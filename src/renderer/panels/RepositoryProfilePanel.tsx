@@ -339,6 +339,136 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const [contributors, setContributors] = useState<Array<{ name: string; commits: number }>>([]);
   const [contributorsLoading, setContributorsLoading] = useState(false);
 
+  // State for git branch status (sync status)
+  const [branchStatus, setBranchStatus] = useState<{
+    ahead: number;
+    behind: number;
+    hasUpstream: boolean;
+    branch: string;
+  } | null>(null);
+  const [_branchStatusLoading, setBranchStatusLoading] = useState(false);
+
+  // State for git working directory status
+  const [gitStatus, setGitStatus] = useState<{
+    staged: number;
+    modified: number;
+    untracked: number;
+    total: number;
+  } | null>(null);
+  const [_gitStatusLoading, setGitStatusLoading] = useState(false);
+
+  // Fetch branch status for local repositories
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchBranchStatus = async () => {
+      // Only fetch for local repositories
+      if (!repositoryData || !repositoryData.localPath) {
+        setBranchStatus(null);
+        setBranchStatusLoading(false);
+        return;
+      }
+
+      setBranchStatusLoading(true);
+      try {
+        const status = await GitService.getBranchStatus(repositoryData.localPath);
+        if (!cancelled) {
+          setBranchStatus(status);
+        }
+      } catch (error) {
+        console.error('[RepositoryProfilePanel] Failed to fetch branch status:', error);
+        if (!cancelled) {
+          setBranchStatus(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setBranchStatusLoading(false);
+        }
+      }
+    };
+
+    fetchBranchStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repositoryData?.localPath]);
+
+  // Fetch git working directory status for local repositories
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchGitStatus = async () => {
+      // Only fetch for local repositories
+      if (!repositoryData || !repositoryData.localPath) {
+        setGitStatus(null);
+        setGitStatusLoading(false);
+        return;
+      }
+
+      setGitStatusLoading(true);
+      try {
+        // Use git status --porcelain to get machine-readable output
+        const result = await GitService.execCommand(repositoryData.localPath, [
+          'status',
+          '--porcelain',
+        ]);
+
+        if (cancelled) return;
+
+        // Parse the output
+        const lines = result.stdout.trim().split('\n').filter(Boolean);
+        let staged = 0;
+        let modified = 0;
+        let untracked = 0;
+
+        for (const line of lines) {
+          if (line.length < 2) continue;
+
+          const indexStatus = line[0]; // First character = index/staged status
+          const workTreeStatus = line[1]; // Second character = working tree status
+
+          // Untracked files
+          if (line.startsWith('??')) {
+            untracked++;
+            continue;
+          }
+
+          // Staged changes (index status not empty)
+          if (indexStatus !== ' ' && indexStatus !== '?') {
+            staged++;
+          }
+
+          // Modified but not staged (working tree status not empty)
+          if (workTreeStatus !== ' ' && workTreeStatus !== '?') {
+            modified++;
+          }
+        }
+
+        const total = staged + modified + untracked;
+
+        if (!cancelled) {
+          setGitStatus({ staged, modified, untracked, total });
+        }
+      } catch (error) {
+        console.error('[RepositoryProfilePanel] Failed to fetch git status:', error);
+        if (!cancelled) {
+          setGitStatus(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setGitStatusLoading(false);
+        }
+      }
+    };
+
+    fetchGitStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repositoryData?.localPath]);
+
   // Fetch file trees when repository changes
   useEffect(() => {
     let cancelled = false;
@@ -808,6 +938,72 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   old
                 </div>
               </div>
+              {/* Sync Status for local repos */}
+              {repositoryData.isLocal && branchStatus && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    fontSize: theme.fontSizes[3],
+                    fontWeight: theme.fontWeights?.semibold ?? 600,
+                    fontFamily: theme.fonts?.body,
+                    color: !branchStatus.hasUpstream
+                      ? theme.colors.warning
+                      : branchStatus.ahead === 0 && branchStatus.behind === 0
+                        ? theme.colors.success
+                        : branchStatus.ahead > 0 && branchStatus.behind === 0
+                          ? theme.colors.info
+                          : branchStatus.ahead === 0 && branchStatus.behind > 0
+                            ? theme.colors.warning
+                            : theme.colors.error
+                  }}>
+                    {!branchStatus.hasUpstream
+                      ? 'no remote'
+                      : branchStatus.ahead === 0 && branchStatus.behind === 0
+                        ? 'in sync'
+                        : branchStatus.ahead > 0 && branchStatus.behind === 0
+                          ? `${branchStatus.ahead} ahead`
+                          : branchStatus.ahead === 0 && branchStatus.behind > 0
+                            ? `${branchStatus.behind} behind`
+                            : `${branchStatus.ahead}↑ ${branchStatus.behind}↓`
+                    }
+                  </div>
+                  <div style={{
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.textSecondary
+                  }}>
+                    sync
+                  </div>
+                </div>
+              )}
+              {/* Git Status for local repos */}
+              {repositoryData.isLocal && gitStatus && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    fontSize: theme.fontSizes[3],
+                    fontWeight: theme.fontWeights?.semibold ?? 600,
+                    fontFamily: theme.fonts?.body,
+                    color: gitStatus.total === 0
+                      ? theme.colors.success
+                      : gitStatus.staged > 0
+                        ? theme.colors.warning
+                        : theme.colors.textSecondary
+                  }}>
+                    {gitStatus.total === 0
+                      ? 'clean'
+                      : gitStatus.total === 1
+                        ? '1 change'
+                        : `${gitStatus.total} changes`
+                    }
+                  </div>
+                  <div style={{
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.textSecondary
+                  }}>
+                    working dir
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons (for local repos) - right aligned */}
@@ -1099,6 +1295,79 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     >
                       {formatNumber(repositoryData.openIssues)}
                     </span>
+                  </div>
+                )}
+
+                {/* Git Working Directory Status (for local repos) */}
+                {repositoryData.isLocal && gitStatus && gitStatus.total > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: 500,
+                        color: theme.colors.textSecondary,
+                        fontFamily: theme.fonts?.body,
+                      }}
+                    >
+                      Working Directory:
+                    </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                        padding: spacing.sm,
+                        backgroundColor: theme.colors.background,
+                        borderRadius: theme.radii?.[1] || 4,
+                        border: `1px solid ${theme.colors.border}`,
+                      }}
+                    >
+                      {gitStatus.staged > 0 && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            fontSize: theme.fontSizes[1],
+                            fontFamily: theme.fonts?.body,
+                          }}
+                        >
+                          <span style={{ color: theme.colors.textSecondary }}>Staged:</span>
+                          <span style={{ color: theme.colors.success, fontWeight: 500 }}>
+                            {gitStatus.staged}
+                          </span>
+                        </div>
+                      )}
+                      {gitStatus.modified > 0 && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            fontSize: theme.fontSizes[1],
+                            fontFamily: theme.fonts?.body,
+                          }}
+                        >
+                          <span style={{ color: theme.colors.textSecondary }}>Modified:</span>
+                          <span style={{ color: theme.colors.warning, fontWeight: 500 }}>
+                            {gitStatus.modified}
+                          </span>
+                        </div>
+                      )}
+                      {gitStatus.untracked > 0 && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            fontSize: theme.fontSizes[1],
+                            fontFamily: theme.fonts?.body,
+                          }}
+                        >
+                          <span style={{ color: theme.colors.textSecondary }}>Untracked:</span>
+                          <span style={{ color: theme.colors.textTertiary, fontWeight: 500 }}>
+                            {gitStatus.untracked}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 

@@ -19,11 +19,17 @@ interface DeleteAlexandriaEntryModalProps {
   entry: (AlexandriaEntry & { isTracked?: boolean; isDiscovered?: boolean }) | null;
   onClose: () => void;
   onConfirm: (deleteLocal: boolean) => Promise<void>;
+  gitStatus?: {
+    hasUncommittedChanges: boolean;
+    uncommittedCount: number;
+    unpushedCommits: number;
+    currentBranch: string;
+  } | null;
 }
 
 export const DeleteAlexandriaEntryModal: React.FC<
   DeleteAlexandriaEntryModalProps
-> = ({ isOpen, entry, onClose, onConfirm }) => {
+> = ({ isOpen, entry, onClose, onConfirm, gitStatus }) => {
   const { theme } = useTheme();
 
   // Check if this is a real Alexandria entry (not just a discovered repo)
@@ -215,6 +221,58 @@ export const DeleteAlexandriaEntryModal: React.FC<
               This will remove the project folder. You can clone from the remote at any time to recover.
             </div>
           </div>
+
+          {/* Git Status Warning */}
+          {gitStatus && (gitStatus.hasUncommittedChanges || gitStatus.unpushedCommits > 0) && (
+            <div
+              style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
+                backgroundColor: `${theme.colors.error || '#ef4444'}15`,
+                border: `2px solid ${theme.colors.error || '#ef4444'}`,
+                marginBottom: '20px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.fontSizes[2],
+                  fontFamily: theme.fonts.body,
+                  fontWeight: theme.fontWeights.semibold,
+                  color: theme.colors.error || '#ef4444',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                Warning: You will lose uncommitted work!
+              </div>
+              <div
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.textSecondary,
+                  lineHeight: '1.5',
+                }}
+              >
+                {gitStatus.hasUncommittedChanges && (
+                  <div style={{ marginBottom: '4px' }}>
+                    • <strong>{gitStatus.uncommittedCount}</strong> uncommitted {gitStatus.uncommittedCount === 1 ? 'change' : 'changes'} will be permanently lost
+                  </div>
+                )}
+                {gitStatus.unpushedCommits > 0 && (
+                  <div>
+                    • <strong>{gitStatus.unpushedCommits}</strong> unpushed {gitStatus.unpushedCommits === 1 ? 'commit' : 'commits'} on <strong>{gitStatus.currentBranch}</strong> will be lost
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Workspace Memberships - Only for Alexandria entries */}
           {isAlexandriaEntry && loadingWorkspaces ? (

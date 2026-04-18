@@ -60,6 +60,8 @@ import { ApiProxyService } from '../main-process-api/ApiProxyService';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { SecureAuthService } from '../services/SecureAuthService';
 import { WindowService } from '../main-process-api/WindowService';
+import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { DeleteAlexandriaEntryModal } from '../panels/components/DeleteAlexandriaEntryModal';
 
 /**
  * User activity response from Principal ADE API
@@ -756,6 +758,16 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   ]);
   const [activeTabId, setActiveTabId] = useState<string | null>('activity-feed');
 
+  // Delete modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<AlexandriaEntry | null>(null);
+  const [deleteGitStatus, setDeleteGitStatus] = useState<{
+    hasUncommittedChanges: boolean;
+    uncommittedCount: number;
+    unpushedCommits: number;
+    currentBranch: string;
+  } | null>(null);
+
   // Activity feed data
   const activityFeed = useActivityFeed(repositories, 20, 10, 100);
 
@@ -1084,6 +1096,125 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events]);
 
+  // Handle repository delete requests
+  useEffect(() => {
+    const handleDeleteRequest = async (event: {
+      type: string;
+      payload: { repository: RepositoryProfileData }
+    }) => {
+      if (event.type === 'repository-profile:delete-requested') {
+        const { repository } = event.payload;
+
+        // Convert RepositoryProfileData to AlexandriaEntry
+        // Find the matching entry in repositories
+        const entry = repositories.find(r => r.name === repository.name && r.path === repository.localPath);
+
+        if (entry) {
+          // Check git status if this is a local repository
+          let gitStatus = null;
+          if (entry.path) {
+            try {
+              // Get branch status for unpushed commits
+              const branchStatus = await GitService.getBranchStatus(entry.path);
+
+              // Get working directory status for uncommitted changes
+              const statusResult = await GitService.execCommand(entry.path, [
+                'status',
+                '--porcelain',
+              ]);
+
+              const hasUncommittedChanges = statusResult.stdout.trim().length > 0;
+              const uncommittedCount = statusResult.stdout.trim().split('\n').filter(Boolean).length;
+
+              gitStatus = {
+                hasUncommittedChanges,
+                uncommittedCount,
+                unpushedCommits: branchStatus.ahead,
+                currentBranch: branchStatus.branch,
+              };
+            } catch (error) {
+              console.warn('[FeedPanelFramework] Failed to check git status:', error);
+            }
+          }
+
+          setEntryToDelete(entry);
+          setDeleteGitStatus(gitStatus);
+          setIsDeleteModalOpen(true);
+        } else {
+          console.warn('[FeedPanelFramework] Could not find repository to delete:', repository.name);
+        }
+      }
+    };
+
+    events.on('repository-profile:delete-requested', handleDeleteRequest);
+    return () => {
+      events.off('repository-profile:delete-requested', handleDeleteRequest);
+    };
+  }, [events, repositories]);
+
+  // Handle delete modal close
+  const handleCloseDeleteModal = useCallback(() => {
+    setIsDeleteModalOpen(false);
+    setEntryToDelete(null);
+    setDeleteGitStatus(null);
+  }, []);
+
+  // Handle delete confirmation
+  const handleConfirmDelete = useCallback(
+    async (deleteLocal: boolean) => {
+      if (!entryToDelete) return;
+
+      try {
+        await AlexandriaService.removeRepository(entryToDelete.name, deleteLocal);
+
+        // Update the project info tab for this repository if it's open
+        // Convert it to remote-only instead of closing it
+        const openTab = tabs.find(
+          tab => tab.contentType === 'project-info' &&
+          (tab as ProjectInfoTab).repository.name === entryToDelete.name
+        ) as ProjectInfoTab | undefined;
+
+        if (openTab && entryToDelete.github) {
+          // Update the tab to show it as a remote-only repository
+          setTabs(prevTabs => prevTabs.map(tab => {
+            if (tab.id === openTab.id) {
+              // Create a remote-only version of the repository
+              const { path: _path, ...repoWithoutPath } = entryToDelete;
+              const remoteOnlyRepo: Partial<AlexandriaEntry> = {
+                ...repoWithoutPath,
+                // Keep GitHub info so it can still show as remote
+              };
+              return {
+                ...openTab,
+                repository: remoteOnlyRepo as AlexandriaEntry,
+              };
+            }
+            return tab;
+          }));
+        } else if (openTab && !entryToDelete.github) {
+          // If there's no GitHub info, we can't show it as remote-only, so close the tab
+          setTabs(prevTabs => prevTabs.filter(tab => tab.id !== openTab.id));
+          if (activeTabId === openTab.id) {
+            setActiveTabId('activity-feed');
+          }
+        }
+
+        // Refresh would happen automatically via Alexandria service events
+        // but we can emit an event to notify other panels
+        events.emit({
+          type: 'feed:repository-deleted',
+          source: 'feed-panel-framework',
+          timestamp: Date.now(),
+          payload: { repositoryName: entryToDelete.name },
+        });
+      } catch (error) {
+        console.error('[FeedPanelFramework] Failed to delete repository:', error);
+        throw error; // Re-throw so modal knows it failed
+      }
+    },
+    [entryToDelete, tabs, activeTabId, events]
+  );
+
   // Convert terminal activities to workingStates record
   const workingStates = useMemo(() => {
     const states: Record<string, TerminalWorkingState> = {};
@@ -1336,28 +1467,39 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   );
 
   return (
-    <div
-      style={{
-        height: '100%',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        backgroundColor: theme.colors.background,
-      }}
-    >
-      <ConfigurablePanelLayout
-        ref={panelLayoutRef}
-        panels={allPanels}
-        layout={layout}
-        collapsiblePanels={{ left: true, right: true }}
-        defaultSizes={panelSizes || { left: 25, middle: 75, right: 0 }}
-        collapsed={{ left: collapsed.left, right: true }}
-        showCollapseButtons={false}
-        theme={theme}
-        onPanelResize={handlePanelResize}
+    <>
+      <div
+        style={{
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          backgroundColor: theme.colors.background,
+        }}
+      >
+        <ConfigurablePanelLayout
+          ref={panelLayoutRef}
+          panels={allPanels}
+          layout={layout}
+          collapsiblePanels={{ left: true, right: true }}
+          defaultSizes={panelSizes || { left: 25, middle: 75, right: 0 }}
+          collapsed={{ left: collapsed.left, right: true }}
+          showCollapseButtons={false}
+          theme={theme}
+          onPanelResize={handlePanelResize}
+        />
+      </div>
+
+      {/* Delete Repository Modal */}
+      <DeleteAlexandriaEntryModal
+        isOpen={isDeleteModalOpen}
+        entry={entryToDelete}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        gitStatus={deleteGitStatus}
       />
-    </div>
+    </>
   );
 };
 

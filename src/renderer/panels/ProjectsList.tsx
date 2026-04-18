@@ -5,11 +5,13 @@
  * Used in the FeedView panel layout.
  */
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, User } from 'lucide-react';
+import { FolderGit2, User, ChevronDown, ChevronRight } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { SegmentedControl } from '../components/SegmentedControl';
+import { GithubService } from '../main-process-api/GithubService';
 
 export interface CommitTimestamp {
   timestamp: Date | string;
@@ -26,6 +28,8 @@ export interface ProjectsListProps {
   /** Currently selected time block (not used in repository list) */
   selectedBlock?: string | null;
 }
+
+type ProjectsViewMode = 'timeline' | 'by-org';
 
 interface RepoSummaryWithEntry extends RepoSummary {
   entry?: AlexandriaEntry;
@@ -48,9 +52,43 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   const { theme } = useTheme();
 
   const spacing = {
+    xs: theme.space?.[1] || 4,
     sm: theme.space?.[2] || 8,
     md: theme.space?.[3] || 16,
   };
+
+  // View mode state
+  const [viewMode, setViewMode] = useState<ProjectsViewMode>('timeline');
+
+  // User's GitHub username and organizations
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [userOrgs, setUserOrgs] = useState<string[]>([]);
+
+  // Collapsed state for org sections
+  const [collapsedOrgs, setCollapsedOrgs] = useState<Set<string>>(new Set());
+
+  // Fetch user's GitHub username and organizations
+  useEffect(() => {
+    const fetchGitHubData = async () => {
+      try {
+        const [user, orgs] = await Promise.all([
+          GithubService.getCurrentUser(),
+          GithubService.getUserOrganizations(),
+        ]);
+
+        if (user) {
+          setCurrentUser(user.login);
+        }
+        setUserOrgs(orgs.map(org => org.login));
+      } catch (error) {
+        console.error('[ProjectsList] Failed to fetch GitHub data:', error);
+        setCurrentUser(null);
+        setUserOrgs([]);
+      }
+    };
+
+    fetchGitHubData();
+  }, []);
 
   // Format relative time
   const formatRelativeTime = useCallback((date: Date): string => {
@@ -96,7 +134,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     return map;
   }, [repositories]);
 
-  // Aggregate commits by repository
+  // Aggregate commits by repository (for timeline view)
   const repoSummaries = useMemo<RepoSummaryWithEntry[]>(() => {
     const repoMap = new Map<string, RepoSummaryWithEntry>();
 
@@ -137,6 +175,66 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     );
   }, [commits, repoGithubMap, repositories]);
 
+  // Group repositories by organization (for by-org view)
+  const groupedRepos = useMemo(() => {
+    const groups = new Map<string, AlexandriaEntry[]>();
+
+    for (const repo of repositories) {
+      const orgName = repo.github?.owner || 'Untracked';
+      const existing = groups.get(orgName) || [];
+      existing.push(repo);
+      groups.set(orgName, existing);
+    }
+
+    // Sort repos within each group alphabetically
+    for (const [orgName, repos] of groups.entries()) {
+      repos.sort((a, b) => a.name.localeCompare(b.name));
+      groups.set(orgName, repos);
+    }
+
+    // Create sorted array of org names
+    const orgNames = Array.from(groups.keys());
+
+    // Separate into user's own, member orgs, other orgs, and untracked
+    const userOwn = currentUser && orgNames.includes(currentUser) ? [currentUser] : [];
+    const memberOrgs = orgNames.filter(org =>
+      org !== 'Untracked' &&
+      org !== currentUser &&
+      userOrgs.includes(org)
+    );
+    const otherOrgs = orgNames.filter(org =>
+      org !== 'Untracked' &&
+      org !== currentUser &&
+      !userOrgs.includes(org)
+    );
+    const untracked = orgNames.includes('Untracked') ? ['Untracked'] : [];
+
+    // Sort member orgs and other orgs alphabetically
+    memberOrgs.sort((a, b) => a.localeCompare(b));
+    otherOrgs.sort((a, b) => a.localeCompare(b));
+
+    // Combine in order: user's own, member orgs, other orgs, untracked
+    const sortedOrgNames = [...userOwn, ...memberOrgs, ...otherOrgs, ...untracked];
+
+    return {
+      groups,
+      sortedOrgNames,
+    };
+  }, [repositories, currentUser, userOrgs]);
+
+  // Toggle org collapsed state
+  const toggleOrgCollapsed = useCallback((orgName: string) => {
+    setCollapsedOrgs(prev => {
+      const next = new Set(prev);
+      if (next.has(orgName)) {
+        next.delete(orgName);
+      } else {
+        next.add(orgName);
+      }
+      return next;
+    });
+  }, []);
+
   return (
     <div
       style={{
@@ -146,20 +244,39 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         flexDirection: 'column',
         backgroundColor: theme.colors.background,
         overflow: 'hidden',
-        padding: spacing.md,
-        gap: spacing.md,
       }}
     >
-      {/* Repository List */}
+      {/* Subtab Control */}
       <div
         style={{
-          flex: 1,
-          overflow: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: spacing.sm,
+          padding: spacing.sm,
+          borderBottom: `1px solid ${theme.colors.border}`,
+          flexShrink: 0,
         }}
       >
+        <SegmentedControl
+          options={[
+            { value: 'timeline', label: 'Timeline' },
+            { value: 'by-org', label: 'By Organization' },
+          ]}
+          value={viewMode}
+          onChange={(value) => setViewMode(value as ProjectsViewMode)}
+          theme={theme}
+        />
+      </div>
+
+      {/* Timeline View */}
+      {viewMode === 'timeline' && (
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: spacing.sm,
+            padding: spacing.md,
+          }}
+        >
         {repoSummaries.length === 0 ? (
           <div
             style={{
@@ -284,7 +401,228 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             );
           })
         )}
-      </div>
+        </div>
+      )}
+
+      {/* By Organization View */}
+      {viewMode === 'by-org' && (
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: spacing.md,
+          }}
+        >
+          {groupedRepos.sortedOrgNames.length === 0 ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: theme.colors.textSecondary,
+                fontSize: theme.fontSizes[1],
+                textAlign: 'center',
+              }}
+            >
+              <FolderGit2 size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
+              <span>No repositories</span>
+            </div>
+          ) : (
+            groupedRepos.sortedOrgNames.map((orgName) => {
+              const repos = groupedRepos.groups.get(orgName) || [];
+              const isCollapsed = collapsedOrgs.has(orgName);
+              const isUserOwn = currentUser === orgName;
+              const isMemberOrg = userOrgs.includes(orgName);
+
+              return (
+                <div key={orgName} style={{ marginBottom: spacing.md }}>
+                  {/* Org Header */}
+                  <div
+                    onClick={() => toggleOrgCollapsed(orgName)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.sm,
+                      padding: spacing.sm,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.radii?.[1] || 4,
+                      cursor: 'pointer',
+                      marginBottom: spacing.xs,
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                    }}
+                  >
+                    {/* Chevron */}
+                    {isCollapsed ? (
+                      <ChevronRight size={16} color={theme.colors.textSecondary} />
+                    ) : (
+                      <ChevronDown size={16} color={theme.colors.textSecondary} />
+                    )}
+
+                    {/* Org Avatar */}
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.background,
+                        border: `1px solid ${theme.colors.border}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {orgName !== 'Untracked' ? (
+                        <img
+                          src={`https://github.com/${orgName}.png?size=64`}
+                          alt={orgName}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <FolderGit2 size={16} color={theme.colors.textSecondary} />
+                      )}
+                    </div>
+
+                    {/* Org Name */}
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          fontWeight: 600,
+                          color: theme.colors.text,
+                        }}
+                      >
+                        {orgName}
+                        {isUserOwn && (
+                          <span
+                            style={{
+                              marginLeft: spacing.xs,
+                              fontSize: theme.fontSizes[0],
+                              color: theme.colors.primary,
+                              fontWeight: 400,
+                            }}
+                          >
+                            (you)
+                          </span>
+                        )}
+                        {!isUserOwn && isMemberOrg && (
+                          <span
+                            style={{
+                              marginLeft: spacing.xs,
+                              fontSize: theme.fontSizes[0],
+                              color: theme.colors.primary,
+                              fontWeight: 400,
+                            }}
+                          >
+                            (member)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Repo Count */}
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textSecondary,
+                        fontFamily: theme.fonts.monospace,
+                      }}
+                    >
+                      {repos.length} {repos.length === 1 ? 'repo' : 'repos'}
+                    </div>
+                  </div>
+
+                  {/* Repos in Org */}
+                  {!isCollapsed && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: spacing.xs,
+                        paddingLeft: spacing.md + spacing.sm,
+                      }}
+                    >
+                      {repos.map((repo) => (
+                        <div
+                          key={repo.name}
+                          onClick={() => handleRepoClick(repo)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: spacing.sm,
+                            padding: spacing.sm,
+                            backgroundColor: 'transparent',
+                            border: `1px solid ${theme.colors.border}`,
+                            borderRadius: theme.radii?.[1] || 4,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                            e.currentTarget.style.borderColor = theme.colors.primary;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.borderColor = theme.colors.border;
+                          }}
+                        >
+                          <FolderGit2 size={16} color={theme.colors.textSecondary} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: theme.fontSizes[1],
+                                color: theme.colors.text,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {repo.name}
+                            </div>
+                            {repo.github?.description && (
+                              <div
+                                style={{
+                                  fontSize: theme.fontSizes[0],
+                                  color: theme.colors.textSecondary,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  marginTop: 2,
+                                }}
+                              >
+                                {repo.github.description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 };
