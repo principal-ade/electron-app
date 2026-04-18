@@ -52,6 +52,26 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     md: theme.space?.[3] || 16,
   };
 
+  // Format relative time
+  const formatRelativeTime = useCallback((date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
+
+    if (diffMinutes < 1) return 'just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffWeeks < 4) return `${diffWeeks}w ago`;
+    if (diffMonths < 12) return `${diffMonths}mo ago`;
+    return `${diffYears}y ago`;
+  }, []);
+
   // Handle repository click - open profile
   const handleRepoClick = useCallback(
     (entry: AlexandriaEntry) => {
@@ -130,18 +150,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         gap: spacing.md,
       }}
     >
-      {/* Header */}
-      <h3
-        style={{
-          margin: 0,
-          fontSize: theme.fontSizes[2],
-          fontWeight: 600,
-          color: theme.colors.text,
-        }}
-      >
-        Recent Projects
-      </h3>
-
       {/* Repository List */}
       <div
         style={{
@@ -269,7 +277,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                     color: theme.colors.textTertiary,
                   }}
                 >
-                  {summary.commitCount} commit{summary.commitCount !== 1 ? 's' : ''}
+                  {formatRelativeTime(summary.lastCommitTime)}
                 </div>
               </div>
               </div>

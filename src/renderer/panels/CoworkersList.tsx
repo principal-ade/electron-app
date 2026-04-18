@@ -6,11 +6,13 @@
  * Clicking on a coworker opens their profile.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Users, Search } from 'lucide-react';
+import { Users } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCoworkers';
+import { GithubService } from '../main-process-api/GithubService';
+import type { GitHubUser } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export interface CoworkersListProps {
   events: PanelEventEmitter;
@@ -19,7 +21,20 @@ export interface CoworkersListProps {
 export const CoworkersList: React.FC<CoworkersListProps> = ({ events }) => {
   const { theme } = useTheme();
   const { coworkers, loading, error } = useOrganizationsAndCoworkers();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [currentUser, setCurrentUser] = useState<GitHubUser | null>(null);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const user = await GithubService.getCurrentUser();
+        setCurrentUser(user);
+      } catch (err) {
+        console.error('Failed to fetch current user:', err);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
 
   const handleCoworkerClick = (username: string) => {
     events.emit({
@@ -29,16 +44,6 @@ export const CoworkersList: React.FC<CoworkersListProps> = ({ events }) => {
       payload: { username },
     });
   };
-
-  const filteredCoworkers = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return coworkers;
-    }
-    const query = searchQuery.toLowerCase();
-    return coworkers.filter((coworker) =>
-      coworker.login.toLowerCase().includes(query)
-    );
-  }, [coworkers, searchQuery]);
 
   const spacing = {
     xs: theme.space?.[1] || 4,
@@ -116,83 +121,117 @@ export const CoworkersList: React.FC<CoworkersListProps> = ({ events }) => {
   return (
     <div
       style={{
-        height: '100%',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
         backgroundColor: theme.colors.background,
       }}
     >
+      {/* Current User */}
+      {currentUser && (
+        <div
+          style={{
+            padding: spacing.sm,
+          }}
+        >
+          <button
+            onClick={() => handleCoworkerClick(currentUser.login)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              width: '100%',
+              padding: spacing.sm,
+              backgroundColor: 'transparent',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radii?.[1] || 4,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              textAlign: 'left',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+          >
+            {/* Avatar */}
+            <img
+              src={currentUser.avatar_url}
+              alt={currentUser.login}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                flexShrink: 0,
+              }}
+            />
+
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  marginBottom: 2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {currentUser.login}
+              </div>
+              <div
+                style={{
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textSecondary,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                You
+              </div>
+            </div>
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div
         style={{
           padding: spacing.md,
           borderBottom: `1px solid ${theme.colors.border}`,
-          flexShrink: 0,
         }}
       >
         <h2
           style={{
             margin: 0,
-            marginBottom: spacing.sm,
             fontSize: theme.fontSizes[2],
             fontFamily: theme.fonts.monospace,
             fontWeight: 600,
             color: theme.colors.text,
           }}
         >
-          Coworkers ({filteredCoworkers.length})
+          Team Members
         </h2>
-
-        {/* Search Input */}
-        <div style={{ position: 'relative' }}>
-          <Search
-            size={14}
-            style={{
-              position: 'absolute',
-              left: spacing.sm,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: theme.colors.textSecondary,
-              pointerEvents: 'none',
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Search coworkers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: `${spacing.xs}px ${spacing.sm}px ${spacing.xs}px ${spacing.md + spacing.sm}px`,
-              backgroundColor: theme.colors.backgroundSecondary,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radii?.[1] || 4,
-              color: theme.colors.text,
-              fontSize: theme.fontSizes[0],
-              fontFamily: theme.fonts.monospace,
-              outline: 'none',
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.primary;
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.border;
-            }}
-          />
-        </div>
       </div>
 
       {/* Coworkers List */}
       <div
         style={{
-          flex: 1,
-          overflowY: 'auto',
           padding: spacing.sm,
         }}
       >
-        {filteredCoworkers.map((coworker) => (
+        {coworkers
+          .filter((coworker) => currentUser && coworker.login !== currentUser.login)
+          .map((coworker) => (
           <button
             key={coworker.id}
             onClick={() => handleCoworkerClick(coworker.login)}
@@ -262,24 +301,6 @@ export const CoworkersList: React.FC<CoworkersListProps> = ({ events }) => {
                 </div>
               )}
             </div>
-
-            {/* Badge for number of shared orgs */}
-            {coworker.organizations.length > 1 && (
-              <div
-                style={{
-                  padding: `2px ${spacing.xs}px`,
-                  backgroundColor: theme.colors.primary,
-                  borderRadius: theme.radii?.[1] || 4,
-                  color: theme.colors.background,
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts.monospace,
-                  fontWeight: 600,
-                  flexShrink: 0,
-                }}
-              >
-                {coworker.organizations.length}
-              </div>
-            )}
           </button>
         ))}
       </div>

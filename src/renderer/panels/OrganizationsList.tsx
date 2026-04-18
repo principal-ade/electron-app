@@ -101,11 +101,9 @@ export const OrganizationsList: React.FC<OrganizationsListProps> = ({ events }) 
   return (
     <div
       style={{
-        height: '100%',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
         backgroundColor: theme.colors.background,
       }}
     >
@@ -114,7 +112,6 @@ export const OrganizationsList: React.FC<OrganizationsListProps> = ({ events }) 
         style={{
           padding: spacing.md,
           borderBottom: `1px solid ${theme.colors.border}`,
-          flexShrink: 0,
         }}
       >
         <h2
@@ -126,15 +123,13 @@ export const OrganizationsList: React.FC<OrganizationsListProps> = ({ events }) 
             color: theme.colors.text,
           }}
         >
-          Organizations ({organizations.length})
+          Orgs
         </h2>
       </div>
 
       {/* Organizations List */}
       <div
         style={{
-          flex: 1,
-          overflowY: 'auto',
           padding: spacing.sm,
         }}
       >
@@ -208,15 +203,6 @@ export const OrganizationsList: React.FC<OrganizationsListProps> = ({ events }) 
                 </div>
               )}
             </div>
-
-            {/* Icon */}
-            <Building2
-              size={16}
-              style={{
-                color: theme.colors.textSecondary,
-                flexShrink: 0,
-              }}
-            />
           </button>
         ))}
       </div>

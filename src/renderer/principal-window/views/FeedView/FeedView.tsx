@@ -309,7 +309,7 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 };
 
 // Feed mode type
-export type FeedMode = 'my-activity' | 'watched-activity' | 'organizations' | 'coworkers';
+export type FeedMode = 'my-activity' | 'watched-activity' | 'organizations';
 
 /**
  * FeedViewContent - inner content that uses the provider

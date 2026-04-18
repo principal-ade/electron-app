@@ -2,7 +2,7 @@
  * FeedLeftPanel
  *
  * Left panel for the FeedView that contains the feed mode selector
- * and different list views (my activity, watched items, organizations, coworkers).
+ * and different list views (my activity, watched items, team with organizations and coworkers).
  * All sub-components stay mounted to avoid reloading data on mode switch.
  */
 
@@ -23,9 +23,9 @@ export interface FeedLeftPanelProps {
   /** Event bus for panel communication */
   events: PanelEventEmitter;
   /** Feed mode */
-  feedMode: 'my-activity' | 'watched-activity' | 'organizations' | 'coworkers';
+  feedMode: 'my-activity' | 'watched-activity' | 'organizations';
   /** Callback when feed mode changes */
-  onFeedModeChange: (mode: 'my-activity' | 'watched-activity' | 'organizations' | 'coworkers') => void;
+  onFeedModeChange: (mode: 'my-activity' | 'watched-activity' | 'organizations') => void;
   /** Commit timestamps for activity heatmap */
   commits: CommitTimestamp[];
   /** Currently selected time block */
@@ -82,13 +82,12 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
         {/* Feed mode toggle */}
         <SegmentedControl
           options={[
+            { value: 'organizations', label: 'Team' },
             { value: 'my-activity', label: 'My Activity' },
             { value: 'watched-activity', label: 'Watching' },
-            { value: 'organizations', label: 'Organizations' },
-            { value: 'coworkers', label: 'Team' },
           ]}
           value={feedMode}
-          onChange={(value) => onFeedModeChange(value as 'my-activity' | 'watched-activity' | 'organizations' | 'coworkers')}
+          onChange={(value) => onFeedModeChange(value as 'my-activity' | 'watched-activity' | 'organizations')}
           theme={theme}
         />
 
@@ -159,7 +158,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
           <WatchedItemsList events={events} />
         </div>
 
-        {/* Organizations */}
+        {/* Organizations & Coworkers */}
         <div
           style={{
             display: feedMode === 'organizations' ? 'flex' : 'none',
@@ -169,20 +168,15 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
             overflow: 'hidden',
           }}
         >
-          <OrganizationsList events={events} />
-        </div>
-
-        {/* Coworkers */}
-        <div
-          style={{
-            display: feedMode === 'coworkers' ? 'flex' : 'none',
-            height: '100%',
-            width: '100%',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          <CoworkersList events={events} />
+          <div
+            style={{
+              flex: 1,
+              overflow: 'auto',
+            }}
+          >
+            <CoworkersList events={events} />
+            <OrganizationsList events={events} />
+          </div>
         </div>
       </div>
     </div>
