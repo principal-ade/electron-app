@@ -562,7 +562,10 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
   // Handler to open repository profile
   const handleOpenProfile = useCallback(() => {
-    if (entry && events) {
+    if (!events) return;
+
+    // If we have an Alexandria entry (local repo), use it directly
+    if (entry) {
       events.emit({
         type: 'feed:repository-selected',
         source: 'repo-activity-card',
@@ -571,8 +574,36 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           repository: entry,
         },
       });
+      return;
     }
-  }, [entry, events]);
+
+    // For watched GitHub repos without local entry, create a synthetic entry
+    if (summary.githubOwner && summary.githubRepoName) {
+      events.emit({
+        type: 'feed:repository-selected',
+        source: 'repo-activity-card',
+        timestamp: Date.now(),
+        payload: {
+          repository: {
+            path: '',
+            name: summary.githubRepoName,
+            remoteUrl: `https://github.com/${summary.githubOwner}/${summary.githubRepoName}.git`,
+            registeredAt: new Date().toISOString(),
+            hasViews: false,
+            viewCount: 0,
+            views: [],
+            github: {
+              id: `${summary.githubOwner}/${summary.githubRepoName}`,
+              owner: summary.githubOwner,
+              name: summary.githubRepoName,
+              stars: 0,
+              lastUpdated: new Date().toISOString(),
+            },
+          },
+        },
+      });
+    }
+  }, [entry, events, summary.githubOwner, summary.githubRepoName]);
 
   // Handler to open owner profile (user or organization)
   const handleOpenOwnerProfile = useCallback(() => {
@@ -735,16 +766,16 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  cursor: entry && events ? 'pointer' : 'default',
+                  cursor: (entry || (summary.githubOwner && summary.githubRepoName)) && events ? 'pointer' : 'default',
                   transition: 'color 0.15s ease',
                 }}
                 onMouseEnter={(e) => {
-                  if (entry && events) {
+                  if ((entry || (summary.githubOwner && summary.githubRepoName)) && events) {
                     e.currentTarget.style.color = theme.colors.primary;
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (entry && events) {
+                  if ((entry || (summary.githubOwner && summary.githubRepoName)) && events) {
                     e.currentTarget.style.color = theme.colors.text;
                   }
                 }}
