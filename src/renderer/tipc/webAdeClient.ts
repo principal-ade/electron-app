@@ -23,6 +23,8 @@ import type {
   UnwatchRepoResponse,
   GetTreeInput,
   GetTreeResponse,
+  GetRepoContributionsInput,
+  RepoContributionsResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
@@ -50,6 +52,9 @@ export interface WebAdeClient {
 
   // GitHub Tree API (via web-ade)
   getGithubTree: (input: GetTreeInput) => Promise<GetTreeResponse>;
+
+  // GitHub Repository Contributions (via web-ade)
+  getRepoContributions: (input: GetRepoContributionsInput) => Promise<RepoContributionsResponse>;
 }
 
 // =============================================================================
@@ -116,4 +121,7 @@ export type {
   GetTreeInput,
   GetTreeResponse,
   TreeEntry,
+  GetRepoContributionsInput,
+  RepoContributionsResponse,
+  DailyContribution,
 } from '../../shared/tipc/webAdeRouterTypes';

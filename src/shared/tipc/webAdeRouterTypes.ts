@@ -45,6 +45,11 @@ export interface GetTreeInput {
   ref?: string;
 }
 
+export interface GetRepoContributionsInput {
+  owner: string;
+  repo: string;
+}
+
 // =============================================================================
 // Response Types
 // =============================================================================
@@ -157,6 +162,22 @@ export interface GetTreeResponse {
   truncated: boolean;
 }
 
+export interface DailyContribution {
+  date: string; // YYYY-MM-DD
+  count: number;
+}
+
+export interface RepoContributionsResponse {
+  contributions: DailyContribution[];
+  timeRange: {
+    start: string;
+    end: string;
+  };
+  totalCommits: number;
+  pagesFetched: number;
+  contributorsUsed: number;
+}
+
 // =============================================================================
 // Router Type Definition
 // =============================================================================
@@ -223,5 +244,11 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: GetTreeInput;
     }) => Promise<GetTreeResponse>;
+  };
+  getRepoContributions: {
+    action: (args: {
+      context: ActionContext;
+      input: GetRepoContributionsInput;
+    }) => Promise<RepoContributionsResponse>;
   };
 };

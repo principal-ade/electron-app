@@ -18,6 +18,8 @@ import type {
   UnwatchRepoResponse,
   GetTreeInput,
   GetTreeResponse,
+  GetRepoContributionsInput,
+  RepoContributionsResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -405,6 +407,45 @@ export class WebAdeService {
       return tree;
     } catch (error) {
       console.error('[WebADE] Failed to fetch tree:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get repository contribution calendar from GitHub via web-ade
+   * Fetches commits and aggregates them by day
+   */
+  async getRepoContributions(input: GetRepoContributionsInput): Promise<RepoContributionsResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/github/repo/${input.owner}/${input.repo}/contributions`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch repository contributions: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as RepoContributionsResponse;
+
+      if (!data || !data.contributions) {
+        console.warn('[WebADE] Unexpected response format:', data);
+        throw new Error('Invalid contributions response from web-ade');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('[WebADE] Failed to fetch repository contributions:', error);
       throw error;
     }
   }

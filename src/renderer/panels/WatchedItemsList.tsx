@@ -813,6 +813,32 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
                 return (
                   <div
                     key={`repo:${repo.owner}/${repo.repo}`}
+                    onClick={() => {
+                      // Emit event to open repository profile
+                      events.emit({
+                        type: 'feed:repository-selected',
+                        source: 'watched-items-panel',
+                        timestamp: Date.now(),
+                        payload: {
+                          repository: {
+                            path: '',
+                            name: repo.repo,
+                            remoteUrl: `https://github.com/${repo.owner}/${repo.repo}.git`,
+                            registeredAt: new Date().toISOString(),
+                            hasViews: false,
+                            viewCount: 0,
+                            views: [],
+                            github: {
+                              id: `${repo.owner}/${repo.repo}`,
+                              owner: repo.owner,
+                              name: repo.repo,
+                              stars: 0,
+                              lastUpdated: new Date().toISOString(),
+                            },
+                          },
+                        },
+                      });
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -822,7 +848,7 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
                       backgroundColor: 'transparent',
                       border: `1px solid ${theme.colors.border}`,
                       borderRadius: theme.radii?.[1] || 4,
-                      cursor: 'default',
+                      cursor: 'pointer',
                       transition: 'all 0.15s ease',
                       position: 'relative',
                     }}
@@ -901,7 +927,10 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
 
                     {/* Unwatch button */}
                     <button
-                      onClick={() => handleUnwatchRepo(repo.owner, repo.repo)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        handleUnwatchRepo(repo.owner, repo.repo);
+                      }}
                       disabled={isInProgress}
                       style={{
                         padding: `${spacing.xs}px ${spacing.sm}px`,

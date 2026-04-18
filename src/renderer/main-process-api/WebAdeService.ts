@@ -15,6 +15,7 @@ import type {
   WatchRepoResponse,
   UnwatchRepoResponse,
   GetTreeResponse,
+  RepoContributionsResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -105,5 +106,15 @@ export class WebAdeService {
    */
   static async getGithubTree(owner: string, repo: string, ref = 'HEAD'): Promise<GetTreeResponse> {
     return webAdeClient.getGithubTree({ owner, repo, ref });
+  }
+
+  /**
+   * Get repository contribution calendar from GitHub via web-ade
+   * Fetches commits and aggregates them by day (up to 365 days)
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   */
+  static async getRepoContributions(owner: string, repo: string): Promise<RepoContributionsResponse> {
+    return webAdeClient.getRepoContributions({ owner, repo });
   }
 }

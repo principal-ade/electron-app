@@ -40,6 +40,7 @@ export interface RepoCardData {
   stars?: number;
   isOwnerOrg?: boolean;
   createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
   topContributors?: Contributor[]; // Top contributors (max 5)
   alexandriaEntry?: AlexandriaEntry; // Full Alexandria entry if repo exists locally
 }
@@ -84,6 +85,29 @@ function formatProjectAge(createdAt: string): string {
     return `Created ${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
   }
   return 'Created recently';
+}
+
+/**
+ * Format last updated time
+ */
+function formatUpdatedTime(updatedAt: string): string {
+  const updated = new Date(updatedAt);
+  const now = new Date();
+  const diffMs = now.getTime() - updated.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffMonths = Math.floor(diffDays / 30);
+  const diffYears = Math.floor(diffDays / 365);
+
+  if (diffYears > 0) {
+    return `Updated ${diffYears} ${diffYears === 1 ? 'year' : 'years'} ago`;
+  }
+  if (diffMonths > 0) {
+    return `Updated ${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`;
+  }
+  if (diffDays > 0) {
+    return `Updated ${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+  }
+  return 'Updated recently';
 }
 
 export const RepoCard: React.FC<RepoCardProps> = ({
@@ -262,8 +286,8 @@ export const RepoCard: React.FC<RepoCardProps> = ({
             {repo.repoName}
           </h4>
 
-          {/* Project age (if available) */}
-          {repo.createdAt && (
+          {/* Last updated and project age (if available) */}
+          {(repo.updatedAt || repo.createdAt) && (
             <div
               style={{
                 fontSize: theme.fontSizes[1],
@@ -271,7 +295,9 @@ export const RepoCard: React.FC<RepoCardProps> = ({
                 color: theme.colors.textSecondary,
               }}
             >
-              {formatProjectAge(repo.createdAt)}
+              {repo.updatedAt && formatUpdatedTime(repo.updatedAt)}
+              {repo.updatedAt && repo.createdAt && ' • '}
+              {repo.createdAt && formatProjectAge(repo.createdAt)}
             </div>
           )}
 

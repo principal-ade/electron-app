@@ -14,6 +14,7 @@ import type {
   WatchRepoInput,
   UnwatchRepoInput,
   GetTreeInput,
+  GetRepoContributionsInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 
@@ -87,5 +88,15 @@ export const webAdeRouter = {
     .input<GetTreeInput>()
     .action(async ({ input }) => {
       return webAdeService.getGithubTree(input);
+    }),
+
+  // ===========================================================================
+  // GitHub Repository Contributions (via web-ade)
+  // ===========================================================================
+
+  getRepoContributions: t.procedure
+    .input<GetRepoContributionsInput>()
+    .action(async ({ input }) => {
+      return webAdeService.getRepoContributions(input);
     }),
 };

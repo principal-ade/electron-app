@@ -55,10 +55,10 @@ import type { CommitTimestamp } from '../panels/ProjectsList';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { GithubService } from '../main-process-api/GithubService';
 import { GitService } from '../main-process-api/GitService';
+import { WebAdeService } from '../main-process-api/WebAdeService';
 import { ApiProxyService } from '../main-process-api/ApiProxyService';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { SecureAuthService } from '../services/SecureAuthService';
-import { WebAdeService } from '../main-process-api/WebAdeService';
 import { WindowService } from '../main-process-api/WindowService';
 
 /**
@@ -199,7 +199,7 @@ const RepositoryProfileTabContent: React.FC<{
   const [repositoryData, setRepositoryData] = React.useState<RepositoryProfileData | undefined>(undefined);
   const [loading, setLoading] = React.useState(true);
 
-  // Use commit heatmap hook to get activity data
+  // Use commit heatmap hook for local repos only
   const heatMapData = useCommitHeatMap(repository.path ?? null);
 
   React.useEffect(() => {
@@ -213,17 +213,34 @@ const RepositoryProfileTabContent: React.FC<{
 
         if (cancelled) return;
 
-        // Transform activity data
+        // Fetch activity data - local or remote
         const activityData = new Map<string, number>();
-        heatMapData.commits.forEach((commit) => {
-          activityData.set(commit.date, commit.count);
-        });
-
-        // Calculate total commits
         let totalCommits = 0;
-        activityData.forEach((count) => {
-          totalCommits += count;
-        });
+
+        if (repo.path) {
+          // Local repository - use heatmap data from hook
+          heatMapData.commits.forEach((commit) => {
+            activityData.set(commit.date, commit.count);
+          });
+          activityData.forEach((count) => {
+            totalCommits += count;
+          });
+        } else if (repo.github?.owner && repo.github?.name) {
+          // Remote repository - fetch from web-ade
+          try {
+            const contributions = await WebAdeService.getRepoContributions(
+              repo.github.owner,
+              repo.github.name
+            );
+            contributions.contributions.forEach((day) => {
+              activityData.set(day.date, day.count);
+            });
+            totalCommits = contributions.totalCommits;
+            console.info('[RepositoryProfileTab] Fetched remote contributions:', contributions);
+          } catch (err) {
+            console.warn('[RepositoryProfileTab] Failed to fetch remote contributions:', err);
+          }
+        }
 
         // Fetch full repository data from GitHub API if available
         let ownerType: 'User' | 'Organization' | undefined = undefined;
@@ -291,7 +308,7 @@ const RepositoryProfileTabContent: React.FC<{
             ? `https://github.com/${repo.github.owner}/${repo.github.name}`
             : undefined,
           isPrivate: false,
-          isLocal: true,
+          isLocal: !!repo.path,
           localPath: repo.path || undefined,
           github: repo.github,
         };
@@ -497,6 +514,7 @@ const UserProfileTabContent: React.FC<{
             language: repo.language ?? undefined,
             stars: repo.stargazers_count,
             createdAt: repo.created_at,
+            updatedAt: repo.updated_at,
             isOwnerOrg: false,
             topContributors: [],
             alexandriaEntry,
@@ -644,6 +662,7 @@ const OrgProfileTabContent: React.FC<{
             language: repo.language ?? undefined,
             stars: repo.stargazers_count,
             createdAt: repo.created_at,
+            updatedAt: repo.updated_at,
             isOwnerOrg: true,
             topContributors: [],
             alexandriaEntry,
