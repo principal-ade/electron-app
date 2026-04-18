@@ -1,0 +1,542 @@
+{
+  "name": "Repository Discovery & Auto-Registration",
+  "markdown": ".principal-views/local-projects-ipc-flow/local-projects-ipc-flow.md",
+  "description": "Telemetry for discovering and auto-registering local git repositories in Alexandria",
+  "nodes": [
+    {
+      "id": "discovery-started",
+      "type": "otel-event",
+      "x": 100,
+      "y": 100,
+      "width": 200,
+      "height": 100,
+      "color": "#E0F2FE",
+      "label": "Discovery Started",
+      "icon": "Search",
+      "shape": "roundedRect",
+      "description": "Emitted when repository scanning begins in base directory",
+      "event": {
+        "name": "alexandria.discovery.started",
+        "attributes": {
+          "base_directory": {
+            "type": "string",
+            "required": true,
+            "description": "Base directory path being scanned"
+          },
+          "max_depth": {
+            "type": "number",
+            "required": true,
+            "description": "Maximum directory depth for scanning"
+          },
+          "scan_id": {
+            "type": "string",
+            "required": false,
+            "description": "Unique ID for this discovery scan (internal correlation)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "repo-discovered",
+      "type": "otel-event",
+      "x": 350,
+      "y": 100,
+      "width": 200,
+      "height": 100,
+      "color": "#FFE4B5",
+      "label": "Repository Found",
+      "icon": "GitBranch",
+      "shape": "roundedRect",
+      "description": "Emitted for each git repository discovered during scan",
+      "event": {
+        "name": "alexandria.discovery.repo_found",
+        "attributes": {
+          "repo_path": {
+            "type": "string",
+            "required": false,
+            "description": "Absolute path to discovered repository (technical detail)"
+          },
+          "repo_name": {
+            "type": "string",
+            "required": true,
+            "description": "Repository name (directory name)"
+          },
+          "scan_id": {
+            "type": "string",
+            "required": false,
+            "description": "Scan ID for correlation (internal)"
+          },
+          "is_tracked": {
+            "type": "boolean",
+            "required": true,
+            "description": "Whether repo is already in Alexandria"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "discovery-completed",
+      "type": "otel-event",
+      "x": 600,
+      "y": 100,
+      "width": 200,
+      "height": 100,
+      "color": "#D4EDDA",
+      "label": "Discovery Completed",
+      "icon": "CheckCircle",
+      "shape": "roundedRect",
+      "description": "Emitted when scanning completes with summary statistics",
+      "event": {
+        "name": "alexandria.discovery.completed",
+        "attributes": {
+          "scan_id": {
+            "type": "string",
+            "required": false,
+            "description": "Scan ID for correlation (internal)"
+          },
+          "total_repos_found": {
+            "type": "number",
+            "required": true,
+            "description": "Total git repos discovered"
+          },
+          "untracked_repos_count": {
+            "type": "number",
+            "required": true,
+            "description": "Count of repos not in Alexandria"
+          },
+          "duration_ms": {
+            "type": "number",
+            "required": true,
+            "description": "Scan duration in milliseconds"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "auto-registration-started",
+      "type": "otel-event",
+      "x": 100,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#E0F2FE",
+      "label": "Auto-Registration Started",
+      "icon": "Play",
+      "shape": "roundedRect",
+      "description": "Emitted when batch auto-registration begins for discovered repos",
+      "event": {
+        "name": "alexandria.registration.batch_started",
+        "attributes": {
+          "scan_id": {
+            "type": "string",
+            "required": true,
+            "description": "Scan ID for correlation with discovery"
+          },
+          "repos_to_register": {
+            "type": "number",
+            "required": true,
+            "description": "Number of repos to auto-register"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "repo-registered",
+      "type": "otel-event",
+      "x": 350,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#FFE4B5",
+      "label": "Repository Registered",
+      "icon": "FileCheck",
+      "shape": "roundedRect",
+      "description": "Emitted for each successful repository registration",
+      "event": {
+        "name": "alexandria.registration.repo_registered",
+        "attributes": {
+          "repo_name": {
+            "type": "string",
+            "required": true,
+            "description": "Name of registered repository"
+          },
+          "repo_path": {
+            "type": "string",
+            "required": false,
+            "description": "Path to repository (technical detail)"
+          },
+          "scan_id": {
+            "type": "string",
+            "required": false,
+            "description": "Scan ID for correlation (internal)"
+          },
+          "remote_url": {
+            "type": "string",
+            "required": false,
+            "description": "Git remote URL if available"
+          },
+          "is_github": {
+            "type": "boolean",
+            "required": false,
+            "description": "Whether repo has GitHub remote"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "integration",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "registration-failed",
+      "type": "otel-event",
+      "x": 350,
+      "y": 380,
+      "width": 200,
+      "height": 100,
+      "color": "#F8D7DA",
+      "label": "Registration Failed",
+      "icon": "AlertTriangle",
+      "shape": "roundedRect",
+      "description": "Emitted when repository registration fails",
+      "event": {
+        "name": "alexandria.registration.repo_failed",
+        "attributes": {
+          "repo_name": {
+            "type": "string",
+            "required": true,
+            "description": "Name of repository that failed"
+          },
+          "repo_path": {
+            "type": "string",
+            "required": false,
+            "description": "Path to repository (technical detail)"
+          },
+          "scan_id": {
+            "type": "string",
+            "required": false,
+            "description": "Scan ID for correlation (internal)"
+          },
+          "error_message": {
+            "type": "string",
+            "required": true,
+            "description": "Error message describing failure"
+          },
+          "error_type": {
+            "type": "string",
+            "required": false,
+            "description": "Type of error (e.g., 'NO_GIT_DIR', 'PERMISSION_DENIED')"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "error",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "registration-completed",
+      "type": "otel-event",
+      "x": 600,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#D4EDDA",
+      "label": "Auto-Registration Completed",
+      "icon": "CheckCircle",
+      "shape": "roundedRect",
+      "description": "Emitted when batch registration completes with statistics",
+      "event": {
+        "name": "alexandria.registration.batch_completed",
+        "attributes": {
+          "scan_id": {
+            "type": "string",
+            "required": false,
+            "description": "Scan ID for correlation (internal)"
+          },
+          "success_count": {
+            "type": "number",
+            "required": true,
+            "description": "Number of successfully registered repos"
+          },
+          "failure_count": {
+            "type": "number",
+            "required": true,
+            "description": "Number of failed registrations"
+          },
+          "duration_ms": {
+            "type": "number",
+            "required": true,
+            "description": "Total registration duration"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "metadata-fetch-started",
+      "type": "otel-event",
+      "x": 100,
+      "y": 530,
+      "width": 200,
+      "height": 100,
+      "color": "#E0F2FE",
+      "label": "Metadata Fetch Started",
+      "icon": "Download",
+      "shape": "roundedRect",
+      "description": "Emitted when GitHub metadata fetch begins for registered repos",
+      "event": {
+        "name": "alexandria.metadata.fetch_started",
+        "attributes": {
+          "repo_name": {
+            "type": "string",
+            "required": true,
+            "description": "Repository name"
+          },
+          "github_owner": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub owner/organization"
+          },
+          "github_repo": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub repository name"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "integration",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "metadata-fetch-completed",
+      "type": "otel-event",
+      "x": 350,
+      "y": 530,
+      "width": 200,
+      "height": 100,
+      "color": "#D4EDDA",
+      "label": "Metadata Enriched",
+      "icon": "CheckCircle",
+      "shape": "roundedRect",
+      "description": "Emitted when GitHub metadata is successfully fetched and cached",
+      "event": {
+        "name": "alexandria.metadata.fetch_completed",
+        "attributes": {
+          "repo_name": {
+            "type": "string",
+            "required": true,
+            "description": "Repository name"
+          },
+          "default_branch": {
+            "type": "string",
+            "required": false,
+            "description": "Default branch from GitHub metadata"
+          },
+          "has_metadata": {
+            "type": "boolean",
+            "required": true,
+            "description": "Whether metadata was successfully fetched"
+          },
+          "duration_ms": {
+            "type": "number",
+            "required": true,
+            "description": "Fetch duration"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "integration",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "validation-node",
+      "type": "text",
+      "x": 850,
+      "y": 100,
+      "width": 250,
+      "height": 150,
+      "color": "#D4EDDA",
+      "text": "# Success Validation\n\nConfirm auto-registration worked:\n\n```sql\n-- All repos discovered and registered\nSELECT scan_id, \n  COUNT(*) as repos_found,\n  success_count + failure_count as total_processed\nFROM events\nWHERE event_name IN (\n  'alexandria.discovery.completed',\n  'alexandria.registration.batch_completed'\n)\nGROUP BY scan_id\n```\n\nExpected: `repos_found = total_processed`"
+    },
+    {
+      "id": "correlation-node",
+      "type": "text",
+      "x": 850,
+      "y": 280,
+      "width": 250,
+      "height": 150,
+      "color": "#FEF3C7",
+      "text": "# Event Correlation\n\nAll events share `scan_id` attribute:\n\n1. Discovery events → scan_id\n2. Registration events → scan_id\n3. Repo-specific events → scan_id + repo_name\n\n**Query Pattern:**\n```sql\nWHERE attributes['scan_id'] = '<scan-id>'\n```"
+    },
+    {
+      "id": "error-scenarios",
+      "type": "text",
+      "x": 600,
+      "y": 380,
+      "width": 250,
+      "height": 150,
+      "color": "#F8D7DA",
+      "text": "# Common Failures\n\n1. **Permission Denied**\n   - error_type: PERMISSION_DENIED\n   - Can't read .git directory\n\n2. **Not a Git Repo**\n   - error_type: NO_GIT_DIR\n   - Folder lacks .git\n\n3. **Already Registered**\n   - Duplicate entry\n   - Skip silently"
+    }
+  ],
+  "edges": [
+    {
+      "id": "discovery-to-repo-found",
+      "fromNode": "discovery-started",
+      "fromSide": "right",
+      "toNode": "repo-discovered",
+      "toSide": "left",
+      "label": "scans directory",
+      "edgeType": "uses"
+    },
+    {
+      "id": "repo-found-to-completed",
+      "fromNode": "repo-discovered",
+      "fromSide": "right",
+      "toNode": "discovery-completed",
+      "toSide": "left",
+      "label": "aggregates",
+      "edgeType": "uses"
+    },
+    {
+      "id": "completed-to-auto-reg",
+      "fromNode": "discovery-completed",
+      "fromSide": "bottom",
+      "toNode": "auto-registration-started",
+      "toSide": "top",
+      "label": "triggers if untracked > 0",
+      "edgeType": "uses"
+    },
+    {
+      "id": "auto-reg-to-registered",
+      "fromNode": "auto-registration-started",
+      "fromSide": "right",
+      "toNode": "repo-registered",
+      "toSide": "left",
+      "label": "for each repo",
+      "edgeType": "uses"
+    },
+    {
+      "id": "auto-reg-to-failed",
+      "fromNode": "auto-registration-started",
+      "fromSide": "bottom",
+      "toNode": "registration-failed",
+      "toSide": "left",
+      "label": "on error",
+      "edgeType": "uses"
+    },
+    {
+      "id": "registered-to-completed",
+      "fromNode": "repo-registered",
+      "fromSide": "right",
+      "toNode": "registration-completed",
+      "toSide": "left",
+      "label": "aggregates",
+      "edgeType": "uses"
+    },
+    {
+      "id": "failed-to-completed",
+      "fromNode": "registration-failed",
+      "fromSide": "right",
+      "toNode": "registration-completed",
+      "toSide": "bottom",
+      "label": "counts failures",
+      "edgeType": "uses"
+    },
+    {
+      "id": "registered-to-metadata",
+      "fromNode": "repo-registered",
+      "fromSide": "bottom",
+      "toNode": "metadata-fetch-started",
+      "toSide": "top",
+      "label": "if has GitHub remote",
+      "edgeType": "uses"
+    },
+    {
+      "id": "metadata-started-to-completed",
+      "fromNode": "metadata-fetch-started",
+      "fromSide": "right",
+      "toNode": "metadata-fetch-completed",
+      "toSide": "left",
+      "label": "fetches from API",
+      "edgeType": "http"
+    },
+    {
+      "id": "completed-to-validation",
+      "fromNode": "discovery-completed",
+      "fromSide": "right",
+      "toNode": "validation-node",
+      "toSide": "top",
+      "label": "validates",
+      "edgeType": "uses"
+    },
+    {
+      "id": "reg-completed-to-validation",
+      "fromNode": "registration-completed",
+      "fromSide": "right",
+      "toNode": "validation-node",
+      "toSide": "bottom",
+      "label": "validates",
+      "edgeType": "uses"
+    },
+    {
+      "id": "discovery-to-correlation",
+      "fromNode": "discovery-started",
+      "fromSide": "bottom",
+      "toNode": "correlation-node",
+      "toSide": "left",
+      "label": "scan_id",
+      "edgeType": "uses"
+    },
+    {
+      "id": "failed-to-errors",
+      "fromNode": "registration-failed",
+      "fromSide": "right",
+      "toNode": "error-scenarios",
+      "toSide": "left",
+      "label": "categorizes",
+      "edgeType": "uses"
+    }
+  ]
+}

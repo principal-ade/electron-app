@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "name": "Repository Discovery and Auto-Registration",
+  "description": "Complete workflow for discovering git repositories in base directory and automatically registering them in Alexandria",
+  "canvas": ".principal-views/local-projects-ipc-flow/local-projects-ipc-flow.otel.canvas",
+  "spanPattern": "alexandria.discovery",
+  "scenarios": [
+    {
+      "id": "successful-discovery-and-registration",
+      "description": "All discovered repositories are successfully registered in Alexandria",
+      "priority": 1,
+      "template": {
+        "introduction": "**Discovery & Auto-Registration - Success**\n\nAll git repositories were discovered and automatically registered.",
+        "events": {
+          "alexandria.discovery.started": "1. Discovery started [{{scan_id}}] in {{base_directory}} (max_depth: {{max_depth}})",
+          "alexandria.discovery.repo_found": "2. Found repository [{{scan_id}}]: {{repo_name}} at {{repo_path}} (tracked: {{is_tracked}})",
+          "alexandria.discovery.completed": "3. Discovery complete [{{scan_id}}]: found {{total_repos_found}} repos, {{untracked_repos_count}} untracked ({{duration_ms}}ms)",
+          "alexandria.registration.batch_started": "4. Auto-registration started [{{scan_id}}] for {{repos_to_register}} repos",
+          "alexandria.registration.repo_registered": "5. Registered [{{scan_id}}] {{repo_name}} at {{repo_path}} (GitHub: {{is_github}}, remote: {{remote_url}})",
+          "alexandria.registration.batch_completed": "6. Registration complete [{{scan_id}}]: {{success_count}} succeeded, {{failure_count}} failed ({{duration_ms}}ms)",
+          "alexandria.metadata.fetch_started": "7. Fetching GitHub metadata for {{repo_name}} ({{github_owner}}/{{github_repo}})",
+          "alexandria.metadata.fetch_completed": "8. Metadata cached for {{repo_name}} (has_metadata: {{has_metadata}}, default_branch: {{default_branch}}, {{duration_ms}}ms)"
+        },
+        "summary": "**Success**\n- Discovered: {{total_repos_found}} repositories\n- Registered: {{success_count}} successfully\n- Metadata: defaultBranch cached for branch analysis"
+      }
+    },
+    {
+      "id": "discovery-with-registration-failures",
+      "description": "Some repositories failed to register due to permissions or other issues",
+      "priority": 2,
+      "template": {
+        "introduction": "**Discovery & Auto-Registration - Partial Success**\n\nSome repositories could not be registered.",
+        "events": {
+          "alexandria.discovery.started": "1. Discovery started [{{scan_id}}] in {{base_directory}}",
+          "alexandria.discovery.repo_found": "2. Found repository [{{scan_id}}]: {{repo_name}}",
+          "alexandria.discovery.completed": "3. Discovery complete [{{scan_id}}]: found {{total_repos_found}} repositories (untracked: {{untracked_repos_count}})",
+          "alexandria.registration.batch_started": "4. Auto-registration started [{{scan_id}}] for {{repos_to_register}} repos",
+          "alexandria.registration.repo_failed": "5. **Failed** [{{scan_id}}] to register {{repo_name}} at {{repo_path}}: {{error_message}} (type: {{error_type}})",
+          "alexandria.registration.batch_completed": "6. Registration complete [{{scan_id}}]: {{success_count}} succeeded, {{failure_count}} failed"
+        },
+        "summary": "**Partial Success**\n- Succeeded: {{success_count}}\n- Failed: {{failure_count}}"
+      }
+    }
+  ]
+}
