@@ -94,6 +94,10 @@ interface ProjectsPanelActions
   deleteStaleRepo?: (repoName: string) => Promise<void>;
   getStaleRepoCount?: () => number;
   shouldShowStaleBadge?: () => boolean;
+  // Default branch analysis actions
+  analyzeDefaultBranchStatus?: () => Promise<DefaultBranchInfo[]>;
+  getDefaultBranchRepoCount?: () => number;
+  clearDefaultBranchAnalysis?: () => void;
   // File City image action
   getFileCityImage: (repoPath: string) => Promise<string | null>;
 }
@@ -106,6 +110,19 @@ export interface StaleRepoInfo {
   sizeBytes: number;
   mtime: string;
   daysSinceModified: number;
+}
+
+/**
+ * Information about a repository not on its default branch
+ */
+export interface DefaultBranchInfo {
+  entry: AlexandriaEntry;
+  currentBranch: string;
+  defaultBranch: string;
+  behindCount: number;
+  isOnDefaultBranch: boolean;
+  hasRemote: boolean;
+  error?: string;
 }
 
 /**
@@ -141,6 +158,9 @@ export interface ProjectsPanelContextType {
   setSelectedCollection: (collection: Collection | null) => void;
   // Stale repo review
   staleRepos: StaleRepoInfo[];
+  // Default branch analysis
+  defaultBranchRepos: DefaultBranchInfo[];
+  defaultBranchAnalysisRunning: boolean;
 }
 
 /**
@@ -251,6 +271,10 @@ export const ProjectsPanelProvider: React.FC<
     snoozeDurationDays: 10,
     snoozedRepos: {},
   });
+
+  // State for default branch analysis
+  const [defaultBranchRepos, setDefaultBranchRepos] = useState<DefaultBranchInfo[]>([]);
+  const [defaultBranchAnalysisRunning, setDefaultBranchAnalysisRunning] = useState(false);
 
   // Fetch workspaces on mount
   useEffect(() => {
@@ -415,6 +439,39 @@ export const ProjectsPanelProvider: React.FC<
           '[ProjectsPanelProvider] Found discovered repositories:',
           discovered.length,
         );
+
+        // Auto-register all discovered repositories
+        if (discovered.length > 0) {
+          console.info(
+            '[ProjectsPanelProvider] Auto-registering discovered repositories...',
+          );
+          let successCount = 0;
+          let failCount = 0;
+
+          for (const repo of discovered) {
+            try {
+              await AlexandriaService.registerRepository(repo.name, repo.path);
+              successCount++;
+            } catch (error) {
+              console.warn(
+                `[ProjectsPanelProvider] Failed to auto-register ${repo.name}:`,
+                error,
+              );
+              failCount++;
+            }
+          }
+
+          console.info(
+            `[ProjectsPanelProvider] Auto-registration complete: ${successCount} succeeded, ${failCount} failed`,
+          );
+
+          // Refresh local repositories to include newly registered repos
+          // This will trigger Alexandria event and update localRepositories via subscription
+          const repos = await AlexandriaService.getRepositories();
+          setLocalRepositories(repos);
+        }
+
+        // Update discovered repositories state (will be empty after auto-registration)
         setDiscoveredRepositories(discovered);
       } catch (error) {
         console.error(
@@ -430,19 +487,48 @@ export const ProjectsPanelProvider: React.FC<
     // Also refetch when local repositories change (a repo may have been tracked)
     // Listen for preference changes to update when baseDefaultDirectory changes
     const unsubscribe = UserPreferencesService.onPreferencesUpdated(
-      (preferences) => {
+      async (preferences) => {
         const newBasePath = preferences.baseDefaultDirectory;
         if (newBasePath !== baseDefaultDirectory) {
           setBaseDefaultDirectory(newBasePath || null);
           if (newBasePath) {
-            GitService.getDiscoveredRepos(newBasePath, 2)
-              .then(setDiscoveredRepositories)
-              .catch((error) => {
-                console.error(
-                  '[ProjectsPanelProvider] Failed to refresh discovered repos:',
-                  error,
+            try {
+              const discovered = await GitService.getDiscoveredRepos(
+                newBasePath,
+                2,
+              );
+
+              // Auto-register discovered repos
+              if (discovered.length > 0) {
+                console.info(
+                  `[ProjectsPanelProvider] Auto-registering ${discovered.length} discovered repos from new base directory...`,
                 );
-              });
+                for (const repo of discovered) {
+                  try {
+                    await AlexandriaService.registerRepository(
+                      repo.name,
+                      repo.path,
+                    );
+                  } catch (error) {
+                    console.warn(
+                      `[ProjectsPanelProvider] Failed to auto-register ${repo.name}:`,
+                      error,
+                    );
+                  }
+                }
+
+                // Refresh local repositories
+                const repos = await AlexandriaService.getRepositories();
+                setLocalRepositories(repos);
+              }
+
+              setDiscoveredRepositories(discovered);
+            } catch (error) {
+              console.error(
+                '[ProjectsPanelProvider] Failed to refresh discovered repos:',
+                error,
+              );
+            }
           } else {
             setDiscoveredRepositories([]);
           }
@@ -590,6 +676,101 @@ export const ProjectsPanelProvider: React.FC<
     const randomIndex = Math.floor(Math.random() * repos.length);
     return repos[randomIndex];
   }, [getStaleRepos]);
+
+  // Analyze default branch status for all repositories
+  const analyzeDefaultBranchStatus = useCallback(async (): Promise<
+    DefaultBranchInfo[]
+  > => {
+    console.info('[ProjectsPanelProvider] Starting default branch analysis...');
+    setDefaultBranchAnalysisRunning(true);
+
+    const results: DefaultBranchInfo[] = [];
+    let fetchSuccessCount = 0;
+    let fetchFailCount = 0;
+
+    try {
+      // Fetch from all remotes in parallel
+      console.info(
+        `[ProjectsPanelProvider] Fetching from ${localRepositories.length} repositories...`,
+      );
+
+      await Promise.allSettled(
+        localRepositories.map(async repo => {
+          try {
+            const result = await GitService.fetch(repo.path);
+            if (result.success) {
+              fetchSuccessCount++;
+            } else {
+              fetchFailCount++;
+            }
+          } catch {
+            fetchFailCount++;
+          }
+        }),
+      );
+
+      console.info(
+        `[ProjectsPanelProvider] Fetch complete: ${fetchSuccessCount} succeeded, ${fetchFailCount} failed`,
+      );
+
+      // Analyze each repository
+      let analysisCount = 0;
+
+      for (const repo of localRepositories) {
+        const analysis = await GitService.analyzeDefaultBranchStatus(repo);
+
+        if (analysis) {
+          analysisCount++;
+
+          // Include repos that need attention
+          if (
+            !analysis.isOnDefaultBranch ||
+            analysis.behindCount > 0 ||
+            analysis.error
+          ) {
+            results.push(analysis);
+          }
+        }
+      }
+
+      console.info(
+        `[ProjectsPanelProvider] Analysis complete: ${analysisCount} analyzed`,
+      );
+
+      // Sort: not on default first, then by behind count
+      results.sort((a, b) => {
+        if (a.error && !b.error) return 1;
+        if (!a.error && b.error) return -1;
+        if (a.isOnDefaultBranch !== b.isOnDefaultBranch) {
+          return a.isOnDefaultBranch ? 1 : -1;
+        }
+        return b.behindCount - a.behindCount;
+      });
+
+      setDefaultBranchRepos(results);
+
+      const notOnDefault = results.filter(
+        r => !r.isOnDefaultBranch && !r.error,
+      ).length;
+      const behind = results.filter(
+        r => r.isOnDefaultBranch && r.behindCount > 0,
+      ).length;
+
+      console.info('[ProjectsPanelProvider] Summary:', {
+        total: localRepositories.length,
+        needsAttention: results.length,
+        notOnDefault,
+        behind,
+      });
+
+      return results;
+    } catch (error) {
+      console.error('[ProjectsPanelProvider] Analysis failed:', error);
+      return [];
+    } finally {
+      setDefaultBranchAnalysisRunning(false);
+    }
+  }, [localRepositories]);
 
   // Fetch GitHub starred repositories
   const fetchStarredRepositories = useCallback(async () => {
@@ -1794,12 +1975,22 @@ export const ProjectsPanelProvider: React.FC<
         return staleRepos.length > 0;
       },
 
+      // Default branch analysis actions
+      analyzeDefaultBranchStatus,
+
+      getDefaultBranchRepoCount: () => defaultBranchRepos.length,
+
+      clearDefaultBranchAnalysis: () => {
+        console.info('[ProjectsPanelProvider] Clearing default branch analysis');
+        setDefaultBranchRepos([]);
+      },
+
       // File City image action
       getFileCityImage: async (repoPath: string) => {
         return FileCityImageService.getImage(repoPath);
       },
     }),
-    [events, selectedWorkspace, localRepositories, fetchStarredRepositories, fetchGitHubProjects, fetchCollections, getStaleRepos, getRandomStaleRepo, staleRepoPrefs, staleRepos],
+    [events, selectedWorkspace, localRepositories, fetchStarredRepositories, fetchGitHubProjects, fetchCollections, getStaleRepos, getRandomStaleRepo, staleRepoPrefs, staleRepos, analyzeDefaultBranchStatus, defaultBranchRepos],
   );
 
   // Create context value following web-ade pattern
@@ -1844,6 +2035,8 @@ export const ProjectsPanelProvider: React.FC<
       selectedCollection,
       setSelectedCollection,
       staleRepos,
+      defaultBranchRepos,
+      defaultBranchAnalysisRunning,
       // Explicit typed slice properties
       alexandriaRepositories: alexandriaRepositoriesSlice,
       workspaces: workspacesSlice,
@@ -1859,6 +2052,8 @@ export const ProjectsPanelProvider: React.FC<
       selectedCollection,
       selectedRepository,
       staleRepos,
+      defaultBranchRepos,
+      defaultBranchAnalysisRunning,
       alexandriaRepositoriesSlice,
       workspacesSlice,
       workspaceSlice,

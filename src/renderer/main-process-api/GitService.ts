@@ -1,4 +1,6 @@
 import { Repository } from '../../shared/types/repository.types';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
+import type { DefaultBranchInfo } from '../contexts/ProjectsPanelContext';
 
 export interface GitRemote {
   name: string;
@@ -1001,6 +1003,190 @@ export class GitService {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to set remote URL',
       };
+    }
+  }
+
+  /**
+   * Get the default branch for a repository
+   * Uses symbolic-ref → remote set-head → fallback strategy
+   * @param directory - Repository directory
+   * @returns Default branch name or null if cannot be determined
+   */
+  static async getDefaultBranch(directory: string): Promise<string | null> {
+    console.info(`[GitService] Getting default branch for: ${directory}`);
+
+    // Try symbolic-ref first (fast, offline)
+    try {
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'symbolic-ref',
+        'refs/remotes/origin/HEAD',
+      ]);
+      if (result.stdout) {
+        const branch = result.stdout.trim().replace('refs/remotes/origin/', '');
+        if (branch) {
+          console.info(`[GitService] Default branch from symbolic-ref: ${branch}`);
+          return branch;
+        }
+      }
+    } catch {
+      console.info('[GitService] symbolic-ref not set, trying remote detection...');
+    }
+
+    // Try remote set-head (needs network)
+    try {
+      console.info('[GitService] Running git remote set-head origin --auto...');
+      await window.mainProcess.git.execCommand(directory, [
+        'remote',
+        'set-head',
+        'origin',
+        '--auto',
+      ]);
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'symbolic-ref',
+        'refs/remotes/origin/HEAD',
+      ]);
+      if (result.stdout) {
+        const branch = result.stdout.trim().replace('refs/remotes/origin/', '');
+        if (branch) {
+          console.info(`[GitService] Default branch after set-head: ${branch}`);
+          return branch;
+        }
+      }
+    } catch (error) {
+      console.warn('[GitService] remote set-head failed (offline?):', error);
+    }
+
+    // Fallback: check for common branches
+    try {
+      console.info('[GitService] Trying fallback branch detection...');
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'branch',
+        '-r',
+      ]);
+      const remoteBranches = result.stdout
+        .split('\n')
+        .map(b => b.trim())
+        .filter(Boolean);
+
+      for (const common of ['origin/main', 'origin/master']) {
+        if (
+          remoteBranches.some(b => b === common || b.startsWith(`${common} `))
+        ) {
+          const branchName = common.replace('origin/', '');
+          console.info(`[GitService] Default branch from fallback: ${branchName}`);
+          return branchName;
+        }
+      }
+    } catch (error) {
+      console.error('[GitService] Fallback branch detection failed:', error);
+    }
+
+    console.warn('[GitService] Could not determine default branch');
+    return null;
+  }
+
+  /**
+   * Analyze default branch status for a repository
+   * @param entry - Alexandria repository entry
+   * @returns DefaultBranchInfo or null if analysis failed
+   */
+  static async analyzeDefaultBranchStatus(
+    entry: AlexandriaEntry,
+  ): Promise<DefaultBranchInfo | null> {
+    console.info(`[GitService] Analyzing default branch status: ${entry.name}`);
+
+    try {
+      // Get current branch
+      const branchStatus = await this.getBranchStatus(entry.path);
+      const currentBranch = branchStatus.branch;
+
+      // Check if repo has remote
+      const repoInfo = await this.getRepositoryInfo(entry.path);
+      if (!repoInfo || !repoInfo.remotes || repoInfo.remotes.length === 0) {
+        console.info(`[GitService] ${entry.name}: No remote configured`);
+        return {
+          entry,
+          currentBranch,
+          defaultBranch: 'unknown',
+          behindCount: 0,
+          isOnDefaultBranch: false,
+          hasRemote: false,
+        };
+      }
+
+      // Get default branch - prefer cached metadata, fall back to git detection
+      let defaultBranch: string | null = null;
+
+      // Try cached GitHub metadata first (fast!)
+      if (entry.github?.defaultBranch) {
+        defaultBranch = entry.github.defaultBranch;
+        console.info(
+          `[GitService] ${entry.name}: Using cached default branch: ${defaultBranch}`,
+        );
+      } else {
+        // Fall back to git detection (slower but works for non-GitHub remotes)
+        defaultBranch = await this.getDefaultBranch(entry.path);
+        if (defaultBranch) {
+          console.info(
+            `[GitService] ${entry.name}: Detected default branch via git: ${defaultBranch}`,
+          );
+        }
+      }
+
+      if (!defaultBranch) {
+        console.warn(
+          `[GitService] ${entry.name}: Could not determine default branch`,
+        );
+        return {
+          entry,
+          currentBranch,
+          defaultBranch: 'unknown',
+          behindCount: 0,
+          isOnDefaultBranch: false,
+          hasRemote: true,
+          error: 'Could not determine default branch',
+        };
+      }
+
+      // Check if on default branch
+      const isOnDefaultBranch = currentBranch === defaultBranch;
+
+      // Calculate behind count
+      let behindCount = 0;
+      if (isOnDefaultBranch && branchStatus.hasUpstream) {
+        behindCount = branchStatus.behind;
+      } else if (!isOnDefaultBranch) {
+        try {
+          const result = await window.mainProcess.git.execCommand(entry.path, [
+            'rev-list',
+            '--count',
+            `HEAD..origin/${defaultBranch}`,
+          ]);
+          behindCount = parseInt(result.stdout.trim(), 10) || 0;
+        } catch (error) {
+          console.warn(
+            `[GitService] ${entry.name}: Failed to count commits behind:`,
+            error,
+          );
+          behindCount = 0;
+        }
+      }
+
+      console.info(
+        `[GitService] ${entry.name}: current=${currentBranch}, default=${defaultBranch}, behind=${behindCount}`,
+      );
+
+      return {
+        entry,
+        currentBranch,
+        defaultBranch,
+        behindCount,
+        isOnDefaultBranch,
+        hasRemote: true,
+      };
+    } catch (error) {
+      console.error(`[GitService] Failed to analyze ${entry.name}:`, error);
+      return null;
     }
   }
 }

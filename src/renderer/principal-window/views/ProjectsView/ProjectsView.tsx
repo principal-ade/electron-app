@@ -176,6 +176,38 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
   const staleRepoCount = context.staleRepos?.length ?? 0;
   const showStaleBadge = staleRepoCount > 0; // Show badge when there are stale repos
 
+  // Handle default branch analysis
+  const handleAnalyzeDefaultBranch = useCallback(async () => {
+    if (!actions.analyzeDefaultBranchStatus) return;
+
+    try {
+      console.log('[ProjectsView] Starting default branch analysis...');
+      const results = await actions.analyzeDefaultBranchStatus();
+
+      if (results.length === 0) {
+        console.log(
+          '[ProjectsView] ✓ All repositories are on their default branches and up to date',
+        );
+      } else {
+        const notOnDefault = results.filter(
+          r => !r.isOnDefaultBranch && !r.error,
+        ).length;
+        const behind = results.filter(
+          r => r.isOnDefaultBranch && r.behindCount > 0,
+        ).length;
+        console.log(
+          `[ProjectsView] Found ${results.length} repositories needing attention:`,
+          {
+            notOnDefault,
+            behind,
+          },
+        );
+      }
+    } catch (error) {
+      console.error('[ProjectsView] Failed to analyze default branches:', error);
+    }
+  }, [actions]);
+
   // Handle create workspace modal close
   const handleCloseCreateWorkspaceModal = useCallback(() => {
     setIsCreateWorkspaceModalOpen(false);
@@ -508,6 +540,9 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
           staleRepoCount={staleRepoCount}
           showStaleBadge={showStaleBadge}
           onReviewStaleRepos={handleReviewStaleRepo}
+          defaultBranchRepoCount={actions.getDefaultBranchRepoCount?.() ?? 0}
+          isAnalyzingDefaultBranch={context.defaultBranchAnalysisRunning}
+          onAnalyzeDefaultBranch={handleAnalyzeDefaultBranch}
         />
 
         {/* Panel Layout */}
