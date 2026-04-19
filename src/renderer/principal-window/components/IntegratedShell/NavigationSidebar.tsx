@@ -12,6 +12,7 @@ import {
   Zap,
   Map,
   Rss,
+  GraduationCap,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -151,6 +152,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         ]
       : []),
     { id: 'skills', icon: <Zap size={20} />, label: 'Skills' },
+    { id: 'onboarding', icon: <GraduationCap size={20} />, label: 'Tutorials' },
     // Only include network button if user has enabled it in preferences
     ...(showNetworkButton
       ? [

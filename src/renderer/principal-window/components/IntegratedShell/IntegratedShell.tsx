@@ -538,7 +538,6 @@ export const IntegratedShell: React.FC = () => {
           }}
           onShowOnboardingWizard={() => setShowOnboardingWizard(true)}
           hideUpdateButton={activeView === 'settings'}
-          onNavigateToOnboarding={() => handleViewChange('onboarding')}
         />
 
         {/* Main content area with rounded corners for Slack-style cutout */}

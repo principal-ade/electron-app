@@ -11,7 +11,6 @@ import type { UserPreferences } from '../../../../shared/types/userPreferences.t
 import { FolderOpen, MessageCircle, Layers } from 'lucide-react';
 import { ShellService } from '../../../main-process-api/ShellService';
 import { WindowService } from '../../../main-process-api/WindowService';
-import { OnboardingButton } from '../../../components/Titlebar/OnboardingButton';
 
 declare global {
   interface Window {
@@ -35,7 +34,6 @@ interface IntegratedTitlebarProps {
   showRightSidebarControl?: boolean;
   onUpdateClick?: () => void;
   hideUpdateButton?: boolean;
-  onNavigateToOnboarding?: () => void;
   onShowOnboardingWizard?: () => void;
 }
 
@@ -48,13 +46,13 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   showRightSidebarControl = false,
   onUpdateClick,
   hideUpdateButton = false,
-  onNavigateToOnboarding,
   onShowOnboardingWizard,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showThemeButton, setShowThemeButton] = useState(false);
   const [showCustomizeButton, setShowCustomizeButton] = useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
+  const [showOpenThreadButton, setShowOpenThreadButton] = useState(false);
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
   const { theme } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -99,6 +97,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       setShowThemeButton(preferences.titlebarButtons?.theme ?? false);
       setShowCustomizeButton(preferences.titlebarButtons?.customize ?? false);
       setShowPullMailbox(preferences.titlebarButtons?.pullMailbox ?? false);
+      setShowOpenThreadButton(preferences.titlebarButtons?.openThread ?? false);
     };
 
     void UserPreferencesService.getPreferences().then(applyPreferences);
@@ -257,11 +256,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           gap: '8px',
         }}
       >
-        {/* Onboarding button */}
-        {onNavigateToOnboarding && (
-          <OnboardingButton onClick={onNavigateToOnboarding} />
-        )}
-        {/* Onboarding Wizard Test Button */}
+        {/* Onboarding Wizard Button */}
         {onShowOnboardingWizard && (
           <button
             onClick={onShowOnboardingWizard}
@@ -293,35 +288,37 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           </button>
         )}
         {/* Open Thread button */}
-        <button
-          onClick={() => WindowService.openEmptyThread()}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 12px',
-            borderRadius: '6px',
-            backgroundColor: theme.colors.backgroundSecondary,
-            color: theme.colors.text,
-            border: `1px solid ${theme.colors.border}`,
-            cursor: 'pointer',
-            fontSize: theme.fontSizes[1],
-            fontWeight: 500,
-            fontFamily: theme.fonts.body,
-            transition: 'all 0.2s',
-            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-          }}
-          title="Open a new thread"
-        >
-          <Layers size={14} />
-          Open Thread
-        </button>
+        {showOpenThreadButton && (
+          <button
+            onClick={() => WindowService.openEmptyThread()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              cursor: 'pointer',
+              fontSize: theme.fontSizes[1],
+              fontWeight: 500,
+              fontFamily: theme.fonts.body,
+              transition: 'all 0.2s',
+              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            }}
+            title="Open a new thread"
+          >
+            <Layers size={14} />
+            Open Thread
+          </button>
+        )}
         {/* Community Discord button */}
         <button
           onClick={() => ShellService.openExternal('https://discord.gg/G3qdcC2DXq')}

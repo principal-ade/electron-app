@@ -80,10 +80,10 @@ export const OnboardingButton: React.FC<OnboardingButtonProps> = ({ onClick }) =
           e.currentTarget.style.opacity = '1';
         }
       }}
-      title={isComplete ? 'Onboarding complete' : `Onboarding: ${completedCount}/${totalCount} completed`}
+      title={isComplete ? 'Tutorials complete' : `Tutorials: ${completedCount}/${totalCount} completed`}
     >
       <GraduationCap size={14} />
-      <span>Onboarding</span>
+      <span>Tutorials</span>
       {showBadge && (
         <span
           style={{

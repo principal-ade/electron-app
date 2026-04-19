@@ -153,6 +153,7 @@ export interface UserPreferences {
     openInIDE?: boolean;
     workspace?: boolean; // Show/hide the workspace button in dev-workspace titlebar (default: false)
     pullMailbox?: boolean; // Show/hide the pull mailbox in titlebar (default: false)
+    openThread?: boolean; // Show/hide the open thread button in titlebar (default: false)
   };
 
   // Theme preferences
