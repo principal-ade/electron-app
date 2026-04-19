@@ -153,9 +153,36 @@ export const ActivityCitiesPanel: React.FC = () => {
       );
     }
 
+    // Filter out repositories with 404/403 errors (no access)
+    const accessibleRepos = repositories.filter((repo) => {
+      if (!repo.error) return true;
+      // Hide repos with access denied errors or branch not found
+      const error = repo.error.toLowerCase();
+      return (
+        !error.includes('404') &&
+        !error.includes('403') &&
+        !error.includes('not found') &&
+        !error.includes('forbidden') &&
+        !error.includes('no non-interactive git access') &&
+        !error.includes('git fetch failed') &&
+        !error.includes("couldn't find remote ref")
+      );
+    });
+
+    if (accessibleRepos.length === 0) {
+      return (
+        <div style={emptyStateStyle}>
+          <div>No accessible repositories</div>
+          <div style={{ fontSize: theme.fontSizes[0], opacity: 0.7 }}>
+            When users are online and working on repositories you have access to, their cities will appear here.
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={gridStyle}>
-        {repositories.map((repo) => (
+        {accessibleRepos.map((repo) => (
           <CityCard
             key={repo.repoId}
             owner={repo.owner}

@@ -130,11 +130,7 @@ Proxies web-ade API requests through main process via TIPC:
 ### Live Activity / File City Cards
 The `CityCard` component displays 2D File City visualizations for repositories with active presence.
 
-**Important:** `CityCard` is rendered in TWO locations - both must be kept in sync:
-- `src/renderer/panels/ActivityCitiesPanel.tsx` - Dedicated activity cities panel
-- `src/renderer/components/LiveActivityTabContent.tsx` - Live activity tab in the feed view
-
-When adding new props to `CityCard`, ensure both locations pass the prop.
+`CityCard` is rendered in `src/renderer/panels/ActivityCitiesPanel.tsx` - the dedicated activity cities panel used throughout the application.
 
 ### Hooks
 - `src/renderer/hooks/useActivityFeed.ts` - Local commit aggregation

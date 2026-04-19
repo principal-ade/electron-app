@@ -156,7 +156,10 @@ export async function getTree(
   owner: string,
   repo: string,
   ref: string,
-): Promise<{ success: true; data: GitHubTreeResponse } | { success: false; error: string }> {
+): Promise<
+  | { success: true; data: GitHubTreeResponse }
+  | { success: false; error: string; status?: number; statusText?: string }
+> {
   console.log(`[GitHub] Getting tree for ${owner}/${repo} on branch ${ref}`);
 
   const result = await core.makeGitHubAPICall(
@@ -170,6 +173,8 @@ export async function getTree(
   return {
     success: false,
     error: result.error || 'Failed to fetch repository tree',
+    status: result.status,
+    statusText: result.statusText,
   };
 }
 

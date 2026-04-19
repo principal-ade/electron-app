@@ -38,7 +38,7 @@ import { FeedLeftPanel } from '../panels/FeedLeftPanel';
 import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
 import { RepositoryProfilePanel, type RepositoryProfileData } from '../panels/RepositoryProfilePanel';
-import { LiveActivityTabContent } from '../components/LiveActivityTabContent';
+import { ActivityCitiesPanel } from '../panels/ActivityCitiesPanel';
 import {
   UserProfilePanel,
   type UserProfilePanelContext,
@@ -1292,7 +1292,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           );
         }
         case 'live-activity': {
-          return <LiveActivityTabContent />;
+          return <ActivityCitiesPanel />;
         }
         case 'activity-feed': {
           return (

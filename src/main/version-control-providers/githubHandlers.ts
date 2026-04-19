@@ -2474,6 +2474,15 @@ export function registerGitHubIpcHandlers(
           return result;
         }
 
+        // Don't fallback for 404 (not found) or 403 (forbidden) - user doesn't have access
+        if ('status' in result && (result.status === 404 || result.status === 403)) {
+          const statusText = 'statusText' in result ? result.statusText : undefined;
+          console.warn(
+            `[GitHub] Skipping git CLI fallback for ${owner}/${repo}@${treeRef}: ${result.status} ${statusText || 'Access denied'}`,
+          );
+          return result;
+        }
+
         // Fallback: use git CLI (Option C: no checkout) with SSH preferred
         console.warn(
           `[GitHub] API failed. Falling back to git CLI (no checkout) for ${owner}/${repo}@${treeRef}`,
