@@ -159,6 +159,7 @@ const createMockActions = (
     lineCounts?: Record<string, number>;
     simulateDelay?: number;
     simulateError?: boolean;
+    watchedReposRef?: React.MutableRefObject<Set<string>>;
   } = {}
 ): RepositoryProfilePanelActions => {
   const {
@@ -167,6 +168,7 @@ const createMockActions = (
     lineCounts = {},
     simulateDelay = 500,
     simulateError = false,
+    watchedReposRef,
   } = options;
 
   return {
@@ -196,6 +198,34 @@ const createMockActions = (
       }
       return lineCounts;
     },
+    isRepositoryWatched: async (owner: string, repo: string) => {
+      console.info('[Mock Action] isRepositoryWatched:', owner, repo);
+      if (simulateDelay) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      const repoKey = `${owner}/${repo}`;
+      return watchedReposRef?.current.has(repoKey) ?? false;
+    },
+    watchRepository: async (owner: string, repo: string) => {
+      console.info('[Mock Action] watchRepository:', owner, repo);
+      if (simulateDelay) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      const repoKey = `${owner}/${repo}`;
+      if (watchedReposRef) {
+        watchedReposRef.current.add(repoKey);
+      }
+    },
+    unwatchRepository: async (owner: string, repo: string) => {
+      console.info('[Mock Action] unwatchRepository:', owner, repo);
+      if (simulateDelay) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      const repoKey = `${owner}/${repo}`;
+      if (watchedReposRef) {
+        watchedReposRef.current.delete(repoKey);
+      }
+    },
   };
 };
 
@@ -204,6 +234,9 @@ const MockRepositoryProfilePanel: React.FC<{
   repositoryData?: RepositoryProfileData;
   actions?: RepositoryProfilePanelActions;
 }> = ({ repositoryData, actions: customActions }) => {
+  // Track watched repos in ref for interactive demo
+  const watchedReposRef = React.useRef<Set<string>>(new Set());
+
   const mockContext: RepositoryProfilePanelContext = {
     currentScope: repositoryData
       ? {
@@ -228,6 +261,7 @@ const MockRepositoryProfilePanel: React.FC<{
       [`${repositoryData?.name}/src/components/Input.tsx`]: 56,
       [`${repositoryData?.name}/tests/app.test.ts`]: 89,
     },
+    watchedReposRef,
   });
 
   const mockEvents = new MockEventEmitter();

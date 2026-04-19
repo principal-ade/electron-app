@@ -62,6 +62,45 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
     loadWatches();
   }, [loadWatches]);
 
+  // Listen for watch toggle events from profile panels
+  useEffect(() => {
+    const handleUserToggle = (event: { payload: { username: string; watched: boolean } }) => {
+      const { username, watched } = event.payload;
+      if (watched) {
+        // Add to watched users (optimistic update)
+        setWatchedUsers((prev) => {
+          if (prev.some((u) => u.login === username)) return prev;
+          return [...prev, { login: username, watchedAt: new Date().toISOString() }];
+        });
+      } else {
+        // Remove from watched users
+        setWatchedUsers((prev) => prev.filter((u) => u.login !== username));
+      }
+    };
+
+    const handleRepoToggle = (event: { payload: { owner: string; repo: string; watched: boolean } }) => {
+      const { owner, repo, watched } = event.payload;
+      if (watched) {
+        // Add to watched repos (optimistic update)
+        setWatchedRepos((prev) => {
+          if (prev.some((r) => r.owner === owner && r.repo === repo)) return prev;
+          return [...prev, { owner, repo, watchedAt: new Date().toISOString() }];
+        });
+      } else {
+        // Remove from watched repos
+        setWatchedRepos((prev) => prev.filter((r) => !(r.owner === owner && r.repo === repo)));
+      }
+    };
+
+    events.on('watch:user-toggled', handleUserToggle);
+    events.on('watch:repo-toggled', handleRepoToggle);
+
+    return () => {
+      events.off('watch:user-toggled', handleUserToggle);
+      events.off('watch:repo-toggled', handleRepoToggle);
+    };
+  }, [events]);
+
   // Debounced search effect (300ms delay like mobile app)
   useEffect(() => {
     if (!searchQuery.trim()) {

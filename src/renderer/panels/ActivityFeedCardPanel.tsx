@@ -87,19 +87,21 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
 
   // Listen for activity refresh events (triggered by git commits or watch list changes)
   useEffect(() => {
-    const handleRefreshRequest = () => {
+    // Only refresh watched activity feed when watch status changes
+    const handleWatchToggle = () => {
       if (feedMode === 'watched-activity') {
+        console.info('[ActivityFeedCardPanel] Watch toggled, refreshing watched activity feed');
         watchedActivityFeed.refresh();
-      } else {
-        activityFeed.refresh();
       }
     };
 
-    events.on('feed:activity-refresh-requested', handleRefreshRequest);
+    events.on('watch:user-toggled', handleWatchToggle);
+    events.on('watch:repo-toggled', handleWatchToggle);
     return () => {
-      events.off('feed:activity-refresh-requested', handleRefreshRequest);
+      events.off('watch:user-toggled', handleWatchToggle);
+      events.off('watch:repo-toggled', handleWatchToggle);
     };
-  }, [events, activityFeed, watchedActivityFeed, feedMode]);
+  }, [events, watchedActivityFeed, feedMode]);
 
   // Create repo github owner map
   const repoOwnerMap = useMemo(() => {

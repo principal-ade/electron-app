@@ -16,6 +16,8 @@ import {
   User,
   Twitter,
   Github,
+  Eye,
+  EyeClosed,
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
 import type { FileTree } from '@principal-ai/repository-abstraction';
@@ -99,6 +101,21 @@ export interface UserProfilePanelActions extends PanelActions {
    * Unfollow a GitHub user (optional)
    */
   unfollowUser?: (username: string) => Promise<void>;
+
+  /**
+   * Check if user is watched
+   */
+  isUserWatched?: (username: string) => Promise<boolean>;
+
+  /**
+   * Watch a GitHub user (optional)
+   */
+  watchUser?: (username: string) => Promise<void>;
+
+  /**
+   * Unwatch a GitHub user (optional)
+   */
+  unwatchUser?: (username: string) => Promise<void>;
 }
 
 interface UserProfilePanelProps {
@@ -291,6 +308,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   // Hover state for commits this year stat
   const [isCommitsStatHovered, setIsCommitsStatHovered] = useState(false);
 
+  // Watch state
+  const [isWatched, setIsWatched] = useState(false);
+  const [isWatchLoading, setIsWatchLoading] = useState(false);
+
   const spacing = useMemo(
     () => ({
       xs: 4,
@@ -386,6 +407,33 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     };
   }, [user, actions]);
 
+  // Load watch status when user changes
+  useEffect(() => {
+    if (!user || !actions.isUserWatched) {
+      setIsWatched(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadWatchStatus = async () => {
+      try {
+        const watched = await actions.isUserWatched!(user.username);
+        if (!cancelled) {
+          setIsWatched(watched);
+        }
+      } catch (err) {
+        console.error('Failed to load watch status:', err);
+      }
+    };
+
+    loadWatchStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, actions]);
+
   // Lazy fetch file trees for repositories
   useEffect(() => {
     if (repositories.length === 0 || !actions.getRepositoryFileTree) {
@@ -427,6 +475,46 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
       timestamp: Date.now(),
       payload: { url, type },
     });
+  };
+
+  // Handle watch/unwatch user
+  const handleToggleWatch = async () => {
+    if (!user) return;
+
+    // Check if actions are available
+    if (!actions.watchUser || !actions.unwatchUser) {
+      console.warn('Watch actions not available');
+      return;
+    }
+
+    setIsWatchLoading(true);
+    try {
+      if (isWatched) {
+        await actions.unwatchUser(user.username);
+        setIsWatched(false);
+        // Emit specific event for watch toggle
+        events.emit({
+          type: 'watch:user-toggled',
+          source: 'user-profile-panel',
+          timestamp: Date.now(),
+          payload: { username: user.username, watched: false },
+        });
+      } else {
+        await actions.watchUser(user.username);
+        setIsWatched(true);
+        // Emit specific event for watch toggle
+        events.emit({
+          type: 'watch:user-toggled',
+          source: 'user-profile-panel',
+          timestamp: Date.now(),
+          payload: { username: user.username, watched: true },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to toggle watch:', err);
+    } finally {
+      setIsWatchLoading(false);
+    }
   };
 
   // Create a display object that uses userData if available, or empty values as fallback
@@ -635,6 +723,37 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   color: theme.colors.textSecondary
                 }}>
                   following
+                </div>
+              </div>
+
+              {/* Watch Button */}
+              <div
+                style={{
+                  textAlign: 'center',
+                  cursor: isWatchLoading ? 'not-allowed' : 'pointer',
+                  opacity: isWatchLoading ? 0.6 : 1,
+                  transition: 'opacity 0.2s ease',
+                  minWidth: '65px',
+                }}
+                onClick={isWatchLoading ? undefined : handleToggleWatch}
+              >
+                <div style={{
+                  fontSize: theme.fontSizes[3],
+                  fontWeight: theme.fontWeights?.semibold ?? 600,
+                  fontFamily: theme.fonts?.body,
+                  color: isWatched ? theme.colors.primary : theme.colors.text,
+                  display: 'flex',
+                  justifyContent: 'center',
+                }}>
+                  {isWatched ? <Eye size={24} /> : <EyeClosed size={24} />}
+                </div>
+                <div style={{
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  color: theme.colors.textSecondary,
+                  whiteSpace: 'nowrap',
+                }}>
+                  {isWatched ? 'watching' : 'watch'}
                 </div>
               </div>
             </div>

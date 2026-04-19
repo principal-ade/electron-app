@@ -26,6 +26,8 @@ import {
   Github,
   Play,
   Pause,
+  Eye,
+  EyeClosed,
 } from 'lucide-react';
 import { FileCity3D, type HighlightLayer } from '@principal-ai/file-city-react';
 import {
@@ -102,6 +104,21 @@ export interface RepositoryProfilePanelActions extends PanelActions {
    * Open repository in dev workspace
    */
   openRepository: (entry: AlexandriaEntry) => Promise<void>;
+
+  /**
+   * Check if repository is watched
+   */
+  isRepositoryWatched?: (owner: string, repo: string) => Promise<boolean>;
+
+  /**
+   * Watch a GitHub repository (optional)
+   */
+  watchRepository?: (owner: string, repo: string) => Promise<void>;
+
+  /**
+   * Unwatch a GitHub repository (optional)
+   */
+  unwatchRepository?: (owner: string, repo: string) => Promise<void>;
 }
 
 interface RepositoryProfilePanelProps {
@@ -379,6 +396,10 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   } | null>(null);
   const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
 
+  // Watch state
+  const [isWatched, setIsWatched] = useState(false);
+  const [isWatchLoading, setIsWatchLoading] = useState(false);
+
   // Fetch branch status for local repositories
   useEffect(() => {
     let cancelled = false;
@@ -490,6 +511,36 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       cancelled = true;
     };
   }, [repositoryData?.localPath]);
+
+  // Load watch status when repository changes
+  useEffect(() => {
+    if (!repositoryData?.github || !actions.isRepositoryWatched) {
+      setIsWatched(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadWatchStatus = async () => {
+      try {
+        const watched = await actions.isRepositoryWatched!(
+          repositoryData.github!.owner,
+          repositoryData.github!.name
+        );
+        if (!cancelled) {
+          setIsWatched(watched);
+        }
+      } catch (err) {
+        console.error('Failed to load watch status:', err);
+      }
+    };
+
+    loadWatchStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repositoryData?.github?.owner, repositoryData?.github?.name, actions]);
 
   // Fetch file trees when repository changes
   useEffect(() => {
@@ -811,6 +862,60 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     }
   };
 
+  // Handle watch/unwatch repository
+  const handleToggleWatch = async () => {
+    if (!repositoryData?.github) return;
+
+    // Check if actions are available
+    if (!actions.watchRepository || !actions.unwatchRepository) {
+      console.warn('Watch actions not available');
+      return;
+    }
+
+    setIsWatchLoading(true);
+    try {
+      if (isWatched) {
+        await actions.unwatchRepository(
+          repositoryData.github.owner,
+          repositoryData.github.name
+        );
+        setIsWatched(false);
+        // Emit specific event for watch toggle
+        events.emit({
+          type: 'watch:repo-toggled',
+          source: 'repository-profile-panel',
+          timestamp: Date.now(),
+          payload: {
+            owner: repositoryData.github.owner,
+            repo: repositoryData.github.name,
+            watched: false,
+          },
+        });
+      } else {
+        await actions.watchRepository(
+          repositoryData.github.owner,
+          repositoryData.github.name
+        );
+        setIsWatched(true);
+        // Emit specific event for watch toggle
+        events.emit({
+          type: 'watch:repo-toggled',
+          source: 'repository-profile-panel',
+          timestamp: Date.now(),
+          payload: {
+            owner: repositoryData.github.owner,
+            repo: repositoryData.github.name,
+            watched: true,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to toggle watch:', err);
+    } finally {
+      setIsWatchLoading(false);
+    }
+  };
+
   // Empty state - no repository selected
   if (!repositoryData) {
     return (
@@ -1039,6 +1144,39 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   old
                 </div>
               </div>
+
+              {/* Watch Button */}
+              {repositoryData.github && (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    cursor: isWatchLoading ? 'not-allowed' : 'pointer',
+                    opacity: isWatchLoading ? 0.6 : 1,
+                    transition: 'opacity 0.2s ease',
+                    minWidth: '65px',
+                  }}
+                  onClick={isWatchLoading ? undefined : handleToggleWatch}
+                >
+                  <div style={{
+                    fontSize: theme.fontSizes[3],
+                    fontWeight: theme.fontWeights?.semibold ?? 600,
+                    fontFamily: theme.fonts?.body,
+                    color: isWatched ? theme.colors.primary : theme.colors.text,
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}>
+                    {isWatched ? <Eye size={24} /> : <EyeClosed size={24} />}
+                  </div>
+                  <div style={{
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.textSecondary,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {isWatched ? 'watching' : 'watch'}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

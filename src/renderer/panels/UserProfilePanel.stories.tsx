@@ -251,6 +251,9 @@ const MockUserProfilePanel: React.FC<{
   userData?: UserProfileData;
   username?: string;
 }> = ({ userData, username = 'octocat' }) => {
+  // Track watched users in component state for interactive demo
+  const [watchedUsers, setWatchedUsers] = React.useState<Set<string>>(new Set());
+
   const mockContext: UserProfilePanelContext = {
     currentScope: {
       type: 'workspace' as const,
@@ -287,6 +290,27 @@ const MockUserProfilePanel: React.FC<{
       // Simulate async delay
       await new Promise((resolve) => setTimeout(resolve, 300));
       return createMockFileTree(repoName);
+    },
+    isUserWatched: async (user: string) => {
+      // Simulate async delay
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return watchedUsers.has(user);
+    },
+    watchUser: async (user: string) => {
+      // Simulate async delay
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      console.info('[Mock] Watching user:', user);
+      setWatchedUsers((prev) => new Set([...prev, user]));
+    },
+    unwatchUser: async (user: string) => {
+      // Simulate async delay
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      console.info('[Mock] Unwatching user:', user);
+      setWatchedUsers((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(user);
+        return newSet;
+      });
     },
     openFile: async () => {},
   };

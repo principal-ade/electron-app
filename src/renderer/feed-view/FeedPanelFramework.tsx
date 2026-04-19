@@ -394,6 +394,25 @@ const RepositoryProfileTabContent: React.FC<{
       }
       return {};
     },
+
+    isRepositoryWatched: async (owner: string, repo: string) => {
+      const watches = await WebAdeService.getWatches();
+      return watches.watchedRepos.some((r) => r.owner === owner && r.repo === repo);
+    },
+
+    watchRepository: async (owner: string, repo: string) => {
+      const response = await WebAdeService.watchRepo(owner, repo);
+      if (!response.success) {
+        throw new Error('Failed to watch repository');
+      }
+    },
+
+    unwatchRepository: async (owner: string, repo: string) => {
+      const response = await WebAdeService.unwatchRepo(owner, repo);
+      if (!response.success) {
+        throw new Error('Failed to unwatch repository');
+      }
+    },
   }), []);
 
   return (
@@ -543,6 +562,25 @@ const UserProfileTabContent: React.FC<{
       }
     },
 
+    isUserWatched: async (username: string) => {
+      const watches = await WebAdeService.getWatches();
+      return watches.watchedUsers.some((u) => u.login === username);
+    },
+
+    watchUser: async (username: string) => {
+      const response = await WebAdeService.watchUser(username);
+      if (!response.success) {
+        throw new Error('Failed to watch user');
+      }
+    },
+
+    unwatchUser: async (username: string) => {
+      const response = await WebAdeService.unwatchUser(username);
+      if (!response.success) {
+        throw new Error('Failed to unwatch user');
+      }
+    },
+
     openFile: async () => {},
   }), [email, repositories]);
 
@@ -688,6 +726,25 @@ const OrgProfileTabContent: React.FC<{
       } catch (err) {
         console.error(`Failed to fetch file tree for ${owner}/${repoName}:`, err);
         return null;
+      }
+    },
+
+    isOrgWatched: async (orgName: string) => {
+      const watches = await WebAdeService.getWatches();
+      return watches.watchedUsers.some((u) => u.login === orgName);
+    },
+
+    watchOrg: async (orgName: string) => {
+      const response = await WebAdeService.watchUser(orgName);
+      if (!response.success) {
+        throw new Error('Failed to watch organization');
+      }
+    },
+
+    unwatchOrg: async (orgName: string) => {
+      const response = await WebAdeService.unwatchUser(orgName);
+      if (!response.success) {
+        throw new Error('Failed to unwatch organization');
       }
     },
 

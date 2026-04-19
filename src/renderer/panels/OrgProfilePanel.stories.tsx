@@ -250,6 +250,9 @@ const MockOrgProfilePanel: React.FC<{
   orgData?: OrgProfileData;
   orgName?: string;
 }> = ({ orgData, orgName = 'github' }) => {
+  // Track watched orgs in component state for interactive demo
+  const [watchedOrgs, setWatchedOrgs] = React.useState<Set<string>>(new Set());
+
   const mockContext: OrgProfilePanelContext = {
     currentScope: {
       type: 'workspace' as const,
@@ -286,6 +289,27 @@ const MockOrgProfilePanel: React.FC<{
       // Simulate async delay
       await new Promise((resolve) => setTimeout(resolve, 300));
       return createMockFileTree(repoName);
+    },
+    isOrgWatched: async (org: string) => {
+      // Simulate async delay
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return watchedOrgs.has(org);
+    },
+    watchOrg: async (org: string) => {
+      // Simulate async delay
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      console.info('[Mock] Watching org:', org);
+      setWatchedOrgs((prev) => new Set([...prev, org]));
+    },
+    unwatchOrg: async (org: string) => {
+      // Simulate async delay
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      console.info('[Mock] Unwatching org:', org);
+      setWatchedOrgs((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(org);
+        return newSet;
+      });
     },
     openFile: async () => {},
   };
