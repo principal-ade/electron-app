@@ -8,10 +8,29 @@ import {
   CheckCircle,
   FolderPlus,
   Folder,
-  GitBranch,
   FolderTree,
   MoveRight
 } from 'lucide-react';
+import { FileSystemService } from '../../main-process-api/FileSystemService';
+
+// Git Logo Component
+const GitLogo: React.FC<{ size?: number; color?: string }> = ({
+  size = 40,
+  color = '#F05032'
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 92 92"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M90.156 41.965L50.036 1.848a5.918 5.918 0 0 0-8.372 0l-8.328 8.332 10.566 10.566a7.03 7.03 0 0 1 7.23 1.684 7.043 7.043 0 0 1 1.673 7.277l10.183 10.184a7.026 7.026 0 0 1 7.278 1.672 7.04 7.04 0 0 1 0 9.957 7.045 7.045 0 0 1-9.961 0 7.038 7.038 0 0 1-1.532-7.66l-9.5-9.497V59.36a7.04 7.04 0 0 1 1.86 11.29 7.04 7.04 0 0 1-9.957 0 7.04 7.04 0 0 1 0-9.958 7.034 7.034 0 0 1 2.308-1.539V33.926a7.001 7.001 0 0 1-2.308-1.535 7.049 7.049 0 0 1-1.516-7.7L29.242 14.273 1.734 41.777a5.918 5.918 0 0 0 0 8.371l40.12 40.118a5.918 5.918 0 0 0 8.371 0l39.931-39.934a5.925 5.925 0 0 0 0-8.367"
+      fill={color}
+    />
+  </svg>
+);
 
 type OnboardingStep = 'welcome' | 'repo-location' | 'home-directory' | 'organize-projects' | 'github-connect' | 'ready';
 
@@ -117,10 +136,28 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     }
   };
 
-  const handleAddPath = () => {
-    // In real implementation, this would open a folder picker
-    const fakePath = `/Users/developer/projects-${repoPaths.length + 1}`;
-    setRepoPaths([...repoPaths, fakePath]);
+  const handleAddPath = async () => {
+    const result = await FileSystemService.selectDirectory({
+      title: 'Select Git Projects Folder',
+      buttonLabel: 'Select Folder',
+      properties: ['openDirectory'],
+    });
+
+    if (!result || result.canceled || !result.filePaths?.[0]) {
+      return;
+    }
+
+    const selectedPath = result.filePaths[0];
+
+    // For single mode, replace the path; for add-list mode, add to the list
+    if (repoLocationMode === 'single') {
+      setRepoPaths([selectedPath]);
+    } else {
+      // Don't add duplicates
+      if (!repoPaths.includes(selectedPath)) {
+        setRepoPaths([...repoPaths, selectedPath]);
+      }
+    }
   };
 
   const handleRemovePath = (index: number) => {
@@ -372,11 +409,11 @@ const RepoLocationStep: React.FC<RepoLocationStepProps> = ({
     }}>
       <div style={{
         display: 'inline-flex',
-        padding: 20,
-        backgroundColor: `${theme.colors.primary}15`,
+        padding: 24,
+        backgroundColor: '#ffffff',
         borderRadius: '50%'
       }}>
-        <FolderGit2 size={40} color={theme.colors.primary} />
+        <GitLogo size={60} color="#F05032" />
       </div>
     </div>
 
@@ -386,12 +423,9 @@ const RepoLocationStep: React.FC<RepoLocationStepProps> = ({
       fontWeight: 700,
       color: theme.colors.text,
       marginBottom: 12,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8
+      textAlign: 'center'
     }}>
-      Where do you keep your <GitBranch size={28} color="#F05032" style={{ margin: '0 4px' }} /> git projects?
+      Where do you keep your <span style={{ color: '#F05032' }}>git</span> projects?
     </h2>
 
     <p style={{
