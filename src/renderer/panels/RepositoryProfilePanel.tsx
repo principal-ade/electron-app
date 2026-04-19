@@ -6,7 +6,7 @@
  * Modeled after UserProfilePanel for visual consistency.
  */
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type {
   PanelContextValue,
@@ -19,8 +19,15 @@ import {
   FolderOpen,
   Trash2,
   Users,
+  GitBranch,
+  CheckCircle2,
+  AlertCircle,
+  Circle,
+  Github,
+  Play,
+  Pause,
 } from 'lucide-react';
-import { FileCity3D } from '@principal-ai/file-city-react';
+import { FileCity3D, type HighlightLayer } from '@principal-ai/file-city-react';
 import {
   buildCityDataFromFileTree,
   estimateLineCounts,
@@ -31,6 +38,7 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
+import { ShellService } from '../main-process-api/ShellService';
 
 export interface RepositoryProfileData {
   name: string;
@@ -320,8 +328,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     [],
   );
 
-  const borderRadius = theme.radii?.[1] || 4;
-
   // Read repository from context
   const repositoryData = context.currentScope?.repository as RepositoryProfileData | undefined;
 
@@ -356,6 +362,22 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     total: number;
   } | null>(null);
   const [_gitStatusLoading, setGitStatusLoading] = useState(false);
+
+  // State for showing path in cloned badge
+  const [showPath, setShowPath] = useState(false);
+
+  // State for commit playback
+  type PlayMode = 'today' | 'week' | 'year';
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playMode, setPlayMode] = useState<PlayMode>('year');
+  const [highlightLayers, setHighlightLayers] = useState<HighlightLayer[]>([]);
+  const [currentCommitInfo, setCurrentCommitInfo] = useState<{
+    hash: string;
+    message: string;
+    author: string;
+    date: string;
+  } | null>(null);
+  const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
 
   // Fetch branch status for local repositories
   useEffect(() => {
@@ -554,8 +576,8 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       // Loading state is already set by file tree fetch effect
 
       try {
-        // Build city data from file tree
-        const rootPath = fileTree.metadata?.id || '';
+        // Build city data from file tree - use empty string as root path for clean relative paths
+        const rootPath = '';
         const rawCityData = buildCityDataFromFileTree(fileTree, rootPath);
 
         // Get actual line counts if this is a local repository
@@ -564,7 +586,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           try {
             const rawLineCounts = await actions.getLineCounts(repositoryData.localPath);
 
-            // Transform line counts to use the correct rootPath prefix
+            // Transform line counts to use clean relative paths
             const repoName = repositoryData.localPath.split('/').pop() || '';
             const lineCounts: Record<string, number> = {};
             for (const [filePath, count] of Object.entries(rawLineCounts)) {
@@ -572,9 +594,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
               if (filePath.startsWith(repoName + '/')) {
                 const relativePath = filePath.slice(repoName.length + 1);
-                lineCounts[`${rootPath}/${relativePath}`] = count;
+                lineCounts[relativePath] = count;
               } else {
-                lineCounts[`${rootPath}/${filePath}`] = count;
+                lineCounts[filePath] = count;
               }
             }
 
@@ -646,6 +668,85 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         timestamp: Date.now(),
         payload: { repository: repositoryData },
       });
+    }
+  };
+
+  // Handle open in GitHub
+  const handleOpenInGitHub = async () => {
+    if (repositoryData?.htmlUrl) {
+      await ShellService.openExternal(repositoryData.htmlUrl);
+    }
+  };
+
+  // Handle playback toggle
+  const handlePlayPause = async (mode: PlayMode) => {
+    if (isPlaying) {
+      // Stop playback
+      playbackRef.current.cancelled = true;
+      setIsPlaying(false);
+      setCurrentCommitInfo(null);
+      setHighlightLayers([]);
+      return;
+    }
+
+    if (!repositoryData?.localPath) return;
+
+    playbackRef.current.cancelled = false;
+    setIsPlaying(true);
+    setPlayMode(mode);
+    setHighlightLayers([]);
+
+    try {
+      // Get commits based on mode
+      const commits = await GitService.getCommitHistory(repositoryData.localPath, mode === 'year' ? 365 : mode === 'week' ? 7 : 1);
+
+      // Play through commits
+      for (const commit of commits) {
+        if (playbackRef.current.cancelled) break; // Stop if user paused
+
+        setCurrentCommitInfo({
+          hash: commit.hash,
+          message: commit.message.split('\n')[0],
+          author: commit.author,
+          date: commit.date.split('T')[0],
+        });
+
+        // Get changed files for this commit
+        const changedFiles = await GitService.getChangedFilesForCommit(repositoryData.localPath, commit.hash);
+        const filePaths = Array.from(changedFiles.keys());
+
+        // Create highlight layer for changed files
+        const highlightItems = filePaths.map(filePath => {
+          // File paths from Git are relative to repo root
+          // City data paths match these directly (e.g., "src/components/File.tsx")
+          return {
+            type: 'file' as const,
+            path: filePath,
+            color: '#FFD700', // Gold color for changed files
+            opacity: 0.8,
+          };
+        });
+
+        setHighlightLayers([{
+          id: `commit-${commit.hash}`,
+          name: `Commit ${commit.hash.slice(0, 7)}`,
+          enabled: true,
+          color: '#FFD700',
+          priority: 1,
+          items: highlightItems,
+        }]);
+
+        // Wait before showing next commit
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    } catch (error) {
+      console.warn('[RepositoryProfilePanel] Playback error:', error);
+    } finally {
+      if (!playbackRef.current.cancelled) {
+        setIsPlaying(false);
+        setCurrentCommitInfo(null);
+        setHighlightLayers([]);
+      }
     }
   };
 
@@ -872,8 +973,8 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             )}
           </div>
 
-          {/* Stats and Action Buttons - aligned with bottom of avatar */}
-          <div style={{ flex: 1, paddingBottom: spacing.xs, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          {/* Stats - aligned with bottom of avatar */}
+          <div style={{ flex: 1, paddingBottom: spacing.xs, display: 'flex', alignItems: 'flex-end' }}>
             <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}>
               {repositoryData.contributors !== undefined && (
                 <div
@@ -938,161 +1039,281 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   old
                 </div>
               </div>
-              {/* Sync Status for local repos */}
-              {repositoryData.isLocal && branchStatus && (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    fontSize: theme.fontSizes[3],
-                    fontWeight: theme.fontWeights?.semibold ?? 600,
-                    fontFamily: theme.fonts?.body,
-                    color: !branchStatus.hasUpstream
-                      ? theme.colors.warning
-                      : branchStatus.ahead === 0 && branchStatus.behind === 0
-                        ? theme.colors.success
-                        : branchStatus.ahead > 0 && branchStatus.behind === 0
-                          ? theme.colors.info
-                          : branchStatus.ahead === 0 && branchStatus.behind > 0
-                            ? theme.colors.warning
-                            : theme.colors.error
-                  }}>
-                    {!branchStatus.hasUpstream
-                      ? 'no remote'
-                      : branchStatus.ahead === 0 && branchStatus.behind === 0
-                        ? 'in sync'
-                        : branchStatus.ahead > 0 && branchStatus.behind === 0
-                          ? `${branchStatus.ahead} ahead`
-                          : branchStatus.ahead === 0 && branchStatus.behind > 0
-                            ? `${branchStatus.behind} behind`
-                            : `${branchStatus.ahead}↑ ${branchStatus.behind}↓`
-                    }
-                  </div>
-                  <div style={{
-                    fontSize: theme.fontSizes[0],
-                    fontFamily: theme.fonts?.body,
-                    color: theme.colors.textSecondary
-                  }}>
-                    sync
-                  </div>
-                </div>
-              )}
-              {/* Git Status for local repos */}
-              {repositoryData.isLocal && gitStatus && (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    fontSize: theme.fontSizes[3],
-                    fontWeight: theme.fontWeights?.semibold ?? 600,
-                    fontFamily: theme.fonts?.body,
-                    color: gitStatus.total === 0
-                      ? theme.colors.success
-                      : gitStatus.staged > 0
-                        ? theme.colors.warning
-                        : theme.colors.textSecondary
-                  }}>
-                    {gitStatus.total === 0
-                      ? 'clean'
-                      : gitStatus.total === 1
-                        ? '1 change'
-                        : `${gitStatus.total} changes`
-                    }
-                  </div>
-                  <div style={{
-                    fontSize: theme.fontSizes[0],
-                    fontFamily: theme.fonts?.body,
-                    color: theme.colors.textSecondary
-                  }}>
-                    working dir
-                  </div>
-                </div>
-              )}
             </div>
-
-            {/* Action Buttons (for local repos) - right aligned */}
-            {repositoryData.isLocal && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                <button
-                  onClick={handleOpenRepository}
-                  title="Open in workspace"
-                  style={{
-                    padding: `${spacing.xs}px ${spacing.sm}px`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: spacing.xs,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: borderRadius,
-                    background: theme.colors.primary,
-                    color: theme.colors.background,
-                    cursor: 'pointer',
-                    transition: 'opacity 0.2s ease',
-                    fontSize: theme.fontSizes[1],
-                    fontFamily: theme.fonts?.body,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.9';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <FolderOpen size={14} />
-                  Open
-                </button>
-                <button
-                  onClick={handleDeleteRepository}
-                  title="Delete repository"
-                  style={{
-                    padding: `${spacing.xs}px ${spacing.sm}px`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: spacing.xs,
-                    border: `1px solid ${theme.colors.error}`,
-                    borderRadius: borderRadius,
-                    background: 'transparent',
-                    color: theme.colors.error,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    fontSize: theme.fontSizes[1],
-                    fontFamily: theme.fonts?.body,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.error;
-                    e.currentTarget.style.color = theme.colors.background;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = theme.colors.error;
-                  }}
-                >
-                  <Trash2 size={14} />
-                  Delete
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Repository Name and Local Path */}
+        {/* Repository Name and Status Badge */}
         <div style={{ marginBottom: spacing.md }}>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: theme.fontSizes[4],
-              fontWeight: theme.fontWeights?.semibold ?? 600,
-              fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
-              color: theme.colors.text,
-            }}
-          >
-            {repositoryData.name}
-          </h2>
-          {repositoryData.localPath && (
-            <div
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+            {repositoryData.htmlUrl && (
+              <button
+                onClick={handleOpenInGitHub}
+                title="Open in GitHub"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: theme.colors.textSecondary,
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = theme.colors.text;
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <Github size={24} />
+              </button>
+            )}
+            <h2
               style={{
-                fontSize: theme.fontSizes[2],
-                fontFamily: theme.fonts?.body,
-                color: theme.colors.textSecondary,
-                marginTop: spacing.xs,
+                margin: 0,
+                fontSize: theme.fontSizes[4],
+                fontWeight: theme.fontWeights?.semibold ?? 600,
+                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                color: theme.colors.text,
               }}
             >
-              {shortenPath(repositoryData.localPath)}
+              {repositoryData.name}
+            </h2>
+          </div>
+          {repositoryData.isLocal && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.sm,
+                marginTop: spacing.sm,
+                flexWrap: 'wrap',
+              }}
+            >
+              {/* Cloned Badge */}
+              <button
+                onClick={() => setShowPath(!showPath)}
+                title={showPath ? 'Click to show "cloned"' : 'Click to show path'}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  backgroundColor: `${theme.colors.success}15`,
+                  border: `1px solid ${theme.colors.success}30`,
+                  borderRadius: 6,
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  fontWeight: theme.fontWeights?.medium ?? 500,
+                  color: theme.colors.success,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = `${theme.colors.success}25`;
+                  e.currentTarget.style.borderColor = `${theme.colors.success}50`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = `${theme.colors.success}15`;
+                  e.currentTarget.style.borderColor = `${theme.colors.success}30`;
+                }}
+              >
+                <FolderGit2 size={12} />
+                {showPath && repositoryData.localPath
+                  ? shortenPath(repositoryData.localPath)
+                  : 'cloned'}
+              </button>
+
+              {/* Branch and Status Badge */}
+              {branchStatus && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    padding: `${spacing.xs}px ${spacing.sm}px`,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: 6,
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    fontWeight: theme.fontWeights?.medium ?? 500,
+                    color: theme.colors.text,
+                  }}
+                >
+                  <GitBranch size={12} />
+                  <span>{branchStatus.branch}</span>
+
+                  {/* Status Indicator */}
+                  {gitStatus && gitStatus.total > 0 ? (
+                    <>
+                      <span style={{ color: theme.colors.textSecondary }}>•</span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          color: gitStatus.staged > 0 ? theme.colors.warning : theme.colors.textSecondary,
+                        }}
+                      >
+                        <Circle size={8} fill="currentColor" />
+                        <span>
+                          {gitStatus.total === 1 ? '1 change' : `${gitStatus.total} changes`}
+                        </span>
+                      </div>
+                    </>
+                  ) : !branchStatus.hasUpstream ? (
+                    <>
+                      <span style={{ color: theme.colors.textSecondary }}>•</span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          color: theme.colors.warning,
+                        }}
+                      >
+                        <AlertCircle size={12} />
+                        <span>no remote</span>
+                      </div>
+                    </>
+                  ) : branchStatus.ahead === 0 && branchStatus.behind === 0 ? (
+                    <>
+                      <span style={{ color: theme.colors.textSecondary }}>•</span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          color: theme.colors.success,
+                        }}
+                      >
+                        <CheckCircle2 size={12} />
+                        <span>in sync</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ color: theme.colors.textSecondary }}>•</span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          color: branchStatus.ahead > 0 && branchStatus.behind > 0
+                            ? theme.colors.error
+                            : branchStatus.behind > 0
+                              ? theme.colors.warning
+                              : theme.colors.info,
+                        }}
+                      >
+                        <AlertCircle size={12} />
+                        <span>
+                          {branchStatus.ahead > 0 && branchStatus.behind === 0
+                            ? `${branchStatus.ahead} ahead`
+                            : branchStatus.ahead === 0 && branchStatus.behind > 0
+                              ? `${branchStatus.behind} behind`
+                              : `${branchStatus.ahead}↑ ${branchStatus.behind}↓`}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {repositoryData.isLocal && (
+                <>
+                  <button
+                    onClick={handleOpenRepository}
+                    title="Open in workspace"
+                    style={{
+                      padding: `${spacing.xs}px ${spacing.sm}px`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.xs,
+                      border: 'none',
+                      borderRadius: 6,
+                      background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}dd)`,
+                      color: theme.colors.background,
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts?.body,
+                      fontWeight: theme.fontWeights?.medium ?? 500,
+                      boxShadow: `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`;
+                    }}
+                    onMouseDown={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = `0 1px 4px ${theme.colors.primary}30`;
+                    }}
+                    onMouseUp={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
+                    }}
+                  >
+                    <FolderOpen size={12} />
+                    Open
+                  </button>
+                  <button
+                    onClick={handleDeleteRepository}
+                    title="Delete repository"
+                    style={{
+                      padding: `${spacing.xs}px ${spacing.sm}px`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.xs,
+                      border: `1px solid ${theme.colors.error}50`,
+                      borderRadius: 6,
+                      background: `${theme.colors.error}08`,
+                      color: theme.colors.error,
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts?.body,
+                      fontWeight: theme.fontWeights?.medium ?? 500,
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = theme.colors.error;
+                      e.currentTarget.style.color = theme.colors.background;
+                      e.currentTarget.style.borderColor = theme.colors.error;
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.error}40, 0 2px 4px rgba(0, 0, 0, 0.1)`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = `${theme.colors.error}08`;
+                      e.currentTarget.style.color = theme.colors.error;
+                      e.currentTarget.style.borderColor = `${theme.colors.error}50`;
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                    }}
+                    onMouseDown={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.1)';
+                    }}
+                    onMouseUp={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.error}40, 0 2px 4px rgba(0, 0, 0, 0.1)`;
+                    }}
+                  >
+                    <Trash2 size={12} />
+                    Delete
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -1222,60 +1443,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 </div>
               ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-                {/* Total Commits */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                  <span
-                    style={{
-                      fontSize: theme.fontSizes[1],
-                      fontWeight: 500,
-                      color: theme.colors.textSecondary,
-                      fontFamily: theme.fonts?.body,
-                    }}
-                  >
-                    Total Commits:
-                  </span>
-                  <span
-                    style={{
-                      fontSize: theme.fontSizes[4],
-                      fontWeight: theme.fontWeights?.semibold ?? 600,
-                      color: theme.colors.text,
-                      fontFamily: theme.fonts?.body,
-                    }}
-                  >
-                    {formatNumber(repositoryData.totalCommits)}
-                  </span>
-                </div>
-
-                {/* Last Updated */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                  <span
-                    style={{
-                      fontSize: theme.fontSizes[1],
-                      fontWeight: 500,
-                      color: theme.colors.textSecondary,
-                      fontFamily: theme.fonts?.body,
-                    }}
-                  >
-                    Last Updated:
-                  </span>
-                  <span
-                    style={{
-                      fontSize: theme.fontSizes[2],
-                      color: theme.colors.text,
-                      fontFamily: theme.fonts?.body,
-                    }}
-                  >
-                    {new Date(repositoryData.updatedAt).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </span>
-                </div>
-
-                {/* Open Issues (if any) */}
-                {repositoryData.openIssues > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                {/* Playback Buttons (for local repos) */}
+                {repositoryData.isLocal && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, marginTop: spacing.md }}>
                     <span
                       style={{
                         fontSize: theme.fontSizes[1],
@@ -1284,116 +1454,145 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                         fontFamily: theme.fonts?.body,
                       }}
                     >
-                      Open Issues:
+                      Commit History:
                     </span>
-                    <span
-                      style={{
-                        fontSize: theme.fontSizes[2],
-                        color: theme.colors.text,
-                        fontFamily: theme.fonts?.body,
-                      }}
-                    >
-                      {formatNumber(repositoryData.openIssues)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Git Working Directory Status (for local repos) */}
-                {repositoryData.isLocal && gitStatus && gitStatus.total > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                    <span
-                      style={{
-                        fontSize: theme.fontSizes[1],
-                        fontWeight: 500,
-                        color: theme.colors.textSecondary,
-                        fontFamily: theme.fonts?.body,
-                      }}
-                    >
-                      Working Directory:
-                    </span>
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 4,
-                        padding: spacing.sm,
-                        backgroundColor: theme.colors.background,
-                        borderRadius: theme.radii?.[1] || 4,
-                        border: `1px solid ${theme.colors.border}`,
-                      }}
-                    >
-                      {gitStatus.staged > 0 && (
-                        <div
+                    <div style={{ display: 'flex', gap: spacing.xs, flexWrap: 'wrap' }}>
+                      {isPlaying ? (
+                        <button
+                          onClick={() => handlePlayPause(playMode)}
                           style={{
                             display: 'flex',
-                            justifyContent: 'space-between',
-                            fontSize: theme.fontSizes[1],
+                            alignItems: 'center',
+                            gap: spacing.xs,
+                            padding: `${spacing.xs}px ${spacing.sm}px`,
+                            background: theme.colors.backgroundSecondary,
+                            border: `1px solid ${theme.colors.border}`,
+                            borderRadius: 6,
+                            color: theme.colors.text,
+                            fontSize: theme.fontSizes[0],
                             fontFamily: theme.fonts?.body,
+                            fontWeight: theme.fontWeights?.medium ?? 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
                           }}
                         >
-                          <span style={{ color: theme.colors.textSecondary }}>Staged:</span>
-                          <span style={{ color: theme.colors.success, fontWeight: 500 }}>
-                            {gitStatus.staged}
-                          </span>
-                        </div>
-                      )}
-                      {gitStatus.modified > 0 && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            fontSize: theme.fontSizes[1],
-                            fontFamily: theme.fonts?.body,
-                          }}
-                        >
-                          <span style={{ color: theme.colors.textSecondary }}>Modified:</span>
-                          <span style={{ color: theme.colors.warning, fontWeight: 500 }}>
-                            {gitStatus.modified}
-                          </span>
-                        </div>
-                      )}
-                      {gitStatus.untracked > 0 && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            fontSize: theme.fontSizes[1],
-                            fontFamily: theme.fonts?.body,
-                          }}
-                        >
-                          <span style={{ color: theme.colors.textSecondary }}>Untracked:</span>
-                          <span style={{ color: theme.colors.textTertiary, fontWeight: 500 }}>
-                            {gitStatus.untracked}
-                          </span>
-                        </div>
+                          <Pause size={12} />
+                          Stop
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handlePlayPause('today')}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: spacing.xs,
+                              padding: `${spacing.xs}px ${spacing.sm}px`,
+                              background: theme.colors.backgroundSecondary,
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: 6,
+                              color: theme.colors.text,
+                              fontSize: theme.fontSizes[0],
+                              fontFamily: theme.fonts?.body,
+                              fontWeight: theme.fontWeights?.medium ?? 500,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = `${theme.colors.primary}15`;
+                              e.currentTarget.style.borderColor = theme.colors.primary;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = theme.colors.backgroundSecondary;
+                              e.currentTarget.style.borderColor = theme.colors.border;
+                            }}
+                          >
+                            <Play size={12} />
+                            Latest
+                          </button>
+                          <button
+                            onClick={() => handlePlayPause('week')}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: spacing.xs,
+                              padding: `${spacing.xs}px ${spacing.sm}px`,
+                              background: theme.colors.backgroundSecondary,
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: 6,
+                              color: theme.colors.text,
+                              fontSize: theme.fontSizes[0],
+                              fontFamily: theme.fonts?.body,
+                              fontWeight: theme.fontWeights?.medium ?? 500,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = `${theme.colors.primary}15`;
+                              e.currentTarget.style.borderColor = theme.colors.primary;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = theme.colors.backgroundSecondary;
+                              e.currentTarget.style.borderColor = theme.colors.border;
+                            }}
+                          >
+                            <Play size={12} />
+                            Last 7 Active
+                          </button>
+                          <button
+                            onClick={() => handlePlayPause('year')}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: spacing.xs,
+                              padding: `${spacing.xs}px ${spacing.sm}px`,
+                              background: theme.colors.backgroundSecondary,
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: 6,
+                              color: theme.colors.text,
+                              fontSize: theme.fontSizes[0],
+                              fontFamily: theme.fonts?.body,
+                              fontWeight: theme.fontWeights?.medium ?? 500,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = `${theme.colors.primary}15`;
+                              e.currentTarget.style.borderColor = theme.colors.primary;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = theme.colors.backgroundSecondary;
+                              e.currentTarget.style.borderColor = theme.colors.border;
+                            }}
+                          >
+                            <Play size={12} />
+                            Full Year
+                          </button>
+                        </>
                       )}
                     </div>
+
+                    {/* Current commit info during playback */}
+                    {currentCommitInfo && (
+                      <div
+                        style={{
+                          padding: spacing.sm,
+                          background: `${theme.colors.primary}10`,
+                          border: `1px solid ${theme.colors.primary}30`,
+                          borderRadius: 6,
+                          fontSize: theme.fontSizes[0],
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, marginBottom: spacing.xs, color: theme.colors.text }}>
+                          {currentCommitInfo.message}
+                        </div>
+                        <div style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[0] }}>
+                          {currentCommitInfo.author} • {currentCommitInfo.date}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-
-                {/* Activity Indicator */}
-                <div
-                  style={{
-                    marginTop: 'auto',
-                    paddingTop: spacing.md,
-                    borderTop: `1px solid ${theme.colors.border}`,
-                    fontSize: theme.fontSizes[1],
-                    color: theme.colors.textSecondary,
-                    fontFamily: theme.fonts?.body,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                    <div
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        backgroundColor: theme.colors.success,
-                      }}
-                    />
-                    <span>Active repository</span>
-                  </div>
-                </div>
               </div>
               )}
             </section>
@@ -1420,6 +1619,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               linearScale={0.5}
               animation={{ startFlat: true, autoStartDelay: null }}
               backgroundColor={theme.colors.backgroundSecondary}
+              highlightLayers={highlightLayers}
               style={{
                 width: '100%',
                 height: '100%',
