@@ -44,10 +44,10 @@ export interface UserProfileData {
   twitterHandle?: string;
   websiteUrl?: string;
   activityData: Map<string, number>; // date -> commit count
-  totalCommits: number;
-  totalRepos: number;
-  followers: number;
-  following: number;
+  totalCommits?: number;
+  totalRepos?: number;
+  followers?: number;
+  following?: number;
   joinedDate: string; // ISO date string
 }
 
@@ -265,7 +265,12 @@ const ActivityHeatmap: React.FC<{
 /**
  * Format number with k/m suffix
  */
-function formatNumber(num: number): string {
+function formatNumber(num: number | undefined): string {
+  // Handle undefined, null, or NaN values - show loading indicator
+  if (num === undefined || num === null || Number.isNaN(num)) {
+    return '—';
+  }
+
   if (num >= 1000000) {
     return `${(num / 1000000).toFixed(1).replace(/\.0$/, '')}m`;
   }
@@ -518,21 +523,23 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   };
 
   // Create a display object that uses userData if available, or empty values as fallback
+  // Eagerly construct avatar URL from username for instant display
+  // Use undefined for numeric values to show loading state ("—") vs actual 0
   const displayData: UserProfileData = userData || {
     username: user?.username || '',
     name: undefined,
     email: undefined,
-    avatarUrl: undefined,
+    avatarUrl: user?.username ? `https://github.com/${user.username}.png` : undefined,
     bio: undefined,
     location: undefined,
     company: undefined,
     twitterHandle: undefined,
     websiteUrl: undefined,
     activityData: new Map(),
-    totalCommits: 0,
-    totalRepos: 0,
-    followers: 0,
-    following: 0,
+    totalCommits: undefined,
+    totalRepos: undefined,
+    followers: undefined,
+    following: undefined,
     joinedDate: new Date().toISOString(),
   };
 
@@ -540,6 +547,11 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
   // Calculate commits this year from activityData
   const commitsThisYear = useMemo(() => {
+    // Return undefined during loading state
+    if (!userData) {
+      return undefined;
+    }
+
     const currentYear = new Date().getFullYear();
     let count = 0;
     displayData.activityData.forEach((commits, dateKey) => {
@@ -549,7 +561,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
       }
     });
     return count;
-  }, [displayData.activityData]);
+  }, [userData, displayData.activityData]);
 
   // Empty state - no user selected
   if (!user) {

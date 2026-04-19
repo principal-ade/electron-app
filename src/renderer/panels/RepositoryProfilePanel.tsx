@@ -56,7 +56,7 @@ export interface RepositoryProfileData {
   openIssues: number;
   size: number; // in KB
   activityData: Map<string, number>; // date -> commit count
-  totalCommits: number;
+  totalCommits?: number; // Optional to show loading state
   contributors?: number; // Number of contributors
   defaultBranch: string;
   createdAt: string; // ISO date string
@@ -259,7 +259,12 @@ const ActivityHeatmap: React.FC<{
 /**
  * Format number with k/m suffix
  */
-function formatNumber(num: number): string {
+function formatNumber(num: number | undefined): string {
+  // Handle undefined, null, or NaN values - show loading indicator
+  if (num === undefined || num === null || Number.isNaN(num)) {
+    return '—';
+  }
+
   if (num >= 1000000) {
     return `${(num / 1000000).toFixed(1).replace(/\.0$/, '')}m`;
   }
@@ -274,6 +279,12 @@ function formatNumber(num: number): string {
  */
 function getRepositoryAge(createdAt: string): string {
   const created = new Date(createdAt);
+
+  // Handle invalid dates - show loading indicator
+  if (isNaN(created.getTime())) {
+    return '—';
+  }
+
   const now = new Date();
   const diffMs = now.getTime() - created.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -1081,35 +1092,33 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           {/* Stats - aligned with bottom of avatar */}
           <div style={{ flex: 1, paddingBottom: spacing.xs, display: 'flex', alignItems: 'flex-end' }}>
             <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}>
-              {repositoryData.contributors !== undefined && (
-                <div
-                  style={{ textAlign: 'center', cursor: 'pointer', transition: 'opacity 0.2s ease' }}
-                  onClick={handleContributorsClick}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.7';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                  title="Click to view contributors"
-                >
-                  <div style={{
-                    fontSize: theme.fontSizes[3],
-                    fontWeight: theme.fontWeights?.semibold ?? 600,
-                    fontFamily: theme.fonts?.body,
-                    color: theme.colors.text
-                  }}>
-                    {formatNumber(repositoryData.contributors)}
-                  </div>
-                  <div style={{
-                    fontSize: theme.fontSizes[0],
-                    fontFamily: theme.fonts?.body,
-                    color: theme.colors.textSecondary
-                  }}>
-                    devs
-                  </div>
+              <div
+                style={{ textAlign: 'center', cursor: 'pointer', transition: 'opacity 0.2s ease' }}
+                onClick={handleContributorsClick}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.7';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+                title="Click to view contributors"
+              >
+                <div style={{
+                  fontSize: theme.fontSizes[3],
+                  fontWeight: theme.fontWeights?.semibold ?? 600,
+                  fontFamily: theme.fonts?.body,
+                  color: theme.colors.text
+                }}>
+                  {formatNumber(repositoryData.contributors)}
                 </div>
-              )}
+                <div style={{
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  color: theme.colors.textSecondary
+                }}>
+                  devs
+                </div>
+              </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{
                   fontSize: theme.fontSizes[3],
@@ -1550,35 +1559,49 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   Loading contributors...
                 </div>
               ) : showContributors ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, flex: 1, overflow: 'auto' }}>
-                  {contributors.map((contributor, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: spacing.sm,
-                        backgroundColor: theme.colors.background,
-                        borderRadius: theme.radii?.[1] || 4,
-                        fontSize: theme.fontSizes[1],
-                        fontFamily: theme.fonts?.body,
-                      }}
-                    >
-                      <span style={{ color: theme.colors.text, flex: 1 }}>
-                        {contributor.name}
-                      </span>
-                      <span style={{
-                        color: theme.colors.textSecondary,
-                        fontSize: theme.fontSizes[0],
-                        minWidth: '60px',
-                        textAlign: 'right',
-                      }}>
-                        {formatNumber(contributor.commits)} commit{contributor.commits !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                contributors.length === 0 ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: spacing.lg,
+                    color: theme.colors.textSecondary,
+                    fontFamily: theme.fonts?.body,
+                    fontSize: theme.fontSizes[1],
+                  }}>
+                    No contributors found
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, flex: 1, overflow: 'auto' }}>
+                    {contributors.map((contributor, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: spacing.sm,
+                          backgroundColor: theme.colors.background,
+                          borderRadius: theme.radii?.[1] || 4,
+                          fontSize: theme.fontSizes[1],
+                          fontFamily: theme.fonts?.body,
+                        }}
+                      >
+                        <span style={{ color: theme.colors.text, flex: 1 }}>
+                          {contributor.name}
+                        </span>
+                        <span style={{
+                          color: theme.colors.textSecondary,
+                          fontSize: theme.fontSizes[0],
+                          minWidth: '60px',
+                          textAlign: 'right',
+                        }}>
+                          {formatNumber(contributor.commits)} commit{contributor.commits !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )
               ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
                 {/* Playback Buttons (for local repos) */}
