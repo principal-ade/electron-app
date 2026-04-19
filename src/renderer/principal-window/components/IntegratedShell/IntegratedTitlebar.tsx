@@ -36,6 +36,7 @@ interface IntegratedTitlebarProps {
   onUpdateClick?: () => void;
   hideUpdateButton?: boolean;
   onNavigateToOnboarding?: () => void;
+  onShowOnboardingWizard?: () => void;
 }
 
 export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
@@ -48,6 +49,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   onUpdateClick,
   hideUpdateButton = false,
   onNavigateToOnboarding,
+  onShowOnboardingWizard,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showThemeButton, setShowThemeButton] = useState(false);
@@ -235,14 +237,14 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           alignItems: 'center',
           fontSize: theme.fontSizes[3],
           fontWeight: theme.fontWeights.heading,
-          color: theme.colors.primary,
+          color: theme.colors.text,
           fontFamily: theme.fonts.heading,
           WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
           pointerEvents: 'none',
           zIndex: 101,
         }}
       >
-        Principal AI
+        Principal <span style={{ color: theme.colors.primary, marginLeft: 4 }}>AI</span>
       </div>
 
       {/* Right controls */}
@@ -258,6 +260,37 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         {/* Onboarding button */}
         {onNavigateToOnboarding && (
           <OnboardingButton onClick={onNavigateToOnboarding} />
+        )}
+        {/* Onboarding Wizard Test Button */}
+        {onShowOnboardingWizard && (
+          <button
+            onClick={onShowOnboardingWizard}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              backgroundColor: theme.colors.primary,
+              color: '#ffffff',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: theme.fontSizes[1],
+              fontWeight: 500,
+              fontFamily: theme.fonts.body,
+              transition: 'all 0.2s',
+              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+            title="Test Onboarding Wizard"
+          >
+            Onboarding Wizard
+          </button>
         )}
         {/* Open Thread button */}
         <button

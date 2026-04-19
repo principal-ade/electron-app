@@ -26,6 +26,7 @@ import {
   useAgentCommandPalette,
 } from '@principal-ade/panel-layouts';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
+import { OnboardingWizard } from '../../../components/OnboardingWizard/OnboardingWizard';
 import './IntegratedShell.css';
 
 export type NavigationView = InteractiveShellNavigationView;
@@ -114,6 +115,7 @@ export const IntegratedShell: React.FC = () => {
   const [activeView, setActiveView] = useState<NavigationView>('activity-cities');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | undefined>(undefined);
+  const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const { theme, mode } = useTheme();
   const { events } = usePrincipalEvents();
 
@@ -534,6 +536,7 @@ export const IntegratedShell: React.FC = () => {
             setSettingsCategory('updates');
             handleViewChange('settings');
           }}
+          onShowOnboardingWizard={() => setShowOnboardingWizard(true)}
           hideUpdateButton={activeView === 'settings'}
           onNavigateToOnboarding={() => handleViewChange('onboarding')}
         />
@@ -608,6 +611,21 @@ export const IntegratedShell: React.FC = () => {
           placeholder: 'What would you like to do?',
         }}
       />
+
+      {/* Onboarding Wizard Overlay */}
+      {showOnboardingWizard && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 10000
+        }}>
+          <OnboardingWizard
+            onComplete={() => {
+              setShowOnboardingWizard(false);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
