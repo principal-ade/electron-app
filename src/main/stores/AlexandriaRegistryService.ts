@@ -7,7 +7,10 @@ import {
   AlexandriaOutpostManager,
   MemoryPalace,
 } from '@principal-ai/alexandria-core-library';
-import { NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library/node';
+import {
+  NodeFileSystemAdapter,
+  NodeGlobAdapter,
+} from '@principal-ai/alexandria-core-library/node';
 import type {
   AlexandriaEntry,
   CodebaseView,
@@ -16,7 +19,6 @@ import type {
 } from '@principal-ai/alexandria-core-library';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
-import { LocalNodeGlobAdapter } from '../adapters/LocalNodeGlobAdapter';
 import { homedir } from 'os';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
@@ -29,7 +31,7 @@ export class AlexandriaRegistryService {
   private constructor() {
     // Create filesystem and glob adapters for outpost manager
     const fsAdapter = new NodeFileSystemAdapter();
-    const globAdapter = new LocalNodeGlobAdapter(); // Use our local fixed adapter
+    const globAdapter = new NodeGlobAdapter();
     const homeDir = homedir(); // Get user's home directory
     this.outpostManager = new AlexandriaOutpostManager(
       fsAdapter,
@@ -259,17 +261,8 @@ export class AlexandriaRegistryService {
         return false;
       }
 
-      // Access the private projectRegistry field via reflection
-      // This is a workaround until AlexandriaOutpostManager exposes removal
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const registryField = (this.outpostManager as any).projectRegistry;
-      if (!registryField || typeof registryField.removeProject !== 'function') {
-        console.error('Cannot access project registry for removal');
-        return false;
-      }
-
-      // Remove from registry
-      const removed = registryField.removeProject(name);
+      // Remove from registry using the public API
+      const removed = this.outpostManager.removeRepository(name);
 
       if (!removed) {
         console.warn(`Failed to remove repository from registry: ${name}`);
@@ -463,11 +456,7 @@ export class AlexandriaRegistryService {
       throw new Error(`Repository not found: ${name}`);
     }
 
-    const docs = await this.outpostManager.getAlexandriaEntryDocs(entry);
-
-    // TODO: Remove deduplication once Alexandria library is fixed to not return duplicates
-    // Temporary fix: deduplicate documents array
-    return Array.from(new Set(docs));
+    return this.outpostManager.getAlexandriaEntryDocs(entry);
   }
 
   /**
@@ -520,14 +509,10 @@ export class AlexandriaRegistryService {
     // These are still valid documents but don't need to be associated with views
     const excluded = this.outpostManager.getAlexandriaEntryExcludedDocs(entry);
 
-    // TODO: Remove deduplication once Alexandria library is fixed to not return duplicates
-    // Temporary fix: deduplicate documents array
-    const uniqueDocuments = Array.from(new Set(allDocuments));
-
     // For search indexing, we want to index ALL documents including excluded ones
     // The excluded list is returned for informational purposes only
     return {
-      documents: uniqueDocuments,
+      documents: allDocuments,
       excluded,
     };
   }
@@ -828,7 +813,7 @@ export class AlexandriaRegistryService {
   ): Promise<AlexandriaEntry[]> {
     return this.outpostManager.workspaces.getRepositoriesInWorkspace(
       workspaceId,
-      this.outpostManager['projectRegistry'], // Access internal projectRegistry
+      this.outpostManager.getProjectRegistry(),
     );
   }
 
