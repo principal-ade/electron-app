@@ -30,13 +30,38 @@ const createMockFileSystemService = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
       return mockFolders;
     },
-    scanFoldersForRepos: async (_folderPaths: string[]): Promise<{ success: boolean; repos: Array<{ path: string; name: string; owner?: string }>; error?: string }> => {
+    scanFoldersForRepos: async (_folderPaths: string[]): Promise<{ success: boolean; repos: Array<{ path: string; name: string; owner?: string; registered?: boolean; alreadyRegistered?: boolean; registrationError?: string }>; error?: string }> => {
       // Simulate scanning with progress
       return new Promise((resolve) => {
         setTimeout(() => {
+          // Simulate different registration states
+          const reposWithStatus = mockRepos.map((repo, idx) => {
+            if (idx === 0) {
+              // First repo: already registered
+              return {
+                ...repo,
+                registered: true,
+                alreadyRegistered: true
+              };
+            } else if (idx === 2) {
+              // Third repo: registration failed
+              return {
+                ...repo,
+                registered: false,
+                registrationError: 'Failed to access repository directory'
+              };
+            } else {
+              // Others: newly registered
+              return {
+                ...repo,
+                registered: true,
+                alreadyRegistered: false
+              };
+            }
+          });
           resolve({
             success: true,
-            repos: mockRepos
+            repos: reposWithStatus
           });
         }, 3000); // 3 second simulated scan
       });

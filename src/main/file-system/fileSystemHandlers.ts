@@ -19,6 +19,7 @@ import { RecentReposAPIEvent } from '../../shared/main-process-api-interfaces/Re
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
 import { GitRepositoryScannerService } from './gitRepositoryScannerService';
+import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import os from 'os';
 
 export class ElectronFileSystemAdapter {
@@ -2677,6 +2678,7 @@ This placeholder skill can be safely deleted once you've installed your first sk
   ipcMain.handle(FileSystemAPIEvent.SCAN_FOLDERS_FOR_REPOS, async (event, folderPaths: string[]) => {
     try {
       const scanner = GitRepositoryScannerService.getInstance();
+      const alexandriaService = AlexandriaRegistryService.getInstance();
       const senderWindow = BrowserWindow.fromWebContents(event.sender);
 
       let allRepos: string[] = [];
@@ -2705,7 +2707,68 @@ This placeholder skill can be safely deleted once you've installed your first sk
       // Get repository info (including owner from git remotes)
       const scannedRepos = await scanner.getRepositoriesInfo(allRepos);
 
-      return { success: true, repos: scannedRepos };
+      // Register each repository with Alexandria one at a time
+      const reposWithStatus = await Promise.all(
+        scannedRepos.map(async (repo) => {
+          try {
+            // Check if repo is already registered at this exact path
+            const existingByPath = await alexandriaService.getRepositoryByPath(repo.path);
+            if (existingByPath) {
+              console.log(`[scanFoldersForRepos] Repository already registered at path: ${repo.path}`);
+              return {
+                ...repo,
+                registered: true,
+                alreadyRegistered: true
+              };
+            }
+
+            // Try to get remote URL from git
+            let remoteUrl: string | undefined;
+            try {
+              const remotes = await gitClientFactory.getRemotes(repo.path);
+              const originRemote = remotes.find((r) => r.name === 'origin');
+              remoteUrl = originRemote?.url;
+            } catch (error) {
+              console.log(`[scanFoldersForRepos] Could not get remote URL for ${repo.name}:`, error);
+            }
+
+            // Check for name conflict and generate unique name if needed
+            let finalName = repo.name;
+            let nameCounter = 2;
+            while (await alexandriaService.getRepository(finalName)) {
+              finalName = `${repo.name}-${nameCounter}`;
+              nameCounter++;
+            }
+
+            if (finalName !== repo.name) {
+              console.log(`[scanFoldersForRepos] Name conflict detected, using: ${finalName} instead of ${repo.name}`);
+            }
+
+            // Register the repository
+            await alexandriaService.registerRepository(finalName, repo.path, remoteUrl);
+
+            console.log(`[scanFoldersForRepos] Successfully registered: ${finalName} at ${repo.path}`);
+
+            return {
+              ...repo,
+              name: finalName, // Use the final name (may be modified for uniqueness)
+              registered: true,
+              alreadyRegistered: false
+            };
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`[scanFoldersForRepos] Failed to register ${repo.name}:`, errorMessage);
+
+            return {
+              ...repo,
+              registered: false,
+              registrationError: errorMessage
+            };
+          }
+        })
+      );
+
+      return { success: true, repos: reposWithStatus };
     } catch (error) {
       console.error('[scanFoldersForRepos] Failed:', error);
       return {

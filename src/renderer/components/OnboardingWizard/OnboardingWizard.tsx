@@ -8,7 +8,9 @@ import {
   FolderPlus,
   Folder,
   FolderTree,
-  MoveRight
+  MoveRight,
+  AlertCircle,
+  Info
 } from 'lucide-react';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 
@@ -62,7 +64,7 @@ interface OnboardingWizardProps {
   // Service methods for testing/mocking
   fileSystemService?: {
     getTopLevelFolders: () => Promise<TopLevelFolder[]>;
-    scanFoldersForRepos: (folderPaths: string[]) => Promise<{ success: boolean; repos: Array<{ path: string; name: string; owner?: string }>; error?: string }>;
+    scanFoldersForRepos: (folderPaths: string[]) => Promise<{ success: boolean; repos: Array<{ path: string; name: string; owner?: string; registered?: boolean; alreadyRegistered?: boolean; registrationError?: string }>; error?: string }>;
     onRepoScanProgress: (callback: (progress: { current: number; total: number; currentFolder: string; foundRepos: number }) => void) => () => void;
     selectDirectory: (options?: { title?: string; buttonLabel?: string; properties?: Array<'openDirectory' | 'createDirectory' | 'promptToCreate'> }) => Promise<{ filePaths: string[]; canceled: boolean } | { canceled: true } | null>;
   };
@@ -92,7 +94,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [repoPaths, setRepoPaths] = useState<string[]>([]);
   const [topLevelFolders, setTopLevelFolders] = useState<TopLevelFolder[]>([]);
   const [isLoadingFolders, setIsLoadingFolders] = useState(false);
-  const [foundProjects, setFoundProjects] = useState<Array<{ currentPath: string; owner: string; name: string }>>([]);
+  const [foundProjects, setFoundProjects] = useState<Array<{ currentPath: string; owner: string; name: string; registered?: boolean; alreadyRegistered?: boolean; registrationError?: string }>>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState({ current: 0, total: 0, currentFolder: '', foundRepos: 0 });
   const [githubConnected, setGithubConnected] = useState(false);
@@ -167,7 +169,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         const projects = result.repos.map(repo => ({
           currentPath: repo.path,
           owner: repo.owner || 'local', // Fallback for repos without remotes
-          name: repo.name
+          name: repo.name,
+          registered: repo.registered,
+          alreadyRegistered: repo.alreadyRegistered,
+          registrationError: repo.registrationError
         }));
         setFoundProjects(projects);
       }
@@ -1043,7 +1048,7 @@ interface ScanningStepProps {
   theme: Theme;
   isScanning: boolean;
   progress: { current: number; total: number; currentFolder: string };
-  foundProjects: Array<{ currentPath: string; owner: string; name: string }>;
+  foundProjects: Array<{ currentPath: string; owner: string; name: string; registered?: boolean; alreadyRegistered?: boolean; registrationError?: string }>;
 }
 
 const ScanningStep: React.FC<ScanningStepProps> = ({
@@ -1223,6 +1228,30 @@ const ScanningStep: React.FC<ScanningStepProps> = ({
               textAlign: 'center'
             }}>
               Found {foundProjects.length} <span style={{ color: '#F05032' }}>git</span> {foundProjects.length === 1 ? 'project' : 'projects'}
+              {foundProjects.some(p => p.registered === true || p.registered === false) && (
+                <>
+                  {' • '}
+                  <span style={{ color: theme.colors.success || '#10b981' }}>
+                    {foundProjects.filter(p => p.registered === true && !p.alreadyRegistered).length} newly registered
+                  </span>
+                  {foundProjects.some(p => p.alreadyRegistered) && (
+                    <>
+                      {' • '}
+                      <span style={{ color: theme.colors.textSecondary }}>
+                        {foundProjects.filter(p => p.alreadyRegistered).length} already in library
+                      </span>
+                    </>
+                  )}
+                  {foundProjects.some(p => p.registered === false) && (
+                    <>
+                      {' • '}
+                      <span style={{ color: theme.colors.error || '#ef4444' }}>
+                        {foundProjects.filter(p => p.registered === false).length} failed
+                      </span>
+                    </>
+                  )}
+                </>
+              )}
             </p>
 
             <div style={{
@@ -1263,7 +1292,36 @@ const ScanningStep: React.FC<ScanningStepProps> = ({
                     }}>
                       {project.currentPath}
                     </div>
+                    {project.alreadyRegistered && (
+                      <div style={{
+                        fontFamily: theme.fonts.body,
+                        fontSize: `${theme.fontSizes[0]}px`,
+                        color: theme.colors.textSecondary,
+                        marginTop: 4
+                      }}>
+                        Already in library
+                      </div>
+                    )}
+                    {project.registrationError && (
+                      <div style={{
+                        fontFamily: theme.fonts.body,
+                        fontSize: `${theme.fontSizes[0]}px`,
+                        color: theme.colors.error || '#ef4444',
+                        marginTop: 4
+                      }}>
+                        Failed: {project.registrationError}
+                      </div>
+                    )}
                   </div>
+                  {project.registered === true && !project.alreadyRegistered && (
+                    <CheckCircle size={20} color={theme.colors.success || '#10b981'} />
+                  )}
+                  {project.alreadyRegistered && (
+                    <Info size={20} color={theme.colors.textSecondary} />
+                  )}
+                  {project.registered === false && (
+                    <AlertCircle size={20} color={theme.colors.error || '#ef4444'} />
+                  )}
                 </div>
               ))}
             </div>
@@ -1412,7 +1470,7 @@ const HomeDirectoryStep: React.FC<HomeDirectoryStepProps> = ({
 
 interface OrganizeProjectsStepProps {
   theme: Theme;
-  projects: Array<{ currentPath: string; owner: string; name: string }>;
+  projects: Array<{ currentPath: string; owner: string; name: string; registered?: boolean; alreadyRegistered?: boolean; registrationError?: string }>;
   devDirectoryName: string;
   shouldOrganize: boolean;
   onToggleOrganize: () => void;

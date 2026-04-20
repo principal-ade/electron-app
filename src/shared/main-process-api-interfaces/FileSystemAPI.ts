@@ -279,6 +279,9 @@ export interface ScannedRepository {
   path: string;
   name: string;
   owner?: string;
+  registered?: boolean; // Whether the repo was successfully registered with Alexandria
+  alreadyRegistered?: boolean; // Whether the repo was already registered (not a new registration)
+  registrationError?: string; // Error message if registration failed
 }
 
 // File watching interfaces
