@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Palette, RefreshCw } from 'lucide-react';
+import { Palette, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import { Logo } from '@principal-ai/logo-component';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
+import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
 import { ThemeService } from '../../../../services/ThemeService';
 import type { EditorId } from '../../../../../shared/types/editor.types';
 import { EDITOR_LABELS } from '../../../../../shared/types/editor.types';
@@ -41,6 +42,8 @@ export const GeneralSettings: React.FC = () => {
   const [presenceAutoConnect, setPresenceAutoConnect] = useState(
     USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
   );
+  const [isClearing, setIsClearing] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
@@ -108,6 +111,26 @@ export const GeneralSettings: React.FC = () => {
       );
     };
   }, []);
+
+  const handleClearAllData = async () => {
+    if (!showClearConfirm) {
+      setShowClearConfirm(true);
+      return;
+    }
+
+    setIsClearing(true);
+    try {
+      const result = await AlexandriaService.clearAllData();
+      alert(
+        `Successfully cleared all data!\n\nRepositories removed: ${result.repositoriesRemoved}\nWorkspaces removed: ${result.workspacesRemoved}\n\nLocal files were NOT deleted.`,
+      );
+      setShowClearConfirm(false);
+    } catch (error) {
+      alert(`Failed to clear data: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   return (
     <div style={{ maxWidth: '800px' }}>
@@ -1537,6 +1560,189 @@ export const GeneralSettings: React.FC = () => {
               {predefinedThemes[pendingTheme || selectedTheme]?.description ||
                 'Standard theme'}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Data Management */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Data Management
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '16px',
+            }}
+          >
+            <div
+              style={{
+                padding: '8px',
+                borderRadius: '8px',
+                backgroundColor: theme.colors.error + '20',
+              }}
+            >
+              <AlertTriangle size={20} color={theme.colors.error} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h5
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  marginBottom: '8px',
+                  color: theme.colors.text,
+                }}
+              >
+                Clear All Alexandria Data
+              </h5>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  lineHeight: '1.5',
+                  marginBottom: '16px',
+                }}
+              >
+                Remove all registered repositories and workspaces from the
+                Alexandria registry. This is useful before uninstalling the
+                app. <strong>Local repository files will NOT be deleted</strong>
+                , only the registry data.
+              </p>
+              {!showClearConfirm ? (
+                <button
+                  onClick={handleClearAllData}
+                  disabled={isClearing}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.colors.error}`,
+                    backgroundColor: theme.colors.background,
+                    color: theme.colors.error,
+                    cursor: isClearing ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    opacity: isClearing ? 0.6 : 1,
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isClearing) {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.error + '10';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.background;
+                  }}
+                >
+                  <Trash2 size={16} />
+                  Clear All Data
+                </button>
+              ) : (
+                <div
+                  style={{
+                    padding: '16px',
+                    borderRadius: '8px',
+                    backgroundColor: theme.colors.error + '10',
+                    border: `1px solid ${theme.colors.error}`,
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: theme.colors.error,
+                      marginBottom: '12px',
+                    }}
+                  >
+                    Are you absolutely sure?
+                  </p>
+                  <p
+                    style={{
+                      fontSize: '13px',
+                      color: theme.colors.textSecondary,
+                      marginBottom: '16px',
+                    }}
+                  >
+                    This action will permanently remove all repository and
+                    workspace data from the registry. This cannot be undone.
+                  </p>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                      onClick={handleClearAllData}
+                      disabled={isClearing}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: theme.colors.error,
+                        color: theme.colors.background,
+                        cursor: isClearing ? 'not-allowed' : 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        opacity: isClearing ? 0.6 : 1,
+                      }}
+                    >
+                      {isClearing ? (
+                        <>
+                          <RefreshCw
+                            size={14}
+                            style={{
+                              animation: 'spin 1s linear infinite',
+                            }}
+                          />
+                          Clearing...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 size={14} />
+                          Yes, Clear All Data
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowClearConfirm(false)}
+                      disabled={isClearing}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: '8px',
+                        border: `1px solid ${theme.colors.border}`,
+                        backgroundColor: theme.colors.background,
+                        color: theme.colors.text,
+                        cursor: isClearing ? 'not-allowed' : 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        opacity: isClearing ? 0.6 : 1,
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

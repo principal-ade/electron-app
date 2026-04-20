@@ -119,6 +119,16 @@ export type AlexandriaRouterType = Record<
     }) => Promise<boolean>;
   };
 
+  alexandria_clearAllData: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<{
+      repositoriesRemoved: number;
+      workspacesRemoved: number;
+    }>;
+  };
+
   alexandria_searchRepositories: {
     action: (args: {
       context: ActionContext;

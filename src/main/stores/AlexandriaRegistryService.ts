@@ -845,4 +845,19 @@ export class AlexandriaRegistryService {
   async setDefaultWorkspace(workspaceId: string): Promise<void> {
     return this.outpostManager.workspaces.setDefaultWorkspace(workspaceId);
   }
+
+  // ===== Data Management Methods =====
+
+  /**
+   * Clear all Alexandria data (repositories and workspaces) for clean uninstall
+   * WARNING: This will permanently delete all registered repositories and workspaces
+   * This does NOT delete local repository files, only the registry data
+   * @returns Object with counts of removed items
+   */
+  async clearAllData(): Promise<{
+    repositoriesRemoved: number;
+    workspacesRemoved: number;
+  }> {
+    return this.outpostManager.clearAllData();
+  }
 }

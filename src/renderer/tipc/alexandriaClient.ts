@@ -55,6 +55,10 @@ export interface AlexandriaClient {
     input: RefreshRepositoryInput,
   ) => Promise<AlexandriaEntry | null>;
   updateLastOpened: (input: UpdateLastOpenedInput) => Promise<void>;
+  clearAllData: () => Promise<{
+    repositoriesRemoved: number;
+    workspacesRemoved: number;
+  }>;
 
   // Codebase Views
   getCodebaseViews: (input: GetCodebaseViewsInput) => Promise<CodebaseView[]>;
@@ -90,6 +94,10 @@ interface TipcAlexandriaClient {
     input: RefreshRepositoryInput,
   ) => Promise<AlexandriaEntry | null>;
   alexandria_updateLastOpened: (input: UpdateLastOpenedInput) => Promise<void>;
+  alexandria_clearAllData: () => Promise<{
+    repositoriesRemoved: number;
+    workspacesRemoved: number;
+  }>;
   alexandria_getCodebaseViews: (
     input: GetCodebaseViewsInput,
   ) => Promise<CodebaseView[]>;
@@ -144,6 +152,7 @@ export const alexandriaClient: AlexandriaClient = {
     getTipcClient().alexandria_refreshRepository(input),
   updateLastOpened: (input) =>
     getTipcClient().alexandria_updateLastOpened(input),
+  clearAllData: () => getTipcClient().alexandria_clearAllData(),
   getCodebaseViews: (input) =>
     getTipcClient().alexandria_getCodebaseViews(input),
   getCodebaseView: (input) => getTipcClient().alexandria_getCodebaseView(input),

@@ -189,6 +189,11 @@ export const alexandriaRouter = {
       return success;
     }),
 
+  alexandria_clearAllData: t.procedure.action(async () => {
+    const result = await registryService.clearAllData();
+    return result;
+  }),
+
   alexandria_refreshRepository: t.procedure
     .input<RefreshRepositoryInput>()
     .action(async ({ input }) => {

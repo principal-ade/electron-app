@@ -51,6 +51,13 @@ export class AlexandriaService {
     return alexandriaClient.removeRepository({ name, deleteLocal });
   }
 
+  static async clearAllData(): Promise<{
+    repositoriesRemoved: number;
+    workspacesRemoved: number;
+  }> {
+    return alexandriaClient.clearAllData();
+  }
+
   static async searchRepositories(query: string): Promise<AlexandriaEntry[]> {
     return alexandriaClient.searchRepositories({ query });
   }
