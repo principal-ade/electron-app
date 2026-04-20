@@ -38,6 +38,7 @@ import {
 } from '@industry-theme/repository-composition-panels';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { LocalClone } from '../../shared/types/repository.types';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
 import { ShellService } from '../main-process-api/ShellService';
@@ -64,7 +65,7 @@ export interface RepositoryProfileData {
   htmlUrl?: string; // GitHub URL
   isPrivate: boolean;
   isLocal?: boolean; // Whether this is a local repository
-  localPath?: string; // Local file system path
+  localClones?: LocalClone[]; // All local clones of this repository
   github?: {
     owner: string;
     name: string;
@@ -373,23 +374,21 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const [contributors, setContributors] = useState<Array<{ name: string; commits: number }>>([]);
   const [contributorsLoading, setContributorsLoading] = useState(false);
 
-  // State for git branch status (sync status)
-  const [branchStatus, setBranchStatus] = useState<{
+  // State for git branch status (sync status) per clone
+  const [branchStatusMap, setBranchStatusMap] = useState<Map<string, {
     ahead: number;
     behind: number;
     hasUpstream: boolean;
     branch: string;
-  } | null>(null);
-  const [_branchStatusLoading, setBranchStatusLoading] = useState(false);
+  }>>(new Map());
 
-  // State for git working directory status
-  const [gitStatus, setGitStatus] = useState<{
+  // State for git working directory status per clone
+  const [gitStatusMap, setGitStatusMap] = useState<Map<string, {
     staged: number;
     modified: number;
     untracked: number;
     total: number;
-  } | null>(null);
-  const [_gitStatusLoading, setGitStatusLoading] = useState(false);
+  }>>(new Map());
 
   // State for showing path in cloned badge
   const [showPath, setShowPath] = useState(false);
@@ -411,117 +410,121 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const [isWatched, setIsWatched] = useState(false);
   const [isWatchLoading, setIsWatchLoading] = useState(false);
 
-  // Fetch branch status for local repositories
+  // Fetch branch status for all local clones
   useEffect(() => {
     let cancelled = false;
 
-    const fetchBranchStatus = async () => {
-      // Only fetch for local repositories
-      if (!repositoryData || !repositoryData.localPath) {
-        setBranchStatus(null);
-        setBranchStatusLoading(false);
+    const fetchBranchStatuses = async () => {
+      const clones = repositoryData?.localClones;
+      if (!repositoryData || !clones || clones.length === 0) {
+        setBranchStatusMap(new Map());
         return;
       }
 
-      setBranchStatusLoading(true);
-      try {
-        const status = await GitService.getBranchStatus(repositoryData.localPath);
-        if (!cancelled) {
-          setBranchStatus(status);
-        }
-      } catch (error) {
-        console.error('[RepositoryProfilePanel] Failed to fetch branch status:', error);
-        if (!cancelled) {
-          setBranchStatus(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setBranchStatusLoading(false);
-        }
+      const newStatusMap = new Map();
+
+      // Fetch status for each clone
+      await Promise.all(
+        clones.map(async (clone) => {
+          try {
+            const status = await GitService.getBranchStatus(clone.path);
+            if (!cancelled) {
+              newStatusMap.set(clone.path, status);
+            }
+          } catch (error) {
+            console.error(`[RepositoryProfilePanel] Failed to fetch branch status for ${clone.path}:`, error);
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setBranchStatusMap(newStatusMap);
       }
     };
 
-    fetchBranchStatus();
+    fetchBranchStatuses();
 
     return () => {
       cancelled = true;
     };
-  }, [repositoryData?.localPath]);
+  }, [repositoryData?.localClones]);
 
-  // Fetch git working directory status for local repositories
+  // Fetch git working directory status for all local clones
   useEffect(() => {
     let cancelled = false;
 
-    const fetchGitStatus = async () => {
-      // Only fetch for local repositories
-      if (!repositoryData || !repositoryData.localPath) {
-        setGitStatus(null);
-        setGitStatusLoading(false);
+    const fetchGitStatuses = async () => {
+      const clones = repositoryData?.localClones;
+      if (!repositoryData || !clones || clones.length === 0) {
+        setGitStatusMap(new Map());
         return;
       }
 
-      setGitStatusLoading(true);
-      try {
-        // Use git status --porcelain to get machine-readable output
-        const result = await GitService.execCommand(repositoryData.localPath, [
-          'status',
-          '--porcelain',
-        ]);
+      const newStatusMap = new Map();
 
-        if (cancelled) return;
+      // Fetch status for each clone
+      await Promise.all(
+        clones.map(async (clone) => {
+          try {
+            // Use git status --porcelain to get machine-readable output
+            const result = await GitService.execCommand(clone.path, [
+              'status',
+              '--porcelain',
+            ]);
 
-        // Parse the output
-        const lines = result.stdout.trim().split('\n').filter(Boolean);
-        let staged = 0;
-        let modified = 0;
-        let untracked = 0;
+            if (cancelled) return;
 
-        for (const line of lines) {
-          if (line.length < 2) continue;
+            // Parse the output
+            const lines = result.stdout.trim().split('\n').filter(Boolean);
+            let staged = 0;
+            let modified = 0;
+            let untracked = 0;
 
-          const indexStatus = line[0]; // First character = index/staged status
-          const workTreeStatus = line[1]; // Second character = working tree status
+            for (const line of lines) {
+              if (line.length < 2) continue;
 
-          // Untracked files
-          if (line.startsWith('??')) {
-            untracked++;
-            continue;
+              const indexStatus = line[0]; // First character = index/staged status
+              const workTreeStatus = line[1]; // Second character = working tree status
+
+              // Untracked files
+              if (line.startsWith('??')) {
+                untracked++;
+                continue;
+              }
+
+              // Staged changes (index status not empty)
+              if (indexStatus !== ' ' && indexStatus !== '?') {
+                staged++;
+              }
+
+              // Modified but not staged (working tree status not empty)
+              if (workTreeStatus !== ' ' && workTreeStatus !== '?') {
+                modified++;
+              }
+            }
+
+            const total = staged + modified + untracked;
+
+            if (!cancelled) {
+              newStatusMap.set(clone.path, { staged, modified, untracked, total });
+            }
+          } catch (error) {
+            console.error(`[RepositoryProfilePanel] Failed to fetch git status for ${clone.path}:`, error);
           }
+        })
+      );
 
-          // Staged changes (index status not empty)
-          if (indexStatus !== ' ' && indexStatus !== '?') {
-            staged++;
-          }
-
-          // Modified but not staged (working tree status not empty)
-          if (workTreeStatus !== ' ' && workTreeStatus !== '?') {
-            modified++;
-          }
-        }
-
-        const total = staged + modified + untracked;
-
-        if (!cancelled) {
-          setGitStatus({ staged, modified, untracked, total });
-        }
-      } catch (error) {
-        console.error('[RepositoryProfilePanel] Failed to fetch git status:', error);
-        if (!cancelled) {
-          setGitStatus(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setGitStatusLoading(false);
-        }
+      if (!cancelled) {
+        setGitStatusMap(newStatusMap);
       }
     };
 
-    fetchGitStatus();
+    fetchGitStatuses();
 
     return () => {
       cancelled = true;
     };
-  }, [repositoryData?.localPath]);
+  }, [repositoryData?.localClones]);
 
   // Load watch status when repository changes
   useEffect(() => {
@@ -576,10 +579,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       try {
         const promises: Promise<void>[] = [];
 
+        const localPath = repositoryData?.localClones?.[0]?.path;
         // Fetch local file tree if repository has a local path
-        if (repositoryData.localPath) {
+        if (localPath) {
           promises.push(
-            actions.getLocalFileTree(repositoryData.localPath)
+            actions.getLocalFileTree(localPath)
               .then(tree => {
                 if (!cancelled) setLocalFileTree(tree);
               })
@@ -620,7 +624,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [repositoryData?.localPath, repositoryData?.github, actions]);
+  }, [repositoryData?.localClones, repositoryData?.github, actions]);
 
   // Build city data from file trees
   useEffect(() => {
@@ -642,14 +646,15 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         const rootPath = '';
         const rawCityData = buildCityDataFromFileTree(fileTree, rootPath);
 
+        const localPath = repositoryData?.localClones?.[0]?.path;
         // Get actual line counts if this is a local repository
         let finalCityData: CityData;
-        if (repositoryData?.localPath) {
+        if (localPath) {
           try {
-            const rawLineCounts = await actions.getLineCounts(repositoryData.localPath);
+            const rawLineCounts = await actions.getLineCounts(localPath);
 
             // Transform line counts to use clean relative paths
-            const repoName = repositoryData.localPath.split('/').pop() || '';
+            const repoName = localPath.split('/').pop() || '';
             const lineCounts: Record<string, number> = {};
             for (const [filePath, count] of Object.entries(rawLineCounts)) {
               if (typeof count !== 'number' || count < 0) continue;
@@ -691,15 +696,15 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [localFileTree, remoteFileTree, repositoryData?.localPath, actions]);
+  }, [localFileTree, remoteFileTree, repositoryData?.localClones, actions]);
 
-  // Handle open repository
-  const handleOpenRepository = async () => {
-    if (repositoryData && repositoryData.localPath) {
+  // Handle open repository for a specific clone
+  const handleOpenRepository = async (clonePath: string) => {
+    if (repositoryData) {
       // Convert RepositoryProfileData to AlexandriaEntry format
       const repositoryEntry = {
         name: repositoryData.name,
-        path: repositoryData.localPath,
+        path: clonePath,
         remoteUrl: repositoryData.htmlUrl || '',
         registeredAt: repositoryData.createdAt,
         hasViews: false,
@@ -721,14 +726,17 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     }
   };
 
-  // Handle delete repository
-  const handleDeleteRepository = () => {
+  // Handle delete clone
+  const handleDeleteClone = (clonePath: string) => {
     if (repositoryData) {
       events.emit({
-        type: 'repository-profile:delete-requested',
+        type: 'repository-profile:delete-clone-requested',
         source: 'repository-profile-panel',
         timestamp: Date.now(),
-        payload: { repository: repositoryData },
+        payload: {
+          repository: repositoryData,
+          clonePath,
+        },
       });
     }
   };
@@ -751,7 +759,8 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       return;
     }
 
-    if (!repositoryData?.localPath) return;
+    const localPath = repositoryData?.localClones?.[0]?.path;
+    if (!localPath) return;
 
     playbackRef.current.cancelled = false;
     setIsPlaying(true);
@@ -760,7 +769,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
     try {
       // Get commits based on mode
-      const commits = await GitService.getCommitHistory(repositoryData.localPath, mode === 'year' ? 365 : mode === 'week' ? 7 : 1);
+      const commits = await GitService.getCommitHistory(localPath, mode === 'year' ? 365 : mode === 'week' ? 7 : 1);
 
       // Play through commits
       for (const commit of commits) {
@@ -774,7 +783,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         });
 
         // Get changed files for this commit
-        const changedFiles = await GitService.getChangedFilesForCommit(repositoryData.localPath, commit.hash);
+        const changedFiles = await GitService.getChangedFilesForCommit(localPath, commit.hash);
         const filePaths = Array.from(changedFiles.keys());
 
         // Create highlight layer for changed files
@@ -831,8 +840,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // Handle contributors stat click
   const handleContributorsClick = async () => {
+    const localPath = repositoryData?.localClones?.[0]?.path;
     // Check if we have either local path or GitHub info
-    if (!repositoryData?.localPath && !repositoryData?.github) return;
+    if (!localPath && !repositoryData?.github) return;
 
     if (showContributors) {
       // Toggle off
@@ -846,9 +856,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       try {
         let contributorsList: Array<{ name: string; commits: number }> = [];
 
-        if (repositoryData.localPath) {
+        if (localPath) {
           // Local repository - use git
-          contributorsList = await GitService.getContributors(repositoryData.localPath);
+          contributorsList = await GitService.getContributors(localPath);
         } else if (repositoryData.github?.owner && repositoryData.github?.name) {
           // Remote repository - use GitHub API
           const githubContributors = await GithubService.getRepositoryContributors(
@@ -1241,226 +1251,234 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 flexWrap: 'wrap',
               }}
             >
-              {/* Cloned Badge */}
-              <button
-                onClick={() => setShowPath(!showPath)}
-                title={showPath ? 'Click to show "cloned"' : 'Click to show path'}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  padding: `${spacing.xs}px ${spacing.sm}px`,
-                  backgroundColor: `${theme.colors.success}15`,
-                  border: `1px solid ${theme.colors.success}30`,
-                  borderRadius: 6,
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  fontWeight: theme.fontWeights?.medium ?? 500,
-                  color: theme.colors.success,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = `${theme.colors.success}25`;
-                  e.currentTarget.style.borderColor = `${theme.colors.success}50`;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = `${theme.colors.success}15`;
-                  e.currentTarget.style.borderColor = `${theme.colors.success}30`;
-                }}
-              >
-                <FolderGit2 size={12} />
-                {showPath && repositoryData.localPath
-                  ? shortenPath(repositoryData.localPath)
-                  : 'cloned'}
-              </button>
+              {/* Local Clones List with Branch Status */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, width: '100%' }}>
+                {repositoryData.localClones?.map((clone, index) => {
+                  const branchStatus = branchStatusMap.get(clone.path);
+                  const gitStatus = gitStatusMap.get(clone.path);
 
-              {/* Branch and Status Badge */}
-              {branchStatus && (
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: spacing.xs,
-                    padding: `${spacing.xs}px ${spacing.sm}px`,
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: 6,
-                    fontSize: theme.fontSizes[0],
-                    fontFamily: theme.fonts?.body,
-                    fontWeight: theme.fontWeights?.medium ?? 500,
-                    color: theme.colors.text,
-                  }}
-                >
-                  <GitBranch size={12} />
-                  <span>{branchStatus.branch}</span>
-
-                  {/* Status Indicator */}
-                  {gitStatus && gitStatus.total > 0 ? (
-                    <>
-                      <span style={{ color: theme.colors.textSecondary }}>•</span>
-                      <div
+                  return (
+                    <div key={clone.path} style={{ display: 'flex', gap: spacing.xs, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {/* Clone Path Badge */}
+                      <button
+                        onClick={() => setShowPath(!showPath)}
+                        title={showPath ? 'Click to show "cloned"' : `Click to show path\n${clone.path}`}
                         style={{
-                          display: 'flex',
+                          display: 'inline-flex',
                           alignItems: 'center',
-                          gap: 4,
-                          color: gitStatus.staged > 0 ? theme.colors.warning : theme.colors.textSecondary,
-                        }}
-                      >
-                        <Circle size={8} fill="currentColor" />
-                        <span>
-                          {gitStatus.total === 1 ? '1 change' : `${gitStatus.total} changes`}
-                        </span>
-                      </div>
-                    </>
-                  ) : !branchStatus.hasUpstream ? (
-                    <>
-                      <span style={{ color: theme.colors.textSecondary }}>•</span>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          color: theme.colors.warning,
-                        }}
-                      >
-                        <AlertCircle size={12} />
-                        <span>no remote</span>
-                      </div>
-                    </>
-                  ) : branchStatus.ahead === 0 && branchStatus.behind === 0 ? (
-                    <>
-                      <span style={{ color: theme.colors.textSecondary }}>•</span>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4,
+                          gap: spacing.xs,
+                          padding: `${spacing.xs}px ${spacing.sm}px`,
+                          backgroundColor: `${theme.colors.success}15`,
+                          border: `1px solid ${theme.colors.success}30`,
+                          borderRadius: 6,
+                          fontSize: theme.fontSizes[0],
+                          fontFamily: theme.fonts?.body,
+                          fontWeight: theme.fontWeights?.medium ?? 500,
                           color: theme.colors.success,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = `${theme.colors.success}25`;
+                          e.currentTarget.style.borderColor = `${theme.colors.success}50`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = `${theme.colors.success}15`;
+                          e.currentTarget.style.borderColor = `${theme.colors.success}30`;
                         }}
                       >
-                        <CheckCircle2 size={12} />
-                        <span>in sync</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ color: theme.colors.textSecondary }}>•</span>
-                      <div
+                        <FolderGit2 size={12} />
+                        {showPath
+                          ? shortenPath(clone.path)
+                          : index === 0 ? 'cloned' : `clone ${index + 1}`}
+                      </button>
+
+                      {/* Branch and Status Badge for this clone */}
+                      {branchStatus && (
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: spacing.xs,
+                            padding: `${spacing.xs}px ${spacing.sm}px`,
+                            backgroundColor: theme.colors.backgroundSecondary,
+                            border: `1px solid ${theme.colors.border}`,
+                            borderRadius: 6,
+                            fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts?.body,
+                            fontWeight: theme.fontWeights?.medium ?? 500,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          <GitBranch size={12} />
+                          <span>{branchStatus.branch}</span>
+
+                          {/* Status Indicator */}
+                          {gitStatus && gitStatus.total > 0 ? (
+                            <>
+                              <span style={{ color: theme.colors.textSecondary }}>•</span>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  color: gitStatus.staged > 0 ? theme.colors.warning : theme.colors.textSecondary,
+                                }}
+                              >
+                                <Circle size={8} fill="currentColor" />
+                                <span>
+                                  {gitStatus.total === 1 ? '1 change' : `${gitStatus.total} changes`}
+                                </span>
+                              </div>
+                            </>
+                          ) : !branchStatus.hasUpstream ? (
+                            <>
+                              <span style={{ color: theme.colors.textSecondary }}>•</span>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  color: theme.colors.warning,
+                                }}
+                              >
+                                <AlertCircle size={12} />
+                                <span>no remote</span>
+                              </div>
+                            </>
+                          ) : branchStatus.ahead === 0 && branchStatus.behind === 0 ? (
+                            <>
+                              <span style={{ color: theme.colors.textSecondary }}>•</span>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  color: theme.colors.success,
+                                }}
+                              >
+                                <CheckCircle2 size={12} />
+                                <span>in sync</span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ color: theme.colors.textSecondary }}>•</span>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  color: branchStatus.ahead > 0 && branchStatus.behind > 0
+                                    ? theme.colors.error
+                                    : branchStatus.behind > 0
+                                      ? theme.colors.warning
+                                      : theme.colors.info,
+                                }}
+                              >
+                                <AlertCircle size={12} />
+                                <span>
+                                  {branchStatus.ahead > 0 && branchStatus.behind === 0
+                                    ? `${branchStatus.ahead} ahead`
+                                    : branchStatus.ahead === 0 && branchStatus.behind > 0
+                                      ? `${branchStatus.behind} behind`
+                                      : `${branchStatus.ahead}↑ ${branchStatus.behind}↓`}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Action Buttons for this clone */}
+                      <button
+                        onClick={() => handleOpenRepository(clone.path)}
+                        title="Open in workspace"
                         style={{
+                          padding: `${spacing.xs}px ${spacing.sm}px`,
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 4,
-                          color: branchStatus.ahead > 0 && branchStatus.behind > 0
-                            ? theme.colors.error
-                            : branchStatus.behind > 0
-                              ? theme.colors.warning
-                              : theme.colors.info,
+                          gap: spacing.xs,
+                          border: 'none',
+                          borderRadius: 6,
+                          background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}dd)`,
+                          color: theme.colors.background,
+                          cursor: 'pointer',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          fontSize: theme.fontSizes[0],
+                          fontFamily: theme.fonts?.body,
+                          fontWeight: theme.fontWeights?.medium ?? 500,
+                          boxShadow: `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`;
+                        }}
+                        onMouseDown={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = `0 1px 4px ${theme.colors.primary}30`;
+                        }}
+                        onMouseUp={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
                         }}
                       >
-                        <AlertCircle size={12} />
-                        <span>
-                          {branchStatus.ahead > 0 && branchStatus.behind === 0
-                            ? `${branchStatus.ahead} ahead`
-                            : branchStatus.ahead === 0 && branchStatus.behind > 0
-                              ? `${branchStatus.behind} behind`
-                              : `${branchStatus.ahead}↑ ${branchStatus.behind}↓`}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              {repositoryData.isLocal && (
-                <>
-                  <button
-                    onClick={handleOpenRepository}
-                    title="Open in workspace"
-                    style={{
-                      padding: `${spacing.xs}px ${spacing.sm}px`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: spacing.xs,
-                      border: 'none',
-                      borderRadius: 6,
-                      background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}dd)`,
-                      color: theme.colors.background,
-                      cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      fontSize: theme.fontSizes[0],
-                      fontFamily: theme.fonts?.body,
-                      fontWeight: theme.fontWeights?.medium ?? 500,
-                      boxShadow: `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`;
-                    }}
-                    onMouseDown={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = `0 1px 4px ${theme.colors.primary}30`;
-                    }}
-                    onMouseUp={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
-                    }}
-                  >
-                    <FolderOpen size={12} />
-                    Open
-                  </button>
-                  <button
-                    onClick={handleDeleteRepository}
-                    title="Delete repository"
-                    style={{
-                      padding: `${spacing.xs}px ${spacing.sm}px`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: spacing.xs,
-                      border: `1px solid ${theme.colors.error}50`,
-                      borderRadius: 6,
-                      background: `${theme.colors.error}08`,
-                      color: theme.colors.error,
-                      cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      fontSize: theme.fontSizes[0],
-                      fontFamily: theme.fonts?.body,
-                      fontWeight: theme.fontWeights?.medium ?? 500,
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = theme.colors.error;
-                      e.currentTarget.style.color = theme.colors.background;
-                      e.currentTarget.style.borderColor = theme.colors.error;
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.error}40, 0 2px 4px rgba(0, 0, 0, 0.1)`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = `${theme.colors.error}08`;
-                      e.currentTarget.style.color = theme.colors.error;
-                      e.currentTarget.style.borderColor = `${theme.colors.error}50`;
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
-                    }}
-                    onMouseDown={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.1)';
-                    }}
-                    onMouseUp={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.error}40, 0 2px 4px rgba(0, 0, 0, 0.1)`;
-                    }}
-                  >
-                    <Trash2 size={12} />
-                    Delete
-                  </button>
-                </>
-              )}
+                        <FolderOpen size={12} />
+                        Open
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClone(clone.path)}
+                        title="Delete this clone"
+                        style={{
+                          padding: `${spacing.xs}px ${spacing.sm}px`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: spacing.xs,
+                          border: `1px solid ${theme.colors.error}50`,
+                          borderRadius: 6,
+                          background: `${theme.colors.error}08`,
+                          color: theme.colors.error,
+                          cursor: 'pointer',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          fontSize: theme.fontSizes[0],
+                          fontFamily: theme.fonts?.body,
+                          fontWeight: theme.fontWeights?.medium ?? 500,
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = theme.colors.error;
+                          e.currentTarget.style.color = theme.colors.background;
+                          e.currentTarget.style.borderColor = theme.colors.error;
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.error}40, 0 2px 4px rgba(0, 0, 0, 0.1)`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = `${theme.colors.error}08`;
+                          e.currentTarget.style.color = theme.colors.error;
+                          e.currentTarget.style.borderColor = `${theme.colors.error}50`;
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                        }}
+                        onMouseDown={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.1)';
+                        }}
+                        onMouseUp={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.error}40, 0 2px 4px rgba(0, 0, 0, 0.1)`;
+                        }}
+                      >
+                        <Trash2 size={12} />
+                        Delete
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

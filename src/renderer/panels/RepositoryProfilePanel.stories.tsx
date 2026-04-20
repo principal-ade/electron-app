@@ -252,7 +252,7 @@ const MockRepositoryProfilePanel: React.FC<{
   } as unknown as RepositoryProfilePanelContext;
 
   const mockActions = customActions || createMockActions({
-    localFileTree: repositoryData?.localPath ? createMockFileTree(repositoryData.name) : null,
+    localFileTree: repositoryData?.localClones?.[0]?.path ? createMockFileTree(repositoryData.name) : null,
     remoteFileTree: repositoryData?.github ? createMockFileTree(repositoryData.name) : null,
     lineCounts: {
       [`${repositoryData?.name}/src/index.ts`]: 45,
@@ -346,7 +346,7 @@ export const LocalRepository = {
         description: 'A local development project on my machine. Synced with GitHub.',
         language: 'TypeScript',
         isLocal: true,
-        localPath: '/Users/johndoe/projects/my-local-project',
+        localClones: [{ path: '/Users/johndoe/projects/my-local-project', addedAt: Date.now() }],
         activityData: generateMockActivityData('high'),
         stars: 23,
         forks: 4,
@@ -372,7 +372,7 @@ export const RemoteOnly = {
         description: 'A framework I want to explore. Not cloned locally yet.',
         language: 'JavaScript',
         isLocal: false,
-        localPath: undefined,
+        localClones: undefined,
         activityData: generateMockActivityData('high'),
         stars: 12456,
         forks: 2134,
@@ -401,7 +401,7 @@ export const LocalOnly = {
         description: 'A private local project, not on GitHub.',
         language: 'Python',
         isLocal: true,
-        localPath: '/Users/me/private-project',
+        localClones: [{ path: '/Users/me/private-project', addedAt: Date.now() }],
         activityData: generateMockActivityData('medium'),
         stars: 0,
         forks: 0,
@@ -572,11 +572,42 @@ export const CompleteProfile = {
         openIssues: 89,
         htmlUrl: 'https://github.com/principal-ade/desktop-app',
         isLocal: true,
-        localPath: '/Users/dev/principal-ade/desktop-app',
+        localClones: [{ path: '/Users/dev/principal-ade/desktop-app', addedAt: Date.now() }],
         updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
         github: {
           owner: 'principal-ade',
           name: 'desktop-app',
+        },
+      })}
+    />
+  ),
+} as unknown as Story;
+
+// Repository with multiple clones
+export const MultipleClones = {
+  render: () => (
+    <RepositoryProfilePanelStory
+      repositoryData={createMockRepositoryProfile({
+        name: 'multi-clone-repo',
+        fullName: 'dev/multi-clone-repo',
+        owner: 'dev',
+        description: 'A repository cloned to multiple locations on this machine.',
+        language: 'TypeScript',
+        isLocal: true,
+        localClones: [
+          { path: '/Users/dev/work/multi-clone-repo', addedAt: Date.now() - 1000000 },
+          { path: '/Users/dev/personal/multi-clone-repo', addedAt: Date.now() - 500000 },
+          { path: '/Users/dev/experiments/multi-clone-repo', addedAt: Date.now() },
+        ],
+        activityData: generateMockActivityData('high'),
+        stars: 42,
+        forks: 8,
+        totalCommits: 287,
+        contributors: 5,
+        htmlUrl: 'https://github.com/dev/multi-clone-repo',
+        github: {
+          owner: 'dev',
+          name: 'multi-clone-repo',
         },
       })}
     />

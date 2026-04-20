@@ -311,7 +311,7 @@ const RepositoryProfileTabContent: React.FC<{
             : undefined,
           isPrivate: false,
           isLocal: !!repo.path,
-          localPath: repo.path || undefined,
+          localClones: ('localClones' in repo && Array.isArray(repo.localClones)) ? repo.localClones : (repo.path ? [{ path: repo.path, addedAt: Date.now() }] : undefined),
           github: repo.github,
         };
 
@@ -1164,7 +1164,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
 
         // Convert RepositoryProfileData to AlexandriaEntry
         // Find the matching entry in repositories
-        const entry = repositories.find(r => r.name === repository.name && r.path === repository.localPath);
+        const entry = repositories.find(r => r.name === repository.name && r.path === repository.localClones?.[0]?.path);
 
         if (entry) {
           // Check git status if this is a local repository
