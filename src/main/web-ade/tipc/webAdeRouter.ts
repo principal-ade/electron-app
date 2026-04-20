@@ -15,6 +15,7 @@ import type {
   UnwatchRepoInput,
   GetTreeInput,
   GetRepoContributionsInput,
+  GetStarredCollectionsInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 
@@ -98,5 +99,15 @@ export const webAdeRouter = {
     .input<GetRepoContributionsInput>()
     .action(async ({ input }) => {
       return webAdeService.getRepoContributions(input);
+    }),
+
+  // ===========================================================================
+  // Starred Collections
+  // ===========================================================================
+
+  getStarredCollections: t.procedure
+    .input<GetStarredCollectionsInput>()
+    .action(async ({ input }) => {
+      return webAdeService.getStarredCollections(input.includeItems ?? true);
     }),
 };

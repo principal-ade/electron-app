@@ -20,6 +20,7 @@ import type {
   GetTreeResponse,
   GetRepoContributionsInput,
   RepoContributionsResponse,
+  StarredCollection,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -446,6 +447,48 @@ export class WebAdeService {
       return data;
     } catch (error) {
       console.error('[WebADE] Failed to fetch repository contributions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's starred collections from web-ade API
+   * Returns collections with optional items (repos and users)
+   */
+  async getStarredCollections(includeItems: boolean = true): Promise<StarredCollection[]> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/starred-collections${includeItems ? '?include_items=true' : ''}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        throw new Error(`Failed to fetch starred collections: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as { collections?: StarredCollection[] };
+
+      if (!Array.isArray(data?.collections)) {
+        console.warn('[WebADE] Unexpected response format:', data);
+        return [];
+      }
+
+      return data.collections;
+    } catch (error) {
+      console.error('[WebADE] Failed to fetch starred collections:', error);
       throw error;
     }
   }

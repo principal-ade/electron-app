@@ -16,6 +16,7 @@ import type {
   UnwatchRepoResponse,
   GetTreeResponse,
   RepoContributionsResponse,
+  StarredCollection,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -116,5 +117,13 @@ export class WebAdeService {
    */
   static async getRepoContributions(owner: string, repo: string): Promise<RepoContributionsResponse> {
     return webAdeClient.getRepoContributions({ owner, repo });
+  }
+
+  /**
+   * Get user's starred collections from web-ade API
+   * @param includeItems - Whether to include items (repos and users) in collections (default: true)
+   */
+  static async getStarredCollections(includeItems = true): Promise<StarredCollection[]> {
+    return webAdeClient.getStarredCollections({ includeItems });
   }
 }

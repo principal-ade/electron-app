@@ -25,6 +25,8 @@ import type {
   GetTreeResponse,
   GetRepoContributionsInput,
   RepoContributionsResponse,
+  GetStarredCollectionsInput,
+  StarredCollection,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
@@ -55,6 +57,9 @@ export interface WebAdeClient {
 
   // GitHub Repository Contributions (via web-ade)
   getRepoContributions: (input: GetRepoContributionsInput) => Promise<RepoContributionsResponse>;
+
+  // Starred Collections
+  getStarredCollections: (input: GetStarredCollectionsInput) => Promise<StarredCollection[]>;
 }
 
 // =============================================================================
@@ -124,4 +129,8 @@ export type {
   GetRepoContributionsInput,
   RepoContributionsResponse,
   DailyContribution,
+  GetStarredCollectionsInput,
+  StarredCollection,
+  StarredCollectionRepo,
+  StarredCollectionUser,
 } from '../../shared/tipc/webAdeRouterTypes';

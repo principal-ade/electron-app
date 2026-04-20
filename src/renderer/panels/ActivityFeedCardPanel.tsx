@@ -53,7 +53,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
 
   // Get watched activity feed
   const watchedActivityFeed = useWatchedActivityFeed(
-    feedMode === 'watched-activity',
+    feedMode === 'collections',
     100
   );
 
@@ -89,7 +89,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
   useEffect(() => {
     // Only refresh watched activity feed when watch status changes
     const handleWatchToggle = () => {
-      if (feedMode === 'watched-activity') {
+      if (feedMode === 'collections') {
         console.info('[ActivityFeedCardPanel] Watch toggled, refreshing watched activity feed');
         watchedActivityFeed.refresh();
       }
@@ -219,7 +219,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
 
   // Transform watched activity groups to hourly format
   const watchedHourlyGroups = useMemo(() => {
-    if (feedMode !== 'watched-activity') return [];
+    if (feedMode !== 'collections') return [];
 
     // Convert watched repo groups to hourly format
     const hourMap = new Map<string, RepoActivitySummary[]>();
@@ -326,7 +326,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
   }, [filteredCommits, repoOwnerMap, repoEntryMap, ownerIsOrgMap, getHourBucket, formatHourBucket]);
 
   // Use the appropriate hourly groups based on feed mode
-  const hourlyGroups = feedMode === 'watched-activity' ? watchedHourlyGroups : myActivityHourlyGroups;
+  const hourlyGroups = feedMode === 'collections' ? watchedHourlyGroups : myActivityHourlyGroups;
 
   // Handle opening a repository
   const handleOpenRepo = useCallback(
@@ -371,7 +371,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
             }}
           >
             <FolderGit2 size={48} style={{ marginBottom: spacing.md, opacity: 0.5 }} />
-            {feedMode === 'watched-activity' ? (
+            {feedMode === 'collections' ? (
               !watchedActivityFeed.authenticated ? (
                 <>
                   <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>Sign in required</p>

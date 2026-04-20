@@ -50,6 +50,10 @@ export interface GetRepoContributionsInput {
   repo: string;
 }
 
+export interface GetStarredCollectionsInput {
+  includeItems?: boolean;
+}
+
 // =============================================================================
 // Response Types
 // =============================================================================
@@ -178,6 +182,32 @@ export interface RepoContributionsResponse {
   contributorsUsed: number;
 }
 
+export interface StarredCollectionRepo {
+  owner: string;
+  repo: string;
+  addedAt: string;
+}
+
+export interface StarredCollectionUser {
+  login: string;
+  addedAt: string;
+}
+
+export interface StarredCollection {
+  id: string;
+  name: string;
+  icon?: string;
+  description?: string;
+  repos: StarredCollectionRepo[];
+  users: StarredCollectionUser[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StarredCollectionsResponse {
+  collections: StarredCollection[];
+}
+
 // =============================================================================
 // Router Type Definition
 // =============================================================================
@@ -250,5 +280,11 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: GetRepoContributionsInput;
     }) => Promise<RepoContributionsResponse>;
+  };
+  getStarredCollections: {
+    action: (args: {
+      context: ActionContext;
+      input: GetStarredCollectionsInput;
+    }) => Promise<StarredCollection[]>;
   };
 };

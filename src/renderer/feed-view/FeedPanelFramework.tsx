@@ -171,9 +171,9 @@ export interface FeedPanelFrameworkProps {
   /** Callback to open a repository */
   onOpenRepository?: (entry: AlexandriaEntry) => void;
   /** Feed mode */
-  feedMode?: 'my-activity' | 'watched-activity' | 'organizations';
+  feedMode?: 'my-activity' | 'collections' | 'organizations';
   /** Callback when feed mode changes */
-  onFeedModeChange?: (mode: 'my-activity' | 'watched-activity' | 'organizations') => void;
+  onFeedModeChange?: (mode: 'my-activity' | 'collections' | 'organizations') => void;
 }
 
 interface FeedPanelFrameworkInnerProps {
@@ -186,8 +186,8 @@ interface FeedPanelFrameworkInnerProps {
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   events: PanelEventEmitter;
   onOpenRepository?: (entry: AlexandriaEntry) => void;
-  feedMode?: 'my-activity' | 'watched-activity' | 'organizations';
-  onFeedModeChange?: (mode: 'my-activity' | 'watched-activity' | 'organizations') => void;
+  feedMode?: 'my-activity' | 'collections' | 'organizations';
+  onFeedModeChange?: (mode: 'my-activity' | 'collections' | 'organizations') => void;
 }
 
 /**
@@ -1442,7 +1442,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     () => [
       {
         id: 'heatmap',
-        label: feedMode === 'watched-activity' ? 'Watched' :
+        label: feedMode === 'collections' ? 'Collections' :
                feedMode === 'organizations' ? 'Team' : 'Activity',
         content: (
           <FeedLeftPanel
