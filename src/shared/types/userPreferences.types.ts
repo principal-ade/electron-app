@@ -27,11 +27,7 @@ export type InteractiveShellNavigationView =
   | 'settings'
   | 'monitoring'
   | 'auth'
-  | 'local-projects'
-  | 'remote-projects'
-  | 'starred-projects'
   | 'worlds'
-  | 'network'
   | 'processes'
   | 'connections'
   | 'skills'
@@ -135,7 +131,6 @@ export interface UserPreferences {
   showMonitorButton?: boolean; // Show/hide the monitor button in side nav (default: false)
   showSearchButton?: boolean; // Show/hide the search button in side nav (default: false)
   showConnectionsButton?: boolean; // Show/hide the connections button in side nav (default: false)
-  showNetworkButton?: boolean; // Show/hide the network button in side nav (default: false)
   showProcessesButton?: boolean; // Show/hide the processes button in side nav (default: false)
   showWorldsButton?: boolean; // Show/hide the worlds button in side nav (default: false)
   showGitSyncPanel?: boolean; // Show/hide the git sync panel (default: false)

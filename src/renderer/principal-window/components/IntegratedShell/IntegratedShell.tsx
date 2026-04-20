@@ -5,11 +5,9 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Settings, type SettingsCategory } from '../../views/Settings';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
-import { ProjectsView } from '../../views/ProjectsView';
 import { FeedView } from '../../views/FeedView';
 import { OnboardingView } from '../../views/OnboardingView';
 import { WorldsView } from '../../views/WorldsView';
-import { GitSyncView } from '../../views/GitSyncView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
@@ -35,13 +33,9 @@ export type NavigationView = InteractiveShellNavigationView;
 const VIEW_OPTIONS = [
   'feed',
   'onboarding',
-  'local-projects',
-  'remote-projects',
-  'starred-projects',
   'settings',
   'monitoring',
   'auth',
-  'network',
   'processes',
   'connections',
   'skills',
@@ -129,10 +123,6 @@ export const IntegratedShell: React.FC = () => {
     monitoring: { left: false, right: false },
     search: { left: false, right: false },
     settings: { left: false, right: false },
-    'local-projects': { left: false, right: false },
-    'remote-projects': { left: false, right: false },
-    'starred-projects': { left: false, right: false },
-    network: { left: false, right: false },
     processes: { left: false, right: false },
     connections: { left: false, right: false },
     skills: { left: false, right: false },
@@ -150,12 +140,13 @@ export const IntegratedShell: React.FC = () => {
       try {
         const prefs = await UserPreferencesService.getPreferences();
 
-        // Load active view (migrate 'workspaces' to 'local-projects')
+        // Load active view (migrate legacy views to 'feed')
         if (prefs.interactiveShell?.activeNavigationView) {
-          // Cast to string to handle legacy 'workspaces' value from storage
+          // Cast to string to handle legacy values from storage
           const savedView = prefs.interactiveShell.activeNavigationView as string;
-          // Migrate legacy 'workspaces' view to 'local-projects'
-          const view = savedView === 'workspaces' ? 'local-projects' : savedView;
+          // Migrate removed views to 'feed'
+          const legacyViews = ['workspaces', 'local-projects', 'remote-projects', 'starred-projects', 'network'];
+          const view = legacyViews.includes(savedView) ? 'feed' : savedView;
           setActiveView(view as NavigationView);
         }
 
@@ -403,10 +394,6 @@ export const IntegratedShell: React.FC = () => {
             monitoring: { left: false, right: false },
             search: { left: false, right: false },
             settings: { left: false, right: false },
-            'local-projects': { left: false, right: false },
-            'remote-projects': { left: false, right: false },
-            'starred-projects': { left: false, right: false },
-            network: { left: false, right: false },
             processes: { left: false, right: false },
             connections: { left: false, right: false },
             skills: { left: false, right: false },
@@ -468,10 +455,6 @@ export const IntegratedShell: React.FC = () => {
           monitoring: { left: false, right: false },
           search: { left: false, right: false },
           settings: { left: false, right: false },
-          'local-projects': { left: false, right: false },
-          'remote-projects': { left: false, right: false },
-          'starred-projects': { left: false, right: false },
-          network: { left: false, right: false },
           processes: { left: false, right: false },
           connections: { left: false, right: false },
           skills: { left: false, right: false },
@@ -498,7 +481,7 @@ export const IntegratedShell: React.FC = () => {
     quickCommands: QUICK_COMMANDS,
     agentAvailable: false,
     initialSuggestions: [
-      '/switch local-projects',
+      '/switch feed',
       '/switch settings',
       '/collapse',
       '/reset',
@@ -587,11 +570,7 @@ export const IntegratedShell: React.FC = () => {
             )}
             {activeView === 'settings' && <Settings initialCategory={settingsCategory} />}
             {activeView === 'auth' && <AuthView />}
-            {activeView === 'local-projects' && <ProjectsView mode="local" />}
-            {activeView === 'remote-projects' && <ProjectsView mode="remote" />}
-            {activeView === 'starred-projects' && <ProjectsView mode="starred" />}
             {activeView === 'worlds' && <WorldsView />}
-            {activeView === 'network' && <GitSyncView />}
             {activeView === 'processes' && <LocalhostProcessesView />}
             {activeView === 'connections' && <ConnectionsView />}
             {activeView === 'skills' && <SkillBrowserView />}

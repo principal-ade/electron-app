@@ -3,10 +3,6 @@ import {
   Settings,
   Activity,
   User,
-  Monitor,
-  Github,
-  Star,
-  Users,
   Globe,
   Radio,
   Zap,
@@ -39,7 +35,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const { isAuthenticated, user } = useAuth();
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showConnectionsButton, setShowConnectionsButton] = useState(false);
-  const [showNetworkButton, setShowNetworkButton] = useState(false);
   const [showProcessesButton, setShowProcessesButton] = useState(false);
   const [showWorldsButton, setShowWorldsButton] = useState(false);
 
@@ -48,7 +43,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     UserPreferencesService.getPreferences().then((prefs) => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowConnectionsButton(prefs.showConnectionsButton ?? false);
-      setShowNetworkButton(prefs.showNetworkButton ?? false);
       setShowProcessesButton(prefs.showProcessesButton ?? false);
       setShowWorldsButton(prefs.showWorldsButton ?? false);
     });
@@ -62,9 +56,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }
         if ('showConnectionsButton' in detail) {
           setShowConnectionsButton(detail.showConnectionsButton ?? false);
-        }
-        if ('showNetworkButton' in detail) {
-          setShowNetworkButton(detail.showNetworkButton ?? false);
         }
         if ('showProcessesButton' in detail) {
           setShowProcessesButton(detail.showProcessesButton ?? false);
@@ -138,9 +129,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const navItems: NavItem[] = [
     { id: 'feed', icon: <Rss size={20} />, label: 'Feed' },
-    { id: 'local-projects', icon: <Monitor size={20} />, label: 'Local' },
-    { id: 'remote-projects', icon: <Github size={20} />, label: 'Github' },
-    { id: 'starred-projects', icon: <Star size={20} />, label: 'Starred' },
     // Only include worlds button if user has enabled it in preferences
     ...(showWorldsButton
       ? [
@@ -153,16 +141,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       : []),
     { id: 'skills', icon: <Zap size={20} />, label: 'Skills' },
     { id: 'onboarding', icon: <GraduationCap size={20} />, label: 'Tutorials' },
-    // Only include network button if user has enabled it in preferences
-    ...(showNetworkButton
-      ? [
-          {
-            id: 'network' as NavigationView,
-            icon: <Users size={20} />,
-            label: 'Network',
-          },
-        ]
-      : []),
     // Only include processes button if user has enabled it in preferences
     ...(showProcessesButton
       ? [
