@@ -5,13 +5,19 @@
 
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+
+const execFileAsync = promisify(execFile);
 
 export interface DiscoveredRepository {
   /** Absolute path to the repository */
   path: string;
   /** Repository name (directory name) */
   name: string;
+  /** Owner/organization name from git remote (if available) */
+  owner?: string;
   /** Whether this repo is tracked in Alexandria */
   isTracked: false;
 }
@@ -41,6 +47,73 @@ export class GitRepositoryScannerService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Get the git remote URL for a repository
+   */
+  private async getGitRemoteUrl(repoPath: string): Promise<string | null> {
+    try {
+      const { stdout } = await execFileAsync('git', ['remote', 'get-url', 'origin'], {
+        cwd: repoPath,
+        timeout: 5000
+      });
+      return stdout.trim();
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Parse owner and repo name from git remote URL
+   * Supports: https://github.com/owner/repo.git, git@github.com:owner/repo.git, etc.
+   */
+  private parseGitRemote(remoteUrl: string): { owner?: string; repo?: string } {
+    if (!remoteUrl) {
+      return {};
+    }
+
+    try {
+      // Handle SSH format: git@github.com:owner/repo.git
+      const sshMatch = remoteUrl.match(/[^@]+@[^:]+:([^/]+)\/(.+?)(?:\.git)?$/);
+      if (sshMatch) {
+        return {
+          owner: sshMatch[1],
+          repo: sshMatch[2]
+        };
+      }
+
+      // Handle HTTPS format: https://github.com/owner/repo.git
+      const httpsMatch = remoteUrl.match(/https?:\/\/[^/]+\/([^/]+)\/(.+?)(?:\.git)?$/);
+      if (httpsMatch) {
+        return {
+          owner: httpsMatch[1],
+          repo: httpsMatch[2]
+        };
+      }
+
+      return {};
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Get repository info including owner from git remote
+   */
+  private async getRepositoryInfo(repoPath: string): Promise<{ owner?: string; name: string }> {
+    const name = path.basename(repoPath);
+    const remoteUrl = await this.getGitRemoteUrl(repoPath);
+
+    if (remoteUrl) {
+      const { owner, repo } = this.parseGitRemote(remoteUrl);
+      return {
+        owner,
+        name: repo || name // Prefer parsed repo name, fallback to directory name
+      };
+    }
+
+    return { name };
   }
 
   /**
@@ -84,9 +157,22 @@ export class GitRepositoryScannerService {
         '.cache',
         '.npm',
         '.yarn',
+        '.local',
+        '.config',
+        '.vscode',
         'Library',
         'Applications',
         '.Trash',
+        'Music',
+        'Movies',
+        'Pictures',
+        'Public',
+        'Downloads',
+        '.dropbox',
+        'Dropbox',
+        'Google Drive',
+        'OneDrive',
+        'iCloud Drive',
       ]);
 
       const directories = entries.filter(
@@ -145,15 +231,17 @@ export class GitRepositoryScannerService {
       trackedRepos.map((repo) => path.normalize(repo.path)),
     );
 
-    // Filter to only untracked repos
+    // Filter to only untracked repos and get their info
     const discoveredRepos: DiscoveredRepository[] = [];
 
     for (const repoPath of allRepos) {
       const normalizedPath = path.normalize(repoPath);
       if (!trackedPaths.has(normalizedPath)) {
+        const info = await this.getRepositoryInfo(repoPath);
         discoveredRepos.push({
           path: repoPath,
-          name: path.basename(repoPath),
+          name: info.name,
+          owner: info.owner,
           isTracked: false,
         });
       }
@@ -165,5 +253,24 @@ export class GitRepositoryScannerService {
     );
 
     return discoveredRepos;
+  }
+
+  /**
+   * Get repository info (name and owner) for multiple repos in parallel
+   * Used for onboarding wizard scanning
+   */
+  async getRepositoriesInfo(repoPaths: string[]): Promise<Array<{ path: string; name: string; owner?: string }>> {
+    const results = await Promise.all(
+      repoPaths.map(async (repoPath) => {
+        const info = await this.getRepositoryInfo(repoPath);
+        return {
+          path: repoPath,
+          name: info.name,
+          owner: info.owner
+        };
+      })
+    );
+
+    return results;
   }
 }

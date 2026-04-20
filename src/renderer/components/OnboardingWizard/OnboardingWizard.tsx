@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme, Theme } from '@principal-ade/industry-theme';
 import { Logo } from '@principal-ai/logo-component';
 import {
   FolderGit2,
-  Github,
   ArrowRight,
   CheckCircle,
   FolderPlus,
@@ -32,13 +31,41 @@ const GitLogo: React.FC<{ size?: number; color?: string }> = ({
   </svg>
 );
 
-type OnboardingStep = 'welcome' | 'repo-location' | 'home-directory' | 'organize-projects' | 'github-connect' | 'ready';
+// GitHub Logo Component (Octocat mark)
+const GitHubLogo: React.FC<{ size?: number; color?: string }> = ({
+  size = 40,
+  color = '#24292e'
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 98 96"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M48.854 0C21.839 0 0 22 0 49.217c0 21.756 13.993 40.172 33.405 46.69 2.427.49 3.316-1.059 3.316-2.362 0-1.141-.08-5.052-.08-9.127-13.59 2.934-16.42-5.867-16.42-5.867-2.184-5.704-5.42-7.17-5.42-7.17-4.448-3.015.324-3.015.324-3.015 4.934.326 7.523 5.052 7.523 5.052 4.367 7.496 11.404 5.378 14.235 4.074.404-3.178 1.699-5.378 3.074-6.6-10.839-1.141-22.243-5.378-22.243-24.283 0-5.378 1.94-9.778 5.014-13.2-.485-1.222-2.184-6.275.486-13.038 0 0 4.125-1.304 13.426 5.052a46.97 46.97 0 0 1 12.214-1.63c4.125 0 8.33.571 12.213 1.63 9.302-6.356 13.427-5.052 13.427-5.052 2.67 6.763.97 11.816.485 13.038 3.155 3.422 5.015 7.822 5.015 13.2 0 18.905-11.404 23.06-22.324 24.283 1.78 1.548 3.316 4.481 3.316 9.126 0 6.6-.08 11.897-.08 13.526 0 1.304.89 2.853 3.316 2.364 19.412-6.52 33.405-24.935 33.405-46.691C97.707 22 75.788 0 48.854 0z"
+      fill={color}
+    />
+  </svg>
+);
+
+type OnboardingStep = 'welcome' | 'choose-method' | 'folder-selection' | 'scanning' | 'repo-location' | 'home-directory' | 'organize-projects' | 'github-connect' | 'ready';
 
 type RepoLocationMode = 'single' | 'multiple' | 'add-list';
+type SetupMethod = 'scan' | 'select' | null;
 
 interface OnboardingWizardProps {
   repoLocationMode?: RepoLocationMode;
   onComplete?: (data: OnboardingData) => void;
+  // Service methods for testing/mocking
+  fileSystemService?: {
+    getTopLevelFolders: () => Promise<TopLevelFolder[]>;
+    scanFoldersForRepos: (folderPaths: string[]) => Promise<{ success: boolean; repos: Array<{ path: string; name: string; owner?: string }>; error?: string }>;
+    onRepoScanProgress: (callback: (progress: { current: number; total: number; currentFolder: string; foundRepos: number }) => void) => () => void;
+    selectDirectory: (options?: { title?: string; buttonLabel?: string; properties?: Array<'openDirectory' | 'createDirectory' | 'promptToCreate'> }) => Promise<{ filePaths: string[]; canceled: boolean } | { canceled: true } | null>;
+  };
 }
 
 interface OnboardingData {
@@ -47,40 +74,116 @@ interface OnboardingData {
   githubConnected: boolean;
 }
 
+interface TopLevelFolder {
+  name: string;
+  path: string;
+  selected: boolean;
+  category: 'dev' | 'common' | 'system';
+}
+
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   repoLocationMode = 'single',
-  onComplete
+  onComplete,
+  fileSystemService = FileSystemService
 }) => {
   const { theme } = useTheme();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
+  const [setupMethod, setSetupMethod] = useState<SetupMethod>(null);
   const [repoPaths, setRepoPaths] = useState<string[]>([]);
+  const [topLevelFolders, setTopLevelFolders] = useState<TopLevelFolder[]>([]);
+  const [isLoadingFolders, setIsLoadingFolders] = useState(false);
+  const [foundProjects, setFoundProjects] = useState<Array<{ currentPath: string; owner: string; name: string }>>([]);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState({ current: 0, total: 0, currentFolder: '', foundRepos: 0 });
   const [githubConnected, setGithubConnected] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [showContent, setShowContent] = useState(true);
   const [devDirectoryName, setDevDirectoryName] = useState('Development');
   const [shouldOrganize, setShouldOrganize] = useState(true);
 
-  // Mock found projects - in real implementation, this would come from scanning the paths
-  const foundProjects = [
-    { currentPath: '/Users/developer/my-app', owner: 'johndoe', name: 'my-app' },
-    { currentPath: '/Users/developer/projects/react-project', owner: 'acme', name: 'react-project' },
-    { currentPath: '/Users/developer/Downloads/old-repo', owner: 'janedoe', name: 'old-repo' }
-  ];
+  // Get active steps based on user's choice
+  const getActiveSteps = (): OnboardingStep[] => {
+    const baseSteps: OnboardingStep[] = ['welcome', 'choose-method'];
 
-  const steps: OnboardingStep[] = ['welcome', 'repo-location', 'home-directory', 'organize-projects', 'github-connect', 'ready'];
-  const currentStepIndex = steps.indexOf(currentStep);
+    if (setupMethod === 'scan') {
+      return [...baseSteps, 'folder-selection', 'scanning', 'home-directory', 'organize-projects', 'github-connect', 'ready'];
+    } else if (setupMethod === 'select') {
+      return [...baseSteps, 'repo-location', 'home-directory', 'organize-projects', 'github-connect', 'ready'];
+    }
+
+    // Before method is chosen, show all possible steps
+    return ['welcome', 'choose-method', 'home-directory', 'organize-projects', 'github-connect', 'ready'];
+  };
+
+  const activeSteps = getActiveSteps();
+  const currentStepIndex = activeSteps.indexOf(currentStep);
 
   // Don't count welcome step in progress
-  const actualSteps: Array<Exclude<OnboardingStep, 'welcome'>> = steps.filter((s): s is Exclude<OnboardingStep, 'welcome'> => s !== 'welcome');
+  const actualSteps: Array<Exclude<OnboardingStep, 'welcome'>> = activeSteps.filter((s): s is Exclude<OnboardingStep, 'welcome'> => s !== 'welcome');
   const actualStepIndex = currentStep === 'welcome' ? -1 : actualSteps.indexOf(currentStep as Exclude<OnboardingStep, 'welcome'>);
   const progress = currentStep === 'welcome' ? 0 : ((actualStepIndex + 1) / actualSteps.length) * 100;
+
+  // Load top-level folders when entering folder-selection step
+  useEffect(() => {
+    if (currentStep === 'folder-selection' && topLevelFolders.length === 0) {
+      setIsLoadingFolders(true);
+      fileSystemService.getTopLevelFolders().then((folders) => {
+        setTopLevelFolders(folders.map(f => ({
+          ...f,
+          selected: f.category === 'dev' // Pre-select dev folders
+        })));
+        setIsLoadingFolders(false);
+      });
+    }
+  }, [currentStep, topLevelFolders.length, fileSystemService]);
+
+  // Set up progress listener when entering scanning step
+  useEffect(() => {
+    if (currentStep === 'scanning') {
+      const cleanup = fileSystemService.onRepoScanProgress((progress) => {
+        setScanProgress(progress);
+      });
+
+      // Start scanning
+      startScanning();
+
+      return cleanup;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, fileSystemService]);
+
+  const startScanning = async () => {
+    setIsScanning(true);
+    setFoundProjects([]);
+    setScanProgress({ current: 0, total: 0, currentFolder: '', foundRepos: 0 });
+
+    try {
+      const selectedFolders = topLevelFolders.filter(f => f.selected).map(f => f.path);
+
+      const result = await fileSystemService.scanFoldersForRepos(selectedFolders);
+
+      if (result.success && result.repos) {
+        // Convert to the format expected by foundProjects
+        const projects = result.repos.map(repo => ({
+          currentPath: repo.path,
+          owner: repo.owner || 'local', // Fallback for repos without remotes
+          name: repo.name
+        }));
+        setFoundProjects(projects);
+      }
+    } catch (error) {
+      console.error('Scanning failed:', error);
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   const handleStart = () => {
     setShowContent(false);
 
     // Step 1: Fade out welcome content (300ms)
     setTimeout(() => {
-      setCurrentStep('repo-location');
+      setCurrentStep('choose-method');
       setHasStarted(true);
 
       // Step 2: Nav slides up (400ms animation in CSS)
@@ -93,10 +196,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
   const handleNext = () => {
     const nextIndex = currentStepIndex + 1;
-    if (nextIndex < steps.length) {
+    if (nextIndex < activeSteps.length) {
       setShowContent(false);
       setTimeout(() => {
-        setCurrentStep(steps[nextIndex]);
+        setCurrentStep(activeSteps[nextIndex]);
         setTimeout(() => {
           setShowContent(true);
         }, 50);
@@ -113,7 +216,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const handleBack = () => {
     const prevIndex = currentStepIndex - 1;
     if (prevIndex >= 0) {
-      if (steps[prevIndex] === 'welcome') {
+      if (activeSteps[prevIndex] === 'welcome') {
         // Going back to welcome - reverse the animation
         setShowContent(false);
         setTimeout(() => {
@@ -127,7 +230,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         // Normal back transition with fade
         setShowContent(false);
         setTimeout(() => {
-          setCurrentStep(steps[prevIndex]);
+          setCurrentStep(activeSteps[prevIndex]);
           setTimeout(() => {
             setShowContent(true);
           }, 50);
@@ -137,7 +240,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const handleAddPath = async () => {
-    const result = await FileSystemService.selectDirectory({
+    const result = await fileSystemService.selectDirectory({
       title: 'Select Git Projects Folder',
       buttonLabel: 'Select Folder',
       properties: ['openDirectory'],
@@ -165,6 +268,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const canProceed = () => {
+    if (currentStep === 'choose-method') {
+      return setupMethod !== null;
+    }
+    if (currentStep === 'folder-selection') {
+      return topLevelFolders.some(f => f.selected);
+    }
+    if (currentStep === 'scanning') {
+      return !isScanning && foundProjects.length > 0;
+    }
     if (currentStep === 'repo-location') {
       return repoPaths.length > 0;
     }
@@ -215,6 +327,36 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         }}>
           {currentStep === 'welcome' && (
             <WelcomeStep theme={theme} onStart={handleStart} />
+          )}
+
+          {currentStep === 'choose-method' && (
+            <ChooseMethodStep
+              theme={theme}
+              selectedMethod={setupMethod}
+              onSelectMethod={setSetupMethod}
+            />
+          )}
+
+          {currentStep === 'folder-selection' && (
+            <FolderSelectionStep
+              theme={theme}
+              folders={topLevelFolders}
+              isLoading={isLoadingFolders}
+              onToggleFolder={(name) => {
+                setTopLevelFolders(folders =>
+                  folders.map(f => f.name === name ? { ...f, selected: !f.selected } : f)
+                );
+              }}
+            />
+          )}
+
+          {currentStep === 'scanning' && (
+            <ScanningStep
+              theme={theme}
+              isScanning={isScanning}
+              progress={scanProgress}
+              foundProjects={foundProjects}
+            />
           )}
 
           {currentStep === 'repo-location' && (
@@ -322,6 +464,154 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 };
 
 // Step Components
+
+interface ChooseMethodStepProps {
+  theme: Theme;
+  selectedMethod: SetupMethod;
+  onSelectMethod: (method: SetupMethod) => void;
+}
+
+const ChooseMethodStep: React.FC<ChooseMethodStepProps> = ({
+  theme,
+  selectedMethod,
+  onSelectMethod
+}) => (
+  <div>
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      marginBottom: 24
+    }}>
+      <div style={{
+        display: 'inline-flex',
+        padding: 24,
+        backgroundColor: '#ffffff',
+        borderRadius: '50%'
+      }}>
+        <GitLogo size={60} color="#F05032" />
+      </div>
+    </div>
+
+    <h2 style={{
+      fontFamily: theme.fonts.heading,
+      fontSize: `${theme.fontSizes[4]}px`,
+      fontWeight: 700,
+      color: theme.colors.text,
+      marginBottom: 32,
+      textAlign: 'center'
+    }}>
+      How would you like to find your <span style={{ color: '#F05032' }}>git</span> projects?
+    </h2>
+
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16
+    }}>
+      {/* Scan Option */}
+      <button
+        onClick={() => onSelectMethod('scan')}
+        style={{
+          padding: 24,
+          backgroundColor: selectedMethod === 'scan' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
+          border: `2px solid ${selectedMethod === 'scan' ? theme.colors.primary : theme.colors.border}`,
+          borderRadius: 12,
+          cursor: 'pointer',
+          textAlign: 'left',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 16
+        }}>
+          <div style={{
+            padding: 12,
+            backgroundColor: `${theme.colors.primary}20`,
+            borderRadius: 8,
+            flexShrink: 0
+          }}>
+            <FolderTree size={24} color={theme.colors.primary} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontFamily: theme.fonts.body,
+              fontSize: `${theme.fontSizes[2]}px`,
+              fontWeight: 600,
+              color: theme.colors.text,
+              marginBottom: 8
+            }}>
+              Find for me
+            </div>
+            <div style={{
+              fontFamily: theme.fonts.body,
+              fontSize: `${theme.fontSizes[1]}px`,
+              color: theme.colors.textSecondary,
+              lineHeight: 1.5
+            }}>
+              We will look for .git which are present in git projects
+            </div>
+          </div>
+          {selectedMethod === 'scan' && (
+            <CheckCircle size={24} color={theme.colors.primary} />
+          )}
+        </div>
+      </button>
+
+      {/* Select Option */}
+      <button
+        onClick={() => onSelectMethod('select')}
+        style={{
+          padding: 24,
+          backgroundColor: selectedMethod === 'select' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
+          border: `2px solid ${selectedMethod === 'select' ? theme.colors.primary : theme.colors.border}`,
+          borderRadius: 12,
+          cursor: 'pointer',
+          textAlign: 'left',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 16
+        }}>
+          <div style={{
+            padding: 12,
+            backgroundColor: `${theme.colors.primary}20`,
+            borderRadius: 8,
+            flexShrink: 0
+          }}>
+            <FolderPlus size={24} color={theme.colors.primary} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontFamily: theme.fonts.body,
+              fontSize: `${theme.fontSizes[2]}px`,
+              fontWeight: 600,
+              color: theme.colors.text,
+              marginBottom: 8
+            }}>
+              I'll pick
+            </div>
+            <div style={{
+              fontFamily: theme.fonts.body,
+              fontSize: `${theme.fontSizes[1]}px`,
+              color: theme.colors.textSecondary,
+              lineHeight: 1.5
+            }}>
+              Use Finder to pick git projects manually
+            </div>
+          </div>
+          {selectedMethod === 'select' && (
+            <CheckCircle size={24} color={theme.colors.primary} />
+          )}
+        </div>
+      </button>
+    </div>
+  </div>
+);
 
 interface WelcomeStepProps {
   theme: Theme;
@@ -553,6 +843,437 @@ const RepoLocationStep: React.FC<RepoLocationStepProps> = ({
   </div>
 );
 
+interface FolderSelectionStepProps {
+  theme: Theme;
+  folders: TopLevelFolder[];
+  isLoading: boolean;
+  onToggleFolder: (name: string) => void;
+}
+
+const FolderSelectionStep: React.FC<FolderSelectionStepProps> = ({
+  theme,
+  folders,
+  isLoading,
+  onToggleFolder
+}) => {
+  const selectedCount = folders.filter(f => f.selected).length;
+
+  // Skeleton loader items
+  const skeletonItems = Array.from({ length: 8 }, (_, i) => i);
+
+  return (
+    <div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{
+          display: 'inline-flex',
+          padding: 20,
+          backgroundColor: `${theme.colors.primary}15`,
+          borderRadius: '50%'
+        }}>
+          <FolderTree size={40} color={theme.colors.primary} />
+        </div>
+      </div>
+
+      <h2 style={{
+        fontFamily: theme.fonts.heading,
+        fontSize: `${theme.fontSizes[4]}px`,
+        fontWeight: 700,
+        color: theme.colors.text,
+        marginBottom: 12,
+        textAlign: 'center'
+      }}>
+        Choose folders to scan
+      </h2>
+
+      <p style={{
+        fontFamily: theme.fonts.body,
+        fontSize: `${theme.fontSizes[1]}px`,
+        color: theme.colors.textSecondary,
+        lineHeight: 1.6,
+        marginBottom: 8,
+        textAlign: 'center'
+      }}>
+        Select which folders to search for <span style={{ color: '#F05032' }}>git</span> projects
+      </p>
+
+      <p style={{
+        fontFamily: theme.fonts.body,
+        fontSize: `${theme.fontSizes[0]}px`,
+        color: theme.colors.textSecondary,
+        marginBottom: 32,
+        textAlign: 'center'
+      }}>
+        {selectedCount} folder{selectedCount !== 1 ? 's' : ''} selected
+      </p>
+
+      <div style={{
+        maxHeight: 400,
+        minHeight: 400,
+        overflowY: 'auto',
+        marginBottom: 24
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8
+        }}>
+          {isLoading ? (
+            // Skeleton loaders
+            skeletonItems.map((i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: 12,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: 8,
+                  height: 48
+                }}
+              >
+                <div style={{
+                  width: 18,
+                  height: 18,
+                  backgroundColor: theme.colors.border,
+                  borderRadius: 3,
+                  animation: 'pulse 1.5s ease-in-out infinite'
+                }} />
+                <div style={{
+                  width: 20,
+                  height: 20,
+                  backgroundColor: theme.colors.border,
+                  borderRadius: 4,
+                  animation: 'pulse 1.5s ease-in-out infinite'
+                }} />
+                <div style={{
+                  flex: 1,
+                  height: 16,
+                  backgroundColor: theme.colors.border,
+                  borderRadius: 4,
+                  animation: 'pulse 1.5s ease-in-out infinite',
+                  maxWidth: `${40 + Math.random() * 30}%`
+                }} />
+              </div>
+            ))
+          ) : (
+            // Actual folders
+            folders.map((folder) => {
+              const isDev = folder.category === 'dev';
+              const isSystem = folder.category === 'system';
+
+              return (
+                <label
+                  key={folder.name}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: 12,
+                    backgroundColor: folder.selected ? `${theme.colors.primary}10` : theme.colors.backgroundSecondary,
+                    border: `1px solid ${folder.selected ? theme.colors.primary : theme.colors.border}`,
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    opacity: isSystem ? 0.6 : 1
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={folder.selected}
+                    onChange={() => onToggleFolder(folder.name)}
+                    style={{
+                      width: 18,
+                      height: 18,
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <Folder
+                    size={20}
+                    color={isDev ? theme.colors.primary : theme.colors.textSecondary}
+                  />
+                  <span style={{
+                    flex: 1,
+                    fontFamily: theme.fonts.monospace,
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    color: theme.colors.text,
+                    fontWeight: isDev ? 600 : 400
+                  }}>
+                    ~/{folder.name}
+                  </span>
+                  {isDev && (
+                    <span style={{
+                      padding: '2px 8px',
+                      backgroundColor: `${theme.colors.primary}20`,
+                      color: theme.colors.primary,
+                      borderRadius: 4,
+                      fontSize: `${theme.fontSizes[0]}px`,
+                      fontWeight: 500
+                    }}>
+                      Recommended
+                    </span>
+                  )}
+                  {isSystem && (
+                    <span style={{
+                      padding: '2px 8px',
+                      backgroundColor: `${theme.colors.textSecondary}20`,
+                      color: theme.colors.textSecondary,
+                      borderRadius: 4,
+                      fontSize: `${theme.fontSizes[0]}px`
+                    }}>
+                      Excluded
+                    </span>
+                  )}
+                </label>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface ScanningStepProps {
+  theme: Theme;
+  isScanning: boolean;
+  progress: { current: number; total: number; currentFolder: string };
+  foundProjects: Array<{ currentPath: string; owner: string; name: string }>;
+}
+
+const ScanningStep: React.FC<ScanningStepProps> = ({
+  theme,
+  isScanning,
+  progress,
+  foundProjects
+}) => {
+  // Skeleton loader items for projects
+  const skeletonProjects = Array.from({ length: 5 }, (_, i) => i);
+
+  // Calculate progress percentage
+  const progressPercentage = progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
+  const circumference = 2 * Math.PI * 45; // radius of 45px
+  const strokeDashoffset = circumference - (progressPercentage / 100) * circumference;
+
+  return (
+    <div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        marginBottom: 24,
+        position: 'relative'
+      }}>
+        {/* Circular progress indicator - always visible */}
+        <svg
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%) rotate(-90deg)',
+            width: 110,
+            height: 110
+          }}
+        >
+          {/* Background circle */}
+          <circle
+            cx="55"
+            cy="55"
+            r="45"
+            stroke={theme.colors.border}
+            strokeWidth="3"
+            fill="none"
+          />
+          {/* Progress circle */}
+          <circle
+            cx="55"
+            cy="55"
+            r="45"
+            stroke={!isScanning && foundProjects.length > 0 ? theme.colors.success || '#10b981' : theme.colors.primary}
+            strokeWidth="3"
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={isScanning ? strokeDashoffset : 0}
+            strokeLinecap="round"
+            style={{
+              transition: 'stroke-dashoffset 0.3s ease, stroke 0.3s ease'
+            }}
+          />
+        </svg>
+
+        <div style={{
+          display: 'inline-flex',
+          padding: 20,
+          backgroundColor: `${theme.colors.primary}15`,
+          borderRadius: '50%',
+          zIndex: 1
+        }}>
+          <FolderGit2 size={40} color={theme.colors.primary} />
+        </div>
+      </div>
+
+      <h2 style={{
+        fontFamily: theme.fonts.heading,
+        fontSize: `${theme.fontSizes[4]}px`,
+        fontWeight: 700,
+        color: theme.colors.text,
+        marginBottom: 12,
+        textAlign: 'center'
+      }}>
+        {isScanning ? (
+          <>
+            Scanning for <span style={{ color: '#F05032' }}>git</span> projects...
+          </>
+        ) : (
+          'Scan complete!'
+        )}
+      </h2>
+
+      {/* Results area - always reserve space */}
+      <div style={{
+        minHeight: 300
+      }}>
+        {isScanning && (
+          <>
+            <p style={{
+              fontFamily: theme.fonts.body,
+              fontSize: `${theme.fontSizes[1]}px`,
+              color: theme.colors.textSecondary,
+              lineHeight: 1.6,
+              marginBottom: 24,
+              textAlign: 'center',
+              minHeight: 24
+            }}>
+              {progress.currentFolder ? `Scanning ~/${progress.currentFolder}...` : 'Starting scan...'}
+            </p>
+
+            <div style={{
+              maxHeight: 300,
+              overflowY: 'auto',
+              backgroundColor: theme.colors.backgroundSecondary,
+              borderRadius: 8,
+              padding: 16
+            }}>
+              {skeletonProjects.map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: 12,
+                    borderBottom: i < skeletonProjects.length - 1 ? `1px solid ${theme.colors.border}` : 'none'
+                  }}
+                >
+                  <div style={{
+                    width: 20,
+                    height: 20,
+                    backgroundColor: theme.colors.border,
+                    borderRadius: 4,
+                    animation: 'pulse 1.5s ease-in-out infinite'
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      height: 16,
+                      backgroundColor: theme.colors.border,
+                      borderRadius: 4,
+                      marginBottom: 8,
+                      animation: 'pulse 1.5s ease-in-out infinite',
+                      maxWidth: `${30 + Math.random() * 30}%`
+                    }} />
+                    <div style={{
+                      height: 12,
+                      backgroundColor: theme.colors.border,
+                      borderRadius: 4,
+                      animation: 'pulse 1.5s ease-in-out infinite',
+                      maxWidth: `${50 + Math.random() * 30}%`
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {!isScanning && foundProjects.length === 0 && (
+          <p style={{
+            fontFamily: theme.fonts.body,
+            fontSize: `${theme.fontSizes[1]}px`,
+            color: theme.colors.textSecondary,
+            lineHeight: 1.6,
+            marginBottom: 24,
+            textAlign: 'center'
+          }}>
+            No <span style={{ color: '#F05032' }}>git</span> projects found in the selected folders
+          </p>
+        )}
+
+        {!isScanning && foundProjects.length > 0 && (
+          <>
+            <p style={{
+              fontFamily: theme.fonts.body,
+              fontSize: `${theme.fontSizes[1]}px`,
+              color: theme.colors.textSecondary,
+              lineHeight: 1.6,
+              marginBottom: 24,
+              textAlign: 'center'
+            }}>
+              Found {foundProjects.length} <span style={{ color: '#F05032' }}>git</span> {foundProjects.length === 1 ? 'project' : 'projects'}
+            </p>
+
+            <div style={{
+              maxHeight: 300,
+              overflowY: 'auto',
+              backgroundColor: theme.colors.backgroundSecondary,
+              borderRadius: 8,
+              padding: 16
+            }}>
+              {foundProjects.map((project, idx) => (
+                <div
+                  key={project.currentPath}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: 12,
+                    borderBottom: idx < foundProjects.length - 1 ? `1px solid ${theme.colors.border}` : 'none'
+                  }}
+                >
+                  <FolderGit2 size={20} color={theme.colors.primary} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      fontFamily: theme.fonts.monospace,
+                      fontSize: `${theme.fontSizes[1]}px`,
+                      color: theme.colors.text,
+                      fontWeight: 500
+                    }}>
+                      {project.name}
+                    </div>
+                    <div style={{
+                      fontFamily: theme.fonts.monospace,
+                      fontSize: `${theme.fontSizes[0]}px`,
+                      color: theme.colors.textSecondary,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {project.currentPath}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 interface HomeDirectoryStepProps {
   theme: Theme;
   devDirectoryName: string;
@@ -602,7 +1323,7 @@ const HomeDirectoryStep: React.FC<HomeDirectoryStepProps> = ({
         marginBottom: 32,
         textAlign: 'center'
       }}>
-        This is where we will copy all future clones in owner/reponame style.
+        This is where we will place all future <span style={{ color: '#F05032' }}>git</span> projects in owner/reponame style.
       </p>
 
       <div style={{ marginBottom: 24 }}>
@@ -883,11 +1604,11 @@ const GitHubConnectStep: React.FC<GitHubConnectStepProps> = ({
       <ArrowRight size={32} color={theme.colors.textSecondary} />
       <div style={{
         display: 'inline-flex',
-        padding: 20,
-        backgroundColor: `${theme.colors.primary}15`,
+        padding: 10,
+        backgroundColor: '#24292e',
         borderRadius: '50%'
       }}>
-        <Github size={40} color={theme.colors.primary} />
+        <GitHubLogo size={60} color="#ffffff" />
       </div>
     </div>
 
@@ -934,7 +1655,7 @@ const GitHubConnectStep: React.FC<GitHubConnectStepProps> = ({
           transition: 'all 0.2s ease'
         }}
       >
-        <Github size={20} />
+        <GitHubLogo size={20} color="#ffffff" />
         Connect with GitHub
       </button>
     ) : (
@@ -1003,7 +1724,7 @@ const ReadyStep: React.FC<ReadyStepProps> = ({ theme }) => (
       color: theme.colors.textSecondary,
       lineHeight: 1.6
     }}>
-      Let's start exploring your repositories and building something awesome together.
+      Let's start exploring your <span style={{ color: '#F05032' }}>git</span> projects and building something awesome together.
     </p>
   </div>
 );

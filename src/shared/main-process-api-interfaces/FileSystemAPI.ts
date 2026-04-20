@@ -54,6 +54,11 @@ export enum FileSystemAPIEvent {
   GET_PENDING_CHANGES = 'file-system:get-pending-changes',
   PENDING_CHANGES_UPDATED = 'file-system:pending-changes-updated', // Event
   CLEAR_PENDING_CHANGES = 'file-system:clear-pending-changes',
+
+  // Repository scanning for onboarding
+  GET_TOP_LEVEL_FOLDERS = 'file-system:get-top-level-folders',
+  SCAN_FOLDERS_FOR_REPOS = 'file-system:scan-folders-for-repos',
+  REPO_SCAN_PROGRESS = 'file-system:repo-scan-progress', // Event
 }
 
 export interface FileStats {
@@ -255,6 +260,27 @@ export interface GlobalSkill {
   frontmatterValidation: FrontmatterValidation;
 }
 
+// Repository scanning interfaces
+export interface TopLevelFolder {
+  name: string;
+  path: string;
+  category: 'dev' | 'common' | 'system';
+  estimatedSubdirs?: number;
+}
+
+export interface ScanProgress {
+  current: number;
+  total: number;
+  currentFolder: string;
+  foundRepos: number;
+}
+
+export interface ScannedRepository {
+  path: string;
+  name: string;
+  owner?: string;
+}
+
 // File watching interfaces
 export interface WatchFileOptions {
   filePath: string;
@@ -391,4 +417,9 @@ export interface FileSystemAPI {
       lastDetected: Date;
     };
   }) => void) => () => void;
+
+  // Repository scanning for onboarding
+  getTopLevelFolders: () => Promise<TopLevelFolder[]>;
+  scanFoldersForRepos: (folderPaths: string[]) => Promise<{ success: boolean; repos: ScannedRepository[]; error?: string }>;
+  onRepoScanProgress: (callback: (progress: ScanProgress) => void) => () => void;
 }

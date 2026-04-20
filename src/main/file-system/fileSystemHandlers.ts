@@ -18,6 +18,8 @@ import { RecentReposService } from '../services/RecentReposService';
 import { RecentReposAPIEvent } from '../../shared/main-process-api-interfaces/RecentReposAPI';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
+import { GitRepositoryScannerService } from './gitRepositoryScannerService';
+import os from 'os';
 
 export class ElectronFileSystemAdapter {
   private rootPath: string | null = null;
@@ -2611,6 +2613,106 @@ This placeholder skill can be safely deleted once you've installed your first sk
     } catch (error) {
       console.error('[clearRecentRepos] Failed:', error);
       return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Repository scanning for onboarding
+  ipcMain.handle(FileSystemAPIEvent.GET_TOP_LEVEL_FOLDERS, async () => {
+    try {
+      const homeDir = os.homedir();
+      const entries = await fsPromises.readdir(homeDir, { withFileTypes: true });
+
+      // Categorize folders
+      const devFolders = new Set([
+        'Developer', 'Development', 'Code', 'Projects',
+        'dev', 'repos', 'workspace', 'work', 'src'
+      ]);
+
+      const systemFolders = new Set([
+        '.local', '.config', '.vscode', '.npm', '.cache',
+        'Music', 'Movies', 'Pictures', 'Public',
+        'Library', 'Applications', '.Trash',
+        'Downloads',
+        '.dropbox', 'Dropbox',
+        'Google Drive', 'OneDrive', 'iCloud Drive',
+        '.git', '.ssh', '.gnupg'
+      ]);
+
+      const folders = entries
+        .filter(entry => entry.isDirectory())
+        .map(entry => {
+          const name = entry.name;
+          let category: 'dev' | 'common' | 'system' = 'common';
+
+          if (systemFolders.has(name) || name.startsWith('.')) {
+            category = 'system';
+          } else if (devFolders.has(name)) {
+            category = 'dev';
+          }
+
+          return {
+            name,
+            path: path.join(homeDir, name),
+            category,
+            // Pre-select dev folders, exclude system folders
+            selected: category === 'dev'
+          };
+        })
+        // Sort: dev folders first, then common, then system
+        .sort((a, b) => {
+          const order = { dev: 0, common: 1, system: 2 };
+          if (order[a.category] !== order[b.category]) {
+            return order[a.category] - order[b.category];
+          }
+          return a.name.localeCompare(b.name);
+        });
+
+      return folders;
+    } catch (error) {
+      console.error('[getTopLevelFolders] Failed:', error);
+      return [];
+    }
+  });
+
+  ipcMain.handle(FileSystemAPIEvent.SCAN_FOLDERS_FOR_REPOS, async (event, folderPaths: string[]) => {
+    try {
+      const scanner = GitRepositoryScannerService.getInstance();
+      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+
+      let allRepos: string[] = [];
+      let currentFolder = 0;
+      const totalFolders = folderPaths.length;
+
+      // Scan each folder
+      for (const folderPath of folderPaths) {
+        currentFolder++;
+
+        // Send progress update
+        if (senderWindow) {
+          senderWindow.webContents.send(FileSystemAPIEvent.REPO_SCAN_PROGRESS, {
+            current: currentFolder,
+            total: totalFolders,
+            currentFolder: path.basename(folderPath),
+            foundRepos: allRepos.length
+          });
+        }
+
+        // Scan this folder (depth 3 for better coverage)
+        const repos = await scanner.scanFolderForGitRepos(folderPath, 3);
+        allRepos = allRepos.concat(repos);
+      }
+
+      // Get repository info (including owner from git remotes)
+      const scannedRepos = await scanner.getRepositoriesInfo(allRepos);
+
+      return { success: true, repos: scannedRepos };
+    } catch (error) {
+      console.error('[scanFoldersForRepos] Failed:', error);
+      return {
+        success: false,
+        repos: [],
+        error: error instanceof Error ? error.message : String(error)
+      };
     }
   });
 

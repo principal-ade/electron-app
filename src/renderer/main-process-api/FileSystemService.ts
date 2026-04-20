@@ -248,4 +248,17 @@ export class FileSystemService {
   ): () => void {
     return window.mainProcess.fileSystem.onPendingChangesUpdated(callback);
   }
+
+  // Repository scanning for onboarding
+  static async getTopLevelFolders() {
+    return window.mainProcess.fileSystem.getTopLevelFolders();
+  }
+
+  static async scanFoldersForRepos(folderPaths: string[]) {
+    return window.mainProcess.fileSystem.scanFoldersForRepos(folderPaths);
+  }
+
+  static onRepoScanProgress(callback: (progress: { current: number; total: number; currentFolder: string; foundRepos: number }) => void): () => void {
+    return window.mainProcess.fileSystem.onRepoScanProgress(callback);
+  }
 }

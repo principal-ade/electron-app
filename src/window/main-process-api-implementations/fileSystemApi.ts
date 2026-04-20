@@ -314,4 +314,28 @@ export const fileSystemAPI: FileSystemAPI = {
       ipcRenderer.removeListener(FileSystemAPIEvent.PENDING_CHANGES_UPDATED, handler);
     };
   },
+  // Repository scanning for onboarding
+  getTopLevelFolders: async () => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.GET_TOP_LEVEL_FOLDERS);
+  },
+  scanFoldersForRepos: async (folderPaths: string[]) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.SCAN_FOLDERS_FOR_REPOS, folderPaths);
+  },
+  onRepoScanProgress: (callback: (progress: {
+    current: number;
+    total: number;
+    currentFolder: string;
+    foundRepos: number;
+  }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, progress: {
+      current: number;
+      total: number;
+      currentFolder: string;
+      foundRepos: number;
+    }) => callback(progress);
+    ipcRenderer.on(FileSystemAPIEvent.REPO_SCAN_PROGRESS, handler);
+    return () => {
+      ipcRenderer.removeListener(FileSystemAPIEvent.REPO_SCAN_PROGRESS, handler);
+    };
+  },
 };
