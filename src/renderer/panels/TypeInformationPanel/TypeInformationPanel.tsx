@@ -59,7 +59,6 @@ export const TypeInformationPanel: React.FC<TypeInformationPanelProps> = ({
     return () => {
       unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events]);
 
   // Use theme space array or fallback values
@@ -75,14 +74,14 @@ export const TypeInformationPanel: React.FC<TypeInformationPanelProps> = ({
   // Find all TypeScript files using glob
   const findTypeScriptFiles = async (dirPath: string): Promise<string[]> => {
     try {
-      console.log('[TypeInformationPanel] Globbing for TypeScript files in:', dirPath);
+      console.info('[TypeInformationPanel] Globbing for TypeScript files in:', dirPath);
 
       // Use glob to find all .ts and .tsx files, excluding .d.ts files
       const tsFiles = await window.mainProcess.fileSystem.glob('**/*.ts', { cwd: dirPath });
       const tsxFiles = await window.mainProcess.fileSystem.glob('**/*.tsx', { cwd: dirPath });
 
       const allFiles = [...tsFiles, ...tsxFiles];
-      console.log('[TypeInformationPanel] Glob found files:', allFiles);
+      console.info('[TypeInformationPanel] Glob found files:', allFiles);
 
       // Filter out .d.ts files and files in common build/dependency directories
       const filtered = allFiles.filter(file => {
@@ -102,7 +101,7 @@ export const TypeInformationPanel: React.FC<TypeInformationPanelProps> = ({
       // Convert to absolute paths
       const absolutePaths = filtered.map(file => `${dirPath}/${file}`);
 
-      console.log('[TypeInformationPanel] Filtered to', absolutePaths.length, 'TypeScript files');
+      console.info('[TypeInformationPanel] Filtered to', absolutePaths.length, 'TypeScript files');
       return absolutePaths;
     } catch (error) {
       console.error('Failed to find TypeScript files:', error);

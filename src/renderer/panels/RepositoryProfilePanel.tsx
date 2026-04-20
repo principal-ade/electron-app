@@ -447,7 +447,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [repositoryData?.localClones]);
+  }, [repositoryData]);
 
   // Fetch git working directory status for all local clones
   useEffect(() => {
@@ -524,7 +524,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [repositoryData?.localClones]);
+  }, [repositoryData]);
 
   // Load watch status when repository changes
   useEffect(() => {
@@ -537,9 +537,12 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
     const loadWatchStatus = async () => {
       try {
-        const watched = await actions.isRepositoryWatched!(
-          repositoryData.github!.owner,
-          repositoryData.github!.name
+        if (!actions.isRepositoryWatched || !repositoryData.github) {
+          return;
+        }
+        const watched = await actions.isRepositoryWatched(
+          repositoryData.github.owner,
+          repositoryData.github.name
         );
         if (!cancelled) {
           setIsWatched(watched);
@@ -554,7 +557,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [repositoryData?.github?.owner, repositoryData?.github?.name, actions]);
+  }, [repositoryData, actions]);
 
   // Fetch file trees when repository changes
   useEffect(() => {
@@ -825,7 +828,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const handleOwnerClick = () => {
     if (repositoryData && repositoryData.owner !== 'local') {
       const isOrg = repositoryData.ownerType === 'Organization';
-      console.log('[RepositoryProfilePanel] Owner clicked:', repositoryData.owner, 'isOrg:', isOrg);
+      console.info('[RepositoryProfilePanel] Owner clicked:', repositoryData.owner, 'isOrg:', isOrg);
       events.emit({
         type: 'feed:owner-selected',
         source: 'repository-profile-panel',
@@ -1591,9 +1594,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, flex: 1, overflow: 'auto' }}>
-                    {contributors.map((contributor, index) => (
+                    {contributors.map((contributor) => (
                       <div
-                        key={index}
+                        key={contributor.name}
                         style={{
                           display: 'flex',
                           justifyContent: 'space-between',

@@ -800,7 +800,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 const rowCommits = summary.commits.slice(rowIndex * 10, (rowIndex + 1) * 10);
                 return (
                   <div
-                    key={rowIndex}
+                    key={`row-${rowCommits[0]?.hash || rowIndex}`}
                     style={{
                       position: 'relative',
                       display: 'flex',

@@ -149,9 +149,9 @@ export const ReviewCommitPanel: React.FC<ReviewCommitPanelProps> = ({
 
         {!loading && !error && fileDiffs.length > 0 && (
           <div style={{ padding: 16 }}>
-            {fileDiffs.map((fileDiff, index) => (
+            {fileDiffs.map((fileDiff) => (
               <div
-                key={`${fileDiff.prevName || ''}-${fileDiff.name}-${index}`}
+                key={`${fileDiff.prevName || ''}-${fileDiff.name}`}
                 style={{ marginBottom: 16 }}
               >
                 <FileDiff

@@ -3151,6 +3151,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       FileEditorPanelComponent,
       MDXEditorPanelComponent,
       GitDiffPanelComponent,
+      BrunoRequestPanelComponent,
     ],
   );
 

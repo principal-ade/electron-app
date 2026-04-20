@@ -264,7 +264,7 @@ const MockRepositoryProfilePanel: React.FC<{
     watchedReposRef,
   });
 
-  const mockEvents = new MockEventEmitter();
+  const mockEvents = React.useMemo(() => new MockEventEmitter(), []);
 
   // Listen to events
   React.useEffect(() => {

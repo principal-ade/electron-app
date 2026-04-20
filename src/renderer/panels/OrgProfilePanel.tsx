@@ -371,8 +371,12 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
           const key = `${repo.githubOwner}/${repo.repoName}`;
 
           try {
-            const fileTree = await actions.getRepositoryFileTree!(
-              repo.githubOwner!,
+            if (!actions.getRepositoryFileTree || !repo.githubOwner) {
+              newFileTrees.set(key, null);
+              return;
+            }
+            const fileTree = await actions.getRepositoryFileTree(
+              repo.githubOwner,
               repo.repoName
             );
             newFileTrees.set(key, fileTree);
@@ -400,7 +404,10 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
 
     const loadWatchStatus = async () => {
       try {
-        const watched = await actions.isOrgWatched!(org.orgName);
+        if (!actions.isOrgWatched) {
+          return;
+        }
+        const watched = await actions.isOrgWatched(org.orgName);
         if (!cancelled) {
           setIsWatched(watched);
         }

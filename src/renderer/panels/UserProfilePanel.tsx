@@ -423,7 +423,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
     const loadWatchStatus = async () => {
       try {
-        const watched = await actions.isUserWatched!(user.username);
+        if (!actions.isUserWatched) {
+          return;
+        }
+        const watched = await actions.isUserWatched(user.username);
         if (!cancelled) {
           setIsWatched(watched);
         }
@@ -454,8 +457,12 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           const key = `${repo.githubOwner}/${repo.repoName}`;
 
           try {
-            const fileTree = await actions.getRepositoryFileTree!(
-              repo.githubOwner!,
+            if (!actions.getRepositoryFileTree || !repo.githubOwner) {
+              newFileTrees.set(key, null);
+              return;
+            }
+            const fileTree = await actions.getRepositoryFileTree(
+              repo.githubOwner,
               repo.repoName
             );
             newFileTrees.set(key, fileTree);

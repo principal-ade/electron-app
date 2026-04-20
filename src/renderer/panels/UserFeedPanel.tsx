@@ -126,9 +126,12 @@ const ContributionGraph: React.FC<{
   const maxCount = Math.max(...contributions.map((c) => c.count), 1);
 
   // Get day labels
-  const dayLabels = contributions.map((c) => {
+  const dayLabelsWithDates = contributions.map((c) => {
     const date = new Date(c.date);
-    return date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2);
+    return {
+      label: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2),
+      date: c.date,
+    };
   });
 
   return (
@@ -183,9 +186,9 @@ const ContributionGraph: React.FC<{
           gap: 4,
         }}
       >
-        {dayLabels.map((label, idx) => (
+        {dayLabelsWithDates.map((item) => (
           <div
-            key={`${label}-${idx}`}
+            key={item.date}
             style={{
               flex: 1,
               textAlign: 'center',
@@ -193,7 +196,7 @@ const ContributionGraph: React.FC<{
               color: theme.colors.textTertiary,
             }}
           >
-            {label}
+            {item.label}
           </div>
         ))}
       </div>

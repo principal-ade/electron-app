@@ -246,8 +246,8 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
         }
 
         // Only add if not already present
-        const existing = hourMap.get(hourKey)!;
-        if (!existing.some(s => s.repoName === summary.repoName && s.githubOwner === summary.githubOwner)) {
+        const existing = hourMap.get(hourKey);
+        if (existing && !existing.some(s => s.repoName === summary.repoName && s.githubOwner === summary.githubOwner)) {
           existing.push(summary);
         }
       }

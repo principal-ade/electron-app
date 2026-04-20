@@ -322,9 +322,15 @@ export const RecentActivity: Story = {
 export const LongCommitMessages: Story = {
   render: () => {
     const longMessageCommits = generateMockCommits(3, '/Users/dev/verbose-repo', 'verbose-repo');
-    longMessageCommits[0]!.message = 'Refactor authentication system to use JWT tokens instead of session cookies, update middleware, add token refresh logic, and improve error handling for expired tokens';
-    longMessageCommits[1]!.message = 'Add comprehensive unit tests for the new authentication flow including edge cases and error scenarios';
-    longMessageCommits[2]!.message = 'Update documentation with new authentication setup instructions and API examples';
+    if (longMessageCommits[0]) {
+      longMessageCommits[0].message = 'Refactor authentication system to use JWT tokens instead of session cookies, update middleware, add token refresh logic, and improve error handling for expired tokens';
+    }
+    if (longMessageCommits[1]) {
+      longMessageCommits[1].message = 'Add comprehensive unit tests for the new authentication flow including edge cases and error scenarios';
+    }
+    if (longMessageCommits[2]) {
+      longMessageCommits[2].message = 'Update documentation with new authentication setup instructions and API examples';
+    }
 
     return (
       <RepoActivityCardStory

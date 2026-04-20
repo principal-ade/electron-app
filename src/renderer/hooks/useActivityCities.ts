@@ -210,9 +210,9 @@ export function useActivityCities(): UseActivityCitiesReturn {
             lastActivity?: number;
           };
           const parsed = parseRepoId(session.repoId || '');
-          if (!parsed) continue;
+          if (!parsed || !session.repoId) continue;
 
-          const key = session.repoId!;
+          const key = session.repoId;
           const existing = repoUsersMap.get(key);
 
           if (existing) {
