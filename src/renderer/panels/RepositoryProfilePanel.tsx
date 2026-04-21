@@ -37,6 +37,7 @@ import {
   type CityData,
 } from '@industry-theme/repository-composition-panels';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import { DocumentView } from 'themed-markdown';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { LocalClone } from '../../shared/types/repository.types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
@@ -102,6 +103,11 @@ export interface RepositoryProfilePanelActions extends PanelActions {
    * Returns empty object for remote repositories
    */
   getLineCounts: (repoPath: string) => Promise<Record<string, number>>;
+
+  /**
+   * Get README content from GitHub repository
+   */
+  getReadmeContent?: (owner: string, name: string) => Promise<string | null>;
 
   /**
    * Open repository in dev workspace
@@ -366,6 +372,10 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const [localFileTree, setLocalFileTree] = useState<FileTree | null>(null);
   const [remoteFileTree, setRemoteFileTree] = useState<FileTree | null>(null);
   const [fileTreesError, setFileTreesError] = useState<string | null>(null);
+
+  // State for README content (for remote repos without local clones)
+  const [readmeContent, setReadmeContent] = useState<string | null>(null);
+  const [readmeLoading, setReadmeLoading] = useState(false);
 
   // State for 3D city data (derived from file trees)
   const [cityData, setCityData] = useState<CityData | null>(null);
@@ -675,6 +685,73 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repositoryData?.localClones, repositoryData?.github, actions]);
+
+  // Fetch README content for remote repos without local clones
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchReadme = async () => {
+      // Only fetch README for repos without local clones
+      const hasLocalClone = repositoryData?.localClones && repositoryData.localClones.length > 0;
+      if (hasLocalClone || !repositoryData?.github || !remoteFileTree) {
+        setReadmeContent(null);
+        setReadmeLoading(false);
+        return;
+      }
+
+      setReadmeLoading(true);
+
+      try {
+        // Find README file in the remote file tree
+        const findReadme = (tree: FileTree): string | null => {
+          const readmePattern = /^readme(\.md|\.markdown|\.txt)?$/i;
+
+          // Check all files for README in the root directory
+          for (const file of tree.allFiles) {
+            // Only check files in the root (no path separators in relativePath besides the filename)
+            const isInRoot = !file.relativePath.includes('/') || file.relativePath.split('/').length === 1;
+            if (isInRoot && readmePattern.test(file.name)) {
+              return file.relativePath;
+            }
+          }
+
+          return null;
+        };
+
+        const readmePath = findReadme(remoteFileTree);
+
+        if (readmePath) {
+          const content = await GithubService.getFileContent(
+            repositoryData.github.owner,
+            repositoryData.github.name,
+            readmePath
+          );
+
+          if (!cancelled) {
+            setReadmeContent(content);
+            setReadmeLoading(false);
+          }
+        } else {
+          if (!cancelled) {
+            setReadmeContent(null);
+            setReadmeLoading(false);
+          }
+        }
+      } catch (error) {
+        console.error('[RepositoryProfilePanel] Failed to fetch README:', error);
+        if (!cancelled) {
+          setReadmeContent(null);
+          setReadmeLoading(false);
+        }
+      }
+    };
+
+    fetchReadme();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [remoteFileTree, repositoryData?.github, repositoryData?.localClones]);
 
   // Build city data from file trees
   useEffect(() => {
@@ -1620,12 +1697,15 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 }}
               >
                 {(() => {
+                  const hasLocalClone = repositoryData?.localClones && repositoryData.localClones.length > 0;
                   const firstClone = repositoryData?.localClones?.[0];
                   const gitStatus = firstClone ? gitStatusMap.get(firstClone.path) : null;
                   const hasChanges = gitStatus && gitStatus.isDirty;
 
                   if (showContributors) {
                     return <Users size={16} color={theme.colors.primary} />;
+                  } else if (!hasLocalClone && (readmeContent || readmeLoading)) {
+                    return <FolderGit2 size={16} color={theme.colors.primary} />;
                   } else if (!showContributors && hasChanges) {
                     return <Circle size={16} color={theme.colors.warning} />;
                   } else {
@@ -1642,12 +1722,15 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   }}
                 >
                   {(() => {
+                    const hasLocalClone = repositoryData?.localClones && repositoryData.localClones.length > 0;
                     const firstClone = repositoryData?.localClones?.[0];
                     const gitStatus = firstClone ? gitStatusMap.get(firstClone.path) : null;
                     const hasChanges = gitStatus && gitStatus.isDirty;
 
                     if (showContributors) {
                       return 'Contributors';
+                    } else if (!hasLocalClone && (readmeContent || readmeLoading)) {
+                      return 'README';
                     } else if (!showContributors && hasChanges) {
                       return 'Changed Files';
                     } else {
@@ -1736,6 +1819,37 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   </div>
                 )
               ) : (() => {
+                // Check if we should show README for remote-only repos
+                const hasLocalClone = repositoryData?.localClones && repositoryData.localClones.length > 0;
+
+                if (!hasLocalClone && readmeContent) {
+                  // Show README for remote-only repositories
+                  return (
+                    <div style={{ flex: 1, overflow: 'auto' }}>
+                      <DocumentView
+                        content={readmeContent}
+                        theme={theme}
+                        enableKeyboardScrolling={false}
+                        transparentBackground={true}
+                      />
+                    </div>
+                  );
+                }
+
+                if (!hasLocalClone && readmeLoading) {
+                  return (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: spacing.lg,
+                      color: theme.colors.textSecondary,
+                    }}>
+                      Loading README...
+                    </div>
+                  );
+                }
+
                 // Check if we should show changed files instead of stats
                 const firstClone = repositoryData?.localClones?.[0];
                 const gitStatus = firstClone ? gitStatusMap.get(firstClone.path) : null;
