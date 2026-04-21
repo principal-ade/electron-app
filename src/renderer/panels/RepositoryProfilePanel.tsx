@@ -39,9 +39,11 @@ import {
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { LocalClone } from '../../shared/types/repository.types';
+import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
 import { ShellService } from '../main-process-api/ShellService';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 
 export interface RepositoryProfileData {
   name: string;
@@ -383,12 +385,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   }>>(new Map());
 
   // State for git working directory status per clone
-  const [gitStatusMap, setGitStatusMap] = useState<Map<string, {
-    staged: number;
-    modified: number;
-    untracked: number;
-    total: number;
-  }>>(new Map());
+  const [gitStatusMap, setGitStatusMap] = useState<Map<string, GitStatusWithFiles>>(new Map());
 
   // State for showing path in cloned badge
   const [showPath, setShowPath] = useState(false);
@@ -460,53 +457,18 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         return;
       }
 
-      const newStatusMap = new Map();
+      const newStatusMap = new Map<string, GitStatusWithFiles>();
 
-      // Fetch status for each clone
+      // Fetch status for each clone using RepositoryMonitoringService
       await Promise.all(
         clones.map(async (clone) => {
           try {
-            // Use git status --porcelain to get machine-readable output
-            const result = await GitService.execCommand(clone.path, [
-              'status',
-              '--porcelain',
-            ]);
+            const status = await RepositoryMonitoringService.getGitStatusWithFiles(clone.path);
 
             if (cancelled) return;
 
-            // Parse the output
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            let staged = 0;
-            let modified = 0;
-            let untracked = 0;
-
-            for (const line of lines) {
-              if (line.length < 2) continue;
-
-              const indexStatus = line[0]; // First character = index/staged status
-              const workTreeStatus = line[1]; // Second character = working tree status
-
-              // Untracked files
-              if (line.startsWith('??')) {
-                untracked++;
-                continue;
-              }
-
-              // Staged changes (index status not empty)
-              if (indexStatus !== ' ' && indexStatus !== '?') {
-                staged++;
-              }
-
-              // Modified but not staged (working tree status not empty)
-              if (workTreeStatus !== ' ' && workTreeStatus !== '?') {
-                modified++;
-              }
-            }
-
-            const total = staged + modified + untracked;
-
-            if (!cancelled) {
-              newStatusMap.set(clone.path, { staged, modified, untracked, total });
+            if (status) {
+              newStatusMap.set(clone.path, status);
             }
           } catch (error) {
             console.error(`[RepositoryProfilePanel] Failed to fetch git status for ${clone.path}:`, error);
@@ -525,6 +487,91 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       cancelled = true;
     };
   }, [repositoryData]);
+
+  // Create initial highlight layers from git status when data loads
+  useEffect(() => {
+    // Only create highlights if not currently playing and we have git status
+    if (isPlaying || gitStatusMap.size === 0) {
+      return;
+    }
+
+    // Get the first clone's git status (usually there's only one)
+    const firstClone = repositoryData?.localClones?.[0];
+    if (!firstClone) {
+      return;
+    }
+
+    const gitStatus = gitStatusMap.get(firstClone.path);
+    if (!gitStatus || !gitStatus.isDirty) {
+      // No changes, clear any existing highlights
+      setHighlightLayers([]);
+      return;
+    }
+
+    // Create separate layers for each status type (layers only support one color per layer)
+    const layers: HighlightLayer[] = [];
+
+    // Staged files - green layer
+    if (gitStatus.stagedFiles && gitStatus.stagedFiles.length > 0) {
+      layers.push({
+        id: 'git-staged',
+        name: 'Staged Files',
+        enabled: true,
+        color: theme.colors.success,
+        priority: 4,
+        items: gitStatus.stagedFiles.map(path => ({ type: 'file' as const, path })),
+        opacity: 0.8,
+      });
+    }
+
+    // Modified files - orange/warning layer
+    if (gitStatus.modifiedFiles && gitStatus.modifiedFiles.length > 0) {
+      layers.push({
+        id: 'git-modified',
+        name: 'Modified Files',
+        enabled: true,
+        color: theme.colors.warning,
+        priority: 3,
+        items: gitStatus.modifiedFiles.map(path => ({ type: 'file' as const, path })),
+        opacity: 0.8,
+      });
+    }
+
+    // Untracked files - blue/info layer
+    if (gitStatus.untrackedFiles && gitStatus.untrackedFiles.length > 0) {
+      layers.push({
+        id: 'git-untracked',
+        name: 'Untracked Files',
+        enabled: true,
+        color: theme.colors.info,
+        priority: 2,
+        items: gitStatus.untrackedFiles.map(path => ({ type: 'file' as const, path })),
+        opacity: 0.8,
+      });
+    }
+
+    // Deleted files - red/error layer
+    if (gitStatus.deletedFiles && gitStatus.deletedFiles.length > 0) {
+      layers.push({
+        id: 'git-deleted',
+        name: 'Deleted Files',
+        enabled: true,
+        color: theme.colors.error,
+        priority: 1,
+        items: gitStatus.deletedFiles.map(path => ({ type: 'file' as const, path })),
+        opacity: 0.8,
+      });
+    }
+
+    setHighlightLayers(layers);
+
+    console.info('[RepositoryProfilePanel] Created', layers.length, 'highlight layers for git changes:', {
+      staged: gitStatus.stagedFiles?.length || 0,
+      modified: gitStatus.modifiedFiles?.length || 0,
+      untracked: gitStatus.untrackedFiles?.length || 0,
+      deleted: gitStatus.deletedFiles?.length || 0,
+    });
+  }, [gitStatusMap, isPlaying, repositoryData?.localClones, theme.colors]);
 
   // Load watch status when repository changes
   useEffect(() => {
@@ -787,28 +834,67 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
         // Get changed files for this commit
         const changedFiles = await GitService.getChangedFilesForCommit(localPath, commit.hash);
-        const filePaths = Array.from(changedFiles.keys());
 
-        // Create highlight layer for changed files
-        const highlightItems = filePaths.map(filePath => {
-          // File paths from Git are relative to repo root
-          // City data paths match these directly (e.g., "src/components/File.tsx")
-          return {
-            type: 'file' as const,
-            path: filePath,
-            color: '#FFD700', // Gold color for changed files
+        // Group files by status type (layers only support one color per layer)
+        const addedFiles: string[] = [];
+        const modifiedFiles: string[] = [];
+        const deletedFiles: string[] = [];
+
+        for (const [filePath, fileInfo] of changedFiles.entries()) {
+          switch (fileInfo.status) {
+            case 'added':
+              addedFiles.push(filePath);
+              break;
+            case 'modified':
+            case 'renamed':
+              modifiedFiles.push(filePath);
+              break;
+            case 'deleted':
+              deletedFiles.push(filePath);
+              break;
+          }
+        }
+
+        // Create separate layers for each status type
+        const layers: HighlightLayer[] = [];
+
+        if (addedFiles.length > 0) {
+          layers.push({
+            id: `commit-${commit.hash}-added`,
+            name: `Added Files`,
+            enabled: true,
+            color: theme.colors.success,
+            priority: 3,
+            items: addedFiles.map(path => ({ type: 'file' as const, path })),
             opacity: 0.8,
-          };
-        });
+          });
+        }
 
-        setHighlightLayers([{
-          id: `commit-${commit.hash}`,
-          name: `Commit ${commit.hash.slice(0, 7)}`,
-          enabled: true,
-          color: '#FFD700',
-          priority: 1,
-          items: highlightItems,
-        }]);
+        if (modifiedFiles.length > 0) {
+          layers.push({
+            id: `commit-${commit.hash}-modified`,
+            name: `Modified Files`,
+            enabled: true,
+            color: theme.colors.warning,
+            priority: 2,
+            items: modifiedFiles.map(path => ({ type: 'file' as const, path })),
+            opacity: 0.8,
+          });
+        }
+
+        if (deletedFiles.length > 0) {
+          layers.push({
+            id: `commit-${commit.hash}-deleted`,
+            name: `Deleted Files`,
+            enabled: true,
+            color: theme.colors.error,
+            priority: 1,
+            items: deletedFiles.map(path => ({ type: 'file' as const, path })),
+            opacity: 0.8,
+          });
+        }
+
+        setHighlightLayers(layers);
 
         // Wait before showing next commit
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -1317,7 +1403,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                           <span>{branchStatus.branch}</span>
 
                           {/* Status Indicator */}
-                          {gitStatus && gitStatus.total > 0 ? (
+                          {gitStatus && gitStatus.isDirty ? (
                             <>
                               <span style={{ color: theme.colors.textSecondary }}>•</span>
                               <div
@@ -1325,12 +1411,18 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: 4,
-                                  color: gitStatus.staged > 0 ? theme.colors.warning : theme.colors.textSecondary,
+                                  color: gitStatus.hasStaged ? theme.colors.warning : theme.colors.textSecondary,
                                 }}
                               >
                                 <Circle size={8} fill="currentColor" />
                                 <span>
-                                  {gitStatus.total === 1 ? '1 change' : `${gitStatus.total} changes`}
+                                  {(() => {
+                                    const total = (gitStatus.stagedFiles?.length || 0) +
+                                                  (gitStatus.modifiedFiles?.length || 0) +
+                                                  (gitStatus.untrackedFiles?.length || 0) +
+                                                  (gitStatus.deletedFiles?.length || 0);
+                                    return total === 1 ? '1 change' : `${total} changes`;
+                                  })()}
                                 </span>
                               </div>
                             </>
@@ -1527,11 +1619,19 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   marginBottom: spacing.md,
                 }}
               >
-                {showContributors ? (
-                  <Users size={16} color={theme.colors.primary} />
-                ) : (
-                  <GitCommit size={16} color={theme.colors.primary} />
-                )}
+                {(() => {
+                  const firstClone = repositoryData?.localClones?.[0];
+                  const gitStatus = firstClone ? gitStatusMap.get(firstClone.path) : null;
+                  const hasChanges = gitStatus && gitStatus.isDirty;
+
+                  if (showContributors) {
+                    return <Users size={16} color={theme.colors.primary} />;
+                  } else if (!showContributors && hasChanges) {
+                    return <Circle size={16} color={theme.colors.warning} />;
+                  } else {
+                    return <GitCommit size={16} color={theme.colors.primary} />;
+                  }
+                })()}
                 <h4
                   style={{
                     margin: 0,
@@ -1541,7 +1641,19 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     fontFamily: theme.fonts?.body,
                   }}
                 >
-                  {showContributors ? 'Contributors' : 'Repository Stats'}
+                  {(() => {
+                    const firstClone = repositoryData?.localClones?.[0];
+                    const gitStatus = firstClone ? gitStatusMap.get(firstClone.path) : null;
+                    const hasChanges = gitStatus && gitStatus.isDirty;
+
+                    if (showContributors) {
+                      return 'Contributors';
+                    } else if (!showContributors && hasChanges) {
+                      return 'Changed Files';
+                    } else {
+                      return 'Repository Stats';
+                    }
+                  })()}
                 </h4>
                 {showContributors && (
                   <button
@@ -1623,7 +1735,74 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     ))}
                   </div>
                 )
-              ) : (
+              ) : (() => {
+                // Check if we should show changed files instead of stats
+                const firstClone = repositoryData?.localClones?.[0];
+                const gitStatus = firstClone ? gitStatusMap.get(firstClone.path) : null;
+                const hasChanges = gitStatus && gitStatus.isDirty;
+
+                if (hasChanges) {
+                  // Show changed files
+                  const sections = [
+                    { title: 'Staged', files: gitStatus.stagedFiles || [], color: theme.colors.success, icon: '✓' },
+                    { title: 'Modified', files: gitStatus.modifiedFiles || [], color: theme.colors.warning, icon: '●' },
+                    { title: 'Untracked', files: gitStatus.untrackedFiles || [], color: theme.colors.info, icon: '?' },
+                    { title: 'Deleted', files: gitStatus.deletedFiles || [], color: theme.colors.error, icon: '✕' },
+                  ].filter(section => section.files.length > 0);
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md, flex: 1, overflow: 'auto' }}>
+                      {sections.map((section) => (
+                        <div key={section.title}>
+                          <div style={{
+                            fontSize: theme.fontSizes[0],
+                            fontWeight: theme.fontWeights?.semibold ?? 600,
+                            fontFamily: theme.fonts?.body,
+                            color: section.color,
+                            marginBottom: spacing.xs,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                          }}>
+                            {section.title} ({section.files.length})
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                            {section.files.map((filePath) => (
+                              <div
+                                key={filePath}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: spacing.xs,
+                                  padding: spacing.xs,
+                                  backgroundColor: theme.colors.background,
+                                  borderRadius: theme.radii?.[1] || 4,
+                                  fontSize: theme.fontSizes[0],
+                                  fontFamily: theme.fonts?.monospace,
+                                }}
+                              >
+                                <span style={{ color: section.color, flexShrink: 0, width: 16, textAlign: 'center' }}>
+                                  {section.icon}
+                                </span>
+                                <span style={{
+                                  color: theme.colors.text,
+                                  flex: 1,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }} title={filePath}>
+                                  {filePath}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+
+                // Otherwise show normal stats
+                return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
                 {/* Playback Buttons (for local repos) */}
                 {repositoryData.isLocal && (
@@ -1776,7 +1955,8 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   </div>
                 )}
               </div>
-              )}
+                );
+              })()}
             </section>
 
         {/* File City 3D - Right */}
