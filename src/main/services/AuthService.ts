@@ -924,7 +924,7 @@ class AuthService {
         } else {
           console.log(`[AuthService] ✓ Verified ${name} is deleted`);
         }
-      } catch (error) {
+      } catch (_error) {
         // If we can't read the token, assume it's deleted (or keychain is inaccessible)
         console.log(`[AuthService] ✓ Cannot read ${name} (likely deleted)`);
       }

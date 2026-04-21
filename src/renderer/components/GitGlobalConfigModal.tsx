@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useTheme } from '@principal-ade/industry-theme';
+import { useTheme, type Theme } from '@principal-ade/industry-theme';
 import { X, AlertCircle, CheckCircle, Info, Copy, Check, Edit2, Save, XCircle } from 'lucide-react';
 import { GitService } from '../main-process-api/GitService';
 
@@ -66,15 +66,18 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
           const value = valueParts.join('='); // Handle values with '=' in them
 
           // Only capture keys we care about
-          if (
-            key === 'user.name' ||
-            key === 'user.email' ||
-            key === 'core.editor' ||
-            key === 'init.defaultBranch' ||
-            key === 'credential.helper' ||
-            key === 'core.excludesfile'
-          ) {
-            parsedConfig[key as keyof GitGlobalConfig] = value;
+          if (key === 'user.name') {
+            parsedConfig['user.name'] = value;
+          } else if (key === 'user.email') {
+            parsedConfig['user.email'] = value;
+          } else if (key === 'core.editor') {
+            parsedConfig['core.editor'] = value;
+          } else if (key === 'init.defaultBranch') {
+            parsedConfig['init.defaultBranch'] = value;
+          } else if (key === 'credential.helper') {
+            parsedConfig['credential.helper'] = value;
+          } else if (key === 'core.excludesfile') {
+            parsedConfig['core.excludesfile'] = value;
           }
         }
 
@@ -99,6 +102,12 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
     fetchGitConfig();
   }, [isOpen]);
 
+  const handleClose = useCallback(() => {
+    if (!isLoading && !isSaving) {
+      onClose();
+    }
+  }, [isLoading, isSaving, onClose]);
+
   // ESC key handling
   useEffect(() => {
     if (!isOpen) return;
@@ -111,13 +120,7 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
-  const handleClose = () => {
-    if (!isLoading && !isSaving) {
-      onClose();
-    }
-  };
+  }, [isOpen, handleClose]);
 
   const handleCopy = async (key: string, value: string) => {
     try {
@@ -169,7 +172,7 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
 
       // Update local config state
       setConfig((prev) => ({
-        ...prev!,
+        ...(prev || {}),
         'user.name': editedName,
         'user.email': editedEmail,
       }));
@@ -625,7 +628,7 @@ interface ConfigSectionProps {
   title: string;
   icon?: React.ReactNode;
   children: React.ReactNode;
-  theme: any;
+  theme: Theme;
   alert?: boolean;
 }
 
@@ -672,7 +675,7 @@ const ConfigSection: React.FC<ConfigSectionProps> = ({
 interface ConfigItemProps {
   label: string;
   value: string;
-  theme: any;
+  theme: Theme;
   onCopy: (key: string, value: string) => void;
   copyKey: string;
   isCopied: boolean;
@@ -773,7 +776,7 @@ interface EditableConfigItemProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  theme: any;
+  theme: Theme;
   placeholder?: string;
 }
 

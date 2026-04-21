@@ -40,6 +40,7 @@ export class AuthMethodDetector {
   private cacheTimestamp = 0;
   private readonly CACHE_TTL = 60000; // 1 minute
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
 
   static getInstance(): AuthMethodDetector {
@@ -144,14 +145,14 @@ export class AuthMethodDetector {
           authenticated: isAuthenticated,
           user,
         };
-      } catch (authError) {
+      } catch (_authError) {
         // gh is installed but not authenticated
         return {
           available: true,
           authenticated: false,
         };
       }
-    } catch (error) {
+    } catch (_error) {
       // gh CLI not installed
       return {
         available: false,
@@ -178,14 +179,14 @@ export class AuthMethodDetector {
           configured: helper.length > 0,
           method: helper || undefined,
         };
-      } catch (configError) {
+      } catch (_configError) {
         // git installed but no credential helper configured
         return {
           available: true,
           configured: false,
         };
       }
-    } catch (error) {
+    } catch (_error) {
       // git not installed
       return {
         available: false,

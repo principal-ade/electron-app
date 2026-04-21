@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GithubService } from '../main-process-api/GithubService';
 import type { GitHubOrganization, GitHubOrgMember } from '../../shared/main-process-api-interfaces/GitHubAPI';
-import { useAuth } from './useAuthState';
 
 export interface CoworkerWithOrg extends GitHubOrgMember {
   organizations: string[]; // List of org logins this member belongs to

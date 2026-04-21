@@ -45,14 +45,19 @@ class MockElectronAPI {
   }
 }
 
-type ElectronAPI = NonNullable<Window['electronAPI']>;
+// Extend Window interface for Storybook
+interface StorybookWindow extends Window {
+  electronAPI?: unknown;
+}
+
+declare const window: StorybookWindow;
 
 let storybookElectronAPI: MockElectronAPI | undefined;
 
 // Install mock electronAPI
 if (typeof window !== 'undefined') {
   storybookElectronAPI = new MockElectronAPI();
-  window.electronAPI = storybookElectronAPI as unknown as ElectronAPI;
+  window.electronAPI = storybookElectronAPI;
 }
 
 const meta = {

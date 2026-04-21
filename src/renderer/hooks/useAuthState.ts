@@ -14,6 +14,10 @@ import type {
 } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 import { AuthenticationService } from '../main-process-api/AuthenticationService';
 
+interface ErrorWithGuidance extends Error {
+  guidance?: string;
+}
+
 // Extend the API AuthState with local UI state
 export interface AuthState extends APIAuthState {
   isLoading: boolean;
@@ -211,9 +215,9 @@ export function useAuthState(): UseAuthStateReturn {
         }));
 
         // Create detailed error for throwing
-        const error = new Error(errorMsg);
+        const error: ErrorWithGuidance = new Error(errorMsg);
         if (result.guidance) {
-          (error as any).guidance = result.guidance;
+          error.guidance = result.guidance;
         }
         throw error;
       }
@@ -222,7 +226,7 @@ export function useAuthState(): UseAuthStateReturn {
 
       // Ensure error state is set even if exception occurs
       const errorMsg = error instanceof Error ? error.message : 'Logout failed';
-      const guidance = (error as any)?.guidance;
+      const guidance = (error as ErrorWithGuidance)?.guidance;
 
       setAuthState((prev) => ({
         ...prev,

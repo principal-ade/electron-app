@@ -33,6 +33,8 @@
     "**/*.d.ts",
     "**/*.d.cts",
     "dist/**/*",
-    "src/renderer/unused/**/*"
+    "src/renderer/unused/**/*",
+    "**/*.stories.tsx",
+    "**/*.stories.ts"
   ]
 }

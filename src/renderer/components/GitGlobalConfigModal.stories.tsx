@@ -1,7 +1,21 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { GitGlobalConfigModal } from './GitGlobalConfigModal';
 import { useState } from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
+
+// Extend Window interface for Storybook-specific properties
+interface StorybookWindow extends Window {
+  __STORYBOOK_GIT_SCENARIO__?: string;
+  __STORYBOOK_GIT_USER_NAME__?: string;
+  __STORYBOOK_GIT_USER_EMAIL__?: string;
+  mainProcess?: {
+    git?: {
+      execCommand: (directory: string, args: string[]) => Promise<{ stdout: string; stderr: string }>;
+    };
+  };
+}
+
+declare const window: StorybookWindow;
 
 // Mock GitService for Storybook
 const mockGitService = {
@@ -18,7 +32,7 @@ const mockGitService = {
 
     if (args[0] === 'config' && args[1] === '--global' && args[2] === '--list') {
       // Return different configs based on story
-      const scenario = (window as any).__STORYBOOK_GIT_SCENARIO__ || 'complete';
+      const scenario = window.__STORYBOOK_GIT_SCENARIO__ || 'complete';
 
       if (scenario === 'error') {
         throw new Error('Git is not installed or not found in PATH');
@@ -40,8 +54,8 @@ core.editor=vim`,
       }
 
       // Complete configuration (use saved values if available)
-      const savedName = (window as any).__STORYBOOK_GIT_USER_NAME__ || 'Jane Developer';
-      const savedEmail = (window as any).__STORYBOOK_GIT_USER_EMAIL__ || 'jane.developer@example.com';
+      const savedName = window.__STORYBOOK_GIT_USER_NAME__ || 'Jane Developer';
+      const savedEmail = window.__STORYBOOK_GIT_USER_EMAIL__ || 'jane.developer@example.com';
 
       return {
         stdout: `user.name=${savedName}
@@ -56,14 +70,14 @@ core.excludesfile=/Users/jane/.gitignore_global`,
 
     // Handle config set commands (for saving edits)
     if (args[0] === 'config' && args[1] === '--global' && args[2] === 'user.name') {
-      (window as any).__STORYBOOK_GIT_USER_NAME__ = args[3];
-      console.log('[Storybook Mock] Saved user.name:', args[3]);
+      window.__STORYBOOK_GIT_USER_NAME__ = args[3];
+      console.info('[Storybook Mock] Saved user.name:', args[3]);
       return { stdout: '', stderr: '' };
     }
 
     if (args[0] === 'config' && args[1] === '--global' && args[2] === 'user.email') {
-      (window as any).__STORYBOOK_GIT_USER_EMAIL__ = args[3];
-      console.log('[Storybook Mock] Saved user.email:', args[3]);
+      window.__STORYBOOK_GIT_USER_EMAIL__ = args[3];
+      console.info('[Storybook Mock] Saved user.email:', args[3]);
       return { stdout: '', stderr: '' };
     }
 
@@ -73,8 +87,8 @@ core.excludesfile=/Users/jane/.gitignore_global`,
 
 // Override GitService in window.mainProcess for Storybook
 if (typeof window !== 'undefined') {
-  (window as any).mainProcess = {
-    ...(window as any).mainProcess,
+  window.mainProcess = {
+    ...window.mainProcess,
     git: {
       execCommand: mockGitService.execCommand,
     },
@@ -83,7 +97,6 @@ if (typeof window !== 'undefined') {
 
 const meta = {
   title: 'Components/GitGlobalConfigModal',
-  component: GitGlobalConfigModal,
   parameters: {
     layout: 'centered',
     docs: {
@@ -93,7 +106,7 @@ const meta = {
     },
   },
   tags: ['autodocs'],
-} satisfies Meta<typeof GitGlobalConfigModal>;
+} satisfies Meta;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -104,7 +117,7 @@ const ModalWrapper = ({ scenario }: { scenario: string }) => {
 
   // Set scenario for mock
   if (typeof window !== 'undefined') {
-    (window as any).__STORYBOOK_GIT_SCENARIO__ = scenario;
+    window.__STORYBOOK_GIT_SCENARIO__ = scenario;
   }
 
   return (
@@ -209,7 +222,7 @@ export const InitiallyOpen: Story = {
     const [isOpen, setIsOpen] = useState(true);
 
     if (typeof window !== 'undefined') {
-      (window as any).__STORYBOOK_GIT_SCENARIO__ = 'complete';
+      window.__STORYBOOK_GIT_SCENARIO__ = 'complete';
     }
 
     return (

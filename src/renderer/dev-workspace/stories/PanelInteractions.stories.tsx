@@ -31,6 +31,7 @@ interface StoryPanelContext extends PanelContextValue, CodeCityPanelContext {
     deletedFiles: string[];
     hash: string;
   } | null>;
+  packages: DataSlice<null>;
 }
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { GitFileTreeBuilder } from '@principal-ai/repository-abstraction';

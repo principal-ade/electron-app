@@ -6,7 +6,7 @@
  * All sub-components stay mounted to avoid reloading data on mode switch.
  */
 
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Github } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
