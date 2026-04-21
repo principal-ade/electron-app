@@ -1,439 +1,343 @@
 {
-  "name": "Instrumentation Scopes",
-  "description": "OpenTelemetry instrumentation scopes representing process boundaries. Traces require context propagation to cross scope boundaries.",
-  "markdown": ".principal-views/architecture.scopes.md",
   "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 400,
+      "y": -100,
+      "width": 600,
+      "height": 80,
+      "color": "#64748B",
+      "text": "# Principal ADE Instrumentation Scopes\n**OpenTelemetry scope definitions for Principal ADE services and windows**"
+    },
     {
       "id": "principal-ade-main",
       "type": "otel-scope",
-      "x": 0,
-      "y": 0,
-      "width": 400,
-      "height": 280,
-      "color": "#4F46E5",
-      "label": "Main Process",
-      "description": "Electron main process - Node.js runtime handling IPC, services, and system operations",
+      "x": 50,
+      "y": 50,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Main",
+      "color": "#1ad76f",
       "otel": {
         "scope": "principal-ade-main",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "principal-ade-principal-window",
-      "type": "otel-scope",
-      "x": 60,
-      "y": -355,
-      "width": 280,
-      "height": 140,
-      "color": "#7C3AED",
-      "label": "Principal Window",
-      "description": "Principal Window - main app shell with auth, workspaces, settings",
-      "otel": {
-        "scope": "principal-ade-principal-window",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "principal-ade-dev-workspace",
-      "type": "otel-scope",
-      "x": 391,
-      "y": -356,
-      "width": 280,
-      "height": 140,
-      "color": "#8B5CF6",
-      "label": "Dev Workspace",
-      "description": "Dev Workspace - development environment with panels and terminal",
-      "otel": {
-        "scope": "principal-ade-dev-workspace",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "principal-ade-alexandria",
-      "type": "otel-scope",
-      "x": -269,
-      "y": -356,
-      "width": 280,
-      "height": 140,
-      "color": "#A855F7",
-      "label": "Alexandria",
-      "description": "Alexandria Workspace - knowledge base and code exploration",
-      "otel": {
-        "scope": "principal-ade-alexandria",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "principal-ade-event-processor",
-      "type": "otel-scope",
-      "x": -235,
-      "y": 420,
-      "width": 280,
-      "height": 140,
-      "color": "#F59E0B",
-      "label": "Event Processor",
-      "description": "Event Processing Server - utility process for agent session events",
-      "otel": {
-        "scope": "principal-ade-event-processor",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "principal-ade-repo-monitor",
-      "type": "otel-scope",
-      "x": 100,
-      "y": 437,
-      "width": 200,
-      "height": 100,
-      "color": "#14B8A6",
-      "label": "Repo Monitor",
-      "description": "Repository Monitoring Server - utility process for file watching and cache building",
-      "otel": {
-        "scope": "principal-ade-repo-monitor",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "principal-ade-terminal-worker",
-      "type": "otel-scope",
-      "x": 340,
-      "y": 412,
-      "width": 220,
-      "height": 80,
-      "color": "#6366F1",
-      "label": "Terminal Worker",
-      "description": "Terminal session router - bridges main process to PTY daemon or manages PTYs directly",
-      "otel": {
-        "scope": "principal-ade-terminal-worker",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "principal-ade-cli-bridge",
-      "type": "otel-scope",
-      "x": -467,
-      "y": 420,
-      "width": 200,
-      "height": 80,
-      "color": "#6366F1",
-      "label": "CLI Bridge",
-      "description": "CLI command executor - runs git, npm, and other CLI tools in isolated workers",
-      "otel": {
-        "scope": "principal-ade-cli-bridge",
-        "status": "implemented"
+        "description": "Electron main process - Node.js runtime handling IPC, services, and system operations",
+        "status": "draft"
       }
     },
     {
       "id": "principal-ade-daemon",
       "type": "otel-scope",
-      "x": 250,
-      "y": 662,
-      "width": 400,
-      "height": 200,
+      "x": 400,
+      "y": 50,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Daemon",
       "color": "#0D9488",
-      "label": "PTY Daemon",
-      "description": "Standalone PTY daemon process managing persistent terminal sessions via Unix socket",
       "otel": {
         "scope": "principal-ade-daemon",
-        "status": "implemented"
+        "description": "Standalone PTY daemon process managing persistent terminal sessions",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "principal-ade-event-processor",
+      "type": "otel-scope",
+      "x": 750,
+      "y": 50,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Event Processor",
+      "color": "#F59E0B",
+      "otel": {
+        "scope": "principal-ade-event-processor",
+        "description": "Event Processing Server - utility process for agent session events",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "principal-ade-repo-monitor",
+      "type": "otel-scope",
+      "x": 50,
+      "y": 200,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Repo Monitor",
+      "color": "#14B8A6",
+      "otel": {
+        "scope": "principal-ade-repo-monitor",
+        "description": "Repository Monitoring Server - utility process for file watching and cache building",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "principal-ade-terminal-worker",
+      "type": "otel-scope",
+      "x": 400,
+      "y": 200,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Terminal Worker",
+      "color": "#6366F1",
+      "otel": {
+        "scope": "principal-ade-terminal-worker",
+        "description": "Terminal Worker - utility process routing terminal sessions to daemon or managing PTYs directly",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "principal-ade-cli-bridge",
+      "type": "otel-scope",
+      "x": 750,
+      "y": 200,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Cli Bridge",
+      "color": "#6366F1",
+      "otel": {
+        "scope": "principal-ade-cli-bridge",
+        "description": "CLI Bridge - utility process for executing CLI commands (git, npm, etc.)",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "principal-ade-principal-window",
+      "type": "otel-scope",
+      "x": 50,
+      "y": 350,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Principal Window",
+      "color": "#7C3AED",
+      "otel": {
+        "scope": "principal-ade-principal-window",
+        "description": "Principal Window - main app shell with auth, workspaces, settings",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "principal-ade-dev-workspace",
+      "type": "otel-scope",
+      "x": 400,
+      "y": 350,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Dev Workspace",
+      "color": "#8B5CF6",
+      "otel": {
+        "scope": "principal-ade-dev-workspace",
+        "description": "Dev Workspace - development environment with panels and terminal",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "principal-ade-alexandria",
+      "type": "otel-scope",
+      "x": 750,
+      "y": 350,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Alexandria",
+      "color": "#A855F7",
+      "otel": {
+        "scope": "principal-ade-alexandria",
+        "description": "Alexandria Workspace - knowledge base and code exploration",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "principal-ade-extension",
+      "type": "otel-scope",
+      "x": 50,
+      "y": 500,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Extension",
+      "color": "#C084FC",
+      "otel": {
+        "scope": "principal-ade-extension",
+        "description": "Extension Window - browser extension host",
+        "status": "draft"
       }
     },
     {
       "id": "principal-ade-splash-screen",
       "type": "otel-scope",
-      "x": 722,
-      "y": -356,
-      "width": 220,
+      "x": 400,
+      "y": 500,
+      "width": 300,
       "height": 120,
-      "color": "#06B6D4",
-      "label": "Splash Screen",
-      "description": "Splash Screen - transient overlay shown on app startup, detects post-update state",
+      "label": "Principal Ade Splash Screen",
+      "color": "#D8B4FE",
       "otel": {
         "scope": "principal-ade-splash-screen",
-        "status": "implemented"
+        "description": "Splash Screen - app loading screen",
+        "status": "draft"
       }
     },
     {
-      "id": "principal-ade-goodbye-screen",
+      "id": "principal-ade-window-switcher",
       "type": "otel-scope",
-      "x": 722,
-      "y": -200,
-      "width": 220,
-      "height": 120,
-      "color": "#F472B6",
-      "label": "Goodbye Screen",
-      "description": "Goodbye Screen - transient overlay shown before update installation, handles graceful shutdown",
-      "otel": {
-        "scope": "principal-ade-goodbye-screen",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "principal-ade-storybook",
-      "type": "otel-scope",
-      "x": 1270,
-      "y": -3,
+      "x": 750,
+      "y": 500,
       "width": 300,
       "height": 120,
+      "label": "Principal Ade Window Switcher",
+      "color": "#E9D5FF",
+      "otel": {
+        "scope": "principal-ade-window-switcher",
+        "description": "Window Switcher - quick window navigation overlay",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "principal-ade-quick-open",
+      "type": "otel-scope",
+      "x": 50,
+      "y": 650,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Quick Open",
+      "color": "#F3E8FF",
+      "otel": {
+        "scope": "principal-ade-quick-open",
+        "description": "Quick Open - command palette overlay",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-renderer",
+      "type": "otel-scope",
+      "x": 400,
+      "y": 650,
+      "width": 300,
+      "height": 120,
+      "label": "File City Renderer",
+      "color": "#22C55E",
+      "otel": {
+        "scope": "file-city-renderer",
+        "description": "File City visualization renderer scope",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "principal-ade-renderer",
+      "type": "otel-scope",
+      "x": 750,
+      "y": 650,
+      "width": 300,
+      "height": 120,
+      "label": "Principal Ade Renderer",
       "color": "#EC4899",
-      "label": "Storybook",
-      "description": "Storybook development environment for UI components",
       "otel": {
-        "scope": "principal-ade-storybook",
-        "status": "implemented"
+        "scope": "principal-ade-renderer",
+        "description": "Shared renderer code - reusable components, hooks, and libraries used across windows",
+        "status": "draft"
       }
     },
     {
-      "id": "principal-ade-tests",
+      "id": "external-file-system",
       "type": "otel-scope",
-      "x": 1271,
-      "y": 159,
+      "x": 50,
+      "y": 800,
       "width": 300,
       "height": 120,
-      "color": "#F59E0B",
-      "label": "Test Runner",
-      "description": "Integration test suite runner",
+      "label": "External File System",
+      "color": "#64748B",
       "otel": {
-        "scope": "principal-ade-tests",
-        "status": "implemented"
+        "scope": "external-file-system",
+        "description": "External OS file system - events from the operating system file watcher",
+        "status": "draft"
       }
     },
     {
-      "id": "external-github",
+      "id": "external-otel-events-manager",
       "type": "otel-scope",
-      "x": 818,
-      "y": 25,
+      "x": 400,
+      "y": 800,
       "width": 300,
-      "height": 100,
+      "height": 120,
+      "label": "External Otel Events Manager",
       "color": "#64748B",
-      "label": "GitHub API",
-      "description": "External GitHub API - trace context via W3C traceparent headers",
       "otel": {
-        "scope": "external",
-        "status": "implemented"
+        "scope": "external-otel-events-manager",
+        "description": "External OTEL Events Manager service - HTTP endpoints for trace persistence",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "external-quality-tools",
+      "type": "otel-scope",
+      "x": 750,
+      "y": 800,
+      "width": 300,
+      "height": 120,
+      "label": "External Quality Tools",
+      "color": "#64748B",
+      "otel": {
+        "scope": "external-quality-tools",
+        "description": "External quality CLI tools - eslint, jest, tsc, knip, etc.",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "external-github-api",
+      "type": "otel-scope",
+      "x": 50,
+      "y": 950,
+      "width": 300,
+      "height": 120,
+      "label": "External Github Api",
+      "color": "#64748B",
+      "otel": {
+        "scope": "external-github-api",
+        "description": "External GitHub API - file downloads and repository operations",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "external-principal-api",
+      "type": "otel-scope",
+      "x": 400,
+      "y": 950,
+      "width": 300,
+      "height": 120,
+      "label": "External Principal Api",
+      "color": "#64748B",
+      "otel": {
+        "scope": "external-principal-api",
+        "description": "External Principal ADE API - app.principal-ade.com services",
+        "status": "draft"
       }
     },
     {
       "id": "external-web-ade",
       "type": "otel-scope",
-      "x": 818,
-      "y": -108,
+      "x": 750,
+      "y": 950,
       "width": 300,
-      "height": 100,
+      "height": 120,
+      "label": "External Web Ade",
       "color": "#64748B",
-      "label": "Web-ADE API",
-      "description": "Principal Web-ADE API - watched directory activity feed, tRPC endpoints",
       "otel": {
-        "scope": "external",
-        "status": "implemented"
+        "scope": "external-web-ade",
+        "description": "External Web ADE - web-based Principal ADE interface",
+        "status": "draft"
       }
-    },
-    {
-      "id": "external-agents",
-      "type": "otel-scope",
-      "x": 818,
-      "y": 154,
-      "width": 300,
-      "height": 100,
-      "color": "#64748B",
-      "label": "Agent Connections",
-      "description": "External agent connections via event server",
-      "otel": {
-        "scope": "external",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "external-auth-server",
-      "type": "otel-scope",
-      "x": 818,
-      "y": 280,
-      "width": 300,
-      "height": 100,
-      "color": "#64748B",
-      "label": "Auth Server",
-      "description": "Principal ADE Auth Server - OAuth flow, JWT tokens, room/orbit/presence tokens",
-      "otel": {
-        "scope": "external",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "external-traffic-controller",
-      "type": "otel-scope",
-      "x": 818,
-      "y": 406,
-      "width": 300,
-      "height": 100,
-      "color": "#64748B",
-      "label": "Traffic Controller",
-      "description": "Repository Traffic Controller - real-time collaboration, git-sync, WebRTC signaling",
-      "otel": {
-        "scope": "external",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "external-npm-registry",
-      "type": "otel-scope",
-      "x": 818,
-      "y": 532,
-      "width": 300,
-      "height": 80,
-      "color": "#64748B",
-      "label": "NPM Registry",
-      "description": "NPM Registry - package versions, licenses, vulnerability info",
-      "otel": {
-        "scope": "external",
-        "status": "implemented"
-      }
-    },
-    {
-      "id": "legend",
-      "type": "text",
-      "x": -416,
-      "y": 22,
-      "width": 200,
-      "height": 240,
-      "color": "#1E293B",
-      "text": "**Context Propagation**\n\nTraces cross scope\nboundaries via:\n\n- IPC metadata\n- Socket messages\n- HTTP headers"
     }
   ],
   "edges": [
     {
-      "id": "main-to-terminal-worker",
+      "id": "main-manages-daemon",
       "fromNode": "principal-ade-main",
-      "fromSide": "bottom",
-      "toNode": "principal-ade-terminal-worker",
-      "toSide": "top",
-      "edgeType": "worker-message"
-    },
-    {
-      "id": "terminal-worker-to-daemon",
-      "fromNode": "principal-ade-terminal-worker",
-      "fromSide": "bottom",
+      "fromSide": "right",
       "toNode": "principal-ade-daemon",
-      "toSide": "top",
-      "label": "Unix socket",
+      "toSide": "left",
+      "label": "spawns",
       "edgeType": "worker-message"
-    },
-    {
-      "id": "main-to-cli-bridge",
-      "fromNode": "principal-ade-main",
-      "fromSide": "bottom",
-      "toNode": "principal-ade-cli-bridge",
-      "toSide": "top",
-      "edgeType": "worker-message"
-    },
-    {
-      "id": "main-to-web-ade",
-      "fromNode": "principal-ade-main",
-      "fromSide": "right",
-      "toNode": "external-web-ade",
-      "toSide": "left",
-      "label": "HTTPS (Bearer token)",
-      "edgeType": "http"
-    },
-    {
-      "id": "main-to-github",
-      "fromNode": "principal-ade-main",
-      "fromSide": "right",
-      "toNode": "external-github",
-      "toSide": "left",
-      "label": "HTTP (traceparent)",
-      "edgeType": "http"
-    },
-    {
-      "id": "main-to-agents",
-      "fromNode": "principal-ade-main",
-      "fromSide": "right",
-      "toNode": "external-agents",
-      "toSide": "left",
-      "label": "HTTP (traceparent)",
-      "edgeType": "http"
-    },
-    {
-      "id": "main-to-auth-server",
-      "fromNode": "principal-ade-main",
-      "fromSide": "right",
-      "toNode": "external-auth-server",
-      "toSide": "left",
-      "label": "HTTPS",
-      "edgeType": "http"
-    },
-    {
-      "id": "main-to-traffic-controller",
-      "fromNode": "principal-ade-main",
-      "fromSide": "right",
-      "toNode": "external-traffic-controller",
-      "toSide": "left",
-      "label": "WebSocket",
-      "edgeType": "websocket"
-    },
-    {
-      "id": "main-to-npm-registry",
-      "fromNode": "principal-ade-main",
-      "fromSide": "right",
-      "toNode": "external-npm-registry",
-      "toSide": "left",
-      "label": "HTTPS",
-      "edgeType": "http"
-    },
-    {
-      "id": "edge-principal-ade-alexandria-principal-ade-main-1773847831768",
-      "fromNode": "principal-ade-alexandria",
-      "toNode": "principal-ade-main",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "edgeType": "ipc"
-    },
-    {
-      "id": "edge-principal-ade-event-processor-principal-ade-main-1773847831770",
-      "fromNode": "principal-ade-event-processor",
-      "toNode": "principal-ade-main",
-      "fromSide": "top",
-      "toSide": "bottom",
-      "edgeType": "ipc"
-    },
-    {
-      "id": "edge-principal-ade-repo-monitor-principal-ade-main",
-      "fromNode": "principal-ade-repo-monitor",
-      "toNode": "principal-ade-main",
-      "fromSide": "top",
-      "toSide": "bottom",
-      "edgeType": "worker-message"
-    },
-    {
-      "id": "edge-principal-ade-dev-workspace-principal-ade-main-1773847831770",
-      "fromNode": "principal-ade-dev-workspace",
-      "toNode": "principal-ade-main",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "edgeType": "ipc"
-    },
-    {
-      "id": "edge-principal-ade-principal-window-principal-ade-main-1773847831770",
-      "fromNode": "principal-ade-principal-window",
-      "toNode": "principal-ade-main",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "edgeType": "ipc"
-    },
-    {
-      "id": "edge-principal-ade-splash-screen-principal-ade-main",
-      "fromNode": "principal-ade-splash-screen",
-      "toNode": "principal-ade-main",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "edgeType": "ipc"
-    },
-    {
-      "id": "edge-principal-ade-goodbye-screen-principal-ade-main",
-      "fromNode": "principal-ade-goodbye-screen",
-      "toNode": "principal-ade-main",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "edgeType": "ipc"
     }
-  ]
+  ],
+  "name": "Principal ADE Instrumentation Scopes",
+  "description": "OpenTelemetry instrumentation scopes for Principal ADE - defining scope boundaries, colors, and visual metadata for all Principal ADE services and windows",
+  "markdown": ".principal-views/architecture.scopes.md"
 }

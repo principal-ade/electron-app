@@ -27,7 +27,6 @@
       "y": 0,
       "width": 280,
       "height": 200,
-      "color": "#22c55e",
       "label": "User Trigger",
       "icon": "Mouse",
       "event": {
@@ -63,7 +62,6 @@
       "y": 0,
       "width": 280,
       "height": 180,
-      "color": "#06b6d4",
       "label": "Thread Service",
       "icon": "Zap",
       "event": {
@@ -93,7 +91,6 @@
       "y": 0,
       "width": 280,
       "height": 200,
-      "color": "#ef4444",
       "label": "IPC Handler",
       "icon": "Server",
       "event": {
@@ -119,7 +116,6 @@
       "y": 270,
       "width": 280,
       "height": 200,
-      "color": "#f59e0b",
       "label": "Thread Resolution",
       "icon": "GitBranch",
       "event": {
@@ -155,7 +151,6 @@
       "y": 300,
       "width": 220,
       "height": 140,
-      "color": "#22c55e",
       "label": "New Thread",
       "icon": "Plus",
       "event": {
@@ -184,7 +179,6 @@
       "y": 300,
       "width": 220,
       "height": 140,
-      "color": "#06b6d4",
       "label": "Existing Thread",
       "icon": "RotateCw",
       "event": {
@@ -213,7 +207,6 @@
       "y": 500,
       "width": 300,
       "height": 180,
-      "color": "#4f46e5",
       "label": "Create Window",
       "icon": "Box",
       "event": {
@@ -246,7 +239,6 @@
       "y": 520,
       "width": 250,
       "height": 120,
-      "color": "#818cf8",
       "label": "Terminal Register",
       "icon": "Monitor",
       "event": {
@@ -269,7 +261,6 @@
       "y": 700,
       "width": 280,
       "height": 200,
-      "color": "#0d9488",
       "label": "Watch Acquisition",
       "icon": "Eye",
       "event": {
@@ -301,7 +292,6 @@
       "y": 740,
       "width": 280,
       "height": 160,
-      "color": "#4f46e5",
       "label": "Load URL",
       "icon": "Globe",
       "event": {
@@ -333,7 +323,6 @@
       "y": 960,
       "width": 280,
       "height": 180,
-      "color": "#22c55e",
       "label": "App Initialize",
       "icon": "Play",
       "event": {
@@ -365,7 +354,6 @@
       "y": 1200,
       "width": 280,
       "height": 160,
-      "color": "#22c55e",
       "label": "Thread Ready",
       "icon": "Check",
       "event": {
@@ -414,7 +402,6 @@
       "y": 600,
       "width": 280,
       "height": 160,
-      "color": "#f59e0b",
       "label": "Add Repository",
       "icon": "FolderPlus",
       "event": {
@@ -444,7 +431,6 @@
       "y": 800,
       "width": 280,
       "height": 160,
-      "color": "#f59e0b",
       "label": "Validate Repository",
       "icon": "Search",
       "event": {
@@ -476,7 +462,6 @@
       "y": 1000,
       "width": 280,
       "height": 160,
-      "color": "#22c55e",
       "label": "Repository Added",
       "icon": "CheckCircle",
       "event": {
@@ -505,7 +490,6 @@
       "y": 800,
       "width": 240,
       "height": 140,
-      "color": "#ef4444",
       "label": "Invalid Repository",
       "icon": "XCircle",
       "event": {
@@ -537,7 +521,6 @@
       "y": 600,
       "width": 280,
       "height": 160,
-      "color": "#f97316",
       "label": "Remove Repository",
       "icon": "FolderMinus",
       "event": {
@@ -566,7 +549,6 @@
       "y": 1000,
       "width": 240,
       "height": 140,
-      "color": "#ef4444",
       "label": "Thread Dissolved",
       "icon": "Trash2",
       "event": {
@@ -593,7 +575,6 @@
       "y": 1200,
       "width": 280,
       "height": 160,
-      "color": "#f59e0b",
       "label": "Close Requested",
       "icon": "X",
       "event": {
@@ -626,7 +607,6 @@
       "y": 1420,
       "width": 280,
       "height": 160,
-      "color": "#8b5cf6",
       "label": "Save Modal Shown",
       "icon": "AlertCircle",
       "event": {
@@ -655,7 +635,6 @@
       "y": 1640,
       "width": 280,
       "height": 180,
-      "color": "#22c55e",
       "label": "Save Confirmed",
       "icon": "Check",
       "event": {
@@ -690,7 +669,6 @@
       "y": 1640,
       "width": 280,
       "height": 160,
-      "color": "#ef4444",
       "label": "Thread Discarded",
       "icon": "Trash2",
       "event": {
@@ -720,7 +698,6 @@
       "y": 1640,
       "width": 260,
       "height": 140,
-      "color": "#6b7280",
       "label": "Save Cancelled",
       "icon": "XCircle",
       "event": {
@@ -746,7 +723,6 @@
       "y": 1880,
       "width": 280,
       "height": 200,
-      "color": "#22c55e",
       "label": "Workspace Created",
       "icon": "Folder",
       "event": {
@@ -788,7 +764,6 @@
       "y": 2140,
       "width": 280,
       "height": 140,
-      "color": "#6b7280",
       "label": "Window Closed",
       "icon": "X",
       "event": {

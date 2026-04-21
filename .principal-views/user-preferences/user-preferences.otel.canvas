@@ -17,7 +17,6 @@
       "y": 50,
       "width": 200,
       "height": 100,
-      "color": "#6366F1",
       "label": "Get Preferences",
       "event": {
         "name": "user_preferences.get",
@@ -48,7 +47,6 @@
       "y": 200,
       "width": 200,
       "height": 100,
-      "color": "#6366F1",
       "label": "Update Started",
       "event": {
         "name": "user_preferences.update.started",
@@ -79,7 +77,6 @@
       "y": 350,
       "width": 200,
       "height": 100,
-      "color": "#0D9488",
       "label": "Update Persisted",
       "event": {
         "name": "user_preferences.update.persisted",
@@ -110,7 +107,6 @@
       "y": 500,
       "width": 200,
       "height": 100,
-      "color": "#F59E0B",
       "label": "Broadcast",
       "event": {
         "name": "user_preferences.broadcast",
@@ -145,7 +141,6 @@
       "y": 650,
       "width": 200,
       "height": 100,
-      "color": "#22C55E",
       "label": "Update Complete",
       "event": {
         "name": "user_preferences.update.complete",
@@ -176,7 +171,6 @@
       "y": 350,
       "width": 200,
       "height": 100,
-      "color": "#EF4444",
       "label": "Update Error",
       "event": {
         "name": "user_preferences.update.error",
@@ -211,7 +205,6 @@
       "y": 800,
       "width": 200,
       "height": 100,
-      "color": "#EC4899",
       "label": "Renderer Received",
       "event": {
         "name": "user_preferences.renderer.received",

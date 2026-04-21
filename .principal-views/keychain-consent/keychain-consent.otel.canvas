@@ -17,7 +17,6 @@
       "y": 50,
       "width": 220,
       "height": 120,
-      "color": "#6366F1",
       "label": "First Run Detected",
       "event": {
         "name": "keychain_consent.first_run.detected",
@@ -44,7 +43,6 @@
       "y": 50,
       "width": 220,
       "height": 120,
-      "color": "#6366F1",
       "label": "App Startup Check",
       "event": {
         "name": "keychain_consent.startup.check",
@@ -75,7 +73,6 @@
       "y": 50,
       "width": 220,
       "height": 120,
-      "color": "#F59E0B",
       "label": "Auth Init Skipped",
       "event": {
         "name": "keychain_consent.auth_init.skipped",
@@ -102,7 +99,6 @@
       "y": 220,
       "width": 220,
       "height": 120,
-      "color": "#22C55E",
       "label": "Auth Init Proceed",
       "event": {
         "name": "keychain_consent.auth_init.proceed",
@@ -129,7 +125,6 @@
       "y": 250,
       "width": 220,
       "height": 120,
-      "color": "#EC4899",
       "label": "Renderer Load Consent",
       "event": {
         "name": "keychain_consent.renderer.load",
@@ -160,7 +155,6 @@
       "y": 420,
       "width": 220,
       "height": 120,
-      "color": "#EC4899",
       "label": "Modal Shown",
       "event": {
         "name": "keychain_consent.modal.shown",
@@ -187,7 +181,6 @@
       "y": 590,
       "width": 220,
       "height": 120,
-      "color": "#F59E0B",
       "label": "User Grants Consent",
       "event": {
         "name": "keychain_consent.user.granted",
@@ -218,7 +211,6 @@
       "y": 590,
       "width": 220,
       "height": 120,
-      "color": "#F59E0B",
       "label": "User Declines Consent",
       "event": {
         "name": "keychain_consent.user.declined",
@@ -249,7 +241,6 @@
       "y": 760,
       "width": 220,
       "height": 120,
-      "color": "#0D9488",
       "label": "Consent Persisted",
       "event": {
         "name": "keychain_consent.persisted",
@@ -280,7 +271,6 @@
       "y": 930,
       "width": 220,
       "height": 120,
-      "color": "#6366F1",
       "label": "Keychain Init Requested",
       "event": {
         "name": "keychain_consent.init.requested",
@@ -307,7 +297,6 @@
       "y": 1100,
       "width": 220,
       "height": 120,
-      "color": "#8B5CF6",
       "label": "Keychain Access Triggered",
       "event": {
         "name": "keychain_consent.keychain.access",
@@ -335,7 +324,6 @@
       "y": 1270,
       "width": 220,
       "height": 120,
-      "color": "#22C55E",
       "label": "Keychain Init Success",
       "event": {
         "name": "keychain_consent.init.success",
@@ -366,7 +354,6 @@
       "y": 1100,
       "width": 220,
       "height": 120,
-      "color": "#EF4444",
       "label": "Keychain Init Error",
       "event": {
         "name": "keychain_consent.init.error",
@@ -398,7 +385,6 @@
       "y": 590,
       "width": 220,
       "height": 120,
-      "color": "#EC4899",
       "label": "Settings Enable Request",
       "event": {
         "name": "keychain_consent.settings.enable_requested",
@@ -435,7 +421,6 @@
       "y": 760,
       "width": 220,
       "height": 120,
-      "color": "#EC4899",
       "label": "Auth View Blocked",
       "event": {
         "name": "keychain_consent.auth_view.blocked",

@@ -68,7 +68,7 @@
         "spanPattern": "terminal.session.create",
         "spanKind": "internal",
         "scope": "principal-ade-main",
-        "status": "draft"
+        "status": "implemented"
       }
     },
     {
@@ -102,7 +102,7 @@
         "spanPattern": "terminal.session.destroy",
         "spanKind": "internal",
         "scope": "principal-ade-main",
-        "status": "draft"
+        "status": "implemented"
       }
     },
     {

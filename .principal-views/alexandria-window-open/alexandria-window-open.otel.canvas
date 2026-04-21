@@ -17,7 +17,6 @@
       "y": 0,
       "width": 280,
       "height": 220,
-      "color": "#22c55e",
       "label": "User Trigger",
       "icon": "Mouse",
       "event": {
@@ -53,7 +52,6 @@
       "y": 0,
       "width": 300,
       "height": 200,
-      "color": "#06b6d4",
       "label": "Window Service",
       "icon": "Zap",
       "event": {
@@ -83,7 +81,6 @@
       "y": 0,
       "width": 280,
       "height": 220,
-      "color": "#ef4444",
       "label": "IPC Handler",
       "icon": "Server",
       "event": {
@@ -115,7 +112,6 @@
       "y": 290,
       "width": 280,
       "height": 180,
-      "color": "#ef4444",
       "label": "Registry Lookup",
       "icon": "Database",
       "event": {
@@ -147,7 +143,6 @@
       "y": 280,
       "width": 300,
       "height": 200,
-      "color": "#4f46e5",
       "label": "Create Window",
       "icon": "Box",
       "event": {
@@ -183,7 +178,6 @@
       "y": 310,
       "width": 280,
       "height": 140,
-      "color": "#818cf8",
       "label": "Terminal Register",
       "icon": "Monitor",
       "event": {
@@ -206,7 +200,6 @@
       "y": 589,
       "width": 280,
       "height": 240,
-      "color": "#0d9488",
       "label": "Watch Acquire",
       "icon": "Eye",
       "event": {
@@ -241,7 +234,6 @@
       "y": 617,
       "width": 300,
       "height": 180,
-      "color": "#4f46e5",
       "label": "Load URL",
       "icon": "Globe",
       "event": {
@@ -273,7 +265,6 @@
       "y": 876,
       "width": 280,
       "height": 240,
-      "color": "#22c55e",
       "label": "App Init",
       "icon": "Play",
       "event": {
@@ -309,7 +300,6 @@
       "y": 1188,
       "width": 250,
       "height": 200,
-      "color": "#22c55e",
       "label": "Window Ready",
       "icon": "Check",
       "event": {
@@ -344,7 +334,6 @@
       "y": 502,
       "width": 250,
       "height": 100,
-      "color": "#22c55e",
       "label": "Workspace Found",
       "icon": "CheckCircle",
       "event": {
@@ -370,7 +359,6 @@
       "y": 331,
       "width": 250,
       "height": 100,
-      "color": "#ef4444",
       "label": "Workspace Not Found",
       "icon": "XCircle",
       "event": {
@@ -396,7 +384,6 @@
       "y": 504,
       "width": 250,
       "height": 100,
-      "color": "#f59e0b",
       "label": "Temp Mode",
       "icon": "Clock",
       "event": {
@@ -422,7 +409,6 @@
       "y": 699,
       "width": 200,
       "height": 80,
-      "color": "#4f46e5",
       "label": "Creating Window",
       "icon": "Plus",
       "event": {
@@ -448,7 +434,6 @@
       "y": 701,
       "width": 200,
       "height": 80,
-      "color": "#06b6d4",
       "label": "Reusing Window",
       "icon": "RotateCw",
       "event": {
@@ -474,7 +459,6 @@
       "y": 341,
       "width": 250,
       "height": 80,
-      "color": "#ef4444",
       "label": "Open Failed",
       "icon": "AlertTriangle",
       "event": {

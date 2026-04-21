@@ -265,7 +265,6 @@
       "height": 100,
       "label": "Worker Exit",
       "shape": "rectangle",
-      "color": "#EF4444",
       "event": {
         "name": "cli_bridge.worker.exited",
         "description": "Worker process exited (crash or normal)",
@@ -304,7 +303,6 @@
       "height": 100,
       "label": "Worker Restart",
       "shape": "rectangle",
-      "color": "#F59E0B",
       "event": {
         "name": "cli_bridge.worker.restarted",
         "description": "Worker was restarted after exit or manual restart",

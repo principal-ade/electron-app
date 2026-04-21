@@ -1,67 +1,6 @@
 version: 1.0.0
 name: principal-ade
 description: Principal ADE - The future of Agentic Development Environment
-scopes:
-  principal-ade-main:
-    color: "#1ad76f"
-    description: Electron main process - Node.js runtime handling IPC, services, and system operations
-  principal-ade-daemon:
-    color: "#0D9488"
-    description: Standalone PTY daemon process managing persistent terminal sessions
-  principal-ade-event-processor:
-    color: "#F59E0B"
-    description: Event Processing Server - utility process for agent session events
-  principal-ade-repo-monitor:
-    color: "#14B8A6"
-    description: Repository Monitoring Server - utility process for file watching and cache building
-  principal-ade-terminal-worker:
-    color: "#6366F1"
-    description: Terminal Worker - utility process routing terminal sessions to daemon or managing PTYs directly
-  principal-ade-cli-bridge:
-    color: "#6366F1"
-    description: CLI Bridge - utility process for executing CLI commands (git, npm, etc.)
-  principal-ade-principal-window:
-    color: "#7C3AED"
-    description: Principal Window - main app shell with auth, workspaces, settings
-  principal-ade-dev-workspace:
-    color: "#8B5CF6"
-    description: Dev Workspace - development environment with panels and terminal
-  principal-ade-alexandria:
-    color: "#A855F7"
-    description: Alexandria Workspace - knowledge base and code exploration
-  principal-ade-extension:
-    color: "#C084FC"
-    description: Extension Window - browser extension host
-  principal-ade-splash-screen:
-    color: "#D8B4FE"
-    description: Splash Screen - app loading screen
-  principal-ade-window-switcher:
-    color: "#E9D5FF"
-    description: Window Switcher - quick window navigation overlay
-  principal-ade-quick-open:
-    color: "#F3E8FF"
-    description: Quick Open - command palette overlay
-  file-city-renderer:
-    color: "#22C55E"
-    description: File City visualization renderer scope
-  principal-ade-renderer:
-    color: "#EC4899"
-    description: Shared renderer code - reusable components, hooks, and libraries used across windows
-  external-file-system:
-    color: "#64748B"
-    description: External OS file system - events from the operating system file watcher
-  external-otel-events-manager:
-    color: "#64748B"
-    description: External OTEL Events Manager service - HTTP endpoints for trace persistence
-  external-quality-tools:
-    color: "#64748B"
-    description: External quality CLI tools - eslint, jest, tsc, knip, etc.
-  external-github-api:
-    color: "#64748B"
-    description: External GitHub API - file downloads and repository operations
-  external-principal-api:
-    color: "#64748B"
-    description: External Principal ADE API - app.principal-ade.com services
 resources:
   principal-ade-main:
     service.name: principal-ade-main
@@ -521,13 +460,3 @@ edgeComponents:
     description: Event subscription/listener pattern
     style: dashed
     color: "#A855F7"
-states:
-  draft:
-    color: "#f59e0b"
-    label: Draft
-  approved:
-    color: "#10b981"
-    label: Approved
-  implemented:
-    color: "#6366f1"
-    label: Implemented
