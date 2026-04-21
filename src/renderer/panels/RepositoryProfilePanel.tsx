@@ -29,7 +29,7 @@ import {
   Eye,
   EyeClosed,
 } from 'lucide-react';
-import { FileCity3D, type HighlightLayer } from '@principal-ai/file-city-react';
+import { FileCity3D, type HighlightLayer, createFileColorHighlightLayers } from '@principal-ai/file-city-react';
 import {
   buildCityDataFromFileTree,
   estimateLineCounts,
@@ -498,90 +498,115 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     };
   }, [repositoryData]);
 
-  // Create initial highlight layers from git status when data loads
+  // Create initial highlight layers from git status and file suffixes when data loads
   useEffect(() => {
-    // Only create highlights if not currently playing and we have git status
-    if (isPlaying || gitStatusMap.size === 0) {
+    // Only create highlights if not currently playing
+    if (isPlaying) {
       return;
     }
 
-    // Get the first clone's git status (usually there's only one)
-    const firstClone = repositoryData?.localClones?.[0];
-    if (!firstClone) {
-      return;
-    }
-
-    const gitStatus = gitStatusMap.get(firstClone.path);
-    if (!gitStatus || !gitStatus.isDirty) {
-      // No changes, clear any existing highlights
-      setHighlightLayers([]);
-      return;
-    }
-
-    // Create separate layers for each status type (layers only support one color per layer)
     const layers: HighlightLayer[] = [];
 
-    // Staged files - green layer
-    if (gitStatus.stagedFiles && gitStatus.stagedFiles.length > 0) {
-      layers.push({
-        id: 'git-staged',
-        name: 'Staged Files',
-        enabled: true,
-        color: theme.colors.success,
-        priority: 4,
-        items: gitStatus.stagedFiles.map(path => ({ type: 'file' as const, path })),
-        opacity: 0.8,
-      });
+    // 1. First, add file suffix color layers (higher priority: 100+)
+    // Higher priority = drawn first = appears underneath
+    // These show the default colors for all files based on their extensions
+    if (cityData?.buildings) {
+      const fileSuffixLayers = createFileColorHighlightLayers(cityData.buildings);
+
+      // Check if there are any git changes
+      const hasGitChanges = gitStatusMap.size > 0 && Array.from(gitStatusMap.values()).some(status => status.isDirty);
+
+      // Dim suffix layers when git changes are present to help focus on git status
+      // Also boost their priority so they render underneath git layers
+      const adjustedSuffixLayers = hasGitChanges
+        ? fileSuffixLayers.map(layer => ({
+            ...layer,
+            opacity: (layer.opacity ?? 1.0) * 0.2, // Reduce opacity to 20% when git changes present
+            priority: layer.priority + 100, // Boost priority to render underneath git layers
+          }))
+        : fileSuffixLayers.map(layer => ({
+            ...layer,
+            priority: layer.priority + 100, // Always boost priority for consistent layering
+          }));
+
+      layers.push(...adjustedSuffixLayers);
     }
 
-    // Modified files - orange/warning layer
-    if (gitStatus.modifiedFiles && gitStatus.modifiedFiles.length > 0) {
-      layers.push({
-        id: 'git-modified',
-        name: 'Modified Files',
-        enabled: true,
-        color: theme.colors.warning,
-        priority: 3,
-        items: gitStatus.modifiedFiles.map(path => ({ type: 'file' as const, path })),
-        opacity: 0.8,
-      });
-    }
+    // 2. Then, add git status layers (lower priority: 1-4)
+    // Lower priority = drawn later = appears on top
+    // These override the file suffix colors for files with git changes
+    if (gitStatusMap.size > 0) {
+      // Get the first clone's git status (usually there's only one)
+      const firstClone = repositoryData?.localClones?.[0];
+      if (firstClone) {
+        const gitStatus = gitStatusMap.get(firstClone.path);
+        if (gitStatus && gitStatus.isDirty) {
+          // Staged files - green layer
+          if (gitStatus.stagedFiles && gitStatus.stagedFiles.length > 0) {
+            layers.push({
+              id: 'git-staged',
+              name: 'Staged Files',
+              enabled: true,
+              color: theme.colors.success,
+              priority: 4,
+              items: gitStatus.stagedFiles.map(path => ({ type: 'file' as const, path })),
+              opacity: 0.8,
+            });
+          }
 
-    // Untracked files - blue/info layer
-    if (gitStatus.untrackedFiles && gitStatus.untrackedFiles.length > 0) {
-      layers.push({
-        id: 'git-untracked',
-        name: 'Untracked Files',
-        enabled: true,
-        color: theme.colors.info,
-        priority: 2,
-        items: gitStatus.untrackedFiles.map(path => ({ type: 'file' as const, path })),
-        opacity: 0.8,
-      });
-    }
+          // Modified files - orange/warning layer
+          if (gitStatus.modifiedFiles && gitStatus.modifiedFiles.length > 0) {
+            layers.push({
+              id: 'git-modified',
+              name: 'Modified Files',
+              enabled: true,
+              color: theme.colors.warning,
+              priority: 3,
+              items: gitStatus.modifiedFiles.map(path => ({ type: 'file' as const, path })),
+              opacity: 0.8,
+            });
+          }
 
-    // Deleted files - red/error layer
-    if (gitStatus.deletedFiles && gitStatus.deletedFiles.length > 0) {
-      layers.push({
-        id: 'git-deleted',
-        name: 'Deleted Files',
-        enabled: true,
-        color: theme.colors.error,
-        priority: 1,
-        items: gitStatus.deletedFiles.map(path => ({ type: 'file' as const, path })),
-        opacity: 0.8,
-      });
+          // Untracked files - blue/info layer
+          if (gitStatus.untrackedFiles && gitStatus.untrackedFiles.length > 0) {
+            layers.push({
+              id: 'git-untracked',
+              name: 'Untracked Files',
+              enabled: true,
+              color: theme.colors.info,
+              priority: 2,
+              items: gitStatus.untrackedFiles.map(path => ({ type: 'file' as const, path })),
+              opacity: 0.8,
+            });
+          }
+
+          // Deleted files - red/error layer
+          if (gitStatus.deletedFiles && gitStatus.deletedFiles.length > 0) {
+            layers.push({
+              id: 'git-deleted',
+              name: 'Deleted Files',
+              enabled: true,
+              color: theme.colors.error,
+              priority: 1,
+              items: gitStatus.deletedFiles.map(path => ({ type: 'file' as const, path })),
+              opacity: 0.8,
+            });
+          }
+
+          console.info('[RepositoryProfilePanel] Created git status layers:', {
+            staged: gitStatus.stagedFiles?.length || 0,
+            modified: gitStatus.modifiedFiles?.length || 0,
+            untracked: gitStatus.untrackedFiles?.length || 0,
+            deleted: gitStatus.deletedFiles?.length || 0,
+          });
+        }
+      }
     }
 
     setHighlightLayers(layers);
 
-    console.info('[RepositoryProfilePanel] Created', layers.length, 'highlight layers for git changes:', {
-      staged: gitStatus.stagedFiles?.length || 0,
-      modified: gitStatus.modifiedFiles?.length || 0,
-      untracked: gitStatus.untrackedFiles?.length || 0,
-      deleted: gitStatus.deletedFiles?.length || 0,
-    });
-  }, [gitStatusMap, isPlaying, repositoryData?.localClones, theme.colors]);
+    console.info('[RepositoryProfilePanel] Total highlight layers:', layers.length);
+  }, [gitStatusMap, isPlaying, repositoryData?.localClones, theme.colors, cityData]);
 
   // Load watch status when repository changes
   useEffect(() => {

@@ -1237,6 +1237,63 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, repositories]);
 
+  // Handle repository clone delete requests
+  useEffect(() => {
+    const handleDeleteCloneRequest = async (event: {
+      type: string;
+      payload: { repository: RepositoryProfileData; clonePath: string }
+    }) => {
+      if (event.type === 'repository-profile:delete-clone-requested') {
+        const { repository, clonePath } = event.payload;
+
+        // Find the matching entry in repositories by clone path
+        const entry = repositories.find(r =>
+          r.name === repository.name &&
+          (r.path === clonePath ||
+           ('localClones' in r && Array.isArray(r.localClones) && r.localClones.some(clone => clone.path === clonePath)))
+        );
+
+        if (entry) {
+          // Check git status for the specific clone path
+          let gitStatus = null;
+          try {
+            // Get branch status for unpushed commits
+            const branchStatus = await GitService.getBranchStatus(clonePath);
+
+            // Get working directory status for uncommitted changes
+            const statusResult = await GitService.execCommand(clonePath, [
+              'status',
+              '--porcelain',
+            ]);
+
+            const hasUncommittedChanges = statusResult.stdout.trim().length > 0;
+            const uncommittedCount = statusResult.stdout.trim().split('\n').filter(Boolean).length;
+
+            gitStatus = {
+              hasUncommittedChanges,
+              uncommittedCount,
+              unpushedCommits: branchStatus.ahead,
+              currentBranch: branchStatus.branch,
+            };
+          } catch (error) {
+            console.warn('[FeedPanelFramework] Failed to check git status:', error);
+          }
+
+          setEntryToDelete(entry);
+          setDeleteGitStatus(gitStatus);
+          setIsDeleteModalOpen(true);
+        } else {
+          console.warn('[FeedPanelFramework] Could not find repository clone to delete:', repository.name, clonePath);
+        }
+      }
+    };
+
+    events.on('repository-profile:delete-clone-requested', handleDeleteCloneRequest);
+    return () => {
+      events.off('repository-profile:delete-clone-requested', handleDeleteCloneRequest);
+    };
+  }, [events, repositories]);
+
   // Handle delete modal close
   const handleCloseDeleteModal = useCallback(() => {
     setIsDeleteModalOpen(false);
