@@ -29,7 +29,7 @@ import {
   Eye,
   EyeClosed,
 } from 'lucide-react';
-import { FileCity3D, type HighlightLayer, createFileColorHighlightLayers } from '@principal-ai/file-city-react';
+import { ArchitectureMapHighlightLayers, type HighlightLayer, createFileColorHighlightLayers } from '@principal-ai/file-city-react';
 import {
   buildCityDataFromFileTree,
   estimateLineCounts,
@@ -377,9 +377,8 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const [readmeContent, setReadmeContent] = useState<string | null>(null);
   const [readmeLoading, setReadmeLoading] = useState(false);
 
-  // State for 3D city data (derived from file trees)
+  // State for city data (derived from file trees)
   const [cityData, setCityData] = useState<CityData | null>(null);
-  const [cityDataLoading, setCityDataLoading] = useState(false);
 
   // State for contributors list
   const [showContributors, setShowContributors] = useState(false);
@@ -655,7 +654,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         setRemoteFileTree(null);
         setFileTreesError(null);
         setCityData(null);
-        setCityDataLoading(false);
         // Reset contributors
         setShowContributors(false);
         setContributors([]);
@@ -663,7 +661,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       }
 
       setFileTreesError(null);
-      setCityDataLoading(true);
 
       try {
         const promises: Promise<void>[] = [];
@@ -702,7 +699,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         console.error('[RepositoryProfilePanel] Failed to fetch file trees:', error);
         if (!cancelled) {
           setFileTreesError(error instanceof Error ? error.message : String(error));
-          setCityDataLoading(false);
         }
       }
     };
@@ -836,13 +832,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
         if (!cancelled) {
           setCityData(finalCityData);
-          setCityDataLoading(false);
         }
       } catch (error) {
         console.error('[RepositoryProfilePanel] Failed to build city data:', error);
         if (!cancelled) {
           setCityData(null);
-          setCityDataLoading(false);
         }
       }
     };
@@ -2116,7 +2110,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           }}
         >
           {/* Toggle suffix layers button */}
-          {cityData && !cityDataLoading && (
+          {cityData && (
             <button
               onClick={() => setShowSuffixLayers(!showSuffixLayers)}
               style={{
@@ -2153,21 +2147,17 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             </button>
           )}
 
-          {cityData && !cityDataLoading ? (
-            <FileCity3D
+          {cityData ? (
+            <ArchitectureMapHighlightLayers
               cityData={cityData}
-              width="100%"
-              height="100%"
-              showControls={true}
-              heightScaling="linear"
-              linearScale={0.5}
-              animation={{ startFlat: true, autoStartDelay: null }}
-              backgroundColor={theme.colors.backgroundSecondary}
               highlightLayers={highlightLayers}
-              style={{
-                width: '100%',
-                height: '100%',
-              }}
+              canvasBackgroundColor={theme.colors.backgroundSecondary}
+              defaultBuildingColor={theme.colors.muted}
+              defaultDirectoryColor={theme.colors.backgroundSecondary}
+              enableZoom={true}
+              showFileTypeIcons={true}
+              showDirectoryLabels={true}
+              fullSize={true}
             />
           ) : (
             <div
@@ -2180,7 +2170,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 color: theme.colors.textSecondary,
               }}
             >
-              {cityDataLoading ? 'Loading 3D city...' : 'No city data available'}
+              No city data available
             </div>
           )}
         </div>
