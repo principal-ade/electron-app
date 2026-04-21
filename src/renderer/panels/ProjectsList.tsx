@@ -7,11 +7,13 @@
 
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, User, ChevronDown, ChevronRight } from 'lucide-react';
+import { FolderGit2, User, ChevronDown, ChevronRight, Circle } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { GithubService } from '../main-process-api/GithubService';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 
 export interface CommitTimestamp {
   timestamp: Date | string;
@@ -29,7 +31,7 @@ export interface ProjectsListProps {
   selectedBlock?: string | null;
 }
 
-type ProjectsViewMode = 'timeline' | 'by-org';
+type ProjectsViewMode = 'in-progress' | 'recent' | 'by-org';
 
 interface RepoSummaryWithEntry extends RepoSummary {
   entry?: AlexandriaEntry;
@@ -58,7 +60,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   };
 
   // View mode state
-  const [viewMode, setViewMode] = useState<ProjectsViewMode>('timeline');
+  const [viewMode, setViewMode] = useState<ProjectsViewMode>('in-progress');
+
+  // Git status map for repositories
+  const [gitStatusMap, setGitStatusMap] = useState<Map<string, GitStatusWithFiles>>(new Map());
 
   // User's GitHub username and organizations
   const [currentUser, setCurrentUser] = useState<string | null>(null);
@@ -88,6 +93,55 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     };
 
     fetchGitHubData();
+  }, []);
+
+  // Fetch git status for all repositories with local paths
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchGitStatuses = async () => {
+      const newStatusMap = new Map<string, GitStatusWithFiles>();
+
+      await Promise.all(
+        repositories
+          .filter(repo => repo.path) // Only check repos with local paths
+          .map(async (repo) => {
+            if (!repo.path) return; // Type guard, should never happen due to filter
+            try {
+              const status = await RepositoryMonitoringService.getGitStatusWithFiles(repo.path);
+              if (!cancelled && status) {
+                newStatusMap.set(repo.path, status);
+              }
+            } catch (error) {
+              console.error(`[ProjectsList] Failed to fetch git status for ${repo.path}:`, error);
+            }
+          })
+      );
+
+      if (!cancelled) {
+        setGitStatusMap(newStatusMap);
+      }
+    };
+
+    fetchGitStatuses();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repositories]);
+
+  // Subscribe to git status changes for real-time updates
+  useEffect(() => {
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged((status) => {
+      // Update the status map when any repository's git status changes
+      setGitStatusMap(prev => {
+        const updated = new Map(prev);
+        updated.set(status.repoPath, status);
+        return updated;
+      });
+    });
+
+    return unsubscribe;
   }, []);
 
   // Format relative time
@@ -169,11 +223,31 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       }
     }
 
-    // Sort by most recent commit first
-    return Array.from(repoMap.values()).sort(
+    // Get all summaries and sort by most recent commit first
+    let summaries = Array.from(repoMap.values()).sort(
       (a, b) => b.lastCommitTime.getTime() - a.lastCommitTime.getTime()
     );
-  }, [commits, repoGithubMap, repositories]);
+
+    // Apply filter based on view mode (only for timeline views)
+    if (viewMode === 'in-progress' || viewMode === 'recent') {
+      summaries = summaries.filter(summary => {
+        if (!summary.repoId) return false;
+        const gitStatus = gitStatusMap.get(summary.repoId);
+
+        if (viewMode === 'in-progress') {
+          // Show only dirty repos
+          return gitStatus && gitStatus.isDirty;
+        } else if (viewMode === 'recent') {
+          // Show only clean repos
+          return !gitStatus || !gitStatus.isDirty;
+        }
+
+        return true;
+      });
+    }
+
+    return summaries;
+  }, [commits, repoGithubMap, repositories, viewMode, gitStatusMap]);
 
   // Group repositories by organization (for by-org view)
   const groupedRepos = useMemo(() => {
@@ -246,7 +320,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         overflow: 'hidden',
       }}
     >
-      {/* Subtab Control */}
+      {/* View Mode Control */}
       <div
         style={{
           padding: spacing.sm,
@@ -256,8 +330,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       >
         <SegmentedControl
           options={[
-            { value: 'timeline', label: 'Timeline' },
-            { value: 'by-org', label: 'By Organization' },
+            { value: 'in-progress', label: 'In Progress' },
+            { value: 'recent', label: 'Recent' },
+            { value: 'by-org', label: 'Cloned Projects' },
           ]}
           value={viewMode}
           onChange={(value) => setViewMode(value as ProjectsViewMode)}
@@ -265,8 +340,8 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         />
       </div>
 
-      {/* Timeline View */}
-      {viewMode === 'timeline' && (
+      {/* Timeline View (for In Progress and Recent modes) */}
+      {(viewMode === 'in-progress' || viewMode === 'recent') && (
         <div
           style={{
             flex: 1,
@@ -363,16 +438,40 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    fontSize: theme.fontSizes[1],
-                    fontWeight: 600,
-                    color: theme.colors.text,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.xs,
                     marginBottom: 2,
                   }}
                 >
-                  {summary.repoName}
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: 600,
+                      color: theme.colors.text,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {summary.repoName}
+                  </div>
+                  {/* Git status indicator */}
+                  {(() => {
+                    const gitStatus = summary.repoId ? gitStatusMap.get(summary.repoId) : null;
+                    if (gitStatus && gitStatus.isDirty) {
+                      return (
+                        <div title="In Progress - has uncommitted changes">
+                          <Circle
+                            size={8}
+                            fill={theme.colors.warning}
+                            color={theme.colors.warning}
+                          />
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 {summary.githubOwner && (
                   <div

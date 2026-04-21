@@ -20,6 +20,7 @@ import {
 } from '@principal-ade/panel-layouts';
 import type { PanelEventEmitter, RepositoryMetadata } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import {
   TerminalProvider,
   useTerminalProvider,
@@ -200,6 +201,7 @@ const RepositoryProfileTabContent: React.FC<{
 }> = ({ repository, events }) => {
   const [repositoryData, setRepositoryData] = React.useState<RepositoryProfileData | undefined>(undefined);
   const [loading, setLoading] = React.useState(true);
+  const [refreshTrigger, setRefreshTrigger] = React.useState(0);
 
   // Use commit heatmap hook for local repos only
   const heatMapData = useCommitHeatMap(repository.path ?? null);
@@ -334,7 +336,33 @@ const RepositoryProfileTabContent: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [heatMapData.commits, repository]);
+  }, [heatMapData.commits, repository, refreshTrigger]);
+
+  // Subscribe to Alexandria repository changes to update profile in real-time
+  React.useEffect(() => {
+    const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
+      // Only handle update events
+      if (event.type !== AlexandriaEventType.UPDATED || !event.repository) {
+        return;
+      }
+
+      // Check if this update is for the repository we're currently viewing
+      const isMatch =
+        event.repository.name === repository.name ||
+        event.repository.path === repository.path ||
+        (event.repository.github?.id && repository.github?.id &&
+         event.repository.github.id === repository.github.id);
+
+      if (isMatch) {
+        console.info('[RepositoryProfileTab] Repository updated, refreshing profile data:', event.repository.name);
+        // Trigger a re-fetch by incrementing the refresh counter
+        // This will cause the main useEffect to re-run
+        setRefreshTrigger(prev => prev + 1);
+      }
+    });
+
+    return unsubscribe;
+  }, [repository]);
 
   // Create minimal context and actions
   // Memoize to prevent unnecessary re-renders and re-fetching
