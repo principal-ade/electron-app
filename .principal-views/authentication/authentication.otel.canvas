@@ -1,0 +1,503 @@
+{
+  "name": "Authentication - User Logout",
+  "markdown": ".principal-views/authentication/authentication.md",
+  "nodes": [
+    {
+      "id": "user-logout-initiated",
+      "type": "otel-event",
+      "x": -27,
+      "y": 46,
+      "width": 200,
+      "height": 100,
+      "label": "Logout Initiated",
+      "icon": "LogOut",
+      "shape": "roundedRect",
+      "description": "User initiates logout from UI (Auth view or settings)",
+      "event": {
+        "name": "auth.logout.initiated",
+        "attributes": {
+          "user.login": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub username of user logging out"
+          },
+          "source": {
+            "type": "string",
+            "required": true,
+            "description": "UI component that triggered logout"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-principal-window",
+        "files": [
+          "src/renderer/hooks/useAuthState.ts"
+        ]
+      }
+    },
+    {
+      "id": "token-deletion-github",
+      "type": "otel-event",
+      "x": 312,
+      "y": -28,
+      "width": 200,
+      "height": 100,
+      "label": "Delete GitHub Token",
+      "icon": "Key",
+      "shape": "roundedRect",
+      "description": "Delete GitHub token from UnifiedSecureStorage keychain",
+      "event": {
+        "name": "auth.token.deleted",
+        "attributes": {
+          "token.key": {
+            "type": "string",
+            "required": true,
+            "description": "Token key (GITHUB_TOKEN)"
+          },
+          "success": {
+            "type": "boolean",
+            "required": true,
+            "description": "Whether deletion succeeded"
+          },
+          "error.message": {
+            "type": "string",
+            "required": false,
+            "description": "Error message if deletion failed"
+          },
+          "error.type": {
+            "type": "string",
+            "required": false,
+            "description": "Error type (KeychainTimeout, KeychainPermission, KeychainNotAvailable)"
+          },
+          "duration_ms": {
+            "type": "number",
+            "required": false,
+            "description": "Time taken to delete token"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/AuthService.ts",
+          "src/main/services/UnifiedSecureStorage.ts"
+        ]
+      }
+    },
+    {
+      "id": "token-deletion-workos",
+      "type": "otel-event",
+      "x": 245,
+      "y": 123,
+      "width": 200,
+      "height": 100,
+      "label": "Delete WorkOS Token",
+      "icon": "Key",
+      "shape": "roundedRect",
+      "description": "Delete WorkOS refresh token from UnifiedSecureStorage keychain",
+      "event": {
+        "name": "auth.token.deleted",
+        "attributes": {
+          "token.key": {
+            "type": "string",
+            "required": true,
+            "description": "Token key (WORKOS_TOKEN)"
+          },
+          "success": {
+            "type": "boolean",
+            "required": true,
+            "description": "Whether deletion succeeded"
+          },
+          "error.message": {
+            "type": "string",
+            "required": false,
+            "description": "Error message if deletion failed"
+          },
+          "error.type": {
+            "type": "string",
+            "required": false,
+            "description": "Error type (KeychainTimeout, KeychainPermission, KeychainNotAvailable)"
+          },
+          "duration_ms": {
+            "type": "number",
+            "required": false,
+            "description": "Time taken to delete token"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/AuthService.ts",
+          "src/main/services/UnifiedSecureStorage.ts"
+        ]
+      }
+    },
+    {
+      "id": "auth-state-cleared",
+      "type": "otel-event",
+      "x": 690,
+      "y": 57,
+      "width": 200,
+      "height": 100,
+      "label": "Auth State Cleared",
+      "icon": "Database",
+      "shape": "roundedRect",
+      "description": "Clear in-memory authentication state in AuthStateManager",
+      "event": {
+        "name": "auth.state.cleared",
+        "attributes": {
+          "previous_user.login": {
+            "type": "string",
+            "required": false,
+            "description": "Username that was logged in"
+          },
+          "state_manager.instance_id": {
+            "type": "string",
+            "required": false,
+            "description": "AuthStateManager instance identifier"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/AuthStateManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "git-credentials-cleared",
+      "type": "otel-event",
+      "x": 690,
+      "y": 229,
+      "width": 200,
+      "height": 100,
+      "label": "Git Credentials Cleared",
+      "icon": "GitBranch",
+      "shape": "roundedRect",
+      "description": "Clear git credential helper configuration",
+      "event": {
+        "name": "auth.git_credentials.cleared",
+        "attributes": {
+          "success": {
+            "type": "boolean",
+            "required": true,
+            "description": "Whether git credential clearing succeeded"
+          },
+          "error.message": {
+            "type": "string",
+            "required": false,
+            "description": "Error message if clearing failed"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitCredentialHelper.ts"
+        ]
+      }
+    },
+    {
+      "id": "auth-state-changed-broadcast",
+      "type": "otel-event",
+      "x": 975,
+      "y": 57,
+      "width": 200,
+      "height": 100,
+      "label": "Auth State Changed",
+      "icon": "Radio",
+      "shape": "roundedRect",
+      "description": "Broadcast auth-state:changed IPC event to all renderer processes",
+      "event": {
+        "name": "auth.state.changed",
+        "attributes": {
+          "is_authenticated": {
+            "type": "boolean",
+            "required": true,
+            "description": "New authentication status (false after logout)"
+          },
+          "user": {
+            "type": "object",
+            "required": false,
+            "description": "User object (null after logout)"
+          },
+          "last_checked": {
+            "type": "number",
+            "required": true,
+            "description": "Timestamp of state change"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/AuthStateManager.ts",
+          "src/shared/ipc-events/AuthEvents.ts"
+        ]
+      }
+    },
+    {
+      "id": "ui-logout-complete",
+      "type": "otel-event",
+      "x": 1236,
+      "y": 57,
+      "width": 200,
+      "height": 100,
+      "label": "UI Updated",
+      "icon": "RefreshCw",
+      "shape": "roundedRect",
+      "description": "UI components receive auth state change and update",
+      "event": {
+        "name": "auth.ui.updated",
+        "attributes": {
+          "component": {
+            "type": "string",
+            "required": true,
+            "description": "Component that updated (FeedLeftPanel, NavigationSidebar, etc)"
+          },
+          "previous_state.authenticated": {
+            "type": "boolean",
+            "required": false,
+            "description": "Previous auth state"
+          },
+          "new_state.authenticated": {
+            "type": "boolean",
+            "required": true,
+            "description": "New auth state (false)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-principal-window",
+        "files": [
+          "src/renderer/hooks/useAuthState.ts",
+          "src/renderer/panels/FeedLeftPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "logout-success-validation",
+      "type": "text",
+      "x": 985,
+      "y": -148,
+      "width": 250,
+      "height": 150,
+      "color": "#D4EDDA",
+      "text": "## Success Validation\n\n✅ Both tokens deleted from keychain\n✅ AuthStateManager.isAuthenticated = false\n✅ Auth state change event broadcast\n✅ UI shows signed-out state\n✅ Git credentials removed\n\n**Query:** Check all logout events succeeded:\n```\nSELECT * FROM events \nWHERE name IN (\n  'auth.token.deleted',\n  'auth.state.cleared'\n)\nAND attributes.success = true\n```"
+    },
+    {
+      "id": "logout-error-silent-failure",
+      "type": "text",
+      "x": 285,
+      "y": 414,
+      "width": 250,
+      "height": 150,
+      "color": "#F8D7DA",
+      "text": "## 🐛 Known Issue: Silent Failure\n\n**Problem:** Token deletion errors are caught and logged but not thrown\n\n```typescript\ncatch (error) {\n  console.error('[AuthService] Failed to clear');\n  // Don't throw - issue!\n}\n```\n\n**Impact:** Logout returns success even if tokens not deleted\n\n**Causes:**\n- Keychain locked during logout\n- Keychain timeout (30s)\n- Permission denied\n- App force-quit mid-logout"
+    },
+    {
+      "id": "logout-error-stale-data",
+      "type": "text",
+      "x": 1211,
+      "y": 301,
+      "width": 250,
+      "height": 150,
+      "color": "#F8D7DA",
+      "text": "## 🐛 Issue: Stale UI Data\n\n**Problem:** Components using local state instead of useAuth() show stale data\n\n**Example:** FeedLeftPanel was fetching user once on mount, never updated on auth changes\n\n**Solution:** All components must use `useAuth()` hook to subscribe to auth state changes\n\n**Fixed in:** FeedLeftPanel.tsx now uses useAuth()"
+    },
+    {
+      "id": "memory-cache-clear",
+      "type": "otel-event",
+      "x": 660,
+      "y": -83,
+      "width": 200,
+      "height": 100,
+      "label": "Memory Cache Cleared",
+      "icon": "Trash2",
+      "shape": "roundedRect",
+      "description": "Clear UnifiedSecureStorage in-memory cache after token deletion",
+      "event": {
+        "name": "auth.cache.cleared",
+        "attributes": {
+          "cache.size_before": {
+            "type": "number",
+            "required": false,
+            "description": "Number of items in cache before clear"
+          },
+          "cache.tokens_removed": {
+            "type": "number",
+            "required": true,
+            "description": "Number of tokens removed from cache"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/UnifiedSecureStorage.ts"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "fromNode": "user-logout-initiated",
+      "toNode": "token-deletion-github",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "clearStoredAuth()",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-2",
+      "fromNode": "user-logout-initiated",
+      "toNode": "token-deletion-workos",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "clearStoredAuth()",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-3",
+      "fromNode": "token-deletion-github",
+      "toNode": "memory-cache-clear",
+      "fromSide": "top",
+      "toSide": "left",
+      "label": "update cache",
+      "edgeType": "stores-in"
+    },
+    {
+      "id": "edge-4",
+      "fromNode": "token-deletion-workos",
+      "toNode": "memory-cache-clear",
+      "fromSide": "top",
+      "toSide": "left",
+      "label": "update cache",
+      "edgeType": "stores-in"
+    },
+    {
+      "id": "edge-5",
+      "fromNode": "token-deletion-github",
+      "toNode": "auth-state-cleared",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "after deletion",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-6",
+      "fromNode": "token-deletion-workos",
+      "toNode": "auth-state-cleared",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "after deletion",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-7",
+      "fromNode": "auth-state-cleared",
+      "toNode": "git-credentials-cleared",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "parallel",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-8",
+      "fromNode": "auth-state-cleared",
+      "toNode": "auth-state-changed-broadcast",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "broadcast",
+      "edgeType": "ipc-event"
+    },
+    {
+      "id": "edge-9",
+      "fromNode": "auth-state-changed-broadcast",
+      "toNode": "ui-logout-complete",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "IPC event",
+      "edgeType": "ipc-event"
+    },
+    {
+      "id": "edge-10",
+      "fromNode": "token-deletion-github",
+      "toNode": "logout-error-silent-failure",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "error caught",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-11",
+      "fromNode": "token-deletion-workos",
+      "toNode": "logout-error-silent-failure",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "error caught",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-12",
+      "fromNode": "ui-logout-complete",
+      "toNode": "logout-error-stale-data",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "if not using useAuth()",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-token-deletion-workos-memory-cache-clear-1776807453097",
+      "fromNode": "token-deletion-workos",
+      "toNode": "memory-cache-clear",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "stores-in"
+      }
+    },
+    {
+      "id": "edge-token-deletion-github-logout-error-silent-failure-1776807453097",
+      "fromNode": "token-deletion-github",
+      "toNode": "logout-error-silent-failure",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "ipc"
+      }
+    },
+    {
+      "id": "edge-token-deletion-github-memory-cache-clear-1776807453097",
+      "fromNode": "token-deletion-github",
+      "toNode": "memory-cache-clear",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "stores-in"
+      }
+    },
+    {
+      "id": "edge-token-deletion-workos-logout-error-silent-failure-1776807453097",
+      "fromNode": "token-deletion-workos",
+      "toNode": "logout-error-silent-failure",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "ipc"
+      }
+    }
+  ],
+  "description": "User logout flow showing token deletion, state management, and known issues with silent failures and stale UI data"
+}

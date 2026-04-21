@@ -6,7 +6,7 @@
  * Clicking on a coworker opens their profile.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Users } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
@@ -141,99 +141,6 @@ export const CoworkersList: React.FC<CoworkersListProps> = ({
         backgroundColor: theme.colors.background,
       }}
     >
-      {/* Current User */}
-      {currentUser && (
-        <div
-          style={{
-            padding: spacing.sm,
-          }}
-        >
-          <button
-            onClick={() => handleCoworkerClick(currentUser.login)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              width: '100%',
-              padding: spacing.sm,
-              backgroundColor: 'transparent',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radii?.[1] || 4,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              textAlign: 'left',
-              position: 'relative',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-              e.currentTarget.style.borderColor = theme.colors.primary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = theme.colors.border;
-            }}
-          >
-            {/* Avatar with activity indicator */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <img
-                src={currentUser.avatar_url}
-                alt={currentUser.login}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                }}
-              />
-              {activeUsers.has(currentUser.login) && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: -2,
-                    right: -2,
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    backgroundColor: theme.colors.success,
-                    border: `2px solid ${theme.colors.background}`,
-                  }}
-                  title="Recent activity"
-                />
-              )}
-            </div>
-
-            {/* Info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[1],
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: 2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {currentUser.login}
-              </div>
-              <div
-                style={{
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[0],
-                  color: theme.colors.textSecondary,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                You
-              </div>
-            </div>
-          </button>
-        </div>
-      )}
-
       {/* Header */}
       <div
         style={{
@@ -296,7 +203,7 @@ export const CoworkersList: React.FC<CoworkersListProps> = ({
         }}
       >
         {coworkers
-          .filter((coworker) => currentUser && coworker.login !== currentUser.login)
+          .filter((coworker) => !currentUser || coworker.login !== currentUser.login)
           .map((coworker) => {
             const hasActivity = activeUsers.has(coworker.login);
 

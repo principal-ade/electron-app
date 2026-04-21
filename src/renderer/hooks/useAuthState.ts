@@ -19,6 +19,8 @@ export interface AuthState extends APIAuthState {
   isLoading: boolean;
   isLoggingIn?: boolean;
   loginError?: string | null;
+  logoutError?: string | null;
+  logoutGuidance?: string | null;
 }
 
 // Re-export AuthUser for backward compatibility
@@ -29,6 +31,7 @@ export interface UseAuthStateReturn extends AuthState {
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   clearLoginError: () => void;
+  clearLogoutError: () => void;
 }
 
 /**
@@ -43,6 +46,8 @@ export function useAuthState(): UseAuthStateReturn {
     isLoading: true,
     isLoggingIn: false,
     loginError: null,
+    logoutError: null,
+    logoutGuidance: null,
   });
 
   const isSubscribed = useRef(false);
@@ -67,6 +72,8 @@ export function useAuthState(): UseAuthStateReturn {
         isLoading: false,
         isLoggingIn: prev.isLoggingIn, // Preserve local login state
         loginError: prev.loginError, // Preserve local error state
+        logoutError: prev.logoutError, // Preserve local logout error state
+        logoutGuidance: prev.logoutGuidance, // Preserve local logout guidance
       }));
     };
 
@@ -167,6 +174,13 @@ export function useAuthState(): UseAuthStateReturn {
     try {
       console.info('[useAuthState] Logging out...');
 
+      // Clear any previous logout errors
+      setAuthState((prev) => ({
+        ...prev,
+        logoutError: null,
+        logoutGuidance: null,
+      }));
+
       const result = await AuthenticationService.logout();
 
       if (result.success) {
@@ -179,16 +193,43 @@ export function useAuthState(): UseAuthStateReturn {
           user: null,
           isLoggingIn: false,
           loginError: null,
+          logoutError: null,
+          logoutGuidance: null,
           lastChecked: Date.now(),
         }));
 
         // State will also be updated via the auth-state:changed event
       } else {
-        console.error('[useAuthState] Logout failed:', result.error);
-        throw new Error(result.error || 'Logout failed');
+        const errorMsg = result.error || 'Logout failed';
+        console.error('[useAuthState] Logout failed:', errorMsg);
+
+        // Store error and guidance in state for UI to display
+        setAuthState((prev) => ({
+          ...prev,
+          logoutError: errorMsg,
+          logoutGuidance: result.guidance || null,
+        }));
+
+        // Create detailed error for throwing
+        const error = new Error(errorMsg);
+        if (result.guidance) {
+          (error as any).guidance = result.guidance;
+        }
+        throw error;
       }
     } catch (error) {
       console.error('[useAuthState] Logout error:', error);
+
+      // Ensure error state is set even if exception occurs
+      const errorMsg = error instanceof Error ? error.message : 'Logout failed';
+      const guidance = (error as any)?.guidance;
+
+      setAuthState((prev) => ({
+        ...prev,
+        logoutError: errorMsg,
+        logoutGuidance: guidance || null,
+      }));
+
       throw error;
     }
   }, []);
@@ -219,12 +260,22 @@ export function useAuthState(): UseAuthStateReturn {
     setAuthState((prev) => ({ ...prev, loginError: null }));
   }, []);
 
+  // Clear logout error
+  const clearLogoutError = useCallback(() => {
+    setAuthState((prev) => ({
+      ...prev,
+      logoutError: null,
+      logoutGuidance: null,
+    }));
+  }, []);
+
   return {
     ...authState,
     login,
     logout,
     refresh,
     clearLoginError,
+    clearLogoutError,
   };
 }
 

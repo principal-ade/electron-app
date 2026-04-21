@@ -364,28 +364,60 @@ class AuthService {
     // Logout handler
     ipcMain.handle(AuthEvent.LOGOUT, async () => {
       try {
+        console.log('[AuthService] Logout requested');
         await this.clearStoredAuth();
 
         // Clear AuthStateManager
+        console.log('[AuthService] Clearing auth state manager...');
         AuthStateManager.getInstance().clearAuthentication();
+        console.log('[AuthService] ✓ Auth state cleared');
 
         // Clear git credentials
         try {
+          console.log('[AuthService] Clearing git credentials...');
           await GitCredentialHelper.clearGitCredentials();
-          console.log('[AuthService] Git credentials cleared on logout');
+          console.log('[AuthService] ✓ Git credentials cleared');
         } catch (gitClearError) {
           // Don't fail logout if git credential clearing fails
           console.error(
-            '[AuthService] Failed to clear git credentials:',
+            '[AuthService] ✗ Failed to clear git credentials:',
             gitClearError,
           );
         }
 
+        console.log('[AuthService] ✓ Logout completed successfully');
         return { success: true };
       } catch (error: unknown) {
-        console.error('[AuthService] Logout error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return { success: false, error: errorMessage };
+        console.error('[AuthService] ✗ Logout failed:', error);
+
+        // Provide user-friendly error messages based on error type
+        let errorMessage: string;
+        let userGuidance: string | undefined;
+
+        if (error instanceof KeychainTimeoutError) {
+          errorMessage = 'Keychain access timed out while logging out.';
+          userGuidance = 'Please ensure your system keychain is unlocked and try again. If the problem persists, try restarting your computer.';
+        } else if (error instanceof KeychainPermissionError) {
+          errorMessage = 'Permission denied to access keychain.';
+          userGuidance = 'Please grant keychain access in System Preferences → Security & Privacy, then try logging out again.';
+        } else if (error instanceof KeychainNotAvailableError) {
+          errorMessage = 'Keychain is not available.';
+          userGuidance = 'Please ensure your system keychain is unlocked and accessible, then try again.';
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+          // Check if verification failed (tokens still exist)
+          if (errorMessage.includes('still exists after deletion')) {
+            userGuidance = 'Unable to verify token deletion. You may need to restart the application. If the problem persists, please contact support.';
+          }
+        } else {
+          errorMessage = 'Unknown error occurred during logout';
+        }
+
+        return {
+          success: false,
+          error: errorMessage,
+          guidance: userGuidance,
+        };
       }
     });
 
@@ -848,16 +880,65 @@ class AuthService {
   }
 
   private async clearStoredAuth(): Promise<void> {
-    try {
-      // Delete both GitHub and WorkOS tokens from unified storage
-      await this.storage.deleteToken(TOKEN_KEYS.GITHUB_TOKEN);
-      await this.storage.deleteToken(TOKEN_KEYS.WORKOS_TOKEN);
+    const errors: string[] = [];
 
-      console.log('[AuthService] Credentials cleared');
-    } catch (error) {
-      console.error('[AuthService] Failed to clear credentials:', error);
-      // Don't throw - clearing non-existent credentials is fine
+    // Track which tokens existed before deletion attempt
+    const tokensToDelete = [
+      { key: TOKEN_KEYS.GITHUB_TOKEN, name: 'GitHub token' },
+      { key: TOKEN_KEYS.WORKOS_TOKEN, name: 'WorkOS token' },
+    ];
+
+    console.log('[AuthService] Starting token deletion...');
+
+    // Delete each token and track results
+    for (const { key, name } of tokensToDelete) {
+      try {
+        console.log(`[AuthService] Deleting ${name} (${key})...`);
+        await this.storage.deleteToken(key);
+        console.log(`[AuthService] ✓ Successfully deleted ${name}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`[AuthService] ✗ Failed to delete ${name}:`, errorMessage);
+
+        // Only add to errors if it's an actual failure (not "token doesn't exist")
+        // Keychain errors are real failures that should be reported
+        if (error instanceof KeychainTimeoutError ||
+            error instanceof KeychainPermissionError ||
+            error instanceof KeychainNotAvailableError) {
+          errors.push(`${name}: ${errorMessage}`);
+        }
+      }
     }
+
+    // Verify tokens are actually gone
+    console.log('[AuthService] Verifying token deletion...');
+    const verificationErrors: string[] = [];
+
+    for (const { key, name } of tokensToDelete) {
+      try {
+        const stillExists = await this.storage.getToken(key);
+        if (stillExists) {
+          const message = `${name} still exists after deletion attempt`;
+          console.error(`[AuthService] ✗ Verification failed: ${message}`);
+          verificationErrors.push(message);
+        } else {
+          console.log(`[AuthService] ✓ Verified ${name} is deleted`);
+        }
+      } catch (error) {
+        // If we can't read the token, assume it's deleted (or keychain is inaccessible)
+        console.log(`[AuthService] ✓ Cannot read ${name} (likely deleted)`);
+      }
+    }
+
+    // If there were any deletion or verification errors, throw
+    const allErrors = [...errors, ...verificationErrors];
+    if (allErrors.length > 0) {
+      const errorMessage = `Failed to clear credentials: ${allErrors.join('; ')}`;
+      console.error(`[AuthService] ${errorMessage}`);
+      throw new Error(errorMessage);
+    }
+
+    console.log('[AuthService] ✓ All credentials cleared and verified');
   }
 
   /**

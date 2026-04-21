@@ -8,6 +8,7 @@
 
 import React, { useCallback, useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { Github } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -20,6 +21,7 @@ import { ProjectsList, type CommitTimestamp } from './ProjectsList';
 import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCoworkers';
 import { useTeamActivity } from '../hooks/useTeamActivity';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
+import { useAuth } from '../hooks/useAuthState';
 
 export interface FeedLeftPanelProps {
   /** List of repositories */
@@ -48,6 +50,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
   activityCommits = [],
 }) => {
   const { theme } = useTheme();
+  const { user: currentUser } = useAuth();
 
   const spacing = {
     xs: theme.space?.[1] || 4,
@@ -62,6 +65,26 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
 
   // Determine which users and orgs have recent activity
   const { activeUsers, activeOrganizations } = useTeamActivity(activityCommits, coworkers);
+
+  const handleCurrentUserClick = useCallback(() => {
+    if (currentUser) {
+      events.emit({
+        type: 'user:profile-selected',
+        source: 'feed-left-panel',
+        timestamp: Date.now(),
+        payload: { username: currentUser.login },
+      });
+    }
+  }, [currentUser, events]);
+
+  const handleSignInClick = useCallback(() => {
+    events.emit({
+      type: 'panel:switch',
+      source: 'feed-left-panel',
+      timestamp: Date.now(),
+      payload: { view: 'auth' },
+    });
+  }, [events]);
 
   return (
     <div
@@ -85,6 +108,167 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
           flexShrink: 0,
         }}
       >
+        {/* Current User Section / Sign In */}
+        {currentUser ? (
+          <button
+            onClick={handleCurrentUserClick}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              width: '100%',
+              padding: spacing.sm,
+              backgroundColor: 'transparent',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radii?.[1] || 4,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              textAlign: 'left',
+              position: 'relative',
+              marginBottom: spacing.xs,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+          >
+            {/* Avatar with activity indicator */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <img
+                src={currentUser.avatarUrl}
+                alt={currentUser.login}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                }}
+              />
+              {activeUsers.has(currentUser.login) && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: -2,
+                    right: -2,
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    backgroundColor: theme.colors.success,
+                    border: `2px solid ${theme.colors.background}`,
+                  }}
+                  title="Recent activity"
+                />
+              )}
+            </div>
+
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  marginBottom: 2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {currentUser.name || currentUser.login}
+              </div>
+              <div
+                style={{
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textSecondary,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {currentUser.name ? `@${currentUser.login}` : 'You'}
+              </div>
+            </div>
+          </button>
+        ) : (
+          <button
+            onClick={handleSignInClick}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              width: '100%',
+              padding: spacing.sm,
+              backgroundColor: 'transparent',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radii?.[1] || 4,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              textAlign: 'left',
+              position: 'relative',
+              marginBottom: spacing.xs,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+          >
+            {/* GitHub icon as avatar */}
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                backgroundColor: theme.colors.backgroundSecondary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Github size={24} color={theme.colors.textSecondary} />
+            </div>
+
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  marginBottom: 2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Sign in with GitHub
+              </div>
+              <div
+                style={{
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textSecondary,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Connect your account
+              </div>
+            </div>
+          </button>
+        )}
+
         {/* Feed mode toggle */}
         <SegmentedControl
           options={[

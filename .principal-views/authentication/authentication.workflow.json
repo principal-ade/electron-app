@@ -1,0 +1,90 @@
+{
+  "version": "1.0.0",
+  "name": "Authentication Logout Flow",
+  "description": "Telemetry scenarios for user logout with token deletion and state management",
+  "canvas": ".principal-views/authentication/authentication.otel.canvas",
+  "spanPattern": "auth.logout.flow",
+  "scenarios": [
+    {
+      "id": "successful-logout",
+      "description": "User successfully logs out with all tokens deleted",
+      "priority": 1,
+      "template": {
+        "introduction": "**Successful Logout**\n\nUser clicks logout, all tokens are deleted, state is cleared, and UI updates.",
+        "events": {
+          "auth.logout.initiated": "0. **Logout initiated** (user={{user.login}}, source={{source}})",
+          "auth.token.deleted": "1. GitHub token deleted (key={{token.key}}, success={{success}})",
+          "auth.token.deleted": "2. WorkOS token deleted (key={{token.key}}, success={{success}})",
+          "auth.cache.cleared": "3. Memory cache cleared (tokens_removed={{cache.tokens_removed}})",
+          "auth.state.cleared": "4. Auth state cleared (previous_user={{previous_user.login}})",
+          "auth.git_credentials.cleared": "5. Git credentials cleared (success={{success}})",
+          "auth.state.changed": "6. **Auth state broadcast** (is_authenticated={{is_authenticated}})",
+          "auth.ui.updated": "7. **UI updated** (component={{component}}, authenticated={{new_state.authenticated}})"
+        },
+        "summary": "**Successful Logout**\n- Tokens: Deleted\n- Auth state: Cleared\n- Git creds: Removed\n- UI: Updated"
+      }
+    },
+    {
+      "id": "logout-with-silent-failure",
+      "description": "Logout appears successful but tokens not deleted (keychain locked)",
+      "priority": 2,
+      "template": {
+        "introduction": "**Logout with Silent Failure**\n\n🐛 Token deletion fails silently due to locked keychain, but logout returns success.",
+        "events": {
+          "auth.logout.initiated": "0. Logout initiated (user={{user.login}}, source={{source}})",
+          "auth.token.deleted": "1. GitHub token deletion attempted (success={{success}}, error={{error.message}})",
+          "auth.token.deleted": "2. WorkOS token deletion attempted (success={{success}}, error={{error.message}})",
+          "auth.state.cleared": "3. Auth state cleared (previous_user={{previous_user.login}})",
+          "auth.git_credentials.cleared": "4. Git credentials cleared (success={{success}})",
+          "auth.state.changed": "5. Auth state broadcast (is_authenticated={{is_authenticated}})",
+          "auth.ui.updated": "6. **UI updated** (component={{component}}, authenticated={{new_state.authenticated}})"
+        },
+        "summary": "**Silent Failure**\n- ❌ Tokens: NOT deleted ({{error.type}})\n- ✅ Auth state: Cleared\n- ✅ UI: Shows signed out\n- ⚠️  Problem: Tokens persist in keychain"
+      }
+    },
+    {
+      "id": "logout-keychain-timeout",
+      "description": "Logout fails due to keychain timeout (30s limit)",
+      "priority": 3,
+      "template": {
+        "introduction": "**Keychain Timeout**\n\nToken deletion takes too long, keychain timeout occurs.",
+        "events": {
+          "auth.logout.initiated": "0. Logout initiated (user={{user.login}}, source={{source}})",
+          "auth.token.deleted": "1. **Token deletion timeout** (key={{token.key}}, error={{error.type}}, duration={{duration_ms}}ms)"
+        },
+        "summary": "**Keychain Timeout**\n- Error: {{error.type}}\n- Duration: {{duration_ms}}ms\n- Tokens may not be deleted"
+      }
+    },
+    {
+      "id": "logout-stale-ui",
+      "description": "Component with local state doesn't update after logout",
+      "priority": 4,
+      "template": {
+        "introduction": "**Stale UI Data (Fixed)**\n\n🐛 Component using local state instead of useAuth() shows stale user data.",
+        "events": {
+          "auth.logout.initiated": "0. Logout initiated (user={{user.login}}, source={{source}})",
+          "auth.token.deleted": "1. Tokens deleted successfully",
+          "auth.state.cleared": "2. Auth state cleared",
+          "auth.state.changed": "3. Auth state broadcast",
+          "auth.ui.updated": "4. Sidebar updated (component=NavigationSidebar, authenticated=false)",
+          "auth.ui.updated": "5. **FeedLeftPanel NOT updated** (still showing user=true)"
+        },
+        "summary": "**Stale UI**\n- Root cause: Component using `useState` for user\n- Fix: Use `useAuth()` hook to subscribe to changes\n- Status: ✅ Fixed in FeedLeftPanel.tsx"
+      }
+    },
+    {
+      "id": "app-restart-auto-login",
+      "description": "User restarts app after logout but auto-logs back in",
+      "priority": 5,
+      "template": {
+        "introduction": "**App Restart - Unexpected Auto-Login**\n\n🐛 User sees signed-out state, restarts app, but auto-logs back in with stale tokens.",
+        "events": {
+          "auth.state.changed": "0. App startup check (is_authenticated=false from AuthStateManager)",
+          "auth.token.deleted": "1. Token fetch from keychain (success=true) - tokens still present!",
+          "auth.state.changed": "2. **Auto-login** (is_authenticated=true) - user=={{user.login}}"
+        },
+        "summary": "**Auto-Login Bug**\n- Cause: Token deletion failed silently during logout\n- Keychain: Still contains tokens\n- Restart: App finds tokens and auto-authenticates\n- User experience: Logout appears broken"
+      }
+    }
+  ]
+}

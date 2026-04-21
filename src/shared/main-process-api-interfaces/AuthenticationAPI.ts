@@ -60,7 +60,7 @@ export interface TokenMetadata {
 export interface AuthenticationAPI {
   // OAuth operations
   login(options?: { forceNew?: boolean }): Promise<AuthResult>;
-  logout(): Promise<{ success: boolean; error?: string }>;
+  logout(): Promise<{ success: boolean; error?: string; guidance?: string }>;
   check(): Promise<AuthResult>;
   getStatus(): Promise<AuthStatus>;
 

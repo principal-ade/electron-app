@@ -24,7 +24,7 @@ export class AuthenticationService {
   /**
    * Logout from authentication
    */
-  static async logout(): Promise<{ success: boolean; error?: string }> {
+  static async logout(): Promise<{ success: boolean; error?: string; guidance?: string }> {
     return window.mainProcess.authentication.logout();
   }
 
