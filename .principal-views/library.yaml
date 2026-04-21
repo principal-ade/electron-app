@@ -1,598 +1,533 @@
-version: "1.0.0"
-name: "principal-ade"
-description: "Principal ADE - The future of Agentic Development Environment"
-
-# Instrumentation scopes (process boundaries)
+version: 1.0.0
+name: principal-ade
+description: Principal ADE - The future of Agentic Development Environment
 scopes:
-  # Process scopes
   principal-ade-main:
-    color: "#4F46E5"
-    description: "Electron main process - Node.js runtime handling IPC, services, and system operations"
+    color: "#1ad76f"
+    description: Electron main process - Node.js runtime handling IPC, services, and system operations
   principal-ade-daemon:
     color: "#0D9488"
-    description: "Standalone PTY daemon process managing persistent terminal sessions"
+    description: Standalone PTY daemon process managing persistent terminal sessions
   principal-ade-event-processor:
     color: "#F59E0B"
-    description: "Event Processing Server - utility process for agent session events"
+    description: Event Processing Server - utility process for agent session events
   principal-ade-repo-monitor:
     color: "#14B8A6"
-    description: "Repository Monitoring Server - utility process for file watching and cache building"
+    description: Repository Monitoring Server - utility process for file watching and cache building
   principal-ade-terminal-worker:
     color: "#6366F1"
-    description: "Terminal Worker - utility process routing terminal sessions to daemon or managing PTYs directly"
+    description: Terminal Worker - utility process routing terminal sessions to daemon or managing PTYs directly
   principal-ade-cli-bridge:
     color: "#6366F1"
-    description: "CLI Bridge - utility process for executing CLI commands (git, npm, etc.)"
-
-  # Window scopes (renderer processes)
+    description: CLI Bridge - utility process for executing CLI commands (git, npm, etc.)
   principal-ade-principal-window:
     color: "#7C3AED"
-    description: "Principal Window - main app shell with auth, workspaces, settings"
+    description: Principal Window - main app shell with auth, workspaces, settings
   principal-ade-dev-workspace:
     color: "#8B5CF6"
-    description: "Dev Workspace - development environment with panels and terminal"
+    description: Dev Workspace - development environment with panels and terminal
   principal-ade-alexandria:
     color: "#A855F7"
-    description: "Alexandria Workspace - knowledge base and code exploration"
+    description: Alexandria Workspace - knowledge base and code exploration
   principal-ade-extension:
     color: "#C084FC"
-    description: "Extension Window - browser extension host"
+    description: Extension Window - browser extension host
   principal-ade-splash-screen:
     color: "#D8B4FE"
-    description: "Splash Screen - app loading screen"
+    description: Splash Screen - app loading screen
   principal-ade-window-switcher:
     color: "#E9D5FF"
-    description: "Window Switcher - quick window navigation overlay"
+    description: Window Switcher - quick window navigation overlay
   principal-ade-quick-open:
     color: "#F3E8FF"
-    description: "Quick Open - command palette overlay"
-
-  # Specialized scopes
+    description: Quick Open - command palette overlay
   file-city-renderer:
     color: "#22C55E"
-    description: "File City visualization renderer scope"
+    description: File City visualization renderer scope
   principal-ade-renderer:
     color: "#EC4899"
-    description: "Shared renderer code - reusable components, hooks, and libraries used across windows"
-
-  # External system scopes
+    description: Shared renderer code - reusable components, hooks, and libraries used across windows
   external-file-system:
     color: "#64748B"
-    description: "External OS file system - events from the operating system file watcher"
+    description: External OS file system - events from the operating system file watcher
   external-otel-events-manager:
     color: "#64748B"
-    description: "External OTEL Events Manager service - HTTP endpoints for trace persistence"
+    description: External OTEL Events Manager service - HTTP endpoints for trace persistence
   external-quality-tools:
     color: "#64748B"
-    description: "External quality CLI tools - eslint, jest, tsc, knip, etc."
+    description: External quality CLI tools - eslint, jest, tsc, knip, etc.
   external-github-api:
     color: "#64748B"
-    description: "External GitHub API - file downloads and repository operations"
+    description: External GitHub API - file downloads and repository operations
   external-principal-api:
     color: "#64748B"
-    description: "External Principal ADE API - app.principal-ade.com services"
-
-# Service resource registry
-# Define all services in this repository with their OTEL resource attributes
+    description: External Principal ADE API - app.principal-ade.com services
 resources:
-  # ============================================
-  # PRODUCTION SCOPES (Process Boundaries)
-  # ============================================
   principal-ade-main:
-    service.name: "principal-ade-main"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    project: "principal-ade"
-    description: "Electron main process - Node.js runtime"
+    service.name: principal-ade-main
+    service.version: 0.0.410
+    deployment.environment: development
+    project: principal-ade
+    description: Electron main process - Node.js runtime
     owned-scopes:
-      - "principal-ade-main"
-
+      - principal-ade-main
   principal-ade-daemon:
-    service.name: "principal-ade-daemon"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    process.type: "pty-daemon"
-    project: "principal-ade"
-    description: "Standalone PTY daemon process"
+    service.name: principal-ade-daemon
+    service.version: 0.0.410
+    deployment.environment: development
+    process.type: pty-daemon
+    project: principal-ade
+    description: Standalone PTY daemon process
     owned-scopes:
-      - "principal-ade-daemon"
-
+      - principal-ade-daemon
   principal-ade-event-processor:
-    service.name: "principal-ade-event-processor"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    process.type: "utility"
-    project: "principal-ade"
-    description: "Event Processing Server - utility process"
+    service.name: principal-ade-event-processor
+    service.version: 0.0.410
+    deployment.environment: development
+    process.type: utility
+    project: principal-ade
+    description: Event Processing Server - utility process
     owned-scopes:
-      - "principal-ade-event-processor"
-
+      - principal-ade-event-processor
   principal-ade-repo-monitor:
-    service.name: "repository-monitoring-server"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    process.type: "utility"
-    project: "principal-ade"
-    description: "Repository Monitoring Server - utility process"
+    service.name: repository-monitoring-server
+    service.version: 0.0.410
+    deployment.environment: development
+    process.type: utility
+    project: principal-ade
+    description: Repository Monitoring Server - utility process
     owned-scopes:
-      - "principal-ade-repo-monitor"
-
+      - principal-ade-repo-monitor
   principal-ade-terminal-worker:
-    service.name: "terminal-worker"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    process.type: "utility"
-    project: "principal-ade"
-    description: "Terminal Worker - session routing utility process"
+    service.name: terminal-worker
+    service.version: 0.0.410
+    deployment.environment: development
+    process.type: utility
+    project: principal-ade
+    description: Terminal Worker - session routing utility process
     owned-scopes:
-      - "principal-ade-terminal-worker"
-
+      - principal-ade-terminal-worker
   principal-ade-cli-bridge:
-    service.name: "cli-bridge-universal"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    process.type: "utility"
-    project: "principal-ade"
-    description: "CLI Bridge - command execution utility process"
+    service.name: cli-bridge-universal
+    service.version: 0.0.410
+    deployment.environment: development
+    process.type: utility
+    project: principal-ade
+    description: CLI Bridge - command execution utility process
     owned-scopes:
-      - "principal-ade-cli-bridge"
-
-  # ============================================
-  # WINDOW SCOPES (Renderer Processes)
-  # ============================================
+      - principal-ade-cli-bridge
   principal-ade-principal-window:
-    service.name: "principal-ade-principal-window"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    project: "principal-ade"
-    description: "Principal Window - main app shell"
+    service.name: principal-ade-principal-window
+    service.version: 0.0.410
+    deployment.environment: development
+    project: principal-ade
+    description: Principal Window - main app shell
     owned-scopes:
-      - "principal-ade-principal-window"
-
+      - principal-ade-principal-window
   principal-ade-dev-workspace:
-    service.name: "principal-ade-dev-workspace"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    project: "principal-ade"
-    description: "Dev Workspace - development environment"
+    service.name: principal-ade-dev-workspace
+    service.version: 0.0.410
+    deployment.environment: development
+    project: principal-ade
+    description: Dev Workspace - development environment
     owned-scopes:
-      - "principal-ade-dev-workspace"
-      - "file-city-renderer"
-
+      - principal-ade-dev-workspace
+      - file-city-renderer
   principal-ade-alexandria:
-    service.name: "principal-ade-alexandria"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    project: "principal-ade"
-    description: "Alexandria Workspace - knowledge base"
+    service.name: principal-ade-alexandria
+    service.version: 0.0.410
+    deployment.environment: development
+    project: principal-ade
+    description: Alexandria Workspace - knowledge base
     owned-scopes:
-      - "principal-ade-alexandria"
-
-  # ============================================
-  # DEVELOPMENT SCOPES
-  # ============================================
+      - principal-ade-alexandria
   principal-ade-storybook:
-    service.name: "principal-ade-storybook"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    project: "principal-ade"
-
+    service.name: principal-ade-storybook
+    service.version: 0.0.410
+    deployment.environment: development
+    project: principal-ade
   principal-ade-tests:
-    service.name: "principal-ade-tests"
-    service.version: "0.0.410"
-    deployment.environment: "test"
-    test.suite: "integration"
-    project: "principal-ade"
-
+    service.name: principal-ade-tests
+    service.version: 0.0.410
+    deployment.environment: test
+    test.suite: integration
+    project: principal-ade
 nodeComponents:
-  # ============================================
-  # SPAN CONVENTIONS
-  # ============================================
   span-convention:
-    defaultLabel: "Span Convention"
-    description: "OpenTelemetry span naming convention definition"
-    tags: ["otel", "span"]
+    defaultLabel: Span Convention
+    description: OpenTelemetry span naming convention definition
+    tags:
+      - otel
+      - span
     color: "#22C55E"
-
-  # ============================================
-  # PROCESSES
-  # ============================================
   main-process:
-    defaultLabel: "Main Process"
-    description: "Electron main process - Node.js backend handling IPC, services, and system operations"
-    tags: ["process"]
+    defaultLabel: Main Process
+    description: Electron main process - Node.js backend handling IPC, services, and system operations
+    tags:
+      - process
     color: "#4F46E5"
-
   pty-daemon:
-    defaultLabel: "PTY Daemon"
-    description: "Standalone Node.js process managing persistent PTY sessions via Unix socket"
-    tags: ["process"]
+    defaultLabel: PTY Daemon
+    description: Standalone Node.js process managing persistent PTY sessions via Unix socket
+    tags:
+      - process
     color: "#0D9488"
-
   renderer-process:
-    defaultLabel: "Renderer Process"
-    description: "React/TypeScript UI process running in Chromium"
-    tags: ["process"]
+    defaultLabel: Renderer Process
+    description: React/TypeScript UI process running in Chromium
+    tags:
+      - process
     color: "#7C3AED"
-
   preload:
-    defaultLabel: "Preload Script"
-    description: "Bridge script exposing safe APIs to renderer"
-    tags: ["process"]
+    defaultLabel: Preload Script
+    description: Bridge script exposing safe APIs to renderer
+    tags:
+      - process
     color: "#8B5CF6"
-
-  # ============================================
-  # WINDOWS
-  # ============================================
   principal-window:
-    defaultLabel: "Principal Window"
-    description: "Main app shell - authentication, workspaces, settings, feed"
-    tags: ["window"]
+    defaultLabel: Principal Window
+    description: Main app shell - authentication, workspaces, settings, feed
+    tags:
+      - window
     color: "#2563EB"
-
   repo-manager:
-    defaultLabel: "Repo Manager"
-    description: "Repository exploration workspace with multi-pane layout"
-    tags: ["window"]
+    defaultLabel: Repo Manager
+    description: Repository exploration workspace with multi-pane layout
+    tags:
+      - window
     color: "#3B82F6"
-
   alexandria-workspace:
-    defaultLabel: "Alexandria Workspace"
-    description: "Knowledge base workspace for code exploration"
-    tags: ["window"]
+    defaultLabel: Alexandria Workspace
+    description: Knowledge base workspace for code exploration
+    tags:
+      - window
     color: "#60A5FA"
-
   dev-workspace:
-    defaultLabel: "Dev Workspace"
-    description: "Development environment window"
-    tags: ["window"]
+    defaultLabel: Dev Workspace
+    description: Development environment window
+    tags:
+      - window
     color: "#93C5FD"
-
   extension-window:
-    defaultLabel: "Extension Window"
-    description: "Browser window for extensions"
-    tags: ["window"]
+    defaultLabel: Extension Window
+    description: Browser window for extensions
+    tags:
+      - window
     color: "#BFDBFE"
-
-  # ============================================
-  # MAIN PROCESS SERVICES
-  # ============================================
   auth-service:
-    defaultLabel: "Auth Service"
-    description: "Authentication, JWT handling, and secure token IPC"
-    tags: ["service"]
+    defaultLabel: Auth Service
+    description: Authentication, JWT handling, and secure token IPC
+    tags:
+      - service
     color: "#DC2626"
-
   git-service:
-    defaultLabel: "Git Service"
-    description: "Core git operations (status, commit, branch, etc.)"
-    tags: ["service"]
+    defaultLabel: Git Service
+    description: Core git operations (status, commit, branch, etc.)
+    tags:
+      - service
     color: "#F97316"
-
   git-sync-service:
-    defaultLabel: "Git Sync Service"
-    description: "WebSocket-based git synchronization manager"
-    tags: ["service"]
+    defaultLabel: Git Sync Service
+    description: WebSocket-based git synchronization manager
+    tags:
+      - service
     color: "#FB923C"
-
   git-status-service:
-    defaultLabel: "Git Status Service"
-    description: "Repository git status tracking and file change detection"
-    tags: ["service"]
+    defaultLabel: Git Status Service
+    description: Repository git status tracking and file change detection
+    tags:
+      - service
     color: "#FDBA74"
-
   repository-service:
-    defaultLabel: "Repository Service"
-    description: "Repository CRUD, metadata, and lifecycle management"
-    tags: ["service"]
+    defaultLabel: Repository Service
+    description: Repository CRUD, metadata, and lifecycle management
+    tags:
+      - service
     color: "#059669"
-
   workspace-service:
-    defaultLabel: "Workspace Service"
-    description: "Workspace operations and state persistence"
-    tags: ["service"]
+    defaultLabel: Workspace Service
+    description: Workspace operations and state persistence
+    tags:
+      - service
     color: "#10B981"
-
   alexandria-service:
-    defaultLabel: "Alexandria Service"
-    description: "Knowledge base storage and retrieval"
-    tags: ["service"]
+    defaultLabel: Alexandria Service
+    description: Knowledge base storage and retrieval
+    tags:
+      - service
     color: "#34D399"
-
   agent-session-service:
-    defaultLabel: "Agent Session Service"
-    description: "Agent session lifecycle and coordination"
-    tags: ["service"]
+    defaultLabel: Agent Session Service
+    description: Agent session lifecycle and coordination
+    tags:
+      - service
     color: "#F59E0B"
-
   agent-events-service:
-    defaultLabel: "Agent Events Service"
-    description: "Agent session event processing and HTTP bridge"
-    tags: ["service"]
+    defaultLabel: Agent Events Service
+    description: Agent session event processing and HTTP bridge
+    tags:
+      - service
     color: "#FBBF24"
-
   file-system-service:
-    defaultLabel: "File System Service"
-    description: "File operations, watching, and shell commands"
-    tags: ["service"]
+    defaultLabel: File System Service
+    description: File operations, watching, and shell commands
+    tags:
+      - service
     color: "#6366F1"
-
   terminal-service:
-    defaultLabel: "Terminal Service"
-    description: "PTY management and terminal session handling"
-    tags: ["service"]
+    defaultLabel: Terminal Service
+    description: PTY management and terminal session handling
+    tags:
+      - service
     color: "#818CF8"
-
   docker-service:
-    defaultLabel: "Docker Service"
-    description: "Docker container and image management"
-    tags: ["service"]
+    defaultLabel: Docker Service
+    description: Docker container and image management
+    tags:
+      - service
     color: "#0EA5E9"
-
   observability-service:
-    defaultLabel: "Observability Service"
-    description: "Monitoring, logging, and event emission"
-    tags: ["service"]
+    defaultLabel: Observability Service
+    description: Monitoring, logging, and event emission
+    tags:
+      - service
     color: "#14B8A6"
-
   storage-service:
-    defaultLabel: "Storage Service"
-    description: "Typed data persistence via Electron Store"
-    tags: ["service"]
+    defaultLabel: Storage Service
+    description: Typed data persistence via Electron Store
+    tags:
+      - service
     color: "#8B5CF6"
-
-  # ============================================
-  # UI COMPONENTS
-  # ============================================
   panel-system:
-    defaultLabel: "Panel System"
-    description: "Dynamic panel registry with 50+ panels (git, markdown, code, graphs)"
-    tags: ["ui"]
+    defaultLabel: Panel System
+    description: Dynamic panel registry with 50+ panels (git, markdown, code, graphs)
+    tags:
+      - ui
     color: "#EC4899"
-
   titlebar:
-    defaultLabel: "Titlebar"
-    description: "Custom window titlebar components"
-    tags: ["ui"]
+    defaultLabel: Titlebar
+    description: Custom window titlebar components
+    tags:
+      - ui
     color: "#F472B6"
-
   modals:
-    defaultLabel: "Modals"
-    description: "Shared modal dialogs (add repo, secrets, settings)"
-    tags: ["ui"]
+    defaultLabel: Modals
+    description: Shared modal dialogs (add repo, secrets, settings)
+    tags:
+      - ui
     color: "#F9A8D4"
-
   integrated-shell:
-    defaultLabel: "Integrated Shell"
-    description: "Primary window navigation and view switching"
-    tags: ["ui"]
+    defaultLabel: Integrated Shell
+    description: Primary window navigation and view switching
+    tags:
+      - ui
     color: "#DB2777"
-
-  # ============================================
-  # PANEL CATEGORIES
-  # ============================================
   git-panels:
-    defaultLabel: "Git Panels"
-    description: "Issues, PRs, commits, diff, history, changes panels"
-    tags: ["panel"]
+    defaultLabel: Git Panels
+    description: Issues, PRs, commits, diff, history, changes panels
+    tags:
+      - panel
     color: "#F97316"
-
   code-panels:
-    defaultLabel: "Code Panels"
-    description: "Files, tools, graphs, code-city visualization"
-    tags: ["panel"]
+    defaultLabel: Code Panels
+    description: Files, tools, graphs, code-city visualization
+    tags:
+      - panel
     color: "#22C55E"
-
   markdown-panels:
-    defaultLabel: "Markdown Panels"
-    description: "Editor, rendering, search, slides, books"
-    tags: ["panel"]
+    defaultLabel: Markdown Panels
+    description: Editor, rendering, search, slides, books
+    tags:
+      - panel
     color: "#3B82F6"
-
   agent-panels:
-    defaultLabel: "Agent Panels"
-    description: "File activity, tool use, session overview"
-    tags: ["panel"]
+    defaultLabel: Agent Panels
+    description: File activity, tool use, session overview
+    tags:
+      - panel
     color: "#EAB308"
-
-  # ============================================
-  # STATE MANAGEMENT
-  # ============================================
   repository-context:
-    defaultLabel: "Repository Context"
-    description: "Repository state and data provider"
-    tags: ["state"]
+    defaultLabel: Repository Context
+    description: Repository state and data provider
+    tags:
+      - state
     color: "#A855F7"
-
   panel-context:
-    defaultLabel: "Panel Context"
-    description: "Panel visibility, ordering, and focus state"
-    tags: ["state"]
+    defaultLabel: Panel Context
+    description: Panel visibility, ordering, and focus state
+    tags:
+      - state
     color: "#C084FC"
-
   git-changes-context:
-    defaultLabel: "Git Changes Context"
-    description: "Git status and file change tracking"
-    tags: ["state"]
+    defaultLabel: Git Changes Context
+    description: Git status and file change tracking
+    tags:
+      - state
     color: "#D8B4FE"
-
   workspace-context:
-    defaultLabel: "Workspace Context"
-    description: "Workspace filter and visible projects state"
-    tags: ["state"]
+    defaultLabel: Workspace Context
+    description: Workspace filter and visible projects state
+    tags:
+      - state
     color: "#E9D5FF"
-
-  # ============================================
-  # EXTERNAL INTEGRATIONS
-  # ============================================
   github-adapter:
-    defaultLabel: "GitHub Adapter"
-    description: "GitHub API integration for remote repositories"
-    tags: ["integration"]
+    defaultLabel: GitHub Adapter
+    description: GitHub API integration for remote repositories
+    tags:
+      - integration
     color: "#171515"
-
   mcp-bridge:
-    defaultLabel: "MCP Bridge"
-    description: "Model Context Protocol server integration"
-    tags: ["integration"]
+    defaultLabel: MCP Bridge
+    description: Model Context Protocol server integration
+    tags:
+      - integration
     color: "#06B6D4"
-
   event-server:
-    defaultLabel: "Event Server"
-    description: "HTTP server for agent session events"
-    tags: ["integration"]
+    defaultLabel: Event Server
+    description: HTTP server for agent session events
+    tags:
+      - integration
     color: "#0891B2"
-
-  # ============================================
-  # STORES
-  # ============================================
   repository-store:
-    defaultLabel: "Repository Store"
-    description: "Persistent repository metadata and configuration"
-    tags: ["store"]
+    defaultLabel: Repository Store
+    description: Persistent repository metadata and configuration
+    tags:
+      - store
     color: "#65A30D"
-
   workspace-store:
-    defaultLabel: "Workspace Store"
-    description: "Workspace data persistence"
-    tags: ["store"]
+    defaultLabel: Workspace Store
+    description: Workspace data persistence
+    tags:
+      - store
     color: "#84CC16"
-
   alexandria-store:
-    defaultLabel: "Alexandria Store"
-    description: "Knowledge base data storage"
-    tags: ["store"]
+    defaultLabel: Alexandria Store
+    description: Knowledge base data storage
+    tags:
+      - store
     color: "#A3E635"
-
   user-preferences-store:
-    defaultLabel: "User Preferences"
-    description: "User settings and UI state persistence"
-    tags: ["store"]
+    defaultLabel: User Preferences
+    description: User settings and UI state persistence
+    tags:
+      - store
     color: "#BEF264"
-
-  # ============================================
-  # REPOSITORY MONITORING
-  # ============================================
   repo-monitoring-worker:
-    defaultLabel: "Repository Monitoring Worker"
-    description: "Node.js utility process running @principal-ai/repository-monitoring-server for file watching and cache building"
-    tags: ["process"]
+    defaultLabel: Repository Monitoring Worker
+    description: Node.js utility process running @principal-ai/repository-monitoring-server for file watching and cache building
+    tags:
+      - process
     color: "#0D9488"
-
   repo-monitoring-manager:
-    defaultLabel: "Repository Monitoring Manager"
-    description: "Main process manager that spawns and communicates with the monitoring worker"
-    tags: ["service"]
+    defaultLabel: Repository Monitoring Manager
+    description: Main process manager that spawns and communicates with the monitoring worker
+    tags:
+      - service
     color: "#14B8A6"
-
   repo-cache-registry:
-    defaultLabel: "Cache Registry"
-    description: "Worker-side cache storage with version tracking, hash validation, and rebuild scheduling"
-    tags: ["service"]
+    defaultLabel: Cache Registry
+    description: Worker-side cache storage with version tracking, hash validation, and rebuild scheduling
+    tags:
+      - service
     color: "#2DD4BF"
-
   git-watcher-adapter:
-    defaultLabel: "Git Watcher Adapter"
-    description: "Chokidar-based file system watcher detecting changes in .git and workspace files"
-    tags: ["service"]
+    defaultLabel: Git Watcher Adapter
+    description: Chokidar-based file system watcher detecting changes in .git and workspace files
+    tags:
+      - service
     color: "#5EEAD4"
-
   file-tree-builder:
-    defaultLabel: "File Tree Builder"
-    description: "Async file tree construction with filtering and metadata"
-    tags: ["service"]
+    defaultLabel: File Tree Builder
+    description: Async file tree construction with filtering and metadata
+    tags:
+      - service
     color: "#99F6E4"
-
   repository-data-cache:
-    defaultLabel: "Repository Data Cache"
-    description: "Renderer-side EventEmitter cache with subscription tracking, batched updates, and version validation"
-    tags: ["state"]
+    defaultLabel: Repository Data Cache
+    description: Renderer-side EventEmitter cache with subscription tracking, batched updates, and version validation
+    tags:
+      - state
     color: "#A855F7"
-
   use-repository-data:
-    defaultLabel: "useRepositoryData Hook"
-    description: "React hook subscribing to RepositoryDataCache for reactive UI updates"
-    tags: ["state"]
+    defaultLabel: useRepositoryData Hook
+    description: React hook subscribing to RepositoryDataCache for reactive UI updates
+    tags:
+      - state
     color: "#C084FC"
-
   repo-monitoring-service:
-    defaultLabel: "Repository Monitoring Service"
-    description: "Renderer-side service wrapper for IPC communication with monitoring system"
-    tags: ["service"]
+    defaultLabel: Repository Monitoring Service
+    description: Renderer-side service wrapper for IPC communication with monitoring system
+    tags:
+      - service
     color: "#7C3AED"
-
 edgeComponents:
-  # ============================================
-  # COMMUNICATION TYPES
-  # ============================================
   ipc:
-    label: "IPC"
-    description: "Electron IPC communication (invoke/send)"
-    style: "solid"
+    label: IPC
+    description: Electron IPC communication (invoke/send)
+    style: solid
     color: "#6366F1"
-
   ipc-event:
-    label: "IPC Event"
-    description: "Reactive IPC event subscription"
-    style: "dashed"
+    label: IPC Event
+    description: Reactive IPC event subscription
+    style: dashed
     color: "#818CF8"
-
   context-provider:
-    label: "Context"
-    description: "React Context provider relationship"
-    style: "solid"
+    label: Context
+    description: React Context provider relationship
+    style: solid
     color: "#A855F7"
-
   websocket:
-    label: "WebSocket"
-    description: "WebSocket connection"
-    style: "solid"
+    label: WebSocket
+    description: WebSocket connection
+    style: solid
     color: "#14B8A6"
-
   http:
-    label: "HTTP"
-    description: "HTTP API communication"
-    style: "solid"
+    label: HTTP
+    description: HTTP API communication
+    style: solid
     color: "#F59E0B"
-
   file-watch:
-    label: "File Watch"
-    description: "File system watch subscription"
-    style: "dashed"
+    label: File Watch
+    description: File system watch subscription
+    style: dashed
     color: "#22C55E"
-
   renders:
-    label: "Renders"
-    description: "Parent renders child component"
-    style: "solid"
+    label: Renders
+    description: Parent renders child component
+    style: solid
     color: "#EC4899"
-
   uses:
-    label: "Uses"
-    description: "Component uses/depends on another"
-    style: "dotted"
+    label: Uses
+    description: Component uses/depends on another
+    style: dotted
     color: "#64748B"
-
   stores-in:
-    label: "Stores In"
-    description: "Service persists data to store"
-    style: "solid"
+    label: Stores In
+    description: Service persists data to store
+    style: solid
     color: "#84CC16"
-
   worker-message:
-    label: "Worker Message"
-    description: "Node.js worker/utility process postMessage communication"
-    style: "solid"
+    label: Worker Message
+    description: Node.js worker/utility process postMessage communication
+    style: solid
     color: "#0D9488"
-
   cache-sync:
-    label: "Cache Sync"
-    description: "RepositoryCacheSyncEvent broadcast"
-    style: "dashed"
+    label: Cache Sync
+    description: RepositoryCacheSyncEvent broadcast
+    style: dashed
     color: "#14B8A6"
-
   subscription:
-    label: "Subscription"
-    description: "Event subscription/listener pattern"
-    style: "dashed"
+    label: Subscription
+    description: Event subscription/listener pattern
+    style: dashed
     color: "#A855F7"
+states:
+  draft:
+    color: "#f59e0b"
+    label: Draft
+  approved:
+    color: "#10b981"
+    label: Approved
+  implemented:
+    color: "#6366f1"
+    label: Implemented
