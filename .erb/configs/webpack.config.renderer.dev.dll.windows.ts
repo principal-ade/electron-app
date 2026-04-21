@@ -166,7 +166,8 @@ const configuration: webpack.Configuration = {
           'jsonwebtoken', // Uses Node.js crypto module
           '@usebruno/requests', // Bruno HTTP client - uses Node.js tls/net/http2 modules
           '@principal-ai/principal-view-core', // Uses /browser subpath exports, has Node.js code in main export
-          '@industry-theme/repository-composition-panels' // Imports @principal-ai/principal-view-core which has Node.js dependencies
+          '@industry-theme/repository-composition-panels', // Imports @principal-ai/principal-view-core which has Node.js dependencies
+          'mermaid' // Complex ESM package with dynamic imports - exclude from DLL, will be bundled in main renderer
         ];
         
         // Exclude if in the list or contains electron
