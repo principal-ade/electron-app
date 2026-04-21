@@ -417,6 +417,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const [isWatched, setIsWatched] = useState(false);
   const [isWatchLoading, setIsWatchLoading] = useState(false);
 
+  // Suffix layers visibility toggle
+  const [showSuffixLayers, setShowSuffixLayers] = useState(true);
+
   // Fetch branch status for all local clones
   useEffect(() => {
     let cancelled = false;
@@ -510,7 +513,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     // 1. First, add file suffix color layers (higher priority: 100+)
     // Higher priority = drawn first = appears underneath
     // These show the default colors for all files based on their extensions
-    if (cityData?.buildings) {
+    if (showSuffixLayers && cityData?.buildings) {
       const fileSuffixLayers = createFileColorHighlightLayers(cityData.buildings);
 
       // Check if there are any git changes
@@ -518,6 +521,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
       // Dim suffix layers when git changes are present to help focus on git status
       // Also boost their priority so they render underneath git layers
+      // Since git layers use borders, the dimmed suffix colors will show through
       const adjustedSuffixLayers = hasGitChanges
         ? fileSuffixLayers.map(layer => ({
             ...layer,
@@ -532,16 +536,16 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       layers.push(...adjustedSuffixLayers);
     }
 
-    // 2. Then, add git status layers (lower priority: 1-4)
+    // 2. Then, add git status layers with borders (lower priority: 1-4)
     // Lower priority = drawn later = appears on top
-    // These override the file suffix colors for files with git changes
+    // Borders allow the suffix colors underneath to show through while highlighting git status
     if (gitStatusMap.size > 0) {
       // Get the first clone's git status (usually there's only one)
       const firstClone = repositoryData?.localClones?.[0];
       if (firstClone) {
         const gitStatus = gitStatusMap.get(firstClone.path);
         if (gitStatus && gitStatus.isDirty) {
-          // Staged files - green layer
+          // Staged files - green layer with border
           if (gitStatus.stagedFiles && gitStatus.stagedFiles.length > 0) {
             layers.push({
               id: 'git-staged',
@@ -549,12 +553,12 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               enabled: true,
               color: theme.colors.success,
               priority: 4,
-              items: gitStatus.stagedFiles.map(path => ({ type: 'file' as const, path })),
+              items: gitStatus.stagedFiles.map(path => ({ type: 'file' as const, path, renderStrategy: 'border' as const })),
               opacity: 0.8,
             });
           }
 
-          // Modified files - orange/warning layer
+          // Modified files - orange/warning layer with border
           if (gitStatus.modifiedFiles && gitStatus.modifiedFiles.length > 0) {
             layers.push({
               id: 'git-modified',
@@ -562,12 +566,12 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               enabled: true,
               color: theme.colors.warning,
               priority: 3,
-              items: gitStatus.modifiedFiles.map(path => ({ type: 'file' as const, path })),
+              items: gitStatus.modifiedFiles.map(path => ({ type: 'file' as const, path, renderStrategy: 'border' as const })),
               opacity: 0.8,
             });
           }
 
-          // Untracked files - blue/info layer
+          // Untracked files - blue/info layer with border
           if (gitStatus.untrackedFiles && gitStatus.untrackedFiles.length > 0) {
             layers.push({
               id: 'git-untracked',
@@ -575,12 +579,12 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               enabled: true,
               color: theme.colors.info,
               priority: 2,
-              items: gitStatus.untrackedFiles.map(path => ({ type: 'file' as const, path })),
+              items: gitStatus.untrackedFiles.map(path => ({ type: 'file' as const, path, renderStrategy: 'border' as const })),
               opacity: 0.8,
             });
           }
 
-          // Deleted files - red/error layer
+          // Deleted files - red/error layer with border
           if (gitStatus.deletedFiles && gitStatus.deletedFiles.length > 0) {
             layers.push({
               id: 'git-deleted',
@@ -588,7 +592,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               enabled: true,
               color: theme.colors.error,
               priority: 1,
-              items: gitStatus.deletedFiles.map(path => ({ type: 'file' as const, path })),
+              items: gitStatus.deletedFiles.map(path => ({ type: 'file' as const, path, renderStrategy: 'border' as const })),
               opacity: 0.8,
             });
           }
@@ -606,7 +610,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     setHighlightLayers(layers);
 
     console.info('[RepositoryProfilePanel] Total highlight layers:', layers.length);
-  }, [gitStatusMap, isPlaying, repositoryData?.localClones, theme.colors, cityData]);
+  }, [gitStatusMap, isPlaying, repositoryData?.localClones, theme.colors, cityData, showSuffixLayers]);
 
   // Load watch status when repository changes
   useEffect(() => {
@@ -957,7 +961,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           }
         }
 
-        // Create separate layers for each status type
+        // Create separate layers for each status type with borders
         const layers: HighlightLayer[] = [];
 
         if (addedFiles.length > 0) {
@@ -967,7 +971,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             enabled: true,
             color: theme.colors.success,
             priority: 3,
-            items: addedFiles.map(path => ({ type: 'file' as const, path })),
+            items: addedFiles.map(path => ({ type: 'file' as const, path, renderStrategy: 'border' as const })),
             opacity: 0.8,
           });
         }
@@ -979,7 +983,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             enabled: true,
             color: theme.colors.warning,
             priority: 2,
-            items: modifiedFiles.map(path => ({ type: 'file' as const, path })),
+            items: modifiedFiles.map(path => ({ type: 'file' as const, path, renderStrategy: 'border' as const })),
             opacity: 0.8,
           });
         }
@@ -991,7 +995,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             enabled: true,
             color: theme.colors.error,
             priority: 1,
-            items: deletedFiles.map(path => ({ type: 'file' as const, path })),
+            items: deletedFiles.map(path => ({ type: 'file' as const, path, renderStrategy: 'border' as const })),
             opacity: 0.8,
           });
         }
@@ -2108,8 +2112,47 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             overflow: 'hidden',
             border: `1px solid ${theme.colors.border}`,
             backgroundColor: theme.colors.backgroundSecondary,
+            position: 'relative',
           }}
         >
+          {/* Toggle suffix layers button */}
+          {cityData && !cityDataLoading && (
+            <button
+              onClick={() => setShowSuffixLayers(!showSuffixLayers)}
+              style={{
+                position: 'absolute',
+                top: spacing.sm,
+                right: spacing.sm,
+                zIndex: 10,
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                padding: `${spacing.xs}px ${spacing.sm}px`,
+                background: theme.colors.backgroundSecondary,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: 6,
+                color: showSuffixLayers ? theme.colors.text : theme.colors.textSecondary,
+                fontSize: theme.fontSizes[0],
+                fontFamily: theme.fonts?.body,
+                fontWeight: theme.fontWeights?.medium ?? 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = `${theme.colors.primary}15`;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = theme.colors.backgroundSecondary;
+                e.currentTarget.style.borderColor = theme.colors.border;
+              }}
+              title={showSuffixLayers ? 'Hide file type colors' : 'Show file type colors'}
+            >
+              {showSuffixLayers ? <Eye size={14} /> : <EyeClosed size={14} />}
+              <span>File Types</span>
+            </button>
+          )}
+
           {cityData && !cityDataLoading ? (
             <FileCity3D
               cityData={cityData}
