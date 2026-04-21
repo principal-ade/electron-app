@@ -6,9 +6,8 @@
  * All sub-components stay mounted to avoid reloading data on mode switch.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Users } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -18,6 +17,9 @@ import { CollectionsList } from './CollectionsList';
 import { OrganizationsList } from './OrganizationsList';
 import { CoworkersList } from './CoworkersList';
 import { ProjectsList, type CommitTimestamp } from './ProjectsList';
+import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCoworkers';
+import { useTeamActivity } from '../hooks/useTeamActivity';
+import type { ActivityCommit } from '../hooks/useActivityFeed';
 
 export interface FeedLeftPanelProps {
   /** List of repositories */
@@ -32,6 +34,8 @@ export interface FeedLeftPanelProps {
   commits: CommitTimestamp[];
   /** Currently selected time block */
   selectedBlock: string | null;
+  /** Full activity commits for team activity tracking */
+  activityCommits?: ActivityCommit[];
 }
 
 export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
@@ -41,6 +45,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
   onFeedModeChange,
   commits,
   selectedBlock,
+  activityCommits = [],
 }) => {
   const { theme } = useTheme();
 
@@ -52,15 +57,11 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
   // State for collections subtab
   const [collectionsSubtab, setCollectionsSubtab] = useState<'watching' | 'starred' | 'collections'>('watching');
 
-  // Open Live Activity tab
-  const handleNavigateToActivityCities = useCallback(() => {
-    events.emit({
-      type: 'live-activity:open',
-      source: 'feed-left-panel',
-      timestamp: Date.now(),
-      payload: null,
-    });
-  }, [events]);
+  // Fetch coworkers and organizations data
+  const { coworkers } = useOrganizationsAndCoworkers();
+
+  // Determine which users and orgs have recent activity
+  const { activeUsers, activeOrganizations } = useTeamActivity(activityCommits, coworkers);
 
   return (
     <div
@@ -95,39 +96,6 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
           onChange={(value) => onFeedModeChange(value as 'my-activity' | 'collections' | 'organizations')}
           theme={theme}
         />
-
-        {/* Live Activity button */}
-        <button
-          onClick={handleNavigateToActivityCities}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: spacing.xs,
-            padding: `${spacing.xs}px ${spacing.sm}px`,
-            backgroundColor: 'transparent',
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: theme.radii?.[1] || 4,
-            color: theme.colors.textSecondary,
-            fontSize: theme.fontSizes[0],
-            fontFamily: theme.fonts.monospace,
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-            e.currentTarget.style.color = theme.colors.text;
-            e.currentTarget.style.borderColor = theme.colors.primary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = theme.colors.textSecondary;
-            e.currentTarget.style.borderColor = theme.colors.border;
-          }}
-        >
-          <Users size={14} />
-          <span>Live Activity</span>
-        </button>
       </div>
 
       {/* Panel content - all sub-components stay mounted, only visibility changes */}
@@ -234,8 +202,8 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
               overflow: 'auto',
             }}
           >
-            <CoworkersList events={events} />
-            <OrganizationsList events={events} />
+            <CoworkersList events={events} activeUsers={activeUsers} />
+            <OrganizationsList events={events} activeOrganizations={activeOrganizations} />
           </div>
         </div>
       </div>

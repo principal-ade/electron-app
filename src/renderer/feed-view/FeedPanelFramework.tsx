@@ -1537,6 +1537,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
             onFeedModeChange={onFeedModeChange || (() => {})}
             commits={heatmapCommits}
             selectedBlock={selectedBlock}
+            activityCommits={activityFeed.commits}
           />
         ),
       },
@@ -1590,6 +1591,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     ],
     [
       heatmapCommits,
+      activityFeed.commits,
       events,
       selectedBlock,
       terminalPanelContext,

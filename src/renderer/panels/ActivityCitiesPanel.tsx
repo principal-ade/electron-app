@@ -15,16 +15,6 @@ export const ActivityCitiesPanel: React.FC = () => {
   const { events: principalEvents } = usePrincipalEvents();
   const { repositories, onlineCount, loading, error, isAuthenticated } = useActivityCities();
 
-  // Navigate back to Feed view
-  const handleBack = useCallback(() => {
-    principalEvents?.emit({
-      type: 'panel:switch',
-      source: 'activity-cities-panel',
-      timestamp: Date.now(),
-      payload: { view: 'feed' },
-    });
-  }, [principalEvents]);
-
   // Navigate to Auth view
   const handleSignIn = useCallback(() => {
     principalEvents?.emit({
@@ -203,7 +193,7 @@ export const ActivityCitiesPanel: React.FC = () => {
 
   return (
     <div style={containerStyle}>
-      <ActivityCitiesHeader onlineCount={onlineCount} onBack={handleBack} />
+      <ActivityCitiesHeader onlineCount={onlineCount} />
       <div style={contentStyle}>{renderContent()}</div>
     </div>
   );

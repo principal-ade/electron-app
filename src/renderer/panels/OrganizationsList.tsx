@@ -5,17 +5,22 @@
  * Clicking on an organization opens its profile.
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Building2 } from 'lucide-react';
+import { Building2, Users } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCoworkers';
 
 export interface OrganizationsListProps {
   events: PanelEventEmitter;
+  /** Set of organization logins with recent activity */
+  activeOrganizations?: Set<string>;
 }
 
-export const OrganizationsList: React.FC<OrganizationsListProps> = ({ events }) => {
+export const OrganizationsList: React.FC<OrganizationsListProps> = ({
+  events,
+  activeOrganizations = new Set(),
+}) => {
   const { theme } = useTheme();
   const { organizations, loading, error } = useOrganizationsAndCoworkers();
 
@@ -27,6 +32,15 @@ export const OrganizationsList: React.FC<OrganizationsListProps> = ({ events }) 
       payload: { owner: orgLogin, isOrg: true },
     });
   };
+
+  const handleShowAllActivity = useCallback(() => {
+    events.emit({
+      type: 'live-activity:open',
+      source: 'organizations-list-panel',
+      timestamp: Date.now(),
+      payload: null,
+    });
+  }, [events]);
 
   const spacing = {
     xs: theme.space?.[1] || 4,
@@ -112,6 +126,10 @@ export const OrganizationsList: React.FC<OrganizationsListProps> = ({ events }) 
         style={{
           padding: spacing.md,
           borderBottom: `1px solid ${theme.colors.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: spacing.sm,
         }}
       >
         <h2
@@ -125,6 +143,37 @@ export const OrganizationsList: React.FC<OrganizationsListProps> = ({ events }) 
         >
           Orgs
         </h2>
+        <button
+          onClick={handleShowAllActivity}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.xs,
+            padding: `${spacing.xs}px ${spacing.sm}px`,
+            backgroundColor: 'transparent',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radii?.[1] || 4,
+            color: theme.colors.textSecondary,
+            fontSize: theme.fontSizes[0],
+            fontFamily: theme.fonts.monospace,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            e.currentTarget.style.color = theme.colors.text;
+            e.currentTarget.style.borderColor = theme.colors.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = theme.colors.textSecondary;
+            e.currentTarget.style.borderColor = theme.colors.border;
+          }}
+        >
+          <Users size={12} />
+          <span>Show All</span>
+        </button>
       </div>
 
       {/* Organizations List */}
@@ -133,78 +182,99 @@ export const OrganizationsList: React.FC<OrganizationsListProps> = ({ events }) 
           padding: spacing.sm,
         }}
       >
-        {organizations.map((org) => (
-          <button
-            key={org.id}
-            onClick={() => handleOrgClick(org.login)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              width: '100%',
-              padding: spacing.sm,
-              marginBottom: spacing.xs,
-              backgroundColor: 'transparent',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radii?.[1] || 4,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              textAlign: 'left',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-              e.currentTarget.style.borderColor = theme.colors.primary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = theme.colors.border;
-            }}
-          >
-            {/* Avatar */}
-            <img
-              src={org.avatar_url}
-              alt={org.login}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: theme.radii?.[1] || 4,
-                flexShrink: 0,
-              }}
-            />
+        {organizations.map((org) => {
+          const hasActivity = activeOrganizations.has(org.login);
 
-            {/* Info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[1],
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: 2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {org.login}
+          return (
+            <button
+              key={org.id}
+              onClick={() => handleOrgClick(org.login)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.sm,
+                width: '100%',
+                padding: spacing.sm,
+                marginBottom: spacing.xs,
+                backgroundColor: 'transparent',
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.radii?.[1] || 4,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                textAlign: 'left',
+                position: 'relative',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = theme.colors.border;
+              }}
+            >
+              {/* Avatar with activity indicator */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <img
+                  src={org.avatar_url}
+                  alt={org.login}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: theme.radii?.[1] || 4,
+                  }}
+                />
+                {hasActivity && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: -2,
+                      right: -2,
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      backgroundColor: theme.colors.success,
+                      border: `2px solid ${theme.colors.background}`,
+                    }}
+                    title="Recent activity"
+                  />
+                )}
               </div>
-              {org.description && (
+
+              {/* Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
                     fontFamily: theme.fonts.monospace,
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.textSecondary,
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                    marginBottom: 2,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {org.description}
+                  {org.login}
                 </div>
-              )}
-            </div>
-          </button>
-        ))}
+                {org.description && (
+                  <div
+                    style={{
+                      fontFamily: theme.fonts.monospace,
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textSecondary,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {org.description}
+                  </div>
+                )}
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
