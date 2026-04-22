@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Search, Star, User } from 'lucide-react';
+import { ExternalLink, Search, Star, User } from 'lucide-react';
 import { githubClient } from '../../../tipc/githubClient';
 import type { GitHubRepository, GitHubUser } from '../../../../shared/tipc/githubRouterTypes';
 import type {
@@ -8,6 +8,25 @@ import type {
   ValidatedRepositoryPath,
 } from '@principal-ai/alexandria-core-library/types';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
+import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+
+type ParsedGitHubUrl =
+  | { type: 'user'; username: string }
+  | { type: 'repo'; owner: string; name: string };
+
+const parseGitHubUrl = (input: string): ParsedGitHubUrl | null => {
+  try {
+    const urlStr = input.trim().startsWith('http') ? input.trim() : `https://${input.trim()}`;
+    const url = new URL(urlStr);
+    if (url.hostname !== 'github.com') return null;
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (parts.length === 1) return { type: 'user', username: parts[0] };
+    if (parts.length >= 2) return { type: 'repo', owner: parts[0], name: parts[1] };
+  } catch {
+    // not a valid URL
+  }
+  return null;
+};
 
 const formatStars = (n?: number): string => {
   if (!n) return '0';
@@ -45,6 +64,8 @@ export const TitlebarGitHubSearch: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isFocused, setIsFocused] = useState(false);
+  const [flashLabel, setFlashLabel] = useState<string | null>(null);
+  const [displayedText, setDisplayedText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -92,12 +113,28 @@ export const TitlebarGitHubSearch: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (flashLabel !== null) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => search(query), 300);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, search]);
+  }, [query, search, flashLabel]);
+
+  useEffect(() => {
+    if (flashLabel === null) {
+      setDisplayedText('');
+      return;
+    }
+    let i = 0;
+    setDisplayedText('');
+    const id = setInterval(() => {
+      i++;
+      setDisplayedText(flashLabel.slice(0, i));
+      if (i >= flashLabel.length) clearInterval(id);
+    }, 30);
+    return () => clearInterval(id);
+  }, [flashLabel]);
 
   const clearSearch = useCallback(() => {
     setQuery('');
@@ -147,6 +184,90 @@ export const TitlebarGitHubSearch: React.FC = () => {
     [events, clearSearch],
   );
 
+  const openUserByUsername = useCallback(
+    (username: string) => {
+      events.emit({
+        type: 'panel:switch',
+        source: 'titlebar-search',
+        timestamp: Date.now(),
+        payload: { view: 'feed' },
+      });
+      events.emit({
+        type: 'user:profile-selected',
+        source: 'titlebar-search',
+        timestamp: Date.now(),
+        payload: { username },
+      });
+      clearSearch();
+    },
+    [events, clearSearch],
+  );
+
+  const openRepoByOwnerName = useCallback(
+    async (owner: string, repoName: string) => {
+      const allEntries = await AlexandriaService.getRepositories();
+      const existing = allEntries.find(
+        (e) => e.github?.owner === owner && e.github?.name === repoName,
+      );
+      const entry: AlexandriaEntry = existing ?? {
+        name: repoName,
+        path: '' as unknown as ValidatedRepositoryPath,
+        remoteUrl: `https://github.com/${owner}/${repoName}`,
+        registeredAt: new Date().toISOString(),
+        hasViews: false,
+        viewCount: 0,
+        views: [],
+        github: {
+          id: `${owner}/${repoName}`,
+          owner,
+          name: repoName,
+          description: undefined,
+          stars: 0,
+          lastUpdated: new Date().toISOString(),
+          isPublic: true,
+          defaultBranch: 'main',
+        },
+      };
+      events.emit({
+        type: 'panel:switch',
+        source: 'titlebar-search',
+        timestamp: Date.now(),
+        payload: { view: 'feed' },
+      });
+      events.emit({
+        type: 'feed:repository-selected',
+        source: 'titlebar-search',
+        timestamp: Date.now(),
+        payload: { repository: entry },
+      });
+      clearSearch();
+    },
+    [events, clearSearch],
+  );
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLInputElement>) => {
+      const pasted = e.clipboardData.getData('text');
+      const parsed = parseGitHubUrl(pasted);
+      if (!parsed) return;
+      e.preventDefault();
+      const entity =
+        parsed.type === 'user' ? `@${parsed.username}` : `${parsed.owner}/${parsed.name}`;
+      const message = `Opening ${entity}`;
+      const duration = message.length * 30 + 250;
+      setFlashLabel(message);
+      setTimeout(() => {
+        setFlashLabel(null);
+        if (parsed.type === 'user') {
+          openUserByUsername(parsed.username);
+        } else {
+          openRepoByOwnerName(parsed.owner, parsed.name);
+        }
+      }, duration);
+    },
+    [openUserByUsername, openRepoByOwnerName],
+  );
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -181,41 +302,54 @@ export const TitlebarGitHubSearch: React.FC = () => {
     >
       {/* Search input */}
       <div
+        className={flashLabel ? 'titlebar-url-flash' : undefined}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
           padding: '6px 12px',
           borderRadius: '8px',
-          backgroundColor: isFocused
-            ? theme.colors.background
-            : theme.colors.backgroundTertiary,
-          border: `1px solid ${isFocused ? theme.colors.primary : theme.colors.border}`,
-          transition: 'border-color 0.15s, background-color 0.15s',
+          backgroundColor: theme.colors.background,
+          border: `1px solid ${flashLabel ? '#22c55e' : isFocused ? theme.colors.primary : theme.colors.border}`,
+          transition: 'border-color 0.2s, box-shadow 0.2s, background-color 0.15s',
           cursor: 'text',
         }}
         onClick={() => inputRef.current?.focus()}
       >
-        <Search
-          size={14}
-          color={isFocused ? theme.colors.primary : theme.colors.textSecondary}
-          style={{ flexShrink: 0, transition: 'color 0.15s' }}
-        />
+        {flashLabel ? (
+          <ExternalLink size={14} color="#22c55e" style={{ flexShrink: 0, transition: 'color 0.2s' }} />
+        ) : (
+          <Search
+            size={14}
+            color={isFocused ? theme.colors.primary : theme.colors.textSecondary}
+            style={{ flexShrink: 0, transition: 'color 0.15s' }}
+          />
+        )}
         <style>{`
           .titlebar-github-search::placeholder {
             color: ${theme.colors.textSecondary};
             opacity: 1;
           }
+          @keyframes titlebar-url-flash-glow {
+            0%   { box-shadow: 0 0 0 0px rgba(34,197,94,0.5); }
+            30%  { box-shadow: 0 0 0 4px rgba(34,197,94,0.25); }
+            100% { box-shadow: 0 0 0 3px rgba(34,197,94,0.0); }
+          }
+          .titlebar-url-flash {
+            animation: titlebar-url-flash-glow 0.6s ease-out forwards;
+          }
         `}</style>
         <input
           ref={inputRef}
           className="titlebar-github-search"
-          value={query}
+          value={flashLabel !== null ? displayedText : query}
+          readOnly={flashLabel !== null}
           onChange={(e) => {
             setQuery(e.target.value);
             setSelectedIndex(-1);
           }}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           onFocus={() => {
             setIsFocused(true);
             if (totalResults > 0) setIsOpen(true);
@@ -229,14 +363,15 @@ export const TitlebarGitHubSearch: React.FC = () => {
             border: 'none',
             outline: 'none',
             background: 'transparent',
-            color: theme.colors.text,
+            color: flashLabel ? '#22c55e' : theme.colors.text,
             fontSize: `${theme.fontSizes[1]}px`,
             fontFamily: theme.fonts.body,
             flex: 1,
             minWidth: 0,
+            transition: 'color 0.2s',
           }}
         />
-        {!isFocused && !query && (
+        {!isFocused && !query && !flashLabel && (
           <span
             style={{
               fontSize: '11px',
@@ -250,7 +385,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
             Command + L
           </span>
         )}
-        {loading && (
+        {loading && !flashLabel && (
           <span
             style={{
               fontSize: '10px',
