@@ -419,6 +419,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   // Suffix layers visibility toggle
   const [showSuffixLayers, setShowSuffixLayers] = useState(true);
 
+  // Track which button is currently bouncing (by clone path)
+  const [bouncingButton, setBouncingButton] = useState<string | null>(null);
+
   // Fetch branch status for all local clones
   useEffect(() => {
     let cancelled = false;
@@ -851,6 +854,14 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   // Handle open repository for a specific clone
   const handleOpenRepository = async (clonePath: string) => {
     if (repositoryData) {
+      // Start bounce animation
+      setBouncingButton(clonePath);
+
+      // Stop animation after 2 seconds
+      setTimeout(() => {
+        setBouncingButton(null);
+      }, 2000);
+
       // Convert RepositoryProfileData to AlexandriaEntry format
       const repositoryEntry = {
         name: repositoryData.name,
@@ -1589,6 +1600,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                       <button
                         onClick={() => handleOpenRepository(clone.path)}
                         title="Open in workspace"
+                        className={bouncingButton === clone.path ? 'bounce-animation' : ''}
                         style={{
                           padding: `${spacing.xs}px ${spacing.sm}px`,
                           display: 'flex',
@@ -1599,27 +1611,35 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                           background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}dd)`,
                           color: theme.colors.background,
                           cursor: 'pointer',
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          transition: bouncingButton === clone.path ? 'none' : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                           fontSize: theme.fontSizes[0],
                           fontFamily: theme.fonts?.body,
                           fontWeight: theme.fontWeights?.medium ?? 500,
                           boxShadow: `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`,
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
+                          if (bouncingButton !== clone.path) {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
+                          }
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`;
+                          if (bouncingButton !== clone.path) {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`;
+                          }
                         }}
                         onMouseDown={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = `0 1px 4px ${theme.colors.primary}30`;
+                          if (bouncingButton !== clone.path) {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = `0 1px 4px ${theme.colors.primary}30`;
+                          }
                         }}
                         onMouseUp={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
+                          if (bouncingButton !== clone.path) {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
+                          }
                         }}
                       >
                         <FolderOpen size={12} />
@@ -2176,7 +2196,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         </div>
       </div>
 
-      {/* Add keyframe animation for loading spinner */}
+      {/* Add keyframe animations */}
       <style>{`
         @keyframes spin {
           from {
@@ -2185,6 +2205,48 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           to {
             transform: rotate(360deg);
           }
+        }
+
+        @keyframes bounce {
+          0% {
+            transform: translateY(0);
+            animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+          }
+          10% {
+            transform: translateY(-16px);
+            animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+          }
+          20% {
+            transform: translateY(0);
+            animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+          }
+          27% {
+            transform: translateY(-10px);
+            animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+          }
+          34% {
+            transform: translateY(0);
+            animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+          }
+          40% {
+            transform: translateY(-5px);
+            animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+          }
+          46% {
+            transform: translateY(0);
+            animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+          }
+          51% {
+            transform: translateY(-2px);
+            animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+          }
+          56%, 100% {
+            transform: translateY(0);
+          }
+        }
+
+        .bounce-animation {
+          animation: bounce 2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
         }
       `}</style>
     </div>
