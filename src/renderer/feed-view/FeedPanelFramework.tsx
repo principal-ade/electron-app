@@ -217,6 +217,32 @@ const RepositoryProfileTabContent: React.FC<{
 
         if (cancelled) return;
 
+        // Show avatar and basic info immediately before async fetches
+        if (repo.github?.owner) {
+          setRepositoryData((prev) => ({
+            name: repo.name,
+            fullName: `${repo.github!.owner}/${repo.github!.name || repo.name}`,
+            owner: repo.github!.owner,
+            ownerAvatarUrl: `https://github.com/${repo.github!.owner}.png`,
+            description: repo.github?.description || undefined,
+            stars: 0,
+            forks: 0,
+            watchers: 0,
+            openIssues: 0,
+            size: 0,
+            activityData: prev?.activityData ?? new Map(),
+            totalCommits: prev?.totalCommits ?? 0,
+            defaultBranch: repo.github?.defaultBranch || 'main',
+            createdAt: repo.registeredAt || new Date().toISOString(),
+            updatedAt: repo.lastOpenedAt || new Date().toISOString(),
+            htmlUrl: `https://github.com/${repo.github!.owner}/${repo.github!.name || repo.name}`,
+            isPrivate: false,
+            isLocal: !!repo.path,
+            localClones: ('localClones' in repo && Array.isArray(repo.localClones)) ? repo.localClones : (repo.path ? [{ path: repo.path, addedAt: Date.now() }] : undefined),
+            github: repo.github ? { ...repo.github } : undefined,
+          }));
+        }
+
         // Fetch activity data - local or remote
         const activityData = new Map<string, number>();
         let totalCommits = 0;

@@ -1527,6 +1527,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               border: `4px solid ${theme.colors.background}`,
               overflow: 'hidden',
               flexShrink: 0,
+              position: 'relative',
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
               cursor: repositoryData.owner !== 'local' ? 'pointer' : 'default',
               transition: 'transform 0.2s ease, box-shadow 0.2s ease',
@@ -1544,29 +1545,36 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               }
             }}
           >
-            {repositoryData.ownerAvatarUrl ? (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: theme.fontSizes[6] ?? 40,
+                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                fontWeight: theme.fontWeights?.semibold ?? 600,
+                color: theme.colors.text,
+              }}
+            >
+              {initials}
+            </div>
+            {repositoryData.ownerAvatarUrl && (
               <img
                 src={repositoryData.ownerAvatarUrl}
                 alt={repositoryData.owner}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              <div
                 style={{
+                  position: 'absolute',
+                  inset: 0,
                   width: '100%',
                   height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: theme.fontSizes[6] ?? 40,
-                  fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  color: theme.colors.text,
-                  backgroundColor: theme.colors.primary + '20',
+                  objectFit: 'cover',
+                  opacity: 0,
+                  transition: 'opacity 0.15s ease',
                 }}
-              >
-                {initials}
-              </div>
+                onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
+              />
             )}
           </div>
 
