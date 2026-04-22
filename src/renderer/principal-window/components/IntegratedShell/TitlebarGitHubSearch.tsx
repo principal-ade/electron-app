@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Search, Star } from 'lucide-react';
+import { Search, Star, User } from 'lucide-react';
 import { githubClient } from '../../../tipc/githubClient';
-import type { GitHubRepository } from '../../../../shared/tipc/githubRouterTypes';
+import type { GitHubRepository, GitHubUser } from '../../../../shared/tipc/githubRouterTypes';
 import type {
   AlexandriaEntry,
   ValidatedRepositoryPath,
@@ -39,7 +39,8 @@ export const TitlebarGitHubSearch: React.FC = () => {
   const { theme } = useTheme();
   const { events } = usePrincipalEvents();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<GitHubRepository[]>([]);
+  const [repoResults, setRepoResults] = useState<GitHubRepository[]>([]);
+  const [userResults, setUserResults] = useState<GitHubUser[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -47,19 +48,31 @@ export const TitlebarGitHubSearch: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Flat list for keyboard nav: users first, then repos
+  const flatResults = [...userResults, ...repoResults];
+  const totalResults = flatResults.length;
+
   const search = useCallback(async (q: string) => {
     if (!q || q.trim().length < 2) {
-      setResults([]);
+      setUserResults([]);
+      setRepoResults([]);
       setIsOpen(false);
       return;
     }
     setLoading(true);
     try {
-      const response = await githubClient.searchRepos({ query: q, perPage: 8 });
-      setResults(response.repos || []);
-      setIsOpen((response.repos || []).length > 0);
+      const [usersResponse, reposResponse] = await Promise.all([
+        githubClient.searchUsers({ query: q, perPage: 5 }),
+        githubClient.searchRepos({ query: q, perPage: 5 }),
+      ]);
+      const users = usersResponse.users || [];
+      const repos = reposResponse.repos || [];
+      setUserResults(users);
+      setRepoResults(repos);
+      setIsOpen(users.length > 0 || repos.length > 0);
     } catch {
-      setResults([]);
+      setUserResults([]);
+      setRepoResults([]);
       setIsOpen(false);
     } finally {
       setLoading(false);
@@ -86,43 +99,71 @@ export const TitlebarGitHubSearch: React.FC = () => {
     };
   }, [query, search]);
 
-  const handleSelect = useCallback(
+  const clearSearch = useCallback(() => {
+    setQuery('');
+    setUserResults([]);
+    setRepoResults([]);
+    setIsOpen(false);
+    setSelectedIndex(-1);
+    inputRef.current?.blur();
+  }, []);
+
+  const handleSelectRepo = useCallback(
     (repo: GitHubRepository) => {
       const entry = toAlexandriaEntry(repo);
-
       events.emit({
         type: 'panel:switch',
         source: 'titlebar-search',
         timestamp: Date.now(),
         payload: { view: 'feed' },
       });
-
       events.emit({
         type: 'feed:repository-selected',
         source: 'titlebar-search',
         timestamp: Date.now(),
         payload: { repository: entry },
       });
-
-      setQuery('');
-      setResults([]);
-      setIsOpen(false);
-      inputRef.current?.blur();
+      clearSearch();
     },
-    [events],
+    [events, clearSearch],
+  );
+
+  const handleSelectUser = useCallback(
+    (user: GitHubUser) => {
+      events.emit({
+        type: 'panel:switch',
+        source: 'titlebar-search',
+        timestamp: Date.now(),
+        payload: { view: 'feed' },
+      });
+      events.emit({
+        type: 'user:profile-selected',
+        source: 'titlebar-search',
+        timestamp: Date.now(),
+        payload: { username: user.login },
+      });
+      clearSearch();
+    },
+    [events, clearSearch],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((i) => Math.min(i + 1, results.length - 1));
+      setSelectedIndex((i) => Math.min(i + 1, totalResults - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
       const idx = selectedIndex >= 0 ? selectedIndex : 0;
-      if (results[idx]) handleSelect(results[idx]);
+      const item = flatResults[idx];
+      if (!item) return;
+      if (idx < userResults.length) {
+        handleSelectUser(item as GitHubUser);
+      } else {
+        handleSelectRepo(item as GitHubRepository);
+      }
     } else if (e.key === 'Escape') {
       setIsOpen(false);
       setQuery('');
@@ -134,7 +175,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
     <div
       style={{
         position: 'relative',
-        width: '440px',
+        width: '580px',
         WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
       }}
     >
@@ -177,7 +218,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
           onKeyDown={handleKeyDown}
           onFocus={() => {
             setIsFocused(true);
-            if (results.length > 0) setIsOpen(true);
+            if (totalResults > 0) setIsOpen(true);
           }}
           onBlur={() => {
             setIsFocused(false);
@@ -223,7 +264,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
       </div>
 
       {/* Results dropdown */}
-      {isOpen && results.length > 0 && (
+      {isOpen && totalResults > 0 && (
         <div
           style={{
             position: 'absolute',
@@ -238,84 +279,166 @@ export const TitlebarGitHubSearch: React.FC = () => {
             overflow: 'hidden',
           }}
         >
-          {results.map((repo, i) => (
-            <div
-              key={repo.id}
-              onMouseDown={() => handleSelect(repo)}
-              onMouseEnter={() => setSelectedIndex(i)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '8px 12px',
-                cursor: 'pointer',
-                backgroundColor:
-                  i === selectedIndex
-                    ? theme.colors.backgroundTertiary
-                    : 'transparent',
-                borderBottom:
-                  i < results.length - 1
-                    ? `1px solid ${theme.colors.border}`
-                    : 'none',
-                transition: 'background-color 0.1s',
-              }}
-            >
-              <img
-                src={`${repo.owner.avatar_url}&s=40`}
-                alt={repo.owner.login}
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  flexShrink: 0,
-                }}
-              />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: `${theme.fontSizes[1]}px`,
-                    color: theme.colors.text,
-                    fontWeight: 500,
-                    fontFamily: theme.fonts.body,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {repo.full_name}
-                </div>
-                {repo.description && (
-                  <div
-                    style={{
-                      fontSize: `${theme.fontSizes[0]}px`,
-                      color: theme.colors.textSecondary,
-                      fontFamily: theme.fonts.body,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      marginTop: '1px',
-                    }}
-                  >
-                    {repo.description}
-                  </div>
-                )}
-              </div>
+          {/* Users section */}
+          {userResults.length > 0 && (
+            <>
               <div
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                  color: theme.colors.textSecondary,
+                  padding: '5px 12px 4px',
                   fontSize: `${theme.fontSizes[0]}px`,
+                  color: theme.colors.textSecondary,
                   fontFamily: theme.fonts.body,
-                  flexShrink: 0,
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  borderBottom: `1px solid ${theme.colors.border}`,
                 }}
               >
-                <Star size={11} />
-                {formatStars(repo.stargazers_count)}
+                Users
               </div>
-            </div>
-          ))}
+              {userResults.map((user, i) => (
+                <div
+                  key={`user-${user.id}`}
+                  onMouseDown={() => handleSelectUser(user)}
+                  onMouseEnter={() => setSelectedIndex(i)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 12px',
+                    cursor: 'pointer',
+                    backgroundColor:
+                      i === selectedIndex
+                        ? theme.colors.backgroundTertiary
+                        : 'transparent',
+                    borderBottom: `1px solid ${theme.colors.border}`,
+                    transition: 'background-color 0.1s',
+                  }}
+                >
+                  <img
+                    src={`${user.avatar_url}&s=84`}
+                    alt={user.login}
+                    style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: `${theme.fontSizes[2]}px`,
+                        color: theme.colors.text,
+                        fontWeight: 500,
+                        fontFamily: theme.fonts.body,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {user.name ? `${user.name} ` : ''}
+                      <span style={{ color: theme.colors.textSecondary, fontWeight: 400 }}>
+                        @{user.login}
+                      </span>
+                    </div>
+                  </div>
+                  <User size={11} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* Repositories section */}
+          {repoResults.length > 0 && (
+            <>
+              <div
+                style={{
+                  padding: '5px 12px 4px',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.fonts.body,
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                Repositories
+              </div>
+              {repoResults.map((repo, i) => {
+                const flatIndex = userResults.length + i;
+                return (
+                  <div
+                    key={`repo-${repo.id}`}
+                    onMouseDown={() => handleSelectRepo(repo)}
+                    onMouseEnter={() => setSelectedIndex(flatIndex)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '12px 12px',
+                      cursor: 'pointer',
+                      backgroundColor:
+                        flatIndex === selectedIndex
+                          ? theme.colors.backgroundTertiary
+                          : 'transparent',
+                      borderBottom:
+                        i < repoResults.length - 1
+                          ? `1px solid ${theme.colors.border}`
+                          : 'none',
+                      transition: 'background-color 0.1s',
+                    }}
+                  >
+                    <img
+                      src={`${repo.owner.avatar_url}&s=84`}
+                      alt={repo.owner.login}
+                      style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: `${theme.fontSizes[1]}px`,
+                          color: theme.colors.text,
+                          fontWeight: 500,
+                          fontFamily: theme.fonts.body,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {repo.full_name}
+                      </div>
+                      {repo.description && (
+                        <div
+                          style={{
+                            fontSize: `${theme.fontSizes[0]}px`,
+                            color: theme.colors.textSecondary,
+                            fontFamily: theme.fonts.body,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            marginTop: '1px',
+                          }}
+                        >
+                          {repo.description}
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        color: theme.colors.textSecondary,
+                        fontSize: `${theme.fontSizes[0]}px`,
+                        fontFamily: theme.fonts.body,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Star size={11} />
+                      {formatStars(repo.stargazers_count)}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
       )}
     </div>
