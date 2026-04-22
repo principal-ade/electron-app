@@ -365,10 +365,10 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      OAuth
+                      GitHub OAuth
                     </div>
                     <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      Not connected
+                      Sign in
                     </div>
                   </div>
                 </div>
