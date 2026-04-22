@@ -533,7 +533,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
           options={[
             { value: 'my-activity', label: 'My Activity' },
             { value: 'organizations', label: 'Team' },
-            { value: 'collections', label: 'Collections' },
+            { value: 'collections', label: 'Social' },
           ]}
           value={feedMode}
           onChange={(value) => onFeedModeChange(value as 'my-activity' | 'collections' | 'organizations')}

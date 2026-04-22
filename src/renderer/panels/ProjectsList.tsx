@@ -330,8 +330,8 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       >
         <SegmentedControl
           options={[
-            { value: 'in-progress', label: 'In Progress' },
             { value: 'recent', label: 'Recent' },
+            { value: 'in-progress', label: 'In Progress' },
             { value: 'by-org', label: 'Cloned Projects' },
           ]}
           value={viewMode}
