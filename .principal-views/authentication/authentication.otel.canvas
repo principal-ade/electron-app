@@ -154,11 +154,6 @@
             "type": "string",
             "required": false,
             "description": "Username that was logged in"
-          },
-          "state_manager.instance_id": {
-            "type": "string",
-            "required": false,
-            "description": "AuthStateManager instance identifier"
           }
         }
       },
@@ -188,11 +183,6 @@
             "type": "boolean",
             "required": true,
             "description": "Whether git credential clearing succeeded"
-          },
-          "error.message": {
-            "type": "string",
-            "required": false,
-            "description": "Error message if clearing failed"
           }
         }
       },
@@ -222,16 +212,6 @@
             "type": "boolean",
             "required": true,
             "description": "New authentication status (false after logout)"
-          },
-          "user": {
-            "type": "object",
-            "required": false,
-            "description": "User object (null after logout)"
-          },
-          "last_checked": {
-            "type": "number",
-            "required": true,
-            "description": "Timestamp of state change"
           }
         }
       },
@@ -263,11 +243,6 @@
             "required": true,
             "description": "Component that updated (FeedLeftPanel, NavigationSidebar, etc)"
           },
-          "previous_state.authenticated": {
-            "type": "boolean",
-            "required": false,
-            "description": "Previous auth state"
-          },
           "new_state.authenticated": {
             "type": "boolean",
             "required": true,
@@ -292,7 +267,7 @@
       "width": 250,
       "height": 150,
       "color": "#D4EDDA",
-      "text": "## Success Validation\n\n✅ Both tokens deleted from keychain\n✅ AuthStateManager.isAuthenticated = false\n✅ Auth state change event broadcast\n✅ UI shows signed-out state\n✅ Git credentials removed\n\n**Query:** Check all logout events succeeded:\n```\nSELECT * FROM events \nWHERE name IN (\n  'auth.token.deleted',\n  'auth.state.cleared'\n)\nAND attributes.success = true\n```"
+      "text": "## Success Validation\n\n- Both tokens deleted from keychain\n- AuthStateManager.isAuthenticated = false\n- Auth state change event broadcast\n- UI shows signed-out state\n- Git credentials removed\n\n**Query:** Check all logout events succeeded:\n```\nSELECT * FROM events \nWHERE name IN (\n  'auth.token.deleted',\n  'auth.state.cleared'\n)\nAND attributes.success = true\n```"
     },
     {
       "id": "logout-error-silent-failure",
@@ -302,7 +277,7 @@
       "width": 250,
       "height": 150,
       "color": "#F8D7DA",
-      "text": "## 🐛 Known Issue: Silent Failure\n\n**Problem:** Token deletion errors are caught and logged but not thrown\n\n```typescript\ncatch (error) {\n  console.error('[AuthService] Failed to clear');\n  // Don't throw - issue!\n}\n```\n\n**Impact:** Logout returns success even if tokens not deleted\n\n**Causes:**\n- Keychain locked during logout\n- Keychain timeout (30s)\n- Permission denied\n- App force-quit mid-logout"
+      "text": "## Known Issue: Silent Failure\n\n**Problem:** Token deletion errors are caught and logged but not thrown\n\n```typescript\ncatch (error) {\n  console.error('[AuthService] Failed to clear');\n  // Don't throw - issue!\n}\n```\n\n**Impact:** Logout returns success even if tokens not deleted\n\n**Causes:**\n- Keychain locked during logout\n- Keychain timeout (30s)\n- Permission denied\n- App force-quit mid-logout"
     },
     {
       "id": "logout-error-stale-data",
@@ -312,7 +287,133 @@
       "width": 250,
       "height": 150,
       "color": "#F8D7DA",
-      "text": "## 🐛 Issue: Stale UI Data\n\n**Problem:** Components using local state instead of useAuth() show stale data\n\n**Example:** FeedLeftPanel was fetching user once on mount, never updated on auth changes\n\n**Solution:** All components must use `useAuth()` hook to subscribe to auth state changes\n\n**Fixed in:** FeedLeftPanel.tsx now uses useAuth()"
+      "text": "## Issue: Stale UI Data\n\n**Problem:** Components using local state instead of useAuth() show stale data\n\n**Example:** FeedLeftPanel was fetching user once on mount, never updated on auth changes\n\n**Solution:** All components must use `useAuth()` hook to subscribe to auth state changes\n\n**Fixed in:** FeedLeftPanel.tsx now uses useAuth()"
+    },
+    {
+      "id": "token-deletion-failed",
+      "type": "otel-event",
+      "x": 550,
+      "y": 400,
+      "width": 200,
+      "height": 100,
+      "label": "Token Deletion Failed (Silent)",
+      "icon": "AlertTriangle",
+      "shape": "roundedRect",
+      "description": "Token deletion error caught and suppressed, logout continues",
+      "event": {
+        "name": "auth.token.deletion.failed",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "required": true,
+            "description": "Error type (KeychainTimeout, KeychainPermission, KeychainNotAvailable)"
+          },
+          "token.key": {
+            "type": "string",
+            "required": true,
+            "description": "Token key that failed to delete"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/AuthService.ts"
+        ]
+      }
+    },
+    {
+      "id": "keychain-timeout",
+      "type": "otel-event",
+      "x": 400,
+      "y": -200,
+      "width": 200,
+      "height": 100,
+      "label": "Keychain Timeout",
+      "icon": "Clock",
+      "shape": "roundedRect",
+      "description": "Keychain operation exceeded timeout limit (30s)",
+      "event": {
+        "name": "auth.keychain.timeout",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "required": true,
+            "description": "Timeout error type"
+          },
+          "duration_ms": {
+            "type": "number",
+            "required": true,
+            "description": "Duration before timeout"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/UnifiedSecureStorage.ts"
+        ]
+      }
+    },
+    {
+      "id": "ui-stale-component",
+      "type": "otel-event",
+      "x": 1450,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "label": "Stale UI Component",
+      "icon": "AlertTriangle",
+      "shape": "roundedRect",
+      "description": "Component missed auth state change due to local state instead of useAuth()",
+      "event": {
+        "name": "auth.ui.stale_component",
+        "attributes": {
+          "component": {
+            "type": "string",
+            "required": true,
+            "description": "Component that failed to update"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-principal-window",
+        "files": [
+          "src/renderer/hooks/useAuthState.ts"
+        ]
+      }
+    },
+    {
+      "id": "session-auto-restored",
+      "type": "otel-event",
+      "x": 1100,
+      "y": -200,
+      "width": 200,
+      "height": 100,
+      "label": "Session Auto-Restored",
+      "icon": "RefreshCw",
+      "shape": "roundedRect",
+      "description": "App restart found stale tokens in keychain and auto-logged in the user",
+      "event": {
+        "name": "auth.session.auto_restored",
+        "attributes": {
+          "user": {
+            "type": "object",
+            "required": true,
+            "description": "User object auto-restored from stale keychain token"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/AuthService.ts"
+        ]
+      }
     },
     {
       "id": "memory-cache-clear",
@@ -328,11 +429,6 @@
       "event": {
         "name": "auth.cache.cleared",
         "attributes": {
-          "cache.size_before": {
-            "type": "number",
-            "required": false,
-            "description": "Number of items in cache before clear"
-          },
           "cache.tokens_removed": {
             "type": "number",
             "required": true,
@@ -459,44 +555,58 @@
       "edgeType": "ipc"
     },
     {
-      "id": "edge-token-deletion-workos-memory-cache-clear-1776807453097",
-      "fromNode": "token-deletion-workos",
-      "toNode": "memory-cache-clear",
-      "fromSide": "right",
-      "toSide": "left",
-      "pv": {
-        "edgeType": "stores-in"
-      }
-    },
-    {
-      "id": "edge-token-deletion-github-logout-error-silent-failure-1776807453097",
+      "id": "edge-13",
       "fromNode": "token-deletion-github",
-      "toNode": "logout-error-silent-failure",
+      "toNode": "token-deletion-failed",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "label": "error suppressed",
+      "edgeType": "ipc"
     },
     {
-      "id": "edge-token-deletion-github-memory-cache-clear-1776807453097",
-      "fromNode": "token-deletion-github",
-      "toNode": "memory-cache-clear",
-      "fromSide": "right",
-      "toSide": "left",
-      "pv": {
-        "edgeType": "stores-in"
-      }
-    },
-    {
-      "id": "edge-token-deletion-workos-logout-error-silent-failure-1776807453097",
+      "id": "edge-14",
       "fromNode": "token-deletion-workos",
-      "toNode": "logout-error-silent-failure",
+      "toNode": "token-deletion-failed",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "label": "error suppressed",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-15",
+      "fromNode": "token-deletion-github",
+      "toNode": "keychain-timeout",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "timeout",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-16",
+      "fromNode": "token-deletion-workos",
+      "toNode": "keychain-timeout",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "timeout",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-17",
+      "fromNode": "ui-logout-complete",
+      "toNode": "ui-stale-component",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "component missed update",
+      "edgeType": "ipc-event"
+    },
+    {
+      "id": "edge-18",
+      "fromNode": "auth-state-changed-broadcast",
+      "toNode": "session-auto-restored",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "stale token found on restart",
+      "edgeType": "ipc"
     }
   ],
   "description": "User logout flow showing token deletion, state management, and known issues with silent failures and stale UI data"

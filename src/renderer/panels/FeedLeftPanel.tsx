@@ -6,9 +6,9 @@
  * All sub-components stay mounted to avoid reloading data on mode switch.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Github } from 'lucide-react';
+import { Github, User } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -22,6 +22,7 @@ import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCowork
 import { useTeamActivity } from '../hooks/useTeamActivity';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { useAuth } from '../hooks/useAuthState';
+import { GitService } from '../main-process-api/GitService';
 
 export interface FeedLeftPanelProps {
   /** List of repositories */
@@ -59,6 +60,27 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
 
   // State for collections subtab
   const [collectionsSubtab, setCollectionsSubtab] = useState<'watching' | 'starred' | 'collections'>('watching');
+
+  // Local git identity (shown when signed out)
+  const [localGitName, setLocalGitName] = useState<string | null>(null);
+  const [localGitEmail, setLocalGitEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentUser) return;
+    const dir = process.env.HOME || '/';
+    (async () => {
+      try {
+        const [nameResult, emailResult] = await Promise.all([
+          GitService.execCommand(dir, ['config', '--global', 'user.name']),
+          GitService.execCommand(dir, ['config', '--global', 'user.email']),
+        ]);
+        setLocalGitName(nameResult.stdout.trim() || null);
+        setLocalGitEmail(emailResult.stdout.trim() || null);
+      } catch {
+        // no global git config available
+      }
+    })();
+  }, [currentUser]);
 
   // Fetch coworkers and organizations data
   const { coworkers } = useOrganizationsAndCoworkers();
@@ -221,7 +243,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
               e.currentTarget.style.borderColor = theme.colors.border;
             }}
           >
-            {/* GitHub icon as avatar */}
+            {/* Avatar icon */}
             <div
               style={{
                 width: 40,
@@ -234,7 +256,10 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                 flexShrink: 0,
               }}
             >
-              <Github size={24} color={theme.colors.textSecondary} />
+              {localGitName
+                ? <User size={24} color={theme.colors.textSecondary} />
+                : <Github size={24} color={theme.colors.textSecondary} />
+              }
             </div>
 
             {/* Info */}
@@ -251,7 +276,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                   whiteSpace: 'nowrap',
                 }}
               >
-                Sign in with GitHub
+                {localGitName || 'Sign in with GitHub'}
               </div>
               <div
                 style={{
@@ -263,7 +288,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                   whiteSpace: 'nowrap',
                 }}
               >
-                Connect your account
+                {localGitEmail || 'Connect your account'}
               </div>
             </div>
           </button>
