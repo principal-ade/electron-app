@@ -14,6 +14,7 @@ import type {
   DataSlice,
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
+import { usePrincipalEvents } from '../../PrincipalEventContext';
 import type { PanelLayout } from '@principal-ade/panel-layouts';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitHubRepository } from '../../../../shared/main-process-api-interfaces/GitHubAPI';
@@ -84,6 +85,23 @@ const useFeedPanelProvider = (): FeedPanelProviderValue => {
  */
 const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const events = useMemo(() => new PanelEventBus(), []);
+  const { events: principalEvents } = usePrincipalEvents();
+
+  // Bridge feed events from the principal event bus into the local feed bus
+  useEffect(() => {
+    const unsubRepoSelected = principalEvents.on<{ repository: AlexandriaEntry }>(
+      'feed:repository-selected',
+      (event) => {
+        events.emit({
+          type: 'feed:repository-selected',
+          source: event.source,
+          timestamp: event.timestamp,
+          payload: event.payload,
+        });
+      },
+    );
+    return () => { unsubRepoSelected(); };
+  }, [events, principalEvents]);
 
   // State for local repositories
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);

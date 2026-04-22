@@ -5,9 +5,9 @@
  * Read-only list with local search filtering.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Star, FolderGit2, Loader2, Search, AlertCircle } from 'lucide-react';
+import { Star, FolderGit2, Loader2, AlertCircle } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { GithubService } from '../main-process-api/GithubService';
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
@@ -31,7 +31,6 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
   const [starredRepos, setStarredRepos] = useState<GitHubRepository[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   // Load starred repos on mount
   const loadStarredRepos = useCallback(async () => {
@@ -64,19 +63,6 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
     });
     return unsubscribe;
   }, [events, loadStarredRepos]);
-
-  // Filter repos based on search query (client-side filtering)
-  const filteredRepos = useMemo(() => {
-    if (!searchQuery.trim()) return starredRepos;
-
-    const query = searchQuery.toLowerCase();
-    return starredRepos.filter((repo) => {
-      const fullName = repo.full_name?.toLowerCase() || '';
-      const description = repo.description?.toLowerCase() || '';
-      const language = repo.language?.toLowerCase() || '';
-      return fullName.includes(query) || description.includes(query) || language.includes(query);
-    });
-  }, [starredRepos, searchQuery]);
 
   // Handle repo click - emit event to open repo profile
   const handleRepoClick = useCallback(
@@ -211,58 +197,6 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
         overflow: 'hidden',
       }}
     >
-      {/* Search header */}
-      <div
-        style={{
-          padding: spacing.sm,
-          borderBottom: `1px solid ${theme.colors.border}`,
-          backgroundColor: theme.colors.background,
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ position: 'relative' }}>
-          <Search
-            size={16}
-            style={{
-              position: 'absolute',
-              left: spacing.sm,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: theme.colors.textSecondary,
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Search starred repositories..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: `${spacing.xs}px ${spacing.sm}px ${spacing.xs}px ${spacing.lg + spacing.md}px`,
-              backgroundColor: theme.colors.backgroundSecondary,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radii?.[1] || 4,
-              color: theme.colors.text,
-              fontSize: theme.fontSizes[0],
-              fontFamily: theme.fonts.body,
-              outline: 'none',
-              transition: 'border-color 0.2s',
-            }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = theme.colors.primary)}
-            onBlur={(e) => (e.currentTarget.style.borderColor = theme.colors.border)}
-          />
-        </div>
-        <div
-          style={{
-            marginTop: spacing.xs,
-            fontSize: theme.fontSizes[0],
-            color: theme.colors.textSecondary,
-          }}
-        >
-          {filteredRepos.length} {filteredRepos.length === 1 ? 'repository' : 'repositories'}
-        </div>
-      </div>
-
       {/* Repos list */}
       <div
         style={{
@@ -271,22 +205,10 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
           padding: spacing.sm,
         }}
       >
-        {filteredRepos.length === 0 && searchQuery ? (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: spacing.lg,
-              color: theme.colors.textSecondary,
-              fontSize: theme.fontSizes[0],
-            }}
-          >
-            No repositories match your search
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-            {filteredRepos
-              .filter((repo) => repo.full_name && repo.full_name.includes('/'))
-              .map((repo) => {
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+          {starredRepos
+            .filter((repo) => repo.full_name && repo.full_name.includes('/'))
+            .map((repo) => {
                 const [owner, name] = repo.full_name.split('/');
                 return (
                 <div
@@ -367,8 +289,7 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
                 </div>
               );
             })}
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Add spin animation */}

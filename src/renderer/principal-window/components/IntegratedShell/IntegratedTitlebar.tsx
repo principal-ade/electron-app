@@ -12,6 +12,7 @@ import { FolderOpen, MessageCircle, Layers, Settings } from 'lucide-react';
 import { ShellService } from '../../../main-process-api/ShellService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
+import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 
 declare global {
   interface Window {
@@ -226,7 +227,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         </div>
       </div>
 
-      {/* Centered Title - Absolutely positioned */}
+      {/* Centered GitHub Search Bar */}
       <div
         style={{
           position: 'fixed',
@@ -236,16 +237,11 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           height: '56px',
           display: 'flex',
           alignItems: 'center',
-          fontSize: theme.fontSizes[3],
-          fontWeight: theme.fontWeights.heading,
-          color: theme.colors.text,
-          fontFamily: theme.fonts.heading,
           WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-          pointerEvents: 'none',
           zIndex: 101,
         }}
       >
-        Principal <span style={{ color: theme.colors.primary, marginLeft: 4 }}>AI</span>
+        <TitlebarGitHubSearch />
       </div>
 
       {/* Right controls */}

@@ -250,20 +250,27 @@ const RepositoryProfileTabContent: React.FC<{
         let ownerType: 'User' | 'Organization' | undefined = undefined;
         let githubCreatedAt: string | undefined = undefined;
         let githubUpdatedAt: string | undefined = undefined;
+        let githubDefaultBranch: string | undefined = undefined;
+
+        console.info('[RepositoryProfileTab] repo.github:', repo.github);
+        console.info('[RepositoryProfileTab] repo.github?.defaultBranch (cached):', repo.github?.defaultBranch);
 
         if (repo.github?.owner && repo.github?.name) {
           try {
             const githubRepo = await GithubService.getRepository(repo.github.owner, repo.github.name);
             console.info('[RepositoryProfileTab] Fetched GitHub repository:', githubRepo);
-            console.info('[RepositoryProfileTab] Owner type:', githubRepo?.owner.type);
-            console.info('[RepositoryProfileTab] Created at:', githubRepo?.created_at);
+            console.info('[RepositoryProfileTab] default_branch from API:', githubRepo?.default_branch);
             ownerType = githubRepo?.owner.type;
             githubCreatedAt = githubRepo?.created_at;
             githubUpdatedAt = githubRepo?.updated_at;
+            githubDefaultBranch = githubRepo?.default_branch || undefined;
           } catch (err) {
             console.warn('[RepositoryProfileTab] Failed to fetch GitHub repository:', err);
           }
         }
+
+        console.info('[RepositoryProfileTab] githubDefaultBranch (API):', githubDefaultBranch);
+        console.info('[RepositoryProfileTab] final defaultBranch will be:', githubDefaultBranch || repo.github?.defaultBranch || 'main');
 
         // Fetch contributor count - local or from GitHub
         let contributors: number | undefined = undefined;
@@ -305,7 +312,7 @@ const RepositoryProfileTabContent: React.FC<{
           activityData,
           totalCommits: totalCommits || 0,
           contributors,
-          defaultBranch: 'main', // Could fetch from git but using default
+          defaultBranch: githubDefaultBranch || repo.github?.defaultBranch || 'main',
           createdAt: githubCreatedAt || repo.registeredAt || new Date().toISOString(),
           updatedAt: githubUpdatedAt || repo.lastOpenedAt || new Date().toISOString(),
           htmlUrl: repo.github?.owner && repo.github?.name
@@ -314,7 +321,10 @@ const RepositoryProfileTabContent: React.FC<{
           isPrivate: false,
           isLocal: !!repo.path,
           localClones: ('localClones' in repo && Array.isArray(repo.localClones)) ? repo.localClones : (repo.path ? [{ path: repo.path, addedAt: Date.now() }] : undefined),
-          github: repo.github,
+          github: repo.github ? {
+            ...repo.github,
+            defaultBranch: githubDefaultBranch || repo.github.defaultBranch || undefined,
+          } : undefined,
         };
 
         console.info('[RepositoryProfileTab] Final profile data with ownerType:', profileData.ownerType);
