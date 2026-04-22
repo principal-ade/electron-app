@@ -8,7 +8,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Github, ChevronDown, ChevronUp, Settings } from 'lucide-react';
+import { Github, ChevronDown, ChevronUp, Settings, FolderOpen } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -24,6 +24,8 @@ import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { useAuthState } from '../hooks/useAuthState';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { FileSystemService } from '../main-process-api/FileSystemService';
 import { GitGlobalConfigModal } from '../components/GitGlobalConfigModal';
 
 const GitLogo: React.FC<{ size?: number }> = ({ size = 24 }) => (
@@ -88,6 +90,35 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
       }
     })();
   }, [currentUser]);
+
+  // Home directory
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
+
+  useEffect(() => {
+    UserPreferencesService.getPreferences().then((prefs) => {
+      setBaseDefaultDirectory(prefs.baseDefaultDirectory || null);
+    });
+    return UserPreferencesService.onPreferencesUpdated((prefs) => {
+      setBaseDefaultDirectory(prefs.baseDefaultDirectory || null);
+    });
+  }, []);
+
+  const handleSelectBaseDirectory = async () => {
+    const result = await FileSystemService.selectDirectory({
+      title: 'Select Home Folder',
+      buttonLabel: 'Select',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (!result || result.canceled || !result.filePaths?.[0]) return;
+    const selected = result.filePaths[0];
+    await UserPreferencesService.updatePreferences({ baseDefaultDirectory: selected });
+    setBaseDefaultDirectory(selected);
+  };
+
+  const getDirectoryDisplayName = (path: string) => {
+    const parts = path.split('/');
+    return parts[parts.length - 1] || path;
+  };
 
   // Git config modal
   const [isGitConfigModalOpen, setIsGitConfigModalOpen] = useState(false);
@@ -331,6 +362,46 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                     Config
                   </button>
                 </div>
+
+                {/* Home folder card */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radii?.[1] || 4 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <FolderOpen size={20} color={theme.colors.textSecondary} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2 }}>
+                      Home Folder
+                    </div>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={baseDefaultDirectory || undefined}>
+                      {baseDefaultDirectory ? getDirectoryDisplayName(baseDefaultDirectory) : 'Not set'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleSelectBaseDirectory}
+                    style={{
+                      flexShrink: 0,
+                      padding: `2px ${spacing.sm}px`,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.radii?.[1] || 4,
+                      fontFamily: theme.fonts.monospace,
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textSecondary,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                      e.currentTarget.style.color = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                    }}
+                  >
+                    Change
+                  </button>
+                </div>
               </div>
             )}
           </>
@@ -521,6 +592,46 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                     }}
                   >
                     Config
+                  </button>
+                </div>
+
+                {/* Home folder card */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radii?.[1] || 4 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <FolderOpen size={20} color={theme.colors.textSecondary} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2 }}>
+                      Home Folder
+                    </div>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={baseDefaultDirectory || undefined}>
+                      {baseDefaultDirectory ? getDirectoryDisplayName(baseDefaultDirectory) : 'Not set'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleSelectBaseDirectory}
+                    style={{
+                      flexShrink: 0,
+                      padding: `2px ${spacing.sm}px`,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.radii?.[1] || 4,
+                      fontFamily: theme.fonts.monospace,
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textSecondary,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                      e.currentTarget.style.color = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                    }}
+                  >
+                    Change
                   </button>
                 </div>
               </div>

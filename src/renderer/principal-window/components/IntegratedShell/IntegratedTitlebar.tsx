@@ -6,10 +6,8 @@ import { TitlebarUpdateButton } from '../../../components/Titlebar/TitlebarUpdat
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
 import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
-import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
-import { FolderOpen, MessageCircle, Layers } from 'lucide-react';
-import { ShellService } from '../../../main-process-api/ShellService';
+import { Layers } from 'lucide-react';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 
@@ -54,7 +52,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   const [showCustomizeButton, setShowCustomizeButton] = useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
   const [showOpenThreadButton, setShowOpenThreadButton] = useState(false);
-  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
   const { theme } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
@@ -64,28 +61,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       window.electronTitlebar.onMaximizeChange(setIsMaximized);
     }
   }, []);
-
-  useEffect(() => {
-    const loadBaseDirectory = async () => {
-      const preferences = await UserPreferencesService.getPreferences();
-      setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
-    };
-
-    loadBaseDirectory();
-
-    const unsubscribe = UserPreferencesService.onPreferencesUpdated(
-      (preferences) => {
-        setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
-      },
-    );
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, []);
-
 
   useEffect(() => {
     let isMounted = true;
@@ -124,29 +99,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
     };
   }, []);
 
-  const handleSelectBaseDirectory = async () => {
-    const result = await FileSystemService.selectDirectory({
-      title: 'Select Base Default Directory',
-      buttonLabel: 'Select Directory',
-      properties: ['openDirectory', 'createDirectory'],
-    });
-
-    if (!result || result.canceled || !result.filePaths?.[0]) {
-      return;
-    }
-
-    const selectedPath = result.filePaths[0];
-    await UserPreferencesService.updatePreferences({
-      baseDefaultDirectory: selectedPath,
-    });
-    setBaseDefaultDirectory(selectedPath);
-  };
-
-  const getDirectoryDisplayName = (path: string) => {
-    const parts = path.split('/');
-    return parts[parts.length - 1] || path;
-  };
-
   // Static title - Principal Workspace
 
   return (
@@ -169,61 +121,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
     >
       {/* Update button - positioned below macOS traffic lights */}
       <TitlebarUpdateButton onClick={onUpdateClick} hidden={hideUpdateButton} />
-
-      {/* Left: Home Folder */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          paddingLeft: '16px',
-          WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-        }}
-      >
-        <span
-          style={{
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.textSecondary,
-          }}
-        >
-          Home Folder:
-        </span>
-        <div
-          onClick={handleSelectBaseDirectory}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '6px 12px',
-            borderRadius: '6px',
-            backgroundColor: theme.colors.backgroundSecondary,
-            cursor: 'pointer',
-            transition: 'background-color 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor =
-              theme.colors.backgroundTertiary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor =
-              theme.colors.backgroundSecondary;
-          }}
-          title={baseDefaultDirectory || 'Click to set base directory'}
-        >
-          <FolderOpen size={16} color={theme.colors.textSecondary} />
-          <span
-            style={{
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.textSecondary,
-              fontFamily: theme.fonts.monospace,
-            }}
-          >
-            {baseDefaultDirectory
-              ? getDirectoryDisplayName(baseDefaultDirectory)
-              : 'Set Directory'}
-          </span>
-        </div>
-      </div>
 
       {/* Centered GitHub Search Bar */}
       <div
@@ -315,36 +212,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             Open Thread
           </button>
         )}
-        {/* Community Discord button */}
-        <button
-          onClick={() => ShellService.openExternal('https://discord.gg/G3qdcC2DXq')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 12px',
-            borderRadius: '6px',
-            backgroundColor: '#5865F2',
-            color: '#ffffff',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: theme.fontSizes[1],
-            fontWeight: 500,
-            fontFamily: theme.fonts.body,
-            transition: 'all 0.2s',
-            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#4752C4';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#5865F2';
-          }}
-          title="Join our Discord community"
-        >
-          <MessageCircle size={14} />
-          Community
-        </button>
         {showPullMailbox && <PullMailbox />}
         {showThemeButton && <ThemeDropdown />}
         {showCustomizeButton && <ThemeCustomizationButton />}
