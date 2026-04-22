@@ -11,6 +11,7 @@ import {
   PrimaryWindowType,
   getWindowsByType,
   getRepositoryUrl,
+  getRepositoryLocalPath,
   getWorkspaceId,
 } from './types';
 import { openDevWorkspaceWindow } from './devWorkspaceWindowHandlers';
@@ -239,11 +240,11 @@ class QuickOpen {
         PrimaryWindowType.WORKSPACE,
       );
 
-      const openRepoUrls = openRepoWindowIds
-        .map((id) => ({ id, url: getRepositoryUrl(id) }))
-        .filter(
-          (item): item is { id: number; url: string } => item.url !== null,
-        );
+      const openRepoWindows = openRepoWindowIds.map((id) => ({
+        id,
+        url: getRepositoryUrl(id),
+        localPath: getRepositoryLocalPath(id),
+      }));
 
       const openWorkspaceIds = openWorkspaceWindowIds
         .map((id) => ({ windowId: id, workspaceId: getWorkspaceId(id) }))
@@ -271,7 +272,9 @@ class QuickOpen {
           continue;
         }
 
-        const openRepo = openRepoUrls.find((r) => r.url === repo.remoteUrl);
+        const openRepo = openRepoWindows.find((r) =>
+          repo.path ? r.localPath === repo.path : r.url === repo.remoteUrl,
+        );
         // Build avatar URL from GitHub owner (GitHub's reliable avatar endpoint)
         const owner = repo.github?.owner;
         const avatarUrl = owner
@@ -279,7 +282,7 @@ class QuickOpen {
           : undefined;
 
         items.push({
-          id: repo.remoteUrl,
+          id: repo.path || repo.remoteUrl,
           type: 'repository',
           name: repo.name,
           description: repo.github?.description || repo.path,

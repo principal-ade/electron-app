@@ -157,6 +157,13 @@ export function getRepositoryUrl(windowId: number): string | null {
     : null;
 }
 
+export function getRepositoryLocalPath(windowId: number): string | null {
+  const metadata = getWindowMetadata(windowId);
+  return metadata?.primaryType === PrimaryWindowType.REPOSITORY
+    ? (metadata.localPath ?? null)
+    : null;
+}
+
 export function getWorkspaceId(windowId: number): string | null {
   const metadata = getWindowMetadata(windowId);
   return metadata?.primaryType === PrimaryWindowType.WORKSPACE

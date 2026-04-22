@@ -252,14 +252,10 @@ const RepositoryProfileTabContent: React.FC<{
         let githubUpdatedAt: string | undefined = undefined;
         let githubDefaultBranch: string | undefined = undefined;
 
-        console.info('[RepositoryProfileTab] repo.github:', repo.github);
-        console.info('[RepositoryProfileTab] repo.github?.defaultBranch (cached):', repo.github?.defaultBranch);
-
         if (repo.github?.owner && repo.github?.name) {
           try {
             const githubRepo = await GithubService.getRepository(repo.github.owner, repo.github.name);
             console.info('[RepositoryProfileTab] Fetched GitHub repository:', githubRepo);
-            console.info('[RepositoryProfileTab] default_branch from API:', githubRepo?.default_branch);
             ownerType = githubRepo?.owner.type;
             githubCreatedAt = githubRepo?.created_at;
             githubUpdatedAt = githubRepo?.updated_at;
@@ -268,9 +264,6 @@ const RepositoryProfileTabContent: React.FC<{
             console.warn('[RepositoryProfileTab] Failed to fetch GitHub repository:', err);
           }
         }
-
-        console.info('[RepositoryProfileTab] githubDefaultBranch (API):', githubDefaultBranch);
-        console.info('[RepositoryProfileTab] final defaultBranch will be:', githubDefaultBranch || repo.github?.defaultBranch || 'main');
 
         // Fetch contributor count - local or from GitHub
         let contributors: number | undefined = undefined;

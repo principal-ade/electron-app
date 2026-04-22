@@ -39,6 +39,7 @@ import {
 } from '@industry-theme/repository-composition-panels';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { DocumentView } from 'themed-markdown';
+import { transformImageUrl } from '@principal-ade/markdown-utils';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { LocalClone } from '../../shared/types/repository.types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
@@ -73,6 +74,7 @@ export interface RepositoryProfileData {
   github?: {
     owner: string;
     name: string;
+    defaultBranch?: string;
   };
 }
 
@@ -361,6 +363,13 @@ function shortenPath(fullPath: string): string {
   }
 
   return fullPath;
+}
+
+function transformHtmlImageUrls(content: string, repositoryInfo: { owner: string; repo: string; branch?: string }): string {
+  return content.replace(/(<img\s[^>]*?)src="([^"]+)"([^>]*?>)/gi, (match, before, src, after) => {
+    const transformed = transformImageUrl(src, repositoryInfo);
+    return `${before}src="${transformed}"${after}`;
+  });
 }
 
 export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
@@ -802,14 +811,21 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         const readmePath = findReadme(remoteFileTree);
 
         if (readmePath) {
+          const branch = repositoryData.defaultBranch || repositoryData.github?.defaultBranch || undefined;
           const content = await GithubService.getFileContent(
             repositoryData.github.owner,
             repositoryData.github.name,
-            readmePath
+            readmePath,
+            branch
           );
 
           if (!cancelled) {
-            setReadmeContent(content);
+            const repoInfo = {
+              owner: repositoryData.github.owner,
+              repo: repositoryData.github.name,
+              branch,
+            };
+            setReadmeContent(content ? transformHtmlImageUrls(content, repoInfo) : content);
             setReadmeLoading(false);
           }
         } else {
@@ -832,7 +848,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [remoteFileTree, repositoryData?.github, repositoryData?.localClones]);
+  }, [remoteFileTree, repositoryData?.github, repositoryData?.localClones, repositoryData?.defaultBranch]);
 
   // Build city data from file trees
   useEffect(() => {
@@ -2014,7 +2030,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                         repositoryInfo={repositoryData.github ? {
                           owner: repositoryData.github.owner,
                           repo: repositoryData.github.name,
-                          branch: repositoryData.defaultBranch || 'main',
+                          branch: repositoryData.defaultBranch || undefined,
                         } : undefined}
                       />
                     </div>

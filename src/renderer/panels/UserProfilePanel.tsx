@@ -1052,14 +1052,27 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                       e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
                     }}
                     onClick={() => {
-                      if (commit.repositoryUrl) {
-                        events.emit({
-                          type: 'user-profile:open-link',
-                          source: 'UserProfilePanel',
-                          timestamp: Date.now(),
-                          payload: { url: commit.repositoryUrl, type: 'github' },
-                        });
-                      }
+                      events.emit({
+                        type: 'feed:repository-selected',
+                        source: 'UserProfilePanel',
+                        timestamp: Date.now(),
+                        payload: {
+                          repository: {
+                            path: '',
+                            name: repoName,
+                            remoteUrl: commit.repositoryUrl || `https://github.com/${commit.repository}.git`,
+                            registeredAt: new Date().toISOString(),
+                            hasViews: false,
+                            viewCount: 0,
+                            views: [],
+                            github: {
+                              id: commit.repository,
+                              owner: repoOwner,
+                              name: repoName,
+                            },
+                          } as unknown as AlexandriaEntry,
+                        },
+                      });
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
@@ -1148,14 +1161,27 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                       e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
                     }}
                     onClick={() => {
-                      if (repo.url) {
-                        events.emit({
-                          type: 'user-profile:open-link',
-                          source: 'UserProfilePanel',
-                          timestamp: Date.now(),
-                          payload: { url: repo.url, type: 'github' },
-                        });
-                      }
+                      events.emit({
+                        type: 'feed:repository-selected',
+                        source: 'UserProfilePanel',
+                        timestamp: Date.now(),
+                        payload: {
+                          repository: {
+                            path: '',
+                            name: repo.name,
+                            remoteUrl: repo.url,
+                            registeredAt: new Date().toISOString(),
+                            hasViews: false,
+                            viewCount: 0,
+                            views: [],
+                            github: {
+                              id: repo.nameWithOwner,
+                              owner: repo.owner,
+                              name: repo.name,
+                            },
+                          } as unknown as AlexandriaEntry,
+                        },
+                      });
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, marginBottom: spacing.xs }}>
