@@ -337,11 +337,11 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                   }}
                 >
                   <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <GitLogo size={24} />
+                    <Github size={24} color={theme.colors.textSecondary} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      GH CLI
+                      GitHub CLI
                     </div>
                     <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: ghCliStatus?.isAuthenticated ? theme.colors.success : theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {ghCliLoading ? '…' : ghCliStatus?.isAuthenticated ? (ghCliStatus.username ? `@${ghCliStatus.username}` : 'Connected') : 'Not connected'}
