@@ -6,7 +6,7 @@ import {
   BookOpen,
   KanbanSquare,
   Network,
-  Bot,
+  ToolCase,
   CheckCircle,
   Package,
   Activity,
@@ -74,7 +74,7 @@ export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'packageComposition', Icon: Package, label: 'Info' },
   { id: 'canvasList', Icon: Network, label: 'Stories' },
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
-  { id: 'agentsList', Icon: Bot, label: 'Skills' },
+  { id: 'agentsList', Icon: ToolCase, label: 'Skills' },
   { id: 'gitChanges', Icon: GitBranch, label: 'Files' },
   { id: 'traceList', Icon: Activity, label: 'Traces' },
 ];

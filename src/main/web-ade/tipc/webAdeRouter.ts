@@ -16,6 +16,9 @@ import type {
   GetTreeInput,
   GetRepoContributionsInput,
   GetStarredCollectionsInput,
+  CreateCollectionInput,
+  AddRepoToCollectionInput,
+  RemoveRepoFromCollectionInput,
   GetUserActivityInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
@@ -120,5 +123,23 @@ export const webAdeRouter = {
     .input<GetStarredCollectionsInput>()
     .action(async ({ input }) => {
       return webAdeService.getStarredCollections(input.includeItems ?? true);
+    }),
+
+  createCollection: t.procedure
+    .input<CreateCollectionInput>()
+    .action(async ({ input }) => {
+      return webAdeService.createCollection(input.name, input.description, input.icon);
+    }),
+
+  addRepoToCollection: t.procedure
+    .input<AddRepoToCollectionInput>()
+    .action(async ({ input }) => {
+      return webAdeService.addRepoToCollection(input.collectionId, input.owner, input.repo);
+    }),
+
+  removeRepoFromCollection: t.procedure
+    .input<RemoveRepoFromCollectionInput>()
+    .action(async ({ input }) => {
+      return webAdeService.removeRepoFromCollection(input.collectionId, input.owner, input.repo);
     }),
 };

@@ -26,6 +26,9 @@ import type {
   GetRepoContributionsInput,
   RepoContributionsResponse,
   GetStarredCollectionsInput,
+  CreateCollectionInput,
+  AddRepoToCollectionInput,
+  RemoveRepoFromCollectionInput,
   StarredCollection,
 } from '../../shared/tipc/webAdeRouterTypes';
 
@@ -60,6 +63,9 @@ export interface WebAdeClient {
 
   // Starred Collections
   getStarredCollections: (input: GetStarredCollectionsInput) => Promise<StarredCollection[]>;
+  createCollection: (input: CreateCollectionInput) => Promise<StarredCollection>;
+  addRepoToCollection: (input: AddRepoToCollectionInput) => Promise<void>;
+  removeRepoFromCollection: (input: RemoveRepoFromCollectionInput) => Promise<void>;
 }
 
 // =============================================================================
@@ -130,6 +136,9 @@ export type {
   RepoContributionsResponse,
   DailyContribution,
   GetStarredCollectionsInput,
+  CreateCollectionInput,
+  AddRepoToCollectionInput,
+  RemoveRepoFromCollectionInput,
   StarredCollection,
   StarredCollectionRepo,
   StarredCollectionUser,

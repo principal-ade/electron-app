@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Zap, X, FolderPlus, Plus } from 'lucide-react';
+import { X, FolderPlus, Plus } from 'lucide-react';
 
 export type ViewMode = 'installed' | 'browse';
 
@@ -56,7 +56,6 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
       {/* Left: Title */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Zap size={20} color={theme.colors.primary} />
           <h2
             style={{
               fontSize: '20px',

@@ -5,7 +5,7 @@ import {
   User,
   Globe,
   Radio,
-  Zap,
+  ToolCase,
   Map,
   Rss,
   GraduationCap,
@@ -139,7 +139,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           },
         ]
       : []),
-    { id: 'skills', icon: <Zap size={20} />, label: 'Skills' },
+    { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },
     { id: 'onboarding', icon: <GraduationCap size={20} />, label: 'Tutorials' },
     // Only include processes button if user has enabled it in preferences
     ...(showProcessesButton

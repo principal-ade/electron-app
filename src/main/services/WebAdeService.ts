@@ -496,6 +496,118 @@ export class WebAdeService {
   }
 
   /**
+   * Create a new starred collection
+   */
+  async createCollection(name: string, description?: string, icon?: string): Promise<StarredCollection> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/starred-collections`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, description, icon }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        if (response.status === 409) {
+          throw new Error('A collection with this name already exists');
+        }
+        throw new Error(`Failed to create collection: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json() as StarredCollection;
+    } catch (error) {
+      console.error('[WebADE] Failed to create collection:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add a repository to a starred collection
+   */
+  async addRepoToCollection(collectionId: string, owner: string, repo: string): Promise<void> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/starred-collections/${collectionId}/repos`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ owner, repo }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        if (response.status === 404) {
+          throw new Error('Collection not found');
+        }
+        if (response.status === 409) {
+          return; // Already in collection, treat as success
+        }
+        throw new Error(`Failed to add repository to collection: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('[WebADE] Failed to add repo to collection:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a repository from a starred collection
+   */
+  async removeRepoFromCollection(collectionId: string, owner: string, repo: string): Promise<void> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/starred-collections/${collectionId}/repos/${owner}/${repo}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        if (response.status === 404) {
+          return; // Not in collection, treat as success
+        }
+        throw new Error(`Failed to remove repository from collection: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('[WebADE] Failed to remove repo from collection:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get user activity (recent commits and contribution heatmap)
    * Fetches recent commit activity and contribution calendar for a GitHub user
    */

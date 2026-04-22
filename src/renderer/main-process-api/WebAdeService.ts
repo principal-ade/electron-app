@@ -126,4 +126,25 @@ export class WebAdeService {
   static async getStarredCollections(includeItems = true): Promise<StarredCollection[]> {
     return webAdeClient.getStarredCollections({ includeItems });
   }
+
+  /**
+   * Create a new starred collection
+   */
+  static async createCollection(name: string, description?: string, icon?: string): Promise<StarredCollection> {
+    return webAdeClient.createCollection({ name, description, icon });
+  }
+
+  /**
+   * Add a repository to a starred collection
+   */
+  static async addRepoToCollection(collectionId: string, owner: string, repo: string): Promise<void> {
+    return webAdeClient.addRepoToCollection({ collectionId, owner, repo });
+  }
+
+  /**
+   * Remove a repository from a starred collection
+   */
+  static async removeRepoFromCollection(collectionId: string, owner: string, repo: string): Promise<void> {
+    return webAdeClient.removeRepoFromCollection({ collectionId, owner, repo });
+  }
 }

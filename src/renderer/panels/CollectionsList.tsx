@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, Loader2, AlertCircle, Plus } from 'lucide-react';
+import { FolderGit2, Loader2, AlertCircle, Plus, Users } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { WebAdeService } from '../main-process-api/WebAdeService';
@@ -51,6 +51,13 @@ export const CollectionsList: React.FC<CollectionsListProps> = ({ events }) => {
   useEffect(() => {
     loadCollections();
   }, [loadCollections]);
+
+  useEffect(() => {
+    events.on('collections:updated', loadCollections);
+    return () => {
+      events.off('collections:updated', loadCollections);
+    };
+  }, [events, loadCollections]);
 
   // Handle collection click - emit event to open collection view
   const handleCollectionClick = useCallback(
@@ -261,8 +268,27 @@ export const CollectionsList: React.FC<CollectionsListProps> = ({ events }) => {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
                   <Icon size={24} color={theme.colors.primary} style={{ marginTop: 2 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text }}>
-                      {collection.name}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                      <div style={{ fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text }}>
+                        {collection.name}
+                      </div>
+                      {collection.ownerType === 'org' && collection.ownerLogin && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          padding: `1px ${spacing.xs}px`,
+                          backgroundColor: theme.colors.backgroundTertiary,
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: theme.radii?.[1] || 4,
+                          fontSize: 10,
+                          color: theme.colors.textSecondary,
+                          flexShrink: 0,
+                        }}>
+                          <Users size={10} />
+                          <span>{collection.ownerLogin}</span>
+                        </div>
+                      )}
                     </div>
                     {collection.description && (
                       <div

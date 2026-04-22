@@ -54,6 +54,24 @@ export interface GetStarredCollectionsInput {
   includeItems?: boolean;
 }
 
+export interface AddRepoToCollectionInput {
+  collectionId: string;
+  owner: string;
+  repo: string;
+}
+
+export interface RemoveRepoFromCollectionInput {
+  collectionId: string;
+  owner: string;
+  repo: string;
+}
+
+export interface CreateCollectionInput {
+  name: string;
+  description?: string;
+  icon?: string;
+}
+
 // =============================================================================
 // Response Types
 // =============================================================================
@@ -198,6 +216,8 @@ export interface StarredCollection {
   name: string;
   icon?: string;
   description?: string;
+  ownerType?: 'user' | 'org';
+  ownerLogin?: string;
   repos: StarredCollectionRepo[];
   users: StarredCollectionUser[];
   createdAt: string;
@@ -331,6 +351,24 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: GetStarredCollectionsInput;
     }) => Promise<StarredCollection[]>;
+  };
+  createCollection: {
+    action: (args: {
+      context: ActionContext;
+      input: CreateCollectionInput;
+    }) => Promise<StarredCollection>;
+  };
+  addRepoToCollection: {
+    action: (args: {
+      context: ActionContext;
+      input: AddRepoToCollectionInput;
+    }) => Promise<void>;
+  };
+  removeRepoFromCollection: {
+    action: (args: {
+      context: ActionContext;
+      input: RemoveRepoFromCollectionInput;
+    }) => Promise<void>;
   };
   getUserActivity: {
     action: (args: {
