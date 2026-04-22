@@ -321,7 +321,22 @@ export class GitHubAdapter {
 
   // DELETED: detectRepository, getGitRemotes, parseGitRemoteUrl - unused (0 calls)
 
-  // DELETED: checkAuthStatus - unused (0 calls)
+  async checkAuthStatus(): Promise<{ isAuthenticated: boolean; method: string; username?: string }> {
+    try {
+      const authStatusResult = await this.executeCommand(['gh', 'auth', 'status']);
+      if (!authStatusResult.success) {
+        return { isAuthenticated: false, method: 'none' };
+      }
+      const userResult = await this.executeCommand(['gh', 'api', '/user']);
+      if (userResult.success) {
+        const userMatch = authStatusResult.stderr.match(/Logged in to github\.com as ([^\s]+)/);
+        return { isAuthenticated: true, method: 'cli', username: userMatch?.[1] };
+      }
+    } catch {
+      // gh not installed or not authenticated
+    }
+    return { isAuthenticated: false, method: 'none' };
+  }
 
   async refreshData(owner: string, repo: string): Promise<void> {
     console.log(`[GitHub] Refreshing data for ${owner}/${repo}`);
@@ -2432,7 +2447,15 @@ export function registerGitHubIpcHandlers(
   };
 
   // DELETED: DETECT_REPOSITORY - unused (0 calls in renderer)
-  // DELETED: CHECK_AUTH_STATUS - unused (0 calls in renderer)
+
+  ipcMain.handle(GitHubAPIEvent.CHECK_AUTH_STATUS, async (event) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for CHECK_AUTH_STATUS');
+      return { isAuthenticated: false, method: 'none' };
+    }
+    return adapter.checkAuthStatus();
+  });
 
   ipcMain.handle(
     GitHubAPIEvent.REFRESH_DATA,

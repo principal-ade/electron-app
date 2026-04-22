@@ -45,7 +45,9 @@ export class GithubService {
     return result;
   }
 
-  // DELETED: checkAuthStatus - unused (0 calls)
+  static async checkAuthStatus(): Promise<{ isAuthenticated: boolean; method: string; username?: string }> {
+    return window.mainProcess.github.checkAuthStatus();
+  }
 
   static async getUserRepositories(
     options?: RepositoryFetchOptions,

@@ -8,7 +8,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Github } from 'lucide-react';
+import { Github, ChevronDown, ChevronUp } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -23,6 +23,7 @@ import { useTeamActivity } from '../hooks/useTeamActivity';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { useAuth } from '../hooks/useAuthState';
 import { GitService } from '../main-process-api/GitService';
+import { GithubService } from '../main-process-api/GithubService';
 
 const GitLogo: React.FC<{ size?: number }> = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -87,6 +88,20 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
       }
     })();
   }, [currentUser]);
+
+  // Auth card expand state + GH CLI status
+  const [showAuthCard, setShowAuthCard] = useState(false);
+  const [ghCliStatus, setGhCliStatus] = useState<{ isAuthenticated: boolean; username?: string } | null>(null);
+  const [ghCliLoading, setGhCliLoading] = useState(false);
+
+  useEffect(() => {
+    if (!showAuthCard || currentUser) return;
+    setGhCliLoading(true);
+    GithubService.checkAuthStatus()
+      .then(setGhCliStatus)
+      .catch(() => setGhCliStatus({ isAuthenticated: false }))
+      .finally(() => setGhCliLoading(false));
+  }, [showAuthCard, currentUser]);
 
   // Fetch coworkers and organizations data
   const { coworkers } = useOrganizationsAndCoworkers();
@@ -223,81 +238,167 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
             </div>
           </button>
         ) : (
-          <button
-            onClick={handleSignInClick}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              width: '100%',
-              padding: spacing.sm,
-              backgroundColor: 'transparent',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radii?.[1] || 4,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              textAlign: 'left',
-              position: 'relative',
-              marginBottom: spacing.xs,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-              e.currentTarget.style.borderColor = theme.colors.primary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = theme.colors.border;
-            }}
-          >
-            {/* Avatar icon */}
-            <div
+          <>
+            <button
+              onClick={() => setShowAuthCard(prev => !prev)}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                backgroundColor: theme.colors.backgroundSecondary,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
+                gap: spacing.sm,
+                width: '100%',
+                padding: spacing.sm,
+                backgroundColor: 'transparent',
+                border: `1px solid ${showAuthCard ? theme.colors.primary : theme.colors.border}`,
+                borderRadius: theme.radii?.[1] || 4,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                textAlign: 'left',
+                position: 'relative',
+                marginBottom: spacing.xs,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = showAuthCard ? theme.colors.primary : theme.colors.border;
               }}
             >
-              {localGitName
-                ? <GitLogo size={24} />
-                : <Github size={24} color={theme.colors.textSecondary} />
-              }
-            </div>
+              {/* Avatar icon */}
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {localGitName
+                  ? <GitLogo size={24} />
+                  : <Github size={24} color={theme.colors.textSecondary} />
+                }
+              </div>
 
-            {/* Info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+              {/* Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontFamily: theme.fonts.monospace,
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                    marginBottom: 2,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {localGitName || 'Sign in with GitHub'}
+                </div>
+                <div
+                  style={{
+                    fontFamily: theme.fonts.monospace,
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textSecondary,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {localGitEmail || 'Connect your account'}
+                </div>
+              </div>
+
+              {/* Expand chevron */}
+              {showAuthCard
+                ? <ChevronUp size={14} color={theme.colors.textSecondary} />
+                : <ChevronDown size={14} color={theme.colors.textSecondary} />
+              }
+            </button>
+
+            {/* Auth status card */}
+            {showAuthCard && (
               <div
                 style={{
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[1],
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: 2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: spacing.xs,
+                  padding: spacing.sm,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: theme.radii?.[1] || 4,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  marginBottom: spacing.xs,
                 }}
               >
-                {localGitName || 'Sign in with GitHub'}
+                {/* GH CLI row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                  <GitLogo size={14} />
+                  <span style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, flex: 1 }}>
+                    GH CLI
+                  </span>
+                  {ghCliLoading ? (
+                    <span style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>…</span>
+                  ) : (
+                    <span style={{
+                      fontFamily: theme.fonts.monospace,
+                      fontSize: theme.fontSizes[0],
+                      color: ghCliStatus?.isAuthenticated ? theme.colors.success : theme.colors.textSecondary,
+                      backgroundColor: ghCliStatus?.isAuthenticated ? `${theme.colors.success}22` : `${theme.colors.border}44`,
+                      padding: '1px 6px',
+                      borderRadius: 99,
+                    }}>
+                      {ghCliStatus?.isAuthenticated
+                        ? (ghCliStatus.username ? `@${ghCliStatus.username}` : 'Connected')
+                        : 'Not connected'}
+                    </span>
+                  )}
+                </div>
+
+                {/* OAuth row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                  <Github size={14} color={theme.colors.textSecondary} />
+                  <span style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, flex: 1 }}>
+                    OAuth
+                  </span>
+                  <span style={{
+                    fontFamily: theme.fonts.monospace,
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textSecondary,
+                    backgroundColor: `${theme.colors.border}44`,
+                    padding: '1px 6px',
+                    borderRadius: 99,
+                  }}>
+                    Not connected
+                  </span>
+                </div>
+
+                {/* Sign in button */}
+                <button
+                  onClick={handleSignInClick}
+                  style={{
+                    marginTop: spacing.xs,
+                    padding: `${spacing.xs}px ${spacing.sm}px`,
+                    backgroundColor: theme.colors.primary,
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: theme.radii?.[1] || 4,
+                    fontFamily: theme.fonts.monospace,
+                    fontSize: theme.fontSizes[0],
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    width: '100%',
+                  }}
+                >
+                  Sign in with GitHub
+                </button>
               </div>
-              <div
-                style={{
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[0],
-                  color: theme.colors.textSecondary,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {localGitEmail || 'Connect your account'}
-              </div>
-            </div>
-          </button>
+            )}
+          </>
         )}
 
         {/* Feed mode toggle */}
