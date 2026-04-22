@@ -21,7 +21,7 @@ import { ProjectsList, type CommitTimestamp } from './ProjectsList';
 import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCoworkers';
 import { useTeamActivity } from '../hooks/useTeamActivity';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
-import { useAuth } from '../hooks/useAuthState';
+import { useAuthState } from '../hooks/useAuthState';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
 
@@ -58,7 +58,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
   activityCommits = [],
 }) => {
   const { theme } = useTheme();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, login } = useAuthState();
 
   const spacing = {
     xs: theme.space?.[1] || 4,
@@ -119,15 +119,6 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
       });
     }
   }, [currentUser, events]);
-
-  const handleSignInClick = useCallback(() => {
-    events.emit({
-      type: 'panel:switch',
-      source: 'feed-left-panel',
-      timestamp: Date.now(),
-      payload: { view: 'auth' },
-    });
-  }, [events]);
 
   return (
     <div
@@ -349,15 +340,29 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                   </div>
                 </div>
 
-                {/* OAuth card */}
-                <div
+                {/* OAuth card — clickable to trigger OAuth login */}
+                <button
+                  onClick={() => login()}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: spacing.sm,
                     padding: spacing.sm,
+                    backgroundColor: 'transparent',
                     border: `1px solid ${theme.colors.border}`,
                     borderRadius: theme.radii?.[1] || 4,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                    width: '100%',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = theme.colors.border;
                   }}
                 >
                   <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -369,37 +374,6 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                     </div>
                     <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       Sign in
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sign in card */}
-                <button
-                  onClick={handleSignInClick}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: spacing.sm,
-                    padding: spacing.sm,
-                    backgroundColor: 'transparent',
-                    border: `1px solid ${theme.colors.primary}`,
-                    borderRadius: theme.radii?.[1] || 4,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                >
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Github size={24} color={theme.colors.primary} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.primary, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      Sign in with GitHub
-                    </div>
-                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      Connect your account
                     </div>
                   </div>
                 </button>
