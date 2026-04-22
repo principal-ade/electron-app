@@ -8,7 +8,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Github, ChevronDown, ChevronUp } from 'lucide-react';
+import { Github, ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -95,7 +95,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
   const [ghCliLoading, setGhCliLoading] = useState(false);
 
   useEffect(() => {
-    if (!showAuthCard || currentUser) return;
+    if (!showAuthCard) return;
     setGhCliLoading(true);
     GithubService.checkAuthStatus()
       .then(setGhCliStatus)
@@ -144,90 +144,126 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
       >
         {/* Current User Section / Sign In */}
         {currentUser ? (
-          <button
-            onClick={handleCurrentUserClick}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              width: '100%',
-              padding: spacing.sm,
-              backgroundColor: 'transparent',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radii?.[1] || 4,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              textAlign: 'left',
-              position: 'relative',
-              marginBottom: spacing.xs,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-              e.currentTarget.style.borderColor = theme.colors.primary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = theme.colors.border;
-            }}
-          >
-            {/* Avatar with activity indicator */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <img
-                src={currentUser.avatarUrl}
-                alt={currentUser.login}
+          <>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.sm,
+                width: '100%',
+                border: `1px solid ${showAuthCard ? theme.colors.primary : theme.colors.border}`,
+                borderRadius: theme.radii?.[1] || 4,
+                marginBottom: spacing.xs,
+                overflow: 'hidden',
+              }}
+            >
+              {/* Profile click area */}
+              <button
+                onClick={handleCurrentUserClick}
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  flex: 1,
+                  minWidth: 0,
+                  padding: spacing.sm,
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'background-color 0.15s ease',
                 }}
-              />
-              {activeUsers.has(currentUser.login) && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: -2,
-                    right: -2,
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    backgroundColor: theme.colors.success,
-                    border: `2px solid ${theme.colors.background}`,
-                  }}
-                  title="Recent activity"
-                />
-              )}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                {/* Avatar with activity indicator */}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <img
+                    src={currentUser.avatarUrl}
+                    alt={currentUser.login}
+                    style={{ width: 40, height: 40, borderRadius: '50%' }}
+                  />
+                  {activeUsers.has(currentUser.login) && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: -2,
+                        right: -2,
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.success,
+                        border: `2px solid ${theme.colors.background}`,
+                      }}
+                      title="Recent activity"
+                    />
+                  )}
+                </div>
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {currentUser.name || currentUser.login}
+                  </div>
+                  <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {currentUser.name ? `@${currentUser.login}` : 'You'}
+                  </div>
+                </div>
+              </button>
+
+              {/* Settings toggle */}
+              <button
+                onClick={() => setShowAuthCard(prev => !prev)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: spacing.sm,
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderLeft: `1px solid ${theme.colors.border}`,
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'background-color 0.15s ease',
+                  alignSelf: 'stretch',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                title="Auth settings"
+              >
+                <Settings size={14} color={showAuthCard ? theme.colors.primary : theme.colors.textSecondary} />
+              </button>
             </div>
 
-            {/* Info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[1],
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: 2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {currentUser.name || currentUser.login}
+            {/* Auth status cards (signed-in) */}
+            {showAuthCard && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, marginBottom: spacing.xs }}>
+                {/* GitHub CLI card */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radii?.[1] || 4 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Github size={24} color={theme.colors.textSecondary} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>GitHub CLI</div>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: ghCliStatus?.isAuthenticated ? theme.colors.success : theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {ghCliLoading ? '…' : ghCliStatus?.isAuthenticated ? (ghCliStatus.username ? `@${ghCliStatus.username}` : 'Connected') : 'Not connected'}
+                    </div>
+                  </div>
+                </div>
+                {/* GitHub OAuth card */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radii?.[1] || 4 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Github size={24} color={theme.colors.textSecondary} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>GitHub OAuth</div>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.success, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {currentUser.name ? `@${currentUser.login}` : 'Connected'}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div
-                style={{
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[0],
-                  color: theme.colors.textSecondary,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {currentUser.name ? `@${currentUser.login}` : 'You'}
-              </div>
-            </div>
-          </button>
+            )}
+          </>
         ) : (
           <>
             <button
