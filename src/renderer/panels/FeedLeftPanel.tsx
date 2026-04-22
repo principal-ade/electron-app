@@ -321,80 +321,87 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
               }
             </button>
 
-            {/* Auth status card */}
+            {/* Auth status cards */}
             {showAuthCard && (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: spacing.xs,
-                  padding: spacing.sm,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: theme.radii?.[1] || 4,
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  marginBottom: spacing.xs,
-                }}
-              >
-                {/* GH CLI row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                  <GitLogo size={14} />
-                  <span style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, flex: 1 }}>
-                    GH CLI
-                  </span>
-                  {ghCliLoading ? (
-                    <span style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>…</span>
-                  ) : (
-                    <span style={{
-                      fontFamily: theme.fonts.monospace,
-                      fontSize: theme.fontSizes[0],
-                      color: ghCliStatus?.isAuthenticated ? theme.colors.success : theme.colors.textSecondary,
-                      backgroundColor: ghCliStatus?.isAuthenticated ? `${theme.colors.success}22` : `${theme.colors.border}44`,
-                      padding: '1px 6px',
-                      borderRadius: 99,
-                    }}>
-                      {ghCliStatus?.isAuthenticated
-                        ? (ghCliStatus.username ? `@${ghCliStatus.username}` : 'Connected')
-                        : 'Not connected'}
-                    </span>
-                  )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, marginBottom: spacing.xs }}>
+
+                {/* GH CLI card */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                    padding: spacing.sm,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.radii?.[1] || 4,
+                  }}
+                >
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <GitLogo size={24} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      GH CLI
+                    </div>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: ghCliStatus?.isAuthenticated ? theme.colors.success : theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {ghCliLoading ? '…' : ghCliStatus?.isAuthenticated ? (ghCliStatus.username ? `@${ghCliStatus.username}` : 'Connected') : 'Not connected'}
+                    </div>
+                  </div>
                 </div>
 
-                {/* OAuth row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                  <Github size={14} color={theme.colors.textSecondary} />
-                  <span style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, flex: 1 }}>
-                    OAuth
-                  </span>
-                  <span style={{
-                    fontFamily: theme.fonts.monospace,
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.textSecondary,
-                    backgroundColor: `${theme.colors.border}44`,
-                    padding: '1px 6px',
-                    borderRadius: 99,
-                  }}>
-                    Not connected
-                  </span>
+                {/* OAuth card */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                    padding: spacing.sm,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.radii?.[1] || 4,
+                  }}
+                >
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Github size={24} color={theme.colors.textSecondary} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      OAuth
+                    </div>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      Not connected
+                    </div>
+                  </div>
                 </div>
 
-                {/* Sign in button */}
+                {/* Sign in card */}
                 <button
                   onClick={handleSignInClick}
                   style={{
-                    marginTop: spacing.xs,
-                    padding: `${spacing.xs}px ${spacing.sm}px`,
-                    backgroundColor: theme.colors.primary,
-                    color: '#fff',
-                    border: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                    padding: spacing.sm,
+                    backgroundColor: 'transparent',
+                    border: `1px solid ${theme.colors.primary}`,
                     borderRadius: theme.radii?.[1] || 4,
-                    fontFamily: theme.fonts.monospace,
-                    fontSize: theme.fontSizes[0],
-                    fontWeight: 600,
                     cursor: 'pointer',
-                    width: '100%',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
                   }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
-                  Sign in with GitHub
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Github size={24} color={theme.colors.primary} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.primary, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      Sign in with GitHub
+                    </div>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      Connect your account
+                    </div>
+                  </div>
                 </button>
               </div>
             )}
