@@ -24,6 +24,7 @@ import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { useAuthState } from '../hooks/useAuthState';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
+import { GitGlobalConfigModal } from '../components/GitGlobalConfigModal';
 
 const GitLogo: React.FC<{ size?: number }> = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -87,6 +88,9 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
       }
     })();
   }, [currentUser]);
+
+  // Git config modal
+  const [isGitConfigModalOpen, setIsGitConfigModalOpen] = useState(false);
 
   // Auth card expand state + GH CLI status
   const [showAuthCard, setShowAuthCard] = useState(false);
@@ -299,6 +303,31 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                       {localGitEmail || 'No global identity set'}
                     </div>
                   </div>
+                  <button
+                    onClick={() => setIsGitConfigModalOpen(true)}
+                    style={{
+                      flexShrink: 0,
+                      padding: `2px ${spacing.sm}px`,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.radii?.[1] || 4,
+                      fontFamily: theme.fonts.monospace,
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textSecondary,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                      e.currentTarget.style.color = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                    }}
+                  >
+                    Config
+                  </button>
                 </div>
               </div>
             )}
@@ -452,6 +481,46 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                     </div>
                   </div>
                 </button>
+
+                {/* Git local identity card */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radii?.[1] || 4 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <GitLogo size={24} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {localGitName || 'Git'}
+                    </div>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {localGitEmail || 'No global identity set'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsGitConfigModalOpen(true)}
+                    style={{
+                      flexShrink: 0,
+                      padding: `2px ${spacing.sm}px`,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.radii?.[1] || 4,
+                      fontFamily: theme.fonts.monospace,
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textSecondary,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                      e.currentTarget.style.color = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                    }}
+                  >
+                    Config
+                  </button>
+                </div>
               </div>
             )}
           </>
@@ -460,8 +529,8 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
         {/* Feed mode toggle */}
         <SegmentedControl
           options={[
-            { value: 'organizations', label: 'Team' },
             { value: 'my-activity', label: 'My Activity' },
+            { value: 'organizations', label: 'Team' },
             { value: 'collections', label: 'Collections' },
           ]}
           value={feedMode}
@@ -579,6 +648,11 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
           </div>
         </div>
       </div>
+
+      <GitGlobalConfigModal
+        isOpen={isGitConfigModalOpen}
+        onClose={() => setIsGitConfigModalOpen(false)}
+      />
     </div>
   );
 };

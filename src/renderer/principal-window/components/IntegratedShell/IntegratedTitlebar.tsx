@@ -8,10 +8,9 @@ import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
-import { FolderOpen, MessageCircle, Layers, Settings } from 'lucide-react';
+import { FolderOpen, MessageCircle, Layers } from 'lucide-react';
 import { ShellService } from '../../../main-process-api/ShellService';
 import { WindowService } from '../../../main-process-api/WindowService';
-import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 
 declare global {
@@ -56,7 +55,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   const [showPullMailbox, setShowPullMailbox] = useState(false);
   const [showOpenThreadButton, setShowOpenThreadButton] = useState(false);
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
-  const [isGitConfigModalOpen, setIsGitConfigModalOpen] = useState(false);
   const { theme } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
@@ -317,36 +315,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             Open Thread
           </button>
         )}
-        {/* Git Config button */}
-        <button
-          onClick={() => setIsGitConfigModalOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 12px',
-            borderRadius: '6px',
-            backgroundColor: theme.colors.backgroundSecondary,
-            color: theme.colors.text,
-            border: `1px solid ${theme.colors.border}`,
-            cursor: 'pointer',
-            fontSize: theme.fontSizes[1],
-            fontWeight: 500,
-            fontFamily: theme.fonts.body,
-            transition: 'all 0.2s',
-            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-          }}
-          title="Git Global Configuration"
-        >
-          <Settings size={14} />
-          Git Config
-        </button>
         {/* Community Discord button */}
         <button
           onClick={() => ShellService.openExternal('https://discord.gg/G3qdcC2DXq')}
@@ -510,11 +478,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         </div>
       )}
 
-      {/* Git Global Config Modal */}
-      <GitGlobalConfigModal
-        isOpen={isGitConfigModalOpen}
-        onClose={() => setIsGitConfigModalOpen(false)}
-      />
     </div>
   );
 };
