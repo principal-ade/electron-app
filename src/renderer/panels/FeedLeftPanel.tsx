@@ -8,7 +8,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Github, User } from 'lucide-react';
+import { Github } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -23,6 +23,12 @@ import { useTeamActivity } from '../hooks/useTeamActivity';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { useAuth } from '../hooks/useAuthState';
 import { GitService } from '../main-process-api/GitService';
+
+const GitLogo: React.FC<{ size?: number }> = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M90.156 41.965L50.036 1.848a5.918 5.918 0 0 0-8.372 0l-8.328 8.332 10.566 10.566a7.03 7.03 0 0 1 7.23 1.684 7.043 7.043 0 0 1 1.673 7.277l10.183 10.184a7.026 7.026 0 0 1 7.278 1.672 7.04 7.04 0 0 1 0 9.957 7.045 7.045 0 0 1-9.961 0 7.038 7.038 0 0 1-1.532-7.66l-9.5-9.497V59.36a7.04 7.04 0 0 1 1.86 11.29 7.04 7.04 0 0 1-9.957 0 7.04 7.04 0 0 1 0-9.958 7.034 7.034 0 0 1 2.308-1.539V33.926a7.001 7.001 0 0 1-2.308-1.535 7.049 7.049 0 0 1-1.516-7.7L29.242 14.273 1.734 41.777a5.918 5.918 0 0 0 0 8.371l40.12 40.118a5.918 5.918 0 0 0 8.371 0l39.931-39.934a5.925 5.925 0 0 0 0-8.367" fill="#F05032" />
+  </svg>
+);
 
 export interface FeedLeftPanelProps {
   /** List of repositories */
@@ -257,7 +263,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
               }}
             >
               {localGitName
-                ? <User size={24} color={theme.colors.textSecondary} />
+                ? <GitLogo size={24} />
                 : <Github size={24} color={theme.colors.textSecondary} />
               }
             </div>
