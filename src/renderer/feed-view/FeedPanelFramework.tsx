@@ -344,8 +344,7 @@ const RepositoryProfileTabContent: React.FC<{
   // Subscribe to Alexandria repository changes to update profile in real-time
   React.useEffect(() => {
     const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
-      // Only handle update events
-      if (event.type !== AlexandriaEventType.UPDATED || !event.repository) {
+      if ((event.type !== AlexandriaEventType.UPDATED && event.type !== AlexandriaEventType.ADDED) || !event.repository) {
         return;
       }
 
@@ -358,14 +357,23 @@ const RepositoryProfileTabContent: React.FC<{
 
       if (isMatch) {
         console.info('[RepositoryProfileTab] Repository updated, refreshing profile data:', event.repository.name);
-        // Trigger a re-fetch by incrementing the refresh counter
-        // This will cause the main useEffect to re-run
         setRefreshTrigger(prev => prev + 1);
       }
     });
 
     return unsubscribe;
   }, [repository]);
+
+  // Refresh when a clone is added from the profile panel
+  React.useEffect(() => {
+    const handleCloneCompleted = () => {
+      setRefreshTrigger(prev => prev + 1);
+    };
+    events.on('repository-profile:clone-completed', handleCloneCompleted);
+    return () => {
+      events.off('repository-profile:clone-completed', handleCloneCompleted);
+    };
+  }, [events]);
 
   // Create minimal context and actions
   // Memoize to prevent unnecessary re-renders and re-fetching

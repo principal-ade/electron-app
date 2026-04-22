@@ -32,6 +32,7 @@ import {
   FolderPlus,
   Check,
   Loader2,
+  Download,
 } from 'lucide-react';
 import { ArchitectureMapHighlightLayers, type HighlightLayer, createFileColorHighlightLayers } from '@principal-ai/file-city-react';
 import {
@@ -52,6 +53,7 @@ import { ShellService } from '../main-process-api/ShellService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
+import { GitCloneModal } from '../components/GitCloneModal';
 
 export interface RepositoryProfileData {
   name: string;
@@ -478,6 +480,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // Track which button is currently bouncing (by clone path)
   const [bouncingButton, setBouncingButton] = useState<string | null>(null);
+
+  // Clone modal state for repos without local clones
+  const [showCloneModal, setShowCloneModal] = useState(false);
 
   // Fetch branch status for all local clones
   useEffect(() => {
@@ -1909,6 +1914,48 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               {repositoryData.name}
             </h2>
           </div>
+          {!repositoryData.isLocal && (
+            <div style={{ marginTop: spacing.sm }}>
+              <button
+                onClick={() => setShowCloneModal(true)}
+                style={{
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  border: 'none',
+                  borderRadius: 6,
+                  background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}dd)`,
+                  color: theme.colors.background,
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  fontWeight: theme.fontWeights?.medium ?? 500,
+                  boxShadow: `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`;
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = `0 1px 4px ${theme.colors.primary}30`;
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
+                }}
+              >
+                <Download size={12} />
+                Clone
+              </button>
+            </div>
+          )}
           {repositoryData.isLocal && (
             <div
               style={{
@@ -2845,6 +2892,15 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           animation: bounce 2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
         }
       `}</style>
+      <GitCloneModal
+        isOpen={showCloneModal}
+        onClose={() => setShowCloneModal(false)}
+        initialUrl={repositoryData?.htmlUrl ?? undefined}
+        onRepositoryAdded={() => {
+          setShowCloneModal(false);
+          events.emit({ type: 'repository-profile:clone-completed', source: 'repository-profile-panel', timestamp: Date.now(), payload: {} });
+        }}
+      />
     </div>
   );
 };
