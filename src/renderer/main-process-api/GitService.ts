@@ -880,23 +880,8 @@ export class GitService {
    */
   static async getContributorCount(directory: string): Promise<number> {
     console.info(`[GitService] Getting contributor count for: ${directory}`);
-    try {
-      // Use git shortlog to get unique author count
-      // -s = summary (count only), -n = sort by number
-      const result = await window.mainProcess.git.execCommand(directory, [
-        'shortlog',
-        '-s',
-        '-n',
-        '--all',
-      ]);
-
-      // Count the number of lines (each line is a contributor)
-      const lines = result.stdout.trim().split('\n').filter(Boolean);
-      return lines.length;
-    } catch (error) {
-      console.error('[GitService] Failed to get contributor count:', error);
-      return 0;
-    }
+    const contributors = await GitService.getContributors(directory);
+    return contributors.length;
   }
 
   /**
@@ -907,27 +892,50 @@ export class GitService {
   static async getContributors(directory: string): Promise<Array<{ name: string; commits: number }>> {
     console.info(`[GitService] Getting contributors for: ${directory}`);
     try {
-      // Use git shortlog to get contributors with commit counts
-      // -s = summary (count only), -n = sort by number, -e = include email
       const result = await window.mainProcess.git.execCommand(directory, [
         'shortlog',
         '-s',
         '-n',
+        '-e',
         '--all',
       ]);
 
-      // Parse the output: "  count\tAuthor Name"
+      // Parse "  count\tAuthor Name <email>"
+      const emailMap = new Map<string, { name: string; commits: number }>();
+      const noEmailList: Array<{ name: string; commits: number }> = [];
+
       const lines = result.stdout.trim().split('\n').filter(Boolean);
-      return lines.map(line => {
-        const match = line.trim().match(/^(\d+)\s+(.+)$/);
+      for (const line of lines) {
+        const match = line.trim().match(/^(\d+)\s+(.+?)\s+<([^>]*)>$/);
         if (match) {
-          return {
-            commits: parseInt(match[1], 10),
-            name: match[2],
-          };
+          const commits = parseInt(match[1], 10);
+          const name = match[2];
+          const email = match[3].toLowerCase();
+
+          if (email) {
+            const existing = emailMap.get(email);
+            if (existing) {
+              // Keep the name with more commits, accumulate total
+              emailMap.set(email, {
+                name: existing.commits >= commits ? existing.name : name,
+                commits: existing.commits + commits,
+              });
+            } else {
+              emailMap.set(email, { name, commits });
+            }
+          } else {
+            noEmailList.push({ name, commits });
+          }
+        } else {
+          // Fallback for lines without email
+          const fallback = line.trim().match(/^(\d+)\s+(.+)$/);
+          if (fallback) {
+            noEmailList.push({ name: fallback[2], commits: parseInt(fallback[1], 10) });
+          }
         }
-        return { commits: 0, name: line };
-      });
+      }
+
+      return [...emailMap.values(), ...noEmailList].sort((a, b) => b.commits - a.commits);
     } catch (error) {
       console.error('[GitService] Failed to get contributors:', error);
       return [];

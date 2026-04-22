@@ -732,7 +732,11 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
+                  color: theme.colors.text,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '24px',
                 }}>
                   {formatNumber(commitsThisYear)}
                 </div>
@@ -749,7 +753,11 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
+                  color: theme.colors.text,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '24px',
                 }}>
                   {formatNumber(displayData.totalRepos)}
                 </div>
@@ -766,7 +774,11 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
+                  color: theme.colors.text,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '24px',
                 }}>
                   {formatNumber(displayData.followers)}
                 </div>
@@ -783,7 +795,11 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
+                  color: theme.colors.text,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '24px',
                 }}>
                   {formatNumber(displayData.following)}
                 </div>

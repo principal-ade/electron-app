@@ -599,7 +599,11 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
+                  color: theme.colors.text,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '24px',
                 }}>
                   {formatNumber(displayData.publicRepos)}
                 </div>
@@ -616,7 +620,11 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
+                  color: theme.colors.text,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '24px',
                 }}>
                   {formatNumber(displayData.members)}
                 </div>
@@ -633,7 +641,11 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
+                  color: theme.colors.text,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '24px',
                 }}>
                   {formatNumber(displayData.totalCommits)}
                 </div>

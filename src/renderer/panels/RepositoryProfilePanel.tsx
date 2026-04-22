@@ -29,6 +29,9 @@ import {
   Eye,
   EyeClosed,
   Star,
+  FolderPlus,
+  Check,
+  Loader2,
 } from 'lucide-react';
 import { ArchitectureMapHighlightLayers, type HighlightLayer, createFileColorHighlightLayers } from '@principal-ai/file-city-react';
 import {
@@ -42,10 +45,13 @@ import { DocumentView } from 'themed-markdown';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { LocalClone } from '../../shared/types/repository.types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
+import * as LucideIcons from 'lucide-react';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
 import { ShellService } from '../main-process-api/ShellService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { WebAdeService } from '../main-process-api/WebAdeService';
+import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 export interface RepositoryProfileData {
   name: string;
@@ -452,6 +458,20 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   // Star state
   const [isStarred, setIsStarred] = useState(false);
   const [isStarLoading, setIsStarLoading] = useState(false);
+
+  // Collections dropdown state
+  const [showCollectionsDropdown, setShowCollectionsDropdown] = useState(false);
+  const [userCollections, setUserCollections] = useState<StarredCollection[]>([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
+  const [repoCollectionIds, setRepoCollectionIds] = useState<Set<string>>(new Set());
+  const [togglingCollectionId, setTogglingCollectionId] = useState<string | null>(null);
+  const collectDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Create collection modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [createCollectionLoading, setCreateCollectionLoading] = useState(false);
+  const [createCollectionError, setCreateCollectionError] = useState<string | null>(null);
 
   // Suffix layers visibility toggle
   const [showSuffixLayers, setShowSuffixLayers] = useState(true);
@@ -1265,6 +1285,121 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     }
   };
 
+  // Close collections dropdown on outside click
+  useEffect(() => {
+    if (!showCollectionsDropdown) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (collectDropdownRef.current && !collectDropdownRef.current.contains(e.target as Node)) {
+        setShowCollectionsDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCollectionsDropdown]);
+
+  const handleOpenCollectionsDropdown = async () => {
+    if (!repositoryData?.github) return;
+
+    if (showCollectionsDropdown) {
+      setShowCollectionsDropdown(false);
+      return;
+    }
+
+    setShowCollectionsDropdown(true);
+    setCollectionsLoading(true);
+    try {
+      const collections = await WebAdeService.getStarredCollections(true);
+      setUserCollections(collections);
+      const ids = new Set<string>();
+      for (const col of collections) {
+        if (col.repos.some(r => r.owner === repositoryData.github!.owner && r.repo === repositoryData.github!.name)) {
+          ids.add(col.id);
+        }
+      }
+      setRepoCollectionIds(ids);
+    } catch (err) {
+      console.error('Failed to load collections:', err);
+    } finally {
+      setCollectionsLoading(false);
+    }
+  };
+
+  const handleToggleCollection = async (collectionId: string) => {
+    if (!repositoryData?.github || togglingCollectionId) return;
+
+    const isInCollection = repoCollectionIds.has(collectionId);
+    setTogglingCollectionId(collectionId);
+
+    const newIds = new Set(repoCollectionIds);
+    if (isInCollection) {
+      newIds.delete(collectionId);
+    } else {
+      newIds.add(collectionId);
+    }
+    setRepoCollectionIds(newIds);
+
+    try {
+      if (isInCollection) {
+        await WebAdeService.removeRepoFromCollection(collectionId, repositoryData.github.owner, repositoryData.github.name);
+      } else {
+        await WebAdeService.addRepoToCollection(collectionId, repositoryData.github.owner, repositoryData.github.name);
+      }
+    } catch (err) {
+      console.error('Failed to toggle collection:', err);
+      setRepoCollectionIds(repoCollectionIds);
+    } finally {
+      setTogglingCollectionId(null);
+    }
+  };
+
+  const handleOpenCreateModal = () => {
+    setShowCollectionsDropdown(false);
+    setNewCollectionName('');
+    setCreateCollectionError(null);
+    setShowCreateModal(true);
+  };
+
+  const handleCreateCollection = async () => {
+    const name = newCollectionName.trim();
+    if (!name) {
+      setCreateCollectionError('Name is required');
+      return;
+    }
+    if (!repositoryData?.github) return;
+
+    setCreateCollectionLoading(true);
+    setCreateCollectionError(null);
+    try {
+      const created = await WebAdeService.createCollection(name);
+      await WebAdeService.addRepoToCollection(created.id, repositoryData.github.owner, repositoryData.github.name);
+      const newCollection: StarredCollection = {
+        ...created,
+        repos: [{ owner: repositoryData.github.owner, repo: repositoryData.github.name, addedAt: new Date().toISOString() }],
+      };
+      setUserCollections(prev => [...prev, newCollection]);
+      setRepoCollectionIds(prev => new Set([...prev, created.id]));
+      setShowCreateModal(false);
+      setNewCollectionName('');
+      events.emit({ type: 'collections:updated', source: 'repository-profile-panel', timestamp: Date.now(), payload: {} });
+    } catch (err) {
+      setCreateCollectionError(err instanceof Error ? err.message : 'Failed to create collection');
+    } finally {
+      setCreateCollectionLoading(false);
+    }
+  };
+
+  const getCollectionIcon = (iconName?: string): React.ComponentType<{ size?: number; color?: string }> => {
+    if (!iconName) return FolderGit2;
+    const pascalCase = iconName
+      .split(/[-_]/)
+      .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join('');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (LucideIcons as any)[pascalCase] || FolderGit2;
+  };
+
   // Empty state - no repository selected
   if (!repositoryData) {
     return (
@@ -1445,7 +1580,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
+                  color: theme.colors.text,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '24px',
                 }}>
                   {formatNumber(repositoryData.contributors)}
                 </div>
@@ -1462,7 +1601,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
+                  color: theme.colors.text,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '24px',
                 }}>
                   {formatNumber(repositoryData.totalCommits)}
                 </div>
@@ -1479,7 +1622,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
+                  color: theme.colors.text,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '24px',
                 }}>
                   {getRepositoryAge(repositoryData.createdAt)}
                 </div>
@@ -1555,6 +1702,166 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   }}>
                     {isStarred ? 'starred' : 'star'}
                   </div>
+                </div>
+              )}
+
+              {/* Collect Button */}
+              {repositoryData.github && (
+                <div
+                  ref={collectDropdownRef}
+                  style={{
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    minWidth: '65px',
+                    position: 'relative',
+                  }}
+                  onClick={handleOpenCollectionsDropdown}
+                >
+                  <div style={{
+                    fontSize: theme.fontSizes[3],
+                    fontWeight: theme.fontWeights?.semibold ?? 600,
+                    fontFamily: theme.fonts?.body,
+                    color: repoCollectionIds.size > 0 ? theme.colors.primary : theme.colors.text,
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}>
+                    <FolderPlus size={24} />
+                  </div>
+                  <div style={{
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.textSecondary,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {repoCollectionIds.size > 0 ? `${repoCollectionIds.size} lists` : 'collect'}
+                  </div>
+
+                  {/* Collections Dropdown */}
+                  {showCollectionsDropdown && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 'calc(100% + 8px)',
+                        zIndex: 100,
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.radii?.[1] || 4,
+                        width: 240,
+                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+                        textAlign: 'left',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* Scrollable collection list */}
+                      <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                        {collectionsLoading ? (
+                          <div style={{
+                            padding: 12,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: theme.colors.textSecondary,
+                            gap: 8,
+                          }}>
+                            <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                            <span style={{ fontSize: theme.fontSizes[0] }}>Loading...</span>
+                          </div>
+                        ) : userCollections.length === 0 ? (
+                          <div style={{
+                            padding: 12,
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textSecondary,
+                            textAlign: 'center',
+                          }}>
+                            No collections yet
+                          </div>
+                        ) : (
+                          userCollections.map((collection, idx) => {
+                            const isInCollection = repoCollectionIds.has(collection.id);
+                            const isToggling = togglingCollectionId === collection.id;
+                            const CollectionIcon = getCollectionIcon(collection.icon);
+                            return (
+                              <div
+                                key={collection.id}
+                                onClick={() => handleToggleCollection(collection.id)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 8,
+                                  padding: '8px 12px',
+                                  cursor: isToggling ? 'not-allowed' : 'pointer',
+                                  opacity: isToggling ? 0.6 : 1,
+                                  borderBottom: idx < userCollections.length - 1
+                                    ? `1px solid ${theme.colors.border}`
+                                    : 'none',
+                                  transition: 'background-color 0.1s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isToggling) e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
+                              >
+                                <CollectionIcon size={14} color={theme.colors.primary} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{
+                                    fontSize: theme.fontSizes[0],
+                                    color: theme.colors.text,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}>
+                                    {collection.name}
+                                  </div>
+                                  {collection.ownerType === 'org' && collection.ownerLogin && (
+                                    <div style={{
+                                      fontSize: 10,
+                                      color: theme.colors.textSecondary,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 2,
+                                    }}>
+                                      <Users size={10} />
+                                      {collection.ownerLogin}
+                                    </div>
+                                  )}
+                                </div>
+                                {isInCollection && (
+                                  <Check size={14} color={theme.colors.primary} />
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* New collection footer */}
+                      <div
+                        style={{
+                          borderTop: `1px solid ${theme.colors.border}`,
+                          padding: '8px 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          cursor: 'pointer',
+                          transition: 'background-color 0.1s ease',
+                          borderRadius: `0 0 ${theme.radii?.[1] || 4}px ${theme.radii?.[1] || 4}px`,
+                        }}
+                        onClick={handleOpenCreateModal}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <FolderPlus size={14} color={theme.colors.primary} />
+                        <span style={{ fontSize: theme.fontSizes[0], color: theme.colors.text }}>
+                          New collection
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2361,6 +2668,129 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           )}
         </div>
       </div>
+
+      {/* Create Collection Modal */}
+      {showCreateModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }}
+          onClick={() => { if (!createCollectionLoading) setShowCreateModal(false); }}
+        >
+          <div
+            style={{
+              backgroundColor: theme.colors.background,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radii?.[2] || 8,
+              padding: 24,
+              width: 360,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights?.semibold ?? 600,
+              fontFamily: theme.fonts?.body,
+              color: theme.colors.text,
+              marginBottom: 16,
+            }}>
+              New collection
+            </div>
+
+            <input
+              autoFocus
+              type="text"
+              placeholder="Collection name"
+              value={newCollectionName}
+              onChange={(e) => {
+                setNewCollectionName(e.target.value);
+                if (createCollectionError) setCreateCollectionError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateCollection();
+                if (e.key === 'Escape') { if (!createCollectionLoading) setShowCreateModal(false); }
+              }}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '8px 12px',
+                backgroundColor: theme.colors.backgroundSecondary,
+                border: `1px solid ${createCollectionError ? theme.colors.error : theme.colors.border}`,
+                borderRadius: theme.radii?.[1] || 4,
+                color: theme.colors.text,
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts?.body,
+                outline: 'none',
+              }}
+            />
+
+            {createCollectionError && (
+              <div style={{
+                marginTop: 6,
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.error,
+              }}>
+                {createCollectionError}
+              </div>
+            )}
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: 8,
+              marginTop: 20,
+            }}>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                disabled={createCollectionLoading}
+                style={{
+                  padding: '6px 16px',
+                  backgroundColor: 'transparent',
+                  color: theme.colors.textSecondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: theme.radii?.[1] || 4,
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  cursor: createCollectionLoading ? 'not-allowed' : 'pointer',
+                  opacity: createCollectionLoading ? 0.5 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateCollection}
+                disabled={createCollectionLoading || !newCollectionName.trim()}
+                style={{
+                  padding: '6px 16px',
+                  backgroundColor: theme.colors.primary,
+                  color: theme.colors.background,
+                  border: 'none',
+                  borderRadius: theme.radii?.[1] || 4,
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  cursor: (createCollectionLoading || !newCollectionName.trim()) ? 'not-allowed' : 'pointer',
+                  opacity: (createCollectionLoading || !newCollectionName.trim()) ? 0.5 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                {createCollectionLoading && (
+                  <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                )}
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add keyframe animations */}
       <style>{`
