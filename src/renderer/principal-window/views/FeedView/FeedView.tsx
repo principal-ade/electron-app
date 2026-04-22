@@ -100,7 +100,18 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         });
       },
     );
-    return () => { unsubRepoSelected(); };
+    const unsubUserSelected = principalEvents.on<{ username: string }>(
+      'user:profile-selected',
+      (event) => {
+        events.emit({
+          type: 'user:profile-selected',
+          source: event.source,
+          timestamp: event.timestamp,
+          payload: event.payload,
+        });
+      },
+    );
+    return () => { unsubRepoSelected(); unsubUserSelected(); };
   }, [events, principalEvents]);
 
   // State for local repositories
