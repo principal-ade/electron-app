@@ -329,8 +329,12 @@ export class GitHubAdapter {
       }
       const userResult = await this.executeCommand(['gh', 'api', '/user']);
       if (userResult.success) {
-        const userMatch = authStatusResult.stderr.match(/Logged in to github\.com as ([^\s]+)/);
-        return { isAuthenticated: true, method: 'cli', username: userMatch?.[1] };
+        try {
+          const userData = JSON.parse(userResult.stdout);
+          return { isAuthenticated: true, method: 'cli', username: userData.login };
+        } catch {
+          return { isAuthenticated: true, method: 'cli' };
+        }
       }
     } catch {
       // gh not installed or not authenticated
