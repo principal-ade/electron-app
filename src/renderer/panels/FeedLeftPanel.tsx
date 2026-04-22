@@ -58,7 +58,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
   activityCommits = [],
 }) => {
   const { theme } = useTheme();
-  const { user: currentUser, login } = useAuthState();
+  const { user: currentUser, login, logout } = useAuthState();
 
   const spacing = {
     xs: theme.space?.[1] || 4,
@@ -236,6 +236,44 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
             {/* Auth status cards (signed-in) */}
             {showAuthCard && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, marginBottom: spacing.xs }}>
+                {/* GitHub OAuth card with sign out */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radii?.[1] || 4 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Github size={24} color={theme.colors.textSecondary} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>GitHub OAuth</div>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.success, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {currentUser.name ? `@${currentUser.login}` : 'Connected'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => logout()}
+                    style={{
+                      flexShrink: 0,
+                      padding: `2px ${spacing.sm}px`,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.radii?.[1] || 4,
+                      fontFamily: theme.fonts.monospace,
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textSecondary,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.error;
+                      e.currentTarget.style.color = theme.colors.error;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+
                 {/* GitHub CLI card */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radii?.[1] || 4 }}>
                   <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
