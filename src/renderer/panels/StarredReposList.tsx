@@ -52,6 +52,19 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
     loadStarredRepos();
   }, [loadStarredRepos]);
 
+  // Keep list in sync when a repo is starred/unstarred from the profile panel
+  useEffect(() => {
+    const unsubscribe = events.on('star:repo-toggled', (event) => {
+      const { owner, repo, starred } = event.payload as { owner: string; repo: string; starred: boolean };
+      if (starred) {
+        loadStarredRepos();
+      } else {
+        setStarredRepos((prev) => prev.filter((r) => r.full_name !== `${owner}/${repo}`));
+      }
+    });
+    return unsubscribe;
+  }, [events, loadStarredRepos]);
+
   // Filter repos based on search query (client-side filtering)
   const filteredRepos = useMemo(() => {
     if (!searchQuery.trim()) return starredRepos;

@@ -63,6 +63,18 @@ export class GithubService {
     return result || [];
   }
 
+  static async isRepositoryStarred(owner: string, repo: string): Promise<boolean> {
+    return githubClient.isRepositoryStarred({ owner, repo });
+  }
+
+  static async starRepository(owner: string, repo: string): Promise<void> {
+    return githubClient.starRepository({ owner, repo });
+  }
+
+  static async unstarRepository(owner: string, repo: string): Promise<void> {
+    return githubClient.unstarRepository({ owner, repo });
+  }
+
   static async getOrgRepositories(
     org: string,
     options?: RepositoryFetchOptions,

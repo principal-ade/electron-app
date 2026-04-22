@@ -441,6 +441,18 @@ const RepositoryProfileTabContent: React.FC<{
         throw new Error('Failed to unwatch repository');
       }
     },
+
+    isRepositoryStarred: async (owner: string, repo: string) => {
+      return GithubService.isRepositoryStarred(owner, repo);
+    },
+
+    starRepository: async (owner: string, repo: string) => {
+      await GithubService.starRepository(owner, repo);
+    },
+
+    unstarRepository: async (owner: string, repo: string) => {
+      await GithubService.unstarRepository(owner, repo);
+    },
   }), []);
 
   return (

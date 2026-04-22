@@ -127,6 +127,11 @@ export interface InstallSkillInput {
   options: import('../main-process-api-interfaces/GitHubAPI').InstallSkillOptions;
 }
 
+export interface RepoStarInput {
+  owner: string;
+  repo: string;
+}
+
 // =============================================================================
 // Output Types
 // =============================================================================
@@ -305,5 +310,25 @@ export type GithubRouterType = Record<
       context: ActionContext;
       input: InstallSkillInput;
     }) => Promise<import('../main-process-api-interfaces/GitHubAPI').InstallSkillResult>;
+  };
+
+  // Star / Unstar
+  isRepositoryStarred: {
+    action: (args: {
+      context: ActionContext;
+      input: RepoStarInput;
+    }) => Promise<boolean>;
+  };
+  starRepository: {
+    action: (args: {
+      context: ActionContext;
+      input: RepoStarInput;
+    }) => Promise<void>;
+  };
+  unstarRepository: {
+    action: (args: {
+      context: ActionContext;
+      input: RepoStarInput;
+    }) => Promise<void>;
   };
 };

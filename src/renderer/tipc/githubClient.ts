@@ -23,6 +23,7 @@ import type {
   GetUserFollowingInput,
   SearchUsersInput,
   SearchReposInput,
+  RepoStarInput,
   GithubRouterType,
   GitHubUser,
   GitHubOrganization,
@@ -97,6 +98,11 @@ export interface GithubClient {
   // Templates
   getGitignoreTemplates: () => Promise<string[]>;
   getLicenseTemplates: () => Promise<GitHubLicenseTemplate[]>;
+
+  // Star / Unstar
+  isRepositoryStarred: (input: RepoStarInput) => Promise<boolean>;
+  starRepository: (input: RepoStarInput) => Promise<void>;
+  unstarRepository: (input: RepoStarInput) => Promise<void>;
 }
 
 // =============================================================================

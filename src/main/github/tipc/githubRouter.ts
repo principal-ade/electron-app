@@ -23,6 +23,7 @@ import type {
   GetUserFollowingInput,
   SearchUsersInput,
   SearchReposInput,
+  RepoStarInput,
 } from '../../../shared/tipc/githubRouterTypes';
 
 // Import the existing GitHubAdapter - we'll reuse its methods
@@ -196,6 +197,28 @@ export const githubRouter = {
   // implementation in githubHandlers.ts before it can be migrated here.
   // For now, it remains in the legacy handler until refactored.
   // ===========================================================================
+
+  // ===========================================================================
+  // Star / Unstar
+  // ===========================================================================
+
+  isRepositoryStarred: t.procedure
+    .input<RepoStarInput>()
+    .action(async ({ input }) => {
+      return githubAdapter.isRepositoryStarred(input.owner, input.repo);
+    }),
+
+  starRepository: t.procedure
+    .input<RepoStarInput>()
+    .action(async ({ input }) => {
+      return githubAdapter.starRepository(input.owner, input.repo);
+    }),
+
+  unstarRepository: t.procedure
+    .input<RepoStarInput>()
+    .action(async ({ input }) => {
+      return githubAdapter.unstarRepository(input.owner, input.repo);
+    }),
 };
 
 export type GithubRouter = typeof githubRouter;

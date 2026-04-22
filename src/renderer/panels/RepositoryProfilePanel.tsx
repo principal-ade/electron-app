@@ -28,6 +28,7 @@ import {
   Pause,
   Eye,
   EyeClosed,
+  Star,
 } from 'lucide-react';
 import { ArchitectureMapHighlightLayers, type HighlightLayer, createFileColorHighlightLayers } from '@principal-ai/file-city-react';
 import {
@@ -128,6 +129,21 @@ export interface RepositoryProfilePanelActions extends PanelActions {
    * Unwatch a GitHub repository (optional)
    */
   unwatchRepository?: (owner: string, repo: string) => Promise<void>;
+
+  /**
+   * Check if repository is starred
+   */
+  isRepositoryStarred?: (owner: string, repo: string) => Promise<boolean>;
+
+  /**
+   * Star a GitHub repository (optional)
+   */
+  starRepository?: (owner: string, repo: string) => Promise<void>;
+
+  /**
+   * Unstar a GitHub repository (optional)
+   */
+  unstarRepository?: (owner: string, repo: string) => Promise<void>;
 }
 
 interface RepositoryProfilePanelProps {
@@ -416,6 +432,10 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const [isWatched, setIsWatched] = useState(false);
   const [isWatchLoading, setIsWatchLoading] = useState(false);
 
+  // Star state
+  const [isStarred, setIsStarred] = useState(false);
+  const [isStarLoading, setIsStarLoading] = useState(false);
+
   // Suffix layers visibility toggle
   const [showSuffixLayers, setShowSuffixLayers] = useState(true);
 
@@ -641,6 +661,39 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     };
 
     loadWatchStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repositoryData, actions]);
+
+  // Load star status when repository changes
+  useEffect(() => {
+    if (!repositoryData?.github || !actions.isRepositoryStarred) {
+      setIsStarred(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadStarStatus = async () => {
+      try {
+        if (!actions.isRepositoryStarred || !repositoryData.github) {
+          return;
+        }
+        const starred = await actions.isRepositoryStarred(
+          repositoryData.github.owner,
+          repositoryData.github.name
+        );
+        if (!cancelled) {
+          setIsStarred(starred);
+        }
+      } catch (err) {
+        console.error('Failed to load star status:', err);
+      }
+    };
+
+    loadStarStatus();
 
     return () => {
       cancelled = true;
@@ -1137,6 +1190,57 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     }
   };
 
+  // Handle star/unstar repository
+  const handleToggleStar = async () => {
+    if (!repositoryData?.github) return;
+
+    if (!actions.starRepository || !actions.unstarRepository) {
+      console.warn('Star actions not available');
+      return;
+    }
+
+    setIsStarLoading(true);
+    try {
+      if (isStarred) {
+        await actions.unstarRepository(
+          repositoryData.github.owner,
+          repositoryData.github.name
+        );
+        setIsStarred(false);
+        events.emit({
+          type: 'star:repo-toggled',
+          source: 'repository-profile-panel',
+          timestamp: Date.now(),
+          payload: {
+            owner: repositoryData.github.owner,
+            repo: repositoryData.github.name,
+            starred: false,
+          },
+        });
+      } else {
+        await actions.starRepository(
+          repositoryData.github.owner,
+          repositoryData.github.name
+        );
+        setIsStarred(true);
+        events.emit({
+          type: 'star:repo-toggled',
+          source: 'repository-profile-panel',
+          timestamp: Date.now(),
+          payload: {
+            owner: repositoryData.github.owner,
+            repo: repositoryData.github.name,
+            starred: true,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to toggle star:', err);
+    } finally {
+      setIsStarLoading(false);
+    }
+  };
+
   // Empty state - no repository selected
   if (!repositoryData) {
     return (
@@ -1393,6 +1497,39 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     whiteSpace: 'nowrap',
                   }}>
                     {isWatched ? 'watching' : 'watch'}
+                  </div>
+                </div>
+              )}
+
+              {/* Star Button */}
+              {repositoryData.github && (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    cursor: isStarLoading ? 'not-allowed' : 'pointer',
+                    opacity: isStarLoading ? 0.6 : 1,
+                    transition: 'opacity 0.2s ease',
+                    minWidth: '65px',
+                  }}
+                  onClick={isStarLoading ? undefined : handleToggleStar}
+                >
+                  <div style={{
+                    fontSize: theme.fontSizes[3],
+                    fontWeight: theme.fontWeights?.semibold ?? 600,
+                    fontFamily: theme.fonts?.body,
+                    color: isStarred ? '#f5b731' : theme.colors.text,
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}>
+                    <Star size={24} fill={isStarred ? '#f5b731' : 'none'} />
+                  </div>
+                  <div style={{
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.textSecondary,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {isStarred ? 'starred' : 'star'}
                   </div>
                 </div>
               )}
@@ -1874,6 +2011,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                         theme={theme}
                         enableKeyboardScrolling={false}
                         transparentBackground={true}
+                        repositoryInfo={repositoryData.github ? {
+                          owner: repositoryData.github.owner,
+                          repo: repositoryData.github.name,
+                          branch: repositoryData.defaultBranch || 'main',
+                        } : undefined}
                       />
                     </div>
                   );

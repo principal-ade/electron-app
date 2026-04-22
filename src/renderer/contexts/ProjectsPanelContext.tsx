@@ -1060,6 +1060,14 @@ export const ProjectsPanelProvider: React.FC<
     };
   }, [events]);
 
+  // Refresh starred list when a repo is starred/unstarred from the profile panel
+  useEffect(() => {
+    const unsubscribe = events.on('star:repo-toggled', () => {
+      void fetchStarredRepositories();
+    });
+    return unsubscribe;
+  }, [events, fetchStarredRepositories]);
+
   // Listen for repository:opened events to open dev workspace
   useEffect(() => {
     const unsubscribe = events.on('repository:opened', (event) => {

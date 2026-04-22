@@ -1781,6 +1781,61 @@ export class GitHubAdapter {
     return [];
   }
 
+  async isRepositoryStarred(owner: string, repo: string): Promise<boolean> {
+    const token = await this.getGitHubToken();
+    if (!token) return false;
+    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    try {
+      const response = await fetch(
+        `https://api.github.com/user/starred/${owner}/${repo}`,
+        { headers: { Authorization: authHeader, Accept: 'application/vnd.github.v3+json' } },
+      );
+      return response.status === 204;
+    } catch (err) {
+      console.error('[GitHub] Failed to check star status:', err);
+      return false;
+    }
+  }
+
+  async starRepository(owner: string, repo: string): Promise<void> {
+    const token = await this.getGitHubToken();
+    if (!token) throw new Error('No GitHub token available');
+    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    const response = await fetch(
+      `https://api.github.com/user/starred/${owner}/${repo}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: authHeader,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Length': '0',
+        },
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to star repository: ${response.status}`);
+    }
+  }
+
+  async unstarRepository(owner: string, repo: string): Promise<void> {
+    const token = await this.getGitHubToken();
+    if (!token) throw new Error('No GitHub token available');
+    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    const response = await fetch(
+      `https://api.github.com/user/starred/${owner}/${repo}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: authHeader,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to unstar repository: ${response.status}`);
+    }
+  }
+
   /**
    * Create a new GitHub repository
    */
