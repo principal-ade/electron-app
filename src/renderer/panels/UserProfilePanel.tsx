@@ -31,6 +31,35 @@ export interface UserIdentifier {
 }
 
 /**
+ * Recent commit activity (last 24 hours)
+ */
+export interface RecentCommitActivity {
+  id: string;
+  timestamp: string;
+  repository: string;
+  repositoryUrl?: string;
+  ownerType?: 'User' | 'Organization';
+  isPrivate?: boolean;
+  commitCount: number;
+  additions?: number;
+  deletions?: number;
+}
+
+/**
+ * Repository the user has contributed to (past ~5 months)
+ */
+export interface ContributedRepository {
+  nameWithOwner: string;
+  owner: string;
+  name: string;
+  url: string;
+  commitCount: number;
+  lastContributedAt: string;
+  isPrivate: boolean;
+  ownerType: 'User' | 'Organization';
+}
+
+/**
  * User profile data
  */
 export interface UserProfileData {
@@ -43,7 +72,9 @@ export interface UserProfileData {
   company?: string;
   twitterHandle?: string;
   websiteUrl?: string;
-  activityData: Map<string, number>; // date -> commit count
+  activityData: Map<string, number>; // date -> commit count (for heatmap)
+  recentCommits?: RecentCommitActivity[]; // Recent commits (last 24 hours)
+  contributedRepos?: ContributedRepository[]; // Repos contributed to (past ~5 months)
   totalCommits?: number;
   totalRepos?: number;
   followers?: number;
@@ -69,6 +100,15 @@ export interface UserProfilePanelContext extends PanelContextValue {
 }
 
 /**
+ * User activity response from API
+ */
+export interface UserActivityAPIResponse {
+  recentCommits: RecentCommitActivity[];
+  contributions: Array<{ date: string; count: number }>;
+  contributedRepos: ContributedRepository[];
+}
+
+/**
  * Actions for UserProfilePanel
  */
 export interface UserProfilePanelActions extends PanelActions {
@@ -78,9 +118,9 @@ export interface UserProfilePanelActions extends PanelActions {
   getUserProfile: (username: string) => Promise<UserProfileData>;
 
   /**
-   * Get user activity/contribution data
+   * Get user activity/contribution data (heatmap + recent commits)
    */
-  getUserActivity: (username: string) => Promise<Map<string, number>>;
+  getUserActivity: (username: string) => Promise<UserActivityAPIResponse>;
 
   /**
    * Get user's repositories (optional)
@@ -317,6 +357,9 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   const [isWatched, setIsWatched] = useState(false);
   const [isWatchLoading, setIsWatchLoading] = useState(false);
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity'>('overview');
+
   const spacing = useMemo(
     () => ({
       xs: 4,
@@ -346,10 +389,18 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         ]);
 
         if (!cancelled) {
+          // Convert contributions array to Map for heatmap
+          const activityMap = new Map<string, number>();
+          activity.contributions.forEach((day) => {
+            activityMap.set(day.date, day.count);
+          });
+
           // Merge activity data into profile
           const profileWithActivity: UserProfileData = {
             ...profile,
-            activityData: activity,
+            activityData: activityMap,
+            recentCommits: activity.recentCommits,
+            contributedRepos: activity.contributedRepos,
           };
           setUserData(profileWithActivity);
         }
@@ -880,15 +931,285 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         )}
       </div>
 
-      {/* Repositories Grid - Scrollable section */}
-      {repositories.length > 0 && (
-        <div
+      {/* Tabs */}
+      <div
+        style={{
+          display: 'flex',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          padding: `0 ${spacing.md}px`,
+          gap: spacing.md,
+        }}
+      >
+        <button
           style={{
-            flex: 1,
-            overflow: 'auto',
-            padding: `0 ${spacing.md}px ${spacing.md}px`,
+            background: 'none',
+            border: 'none',
+            padding: `${spacing.sm}px ${spacing.md}px`,
+            fontSize: theme.fontSizes[2],
+            fontFamily: theme.fonts?.body,
+            fontWeight: theme.fontWeights?.semibold ?? 600,
+            color: activeTab === 'overview' ? theme.colors.primary : theme.colors.textSecondary,
+            borderBottom: activeTab === 'overview' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            marginBottom: -1,
+          }}
+          onClick={() => setActiveTab('overview')}
+          onMouseEnter={(e) => {
+            if (activeTab !== 'overview') {
+              e.currentTarget.style.color = theme.colors.text;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== 'overview') {
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }
           }}
         >
+          Overview
+        </button>
+        <button
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: `${spacing.sm}px ${spacing.md}px`,
+            fontSize: theme.fontSizes[2],
+            fontFamily: theme.fonts?.body,
+            fontWeight: theme.fontWeights?.semibold ?? 600,
+            color: activeTab === 'activity' ? theme.colors.primary : theme.colors.textSecondary,
+            borderBottom: activeTab === 'activity' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            marginBottom: -1,
+          }}
+          onClick={() => setActiveTab('activity')}
+          onMouseEnter={(e) => {
+            if (activeTab !== 'activity') {
+              e.currentTarget.style.color = theme.colors.text;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== 'activity') {
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }
+          }}
+        >
+          Activity
+        </button>
+      </div>
+
+      {/* Scrollable content section */}
+      <div
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: `0 ${spacing.md}px ${spacing.md}px`,
+        }}
+      >
+        {/* Activity Tab */}
+        {activeTab === 'activity' && (
+          <>
+            {/* Recent Commits Section */}
+            {displayData.recentCommits && displayData.recentCommits.length > 0 && (
+          <div style={{ marginTop: spacing.md }}>
+            <h3
+              style={{
+                margin: 0,
+                marginBottom: spacing.md,
+                fontSize: theme.fontSizes[3],
+                fontWeight: theme.fontWeights?.semibold ?? 600,
+                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                color: theme.colors.text,
+              }}
+            >
+              Recent Commits
+            </h3>
+            <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, marginBottom: spacing.md }}>
+              Last 24 hours
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+              {displayData.recentCommits.map((commit) => {
+                const [repoOwner, repoName] = commit.repository.split('/');
+                const hoursAgo = Math.floor((Date.now() - new Date(commit.timestamp).getTime()) / (1000 * 60 * 60));
+
+                return (
+                  <div
+                    key={commit.id}
+                    style={{
+                      padding: spacing.md,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      borderRadius: theme.radii?.[2] ?? 8,
+                      border: `1px solid ${theme.colors.border}`,
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                      e.currentTarget.style.backgroundColor = theme.colors.surface;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    }}
+                    onClick={() => {
+                      if (commit.repositoryUrl) {
+                        events.emit({
+                          type: 'user-profile:open-link',
+                          source: 'UserProfilePanel',
+                          timestamp: Date.now(),
+                          payload: { url: commit.repositoryUrl, type: 'github' },
+                        });
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[2],
+                            fontWeight: theme.fontWeights?.semibold ?? 600,
+                            fontFamily: theme.fonts?.body,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {repoName}
+                        </div>
+                        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                          {repoOwner}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>
+                        {hoursAgo === 0 ? 'Just now' : hoursAgo === 1 ? '1h ago' : `${hoursAgo}h ago`}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+                      <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                        {commit.commitCount} {commit.commitCount === 1 ? 'commit' : 'commits'}
+                      </div>
+                      {commit.additions !== undefined && commit.deletions !== undefined && (
+                        <>
+                          <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.success }}>
+                            +{commit.additions}
+                          </div>
+                          <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.error }}>
+                            -{commit.deletions}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Contributed Repositories Section */}
+        {displayData.contributedRepos && displayData.contributedRepos.length > 0 && (
+          <div style={{ marginTop: spacing.md }}>
+            <h3
+              style={{
+                margin: 0,
+                marginBottom: spacing.md,
+                fontSize: theme.fontSizes[3],
+                fontWeight: theme.fontWeights?.semibold ?? 600,
+                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                color: theme.colors.text,
+              }}
+            >
+              Contributed Repositories
+            </h3>
+            <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, marginBottom: spacing.md }}>
+              Past 5 months
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+              {displayData.contributedRepos.map((repo) => {
+                const monthsAgo = Math.floor(
+                  (Date.now() - new Date(repo.lastContributedAt).getTime()) / (1000 * 60 * 60 * 24 * 30)
+                );
+
+                return (
+                  <div
+                    key={repo.nameWithOwner}
+                    style={{
+                      padding: spacing.md,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      borderRadius: theme.radii?.[2] ?? 8,
+                      border: `1px solid ${theme.colors.border}`,
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                      e.currentTarget.style.backgroundColor = theme.colors.surface;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    }}
+                    onClick={() => {
+                      if (repo.url) {
+                        events.emit({
+                          type: 'user-profile:open-link',
+                          source: 'UserProfilePanel',
+                          timestamp: Date.now(),
+                          payload: { url: repo.url, type: 'github' },
+                        });
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, marginBottom: spacing.xs }}>
+                      <img
+                        src={`https://github.com/${repo.owner}.png`}
+                        alt={repo.owner}
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[2],
+                            fontWeight: theme.fontWeights?.semibold ?? 600,
+                            fontFamily: theme.fonts?.body,
+                            color: theme.colors.text,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {repo.name}
+                        </div>
+                        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                          {repo.owner}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, paddingLeft: 32 + spacing.md }}>
+                      <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                        {repo.commitCount} {repo.commitCount === 1 ? 'commit' : 'commits'}
+                      </div>
+                      <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                        •
+                      </div>
+                      <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                        {monthsAgo === 0 ? 'This month' : monthsAgo === 1 ? '1 month ago' : `${monthsAgo} months ago`}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+          </>
+        )}
+
+        {/* Overview Tab */}
+        {activeTab === 'overview' && repositories.length > 0 && (
           <div style={{ marginTop: spacing.md }}>
             <h3
               style={{
@@ -952,8 +1273,8 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               })}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Add keyframe animation for loading spinner */}
       <style>{`

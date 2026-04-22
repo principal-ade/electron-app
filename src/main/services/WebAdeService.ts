@@ -21,6 +21,8 @@ import type {
   GetRepoContributionsInput,
   RepoContributionsResponse,
   StarredCollection,
+  GetUserActivityInput,
+  UserActivityResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -489,6 +491,52 @@ export class WebAdeService {
       return data.collections;
     } catch (error) {
       console.error('[WebADE] Failed to fetch starred collections:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user activity (recent commits and contribution heatmap)
+   * Fetches recent commit activity and contribution calendar for a GitHub user
+   */
+  async getUserActivity(input: GetUserActivityInput): Promise<UserActivityResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const { username, contributionDays = 365, activityDays = 1 } = input;
+    const url = `${this.baseUrl}/github/user/${username}/activity?contributionDays=${contributionDays}&activityDays=${activityDays}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        if (response.status === 404) {
+          throw new Error('User not found');
+        }
+        throw new Error(`Failed to fetch user activity: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as UserActivityResponse;
+
+      if (!data || !data.user || !Array.isArray(data.recentCommits) || !Array.isArray(data.contributions)) {
+        console.warn('[WebADE] Unexpected response format:', data);
+        throw new Error('Invalid user activity response from web-ade');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('[WebADE] Failed to fetch user activity:', error);
       throw error;
     }
   }

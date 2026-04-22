@@ -514,7 +514,7 @@ const UserProfileTabContent: React.FC<{
         const authResult = await authService.checkAuth();
 
         if (!authResult.authenticated || !authResult.token) {
-          return new Map<string, number>();
+          return { recentCommits: [], contributions: [], contributedRepos: [] };
         }
 
         const activityResult = await ApiProxyService.call<UserActivityResponse>({
@@ -526,17 +526,72 @@ const UserProfileTabContent: React.FC<{
         });
 
         const activityResponse = activityResult?.data;
-        const activityData = new Map<string, number>();
+
+        // Extract contributions for heatmap
+        const contributions: Array<{ date: string; count: number }> = [];
         if (activityResponse?.contributions) {
           activityResponse.contributions.forEach((contrib: { date: string; count: number }) => {
-            activityData.set(contrib.date, contrib.count);
+            contributions.push({ date: contrib.date, count: contrib.count });
           });
         }
 
-        return activityData;
+        // Extract recent commits (filter activity to only commits)
+        const recentCommits: Array<{
+          id: string;
+          timestamp: string;
+          repository: string;
+          repositoryUrl?: string;
+          ownerType?: 'User' | 'Organization';
+          isPrivate?: boolean;
+          commitCount: number;
+          additions?: number;
+          deletions?: number;
+        }> = [];
+
+        if (activityResponse?.activity) {
+          activityResponse.activity
+            .filter((event) => event.type === 'commit')
+            .forEach((event) => {
+              recentCommits.push({
+                id: event.id,
+                timestamp: event.timestamp,
+                repository: event.repository,
+                // These fields may not be in the current interface but are optional
+                repositoryUrl: undefined,
+                ownerType: undefined,
+                isPrivate: undefined,
+                commitCount: event.metadata?.commitCount || 1,
+                additions: event.metadata?.additions,
+                deletions: event.metadata?.deletions,
+              });
+            });
+        }
+
+        // Extract contributed repos and add missing fields
+        const contributedRepos: Array<{
+          nameWithOwner: string;
+          owner: string;
+          name: string;
+          url: string;
+          commitCount: number;
+          lastContributedAt: string;
+          isPrivate: boolean;
+          ownerType: 'User' | 'Organization';
+        }> = (activityResponse?.contributedRepos || []).map((repo) => ({
+          nameWithOwner: repo.nameWithOwner,
+          owner: repo.owner,
+          name: repo.name,
+          url: `https://github.com/${repo.owner}/${repo.name}`,
+          commitCount: repo.commitCount,
+          lastContributedAt: repo.lastContributedAt,
+          isPrivate: false, // API doesn't provide this, default to false
+          ownerType: 'User', // API doesn't provide this, default to User
+        }));
+
+        return { recentCommits, contributions, contributedRepos };
       } catch (err) {
         console.error('Failed to fetch user activity:', err);
-        return new Map<string, number>();
+        return { recentCommits: [], contributions: [], contributedRepos: [] };
       }
     },
 

@@ -10,6 +10,8 @@ import {
   type UserProfileData,
   type UserProfilePanelContext,
   type UserProfilePanelActions,
+  type RecentCommitActivity,
+  type ContributedRepository,
 } from './UserProfilePanel';
 import type { RepoCardData, Contributor } from './RepoCard';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
@@ -100,6 +102,85 @@ const generateMockActivityData = (intensity: 'low' | 'medium' | 'high' = 'medium
   }
 
   return activityMap;
+};
+
+// Generate mock recent commits (last 24 hours)
+const generateMockRecentCommits = (username: string, count: number = 3): RecentCommitActivity[] => {
+  const repos = [
+    { name: 'awesome-project', owner: username },
+    { name: 'cli-tool', owner: username },
+    { name: 'web-framework', owner: username },
+    { name: 'data-pipeline', owner: username },
+    { name: 'api-server', owner: 'some-org' },
+  ];
+
+  const now = Date.now();
+  const commits: RecentCommitActivity[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const repo = repos[Math.floor(Math.random() * repos.length)];
+    const hoursAgo = Math.floor(Math.random() * 24);
+    const timestamp = new Date(now - hoursAgo * 60 * 60 * 1000);
+    const commitCount = Math.floor(Math.random() * 5) + 1;
+    const additions = Math.floor(Math.random() * 500) + 10;
+    const deletions = Math.floor(Math.random() * 200) + 5;
+
+    commits.push({
+      id: `commit-${i}-${timestamp.getTime()}`,
+      timestamp: timestamp.toISOString(),
+      repository: `${repo.owner}/${repo.name}`,
+      repositoryUrl: `https://github.com/${repo.owner}/${repo.name}`,
+      ownerType: repo.owner === username ? 'User' : 'Organization',
+      isPrivate: Math.random() < 0.3,
+      commitCount,
+      additions,
+      deletions,
+    });
+  }
+
+  // Sort by timestamp descending (most recent first)
+  return commits.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+};
+
+// Generate mock contributed repositories (past ~5 months)
+const generateMockContributedRepos = (username: string, count: number = 5): ContributedRepository[] => {
+  const repos = [
+    { name: 'awesome-project', owner: username, ownerType: 'User' as const },
+    { name: 'cli-tool', owner: username, ownerType: 'User' as const },
+    { name: 'web-framework', owner: 'facebook', ownerType: 'Organization' as const },
+    { name: 'react', owner: 'facebook', ownerType: 'Organization' as const },
+    { name: 'typescript', owner: 'microsoft', ownerType: 'Organization' as const },
+    { name: 'vscode', owner: 'microsoft', ownerType: 'Organization' as const },
+    { name: 'next.js', owner: 'vercel', ownerType: 'Organization' as const },
+    { name: 'tensorflow', owner: 'tensorflow', ownerType: 'Organization' as const },
+  ];
+
+  const now = Date.now();
+  const contributedRepos: ContributedRepository[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const repo = repos[i % repos.length];
+    const monthsAgo = Math.floor(Math.random() * 5);
+    const daysAgo = monthsAgo * 30 + Math.floor(Math.random() * 30);
+    const lastContributedAt = new Date(now - daysAgo * 24 * 60 * 60 * 1000);
+    const commitCount = Math.floor(Math.random() * 50) + 5;
+
+    contributedRepos.push({
+      nameWithOwner: `${repo.owner}/${repo.name}`,
+      owner: repo.owner,
+      name: repo.name,
+      url: `https://github.com/${repo.owner}/${repo.name}`,
+      commitCount,
+      lastContributedAt: lastContributedAt.toISOString(),
+      isPrivate: repo.owner === username && Math.random() < 0.2,
+      ownerType: repo.ownerType,
+    });
+  }
+
+  // Sort by lastContributedAt descending (most recent first)
+  return contributedRepos.sort((a, b) =>
+    new Date(b.lastContributedAt).getTime() - new Date(a.lastContributedAt).getTime()
+  );
 };
 
 // Generate mock contributors
@@ -225,8 +306,9 @@ const createMockRepositories = (username: string, count: number = 6): RepoCardDa
 const createMockUserProfile = (
   overrides: Partial<UserProfileData> = {}
 ): UserProfileData => {
+  const username = overrides.username || 'octocat';
   const defaultProfile: UserProfileData = {
-    username: 'octocat',
+    username,
     name: 'The Octocat',
     email: 'octocat@github.com',
     avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
@@ -236,6 +318,8 @@ const createMockUserProfile = (
     twitterHandle: 'github',
     websiteUrl: 'https://github.com/octocat',
     activityData: generateMockActivityData('medium'),
+    recentCommits: generateMockRecentCommits(username, 4),
+    contributedRepos: generateMockContributedRepos(username, 6),
     totalCommits: 1247,
     totalRepos: 42,
     followers: 3542,
@@ -279,7 +363,18 @@ const MockUserProfilePanel: React.FC<{
     getUserActivity: async () => {
       // Simulate async delay
       await new Promise((resolve) => setTimeout(resolve, 150));
-      return userData?.activityData || new Map<string, number>();
+
+      // Convert Map to array for API response format
+      const contributions: Array<{ date: string; count: number }> = [];
+      userData?.activityData.forEach((count, date) => {
+        contributions.push({ date, count });
+      });
+
+      return {
+        recentCommits: userData?.recentCommits || [],
+        contributions,
+        contributedRepos: userData?.contributedRepos || [],
+      };
     },
     getUserRepositories: async (user: string) => {
       // Simulate async delay
@@ -461,7 +556,7 @@ export const Loading: Story = {
       },
       getUserActivity: async () => {
         await new Promise((resolve) => setTimeout(resolve, 10000));
-        return new Map<string, number>();
+        return { recentCommits: [], contributions: [], contributedRepos: [] };
       },
       openFile: async () => {},
     };
@@ -495,7 +590,7 @@ export const Error: Story = {
       },
       getUserActivity: async () => {
         await new Promise((resolve) => setTimeout(resolve, 500));
-        return new Map<string, number>();
+        return { recentCommits: [], contributions: [], contributedRepos: [] };
       },
       openFile: async () => {},
     };
@@ -526,7 +621,7 @@ export const Empty: Story = {
         return createMockUserProfile();
       },
       getUserActivity: async () => {
-        return new Map<string, number>();
+        return { recentCommits: [], contributions: [], contributedRepos: [] };
       },
       openFile: async () => {},
     };

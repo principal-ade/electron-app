@@ -209,6 +209,51 @@ export interface StarredCollectionsResponse {
 }
 
 // =============================================================================
+// User Activity Types (Commit-focused)
+// =============================================================================
+
+export interface RecentCommitActivity {
+  id: string;
+  timestamp: string;
+  repository: string;
+  repositoryUrl?: string;
+  ownerType?: 'User' | 'Organization';
+  isPrivate?: boolean;
+  commitCount: number;
+  additions?: number;
+  deletions?: number;
+}
+
+export interface ContributedRepository {
+  nameWithOwner: string;
+  owner: string;
+  name: string;
+  url: string;
+  commitCount: number;
+  lastContributedAt: string;
+  isPrivate: boolean;
+  ownerType: 'User' | 'Organization';
+}
+
+export interface UserActivityResponse {
+  user: {
+    login: string;
+    name: string | null;
+    avatarUrl: string;
+    followersCount: number;
+  };
+  recentCommits: RecentCommitActivity[]; // Last 24 hours of commits
+  contributions: DailyContribution[]; // For heatmap (365 days)
+  contributedRepos: ContributedRepository[]; // Repos contributed to (past ~5 months)
+}
+
+export interface GetUserActivityInput {
+  username: string;
+  contributionDays?: number; // Days of contribution heatmap data (default: 365)
+  activityDays?: number; // Days of recent commit activity (default: 1)
+}
+
+// =============================================================================
 // Router Type Definition
 // =============================================================================
 
@@ -286,5 +331,11 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: GetStarredCollectionsInput;
     }) => Promise<StarredCollection[]>;
+  };
+  getUserActivity: {
+    action: (args: {
+      context: ActionContext;
+      input: GetUserActivityInput;
+    }) => Promise<UserActivityResponse>;
   };
 };

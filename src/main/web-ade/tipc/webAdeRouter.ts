@@ -16,6 +16,7 @@ import type {
   GetTreeInput,
   GetRepoContributionsInput,
   GetStarredCollectionsInput,
+  GetUserActivityInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 
@@ -99,6 +100,16 @@ export const webAdeRouter = {
     .input<GetRepoContributionsInput>()
     .action(async ({ input }) => {
       return webAdeService.getRepoContributions(input);
+    }),
+
+  // ===========================================================================
+  // User Activity
+  // ===========================================================================
+
+  getUserActivity: t.procedure
+    .input<GetUserActivityInput>()
+    .action(async ({ input }) => {
+      return webAdeService.getUserActivity(input);
     }),
 
   // ===========================================================================
