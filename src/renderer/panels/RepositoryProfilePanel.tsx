@@ -33,6 +33,7 @@ import {
   Check,
   Loader2,
   Download,
+  GitFork,
 } from 'lucide-react';
 import { ArchitectureMapHighlightLayers, type HighlightLayer, createFileColorHighlightLayers } from '@principal-ai/file-city-react';
 import {
@@ -54,6 +55,7 @@ import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonit
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 import { GitCloneModal } from '../components/GitCloneModal';
+import { CloneFromGitHubModal } from './components/CloneFromGitHubModal';
 
 export interface RepositoryProfileData {
   name: string;
@@ -483,6 +485,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // Clone modal state for repos without local clones
   const [showCloneModal, setShowCloneModal] = useState(false);
+  const [showForkModal, setShowForkModal] = useState(false);
 
   // Fetch branch status for all local clones
   useEffect(() => {
@@ -1915,7 +1918,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             </h2>
           </div>
           {!repositoryData.isLocal && (
-            <div style={{ marginTop: spacing.sm }}>
+            <div style={{ marginTop: spacing.sm, display: 'flex', gap: spacing.xs }}>
               <button
                 onClick={() => setShowCloneModal(true)}
                 style={{
@@ -1953,6 +1956,35 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               >
                 <Download size={12} />
                 Clone
+              </button>
+              <button
+                onClick={() => setShowForkModal(true)}
+                style={{
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: 6,
+                  background: 'transparent',
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  fontWeight: theme.fontWeights?.medium ?? 500,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = theme.colors.text;
+                  e.currentTarget.style.borderColor = theme.colors.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                  e.currentTarget.style.borderColor = theme.colors.border;
+                }}
+              >
+                <GitFork size={12} />
+                Fork
               </button>
             </div>
           )}
@@ -2900,6 +2932,12 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           setShowCloneModal(false);
           events.emit({ type: 'repository-profile:clone-completed', source: 'repository-profile-panel', timestamp: Date.now(), payload: {} });
         }}
+      />
+      <CloneFromGitHubModal
+        isOpen={showForkModal}
+        onClose={() => setShowForkModal(false)}
+        initialUrl={repositoryData?.htmlUrl ?? undefined}
+        initialFork={true}
       />
     </div>
   );

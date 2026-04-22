@@ -38,7 +38,9 @@ function joinPath(...parts: string[]): string {
 interface CloneFromGitHubModalProps {
   isOpen: boolean;
   onClose: () => void;
-  workspace: Workspace;
+  workspace?: Workspace;
+  initialUrl?: string;
+  initialFork?: boolean;
 }
 
 type ModalStep = 'input' | 'progress' | 'complete';
@@ -104,9 +106,14 @@ function parseGitHubUrl(input: string): ParsedGitHubUrl | null {
 export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
   isOpen,
   onClose,
-  workspace,
+  workspace: workspaceProp,
+  initialUrl,
+  initialFork = false,
 }) => {
   const { theme } = useTheme();
+
+  // Resolved workspace (from prop or loaded from service)
+  const [resolvedWorkspace, setResolvedWorkspace] = useState<Workspace | null>(workspaceProp ?? null);
 
   // Step state
   const [step, setStep] = useState<ModalStep>('input');
@@ -142,6 +149,33 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
   // Check if user has push access
   const hasPushAccess = repoInfo?.permissions?.push ?? false;
   const needsFork = repoInfo && !hasPushAccess;
+  // Show fork UI when user lacks access OR when explicitly triggered via Fork button
+  const showForkSection = (needsFork || initialFork) && !!repoInfo && !isCheckingPermissions;
+
+  // Load default workspace when none is provided via prop
+  useEffect(() => {
+    if (isOpen && !workspaceProp) {
+      WorkspaceService.getDefaultWorkspace()
+        .then((ws) => setResolvedWorkspace(ws))
+        .catch(console.error);
+    } else if (workspaceProp) {
+      setResolvedWorkspace(workspaceProp);
+    }
+  }, [isOpen, workspaceProp]);
+
+  // Seed URL from initialUrl when modal opens
+  useEffect(() => {
+    if (isOpen && initialUrl) {
+      setGithubUrl(initialUrl);
+    }
+  }, [isOpen, initialUrl]);
+
+  // Auto-enable fork once permissions are resolved when opened via Fork button
+  useEffect(() => {
+    if (initialFork && repoInfo && !isCheckingPermissions) {
+      setWillFork(true);
+    }
+  }, [initialFork, repoInfo, isCheckingPermissions]);
 
   // Parse URL whenever input changes
   useEffect(() => {
@@ -222,7 +256,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setStep('input');
-      setGithubUrl('');
+      setGithubUrl(initialUrl ?? '');
       setCustomPath('');
       setUseCustomPath(false);
       setError(null);
@@ -236,7 +270,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
       setOrganizations([]);
       setForkTarget('personal');
     }
-  }, [isOpen]);
+  }, [isOpen, initialUrl]);
 
   // Compute the target path
   const getTargetPath = (): string | null => {
@@ -248,8 +282,8 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
       return customPath.trim();
     }
 
-    if (workspace.suggestedClonePath) {
-      return joinPath(workspace.suggestedClonePath, repoName);
+    if (resolvedWorkspace?.suggestedClonePath) {
+      return joinPath(resolvedWorkspace.suggestedClonePath, repoName);
     }
 
     return null;
@@ -278,7 +312,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
       let repoName = parsedUrl.repo;
 
       // Step 0: Fork if needed
-      if (willFork && needsFork) {
+      if (willFork && (needsFork || initialFork)) {
         setProgressStep('forking');
 
         const forkOptions =
@@ -324,10 +358,12 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
       // Step 3: Add to workspace
       setProgressStep('adding');
 
-      await WorkspaceService.addRepositoryToWorkspace(
-        registeredRepo,
-        workspace.id,
-      );
+      if (resolvedWorkspace) {
+        await WorkspaceService.addRepositoryToWorkspace(
+          registeredRepo,
+          resolvedWorkspace.id,
+        );
+      }
 
       // Done!
       setProgressStep('done');
@@ -363,7 +399,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
       const result = await window.mainProcess.system.openDialog({
         properties: ['openDirectory', 'createDirectory'],
         title: 'Select Clone Directory',
-        defaultPath: workspace.suggestedClonePath || undefined,
+        defaultPath: resolvedWorkspace?.suggestedClonePath || undefined,
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
@@ -488,15 +524,17 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
           )}
         </div>
 
-        {/* Fork notice - show when user doesn't have push access */}
-        {needsFork && !isCheckingPermissions && (
+        {/* Fork section - shown when user lacks push access or when explicitly forking */}
+        {showForkSection && (
           <div
             style={{
               marginBottom: '20px',
               padding: '12px 16px',
               borderRadius: '8px',
-              backgroundColor: `${theme.colors.warning || '#f59e0b'}15`,
-              border: `1px solid ${theme.colors.warning || '#f59e0b'}40`,
+              backgroundColor: needsFork
+                ? `${theme.colors.warning || '#f59e0b'}15`
+                : `${theme.colors.primary}15`,
+              border: `1px solid ${needsFork ? theme.colors.warning || '#f59e0b' : theme.colors.primary}40`,
             }}
           >
             <div
@@ -509,7 +547,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
               <Info
                 size={18}
                 style={{
-                  color: theme.colors.warning || '#f59e0b',
+                  color: needsFork ? theme.colors.warning || '#f59e0b' : theme.colors.primary,
                   flexShrink: 0,
                   marginTop: '2px',
                 }}
@@ -524,7 +562,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
                     fontWeight: theme.fontWeights.medium,
                   }}
                 >
-                  You don't have write access to this repository
+                  {needsFork ? "You don't have write access to this repository" : 'Fork this repository'}
                 </p>
                 <p
                   style={{
@@ -534,8 +572,9 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
                     color: theme.colors.textSecondary,
                   }}
                 >
-                  To contribute changes, you can fork this repository to your
-                  account or an organization.
+                  {needsFork
+                    ? 'To contribute changes, you can fork this repository to your account or an organization.'
+                    : 'Create your own copy of this repository to make changes independently.'}
                 </p>
                 <label
                   style={{
@@ -691,7 +730,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
             Clone Directory
           </label>
 
-          {workspace.suggestedClonePath && !useCustomPath ? (
+          {resolvedWorkspace?.suggestedClonePath && !useCustomPath ? (
             <div
               style={{
                 display: 'flex',
@@ -711,8 +750,8 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
                 }}
               >
                 {parsedUrl
-                  ? joinPath(workspace.suggestedClonePath, parsedUrl.repo)
-                  : workspace.suggestedClonePath}
+                  ? joinPath(resolvedWorkspace?.suggestedClonePath ?? '', parsedUrl.repo)
+                  : resolvedWorkspace?.suggestedClonePath}
               </div>
               <button
                 onClick={handleSelectDirectory}
@@ -867,12 +906,12 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
           }}
         >
           {isCloning && <Loader2 size={16} className="animate-spin" />}
-          {willFork && needsFork && <GitFork size={16} />}
+          {willFork && (needsFork || initialFork) && <GitFork size={16} />}
           {isCloning
-            ? willFork && needsFork
+            ? willFork && (needsFork || initialFork)
               ? 'Forking & Cloning...'
               : 'Cloning...'
-            : willFork && needsFork
+            : willFork && (needsFork || initialFork)
               ? 'Fork & Clone'
               : 'Clone Repository'}
         </button>
@@ -882,7 +921,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
 
   const renderProgress = () => {
     const allSteps: ProgressStep[] =
-      willFork && needsFork
+      willFork && (needsFork || initialFork)
         ? ['forking', 'cloning', 'registering', 'adding']
         : ['cloning', 'registering', 'adding'];
 
@@ -945,7 +984,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
             }}
           >
             {step === 'complete'
-              ? `${parsedUrl?.repo} has been ${willFork && forkedRepoUrl ? 'forked and ' : ''}cloned and added to ${workspace.name}`
+              ? `${parsedUrl?.repo} has been ${willFork && forkedRepoUrl ? 'forked and ' : ''}cloned and added to ${resolvedWorkspace?.name ?? 'workspace'}`
               : willFork && progressStep === 'forking'
                 ? `Forking ${parsedUrl?.owner}/${parsedUrl?.repo} to ${forkTarget === 'personal' ? currentUser?.login || 'your account' : forkTarget}...`
                 : `Cloning ${willFork && forkedRepoUrl ? 'your fork of ' : ''}${parsedUrl?.owner}/${parsedUrl?.repo}...`}
@@ -1019,12 +1058,12 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
   const getHeaderSubtitle = () => {
     switch (step) {
       case 'input':
-        return `Clone and add to: ${workspace.name}`;
+        return `Clone and add to: ${resolvedWorkspace?.name ?? 'workspace'}`;
       case 'progress':
       case 'complete':
         return parsedUrl ? `${parsedUrl.owner}/${parsedUrl.repo}` : '';
       default:
-        return `Clone and add to: ${workspace.name}`;
+        return `Clone and add to: ${resolvedWorkspace?.name ?? 'workspace'}`;
     }
   };
 
