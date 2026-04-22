@@ -39,7 +39,6 @@ import {
 } from '@industry-theme/repository-composition-panels';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { DocumentView } from 'themed-markdown';
-import { transformImageUrl } from '@principal-ade/markdown-utils';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { LocalClone } from '../../shared/types/repository.types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
@@ -363,6 +362,15 @@ function shortenPath(fullPath: string): string {
   }
 
   return fullPath;
+}
+
+function transformImageUrl(src: string, repositoryInfo: { owner: string; repo: string; branch?: string }): string {
+  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+    return src;
+  }
+  const branch = repositoryInfo.branch || 'main';
+  const path = src.startsWith('/') ? src.slice(1) : src;
+  return `https://raw.githubusercontent.com/${repositoryInfo.owner}/${repositoryInfo.repo}/${branch}/${path}`;
 }
 
 function transformHtmlImageUrls(content: string, repositoryInfo: { owner: string; repo: string; branch?: string }): string {
