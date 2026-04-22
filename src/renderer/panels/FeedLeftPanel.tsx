@@ -73,7 +73,6 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
   const [localGitEmail, setLocalGitEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    if (currentUser) return;
     const dir = process.env.HOME || '/';
     (async () => {
       try {
@@ -249,15 +248,17 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
                     </div>
                   </div>
                 </div>
-                {/* GitHub OAuth card */}
+                {/* Git local identity card */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radii?.[1] || 4 }}>
                   <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: theme.colors.backgroundSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Github size={24} color={theme.colors.textSecondary} />
+                    <GitLogo size={24} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>GitHub OAuth</div>
-                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.success, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {currentUser.name ? `@${currentUser.login}` : 'Connected'}
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {localGitName || 'Git'}
+                    </div>
+                    <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {localGitEmail || 'No global identity set'}
                     </div>
                   </div>
                 </div>
