@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Github,
@@ -6,15 +6,12 @@ import {
   CheckCircle,
   AlertCircle,
   Loader,
-  ChevronDown,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
-import { WorkspaceService } from '../main-process-api/WorkspaceService';
-import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 
 interface GitCloneModalProps {
   isOpen: boolean;
@@ -43,15 +40,6 @@ interface AuthMethods {
   https: AuthMethod;
   suggestions: string[];
 }
-
-// Convert a string to kebab-case
-const toKebabCase = (str: string): string => {
-  return str
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric characters with hyphens
-    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-};
 
 // Join path segments in a cross-platform way
 const joinPath = (base: string, ...segments: string[]): string => {
@@ -94,28 +82,8 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   const [cloneProgress, setCloneProgress] = useState<string>('');
   const [existingRepoPath, setExistingRepoPath] = useState<string>('');
 
-  // Workspace state
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [defaultWorkspace, setDefaultWorkspace] = useState<Workspace | null>(
-    null,
-  );
-  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(
-    null,
-  );
-  const [customDirectory, setCustomDirectory] = useState<string>(''); // User-selected custom directory
-  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string>(''); // Base default directory from preferences
-  const [cloneLocationType, setCloneLocationType] = useState<
-    'default' | 'workspace'
-  >('default'); // Which option is selected
-
-  // Create new workspace inline state
-  const [showCreateWorkspaceForm, setShowCreateWorkspaceForm] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState('');
-  const [newWorkspaceDescription, setNewWorkspaceDescription] = useState('');
-  const [newWorkspacePath, setNewWorkspacePath] = useState('');
-  const [newWorkspacePathManuallyEdited, setNewWorkspacePathManuallyEdited] =
-    useState(false);
-  const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
+  const [customDirectory, setCustomDirectory] = useState<string>('');
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string>('');
 
   // Reset state when modal opens and focus the input
   useEffect(() => {
@@ -134,13 +102,6 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       setCloneProgress('');
       setExistingRepoPath('');
       setCustomDirectory('');
-      setCloneLocationType('default');
-      setShowCreateWorkspaceForm(false);
-      setNewWorkspaceName('');
-      setNewWorkspaceDescription('');
-      setNewWorkspacePath('');
-      setNewWorkspacePathManuallyEdited(false);
-      setIsCreatingWorkspace(false);
 
       // Only focus input if we're on the input step
       if (!initialUrl) {
@@ -214,62 +175,18 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, currentStep, initialUrl, isValidating]);
 
-  // Load workspaces and base default directory when modal opens
+  // Load base default directory when modal opens
   useEffect(() => {
     if (isOpen) {
-      Promise.all([
-        WorkspaceService.getWorkspaces(),
-        WorkspaceService.getDefaultWorkspace(),
-        UserPreferencesService.getPreferences(),
-      ])
-        .then(([loadedWorkspaces, defaultWs, preferences]) => {
-          setWorkspaces(loadedWorkspaces);
-          setDefaultWorkspace(defaultWs);
+      UserPreferencesService.getPreferences()
+        .then((preferences) => {
           setBaseDefaultDirectory(preferences.baseDefaultDirectory || '');
-
-          // Don't auto-select workspace - let user choose or use custom location
-          setSelectedWorkspace(null);
         })
         .catch((error) => {
-          console.error('[GitCloneModal] Error loading workspaces:', error);
-          setWorkspaces([]);
-          setDefaultWorkspace(null);
-          setSelectedWorkspace(null);
+          console.error('[GitCloneModal] Error loading preferences:', error);
         });
     }
   }, [isOpen]);
-
-  // Sort workspaces alphabetically by name
-  const sortedWorkspaces = useMemo(() => {
-    return [...workspaces].sort((a, b) => a.name.localeCompare(b.name));
-  }, [workspaces]);
-
-  // Auto-show create workspace form when workspace is selected but no workspaces exist
-  useEffect(() => {
-    if (
-      cloneLocationType === 'workspace' &&
-      sortedWorkspaces.length === 0 &&
-      !showCreateWorkspaceForm
-    ) {
-      setShowCreateWorkspaceForm(true);
-    }
-  }, [cloneLocationType, sortedWorkspaces.length, showCreateWorkspaceForm]);
-
-  // Auto-generate workspace path when name changes (if base directory is set and path wasn't manually edited)
-  useEffect(() => {
-    if (!newWorkspacePathManuallyEdited && baseDefaultDirectory) {
-      if (newWorkspaceName) {
-        const kebabName = toKebabCase(newWorkspaceName);
-        if (kebabName) {
-          const generatedPath = joinPath(baseDefaultDirectory, kebabName);
-          setNewWorkspacePath(generatedPath);
-        }
-      } else {
-        // Clear path when name is empty
-        setNewWorkspacePath('');
-      }
-    }
-  }, [newWorkspaceName, baseDefaultDirectory, newWorkspacePathManuallyEdited]);
 
   // Normalize git URL (handle browser URLs, add .git if needed)
   const normalizeGitUrl = (url: string): string => {
@@ -317,7 +234,6 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   // Extract repo name from URL
   const extractRepoName = (url: string): string => {
     try {
-      // First normalize the URL
       const normalizedUrl = normalizeGitUrl(url);
       const urlParts = normalizedUrl.split('/');
       const lastPart = urlParts[urlParts.length - 1];
@@ -325,6 +241,15 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     } catch {
       return 'unknown-repo';
     }
+  };
+
+  // Extract owner from URL (github.com/owner/repo or git@github.com:owner/repo)
+  const extractOwner = (url: string): string => {
+    const sshMatch = url.match(/git@[^:]+:([^/]+)\//);
+    if (sshMatch) return sshMatch[1];
+    const httpsMatch = url.match(/https?:\/\/[^/]+\/([^/]+)\//);
+    if (httpsMatch) return httpsMatch[1];
+    return '';
   };
 
   // Validate Git URL format (now accepts browser URLs too)
@@ -406,43 +331,15 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   // Handle directory selection
   const handleSelectDirectory = async () => {
     try {
-      let baseDir: string | undefined;
+      const baseDir = customDirectory || baseDefaultDirectory;
 
-      // Determine base directory based on location type
-      if (cloneLocationType === 'default') {
-        // Use custom directory if set, otherwise base default directory
-        baseDir = customDirectory || baseDefaultDirectory;
-
-        if (!baseDir) {
-          // No default directory set, prompt user to choose
-          const result = await FileSystemService.selectDirectory({
-            title: 'Select Default Clone Directory',
-            buttonLabel: 'Select Directory',
-            properties: ['openDirectory', 'createDirectory'],
-          });
-
-          if (!result || result.canceled || !result.filePaths?.[0]) {
-            return; // User cancelled
-          }
-
-          baseDir = result.filePaths[0];
-
-          // Set this as the base default directory
-          await UserPreferencesService.updatePreferences({
-            baseDefaultDirectory: baseDir,
-          });
-          setBaseDefaultDirectory(baseDir);
-        }
-      } else {
-        // Workspace mode - use selected workspace
-        if (!selectedWorkspace) {
-          setError('Please select a workspace');
-          return;
-        }
-        baseDir = selectedWorkspace.suggestedClonePath;
+      if (!baseDir) {
+        setError('No home folder configured. Set one in Settings.');
+        return;
       }
 
-      const fullPath = `${baseDir}/${repoName}`;
+      const owner = extractOwner(gitUrl);
+      const fullPath = owner ? joinPath(baseDir, owner, repoName) : joinPath(baseDir, repoName);
       setCloneDirectory(fullPath);
 
       // Check if directory already exists
@@ -556,20 +453,6 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
           targetPath,
         );
 
-        // Add to selected workspace if one is selected
-        if (selectedWorkspace && registeredRepo) {
-          setCloneProgress('Adding to workspace...');
-          try {
-            await WorkspaceService.addRepositoryToWorkspace(
-              registeredRepo,
-              selectedWorkspace.id,
-            );
-          } catch (error) {
-            console.error('[GitCloneModal] Error adding to workspace:', error);
-            // Don't fail the clone if workspace addition fails
-          }
-        }
-
         setCloneProgress('Clone complete!');
         setCurrentStep('complete');
 
@@ -638,20 +521,6 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
         pathToRegister,
       );
 
-      // Add to selected workspace if one is selected
-      if (selectedWorkspace && registeredRepo) {
-        setCloneProgress('Adding to workspace...');
-        try {
-          await WorkspaceService.addRepositoryToWorkspace(
-            registeredRepo,
-            selectedWorkspace.id,
-          );
-        } catch (error) {
-          console.error('[GitCloneModal] Error adding to workspace:', error);
-          // Don't fail the registration if workspace addition fails
-        }
-      }
-
       setCloneProgress('Registration complete!');
       setCurrentStep('complete');
 
@@ -675,59 +544,6 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     } finally {
       setIsCloning(false);
     }
-  };
-
-  // Handle creating a new workspace inline
-  const handleCreateWorkspace = async () => {
-    if (!newWorkspaceName.trim()) {
-      setError('Please enter a workspace name');
-      return;
-    }
-
-    setIsCreatingWorkspace(true);
-    setError('');
-
-    try {
-      const newWorkspace = await WorkspaceService.createWorkspace({
-        name: newWorkspaceName.trim(),
-        description: newWorkspaceDescription.trim() || undefined,
-        theme: 'principalAI',
-        suggestedClonePath: newWorkspacePath.trim() || undefined,
-        icon: undefined,
-      });
-
-      // Refresh the workspace list
-      const updatedWorkspaces = await WorkspaceService.getWorkspaces();
-      setWorkspaces(updatedWorkspaces);
-
-      // Auto-select the newly created workspace
-      setSelectedWorkspace(newWorkspace);
-
-      // Reset create workspace form
-      setShowCreateWorkspaceForm(false);
-      setNewWorkspaceName('');
-      setNewWorkspaceDescription('');
-      setNewWorkspacePath('');
-      setNewWorkspacePathManuallyEdited(false);
-    } catch (err) {
-      console.error('[GitCloneModal] Error creating workspace:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to create workspace',
-      );
-    } finally {
-      setIsCreatingWorkspace(false);
-    }
-  };
-
-  // Handle cancel creating new workspace
-  const handleCancelCreateWorkspace = () => {
-    setShowCreateWorkspaceForm(false);
-    setNewWorkspaceName('');
-    setNewWorkspaceDescription('');
-    setNewWorkspacePath('');
-    setNewWorkspacePathManuallyEdited(false);
-    setSelectedWorkspace(null);
-    setError('');
   };
 
   if (!isOpen) return null;
@@ -970,491 +786,64 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                 </div>
               </div>
 
-              {/* Clone Location Selector */}
-              <div>
-                <h3
-                  className="font-medium mb-3"
-                  style={{ color: theme.colors.text }}
-                >
-                  Clone Location
-                </h3>
-
-                {/* Location Type Toggle */}
-                <div className="space-y-3">
-                  {/* Option 1: Default Directory */}
-                  <div
-                    onClick={() => setCloneLocationType('default')}
-                    style={{
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: `2px solid ${cloneLocationType === 'default' ? theme.colors.primary : theme.colors.border}`,
-                      backgroundColor:
-                        cloneLocationType === 'default'
-                          ? `${theme.colors.primary}10`
-                          : theme.colors.background,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="radio"
-                        checked={cloneLocationType === 'default'}
-                        onChange={() => setCloneLocationType('default')}
-                        style={{
-                          marginTop: '2px',
-                          accentColor: theme.colors.primary,
-                          cursor: 'pointer',
-                        }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div
-                          className="font-medium mb-1"
-                          style={{ color: theme.colors.text }}
-                        >
-                          Default Directory
-                        </div>
-                        <div
-                          className="text-sm mb-2"
-                          style={{ color: theme.colors.textSecondary }}
-                        >
-                          {baseDefaultDirectory || customDirectory
-                            ? 'Clone to your default location'
-                            : 'Choose a default location for all clones'}
-                        </div>
-                        {cloneLocationType === 'default' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              FileSystemService.selectDirectory({
-                                title: 'Select Default Clone Directory',
-                                buttonLabel: 'Select Directory',
-                                properties: [
-                                  'openDirectory',
-                                  'createDirectory',
-                                ],
-                              }).then((result) => {
-                                if (
-                                  result &&
-                                  !result.canceled &&
-                                  result.filePaths?.[0]
-                                ) {
-                                  setCustomDirectory(result.filePaths[0]);
-                                }
-                              });
-                            }}
-                            style={{
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              border: `1px solid ${theme.colors.border}`,
-                              backgroundColor: theme.colors.background,
-                              color: theme.colors.text,
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                            }}
-                          >
-                            <FolderOpen size={14} />
-                            {customDirectory || baseDefaultDirectory
-                              ? 'Change Directory'
-                              : 'Select Directory'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Option 2: Workspace */}
-                  <div
-                    onClick={() => setCloneLocationType('workspace')}
-                    style={{
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: `2px solid ${cloneLocationType === 'workspace' ? theme.colors.primary : theme.colors.border}`,
-                      backgroundColor:
-                        cloneLocationType === 'workspace'
-                          ? `${theme.colors.primary}10`
-                          : theme.colors.background,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="radio"
-                        checked={cloneLocationType === 'workspace'}
-                        onChange={() => setCloneLocationType('workspace')}
-                        style={{
-                          marginTop: '2px',
-                          accentColor: theme.colors.primary,
-                          cursor: 'pointer',
-                        }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div
-                          className="font-medium mb-1"
-                          style={{ color: theme.colors.text }}
-                        >
-                          Workspace
-                        </div>
-                        <div
-                          className="text-sm mb-2"
-                          style={{ color: theme.colors.textSecondary }}
-                        >
-                          {sortedWorkspaces.length > 0
-                            ? 'Add to a specific workspace'
-                            : 'Create a new workspace'}
-                        </div>
-                          {cloneLocationType === 'workspace' && (
-                            <div onClick={(e) => e.stopPropagation()}>
-                              <div style={{ position: 'relative' }}>
-                                <select
-                                  value={
-                                    showCreateWorkspaceForm
-                                      ? '__create_new__'
-                                      : selectedWorkspace?.id || ''
-                                  }
-                                  onChange={(e) => {
-                                    if (e.target.value === '__create_new__') {
-                                      setShowCreateWorkspaceForm(true);
-                                      setSelectedWorkspace(null);
-                                    } else {
-                                      setShowCreateWorkspaceForm(false);
-                                      const workspace = sortedWorkspaces.find(
-                                        (w) => w.id === e.target.value,
-                                      );
-                                      setSelectedWorkspace(workspace || null);
-                                    }
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '6px 28px 6px 10px',
-                                    borderRadius: '6px',
-                                    border: `1px solid ${theme.colors.border}`,
-                                    backgroundColor: theme.colors.background,
-                                    color: theme.colors.text,
-                                    fontSize: '12px',
-                                    cursor: 'pointer',
-                                    appearance: 'none',
-                                  }}
-                                >
-                                  <option value="">
-                                    {sortedWorkspaces.length > 0
-                                      ? 'Select a workspace...'
-                                      : 'No workspaces available...'}
-                                  </option>
-                                  {sortedWorkspaces.map((workspace) => (
-                                    <option
-                                      key={workspace.id}
-                                      value={workspace.id}
-                                    >
-                                      {workspace.name}
-                                      {defaultWorkspace?.id === workspace.id
-                                        ? ' (Default)'
-                                        : ''}
-                                    </option>
-                                  ))}
-                                  <option value="__create_new__">
-                                    + Create new workspace
-                                  </option>
-                                </select>
-                                <ChevronDown
-                                  size={14}
-                                  style={{
-                                    position: 'absolute',
-                                    right: '8px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    color: theme.colors.textSecondary,
-                                    pointerEvents: 'none',
-                                  }}
-                                />
-                              </div>
-
-                              {/* Inline Create Workspace Form */}
-                              {showCreateWorkspaceForm && (
-                                <div
-                                  style={{
-                                    marginTop: '12px',
-                                    padding: '12px',
-                                    borderRadius: '6px',
-                                    border: `1px solid ${theme.colors.border}`,
-                                    backgroundColor:
-                                      theme.colors.backgroundSecondary,
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      fontSize: '13px',
-                                      fontWeight: 600,
-                                      marginBottom: '12px',
-                                      color: theme.colors.text,
-                                    }}
-                                  >
-                                    Create New Workspace
-                                  </div>
-
-                                  {/* Workspace Name */}
-                                  <div style={{ marginBottom: '10px' }}>
-                                    <label
-                                      style={{
-                                        display: 'block',
-                                        fontSize: '11px',
-                                        fontWeight: 500,
-                                        marginBottom: '4px',
-                                        color: theme.colors.textSecondary,
-                                      }}
-                                    >
-                                      Name *
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={newWorkspaceName}
-                                      onChange={(e) =>
-                                        setNewWorkspaceName(e.target.value)
-                                      }
-                                      placeholder="e.g., Work Projects"
-                                      disabled={isCreatingWorkspace}
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px 8px',
-                                        borderRadius: '4px',
-                                        border: `1px solid ${theme.colors.border}`,
-                                        backgroundColor: theme.colors.background,
-                                        color: theme.colors.text,
-                                        fontSize: '12px',
-                                      }}
-                                    />
-                                  </div>
-
-                                  {/* Workspace Description */}
-                                  <div style={{ marginBottom: '10px' }}>
-                                    <label
-                                      style={{
-                                        display: 'block',
-                                        fontSize: '11px',
-                                        fontWeight: 500,
-                                        marginBottom: '4px',
-                                        color: theme.colors.textSecondary,
-                                      }}
-                                    >
-                                      Description
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={newWorkspaceDescription}
-                                      onChange={(e) =>
-                                        setNewWorkspaceDescription(
-                                          e.target.value,
-                                        )
-                                      }
-                                      placeholder="Optional description"
-                                      disabled={isCreatingWorkspace}
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px 8px',
-                                        borderRadius: '4px',
-                                        border: `1px solid ${theme.colors.border}`,
-                                        backgroundColor: theme.colors.background,
-                                        color: theme.colors.text,
-                                        fontSize: '12px',
-                                      }}
-                                    />
-                                  </div>
-
-                                  {/* Workspace Path */}
-                                  <div style={{ marginBottom: '12px' }}>
-                                    <label
-                                      style={{
-                                        display: 'block',
-                                        fontSize: '11px',
-                                        fontWeight: 500,
-                                        marginBottom: '4px',
-                                        color: theme.colors.textSecondary,
-                                      }}
-                                    >
-                                      Clone Path
-                                    </label>
-                                    <div
-                                      style={{ display: 'flex', gap: '6px' }}
-                                    >
-                                      <input
-                                        type="text"
-                                        value={newWorkspacePath}
-                                        onChange={(e) => {
-                                          setNewWorkspacePath(e.target.value);
-                                          setNewWorkspacePathManuallyEdited(true);
-                                        }}
-                                        placeholder="/path/to/workspace"
-                                        disabled={isCreatingWorkspace}
-                                        style={{
-                                          flex: 1,
-                                          padding: '6px 8px',
-                                          borderRadius: '4px',
-                                          border: `1px solid ${theme.colors.border}`,
-                                          backgroundColor:
-                                            theme.colors.background,
-                                          color: theme.colors.text,
-                                          fontSize: '11px',
-                                          fontFamily: 'monospace',
-                                        }}
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={async () => {
-                                          try {
-                                            const result =
-                                              await FileSystemService.selectDirectory(
-                                                {
-                                                  title:
-                                                    'Select Workspace Directory',
-                                                  buttonLabel:
-                                                    'Select Directory',
-                                                  properties: [
-                                                    'openDirectory',
-                                                    'createDirectory',
-                                                  ],
-                                                },
-                                              );
-                                            if (
-                                              result &&
-                                              !result.canceled &&
-                                              result.filePaths?.[0]
-                                            ) {
-                                              setNewWorkspacePath(
-                                                result.filePaths[0],
-                                              );
-                                              setNewWorkspacePathManuallyEdited(
-                                                true,
-                                              );
-                                            }
-                                          } catch (error) {
-                                            console.error(
-                                              '[GitCloneModal] Error selecting directory:',
-                                              error,
-                                            );
-                                          }
-                                        }}
-                                        disabled={isCreatingWorkspace}
-                                        style={{
-                                          padding: '6px 10px',
-                                          borderRadius: '4px',
-                                          border: `1px solid ${theme.colors.border}`,
-                                          backgroundColor:
-                                            theme.colors.backgroundTertiary,
-                                          color: theme.colors.text,
-                                          cursor: isCreatingWorkspace
-                                            ? 'not-allowed'
-                                            : 'pointer',
-                                          fontSize: '11px',
-                                        }}
-                                      >
-                                        <FolderOpen size={12} />
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* Action Buttons */}
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      gap: '6px',
-                                      justifyContent: 'flex-end',
-                                    }}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={handleCancelCreateWorkspace}
-                                      disabled={isCreatingWorkspace}
-                                      style={{
-                                        padding: '6px 12px',
-                                        borderRadius: '4px',
-                                        border: `1px solid ${theme.colors.border}`,
-                                        backgroundColor: 'transparent',
-                                        color: theme.colors.text,
-                                        cursor: isCreatingWorkspace
-                                          ? 'not-allowed'
-                                          : 'pointer',
-                                        fontSize: '11px',
-                                        opacity: isCreatingWorkspace ? 0.5 : 1,
-                                      }}
-                                    >
-                                      Cancel
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={handleCreateWorkspace}
-                                      disabled={
-                                        isCreatingWorkspace ||
-                                        !newWorkspaceName.trim()
-                                      }
-                                      style={{
-                                        padding: '6px 12px',
-                                        borderRadius: '4px',
-                                        border: 'none',
-                                        backgroundColor: theme.colors.primary,
-                                        color: theme.colors.background,
-                                        cursor:
-                                          isCreatingWorkspace ||
-                                          !newWorkspaceName.trim()
-                                            ? 'not-allowed'
-                                            : 'pointer',
-                                        fontSize: '11px',
-                                        fontWeight: 500,
-                                        opacity:
-                                          isCreatingWorkspace ||
-                                          !newWorkspaceName.trim()
-                                            ? 0.5
-                                            : 1,
-                                      }}
-                                    >
-                                      {isCreatingWorkspace
-                                        ? 'Creating...'
-                                        : 'Create'}
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                </div>
-              </div>
-
-              {/* Path Preview */}
+              {/* Clone Location */}
               <div>
                 <h3
                   className="font-medium mb-2"
                   style={{ color: theme.colors.text }}
                 >
-                  Clone Path Preview
+                  Clone to
                 </h3>
                 <div
-                  className="flex items-center gap-2 p-3 rounded-md"
-                  style={{ backgroundColor: theme.colors.backgroundSecondary }}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    color: (customDirectory || baseDefaultDirectory) ? theme.colors.textSecondary : theme.colors.error || '#ef4444',
+                    fontSize: '13px',
+                    fontFamily: 'monospace',
+                    marginBottom: '8px',
+                  }}
                 >
-                  <FolderOpen
-                    size={16}
-                    style={{ color: theme.colors.textSecondary }}
-                  />
-                  <span
-                    className="text-sm font-mono"
-                    style={{ color: theme.colors.text }}
-                  >
-                    {cloneLocationType === 'default'
-                      ? customDirectory || baseDefaultDirectory
-                        ? `${customDirectory || baseDefaultDirectory}/${repoName}`
-                        : 'Select a directory to continue...'
-                      : selectedWorkspace
-                        ? `${selectedWorkspace.suggestedClonePath || ''}/${repoName}`
-                        : 'Select a workspace to continue...'}
-                  </span>
+                  {(customDirectory || baseDefaultDirectory)
+                    ? (() => {
+                        const base = customDirectory || baseDefaultDirectory;
+                        const owner = extractOwner(gitUrl);
+                        return owner ? `${base}/${owner}/${repoName}` : `${base}/${repoName}`;
+                      })()
+                    : 'No home folder configured — set one in Settings'}
                 </div>
+                <button
+                  onClick={() => {
+                    FileSystemService.selectDirectory({
+                      title: 'Select Clone Directory',
+                      buttonLabel: 'Select Directory',
+                      properties: ['openDirectory', 'createDirectory'],
+                    }).then((result) => {
+                      if (result && !result.canceled && result.filePaths?.[0]) {
+                        setCustomDirectory(result.filePaths[0]);
+                      }
+                    });
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: 'transparent',
+                    color: theme.colors.textSecondary,
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <FolderOpen size={14} />
+                  {(customDirectory || baseDefaultDirectory) ? 'Change Directory' : 'Select Directory'}
+                </button>
               </div>
+
 
               {error && (
                 <div
