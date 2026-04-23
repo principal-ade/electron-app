@@ -55,7 +55,7 @@ import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonit
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 import { GitCloneModal } from '../components/GitCloneModal';
-import { CloneFromGitHubModal } from './components/CloneFromGitHubModal';
+import { ForkModal } from './components/ForkModal';
 
 export interface RepositoryProfileData {
   name: string;
@@ -483,6 +483,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   // Track which button is currently bouncing (by clone path)
   const [bouncingButton, setBouncingButton] = useState<string | null>(null);
 
+  // Fork state
+  const [isForked, setIsForked] = useState(false);
+
   // Clone modal state for repos without local clones
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [showForkModal, setShowForkModal] = useState(false);
@@ -744,6 +747,37 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       cancelled = true;
     };
   }, [repositoryData, actions]);
+
+  // Check if the current user has already forked this repo
+  useEffect(() => {
+    if (!repositoryData?.github) {
+      setIsForked(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const checkForkStatus = async () => {
+      try {
+        const user = await GithubService.getCurrentUser();
+        if (!user || cancelled) return;
+
+        const userRepo = await GithubService.getRepository(user.login, repositoryData.github!.name);
+        if (!cancelled) {
+          setIsForked(
+            !!userRepo &&
+            userRepo.fork === true &&
+            userRepo.parent?.full_name === `${repositoryData.github!.owner}/${repositoryData.github!.name}`
+          );
+        }
+      } catch {
+        if (!cancelled) setIsForked(false);
+      }
+    };
+
+    checkForkStatus();
+    return () => { cancelled = true; };
+  }, [repositoryData]);
 
   // Fetch file trees when repository changes
   useEffect(() => {
@@ -1972,10 +2006,10 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: spacing.xs,
-                  border: `1px solid ${theme.colors.border}`,
+                  border: `1px solid ${isForked ? theme.colors.primary : theme.colors.border}`,
                   borderRadius: 6,
-                  background: 'transparent',
-                  color: theme.colors.textSecondary,
+                  background: isForked ? `${theme.colors.primary}18` : 'transparent',
+                  color: isForked ? theme.colors.primary : theme.colors.textSecondary,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   fontSize: theme.fontSizes[0],
@@ -1983,16 +2017,16 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   fontWeight: theme.fontWeights?.medium ?? 500,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = theme.colors.text;
-                  e.currentTarget.style.borderColor = theme.colors.text;
+                  e.currentTarget.style.color = theme.colors.primary;
+                  e.currentTarget.style.borderColor = theme.colors.primary;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
+                  e.currentTarget.style.color = isForked ? theme.colors.primary : theme.colors.textSecondary;
+                  e.currentTarget.style.borderColor = isForked ? theme.colors.primary : theme.colors.border;
                 }}
               >
                 <GitFork size={12} />
-                Fork
+                {isForked ? 'forked' : 'Fork'}
               </button>
             </div>
           )}
@@ -2941,11 +2975,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           events.emit({ type: 'repository-profile:clone-completed', source: 'repository-profile-panel', timestamp: Date.now(), payload: {} });
         }}
       />
-      <CloneFromGitHubModal
+      <ForkModal
         isOpen={showForkModal}
         onClose={() => setShowForkModal(false)}
-        initialUrl={repositoryData?.htmlUrl ?? undefined}
-        initialFork={true}
+        repoOwner={repositoryData?.github?.owner ?? repositoryData?.owner ?? ''}
+        repoName={repositoryData?.github?.name ?? repositoryData?.name ?? ''}
       />
     </div>
   );
