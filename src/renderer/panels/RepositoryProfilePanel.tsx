@@ -437,7 +437,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const [showContributors, setShowContributors] = useState(false);
   const [contributors, setContributors] = useState<Array<{ name: string; commits: number; avatarUrl?: string }>>([]);
   const [contributorsLoading, setContributorsLoading] = useState(false);
-  const [hoveredContributorIndex, setHoveredContributorIndex] = useState<number | null>(null);
 
   // State for git branch status (sync status) per clone
   const [branchStatusMap, setBranchStatusMap] = useState<Map<string, {
@@ -465,6 +464,10 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     date: string;
   } | null>(null);
   const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
+
+  const CONTRIBUTORS_COLUMN_MIN_WIDTH = 900;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [panelWidth, setPanelWidth] = useState<number>(0);
 
   // Watch state
   const [isWatched, setIsWatched] = useState(false);
@@ -500,6 +503,16 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   // Clone modal state for repos without local clones
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [showForkModal, setShowForkModal] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setPanelWidth(entry.contentRect.width);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Fetch branch status for all local clones
   useEffect(() => {
@@ -1188,13 +1201,16 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     }
   };
 
-  // Auto-load contributors when repository data is available
+  // Fetch contributors whenever repository changes
   useEffect(() => {
     const localPath = repositoryData?.localClones?.[0]?.path;
-    if (!localPath && !repositoryData?.github) return;
-    if (contributors.length > 0) return;
+    if (!localPath && !repositoryData?.github) {
+      setContributors([]);
+      return;
+    }
 
     let cancelled = false;
+    setContributorsLoading(true);
 
     const load = async () => {
       try {
@@ -1210,59 +1226,21 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           list = raw.map(c => ({ ...c, avatarUrl: undefined }));
         }
         if (!cancelled) setContributors(list);
-      } catch {}
+      } catch {
+        if (!cancelled) setContributors([]);
+      } finally {
+        if (!cancelled) setContributorsLoading(false);
+      }
     };
 
     load();
     return () => { cancelled = true; };
-  }, [repositoryData]);
+  }, [repositoryData, actions]);
 
-  // Handle contributors stat click
-  const handleContributorsClick = async () => {
-    const localPath = repositoryData?.localClones?.[0]?.path;
-    // Check if we have either local path or GitHub info
-    if (!localPath && !repositoryData?.github) return;
-
-    if (showContributors) {
-      // Toggle off
-      setShowContributors(false);
-      return;
-    }
-
-    // Fetch contributors if not already loaded
-    if (contributors.length === 0) {
-      setContributorsLoading(true);
-      try {
-        let contributorsList: Array<{ name: string; commits: number; avatarUrl?: string }> = [];
-
-        if (repositoryData.github?.owner && repositoryData.github?.name) {
-          // GitHub repo — use API for avatar URLs
-          const fetch = actions.getContributors ?? GithubService.getRepositoryContributors.bind(GithubService);
-          const githubContributors = await fetch(
-            repositoryData.github.owner,
-            repositoryData.github.name
-          );
-          contributorsList = githubContributors.map(c => ({
-            name: c.login,
-            commits: c.contributions,
-            avatarUrl: c.avatar_url,
-          }));
-        } else if (localPath) {
-          // Local-only repository — use git log
-          const raw = await GitService.getContributors(localPath);
-          contributorsList = raw.map(c => ({ ...c, avatarUrl: undefined }));
-        }
-
-        setContributors(contributorsList);
-        setShowContributors(true);
-      } catch (error) {
-        console.warn('[RepositoryProfilePanel] Failed to fetch contributors:', error);
-      } finally {
-        setContributorsLoading(false);
-      }
-    } else {
-      setShowContributors(true);
-    }
+  // Handle contributors stat click — data is already fetched by the effect
+  const handleContributorsClick = () => {
+    if (!repositoryData?.localClones?.[0]?.path && !repositoryData?.github) return;
+    setShowContributors((prev) => !prev);
   };
 
   // Handle watch/unwatch repository
@@ -1559,9 +1537,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   }
 
   const initials = getInitials(repositoryData.name);
+  const isNarrow = panelWidth > 0 && panelWidth < CONTRIBUTORS_COLUMN_MIN_WIDTH;
 
   return (
     <div
+      ref={containerRef}
       style={{
         height: '100%',
         display: 'flex',
@@ -1589,7 +1569,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         </div>
 
         {/* Profile Content */}
-        <div style={{ padding: spacing.md, marginTop: -60, position: 'relative' }}>
+        <div style={{ padding: spacing.md, marginTop: -60, position: 'relative', display: 'flex', gap: spacing.lg, alignItems: 'stretch' }}>
+        {/* Left column */}
+        <div style={{ flexShrink: 0 }}>
         {/* Avatar Section - positioned to overlap banner */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md, marginBottom: spacing.md }}>
           {/* Owner Avatar */}
@@ -1656,7 +1638,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           </div>
 
           {/* Stats - aligned with bottom of avatar */}
-          <div style={{ flex: 1, paddingBottom: spacing.xs, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div style={{ flex: 1, paddingBottom: spacing.xs, display: 'flex', alignItems: 'flex-end' }}>
             <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap', flexShrink: 0 }}>
               <div
                 style={{ textAlign: 'center', cursor: 'pointer', transition: 'opacity 0.2s ease' }}
@@ -1959,95 +1941,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               )}
             </div>
 
-            {/* Contributor grid */}
-            {contributors.length > 0 && (
-              <div style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'flex-end',
-                gap: 4,
-                marginLeft: spacing.lg,
-                minWidth: 0,
-              }}>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary,
-                }}>
-                  Top contributors
-                </div>
-                <div style={{ display: 'flex', gap: 4, overflow: 'visible' }}>
-                {contributors.slice(0, 12).map((contributor, i) => (
-                  <div
-                    key={contributor.name}
-                    style={{ position: 'relative', cursor: 'pointer' }}
-                    onMouseEnter={() => setHoveredContributorIndex(i)}
-                    onMouseLeave={() => setHoveredContributorIndex(null)}
-                    onClick={() => events.emit({
-                      type: 'user:profile-selected',
-                      source: 'repository-profile-panel',
-                      timestamp: Date.now(),
-                      payload: { username: contributor.name },
-                    })}
-                  >
-                    {contributor.avatarUrl ? (
-                      <img
-                        src={contributor.avatarUrl}
-                        alt={contributor.name}
-                        style={{
-                          width: 52,
-                          height: 52,
-                          borderRadius: '50%',
-                          display: 'block',
-                          flexShrink: 0,
-                          transform: hoveredContributorIndex === i ? 'translateY(-2px)' : 'translateY(0)',
-                          transition: 'transform 0.15s ease',
-                        }}
-                      />
-                    ) : (
-                      <div style={{
-                        width: 52,
-                        height: 52,
-                        borderRadius: '50%',
-                        background: theme.colors.backgroundSecondary,
-                        display: 'flex',
-                        flexShrink: 0,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 10,
-                        color: theme.colors.textSecondary,
-                        fontFamily: theme.fonts?.body,
-                      }}>
-                        {contributor.name.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                    {hoveredContributorIndex === i && (
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        marginBottom: 4,
-                        background: theme.colors.surface ?? theme.colors.background,
-                        border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary}`,
-                        borderRadius: 4,
-                        padding: '2px 6px',
-                        fontSize: theme.fontSizes[1],
-                        fontFamily: theme.fonts?.body,
-                        color: theme.colors.text,
-                        whiteSpace: 'nowrap',
-                        pointerEvents: 'none',
-                        zIndex: 100,
-                      }}>
-                        {contributor.name}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -2435,6 +2328,91 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           </p>
         )}
         </div>
+
+        {/* Right column - Top contributors (wide view only) */}
+        {!isNarrow && contributors.length > 0 && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: 60, minWidth: 0 }}>
+            <div style={{
+              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts?.body,
+              color: theme.colors.textSecondary,
+              marginBottom: spacing.xs,
+            }}>
+              Top contributors
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm }}>
+              {contributors.slice(0, 6).map((contributor) => (
+                <div
+                  key={contributor.name}
+                  onClick={() => events.emit({
+                    type: 'user:profile-selected',
+                    source: 'repository-profile-panel',
+                    timestamp: Date.now(),
+                    payload: { username: contributor.name },
+                  })}
+                  style={{
+                    width: 'calc(50% - 4px)',
+                    minWidth: 120,
+                    padding: `${spacing.xs}px ${spacing.sm}px`,
+                    borderRadius: 6,
+                    border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`,
+                    backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                    boxSizing: 'border-box',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {contributor.avatarUrl ? (
+                    <img
+                      src={contributor.avatarUrl}
+                      alt={contributor.name}
+                      style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: '50%',
+                      backgroundColor: theme.colors.primary + '30',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.primary,
+                      flexShrink: 0,
+                    }}>
+                      {contributor.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.primary,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {contributor.name}
+                    </div>
+                    <div style={{
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.textSecondary,
+                    }}>
+                      {formatNumber(contributor.commits)} commit{contributor.commits !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        </div>
       </div>
 
       {/* Bottom Section - Stats and File City 3D (fills remaining height) */}
@@ -2553,32 +2531,66 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     No contributors found
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, flex: 1, overflow: 'auto' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm, alignContent: 'flex-start', overflow: 'auto' }}>
                     {contributors.map((contributor) => (
                       <div
                         key={contributor.name}
                         style={{
+                          width: 'calc(50% - 4px)',
+                          minWidth: 120,
+                          padding: `${spacing.xs}px ${spacing.sm}px`,
+                          borderRadius: 6,
+                          border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`,
+                          backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
                           display: 'flex',
-                          justifyContent: 'space-between',
                           alignItems: 'center',
-                          padding: spacing.sm,
-                          backgroundColor: theme.colors.background,
-                          borderRadius: theme.radii?.[1] || 4,
-                          fontSize: theme.fontSizes[1],
-                          fontFamily: theme.fonts?.body,
+                          gap: spacing.sm,
+                          boxSizing: 'border-box',
                         }}
                       >
-                        <span style={{ color: theme.colors.text, flex: 1 }}>
-                          {contributor.name}
-                        </span>
-                        <span style={{
-                          color: theme.colors.textSecondary,
-                          fontSize: theme.fontSizes[0],
-                          minWidth: '60px',
-                          textAlign: 'right',
-                        }}>
-                          {formatNumber(contributor.commits)} commit{contributor.commits !== 1 ? 's' : ''}
-                        </span>
+                        {contributor.avatarUrl ? (
+                          <img
+                            src={contributor.avatarUrl}
+                            alt={contributor.name}
+                            style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: '50%',
+                            backgroundColor: theme.colors.primary + '30',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts?.body,
+                            color: theme.colors.primary,
+                            flexShrink: 0,
+                          }}>
+                            {contributor.name.slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{
+                            fontSize: theme.fontSizes[1],
+                            fontWeight: theme.fontWeights?.semibold ?? 600,
+                            fontFamily: theme.fonts?.body,
+                            color: theme.colors.primary,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {contributor.name}
+                          </div>
+                          <div style={{
+                            fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts?.body,
+                            color: theme.colors.textSecondary,
+                          }}>
+                            {formatNumber(contributor.commits)} commit{contributor.commits !== 1 ? 's' : ''}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>

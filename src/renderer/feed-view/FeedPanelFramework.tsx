@@ -910,6 +910,10 @@ const OrgProfileTabContent: React.FC<{
       return GithubService.getOrgMembers(orgName);
     },
 
+    getPinnedRepositories: async (username: string) => {
+      return WebAdeService.getPinnedRepositories(username);
+    },
+
     openFile: async () => {},
   }), [repositories]);
 

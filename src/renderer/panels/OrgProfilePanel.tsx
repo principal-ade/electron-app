@@ -5,7 +5,7 @@
  * Features a Facebook-style layout with an avatar overlapping an activity heatmap banner.
  */
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type {
   PanelContextValue,
@@ -103,6 +103,11 @@ export interface OrgProfilePanelActions extends PanelActions {
    * Unwatch a GitHub organization (optional)
    */
   unwatchOrg?: (orgName: string) => Promise<void>;
+
+  /**
+   * Get pinned repositories for the organization (optional)
+   */
+  getPinnedRepositories?: (username: string) => Promise<string[]>;
 }
 
 interface OrgProfilePanelProps {
@@ -266,6 +271,14 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   const [members, setMembers] = useState<GitHubOrgMember[]>([]);
   const [hoveredMemberIndex, setHoveredMemberIndex] = useState<number | null>(null);
 
+  // Pinned repos and responsive layout
+  const PINNED_COLUMN_MIN_WIDTH = 900;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [panelWidth, setPanelWidth] = useState<number>(0);
+  const [pinnedRepoNames, setPinnedRepoNames] = useState<string[]>([]);
+  type OrgTab = 'repositories' | 'pinned';
+  const [activeTab, setActiveTab] = useState<OrgTab>('repositories');
+
   const spacing = useMemo(
     () => ({
       xs: 4,
@@ -276,6 +289,34 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
     }),
     [],
   );
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setPanelWidth(entry.contentRect.width);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (panelWidth >= PINNED_COLUMN_MIN_WIDTH && activeTab === 'pinned') {
+      setActiveTab('repositories');
+    }
+  }, [panelWidth, activeTab]);
+
+  useEffect(() => {
+    if (!org || !actions.getPinnedRepositories) {
+      setPinnedRepoNames([]);
+      return;
+    }
+    let cancelled = false;
+    actions.getPinnedRepositories(org.orgName).then((names) => {
+      if (!cancelled) setPinnedRepoNames(names);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [org, actions]);
 
   // Fetch profile when org changes
   useEffect(() => {
@@ -551,9 +592,11 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   };
 
   const initials = getInitials(displayData.name, displayData.orgName);
+  const isNarrow = panelWidth > 0 && panelWidth < PINNED_COLUMN_MIN_WIDTH;
 
   return (
     <div
+      ref={containerRef}
       style={{
         height: '100%',
         display: 'flex',
@@ -574,7 +617,9 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
       </div>
 
       {/* Profile Header - Fixed, no scroll */}
-      <div style={{ padding: spacing.md, marginTop: -60, position: 'relative', flexShrink: 0 }}>
+      <div style={{ padding: spacing.md, marginTop: -60, position: 'relative', flexShrink: 0, display: 'flex', gap: spacing.md, alignItems: 'stretch' }}>
+        {/* Left column */}
+        <div style={{ flexShrink: 0 }}>
         {/* Avatar Section - positioned to overlap banner */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md, marginBottom: spacing.md }}>
           {/* Avatar */}
@@ -878,10 +923,251 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
             {displayData.description}
           </p>
         )}
+        </div>
+
+        {/* Right column: pinned repos (wide mode only) */}
+        {!isNarrow && pinnedRepoNames.length > 0 && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: 60, minWidth: 0 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm, alignContent: 'flex-start' }}>
+              {pinnedRepoNames.map((nameWithOwner) => {
+                const [owner, name] = nameWithOwner.split('/');
+                const repoData = repositories.find(
+                  (r) => r.repoName === name && r.githubOwner === owner
+                );
+                return (
+                  <div
+                    key={nameWithOwner}
+                    onClick={() => {
+                      const repositoryEntry: AlexandriaEntry = repoData?.alexandriaEntry || ({
+                        path: repoData?.repoPath || '',
+                        name: name ?? nameWithOwner,
+                        remoteUrl: `https://github.com/${owner}/${name}.git`,
+                        registeredAt: repoData?.createdAt || new Date().toISOString(),
+                        hasViews: false,
+                        viewCount: 0,
+                        views: [],
+                        github: {
+                          id: nameWithOwner,
+                          owner: owner ?? '',
+                          name: name ?? nameWithOwner,
+                          stars: repoData?.stars || 0,
+                          description: repoData?.description,
+                          primaryLanguage: repoData?.language,
+                          lastUpdated: new Date().toISOString(),
+                        },
+                      } as unknown as AlexandriaEntry);
+                      events.emit({
+                        type: 'feed:repository-selected',
+                        source: 'OrgProfilePanel',
+                        timestamp: Date.now(),
+                        payload: { repository: repositoryEntry },
+                      });
+                    }}
+                    style={{
+                      width: 'calc(50% - 4px)',
+                      minWidth: 120,
+                      padding: `${spacing.xs}px ${spacing.sm}px`,
+                      borderRadius: 6,
+                      border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`,
+                      backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      boxSizing: 'border-box',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.primary,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {name ?? nameWithOwner}
+                    </div>
+                    {repoData?.description && (
+                      <div style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.textSecondary,
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        lineHeight: 1.3,
+                      }}>
+                        {repoData.description}
+                      </div>
+                    )}
+                    {repoData?.language && (
+                      <div style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.textSecondary,
+                        marginTop: 2,
+                      }}>
+                        {repoData.language}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Tab bar (narrow mode with pinned repos) */}
+      {isNarrow && pinnedRepoNames.length > 0 && (
+        <div style={{
+          display: 'flex',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          padding: `0 ${spacing.md}px`,
+          gap: spacing.md,
+          flexShrink: 0,
+        }}>
+          <button
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              fontSize: theme.fontSizes[2],
+              fontFamily: theme.fonts?.body,
+              fontWeight: theme.fontWeights?.semibold ?? 600,
+              color: activeTab === 'repositories' ? theme.colors.primary : theme.colors.textSecondary,
+              borderBottom: activeTab === 'repositories' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              marginBottom: -1,
+            }}
+            onClick={() => setActiveTab('repositories')}
+            onMouseEnter={(e) => { if (activeTab !== 'repositories') e.currentTarget.style.color = theme.colors.text; }}
+            onMouseLeave={(e) => { if (activeTab !== 'repositories') e.currentTarget.style.color = theme.colors.textSecondary; }}
+          >
+            Repositories
+          </button>
+          <button
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              fontSize: theme.fontSizes[2],
+              fontFamily: theme.fonts?.body,
+              fontWeight: theme.fontWeights?.semibold ?? 600,
+              color: activeTab === 'pinned' ? theme.colors.primary : theme.colors.textSecondary,
+              borderBottom: activeTab === 'pinned' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              marginBottom: -1,
+            }}
+            onClick={() => setActiveTab('pinned')}
+            onMouseEnter={(e) => { if (activeTab !== 'pinned') e.currentTarget.style.color = theme.colors.text; }}
+            onMouseLeave={(e) => { if (activeTab !== 'pinned') e.currentTarget.style.color = theme.colors.textSecondary; }}
+          >
+            Pinned
+          </button>
+        </div>
+      )}
+
+      {/* Pinned tab content (narrow only) */}
+      {isNarrow && activeTab === 'pinned' && pinnedRepoNames.length > 0 && (
+        <div style={{ flex: 1, overflow: 'auto', padding: `0 ${spacing.md}px ${spacing.md}px` }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md, alignContent: 'flex-start' }}>
+            {pinnedRepoNames.map((nameWithOwner) => {
+              const [owner, name] = nameWithOwner.split('/');
+              const repoData = repositories.find(
+                (r) => r.repoName === name && r.githubOwner === owner
+              );
+              return (
+                <div
+                  key={nameWithOwner}
+                  onClick={() => {
+                    const repositoryEntry: AlexandriaEntry = repoData?.alexandriaEntry || ({
+                      path: repoData?.repoPath || '',
+                      name: name ?? nameWithOwner,
+                      remoteUrl: `https://github.com/${owner}/${name}.git`,
+                      registeredAt: repoData?.createdAt || new Date().toISOString(),
+                      hasViews: false,
+                      viewCount: 0,
+                      views: [],
+                      github: {
+                        id: nameWithOwner,
+                        owner: owner ?? '',
+                        name: name ?? nameWithOwner,
+                        stars: repoData?.stars || 0,
+                        description: repoData?.description,
+                        primaryLanguage: repoData?.language,
+                        lastUpdated: new Date().toISOString(),
+                      },
+                    } as unknown as AlexandriaEntry);
+                    events.emit({
+                      type: 'feed:repository-selected',
+                      source: 'OrgProfilePanel',
+                      timestamp: Date.now(),
+                      payload: { repository: repositoryEntry },
+                    });
+                  }}
+                  style={{
+                    width: 'calc(50% - 4px)',
+                    minWidth: 120,
+                    padding: `${spacing.xs}px ${spacing.sm}px`,
+                    borderRadius: 6,
+                    border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`,
+                    backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    boxSizing: 'border-box',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: theme.fontWeights?.semibold ?? 600,
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.primary,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {name ?? nameWithOwner}
+                  </div>
+                  {repoData?.description && (
+                    <div style={{
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.textSecondary,
+                      overflow: 'hidden',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      lineHeight: 1.3,
+                    }}>
+                      {repoData.description}
+                    </div>
+                  )}
+                  {repoData?.language && (
+                    <div style={{
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.textSecondary,
+                      marginTop: 2,
+                    }}>
+                      {repoData.language}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Repositories Grid - Scrollable section */}
-      {repositories.length > 0 && (
+      {(activeTab === 'repositories' || (!isNarrow)) && repositories.length > 0 && (
         <div
           style={{
             flex: 1,
