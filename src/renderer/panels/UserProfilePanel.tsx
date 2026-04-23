@@ -5,7 +5,7 @@
  * Features a Facebook-style layout with an avatar overlapping an activity heatmap banner.
  */
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type {
   PanelContextValue,
@@ -162,6 +162,12 @@ export interface UserProfilePanelActions extends PanelActions {
    * Get organizations a user belongs to (optional)
    */
   getUserOrgs?: (username: string) => Promise<GitHubOrganization[]>;
+
+  /**
+   * Get pinned repositories for a user (optional)
+   * Returns array of "owner/repo" strings
+   */
+  getPinnedRepositories?: (username: string) => Promise<string[]>;
 }
 
 interface UserProfilePanelProps {
@@ -364,11 +370,19 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   const [isWatchLoading, setIsWatchLoading] = useState(false);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'pinned'>('overview');
+
+  // Panel width for responsive pinned column
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [panelWidth, setPanelWidth] = useState(0);
+  const PINNED_COLUMN_MIN_WIDTH = 900;
 
   // Org avatars
   const [userOrgs, setUserOrgs] = useState<GitHubOrganization[]>([]);
   const [hoveredOrgIndex, setHoveredOrgIndex] = useState<number | null>(null);
+
+  // Pinned repos
+  const [pinnedRepoNames, setPinnedRepoNames] = useState<string[]>([]);
 
   const spacing = useMemo(
     () => ({
@@ -380,6 +394,21 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     }),
     [],
   );
+
+  // Track panel width for responsive layout
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width;
+      setPanelWidth(width);
+      if (width >= PINNED_COLUMN_MIN_WIDTH && activeTab === 'pinned') {
+        setActiveTab('overview');
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [activeTab]);
 
   // Fetch profile when user changes
   useEffect(() => {
@@ -560,6 +589,26 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     };
   }, [user, actions]);
 
+  // Fetch pinned repos when user changes
+  useEffect(() => {
+    if (!user || !actions.getPinnedRepositories) {
+      setPinnedRepoNames([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    actions.getPinnedRepositories(user.username)
+      .then((names) => {
+        if (!cancelled) setPinnedRepoNames(names);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, actions]);
+
   // Handle open in browser - emit event instead
   const handleOpenUrl = (url: string, type: 'website' | 'twitter' | 'github' | 'email') => {
     events.emit({
@@ -686,8 +735,11 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     );
   }
 
+  const isNarrow = panelWidth > 0 && panelWidth < PINNED_COLUMN_MIN_WIDTH;
+
   return (
     <div
+      ref={containerRef}
       style={{
         height: '100%',
         display: 'flex',
@@ -709,232 +761,190 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
       {/* Profile Header - Fixed, no scroll */}
       <div style={{ padding: spacing.md, marginTop: -60, position: 'relative', flexShrink: 0 }}>
-        {/* Avatar Section - positioned to overlap banner */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md, marginBottom: spacing.md }}>
-          {/* Avatar */}
-          <div
-            style={{
-              width: 120,
-              height: 120,
-              borderRadius: '50%',
-              backgroundColor: theme.colors.backgroundSecondary,
-              border: `4px solid ${theme.colors.background}`,
-              overflow: 'hidden',
-              flexShrink: 0,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-            }}
-          >
-            {displayData.avatarUrl ? (
-              <img
-                src={displayData.avatarUrl}
-                alt={displayData.username}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
+        <div style={{ display: 'flex', alignItems: 'stretch', gap: spacing.md }}>
+
+          {/* Left column: avatar+stats row, then name/bio below */}
+          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+            {/* Avatar + Stats row — same as original */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md }}>
+              {/* Avatar */}
               <div
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: theme.fontSizes[6] ?? 40,
-                  fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  color: theme.colors.text,
-                  backgroundColor: theme.colors.primary + '20',
+                  width: 120,
+                  height: 120,
+                  borderRadius: '50%',
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  border: `4px solid ${theme.colors.background}`,
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
                 }}
               >
-                {initials}
-              </div>
-            )}
-          </div>
-
-          {/* Stats - aligned with bottom of avatar */}
-          <div style={{ flex: 1, paddingBottom: spacing.xs }}>
-            <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}>
-              <div
-                style={{ textAlign: 'center', cursor: 'pointer' }}
-                onMouseEnter={() => setIsCommitsStatHovered(true)}
-                onMouseLeave={() => setIsCommitsStatHovered(false)}
-              >
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '24px',
-                }}>
-                  {formatNumber(commitsThisYear)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  commits this year
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '24px',
-                }}>
-                  {formatNumber(displayData.totalRepos)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  projects
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '24px',
-                }}>
-                  {formatNumber(displayData.followers)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  followers
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '24px',
-                }}>
-                  {formatNumber(displayData.following)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  following
-                </div>
+                {displayData.avatarUrl ? (
+                  <img
+                    src={displayData.avatarUrl}
+                    alt={displayData.username}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: theme.fontSizes[6] ?? 40,
+                      fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      color: theme.colors.text,
+                      backgroundColor: theme.colors.primary + '20',
+                    }}
+                  >
+                    {initials}
+                  </div>
+                )}
               </div>
 
-              {/* Watch Button */}
-              <div
-                style={{
-                  textAlign: 'center',
-                  cursor: isWatchLoading ? 'not-allowed' : 'pointer',
-                  opacity: isWatchLoading ? 0.6 : 1,
-                  transition: 'opacity 0.2s ease',
-                  minWidth: '65px',
-                }}
-                onClick={isWatchLoading ? undefined : handleToggleWatch}
-              >
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: isWatched ? theme.colors.primary : theme.colors.text,
-                  display: 'flex',
-                  justifyContent: 'center',
-                }}>
-                  {isWatched ? <Eye size={24} /> : <EyeClosed size={24} />}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary,
-                  whiteSpace: 'nowrap',
-                }}>
-                  {isWatched ? 'watching' : 'watch'}
+              {/* Stats */}
+              <div style={{ paddingBottom: spacing.xs }}>
+                <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}>
+                  <div
+                    style={{ textAlign: 'center', cursor: 'pointer' }}
+                    onMouseEnter={() => setIsCommitsStatHovered(true)}
+                    onMouseLeave={() => setIsCommitsStatHovered(false)}
+                  >
+                    <div style={{
+                      fontSize: theme.fontSizes[3],
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.text,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '24px',
+                    }}>
+                      {formatNumber(commitsThisYear)}
+                    </div>
+                    <div style={{ fontSize: theme.fontSizes[0], fontFamily: theme.fonts?.body, color: theme.colors.textSecondary }}>
+                      commits this year
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                      fontSize: theme.fontSizes[3],
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.text,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '24px',
+                    }}>
+                      {formatNumber(displayData.totalRepos)}
+                    </div>
+                    <div style={{ fontSize: theme.fontSizes[0], fontFamily: theme.fonts?.body, color: theme.colors.textSecondary }}>
+                      projects
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                      fontSize: theme.fontSizes[3],
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.text,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '24px',
+                    }}>
+                      {formatNumber(displayData.followers)}
+                    </div>
+                    <div style={{ fontSize: theme.fontSizes[0], fontFamily: theme.fonts?.body, color: theme.colors.textSecondary }}>
+                      followers
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                      fontSize: theme.fontSizes[3],
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.text,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '24px',
+                    }}>
+                      {formatNumber(displayData.following)}
+                    </div>
+                    <div style={{ fontSize: theme.fontSizes[0], fontFamily: theme.fonts?.body, color: theme.colors.textSecondary }}>
+                      following
+                    </div>
+                  </div>
+
+                  {/* Watch Button */}
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      cursor: isWatchLoading ? 'not-allowed' : 'pointer',
+                      opacity: isWatchLoading ? 0.6 : 1,
+                      transition: 'opacity 0.2s ease',
+                      minWidth: '65px',
+                    }}
+                    onClick={isWatchLoading ? undefined : handleToggleWatch}
+                  >
+                    <div style={{
+                      fontSize: theme.fontSizes[3],
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      fontFamily: theme.fonts?.body,
+                      color: isWatched ? theme.colors.primary : theme.colors.text,
+                      display: 'flex',
+                      justifyContent: 'center',
+                    }}>
+                      {isWatched ? <Eye size={24} /> : <EyeClosed size={24} />}
+                    </div>
+                    <div style={{
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.textSecondary,
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {isWatched ? 'watching' : 'watch'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Name and Username */}
-        <div style={{ marginBottom: spacing.md }}>
-          {displayData.name && (
-            <h2
-              style={{
-                margin: 0,
-                fontSize: theme.fontSizes[4],
-                fontWeight: theme.fontWeights?.semibold ?? 600,
-                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
-                color: theme.colors.text,
-              }}
-            >
-              {displayData.name}
-            </h2>
-          )}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              marginTop: spacing.xs,
-              flexWrap: 'wrap',
-            }}
-          >
-            {/* GitHub handle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-              <Github size={14} color={theme.colors.textSecondary} />
-              <button
-                onClick={() => handleOpenUrl(`https://github.com/${displayData.username}`, 'github')}
+            {/* Name and Username */}
+            <div>
+              {displayData.name && (
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: theme.fontSizes[4],
+                    fontWeight: theme.fontWeights?.semibold ?? 600,
+                    fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                    color: theme.colors.text,
+                  }}
+                >
+                  {displayData.name}
+                </h2>
+              )}
+              <div
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  fontSize: theme.fontSizes[2],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                  transition: 'color 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = theme.colors.primary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = theme.colors.textSecondary;
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  marginTop: spacing.xs,
+                  flexWrap: 'wrap',
                 }}
               >
-                {displayData.username}
-              </button>
-            </div>
-
-            {/* Twitter handle inline */}
-            {displayData.twitterHandle && (
-              <>
-                <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
+                {/* GitHub handle */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                  <Twitter size={14} color={theme.colors.textSecondary} />
+                  <Github size={14} color={theme.colors.textSecondary} />
                   <button
-                    onClick={() => handleOpenUrl(`https://twitter.com/${displayData.twitterHandle}`, 'twitter')}
+                    onClick={() => handleOpenUrl(`https://github.com/${displayData.username}`, 'github')}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -946,97 +956,217 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                       textDecoration: 'none',
                       transition: 'color 0.15s ease',
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = theme.colors.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = theme.colors.textSecondary;
-                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = theme.colors.primary; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textSecondary; }}
                   >
-                    {displayData.twitterHandle}
+                    {displayData.username}
                   </button>
                 </div>
-              </>
-            )}
 
-            {/* Org avatars */}
-            {userOrgs.length > 0 && (
-              <>
-                <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                {userOrgs.map((org, i) => (
-                  <div
-                    key={org.id}
-                    style={{
-                      position: 'relative',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={() => setHoveredOrgIndex(i)}
-                    onMouseLeave={() => setHoveredOrgIndex(null)}
-                    onClick={() => events.emit({
-                      type: 'feed:owner-selected',
-                      source: 'user-profile-panel',
-                      timestamp: Date.now(),
-                      payload: { owner: org.login, isOrg: true },
-                    })}
-                  >
-                    <img
-                      src={org.avatar_url}
-                      alt={org.login}
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 6,
-                        border: `2px solid ${theme.colors.background}`,
-                        objectFit: 'cover',
-                        display: 'block',
-                        transform: hoveredOrgIndex === i ? 'translateY(-3px)' : 'translateY(0)',
-                        transition: 'transform 0.15s ease',
-                      }}
-                    />
-                    {hoveredOrgIndex === i && (
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        marginBottom: 4,
-                        background: theme.colors.surface ?? theme.colors.background,
-                        border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary}`,
-                        borderRadius: 4,
-                        padding: '2px 6px',
-                        fontSize: theme.fontSizes[1],
-                        fontFamily: theme.fonts?.body,
-                        color: theme.colors.text,
-                        whiteSpace: 'nowrap',
-                        pointerEvents: 'none',
-                        zIndex: 100,
-                      }}>
-                        {org.login}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {/* Twitter handle inline */}
+                {displayData.twitterHandle && (
+                  <>
+                    <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                      <Twitter size={14} color={theme.colors.textSecondary} />
+                      <button
+                        onClick={() => handleOpenUrl(`https://twitter.com/${displayData.twitterHandle}`, 'twitter')}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          fontSize: theme.fontSizes[2],
+                          fontFamily: theme.fonts?.body,
+                          color: theme.colors.textSecondary,
+                          cursor: 'pointer',
+                          textDecoration: 'none',
+                          transition: 'color 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = theme.colors.primary; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textSecondary; }}
+                      >
+                        {displayData.twitterHandle}
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Org avatars */}
+                {userOrgs.length > 0 && (
+                  <>
+                    <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {userOrgs.map((org, i) => (
+                        <div
+                          key={org.id}
+                          style={{ position: 'relative', cursor: 'pointer' }}
+                          onMouseEnter={() => setHoveredOrgIndex(i)}
+                          onMouseLeave={() => setHoveredOrgIndex(null)}
+                          onClick={() => events.emit({
+                            type: 'feed:owner-selected',
+                            source: 'user-profile-panel',
+                            timestamp: Date.now(),
+                            payload: { owner: org.login, isOrg: true },
+                          })}
+                        >
+                          <img
+                            src={org.avatar_url}
+                            alt={org.login}
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: 6,
+                              border: `2px solid ${theme.colors.background}`,
+                              objectFit: 'cover',
+                              display: 'block',
+                              transform: hoveredOrgIndex === i ? 'translateY(-3px)' : 'translateY(0)',
+                              transition: 'transform 0.15s ease',
+                            }}
+                          />
+                          {hoveredOrgIndex === i && (
+                            <div style={{
+                              position: 'absolute',
+                              bottom: '100%',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              marginBottom: 4,
+                              background: theme.colors.surface ?? theme.colors.background,
+                              border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary}`,
+                              borderRadius: 4,
+                              padding: '2px 6px',
+                              fontSize: theme.fontSizes[1],
+                              fontFamily: theme.fonts?.body,
+                              color: theme.colors.text,
+                              whiteSpace: 'nowrap',
+                              pointerEvents: 'none',
+                              zIndex: 100,
+                            }}>
+                              {org.login}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
-              </>
+            </div>
+
+            {/* Bio */}
+            {displayData.bio && (
+              <p
+                style={{
+                  margin: `0 0 ${spacing.md}px`,
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts?.body,
+                  lineHeight: theme.lineHeights?.body ?? 1.5,
+                  color: theme.colors.text,
+                }}
+              >
+                {displayData.bio}
+              </p>
             )}
           </div>
-        </div>
 
-        {/* Bio */}
-        {displayData.bio && (
-          <p
-            style={{
-              margin: `0 0 ${spacing.md}px`,
-              fontSize: theme.fontSizes[1],
-              fontFamily: theme.fonts?.body,
-              lineHeight: theme.lineHeights?.body ?? 1.5,
-              color: theme.colors.text,
-            }}
-          >
-            {displayData.bio}
-          </p>
-        )}
+          {/* Right column: pinned repos (wide mode only) */}
+          {!isNarrow && pinnedRepoNames.length > 0 && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: 60, minWidth: 0 }}>
+
+            {/* Pinned repos */}
+            {pinnedRepoNames.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm, alignContent: 'flex-start' }}>
+                {pinnedRepoNames.map((nameWithOwner) => {
+                  const [owner, name] = nameWithOwner.split('/');
+                  const repoData = repositories.find(
+                    (r) => r.repoName === name && r.githubOwner === owner
+                  );
+                  return (
+                    <div
+                      key={nameWithOwner}
+                      onClick={() => {
+                        const repositoryEntry: AlexandriaEntry = repoData?.alexandriaEntry || ({
+                          path: repoData?.repoPath || '',
+                          name: name ?? nameWithOwner,
+                          remoteUrl: `https://github.com/${owner}/${name}.git`,
+                          registeredAt: repoData?.createdAt || new Date().toISOString(),
+                          hasViews: false,
+                          viewCount: 0,
+                          views: [],
+                          github: {
+                            id: nameWithOwner,
+                            owner: owner ?? '',
+                            name: name ?? nameWithOwner,
+                            stars: repoData?.stars || 0,
+                            description: repoData?.description,
+                            primaryLanguage: repoData?.language,
+                            lastUpdated: new Date().toISOString(),
+                          },
+                        } as unknown as AlexandriaEntry);
+                        events.emit({
+                          type: 'feed:repository-selected',
+                          source: 'UserProfilePanel',
+                          timestamp: Date.now(),
+                          payload: { repository: repositoryEntry },
+                        });
+                      }}
+                      style={{
+                        width: 'calc(50% - 4px)',
+                        minWidth: 120,
+                        padding: `${spacing.xs}px ${spacing.sm}px`,
+                        borderRadius: 6,
+                        border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`,
+                        backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        boxSizing: 'border-box',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: theme.fontWeights?.semibold ?? 600,
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.primary,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {name ?? nameWithOwner}
+                      </div>
+                      {repoData?.description && (
+                        <div style={{
+                          fontSize: theme.fontSizes[0],
+                          fontFamily: theme.fonts?.body,
+                          color: theme.colors.textSecondary,
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          lineHeight: 1.3,
+                        }}>
+                          {repoData.description}
+                        </div>
+                      )}
+                      {repoData?.language && (
+                        <div style={{
+                          fontSize: theme.fontSizes[0],
+                          fontFamily: theme.fonts?.body,
+                          color: theme.colors.textSecondary,
+                          marginTop: 2,
+                        }}>
+                          {repoData.language}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          )}
+
+        </div>
       </div>
 
       {/* Tabs */}
@@ -1104,6 +1234,32 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         >
           Activity
         </button>
+        {isNarrow && pinnedRepoNames.length > 0 && (
+          <button
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              fontSize: theme.fontSizes[2],
+              fontFamily: theme.fonts?.body,
+              fontWeight: theme.fontWeights?.semibold ?? 600,
+              color: activeTab === 'pinned' ? theme.colors.primary : theme.colors.textSecondary,
+              borderBottom: activeTab === 'pinned' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              marginBottom: -1,
+            }}
+            onClick={() => setActiveTab('pinned')}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'pinned') e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'pinned') e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+          >
+            Pinned
+          </button>
+        )}
       </div>
 
       {/* Scrollable content section */}
@@ -1395,6 +1551,74 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                       } as unknown as AlexandriaEntry);
 
                       // Emit event to open repository profile
+                      events.emit({
+                        type: 'feed:repository-selected',
+                        source: 'UserProfilePanel',
+                        timestamp: Date.now(),
+                        payload: { repository: repositoryEntry },
+                      });
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Pinned Tab (narrow mode only) */}
+        {activeTab === 'pinned' && (
+          <div style={{ marginTop: spacing.md }}>
+            <h3
+              style={{
+                margin: 0,
+                marginBottom: spacing.md,
+                fontSize: theme.fontSizes[3],
+                fontWeight: theme.fontWeights?.semibold ?? 600,
+                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                color: theme.colors.text,
+              }}
+            >
+              Pinned repositories
+            </h3>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))',
+                gap: spacing.md,
+              }}
+            >
+              {pinnedRepoNames.map((nameWithOwner) => {
+                const [owner, name] = nameWithOwner.split('/');
+                const repo = repositories.find(
+                  (r) => r.repoName === name && r.githubOwner === owner
+                );
+                if (!repo) return null;
+                const fileTreeKey = nameWithOwner;
+                const fileTree = fileTrees.get(fileTreeKey);
+                return (
+                  <RepoCard
+                    key={nameWithOwner}
+                    repo={repo}
+                    fileTree={fileTree}
+                    onClick={() => {
+                      const repositoryEntry: AlexandriaEntry = repo.alexandriaEntry || ({
+                        path: repo.repoPath || '',
+                        name: repo.repoName,
+                        remoteUrl: `https://github.com/${repo.githubOwner}/${repo.githubRepoName}.git`,
+                        registeredAt: repo.createdAt || new Date().toISOString(),
+                        hasViews: false,
+                        viewCount: 0,
+                        views: [],
+                        github: {
+                          id: `${repo.githubOwner}/${repo.githubRepoName}`,
+                          owner: repo.githubOwner || '',
+                          name: repo.githubRepoName || repo.repoName,
+                          stars: repo.stars || 0,
+                          description: repo.description,
+                          primaryLanguage: repo.language,
+                          lastUpdated: new Date().toISOString(),
+                        },
+                      } as unknown as AlexandriaEntry);
                       events.emit({
                         type: 'feed:repository-selected',
                         source: 'UserProfilePanel',

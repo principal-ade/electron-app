@@ -30,6 +30,7 @@ import type {
   AddRepoToCollectionInput,
   RemoveRepoFromCollectionInput,
   StarredCollection,
+  GetPinnedRepositoriesInput,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
@@ -66,6 +67,9 @@ export interface WebAdeClient {
   createCollection: (input: CreateCollectionInput) => Promise<StarredCollection>;
   addRepoToCollection: (input: AddRepoToCollectionInput) => Promise<void>;
   removeRepoFromCollection: (input: RemoveRepoFromCollectionInput) => Promise<void>;
+
+  // Pinned Repositories
+  getPinnedRepositories: (input: GetPinnedRepositoriesInput) => Promise<string[]>;
 }
 
 // =============================================================================
@@ -142,4 +146,5 @@ export type {
   StarredCollection,
   StarredCollectionRepo,
   StarredCollectionUser,
+  GetPinnedRepositoriesInput,
 } from '../../shared/tipc/webAdeRouterTypes';

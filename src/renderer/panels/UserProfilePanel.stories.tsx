@@ -342,7 +342,8 @@ const createMockUserProfile = (
 const MockUserProfilePanel: React.FC<{
   userData?: UserProfileData;
   username?: string;
-}> = ({ userData, username = 'octocat' }) => {
+  pinnedRepos?: string[];
+}> = ({ userData, username = 'octocat', pinnedRepos = [] }) => {
   // Track watched users in component state for interactive demo
   const [watchedUsers, setWatchedUsers] = React.useState<Set<string>>(new Set());
 
@@ -419,6 +420,10 @@ const MockUserProfilePanel: React.FC<{
       await new Promise((resolve) => setTimeout(resolve, 150));
       return mockUserOrgs;
     },
+    getPinnedRepositories: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      return pinnedRepos;
+    },
     openFile: async () => {},
   };
 
@@ -437,6 +442,7 @@ const MockUserProfilePanel: React.FC<{
 const UserProfilePanelStory: React.FC<{
   userData?: UserProfileData;
   username?: string;
+  pinnedRepos?: string[];
 }> = (props) => {
   return (
     <ThemeProvider>
@@ -681,6 +687,32 @@ export const LongBio = {
         bio: 'Passionate software engineer with 10+ years of experience in full-stack development. Specialized in React, TypeScript, Node.js, and cloud technologies. Open source maintainer of several popular packages. Love mentoring junior developers and contributing to the tech community. When not coding, you can find me hiking, reading sci-fi, or experimenting with new tech.',
         activityData: generateMockActivityData('medium'),
       })}
+    />
+  ),
+} as unknown as Story;
+
+// Profile with pinned repositories
+export const WithPinnedRepos = {
+  render: () => (
+    <UserProfilePanelStory
+      userData={createMockUserProfile({
+        username: 'octocat',
+        name: 'The Octocat',
+        bio: 'Open source enthusiast and cat lover. Building the future, one commit at a time.',
+        activityData: generateMockActivityData('medium'),
+        totalCommits: 1247,
+        totalRepos: 42,
+        followers: 3542,
+        following: 127,
+      })}
+      pinnedRepos={[
+        'octocat/awesome-project',
+        'octocat/cli-tool',
+        'octocat/web-framework',
+        'octocat/ui-components',
+        'octocat/data-pipeline',
+        'octocat/api-server',
+      ]}
     />
   ),
 } as unknown as Story;

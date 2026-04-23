@@ -608,6 +608,45 @@ export class WebAdeService {
   }
 
   /**
+   * Get pinned repositories for a user or organization
+   * Returns array of "owner/repo" strings
+   */
+  async getPinnedRepositories(username: string): Promise<string[]> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/github/user/${username}/pinned`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return [];
+        }
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        throw new Error(`Failed to fetch pinned repositories: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as { pinnedRepos?: string[] };
+      return data.pinnedRepos || [];
+    } catch (error) {
+      console.error('[WebADE] Failed to fetch pinned repositories:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get user activity (recent commits and contribution heatmap)
    * Fetches recent commit activity and contribution calendar for a GitHub user
    */

@@ -20,6 +20,7 @@ import type {
   AddRepoToCollectionInput,
   RemoveRepoFromCollectionInput,
   GetUserActivityInput,
+  GetPinnedRepositoriesInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 
@@ -141,5 +142,15 @@ export const webAdeRouter = {
     .input<RemoveRepoFromCollectionInput>()
     .action(async ({ input }) => {
       return webAdeService.removeRepoFromCollection(input.collectionId, input.owner, input.repo);
+    }),
+
+  // ===========================================================================
+  // Pinned Repositories
+  // ===========================================================================
+
+  getPinnedRepositories: t.procedure
+    .input<GetPinnedRepositoriesInput>()
+    .action(async ({ input }) => {
+      return webAdeService.getPinnedRepositories(input.username);
     }),
 };

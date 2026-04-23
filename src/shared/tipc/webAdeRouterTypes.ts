@@ -273,6 +273,10 @@ export interface GetUserActivityInput {
   activityDays?: number; // Days of recent commit activity (default: 1)
 }
 
+export interface GetPinnedRepositoriesInput {
+  username: string;
+}
+
 // =============================================================================
 // Router Type Definition
 // =============================================================================
@@ -375,5 +379,11 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: GetUserActivityInput;
     }) => Promise<UserActivityResponse>;
+  };
+  getPinnedRepositories: {
+    action: (args: {
+      context: ActionContext;
+      input: GetPinnedRepositoriesInput;
+    }) => Promise<string[]>;
   };
 };

@@ -147,4 +147,12 @@ export class WebAdeService {
   static async removeRepoFromCollection(collectionId: string, owner: string, repo: string): Promise<void> {
     return webAdeClient.removeRepoFromCollection({ collectionId, owner, repo });
   }
+
+  /**
+   * Get pinned repositories for a user or organization
+   * @param username - GitHub username or organization login
+   */
+  static async getPinnedRepositories(username: string): Promise<string[]> {
+    return webAdeClient.getPinnedRepositories({ username });
+  }
 }

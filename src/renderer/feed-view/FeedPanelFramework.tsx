@@ -735,6 +735,10 @@ const UserProfileTabContent: React.FC<{
       return GithubService.getUserOrganizationsForUser(username);
     },
 
+    getPinnedRepositories: async (username: string) => {
+      return WebAdeService.getPinnedRepositories(username);
+    },
+
     openFile: async () => {},
   }), [email, repositories]);
 
