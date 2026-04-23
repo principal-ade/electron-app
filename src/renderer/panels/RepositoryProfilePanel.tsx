@@ -596,6 +596,24 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     };
   }, [repositoryData]);
 
+  // Subscribe to live git status changes for all local clones
+  useEffect(() => {
+    const clonePaths = new Set(repositoryData?.localClones?.map(c => c.path) ?? []);
+    if (clonePaths.size === 0) return;
+
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged((status) => {
+      if (clonePaths.has(status.repoPath)) {
+        setGitStatusMap(prev => {
+          const updated = new Map(prev);
+          updated.set(status.repoPath, status);
+          return updated;
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [repositoryData?.localClones]);
+
   // Create initial highlight layers from git status and file suffixes when data loads
   useEffect(() => {
     // Only create highlights if not currently playing
