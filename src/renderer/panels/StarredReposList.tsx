@@ -231,69 +231,71 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
                     e.currentTarget.style.borderColor = theme.colors.border;
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
-                    <img
-                      src={repo.owner.avatar_url}
-                      alt={owner}
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: '50%',
-                        flexShrink: 0,
-                        marginTop: 1,
-                      }}
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text }}>
-                        {name}
-                      </div>
-                      <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, marginTop: 2 }}>
-                        {owner}
-                      </div>
-                      {repo.description && (
-                        <div
-                          style={{
-                            fontSize: theme.fontSizes[0],
-                            color: theme.colors.textSecondary,
-                            marginTop: spacing.xs,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                          }}
-                        >
-                          {repo.description}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                    {/* Avatar + name row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+                      <img
+                        src={repo.owner.avatar_url}
+                        alt={owner}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                        }}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: theme.fontSizes[2], fontWeight: 600, color: theme.colors.text }}>
+                          {name}
                         </div>
-                      )}
+                        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary, marginTop: 2 }}>
+                          {owner}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Description — full width */}
+                    {repo.description && (
                       <div
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: spacing.md,
-                          marginTop: spacing.xs,
-                          fontSize: theme.fontSizes[0],
+                          fontSize: theme.fontSizes[1],
                           color: theme.colors.textSecondary,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
                         }}
                       >
-                        {repo.language && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                            <div
-                              style={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: '50%',
-                                backgroundColor: theme.colors.primary,
-                              }}
-                            />
-                            <span>{repo.language}</span>
-                          </div>
-                        )}
+                        {repo.description}
+                      </div>
+                    )}
+                    {/* Meta row — full width */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing.md,
+                        fontSize: theme.fontSizes[1],
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      {repo.language && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                          <Star size={12} />
-                          <span>{repo.stargazers_count?.toLocaleString() || 0}</span>
+                          <div
+                            style={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: '50%',
+                              backgroundColor: theme.colors.primary,
+                            }}
+                          />
+                          <span>{repo.language}</span>
                         </div>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                        <Star size={12} fill="#f5c542" color="#f5c542" />
+                        <span>{repo.stargazers_count?.toLocaleString() || 0}</span>
                       </div>
                     </div>
                   </div>
