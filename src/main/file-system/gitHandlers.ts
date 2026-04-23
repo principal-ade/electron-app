@@ -173,8 +173,12 @@ export function registerGitHandlers(): void {
         const normalizedUrl = normalizeGitUrl(remoteUrl);
         diagnostics.normalizedUrl = normalizedUrl;
 
-        // Use gitClientFactory to clone the repository
+        // Ensure the parent directory exists before cloning — if it doesn't,
+        // execSync throws a spawn ENOENT with no stderr, hiding the real error.
         const parentDir = targetPath.substring(0, targetPath.lastIndexOf('/'));
+        const fs = await import('fs/promises');
+        await fs.mkdir(parentDir, { recursive: true });
+
         const git = await gitClientFactory.getClient(parentDir);
 
         // Check if this is an SSH URL

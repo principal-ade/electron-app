@@ -1244,7 +1244,8 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
     load();
     return () => { cancelled = true; };
-  }, [repositoryData, actions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repositoryData?.localClones?.[0]?.path, repositoryData?.github?.owner, repositoryData?.github?.name, actions]);
 
   // Handle contributors stat click — data is already fetched by the effect
   const handleContributorsClick = () => {
@@ -2572,7 +2573,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 )}
               </div>
 
-              {contributorsLoading ? (
+              {showContributors && contributorsLoading ? (
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
