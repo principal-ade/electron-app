@@ -223,7 +223,12 @@ const RepositoryProfileTabContent: React.FC<{
       setLoading(true);
 
       try {
-        const repo = repository;
+        // Re-fetch from Alexandria on refresh to pick up updated localClones (e.g. after cloning)
+        let repo: AlexandriaEntry = repository;
+        if (refreshTrigger > 0) {
+          const freshEntry = await AlexandriaService.getRepository(repository.name);
+          if (freshEntry) repo = freshEntry;
+        }
 
         if (cancelled) return;
 
