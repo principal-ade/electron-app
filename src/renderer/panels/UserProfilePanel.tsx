@@ -22,6 +22,7 @@ import {
 import { RepoCard, type RepoCardData } from './RepoCard';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { GitHubOrganization } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 /**
  * User identifier in context
@@ -156,6 +157,11 @@ export interface UserProfilePanelActions extends PanelActions {
    * Unwatch a GitHub user (optional)
    */
   unwatchUser?: (username: string) => Promise<void>;
+
+  /**
+   * Get organizations a user belongs to (optional)
+   */
+  getUserOrgs?: (username: string) => Promise<GitHubOrganization[]>;
 }
 
 interface UserProfilePanelProps {
@@ -360,6 +366,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   // Tab state
   const [activeTab, setActiveTab] = useState<'overview' | 'activity'>('overview');
 
+  // Org avatars
+  const [userOrgs, setUserOrgs] = useState<GitHubOrganization[]>([]);
+  const [hoveredOrgIndex, setHoveredOrgIndex] = useState<number | null>(null);
+
   const spacing = useMemo(
     () => ({
       xs: 4,
@@ -529,6 +539,26 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
     fetchFileTrees();
   }, [repositories, actions]);
+
+  // Load orgs for this user
+  useEffect(() => {
+    if (!user || !actions.getUserOrgs) {
+      setUserOrgs([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    actions.getUserOrgs(user.username)
+      .then((result) => {
+        if (!cancelled) setUserOrgs(result.slice(0, 8));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, actions]);
 
   // Handle open in browser - emit event instead
   const handleOpenUrl = (url: string, type: 'website' | 'twitter' | 'github' | 'email') => {
@@ -926,6 +956,68 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                     {displayData.twitterHandle}
                   </button>
                 </div>
+              </>
+            )}
+
+            {/* Org avatars */}
+            {userOrgs.length > 0 && (
+              <>
+                <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                {userOrgs.map((org, i) => (
+                  <div
+                    key={org.id}
+                    style={{
+                      position: 'relative',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={() => setHoveredOrgIndex(i)}
+                    onMouseLeave={() => setHoveredOrgIndex(null)}
+                    onClick={() => events.emit({
+                      type: 'feed:owner-selected',
+                      source: 'user-profile-panel',
+                      timestamp: Date.now(),
+                      payload: { owner: org.login, isOrg: true },
+                    })}
+                  >
+                    <img
+                      src={org.avatar_url}
+                      alt={org.login}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 6,
+                        border: `2px solid ${theme.colors.background}`,
+                        objectFit: 'cover',
+                        display: 'block',
+                        transform: hoveredOrgIndex === i ? 'translateY(-3px)' : 'translateY(0)',
+                        transition: 'transform 0.15s ease',
+                      }}
+                    />
+                    {hoveredOrgIndex === i && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        marginBottom: 4,
+                        background: theme.colors.surface ?? theme.colors.background,
+                        border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary}`,
+                        borderRadius: 4,
+                        padding: '2px 6px',
+                        fontSize: theme.fontSizes[1],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.text,
+                        whiteSpace: 'nowrap',
+                        pointerEvents: 'none',
+                        zIndex: 100,
+                      }}>
+                        {org.login}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
               </>
             )}
           </div>

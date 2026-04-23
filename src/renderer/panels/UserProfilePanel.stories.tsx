@@ -15,6 +15,14 @@ import {
 } from './UserProfilePanel';
 import type { RepoCardData, Contributor } from './RepoCard';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+import type { GitHubOrganization } from '../../shared/main-process-api-interfaces/GitHubAPI';
+
+const mockUserOrgs: GitHubOrganization[] = [
+  { id: 1, login: 'vercel',     avatar_url: 'https://avatars.githubusercontent.com/u/14985020?v=4', description: 'Vercel' },
+  { id: 2, login: 'facebook',   avatar_url: 'https://avatars.githubusercontent.com/u/69631?v=4',    description: 'Facebook' },
+  { id: 3, login: 'microsoft',  avatar_url: 'https://avatars.githubusercontent.com/u/6154722?v=4',  description: 'Microsoft' },
+  { id: 4, login: 'google',     avatar_url: 'https://avatars.githubusercontent.com/u/1342004?v=4',  description: 'Google' },
+];
 
 // Create mock file tree using PathsFileTreeBuilder
 const createMockFileTree = (repoName: string): FileTree => {
@@ -406,6 +414,10 @@ const MockUserProfilePanel: React.FC<{
         newSet.delete(user);
         return newSet;
       });
+    },
+    getUserOrgs: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      return mockUserOrgs;
     },
     openFile: async () => {},
   };

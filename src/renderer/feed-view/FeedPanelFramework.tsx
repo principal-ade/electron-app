@@ -500,6 +500,14 @@ const RepositoryProfileTabContent: React.FC<{
     unstarRepository: async (owner: string, repo: string) => {
       await GithubService.unstarRepository(owner, repo);
     },
+
+    registerRepository: async (name: string, path: string) => {
+      return AlexandriaService.registerRepository(name, path);
+    },
+
+    getContributors: async (owner: string, repo: string) => {
+      return GithubService.getRepositoryContributors(owner, repo);
+    },
   }), []);
 
   return (
@@ -723,6 +731,10 @@ const UserProfileTabContent: React.FC<{
       }
     },
 
+    getUserOrgs: async (username: string) => {
+      return GithubService.getUserOrganizationsForUser(username);
+    },
+
     openFile: async () => {},
   }), [email, repositories]);
 
@@ -888,6 +900,10 @@ const OrgProfileTabContent: React.FC<{
       if (!response.success) {
         throw new Error('Failed to unwatch organization');
       }
+    },
+
+    getOrgMembers: async (orgName: string) => {
+      return GithubService.getOrgMembers(orgName);
     },
 
     openFile: async () => {},

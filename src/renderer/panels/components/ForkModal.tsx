@@ -4,16 +4,17 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { X, Loader2, AlertCircle, Check, GitFork } from 'lucide-react';
 import { GithubService } from '../../main-process-api/GithubService';
 import { GitService } from '../../main-process-api/GitService';
-import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import type { GitHubUser, GitHubOrganization } from '../../../shared/main-process-api-interfaces/GitHubAPI';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 interface ForkModalProps {
   isOpen: boolean;
   onClose: () => void;
   repoOwner: string;
   repoName: string;
+  registerRepository: (name: string, path: string) => Promise<AlexandriaEntry>;
 }
 
 type Step = 'select' | 'progress' | 'complete';
@@ -26,7 +27,7 @@ function joinPath(...parts: string[]): string {
     .join('/');
 }
 
-export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner, repoName }) => {
+export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner, repoName, registerRepository }) => {
   const { theme } = useTheme();
 
   const [step, setStep] = useState<Step>('select');
@@ -89,7 +90,7 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
       if (!cloneOk) throw new Error('Clone failed — check your connection and try again.');
 
       setProgressStep('registering');
-      const registered = await AlexandriaService.registerRepository(forkedRepo.name, clonePath);
+      const registered = await registerRepository(forkedRepo.name, clonePath);
 
       setProgressStep('adding');
       const workspace = await WorkspaceService.getDefaultWorkspace();

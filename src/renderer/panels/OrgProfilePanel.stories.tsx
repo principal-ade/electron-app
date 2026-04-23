@@ -13,6 +13,16 @@ import {
 } from './OrgProfilePanel';
 import type { RepoCardData, Contributor } from './RepoCard';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+import type { GitHubOrgMember } from '../../shared/main-process-api-interfaces/GitHubAPI';
+
+const mockMembers: GitHubOrgMember[] = [
+  { id: 1, login: 'alice',   avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4',   type: 'User', site_admin: false },
+  { id: 2, login: 'bob',     avatar_url: 'https://avatars.githubusercontent.com/u/2?v=4',   type: 'User', site_admin: false },
+  { id: 3, login: 'carol',   avatar_url: 'https://avatars.githubusercontent.com/u/3?v=4',   type: 'User', site_admin: false },
+  { id: 4, login: 'dave',    avatar_url: 'https://avatars.githubusercontent.com/u/4?v=4',   type: 'User', site_admin: false },
+  { id: 5, login: 'eve',     avatar_url: 'https://avatars.githubusercontent.com/u/5?v=4',   type: 'User', site_admin: false },
+  { id: 6, login: 'frank',   avatar_url: 'https://avatars.githubusercontent.com/u/6?v=4',   type: 'User', site_admin: false },
+];
 
 // Create mock file tree using PathsFileTreeBuilder
 const createMockFileTree = (repoName: string): FileTree => {
@@ -310,6 +320,10 @@ const MockOrgProfilePanel: React.FC<{
         newSet.delete(org);
         return newSet;
       });
+    },
+    getOrgMembers: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      return mockMembers;
     },
     openFile: async () => {},
   };

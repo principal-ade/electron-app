@@ -22,6 +22,7 @@ import {
 import { RepoCard, type RepoCardData } from './RepoCard';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { GitHubOrgMember } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 /**
  * Organization identifier in context
@@ -86,7 +87,7 @@ export interface OrgProfilePanelActions extends PanelActions {
   /**
    * Get organization's members (optional)
    */
-  getOrgMembers?: (orgName: string) => Promise<unknown[]>;
+  getOrgMembers?: (orgName: string) => Promise<GitHubOrgMember[]>;
 
   /**
    * Check if organization is watched (orgs are watched as users)
@@ -261,6 +262,10 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   const [isWatched, setIsWatched] = useState(false);
   const [isWatchLoading, setIsWatchLoading] = useState(false);
 
+  // Member avatars
+  const [members, setMembers] = useState<GitHubOrgMember[]>([]);
+  const [hoveredMemberIndex, setHoveredMemberIndex] = useState<number | null>(null);
+
   const spacing = useMemo(
     () => ({
       xs: 4,
@@ -392,6 +397,26 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
 
     fetchFileTrees();
   }, [repositories, actions]);
+
+  // Load member avatars when org changes
+  useEffect(() => {
+    if (!org || !actions.getOrgMembers) {
+      setMembers([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    actions.getOrgMembers(org.orgName)
+      .then((result) => {
+        if (!cancelled) setMembers(result.slice(0, 8));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [org, actions]);
 
   // Load watch status when org changes
   useEffect(() => {
@@ -772,6 +797,68 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                     {displayData.twitterHandle}
                   </button>
                 </div>
+              </>
+            )}
+
+            {/* Member avatars */}
+            {members.length > 0 && (
+              <>
+                <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                {members.map((member, i) => (
+                  <div
+                    key={member.id}
+                    style={{
+                      position: 'relative',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={() => setHoveredMemberIndex(i)}
+                    onMouseLeave={() => setHoveredMemberIndex(null)}
+                    onClick={() => events.emit({
+                      type: 'user:profile-selected',
+                      source: 'org-profile-panel',
+                      timestamp: Date.now(),
+                      payload: { username: member.login },
+                    })}
+                  >
+                    <img
+                      src={member.avatar_url}
+                      alt={member.login}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        border: `2px solid ${theme.colors.background}`,
+                        objectFit: 'cover',
+                        display: 'block',
+                        transform: hoveredMemberIndex === i ? 'translateY(-3px)' : 'translateY(0)',
+                        transition: 'transform 0.15s ease',
+                      }}
+                    />
+                    {hoveredMemberIndex === i && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        marginBottom: 4,
+                        background: theme.colors.surface ?? theme.colors.background,
+                        border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary}`,
+                        borderRadius: 4,
+                        padding: '2px 6px',
+                        fontSize: theme.fontSizes[1],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.text,
+                        whiteSpace: 'nowrap',
+                        pointerEvents: 'none',
+                        zIndex: 100,
+                      }}>
+                        {member.login}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
               </>
             )}
           </div>

@@ -155,6 +155,16 @@ export interface RepositoryProfilePanelActions extends PanelActions {
    * Unstar a GitHub repository (optional)
    */
   unstarRepository?: (owner: string, repo: string) => Promise<void>;
+
+  /**
+   * Register a cloned or existing local repository with Alexandria
+   */
+  registerRepository: (name: string, path: string) => Promise<AlexandriaEntry>;
+
+  /**
+   * Get contributors for a GitHub repository (optional)
+   */
+  getContributors?: (owner: string, repo: string) => Promise<Array<{ login: string; contributions: number; avatar_url: string }>>;
 }
 
 interface RepositoryProfilePanelProps {
@@ -425,8 +435,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // State for contributors list
   const [showContributors, setShowContributors] = useState(false);
-  const [contributors, setContributors] = useState<Array<{ name: string; commits: number }>>([]);
+  const [contributors, setContributors] = useState<Array<{ name: string; commits: number; avatarUrl?: string }>>([]);
   const [contributorsLoading, setContributorsLoading] = useState(false);
+  const [hoveredContributorIndex, setHoveredContributorIndex] = useState<number | null>(null);
 
   // State for git branch status (sync status) per clone
   const [branchStatusMap, setBranchStatusMap] = useState<Map<string, {
@@ -1177,6 +1188,35 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     }
   };
 
+  // Auto-load contributors when repository data is available
+  useEffect(() => {
+    const localPath = repositoryData?.localClones?.[0]?.path;
+    if (!localPath && !repositoryData?.github) return;
+    if (contributors.length > 0) return;
+
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        let list: Array<{ name: string; commits: number; avatarUrl?: string }> = [];
+        const githubOwner = repositoryData?.github?.owner;
+        const githubName = repositoryData?.github?.name;
+        if (githubOwner && githubName) {
+          const fetch = actions.getContributors ?? GithubService.getRepositoryContributors.bind(GithubService);
+          const raw = await fetch(githubOwner, githubName);
+          list = raw.map(c => ({ name: c.login, commits: c.contributions, avatarUrl: c.avatar_url }));
+        } else if (localPath) {
+          const raw = await GitService.getContributors(localPath);
+          list = raw.map(c => ({ ...c, avatarUrl: undefined }));
+        }
+        if (!cancelled) setContributors(list);
+      } catch {}
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [repositoryData]);
+
   // Handle contributors stat click
   const handleContributorsClick = async () => {
     const localPath = repositoryData?.localClones?.[0]?.path;
@@ -1193,21 +1233,24 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     if (contributors.length === 0) {
       setContributorsLoading(true);
       try {
-        let contributorsList: Array<{ name: string; commits: number }> = [];
+        let contributorsList: Array<{ name: string; commits: number; avatarUrl?: string }> = [];
 
-        if (localPath) {
-          // Local repository - use git
-          contributorsList = await GitService.getContributors(localPath);
-        } else if (repositoryData.github?.owner && repositoryData.github?.name) {
-          // Remote repository - use GitHub API
-          const githubContributors = await GithubService.getRepositoryContributors(
+        if (repositoryData.github?.owner && repositoryData.github?.name) {
+          // GitHub repo — use API for avatar URLs
+          const fetch = actions.getContributors ?? GithubService.getRepositoryContributors.bind(GithubService);
+          const githubContributors = await fetch(
             repositoryData.github.owner,
             repositoryData.github.name
           );
           contributorsList = githubContributors.map(c => ({
             name: c.login,
             commits: c.contributions,
+            avatarUrl: c.avatar_url,
           }));
+        } else if (localPath) {
+          // Local-only repository — use git log
+          const raw = await GitService.getContributors(localPath);
+          contributorsList = raw.map(c => ({ ...c, avatarUrl: undefined }));
         }
 
         setContributors(contributorsList);
@@ -1613,8 +1656,8 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           </div>
 
           {/* Stats - aligned with bottom of avatar */}
-          <div style={{ flex: 1, paddingBottom: spacing.xs, display: 'flex', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, paddingBottom: spacing.xs, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap', flexShrink: 0 }}>
               <div
                 style={{ textAlign: 'center', cursor: 'pointer', transition: 'opacity 0.2s ease' }}
                 onClick={handleContributorsClick}
@@ -1915,6 +1958,96 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Contributor grid */}
+            {contributors.length > 0 && (
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-end',
+                gap: 4,
+                marginLeft: spacing.lg,
+                minWidth: 0,
+              }}>
+                <div style={{
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  color: theme.colors.textSecondary,
+                }}>
+                  Top contributors
+                </div>
+                <div style={{ display: 'flex', gap: 4, overflow: 'visible' }}>
+                {contributors.slice(0, 12).map((contributor, i) => (
+                  <div
+                    key={contributor.name}
+                    style={{ position: 'relative', cursor: 'pointer' }}
+                    onMouseEnter={() => setHoveredContributorIndex(i)}
+                    onMouseLeave={() => setHoveredContributorIndex(null)}
+                    onClick={() => events.emit({
+                      type: 'user:profile-selected',
+                      source: 'repository-profile-panel',
+                      timestamp: Date.now(),
+                      payload: { username: contributor.name },
+                    })}
+                  >
+                    {contributor.avatarUrl ? (
+                      <img
+                        src={contributor.avatarUrl}
+                        alt={contributor.name}
+                        style={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: '50%',
+                          display: 'block',
+                          flexShrink: 0,
+                          transform: hoveredContributorIndex === i ? 'translateY(-2px)' : 'translateY(0)',
+                          transition: 'transform 0.15s ease',
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: '50%',
+                        background: theme.colors.backgroundSecondary,
+                        display: 'flex',
+                        flexShrink: 0,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 10,
+                        color: theme.colors.textSecondary,
+                        fontFamily: theme.fonts?.body,
+                      }}>
+                        {contributor.name.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    {hoveredContributorIndex === i && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        marginBottom: 4,
+                        background: theme.colors.surface ?? theme.colors.background,
+                        border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary}`,
+                        borderRadius: 4,
+                        padding: '2px 6px',
+                        fontSize: theme.fontSizes[1],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.text,
+                        whiteSpace: 'nowrap',
+                        pointerEvents: 'none',
+                        zIndex: 100,
+                      }}>
+                        {contributor.name}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2970,6 +3103,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         isOpen={showCloneModal}
         onClose={() => setShowCloneModal(false)}
         initialUrl={repositoryData?.htmlUrl ?? undefined}
+        registerRepository={actions.registerRepository}
         onRepositoryAdded={() => {
           setShowCloneModal(false);
           events.emit({ type: 'repository-profile:clone-completed', source: 'repository-profile-panel', timestamp: Date.now(), payload: {} });
@@ -2980,6 +3114,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         onClose={() => setShowForkModal(false)}
         repoOwner={repositoryData?.github?.owner ?? repositoryData?.owner ?? ''}
         repoName={repositoryData?.github?.name ?? repositoryData?.name ?? ''}
+        registerRepository={actions.registerRepository}
       />
     </div>
   );

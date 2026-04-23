@@ -13,7 +13,6 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
-import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 
@@ -22,6 +21,7 @@ interface GitCloneModalProps {
   onClose: () => void;
   onRepositoryAdded?: (repo: AlexandriaEntry) => void;
   initialUrl?: string;
+  registerRepository: (name: string, path: string) => Promise<AlexandriaEntry>;
 }
 
 type CloneStep =
@@ -76,6 +76,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   onClose,
   onRepositoryAdded,
   initialUrl,
+  registerRepository,
 }) => {
   const { theme } = useTheme();
   const [currentStep, setCurrentStep] = useState<CloneStep>('input');
@@ -550,7 +551,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
         setCloneProgress('Registering repository...');
 
         // Register with Alexandria
-        const registeredRepo = await AlexandriaService.registerRepository(
+        const registeredRepo = await registerRepository(
           repoName,
           targetPath,
         );
@@ -632,7 +633,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
 
     try {
       // Register with Alexandria
-      const registeredRepo = await AlexandriaService.registerRepository(
+      const registeredRepo = await registerRepository(
         repoName,
         pathToRegister,
       );

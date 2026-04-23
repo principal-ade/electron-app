@@ -6,6 +6,7 @@ import type {
   PanelEvent,
 } from '@principal-ade/panel-framework-core';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { RepositoryProfilePanel } from './RepositoryProfilePanel';
 import type {
   RepositoryProfileData,
@@ -225,6 +226,23 @@ const createMockActions = (
       if (watchedReposRef) {
         watchedReposRef.current.delete(repoKey);
       }
+    },
+    registerRepository: async (name: string, path: string) => {
+      console.info('[Mock Action] registerRepository:', name, path);
+      return { name, path } as AlexandriaEntry;
+    },
+    getContributors: async (_owner: string, _repo: string) => {
+      await new Promise(resolve => setTimeout(resolve, 200));
+      return [
+        { login: 'alice',   contributions: 342, avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4' },
+        { login: 'bob',     contributions: 278, avatar_url: 'https://avatars.githubusercontent.com/u/2?v=4' },
+        { login: 'carol',   contributions: 201, avatar_url: 'https://avatars.githubusercontent.com/u/3?v=4' },
+        { login: 'dave',    contributions: 155, avatar_url: 'https://avatars.githubusercontent.com/u/4?v=4' },
+        { login: 'eve',     contributions: 98,  avatar_url: 'https://avatars.githubusercontent.com/u/5?v=4' },
+        { login: 'frank',   contributions: 74,  avatar_url: 'https://avatars.githubusercontent.com/u/6?v=4' },
+        { login: 'grace',   contributions: 52,  avatar_url: 'https://avatars.githubusercontent.com/u/7?v=4' },
+        { login: 'henry',   contributions: 41,  avatar_url: 'https://avatars.githubusercontent.com/u/8?v=4' },
+      ];
     },
   };
 };
