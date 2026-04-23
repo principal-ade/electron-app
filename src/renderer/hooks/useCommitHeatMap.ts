@@ -8,14 +8,16 @@ import type { CommitDay } from '../components/CommitHeatMap';
  * @param days - Number of days to look back (default: 365)
  * @returns Commit data, loading state, error, and refresh function
  */
+const EMPTY_COMMITS: CommitDay[] = [];
+
 export function useCommitHeatMap(repoPath: string | null, days = 365) {
-  const [commits, setCommits] = useState<CommitDay[]>([]);
+  const [commits, setCommits] = useState<CommitDay[]>(EMPTY_COMMITS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadCommitData = useCallback(async () => {
     if (!repoPath) {
-      setCommits([]);
+      setCommits(EMPTY_COMMITS);
       return;
     }
 
@@ -28,7 +30,7 @@ export function useCommitHeatMap(repoPath: string | null, days = 365) {
     } catch (err) {
       console.error('[useCommitHeatMap] Error loading commit data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load commit history');
-      setCommits([]);
+      setCommits(EMPTY_COMMITS);
     } finally {
       setLoading(false);
     }
