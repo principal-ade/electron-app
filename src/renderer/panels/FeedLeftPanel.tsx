@@ -14,6 +14,7 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WatchedItemsList } from './WatchedItemsList';
 import { StarredReposList } from './StarredReposList';
+import { CollectionsList } from './CollectionsList';
 import { OrganizationsList } from './OrganizationsList';
 import { CoworkersList } from './CoworkersList';
 import { ProjectsList, type CommitTimestamp } from './ProjectsList';
@@ -68,7 +69,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
   };
 
   // State for collections subtab
-  const [collectionsSubtab, setCollectionsSubtab] = useState<'watching' | 'starred'>('watching');
+  const [collectionsSubtab, setCollectionsSubtab] = useState<'watching' | 'starred' | 'collections'>('watching');
 
   // Local git identity (shown when signed out)
   const [localGitName, setLocalGitName] = useState<string | null>(null);
@@ -694,9 +695,10 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
               options={[
                 { value: 'watching', label: 'Watching' },
                 { value: 'starred', label: 'Starred' },
+                { value: 'collections', label: 'Collections' },
               ]}
               value={collectionsSubtab}
-              onChange={(value) => setCollectionsSubtab(value as 'watching' | 'starred')}
+              onChange={(value) => setCollectionsSubtab(value as 'watching' | 'starred' | 'collections')}
               theme={theme}
             />
           </div>
@@ -723,6 +725,17 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
               }}
             >
               <StarredReposList events={events} />
+            </div>
+
+            {/* Collections subtab */}
+            <div
+              style={{
+                display: collectionsSubtab === 'collections' ? 'block' : 'none',
+                height: '100%',
+                width: '100%',
+              }}
+            >
+              <CollectionsList events={events} />
             </div>
           </div>
         </div>
