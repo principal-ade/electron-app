@@ -21,6 +21,7 @@ import type {
   RemoveRepoFromCollectionInput,
   GetUserActivityInput,
   GetPinnedRepositoriesInput,
+  ExplainCommitsInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 
@@ -152,5 +153,15 @@ export const webAdeRouter = {
     .input<GetPinnedRepositoriesInput>()
     .action(async ({ input }) => {
       return webAdeService.getPinnedRepositories(input.username);
+    }),
+
+  // ===========================================================================
+  // AI Explain Commits
+  // ===========================================================================
+
+  explainCommits: t.procedure
+    .input<ExplainCommitsInput>()
+    .action(async ({ input }) => {
+      return webAdeService.explainCommits(input);
     }),
 };

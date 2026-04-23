@@ -279,6 +279,25 @@ export interface GetPinnedRepositoriesInput {
   username: string;
 }
 
+export interface ExplainCommitData {
+  sha: string;
+  message: string;
+  author: string;
+  additions?: number;
+  deletions?: number;
+  filesChanged?: number;
+}
+
+export interface ExplainCommitsInput {
+  commits: ExplainCommitData[];
+  audienceLevel: 'maintainer' | 'non-technical';
+  repoName: string;
+}
+
+export interface ExplainCommitsResponse {
+  text: string;
+}
+
 // =============================================================================
 // Router Type Definition
 // =============================================================================
@@ -387,5 +406,11 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: GetPinnedRepositoriesInput;
     }) => Promise<string[]>;
+  };
+  explainCommits: {
+    action: (args: {
+      context: ActionContext;
+      input: ExplainCommitsInput;
+    }) => Promise<ExplainCommitsResponse>;
   };
 };

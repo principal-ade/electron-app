@@ -22,8 +22,10 @@ import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { GitService } from '../main-process-api/GitService';
+import { GithubService } from '../main-process-api/GithubService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { WebAdeService } from '../main-process-api/WebAdeService';
+import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import {
   ArchitectureMapHighlightLayers,
   MultiVersionCityBuilder,
@@ -250,8 +252,10 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     Map<string, Array<{ filename: string; status: string; additions: number; deletions: number }>>
   >(new Map());
 
-  // Inline explanation state (placeholder for future AI integration)
   const [isExplainOpen, setIsExplainOpen] = useState(false);
+  const [explainLoading, setExplainLoading] = useState(false);
+  const [explainText, setExplainText] = useState<string | null>(null);
+  const [explainAudience, setExplainAudience] = useState<'maintainer' | 'non-technical'>('maintainer');
 
   // Get the commit to display (animation > selected > none)
   const displayedCommitIndex = animationCommitIndex ?? selectedCommitIndex;
@@ -275,21 +279,33 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           // Local repository - use RepositoryMonitoringService
           fileTree = await RepositoryMonitoringService.getFileTree(summary.repoPath);
         } else if (summary.githubOwner && summary.githubRepoName) {
-          // Watched GitHub repository - use web-ade's getGithubTree
-          const treeData = await WebAdeService.getGithubTree(
-            summary.githubOwner,
-            summary.githubRepoName
-          );
-
-          if (cancelled) return;
-
-          // Build FileTree from the response
-          fileTree = buildFileTreeFromGitHub(
-            treeData.tree,
-            summary.githubOwner,
-            summary.githubRepoName,
-            treeData.sha
-          );
+          // Try web-ade's cached tree first; fall back to local clone if available
+          try {
+            const treeData = await WebAdeService.getGithubTree(
+              summary.githubOwner,
+              summary.githubRepoName
+            );
+            if (cancelled) return;
+            fileTree = buildFileTreeFromGitHub(
+              treeData.tree,
+              summary.githubOwner,
+              summary.githubRepoName,
+              treeData.sha
+            );
+          } catch {
+            // web-ade failed (e.g. private repo without cookie auth) — try local clone
+            if (cancelled) return;
+            const repos = await AlexandriaService.getRepositories();
+            const match = repos.find(
+              (r: AlexandriaEntry) =>
+                r.github?.owner?.toLowerCase() === summary.githubOwner!.toLowerCase() &&
+                (r.github?.name ?? r.name).toLowerCase() === summary.githubRepoName!.toLowerCase() &&
+                r.path
+            );
+            if (match?.path) {
+              fileTree = await RepositoryMonitoringService.getFileTree(match.path);
+            }
+          }
         }
 
         if (cancelled) return;
@@ -331,17 +347,23 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
         Array<{ filename: string; status: string; additions: number; deletions: number }>
       >();
 
-      // Fetch changed files for each commit (only for local repos)
-      if (summary.repoPath) {
+      // Fetch changed files for each commit — local git for cloned repos, GitHub API for remote
+      const hasLocalPath = Boolean(summary.repoPath);
+      const hasGitHubCoords = Boolean(summary.githubOwner && summary.githubRepoName);
+
+      if (hasLocalPath || hasGitHubCoords) {
         await Promise.all(
           summary.commits.map(async (commit) => {
             if (cancelled) return;
 
             try {
-              const changedFiles = await GitService.getChangedFilesForCommit(
-                summary.repoPath,
-                commit.hash
-              );
+              const changedFiles = hasLocalPath
+                ? await GitService.getChangedFilesForCommit(summary.repoPath, commit.hash)
+                : await GithubService.getChangedFilesForCommit(
+                    summary.githubOwner!,
+                    summary.githubRepoName!,
+                    commit.hash
+                  );
 
               let totalAdditions = 0;
               let totalDeletions = 0;
@@ -1193,11 +1215,41 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               </button>
             )}
 
-            {/* Explain button (placeholder) */}
+            {/* Explain button */}
             <button
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
-                setIsExplainOpen(!isExplainOpen);
+                if (isExplainOpen) {
+                  setIsExplainOpen(false);
+                  return;
+                }
+                setIsExplainOpen(true);
+                if (explainText) return; // already fetched
+                setExplainLoading(true);
+                try {
+                  const commits = summary.commits.map(c => {
+                    const stats = commitStats.get(c.hash);
+                    return {
+                      sha: c.hash,
+                      message: c.message,
+                      author: c.author,
+                      additions: stats?.additions,
+                      deletions: stats?.deletions,
+                      filesChanged: stats?.filesChanged,
+                    };
+                  });
+                  const result = await WebAdeService.explainCommits({
+                    commits,
+                    audienceLevel: explainAudience,
+                    repoName: summary.repoName,
+                  });
+                  setExplainText(result.text);
+                } catch (err) {
+                  console.error('[RepoActivityCard] explain failed:', err);
+                  setExplainText('Failed to generate explanation. Please try again.');
+                } finally {
+                  setExplainLoading(false);
+                }
               }}
               style={{
                 display: 'flex',
@@ -1347,7 +1399,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
         </div>
       </div>
 
-      {/* Inline explanation (placeholder) */}
+      {/* Inline AI explanation */}
       {isExplainOpen && (
         <div
           style={{
@@ -1356,17 +1408,73 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             backgroundColor: theme.colors.background,
             maxHeight: 300,
             overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: spacing.sm,
           }}
         >
-          <div
-            style={{
-              fontSize: theme.fontSizes[2],
-              color: theme.colors.textMuted,
-              fontStyle: 'italic',
-            }}
-          >
-            AI explanations coming soon...
+          {/* Audience toggle */}
+          <div style={{ display: 'flex', gap: spacing.xs }}>
+            {(['maintainer', 'non-technical'] as const).map(level => (
+              <button
+                key={level}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (explainAudience === level) return;
+                  setExplainAudience(level);
+                  setExplainText(null);
+                  setExplainLoading(true);
+                  try {
+                    const commits = summary.commits.map(c => {
+                      const stats = commitStats.get(c.hash);
+                      return {
+                        sha: c.hash,
+                        message: c.message,
+                        author: c.author,
+                        additions: stats?.additions,
+                        deletions: stats?.deletions,
+                        filesChanged: stats?.filesChanged,
+                      };
+                    });
+                    const result = await WebAdeService.explainCommits({
+                      commits,
+                      audienceLevel: level,
+                      repoName: summary.repoName,
+                    });
+                    setExplainText(result.text);
+                  } catch (err) {
+                    console.error('[RepoActivityCard] explain failed:', err);
+                    setExplainText('Failed to generate explanation.');
+                  } finally {
+                    setExplainLoading(false);
+                  }
+                }}
+                style={{
+                  padding: `2px ${spacing.sm}px`,
+                  fontSize: theme.fontSizes[0],
+                  color: explainAudience === level ? theme.colors.text : theme.colors.textSecondary,
+                  backgroundColor: explainAudience === level ? theme.colors.backgroundSecondary : 'transparent',
+                  border: `1px solid ${explainAudience === level ? theme.colors.border : 'transparent'}`,
+                  borderRadius: 4,
+                  cursor: explainAudience === level ? 'default' : 'pointer',
+                }}
+              >
+                {level === 'maintainer' ? 'Technical' : 'Simple'}
+              </button>
+            ))}
           </div>
+
+          {/* Explanation content */}
+          {explainLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, color: theme.colors.textSecondary, fontSize: theme.fontSizes[1] }}>
+              <Sparkles size={12} style={{ animation: 'spin 1.5s linear infinite', opacity: 0.6 }} />
+              <span>Generating explanation...</span>
+            </div>
+          ) : explainText ? (
+            <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.text, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              {explainText}
+            </div>
+          ) : null}
         </div>
       )}
     </div>

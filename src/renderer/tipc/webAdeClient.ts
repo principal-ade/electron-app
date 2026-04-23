@@ -31,6 +31,8 @@ import type {
   RemoveRepoFromCollectionInput,
   StarredCollection,
   GetPinnedRepositoriesInput,
+  ExplainCommitsInput,
+  ExplainCommitsResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
@@ -70,6 +72,9 @@ export interface WebAdeClient {
 
   // Pinned Repositories
   getPinnedRepositories: (input: GetPinnedRepositoriesInput) => Promise<string[]>;
+
+  // AI Explain Commits
+  explainCommits: (input: ExplainCommitsInput) => Promise<ExplainCommitsResponse>;
 }
 
 // =============================================================================
@@ -147,4 +152,7 @@ export type {
   StarredCollectionRepo,
   StarredCollectionUser,
   GetPinnedRepositoriesInput,
+  ExplainCommitsInput,
+  ExplainCommitsResponse,
+  ExplainCommitData,
 } from '../../shared/tipc/webAdeRouterTypes';

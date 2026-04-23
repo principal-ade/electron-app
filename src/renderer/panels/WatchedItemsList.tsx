@@ -197,10 +197,10 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
                     key={`user:${user.login}`}
                     onClick={() => {
                       events.emit({
-                        type: 'feed:owner-selected',
+                        type: 'feed:watched-owner-activity-requested',
                         source: 'watched-items-panel',
                         timestamp: Date.now(),
-                        payload: { owner: user.login, isOrg: user.type === 'Organization' },
+                        payload: { login: user.login, accountType: user.type ?? 'User' },
                       });
                     }}
                     style={{
@@ -316,29 +316,11 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
                   <div
                     key={`repo:${repo.owner}/${repo.repo}`}
                     onClick={() => {
-                      // Emit event to open repository profile
                       events.emit({
-                        type: 'feed:repository-selected',
+                        type: 'feed:watched-repo-activity-requested',
                         source: 'watched-items-panel',
                         timestamp: Date.now(),
-                        payload: {
-                          repository: {
-                            path: '',
-                            name: repo.repo,
-                            remoteUrl: `https://github.com/${repo.owner}/${repo.repo}.git`,
-                            registeredAt: new Date().toISOString(),
-                            hasViews: false,
-                            viewCount: 0,
-                            views: [],
-                            github: {
-                              id: `${repo.owner}/${repo.repo}`,
-                              owner: repo.owner,
-                              name: repo.repo,
-                              stars: 0,
-                              lastUpdated: new Date().toISOString(),
-                            },
-                          },
-                        },
+                        payload: { owner: repo.owner, repo: repo.repo },
                       });
                     }}
                     style={{

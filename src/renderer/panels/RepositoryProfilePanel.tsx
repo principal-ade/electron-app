@@ -484,6 +484,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const [repoCollectionIds, setRepoCollectionIds] = useState<Set<string>>(new Set());
   const [togglingCollectionId, setTogglingCollectionId] = useState<string | null>(null);
   const collectDropdownRef = useRef<HTMLDivElement>(null);
+  const [collectDropdownPos, setCollectDropdownPos] = useState<{ top: number; left: number } | null>(null);
 
   // Create collection modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -1383,6 +1384,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (collectDropdownRef.current && !collectDropdownRef.current.contains(e.target as Node)) {
         setShowCollectionsDropdown(false);
+        setCollectDropdownPos(null);
       }
     };
 
@@ -1395,9 +1397,14 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
     if (showCollectionsDropdown) {
       setShowCollectionsDropdown(false);
+      setCollectDropdownPos(null);
       return;
     }
 
+    if (collectDropdownRef.current) {
+      const rect = collectDropdownRef.current.getBoundingClientRect();
+      setCollectDropdownPos({ top: rect.top, left: rect.right + 8 });
+    }
     setShowCollectionsDropdown(true);
     setCollectionsLoading(true);
     try {
@@ -1840,13 +1847,13 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   </div>
 
                   {/* Collections Dropdown */}
-                  {showCollectionsDropdown && (
+                  {showCollectionsDropdown && collectDropdownPos && (
                     <div
                       style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 'calc(100% + 8px)',
-                        zIndex: 100,
+                        position: 'fixed',
+                        top: collectDropdownPos.top,
+                        left: collectDropdownPos.left,
+                        zIndex: 1000,
                         backgroundColor: theme.colors.backgroundSecondary,
                         border: `1px solid ${theme.colors.border}`,
                         borderRadius: theme.radii?.[1] || 4,
@@ -2027,6 +2034,34 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               >
                 {repositoryData.isPrivate ? 'Private' : 'Public'}
               </span>
+            )}
+            {repositoryData.github && (
+              <button
+                onClick={() => events.emit({
+                  type: 'feed:watched-repo-activity-requested',
+                  source: 'repo-profile-panel',
+                  timestamp: Date.now(),
+                  payload: { owner: repositoryData.github!.owner, repo: repositoryData.github!.name },
+                })}
+                style={{
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  color: theme.colors.primary,
+                  border: `1px solid ${theme.colors.primary}`,
+                  borderRadius: 4,
+                  padding: '2px 8px',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  lineHeight: 1.5,
+                }}
+              >
+                <LucideIcons.Radio size={11} />
+                Activity
+              </button>
             )}
           </div>
           {!repositoryData.isLocal && (

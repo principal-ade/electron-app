@@ -132,6 +132,18 @@ export interface RepoStarInput {
   repo: string;
 }
 
+export interface GetOwnerActivityInput {
+  login: string;
+  type: 'User' | 'Organization';
+  days?: number;
+}
+
+export interface GetRepoActivityInput {
+  owner: string;
+  repo: string;
+  days?: number;
+}
+
 // =============================================================================
 // Output Types
 // =============================================================================

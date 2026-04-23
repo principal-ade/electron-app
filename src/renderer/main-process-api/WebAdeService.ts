@@ -17,6 +17,8 @@ import type {
   GetTreeResponse,
   RepoContributionsResponse,
   StarredCollection,
+  ExplainCommitsInput,
+  ExplainCommitsResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -154,5 +156,9 @@ export class WebAdeService {
    */
   static async getPinnedRepositories(username: string): Promise<string[]> {
     return webAdeClient.getPinnedRepositories({ username });
+  }
+
+  static async explainCommits(input: ExplainCommitsInput): Promise<ExplainCommitsResponse> {
+    return webAdeClient.explainCommits(input);
   }
 }

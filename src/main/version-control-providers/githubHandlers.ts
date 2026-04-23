@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import fetch from 'node-fetch';
+import type { CommitActivityCard } from '../../shared/tipc/webAdeRouterTypes';
 import type { IncomingMessage } from 'http';
 import { electronCLI } from '../electron-cli-bridge';
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
@@ -181,6 +182,52 @@ interface PartialTreeEntry {
 interface CacheEntry {
   value: unknown;
   timestamp: number;
+}
+
+function buildActivityCards(
+  owner: string,
+  repoName: string,
+  commits: Array<{ sha: string; message: string; authorLogin: string; authorAvatarUrl?: string; committedAt: string; url: string }>
+): CommitActivityCard[] {
+  const cardMap = new Map<string, CommitActivityCard>();
+
+  for (const commit of commits) {
+    const date = new Date(commit.committedAt);
+    const dateStr = date.toISOString().split('T')[0];
+    const hour = date.getUTCHours();
+    const itemId = `${dateStr}:${hour.toString().padStart(2, '0')}:${owner}/${repoName}`;
+
+    if (!cardMap.has(itemId)) {
+      const hourBucket = new Date(date);
+      hourBucket.setUTCMinutes(0, 0, 0);
+      cardMap.set(itemId, {
+        itemId,
+        repo: { owner, name: repoName },
+        hour,
+        hourBucket: hourBucket.toISOString(),
+        commits: [],
+        commitCount: 0,
+        latestCommitAt: commit.committedAt,
+      });
+    }
+
+    const card = cardMap.get(itemId)!;
+    if (!card.commits.some(c => c.sha === commit.sha)) {
+      card.commits.push({
+        sha: commit.sha,
+        message: commit.message,
+        author: { login: commit.authorLogin, avatarUrl: commit.authorAvatarUrl },
+        committedAt: commit.committedAt,
+        url: commit.url,
+      });
+      card.commitCount++;
+      if (new Date(commit.committedAt) > new Date(card.latestCommitAt)) {
+        card.latestCommitAt = commit.committedAt;
+      }
+    }
+  }
+
+  return Array.from(cardMap.values());
 }
 
 export class GitHubAdapter {
@@ -2432,6 +2479,227 @@ export class GitHubAdapter {
     console.log(`[GitHub] Cached changed files: ${changedFiles.size} files`);
 
     return changedFiles;
+  }
+
+  async getRepoActivity(owner: string, repo: string, days = 7): Promise<CommitActivityCard[]> {
+    const token = await this.getGitHubToken();
+    const authHeader = token
+      ? token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`
+      : undefined;
+
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    const url = `https://api.github.com/repos/${owner}/${repo}/commits?since=${since}&per_page=100`;
+
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/vnd.github.v3+json',
+        ...(authHeader ? { Authorization: authHeader } : {}),
+      },
+    });
+
+    if (!response.ok) return [];
+
+    const commits = await response.json() as Array<{
+      sha: string;
+      commit: { message: string; author: { date: string } };
+      author: { login: string; avatar_url: string } | null;
+      html_url: string;
+    }>;
+
+    return buildActivityCards(owner, repo, commits.map(c => ({
+      sha: c.sha,
+      message: c.commit.message,
+      authorLogin: c.author?.login ?? 'unknown',
+      authorAvatarUrl: c.author?.avatar_url,
+      committedAt: c.commit.author.date,
+      url: c.html_url,
+    })));
+  }
+
+  async getOwnerActivity(login: string, type: 'User' | 'Organization', days = 7): Promise<CommitActivityCard[]> {
+    const token = await this.getGitHubToken();
+    const authHeader = token
+      ? token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`
+      : undefined;
+
+    const headers = {
+      Accept: 'application/vnd.github.v3+json',
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    };
+
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    if (type === 'Organization') {
+      return this._getOrgActivityViaEvents(login, headers, since);
+    }
+
+    // For users: GraphQL contributionsCollection → per-repo REST commits
+    return this._getUserActivityViaGraphQL(login, token, since);
+  }
+
+  private async _getOrgActivityViaEvents(
+    login: string,
+    headers: Record<string, string>,
+    since: string,
+  ): Promise<CommitActivityCard[]> {
+    const response = await fetch(`https://api.github.com/orgs/${login}/events?per_page=100`, { headers });
+    if (!response.ok) return [];
+
+    const cutoff = new Date(since);
+    const events = await response.json() as Array<{
+      type: string;
+      repo: { name: string };
+      payload: {
+        commits?: Array<{ sha: string; message: string }>;
+        action?: string;
+        pull_request?: {
+          number: number;
+          title: string;
+          html_url: string;
+          head: { sha: string };
+          user: { login: string; avatar_url: string };
+        };
+      };
+      actor: { login: string; avatar_url: string };
+      created_at: string;
+    }>;
+
+    const repoCommits = new Map<string, Array<{ sha: string; message: string; authorLogin: string; authorAvatarUrl?: string; committedAt: string; url: string }>>();
+
+    for (const event of events) {
+      if (event.type !== 'PushEvent' && event.type !== 'PullRequestEvent') continue;
+      if (new Date(event.created_at) < cutoff) continue;
+
+      const [repoOwner, repoName] = event.repo.name.split('/');
+      if (!repoOwner || !repoName) continue;
+
+      const key = `${repoOwner}/${repoName}`;
+      if (!repoCommits.has(key)) repoCommits.set(key, []);
+
+      if (event.type === 'PushEvent') {
+        for (const commit of event.payload.commits ?? []) {
+          repoCommits.get(key)!.push({
+            sha: commit.sha,
+            message: commit.message,
+            authorLogin: event.actor.login,
+            authorAvatarUrl: event.actor.avatar_url,
+            committedAt: event.created_at,
+            url: `https://github.com/${repoOwner}/${repoName}/commit/${commit.sha}`,
+          });
+        }
+      } else if (event.type === 'PullRequestEvent') {
+        const pr = event.payload.pull_request;
+        const action = event.payload.action;
+        if (!pr || (action !== 'opened' && action !== 'synchronize')) continue;
+        repoCommits.get(key)!.push({
+          sha: pr.head.sha,
+          message: `PR #${pr.number}: ${pr.title}`,
+          authorLogin: pr.user.login,
+          authorAvatarUrl: pr.user.avatar_url,
+          committedAt: event.created_at,
+          url: pr.html_url,
+        });
+      }
+    }
+
+    const allCards: CommitActivityCard[] = [];
+    for (const [key, commits] of repoCommits) {
+      const [repoOwner, repoName] = key.split('/');
+      allCards.push(...buildActivityCards(repoOwner!, repoName!, commits));
+    }
+    return allCards.sort((a, b) =>
+      new Date(b.latestCommitAt).getTime() - new Date(a.latestCommitAt).getTime()
+    );
+  }
+
+  private async _getUserActivityViaGraphQL(
+    login: string,
+    token: string | null,
+    since: string,
+  ): Promise<CommitActivityCard[]> {
+    if (!token) return [];
+
+    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+
+    // Step 1: GraphQL to find which repos the user committed to
+    const query = `
+      query UserContributions($login: String!, $from: DateTime!) {
+        user(login: $login) {
+          contributionsCollection(from: $from) {
+            commitContributionsByRepository(maxRepositories: 25) {
+              repository {
+                nameWithOwner
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const gqlResponse = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: {
+        Authorization: authHeader,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, variables: { login, from: since } }),
+    });
+
+    if (!gqlResponse.ok) return [];
+
+    const gqlData = await gqlResponse.json() as {
+      data?: {
+        user?: {
+          contributionsCollection?: {
+            commitContributionsByRepository?: Array<{
+              repository: { nameWithOwner: string };
+            }>;
+          };
+        };
+      };
+      errors?: unknown[];
+    };
+
+    const repos = gqlData.data?.user?.contributionsCollection?.commitContributionsByRepository ?? [];
+    if (repos.length === 0) return [];
+
+    // Step 2: Fetch actual commits per repo filtered by author
+    const restHeaders = {
+      Accept: 'application/vnd.github.v3+json',
+      Authorization: authHeader,
+    };
+
+    const fetchRepoCommits = async (nameWithOwner: string) => {
+      const [owner, repo] = nameWithOwner.split('/');
+      if (!owner || !repo) return [];
+
+      const url = `https://api.github.com/repos/${owner}/${repo}/commits?author=${login}&since=${since}&per_page=50`;
+      const res = await fetch(url, { headers: restHeaders });
+      if (!res.ok) return [];
+
+      const commits = await res.json() as Array<{
+        sha: string;
+        commit: { message: string; author: { date: string } };
+        author: { login: string; avatar_url: string } | null;
+        html_url: string;
+      }>;
+
+      return buildActivityCards(owner, repo, commits.map(c => ({
+        sha: c.sha,
+        message: c.commit.message,
+        authorLogin: c.author?.login ?? login,
+        authorAvatarUrl: c.author?.avatar_url,
+        committedAt: c.commit.author.date,
+        url: c.html_url,
+      })));
+    };
+
+    const results = await Promise.all(repos.map(r => fetchRepoCommits(r.repository.nameWithOwner)));
+    const allCards = results.flat();
+
+    return allCards.sort((a, b) =>
+      new Date(b.latestCommitAt).getTime() - new Date(a.latestCommitAt).getTime()
+    );
   }
 }
 

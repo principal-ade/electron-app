@@ -20,6 +20,7 @@ import {
   EyeClosed,
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
+import { WatchedActivityPanel } from './WatchedActivityPanel';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitHubOrganization } from '../../shared/main-process-api-interfaces/GitHubAPI';
@@ -370,7 +371,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   const [isWatchLoading, setIsWatchLoading] = useState(false);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'pinned'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'pinned'>('activity');
 
   // Panel width for responsive pinned column
   const containerRef = useRef<HTMLDivElement>(null);
@@ -403,7 +404,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
       const width = entry.contentRect.width;
       setPanelWidth(width);
       if (width >= PINNED_COLUMN_MIN_WIDTH && activeTab === 'pinned') {
-        setActiveTab('overview');
+        setActiveTab('activity');
       }
     });
     observer.observe(el);
@@ -1203,7 +1204,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             }
           }}
         >
-          Overview
+          Projects
         </button>
         <button
           style={{
@@ -1270,231 +1271,14 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         }}
       >
         {/* Activity Tab */}
-        {activeTab === 'activity' && (
-          <>
-            {/* Recent Commits Section */}
-            {displayData.recentCommits && displayData.recentCommits.length > 0 && (
-          <div style={{ marginTop: spacing.md }}>
-            <h3
-              style={{
-                margin: 0,
-                marginBottom: spacing.md,
-                fontSize: theme.fontSizes[3],
-                fontWeight: theme.fontWeights?.semibold ?? 600,
-                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
-                color: theme.colors.text,
-              }}
-            >
-              Recent Commits
-            </h3>
-            <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, marginBottom: spacing.md }}>
-              Last 24 hours
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-              {displayData.recentCommits.map((commit) => {
-                const [repoOwner, repoName] = commit.repository.split('/');
-                const hoursAgo = Math.floor((Date.now() - new Date(commit.timestamp).getTime()) / (1000 * 60 * 60));
-
-                return (
-                  <div
-                    key={commit.id}
-                    style={{
-                      padding: spacing.md,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      borderRadius: theme.radii?.[2] ?? 8,
-                      border: `1px solid ${theme.colors.border}`,
-                      transition: 'all 0.2s ease',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.primary;
-                      e.currentTarget.style.backgroundColor = theme.colors.surface;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.border;
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                    }}
-                    onClick={() => {
-                      events.emit({
-                        type: 'feed:repository-selected',
-                        source: 'UserProfilePanel',
-                        timestamp: Date.now(),
-                        payload: {
-                          repository: {
-                            path: '',
-                            name: repoName,
-                            remoteUrl: commit.repositoryUrl || `https://github.com/${commit.repository}.git`,
-                            registeredAt: new Date().toISOString(),
-                            hasViews: false,
-                            viewCount: 0,
-                            views: [],
-                            github: {
-                              id: commit.repository,
-                              owner: repoOwner,
-                              name: repoName,
-                            },
-                          } as unknown as AlexandriaEntry,
-                        },
-                      });
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                        <div
-                          style={{
-                            fontSize: theme.fontSizes[2],
-                            fontWeight: theme.fontWeights?.semibold ?? 600,
-                            fontFamily: theme.fonts?.body,
-                            color: theme.colors.text,
-                          }}
-                        >
-                          {repoName}
-                        </div>
-                        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-                          {repoOwner}
-                        </div>
-                      </div>
-                      <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>
-                        {hoursAgo === 0 ? 'Just now' : hoursAgo === 1 ? '1h ago' : `${hoursAgo}h ago`}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
-                      <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-                        {commit.commitCount} {commit.commitCount === 1 ? 'commit' : 'commits'}
-                      </div>
-                      {commit.additions !== undefined && commit.deletions !== undefined && (
-                        <>
-                          <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.success }}>
-                            +{commit.additions}
-                          </div>
-                          <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.error }}>
-                            -{commit.deletions}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {activeTab === 'activity' && userData && (
+          <div style={{ marginTop: spacing.md, height: 600, display: 'flex', flexDirection: 'column' }}>
+            <WatchedActivityPanel
+              source={{ kind: 'owner', login: userData.username, accountType: 'User' }}
+              events={events}
+              hideHeader
+            />
           </div>
-        )}
-
-        {/* Contributed Repositories Section */}
-        {displayData.contributedRepos && displayData.contributedRepos.length > 0 && (
-          <div style={{ marginTop: spacing.md }}>
-            <h3
-              style={{
-                margin: 0,
-                marginBottom: spacing.md,
-                fontSize: theme.fontSizes[3],
-                fontWeight: theme.fontWeights?.semibold ?? 600,
-                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
-                color: theme.colors.text,
-              }}
-            >
-              Contributed Repositories
-            </h3>
-            <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, marginBottom: spacing.md }}>
-              Past 5 months
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-              {displayData.contributedRepos.map((repo) => {
-                const monthsAgo = Math.floor(
-                  (Date.now() - new Date(repo.lastContributedAt).getTime()) / (1000 * 60 * 60 * 24 * 30)
-                );
-
-                return (
-                  <div
-                    key={repo.nameWithOwner}
-                    style={{
-                      padding: spacing.md,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      borderRadius: theme.radii?.[2] ?? 8,
-                      border: `1px solid ${theme.colors.border}`,
-                      transition: 'all 0.2s ease',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.primary;
-                      e.currentTarget.style.backgroundColor = theme.colors.surface;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.border;
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                    }}
-                    onClick={() => {
-                      events.emit({
-                        type: 'feed:repository-selected',
-                        source: 'UserProfilePanel',
-                        timestamp: Date.now(),
-                        payload: {
-                          repository: {
-                            path: '',
-                            name: repo.name,
-                            remoteUrl: repo.url,
-                            registeredAt: new Date().toISOString(),
-                            hasViews: false,
-                            viewCount: 0,
-                            views: [],
-                            github: {
-                              id: repo.nameWithOwner,
-                              owner: repo.owner,
-                              name: repo.name,
-                            },
-                          } as unknown as AlexandriaEntry,
-                        },
-                      });
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, marginBottom: spacing.xs }}>
-                      <img
-                        src={`https://github.com/${repo.owner}.png`}
-                        alt={repo.owner}
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: '50%',
-                          flexShrink: 0,
-                        }}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: theme.fontSizes[2],
-                            fontWeight: theme.fontWeights?.semibold ?? 600,
-                            fontFamily: theme.fonts?.body,
-                            color: theme.colors.text,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {repo.name}
-                        </div>
-                        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-                          {repo.owner}
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, paddingLeft: 32 + spacing.md }}>
-                      <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-                        {repo.commitCount} {repo.commitCount === 1 ? 'commit' : 'commits'}
-                      </div>
-                      <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-                        •
-                      </div>
-                      <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-                        {monthsAgo === 0 ? 'This month' : monthsAgo === 1 ? '1 month ago' : `${monthsAgo} months ago`}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-          </>
         )}
 
         {/* Overview Tab */}

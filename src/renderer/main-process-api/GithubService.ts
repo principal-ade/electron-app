@@ -340,6 +340,14 @@ export class GithubService {
    * Get changed files for a specific commit (for highlight layers)
    * Returns file info including status and line counts
    */
+  static async getOwnerActivity(login: string, type: 'User' | 'Organization', days?: number) {
+    return githubClient.getOwnerActivity({ login, type, days });
+  }
+
+  static async getRepoActivity(owner: string, repo: string, days?: number) {
+    return githubClient.getRepoActivity({ owner, repo, days });
+  }
+
   static async getChangedFilesForCommit(
     owner: string,
     repo: string,

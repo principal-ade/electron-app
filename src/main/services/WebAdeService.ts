@@ -23,6 +23,8 @@ import type {
   StarredCollection,
   GetUserActivityInput,
   UserActivityResponse,
+  ExplainCommitsInput,
+  ExplainCommitsResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -690,5 +692,45 @@ export class WebAdeService {
       console.error('[WebADE] Failed to fetch user activity:', error);
       throw error;
     }
+  }
+
+  async explainCommits(input: ExplainCommitsInput): Promise<ExplainCommitsResponse> {
+    const token = await this.getToken();
+
+    // Derive the explain-commits URL from baseUrl (strip /api suffix, use /api/explain-commits)
+    const apiBase = this.baseUrl.endsWith('/api')
+      ? this.baseUrl.slice(0, -4)
+      : this.baseUrl;
+    const url = `${apiBase}/api/explain-commits`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      throw new Error(`explain-commits failed: ${response.status}`);
+    }
+
+    // Response is SSE — read all chunks and extract text content
+    const raw = await response.text();
+    let text = '';
+    for (const line of raw.split('\n')) {
+      if (!line.startsWith('data: ')) continue;
+      try {
+        const event = JSON.parse(line.slice(6)) as { type: string; content?: string };
+        if (event.type === 'text' && event.content) {
+          text += event.content;
+        }
+      } catch {
+        // ignore malformed SSE lines
+      }
+    }
+
+    return { text };
   }
 }

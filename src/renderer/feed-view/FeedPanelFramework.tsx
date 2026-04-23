@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, Users, Activity, FolderGit2, User, Building2, BookMarked } from 'lucide-react';
+import { GitCommit, Users, Activity, FolderGit2, User, Building2, BookMarked, Radio } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -64,6 +64,7 @@ import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { DeleteAlexandriaEntryModal } from '../panels/components/DeleteAlexandriaEntryModal';
 import { CollectionProfilePanel } from '../panels/CollectionProfilePanel';
+import { WatchedActivityPanel } from '../panels/WatchedActivityPanel';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -157,10 +158,22 @@ export interface CollectionProfileTab extends BaseTab {
   collection: StarredCollection;
 }
 
+export interface WatchedOwnerActivityTab extends BaseTab {
+  contentType: 'watched-owner-activity';
+  login: string;
+  accountType: 'User' | 'Organization';
+}
+
+export interface WatchedRepoActivityTab extends BaseTab {
+  contentType: 'watched-repo-activity';
+  owner: string;
+  repo: string;
+}
+
 /**
  * Union type of all supported tab types in FeedView
  */
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab;
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | WatchedOwnerActivityTab | WatchedRepoActivityTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -1336,6 +1349,58 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, tabs]);
 
+  // Listen for watched owner activity tab requests
+  useEffect(() => {
+    const handleOwnerActivity = (event: {
+      type: string;
+      payload: { login: string; accountType: 'User' | 'Organization' };
+    }) => {
+      if (event.type !== 'feed:watched-owner-activity-requested') return;
+      const { login, accountType } = event.payload;
+      const tabId = `watched-owner-activity-${login}`;
+      const existing = tabs.find(t => t.id === tabId);
+      if (existing) { setActiveTabId(tabId); return; }
+      const newTab: WatchedOwnerActivityTab = {
+        id: tabId,
+        label: `@${login}`,
+        contentType: 'watched-owner-activity',
+        closable: true,
+        login,
+        accountType,
+      };
+      setTabs(prev => [...prev, newTab]);
+      setActiveTabId(tabId);
+    };
+    events.on('feed:watched-owner-activity-requested', handleOwnerActivity);
+    return () => { events.off('feed:watched-owner-activity-requested', handleOwnerActivity); };
+  }, [events, tabs]);
+
+  // Listen for watched repo activity tab requests
+  useEffect(() => {
+    const handleRepoActivity = (event: {
+      type: string;
+      payload: { owner: string; repo: string };
+    }) => {
+      if (event.type !== 'feed:watched-repo-activity-requested') return;
+      const { owner, repo } = event.payload;
+      const tabId = `watched-repo-activity-${owner}/${repo}`;
+      const existing = tabs.find(t => t.id === tabId);
+      if (existing) { setActiveTabId(tabId); return; }
+      const newTab: WatchedRepoActivityTab = {
+        id: tabId,
+        label: `${owner}/${repo}`,
+        contentType: 'watched-repo-activity',
+        closable: true,
+        owner,
+        repo,
+      };
+      setTabs(prev => [...prev, newTab]);
+      setActiveTabId(tabId);
+    };
+    events.on('feed:watched-repo-activity-requested', handleRepoActivity);
+    return () => { events.off('feed:watched-repo-activity-requested', handleRepoActivity); };
+  }, [events, tabs]);
+
   // Handle user profile panel events
   useEffect(() => {
     const handleOpenLink = (event: { type: string; payload: { url: string; type: string } }) => {
@@ -1600,6 +1665,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         return <Building2 size={14} />;
       case 'collection-profile':
         return <BookMarked size={14} />;
+      case 'watched-owner-activity':
+      case 'watched-repo-activity':
+        return <Radio size={14} />;
       default:
         return null;
     }
@@ -1670,6 +1738,26 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
             <CollectionProfilePanel
               key={collectionTab.collection.id}
               collection={collectionTab.collection}
+              events={eventsRef.current}
+            />
+          );
+        }
+        case 'watched-owner-activity': {
+          const ownerTab = tab as WatchedOwnerActivityTab;
+          return (
+            <WatchedActivityPanel
+              key={ownerTab.id}
+              source={{ kind: 'owner', login: ownerTab.login, accountType: ownerTab.accountType }}
+              events={eventsRef.current}
+            />
+          );
+        }
+        case 'watched-repo-activity': {
+          const repoTab = tab as WatchedRepoActivityTab;
+          return (
+            <WatchedActivityPanel
+              key={repoTab.id}
+              source={{ kind: 'repo', owner: repoTab.owner, repo: repoTab.repo }}
               events={eventsRef.current}
             />
           );

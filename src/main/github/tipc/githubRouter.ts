@@ -24,6 +24,8 @@ import type {
   SearchUsersInput,
   SearchReposInput,
   RepoStarInput,
+  GetOwnerActivityInput,
+  GetRepoActivityInput,
 } from '../../../shared/tipc/githubRouterTypes';
 
 // Import the existing GitHubAdapter - we'll reuse its methods
@@ -134,6 +136,18 @@ export const githubRouter = {
     .input<GetUserFollowingInput>()
     .action(async ({ input }) => {
       return githubAdapter.getUserFollowing(input.username);
+    }),
+
+  getOwnerActivity: t.procedure
+    .input<GetOwnerActivityInput>()
+    .action(async ({ input }) => {
+      return githubAdapter.getOwnerActivity(input.login, input.type, input.days);
+    }),
+
+  getRepoActivity: t.procedure
+    .input<GetRepoActivityInput>()
+    .action(async ({ input }) => {
+      return githubAdapter.getRepoActivity(input.owner, input.repo, input.days);
     }),
 
   // ===========================================================================

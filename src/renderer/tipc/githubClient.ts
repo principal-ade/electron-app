@@ -38,7 +38,10 @@ import type {
   SearchReposResponse,
   TreeResponse,
   FileContentResponse,
+  GetOwnerActivityInput,
+  GetRepoActivityInput,
 } from '../../shared/tipc/githubRouterTypes';
+import type { CommitActivityCard } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
 // Client Interface
@@ -81,6 +84,8 @@ export interface GithubClient {
   ) => Promise<GitHubRepository[]>;
   getUserFollowers: (input: GetUserFollowersInput) => Promise<GitHubUser[]>;
   getUserFollowing: (input: GetUserFollowingInput) => Promise<GitHubUser[]>;
+  getOwnerActivity: (input: GetOwnerActivityInput) => Promise<CommitActivityCard[]>;
+  getRepoActivity: (input: GetRepoActivityInput) => Promise<CommitActivityCard[]>;
 
   // Repository Operations
   getRepository: (
