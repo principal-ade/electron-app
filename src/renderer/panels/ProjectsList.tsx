@@ -7,7 +7,7 @@
 
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, User, ChevronDown, ChevronRight, Circle } from 'lucide-react';
+import { FolderGit2, User, ChevronDown, ChevronRight, Circle, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
@@ -296,6 +296,31 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     };
   }, [repositories, currentUser, userOrgs]);
 
+  // Search query for the by-org (Cloned Projects) view
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filtered grouped repos based on search query
+  const filteredGroupedRepos = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return groupedRepos;
+
+    const filteredGroups = new Map<string, AlexandriaEntry[]>();
+    for (const [orgName, repos] of groupedRepos.groups.entries()) {
+      const matched = repos.filter(
+        r =>
+          r.name.toLowerCase().includes(q) ||
+          r.github?.description?.toLowerCase().includes(q)
+      );
+      if (matched.length > 0) filteredGroups.set(orgName, matched);
+    }
+
+    const filteredOrgNames = groupedRepos.sortedOrgNames.filter(o =>
+      filteredGroups.has(o)
+    );
+
+    return { groups: filteredGroups, sortedOrgNames: filteredOrgNames };
+  }, [groupedRepos, searchQuery]);
+
   // Toggle org collapsed state
   const toggleOrgCollapsed = useCallback((orgName: string) => {
     setCollapsedOrgs(prev => {
@@ -508,13 +533,59 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         <div
           style={{
             flex: 1,
-            overflow: 'auto',
+            overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            padding: spacing.md,
           }}
         >
-          {groupedRepos.sortedOrgNames.length === 0 ? (
+          {/* Search bar */}
+          <div
+            style={{
+              padding: `${spacing.xs}px ${spacing.md}px`,
+              borderBottom: `1px solid ${theme.colors.border}`,
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                backgroundColor: theme.colors.backgroundSecondary,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.radii?.[1] || 4,
+                padding: `${spacing.xs}px ${spacing.sm}px`,
+              }}
+            >
+              <Search size={13} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
+              <input
+                type="text"
+                placeholder="Filter repositories..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: 'none',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.text,
+                  caretColor: theme.colors.primary,
+                }}
+              />
+            </div>
+          </div>
+
+          <div
+            style={{
+              flex: 1,
+              overflow: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: spacing.md,
+            }}
+          >
+          {filteredGroupedRepos.sortedOrgNames.length === 0 ? (
             <div
               style={{
                 display: 'flex',
@@ -531,8 +602,8 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
               <span>No repositories</span>
             </div>
           ) : (
-            groupedRepos.sortedOrgNames.map((orgName) => {
-              const repos = groupedRepos.groups.get(orgName) || [];
+            filteredGroupedRepos.sortedOrgNames.map((orgName) => {
+              const repos = filteredGroupedRepos.groups.get(orgName) || [];
               const isCollapsed = collapsedOrgs.has(orgName);
               const isUserOwn = currentUser === orgName;
               const isMemberOrg = userOrgs.includes(orgName);
@@ -720,6 +791,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
               );
             })
           )}
+          </div>
         </div>
       )}
     </div>

@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Star, Loader2, AlertCircle } from 'lucide-react';
+import { Star, Loader2, AlertCircle, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { GithubService } from '../main-process-api/GithubService';
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
@@ -31,6 +31,7 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
   const [starredRepos, setStarredRepos] = useState<GitHubRepository[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Load starred repos on mount
   const loadStarredRepos = useCallback(async () => {
@@ -188,6 +189,16 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
     );
   }
 
+  const filteredRepos = starredRepos.filter((repo) => {
+    if (!repo.full_name || !repo.full_name.includes('/')) return false;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      repo.full_name.toLowerCase().includes(q) ||
+      repo.description?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div
       style={{
@@ -197,6 +208,44 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
         overflow: 'hidden',
       }}
     >
+      {/* Search bar */}
+      <div
+        style={{
+          padding: `${spacing.xs}px ${spacing.md}px`,
+          borderBottom: `1px solid ${theme.colors.border}`,
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.xs,
+            backgroundColor: theme.colors.backgroundSecondary,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radii?.[1] || 4,
+            padding: `${spacing.xs}px ${spacing.sm}px`,
+          }}
+        >
+          <Search size={13} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
+          <input
+            type="text"
+            placeholder="Filter starred repos..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              flex: 1,
+              background: 'none',
+              border: 'none',
+              outline: 'none',
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.text,
+              caretColor: theme.colors.primary,
+            }}
+          />
+        </div>
+      </div>
+
       {/* Repos list */}
       <div
         style={{
@@ -205,9 +254,26 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
           padding: spacing.sm,
         }}
       >
+        {filteredRepos.length === 0 && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              color: theme.colors.textSecondary,
+              fontSize: theme.fontSizes[1],
+              textAlign: 'center',
+              padding: spacing.lg,
+            }}
+          >
+            <Star size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
+            <span>No results for "{searchQuery}"</span>
+          </div>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-          {starredRepos
-            .filter((repo) => repo.full_name && repo.full_name.includes('/'))
+          {filteredRepos
             .map((repo) => {
                 const [owner, name] = repo.full_name.split('/');
                 return (
