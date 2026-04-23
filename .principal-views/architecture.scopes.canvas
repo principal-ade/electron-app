@@ -3,8 +3,8 @@
     {
       "id": "title",
       "type": "text",
-      "x": 400,
-      "y": -100,
+      "x": 784,
+      "y": -109,
       "width": 600,
       "height": 80,
       "color": "#64748B",
@@ -13,10 +13,10 @@
     {
       "id": "principal-ade-main",
       "type": "otel-scope",
-      "x": 50,
-      "y": 50,
-      "width": 300,
-      "height": 120,
+      "x": 0,
+      "y": 0,
+      "width": 400,
+      "height": 280,
       "label": "Principal Ade Main",
       "color": "#1ad76f",
       "otel": {
@@ -28,10 +28,10 @@
     {
       "id": "principal-ade-daemon",
       "type": "otel-scope",
-      "x": 400,
-      "y": 50,
-      "width": 300,
-      "height": 120,
+      "x": 250,
+      "y": 662,
+      "width": 400,
+      "height": 200,
       "label": "Principal Ade Daemon",
       "color": "#0D9488",
       "otel": {
@@ -43,10 +43,10 @@
     {
       "id": "principal-ade-event-processor",
       "type": "otel-scope",
-      "x": 750,
-      "y": 50,
-      "width": 300,
-      "height": 120,
+      "x": -235,
+      "y": 420,
+      "width": 280,
+      "height": 140,
       "label": "Principal Ade Event Processor",
       "color": "#F59E0B",
       "otel": {
@@ -58,10 +58,10 @@
     {
       "id": "principal-ade-repo-monitor",
       "type": "otel-scope",
-      "x": 50,
-      "y": 200,
-      "width": 300,
-      "height": 120,
+      "x": 99,
+      "y": 462,
+      "width": 200,
+      "height": 100,
       "label": "Principal Ade Repo Monitor",
       "color": "#14B8A6",
       "otel": {
@@ -73,10 +73,10 @@
     {
       "id": "principal-ade-terminal-worker",
       "type": "otel-scope",
-      "x": 400,
-      "y": 200,
-      "width": 300,
-      "height": 120,
+      "x": 340,
+      "y": 412,
+      "width": 220,
+      "height": 80,
       "label": "Principal Ade Terminal Worker",
       "color": "#6366F1",
       "otel": {
@@ -88,10 +88,10 @@
     {
       "id": "principal-ade-cli-bridge",
       "type": "otel-scope",
-      "x": 750,
-      "y": 200,
-      "width": 300,
-      "height": 120,
+      "x": -467,
+      "y": 420,
+      "width": 200,
+      "height": 80,
       "label": "Principal Ade Cli Bridge",
       "color": "#6366F1",
       "otel": {
@@ -103,10 +103,10 @@
     {
       "id": "principal-ade-principal-window",
       "type": "otel-scope",
-      "x": 50,
-      "y": 350,
-      "width": 300,
-      "height": 120,
+      "x": 60,
+      "y": -355,
+      "width": 280,
+      "height": 140,
       "label": "Principal Ade Principal Window",
       "color": "#7C3AED",
       "otel": {
@@ -118,10 +118,10 @@
     {
       "id": "principal-ade-dev-workspace",
       "type": "otel-scope",
-      "x": 400,
-      "y": 350,
-      "width": 300,
-      "height": 120,
+      "x": 391,
+      "y": -356,
+      "width": 280,
+      "height": 140,
       "label": "Principal Ade Dev Workspace",
       "color": "#8B5CF6",
       "otel": {
@@ -133,10 +133,10 @@
     {
       "id": "principal-ade-alexandria",
       "type": "otel-scope",
-      "x": 750,
-      "y": 350,
-      "width": 300,
-      "height": 120,
+      "x": -269,
+      "y": -356,
+      "width": 280,
+      "height": 140,
       "label": "Principal Ade Alexandria",
       "color": "#A855F7",
       "otel": {
@@ -148,8 +148,8 @@
     {
       "id": "principal-ade-extension",
       "type": "otel-scope",
-      "x": 50,
-      "y": 500,
+      "x": -347,
+      "y": 735,
       "width": 300,
       "height": 120,
       "label": "Principal Ade Extension",
@@ -163,9 +163,9 @@
     {
       "id": "principal-ade-splash-screen",
       "type": "otel-scope",
-      "x": 400,
-      "y": 500,
-      "width": 300,
+      "x": 722,
+      "y": -356,
+      "width": 220,
       "height": 120,
       "label": "Principal Ade Splash Screen",
       "color": "#D8B4FE",
@@ -178,8 +178,8 @@
     {
       "id": "principal-ade-window-switcher",
       "type": "otel-scope",
-      "x": 750,
-      "y": 500,
+      "x": -680,
+      "y": -189,
       "width": 300,
       "height": 120,
       "label": "Principal Ade Window Switcher",
@@ -193,8 +193,8 @@
     {
       "id": "principal-ade-quick-open",
       "type": "otel-scope",
-      "x": 50,
-      "y": 650,
+      "x": -673,
+      "y": -348,
       "width": 300,
       "height": 120,
       "label": "Principal Ade Quick Open",
@@ -208,8 +208,8 @@
     {
       "id": "file-city-renderer",
       "type": "otel-scope",
-      "x": 400,
-      "y": 650,
+      "x": 457,
+      "y": -90,
       "width": 300,
       "height": 120,
       "label": "File City Renderer",
@@ -223,8 +223,8 @@
     {
       "id": "principal-ade-renderer",
       "type": "otel-scope",
-      "x": 750,
-      "y": 650,
+      "x": -316,
+      "y": -85,
       "width": 300,
       "height": 120,
       "label": "Principal Ade Renderer",
@@ -238,8 +238,8 @@
     {
       "id": "external-file-system",
       "type": "otel-scope",
-      "x": 50,
-      "y": 800,
+      "x": -126,
+      "y": 769,
       "width": 300,
       "height": 120,
       "label": "External File System",
@@ -253,8 +253,8 @@
     {
       "id": "external-otel-events-manager",
       "type": "otel-scope",
-      "x": 400,
-      "y": 800,
+      "x": 936,
+      "y": 340,
       "width": 300,
       "height": 120,
       "label": "External Otel Events Manager",
@@ -268,8 +268,8 @@
     {
       "id": "external-quality-tools",
       "type": "otel-scope",
-      "x": 750,
-      "y": 800,
+      "x": 938,
+      "y": 663,
       "width": 300,
       "height": 120,
       "label": "External Quality Tools",
@@ -283,8 +283,8 @@
     {
       "id": "external-github-api",
       "type": "otel-scope",
-      "x": 50,
-      "y": 950,
+      "x": 934,
+      "y": 160,
       "width": 300,
       "height": 120,
       "label": "External Github Api",
@@ -298,8 +298,8 @@
     {
       "id": "external-principal-api",
       "type": "otel-scope",
-      "x": 400,
-      "y": 950,
+      "x": 937,
+      "y": 503,
       "width": 300,
       "height": 120,
       "label": "External Principal Api",
@@ -313,10 +313,10 @@
     {
       "id": "external-web-ade",
       "type": "otel-scope",
-      "x": 750,
-      "y": 950,
+      "x": 933,
+      "y": 5,
       "width": 300,
-      "height": 120,
+      "height": 100,
       "label": "External Web Ade",
       "color": "#64748B",
       "otel": {
@@ -328,6 +328,40 @@
   ],
   "edges": [
     {
+      "id": "main-to-terminal-worker",
+      "fromNode": "principal-ade-main",
+      "fromSide": "bottom",
+      "toNode": "principal-ade-terminal-worker",
+      "toSide": "top",
+      "edgeType": "worker-message"
+    },
+    {
+      "id": "terminal-worker-to-daemon",
+      "fromNode": "principal-ade-terminal-worker",
+      "fromSide": "bottom",
+      "toNode": "principal-ade-daemon",
+      "toSide": "top",
+      "label": "Unix socket",
+      "edgeType": "worker-message"
+    },
+    {
+      "id": "main-to-cli-bridge",
+      "fromNode": "principal-ade-main",
+      "fromSide": "bottom",
+      "toNode": "principal-ade-cli-bridge",
+      "toSide": "top",
+      "edgeType": "worker-message"
+    },
+    {
+      "id": "main-to-web-ade",
+      "fromNode": "principal-ade-main",
+      "fromSide": "right",
+      "toNode": "external-web-ade",
+      "toSide": "left",
+      "label": "HTTPS (Bearer token)",
+      "edgeType": "http"
+    },
+    {
       "id": "main-manages-daemon",
       "fromNode": "principal-ade-main",
       "fromSide": "right",
@@ -335,6 +369,54 @@
       "toSide": "left",
       "label": "spawns",
       "edgeType": "worker-message"
+    },
+    {
+      "id": "edge-principal-ade-alexandria-principal-ade-main-1773847831768",
+      "fromNode": "principal-ade-alexandria",
+      "toNode": "principal-ade-main",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-principal-ade-event-processor-principal-ade-main-1773847831770",
+      "fromNode": "principal-ade-event-processor",
+      "toNode": "principal-ade-main",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-principal-ade-repo-monitor-principal-ade-main",
+      "fromNode": "principal-ade-repo-monitor",
+      "toNode": "principal-ade-main",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "edgeType": "worker-message"
+    },
+    {
+      "id": "edge-principal-ade-dev-workspace-principal-ade-main-1773847831770",
+      "fromNode": "principal-ade-dev-workspace",
+      "toNode": "principal-ade-main",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-principal-ade-principal-window-principal-ade-main-1773847831770",
+      "fromNode": "principal-ade-principal-window",
+      "toNode": "principal-ade-main",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge-principal-ade-splash-screen-principal-ade-main",
+      "fromNode": "principal-ade-splash-screen",
+      "toNode": "principal-ade-main",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "edgeType": "ipc"
     }
   ],
   "name": "Principal ADE Instrumentation Scopes",
