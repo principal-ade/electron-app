@@ -638,7 +638,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           type: 'watch:user-toggled',
           source: 'user-profile-panel',
           timestamp: Date.now(),
-          payload: { username: user.username, watched: false },
+          payload: { username: user.username, watched: false, accountType: 'User' as const },
         });
       } else {
         await actions.watchUser(user.username);
@@ -648,7 +648,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           type: 'watch:user-toggled',
           source: 'user-profile-panel',
           timestamp: Date.now(),
-          payload: { username: user.username, watched: true },
+          payload: { username: user.username, watched: true, accountType: 'User' as const },
         });
       }
     } catch (err) {

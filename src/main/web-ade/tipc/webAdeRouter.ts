@@ -65,7 +65,7 @@ export const webAdeRouter = {
   watchUser: t.procedure
     .input<WatchUserInput>()
     .action(async ({ input }) => {
-      return webAdeService.watchUser(input.login);
+      return webAdeService.watchUser(input.login, input.type);
     }),
 
   unwatchUser: t.procedure

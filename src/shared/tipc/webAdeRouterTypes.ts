@@ -23,6 +23,7 @@ export interface GetActivityHeatmapInput {
 
 export interface WatchUserInput {
   login: string;
+  type?: 'User' | 'Organization';
 }
 
 export interface UnwatchUserInput {
@@ -105,6 +106,7 @@ export interface CommitActivityCard {
 export interface WatchedUser {
   login: string;
   watchedAt: string;
+  type?: 'User' | 'Organization';
 }
 
 export interface WatchedRepo {

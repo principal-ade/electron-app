@@ -53,13 +53,13 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
 
   // Listen for watch toggle events from profile panels
   useEffect(() => {
-    const handleUserToggle = (event: { payload: { username: string; watched: boolean } }) => {
-      const { username, watched } = event.payload;
+    const handleUserToggle = (event: { payload: { username: string; watched: boolean; accountType?: 'User' | 'Organization' } }) => {
+      const { username, watched, accountType } = event.payload;
       if (watched) {
         // Add to watched users (optimistic update)
         setWatchedUsers((prev) => {
           if (prev.some((u) => u.login === username)) return prev;
-          return [...prev, { login: username, watchedAt: new Date().toISOString() }];
+          return [...prev, { login: username, watchedAt: new Date().toISOString(), type: accountType }];
         });
       } else {
         // Remove from watched users
@@ -196,12 +196,11 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
                   <div
                     key={`user:${user.login}`}
                     onClick={() => {
-                      // Emit event to open user profile tab
                       events.emit({
-                        type: 'user:profile-selected',
+                        type: 'feed:owner-selected',
                         source: 'watched-items-panel',
                         timestamp: Date.now(),
-                        payload: { username: user.login },
+                        payload: { owner: user.login, isOrg: user.type === 'Organization' },
                       });
                     }}
                     style={{
@@ -229,7 +228,7 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
                       style={{
                         width: 72,
                         height: 72,
-                        borderRadius: '50%',
+                        borderRadius: user.type === 'Organization' ? theme.radii?.[5] || 12 : '50%',
                         backgroundColor: theme.colors.background,
                         border: `1px solid ${theme.colors.border}`,
                         display: 'flex',
@@ -274,7 +273,7 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
                           color: theme.colors.textSecondary,
                         }}
                       >
-                        User
+                        {user.type === 'Organization' ? 'Organization' : 'User'}
                       </div>
                     </div>
 

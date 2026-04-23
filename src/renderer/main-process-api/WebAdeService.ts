@@ -68,8 +68,8 @@ export class WebAdeService {
    * Watch a GitHub user
    * @param login - GitHub username to watch
    */
-  static async watchUser(login: string): Promise<WatchUserResponse> {
-    return webAdeClient.watchUser({ login });
+  static async watchUser(login: string, type?: 'User' | 'Organization'): Promise<WatchUserResponse> {
+    return webAdeClient.watchUser({ login, type });
   }
 
   /**

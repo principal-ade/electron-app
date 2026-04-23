@@ -726,7 +726,7 @@ const UserProfileTabContent: React.FC<{
     },
 
     watchUser: async (username: string) => {
-      const response = await WebAdeService.watchUser(username);
+      const response = await WebAdeService.watchUser(username, 'User');
       if (!response.success) {
         throw new Error('Failed to watch user');
       }
@@ -902,7 +902,7 @@ const OrgProfileTabContent: React.FC<{
     },
 
     watchOrg: async (orgName: string) => {
-      const response = await WebAdeService.watchUser(orgName);
+      const response = await WebAdeService.watchUser(orgName, 'Organization');
       if (!response.success) {
         throw new Error('Failed to watch organization');
       }

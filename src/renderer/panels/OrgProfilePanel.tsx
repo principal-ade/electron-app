@@ -518,7 +518,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
           type: 'watch:user-toggled',
           source: 'org-profile-panel',
           timestamp: Date.now(),
-          payload: { username: org.orgName, watched: false },
+          payload: { username: org.orgName, watched: false, accountType: 'Organization' as const },
         });
       } else {
         await actions.watchOrg(org.orgName);
@@ -528,7 +528,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
           type: 'watch:user-toggled',
           source: 'org-profile-panel',
           timestamp: Date.now(),
-          payload: { username: org.orgName, watched: true },
+          payload: { username: org.orgName, watched: true, accountType: 'Organization' as const },
         });
       }
     } catch (err) {

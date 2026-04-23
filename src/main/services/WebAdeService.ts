@@ -207,7 +207,7 @@ export class WebAdeService {
    * Watch a GitHub user
    * Adds user to watched list for activity feed
    */
-  async watchUser(login: string): Promise<WatchUserResponse> {
+  async watchUser(login: string, type?: 'User' | 'Organization'): Promise<WatchUserResponse> {
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -222,7 +222,7 @@ export class WebAdeService {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ login }),
+        body: JSON.stringify({ login, ...(type && { type }) }),
       });
 
       if (!response.ok) {
