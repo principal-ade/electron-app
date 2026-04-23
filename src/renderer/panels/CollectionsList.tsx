@@ -66,7 +66,7 @@ export const CollectionsList: React.FC<CollectionsListProps> = ({ events }) => {
         type: 'feed:collection-selected',
         source: 'collections-list',
         timestamp: Date.now(),
-        payload: { collectionId: collection.id },
+        payload: { collection },
       });
     },
     [events]
