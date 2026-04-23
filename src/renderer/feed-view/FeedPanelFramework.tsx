@@ -251,7 +251,7 @@ const RepositoryProfileTabContent: React.FC<{
             createdAt: repo.registeredAt || new Date().toISOString(),
             updatedAt: repo.lastOpenedAt || new Date().toISOString(),
             htmlUrl: `https://github.com/${repo.github!.owner}/${repo.github!.name || repo.name}`,
-            isPrivate: false,
+            isPrivate: undefined,
             isLocal: !!repo.path,
             localClones: ('localClones' in repo && Array.isArray(repo.localClones)) ? repo.localClones : (repo.path ? [{ path: repo.path, addedAt: Date.now() }] : undefined),
             github: repo.github ? { ...repo.github } : undefined,
@@ -292,6 +292,7 @@ const RepositoryProfileTabContent: React.FC<{
         let githubCreatedAt: string | undefined = undefined;
         let githubUpdatedAt: string | undefined = undefined;
         let githubDefaultBranch: string | undefined = undefined;
+        let githubIsPrivate: boolean | undefined = undefined;
 
         if (repo.github?.owner && repo.github?.name) {
           try {
@@ -301,6 +302,7 @@ const RepositoryProfileTabContent: React.FC<{
             githubCreatedAt = githubRepo?.created_at;
             githubUpdatedAt = githubRepo?.updated_at;
             githubDefaultBranch = githubRepo?.default_branch || undefined;
+            githubIsPrivate = githubRepo?.private;
           } catch (err) {
             console.warn('[RepositoryProfileTab] Failed to fetch GitHub repository:', err);
           }
@@ -352,7 +354,7 @@ const RepositoryProfileTabContent: React.FC<{
           htmlUrl: repo.github?.owner && repo.github?.name
             ? `https://github.com/${repo.github.owner}/${repo.github.name}`
             : undefined,
-          isPrivate: false,
+          isPrivate: githubIsPrivate,
           isLocal: !!repo.path,
           localClones: ('localClones' in repo && Array.isArray(repo.localClones)) ? repo.localClones : (repo.path ? [{ path: repo.path, addedAt: Date.now() }] : undefined),
           github: repo.github ? {
@@ -671,7 +673,7 @@ const UserProfileTabContent: React.FC<{
       try {
         const result = await GithubService.searchRepos(
           `user:${username} sort:updated`,
-          { perPage: 50 }
+          { perPage: 100 }
         );
 
         return result.repos.map((repo) => {
@@ -689,6 +691,7 @@ const UserProfileTabContent: React.FC<{
             description: repo.description ?? undefined,
             language: repo.language ?? undefined,
             stars: repo.stargazers_count,
+            isPrivate: repo.private,
             createdAt: repo.created_at,
             updatedAt: repo.updated_at,
             isOwnerOrg: false,
@@ -847,7 +850,7 @@ const OrgProfileTabContent: React.FC<{
 
     getOrgRepositories: async (orgName: string) => {
       try {
-        const repos = await GithubService.getOrgRepositories(orgName, { perPage: 50 });
+        const repos = await GithubService.getOrgRepositories(orgName, { perPage: 100 });
 
         return repos.map((repo) => {
           // Try to find matching local Alexandria entry
@@ -864,6 +867,7 @@ const OrgProfileTabContent: React.FC<{
             description: repo.description ?? undefined,
             language: repo.language ?? undefined,
             stars: repo.stargazers_count,
+            isPrivate: repo.private,
             createdAt: repo.created_at,
             updatedAt: repo.updated_at,
             isOwnerOrg: true,

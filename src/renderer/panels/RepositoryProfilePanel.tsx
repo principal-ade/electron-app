@@ -77,7 +77,7 @@ export interface RepositoryProfileData {
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
   htmlUrl?: string; // GitHub URL
-  isPrivate: boolean;
+  isPrivate?: boolean;
   isLocal?: boolean; // Whether this is a local repository
   localClones?: LocalClone[]; // All local clones of this repository
   github?: {
@@ -1994,6 +1994,22 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             >
               {repositoryData.name}
             </h2>
+            {repositoryData.isPrivate !== undefined && (
+              <span
+                style={{
+                  flexShrink: 0,
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  color: repositoryData.isPrivate ? theme.colors.textSecondary : theme.colors.textMuted,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: 4,
+                  padding: '2px 8px',
+                  lineHeight: 1.5,
+                }}
+              >
+                {repositoryData.isPrivate ? 'Private' : 'Public'}
+              </span>
+            )}
           </div>
           {!repositoryData.isLocal && (
             <div style={{ marginTop: spacing.sm, display: 'flex', gap: spacing.xs }}>

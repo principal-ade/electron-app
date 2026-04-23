@@ -380,8 +380,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
         const repos = await actions.getOrgRepositories(org.orgName);
 
         if (!cancelled) {
-          // Take top 9 repositories (or however many are returned)
-          setRepositories(repos.slice(0, 9));
+          setRepositories(repos);
         }
       } catch (err) {
         if (!cancelled) {
@@ -1186,7 +1185,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                 color: theme.colors.text,
               }}
             >
-              Popular repositories
+              Repositories
             </h3>
             <div
               style={{

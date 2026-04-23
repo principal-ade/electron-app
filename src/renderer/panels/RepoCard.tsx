@@ -39,6 +39,7 @@ export interface RepoCardData {
   language?: string;
   stars?: number;
   isOwnerOrg?: boolean;
+  isPrivate?: boolean;
   createdAt?: string; // ISO date string
   updatedAt?: string; // ISO date string
   topContributors?: Contributor[]; // Top contributors (max 5)
@@ -271,20 +272,38 @@ export const RepoCard: React.FC<RepoCardProps> = ({
           }}
         >
           {/* Repository name */}
-          <h4
-            style={{
-              margin: 0,
-              fontSize: theme.fontSizes[3],
-              fontWeight: 600,
-              fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
-              color: theme.colors.text,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {repo.repoName}
-          </h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, minWidth: 0 }}>
+            <h4
+              style={{
+                margin: 0,
+                fontSize: theme.fontSizes[3],
+                fontWeight: 600,
+                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                color: theme.colors.text,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {repo.repoName}
+            </h4>
+            {repo.isPrivate !== undefined && (
+              <span
+                style={{
+                  flexShrink: 0,
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  color: repo.isPrivate ? theme.colors.textSecondary : theme.colors.textMuted,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: 4,
+                  padding: '1px 6px',
+                  lineHeight: 1.5,
+                }}
+              >
+                {repo.isPrivate ? 'Private' : 'Public'}
+              </span>
+            )}
+          </div>
 
           {/* Last updated and project age (if available) */}
           {(repo.updatedAt || repo.createdAt) && (

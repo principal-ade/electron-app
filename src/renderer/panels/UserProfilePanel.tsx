@@ -480,8 +480,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         const repos = await actions.getUserRepositories(user.username);
 
         if (!cancelled) {
-          // Take top 9 repositories (or however many are returned)
-          setRepositories(repos.slice(0, 9));
+          setRepositories(repos);
         }
       } catch (err) {
         if (!cancelled) {
@@ -1511,7 +1510,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                 color: theme.colors.text,
               }}
             >
-              Popular repositories
+              Repositories
             </h3>
             <div
               style={{
