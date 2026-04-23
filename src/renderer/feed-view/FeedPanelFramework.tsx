@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, Users, Activity, FolderGit2, User, Building2 } from 'lucide-react';
+import { GitCommit, Users, Activity, FolderGit2, User, Building2, BookMarked } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -182,9 +182,9 @@ export interface FeedPanelFrameworkProps {
   /** Callback to open a repository */
   onOpenRepository?: (entry: AlexandriaEntry) => void;
   /** Feed mode */
-  feedMode?: 'my-activity' | 'organizations';
+  feedMode?: 'my-activity' | 'collections' | 'organizations';
   /** Callback when feed mode changes */
-  onFeedModeChange?: (mode: 'my-activity' | 'organizations') => void;
+  onFeedModeChange?: (mode: 'my-activity' | 'collections' | 'organizations') => void;
 }
 
 interface FeedPanelFrameworkInnerProps {
@@ -197,8 +197,8 @@ interface FeedPanelFrameworkInnerProps {
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   events: PanelEventEmitter;
   onOpenRepository?: (entry: AlexandriaEntry) => void;
-  feedMode?: 'my-activity' | 'organizations';
-  onFeedModeChange?: (mode: 'my-activity' | 'organizations') => void;
+  feedMode?: 'my-activity' | 'collections' | 'organizations';
+  onFeedModeChange?: (mode: 'my-activity' | 'collections' | 'organizations') => void;
 }
 
 /**
@@ -1564,6 +1564,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         return <User size={14} />;
       case 'org-profile':
         return <Building2 size={14} />;
+      case 'collection-profile':
+        return <BookMarked size={14} />;
       default:
         return null;
     }
@@ -1685,7 +1687,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     () => [
       {
         id: 'heatmap',
-        label: feedMode === 'organizations' ? 'Team' : 'Activity',
+        label: feedMode === 'collections' ? 'Social' :
+               feedMode === 'organizations' ? 'Team' : 'Activity',
         content: (
           <FeedLeftPanel
             repositories={repositories}

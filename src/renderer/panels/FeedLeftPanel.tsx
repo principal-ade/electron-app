@@ -12,6 +12,8 @@ import { Github, ChevronDown, ChevronUp, Settings, FolderOpen } from 'lucide-rea
 import { SegmentedControl } from '../components/SegmentedControl';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { WatchedItemsList } from './WatchedItemsList';
+import { StarredReposList } from './StarredReposList';
 import { OrganizationsList } from './OrganizationsList';
 import { CoworkersList } from './CoworkersList';
 import { ProjectsList, type CommitTimestamp } from './ProjectsList';
@@ -37,9 +39,9 @@ export interface FeedLeftPanelProps {
   /** Event bus for panel communication */
   events: PanelEventEmitter;
   /** Feed mode */
-  feedMode: 'my-activity' | 'organizations';
+  feedMode: 'my-activity' | 'collections' | 'organizations';
   /** Callback when feed mode changes */
-  onFeedModeChange: (mode: 'my-activity' | 'organizations') => void;
+  onFeedModeChange: (mode: 'my-activity' | 'collections' | 'organizations') => void;
   /** Commit timestamps for activity heatmap */
   commits: CommitTimestamp[];
   /** Currently selected time block */
@@ -64,6 +66,9 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
     xs: theme.space?.[1] || 4,
     sm: theme.space?.[2] || 8,
   };
+
+  // State for collections subtab
+  const [collectionsSubtab, setCollectionsSubtab] = useState<'watching' | 'starred'>('watching');
 
   // Local git identity (shown when signed out)
   const [localGitName, setLocalGitName] = useState<string | null>(null);
@@ -638,9 +643,10 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
           options={[
             { value: 'my-activity', label: 'My Activity' },
             { value: 'organizations', label: 'Team' },
+            { value: 'collections', label: 'Social' },
           ]}
           value={feedMode}
-          onChange={(value) => onFeedModeChange(value as 'my-activity' | 'organizations')}
+          onChange={(value) => onFeedModeChange(value as 'my-activity' | 'collections' | 'organizations')}
           theme={theme}
         />
       </div>
@@ -663,6 +669,62 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
             events={events}
             selectedBlock={selectedBlock}
           />
+        </div>
+
+        {/* Collections Tab with Subtabs */}
+        <div
+          style={{
+            display: feedMode === 'collections' ? 'flex' : 'none',
+            height: '100%',
+            width: '100%',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Second-level segmented control for subtabs */}
+          <div
+            style={{
+              padding: spacing.sm,
+              borderBottom: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.background,
+              flexShrink: 0,
+            }}
+          >
+            <SegmentedControl
+              options={[
+                { value: 'watching', label: 'Watching' },
+                { value: 'starred', label: 'Starred' },
+              ]}
+              value={collectionsSubtab}
+              onChange={(value) => setCollectionsSubtab(value as 'watching' | 'starred')}
+              theme={theme}
+            />
+          </div>
+
+          {/* Subtab content container - all mounted, only visibility changes */}
+          <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+            {/* Watching subtab */}
+            <div
+              style={{
+                display: collectionsSubtab === 'watching' ? 'block' : 'none',
+                height: '100%',
+                width: '100%',
+              }}
+            >
+              <WatchedItemsList events={events} />
+            </div>
+
+            {/* Starred subtab */}
+            <div
+              style={{
+                display: collectionsSubtab === 'starred' ? 'block' : 'none',
+                height: '100%',
+                width: '100%',
+              }}
+            >
+              <StarredReposList events={events} />
+            </div>
+          </div>
         </div>
 
         {/* Organizations & Coworkers */}
