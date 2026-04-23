@@ -499,6 +499,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // Fork state
   const [isForked, setIsForked] = useState(false);
+  const [forkedRepoOwner, setForkedRepoOwner] = useState<string | null>(null);
 
   // Clone modal state for repos without local clones
   const [showCloneModal, setShowCloneModal] = useState(false);
@@ -787,15 +788,19 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         if (!user || cancelled) return;
 
         const userRepo = await GithubService.getRepository(user.login, repositoryData.github!.name);
+        const isFork =
+          !!userRepo &&
+          userRepo.fork === true &&
+          userRepo.parent?.full_name === `${repositoryData.github!.owner}/${repositoryData.github!.name}`;
         if (!cancelled) {
-          setIsForked(
-            !!userRepo &&
-            userRepo.fork === true &&
-            userRepo.parent?.full_name === `${repositoryData.github!.owner}/${repositoryData.github!.name}`
-          );
+          setIsForked(isFork);
+          setForkedRepoOwner(isFork ? user.login : null);
         }
       } catch {
-        if (!cancelled) setIsForked(false);
+        if (!cancelled) {
+          setIsForked(false);
+          setForkedRepoOwner(null);
+        }
       }
     };
 
@@ -868,7 +873,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [repositoryData?.localClones, repositoryData?.github, actions]);
+  }, [repositoryData?.localClones, repositoryData?.github?.owner, repositoryData?.github?.name, actions]);
 
   // Fetch README content for remote repos without local clones
   useEffect(() => {
@@ -877,8 +882,12 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     const fetchReadme = async () => {
       // Only fetch README for repos without local clones
       const hasLocalClone = repositoryData?.localClones && repositoryData.localClones.length > 0;
-      if (hasLocalClone || !repositoryData?.github || !remoteFileTree) {
+      if (hasLocalClone || !repositoryData?.github) {
         setReadmeContent(null);
+        setReadmeLoading(false);
+        return;
+      }
+      if (!remoteFileTree) {
         setReadmeLoading(false);
         return;
       }
@@ -942,7 +951,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [remoteFileTree, repositoryData?.github, repositoryData?.localClones, repositoryData?.defaultBranch]);
+  }, [remoteFileTree, repositoryData?.github?.owner, repositoryData?.github?.name, repositoryData?.localClones, repositoryData?.defaultBranch]);
 
   // Build city data from file trees
   useEffect(() => {
@@ -2025,35 +2034,91 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 <Download size={12} />
                 Clone
               </button>
-              <button
-                onClick={() => setShowForkModal(true)}
-                style={{
-                  padding: `${spacing.xs}px ${spacing.sm}px`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  border: `1px solid ${isForked ? theme.colors.primary : theme.colors.border}`,
-                  borderRadius: 6,
-                  background: isForked ? `${theme.colors.primary}18` : 'transparent',
-                  color: isForked ? theme.colors.primary : theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  fontWeight: theme.fontWeights?.medium ?? 500,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = theme.colors.primary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = isForked ? theme.colors.primary : theme.colors.textSecondary;
-                  e.currentTarget.style.borderColor = isForked ? theme.colors.primary : theme.colors.border;
-                }}
-              >
-                <GitFork size={12} />
-                {isForked ? 'forked' : 'Fork'}
-              </button>
+              {isForked && forkedRepoOwner ? (
+                <button
+                  onClick={() => {
+                    const forkName = repositoryData.github!.name;
+                    const repositoryEntry = {
+                      path: '',
+                      name: forkName,
+                      remoteUrl: `https://github.com/${forkedRepoOwner}/${forkName}.git`,
+                      registeredAt: new Date().toISOString(),
+                      hasViews: false,
+                      viewCount: 0,
+                      views: [],
+                      github: {
+                        id: `${forkedRepoOwner}/${forkName}`,
+                        owner: forkedRepoOwner,
+                        name: forkName,
+                        stars: 0,
+                        description: null,
+                        primaryLanguage: null,
+                        lastUpdated: new Date().toISOString(),
+                      },
+                    } as unknown as AlexandriaEntry;
+                    events.emit({
+                      type: 'feed:repository-selected',
+                      source: 'repository-profile-panel',
+                      timestamp: Date.now(),
+                      payload: { repository: repositoryEntry },
+                    });
+                  }}
+                  style={{
+                    padding: `${spacing.xs}px ${spacing.sm}px`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    border: `1px solid ${theme.colors.primary}`,
+                    borderRadius: 6,
+                    background: `${theme.colors.primary}18`,
+                    color: theme.colors.primary,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    fontWeight: theme.fontWeights?.medium ?? 500,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `${theme.colors.primary}28`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = `${theme.colors.primary}18`;
+                  }}
+                >
+                  <GitFork size={12} />
+                  forked: {forkedRepoOwner}
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowForkModal(true)}
+                  style={{
+                    padding: `${spacing.xs}px ${spacing.sm}px`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: 6,
+                    background: 'transparent',
+                    color: theme.colors.textSecondary,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    fontWeight: theme.fontWeights?.medium ?? 500,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = theme.colors.primary;
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = theme.colors.textSecondary;
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                  }}
+                >
+                  <GitFork size={12} />
+                  Fork
+                </button>
+              )}
             </div>
           )}
           {repositoryData.isLocal && (

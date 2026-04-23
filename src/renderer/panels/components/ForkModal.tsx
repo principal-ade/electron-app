@@ -9,6 +9,11 @@ import { UserPreferencesService } from '../../main-process-api/UserPreferencesSe
 import type { GitHubUser, GitHubOrganization } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
+interface AuthMethods {
+  ssh: { available: boolean; reason?: string };
+  https: { available: boolean; reason?: string };
+}
+
 interface ForkModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -39,6 +44,8 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
   const [baseDir, setBaseDir] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authMethods, setAuthMethods] = useState<AuthMethods | null>(null);
+  const [selectedAuthMethod, setSelectedAuthMethod] = useState<'ssh' | 'https'>('https');
 
   useEffect(() => {
     if (!isOpen) {
@@ -46,19 +53,29 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
       setProgressStep('forking');
       setForkTarget('personal');
       setError(null);
+      setAuthMethods(null);
+      setSelectedAuthMethod('https');
       return;
     }
 
     setIsLoading(true);
+    const repoUrl = `https://github.com/${repoOwner}/${repoName}.git`;
     Promise.all([
       GithubService.getCurrentUser(),
       GithubService.getUserOrganizations(),
       UserPreferencesService.getPreferences(),
+      GitService.checkAuthMethods(repoUrl),
     ])
-      .then(([user, orgs, prefs]) => {
+      .then(([user, orgs, prefs, methods]) => {
         setCurrentUser(user);
         setOrganizations(orgs);
         setBaseDir(prefs.baseDefaultDirectory || null);
+        setAuthMethods(methods);
+        if (methods.ssh.available) {
+          setSelectedAuthMethod('ssh');
+        } else {
+          setSelectedAuthMethod('https');
+        }
       })
       .catch((err) => {
         console.error('[ForkModal] Failed to load:', err);
@@ -86,7 +103,8 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
       if (!forkedRepo) throw new Error('Fork failed — please try again.');
 
       setProgressStep('cloning');
-      const cloneOk = await GitService.cloneRepository(forkedRepo.clone_url, clonePath);
+      const cloneUrl = selectedAuthMethod === 'ssh' && forkedRepo.ssh_url ? forkedRepo.ssh_url : forkedRepo.clone_url;
+      const cloneOk = await GitService.cloneRepository(cloneUrl, clonePath);
       if (!cloneOk) throw new Error('Clone failed — check your connection and try again.');
 
       setProgressStep('registering');
@@ -275,6 +293,79 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
                       {clonePath ?? 'No home folder configured — set one in Settings'}
                     </div>
                   </div>
+
+                  {authMethods && (authMethods.ssh.available || authMethods.https.available) && (
+                    <div>
+                      <label
+                        style={{
+                          display: 'block',
+                          marginBottom: '8px',
+                          fontSize: `${theme.fontSizes[1]}px`,
+                          fontWeight: theme.fontWeights.semibold,
+                          fontFamily: theme.fonts.body,
+                          color: theme.colors.text,
+                        }}
+                      >
+                        Clone via
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {authMethods.https.available && (
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '8px 14px',
+                              borderRadius: '6px',
+                              border: `1px solid ${selectedAuthMethod === 'https' ? theme.colors.primary : theme.colors.border}`,
+                              backgroundColor: selectedAuthMethod === 'https' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
+                              cursor: 'pointer',
+                              fontSize: `${theme.fontSizes[1]}px`,
+                              fontFamily: theme.fonts.body,
+                              color: theme.colors.text,
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name="authMethod"
+                              value="https"
+                              checked={selectedAuthMethod === 'https'}
+                              onChange={() => setSelectedAuthMethod('https')}
+                              style={{ accentColor: theme.colors.primary }}
+                            />
+                            HTTPS
+                          </label>
+                        )}
+                        {authMethods.ssh.available && (
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '8px 14px',
+                              borderRadius: '6px',
+                              border: `1px solid ${selectedAuthMethod === 'ssh' ? theme.colors.primary : theme.colors.border}`,
+                              backgroundColor: selectedAuthMethod === 'ssh' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
+                              cursor: 'pointer',
+                              fontSize: `${theme.fontSizes[1]}px`,
+                              fontFamily: theme.fonts.body,
+                              color: theme.colors.text,
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name="authMethod"
+                              value="ssh"
+                              checked={selectedAuthMethod === 'ssh'}
+                              onChange={() => setSelectedAuthMethod('ssh')}
+                              style={{ accentColor: theme.colors.primary }}
+                            />
+                            SSH
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 

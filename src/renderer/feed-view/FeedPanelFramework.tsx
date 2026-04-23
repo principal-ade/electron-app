@@ -1176,7 +1176,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     }) => {
       if (event.type === 'feed:repository-selected') {
         const { repository } = event.payload;
-        const tabId = `project-info-${repository.name}`;
+        const owner = repository.github?.owner;
+        const tabId = owner ? `project-info-${owner}/${repository.name}` : `project-info-${repository.name}`;
 
         // Check if tab already exists
         const existingTab = tabs.find(tab => tab.id === tabId);
@@ -1188,7 +1189,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         // Create new project info tab
         const newTab: ProjectInfoTab = {
           id: tabId,
-          label: repository.name,
+          label: owner ? `${owner}/${repository.name}` : repository.name,
           contentType: 'project-info',
           closable: true,
           repository,
