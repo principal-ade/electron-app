@@ -63,6 +63,8 @@ import { SecureAuthService } from '../services/SecureAuthService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { DeleteAlexandriaEntryModal } from '../panels/components/DeleteAlexandriaEntryModal';
+import { CollectionProfilePanel } from '../panels/CollectionProfilePanel';
+import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
  * User activity response from Principal ADE API
@@ -148,9 +150,17 @@ export interface OrgProfileTab extends BaseTab {
 }
 
 /**
+ * Collection profile tab - displays a collection's repos and users
+ */
+export interface CollectionProfileTab extends BaseTab {
+  contentType: 'collection-profile';
+  collection: StarredCollection;
+}
+
+/**
  * Union type of all supported tab types in FeedView
  */
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | ProjectInfoTab | UserProfileTab | OrgProfileTab;
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -172,9 +182,9 @@ export interface FeedPanelFrameworkProps {
   /** Callback to open a repository */
   onOpenRepository?: (entry: AlexandriaEntry) => void;
   /** Feed mode */
-  feedMode?: 'my-activity' | 'collections' | 'organizations';
+  feedMode?: 'my-activity' | 'organizations';
   /** Callback when feed mode changes */
-  onFeedModeChange?: (mode: 'my-activity' | 'collections' | 'organizations') => void;
+  onFeedModeChange?: (mode: 'my-activity' | 'organizations') => void;
 }
 
 interface FeedPanelFrameworkInnerProps {
@@ -187,8 +197,8 @@ interface FeedPanelFrameworkInnerProps {
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   events: PanelEventEmitter;
   onOpenRepository?: (entry: AlexandriaEntry) => void;
-  feedMode?: 'my-activity' | 'collections' | 'organizations';
-  onFeedModeChange?: (mode: 'my-activity' | 'collections' | 'organizations') => void;
+  feedMode?: 'my-activity' | 'organizations';
+  onFeedModeChange?: (mode: 'my-activity' | 'organizations') => void;
 }
 
 /**
@@ -1257,6 +1267,41 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, tabs]);
 
+  // Listen for collection selection events to open collection profile tab
+  useEffect(() => {
+    const handleCollectionSelected = (event: {
+      type: string;
+      payload: { collection: StarredCollection }
+    }) => {
+      if (event.type === 'feed:collection-selected') {
+        const { collection } = event.payload;
+        const tabId = `collection-profile-${collection.id}`;
+
+        const existingTab = tabs.find(tab => tab.id === tabId);
+        if (existingTab) {
+          setActiveTabId(tabId);
+          return;
+        }
+
+        const newTab: CollectionProfileTab = {
+          id: tabId,
+          label: collection.name,
+          contentType: 'collection-profile',
+          closable: true,
+          collection,
+        };
+
+        setTabs(prevTabs => [...prevTabs, newTab]);
+        setActiveTabId(tabId);
+      }
+    };
+
+    events.on('feed:collection-selected', handleCollectionSelected);
+    return () => {
+      events.off('feed:collection-selected', handleCollectionSelected);
+    };
+  }, [events, tabs]);
+
   // Handle user profile panel events
   useEffect(() => {
     const handleOpenLink = (event: { type: string; payload: { url: string; type: string } }) => {
@@ -1547,7 +1592,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               repositories={repositories}
               events={eventsRef.current}
               onOpenRepository={onOpenRepositoryRef.current}
-              feedMode={feedModeRef.current}
             />
           );
         }
@@ -1581,6 +1625,16 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               orgName={orgTab.orgName}
               events={eventsRef.current}
               repositories={repositories}
+            />
+          );
+        }
+        case 'collection-profile': {
+          const collectionTab = tab as CollectionProfileTab;
+          return (
+            <CollectionProfilePanel
+              key={collectionTab.collection.id}
+              collection={collectionTab.collection}
+              events={eventsRef.current}
             />
           );
         }
@@ -1631,8 +1685,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     () => [
       {
         id: 'heatmap',
-        label: feedMode === 'collections' ? 'Collections' :
-               feedMode === 'organizations' ? 'Team' : 'Activity',
+        label: feedMode === 'organizations' ? 'Team' : 'Activity',
         content: (
           <FeedLeftPanel
             repositories={repositories}

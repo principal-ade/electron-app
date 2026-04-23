@@ -32,37 +32,29 @@ import type {
   GitHubProjectsPanelActions,
   GitHubRepository,
   GitHubOrganization,
-  UserCollectionsSlice,
-  UserCollectionsPanelActions,
   LocalProjectsPanelActions,
 } from '@industry-theme/alexandria-panels';
-import type { Collection } from '@principal-ai/alexandria-collections';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { GithubService } from '../main-process-api/GithubService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import { CollectionsService } from '../main-process-api/CollectionsService';
 import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
-import type { CollectionMembership } from '@principal-ai/alexandria-collections';
 import type { DiscoveredRepository } from '@industry-theme/alexandria-panels';
 
 /**
  * Extended actions for ProjectsPanelProvider
  * Combines workspace list actions with repository actions and GitHub actions
- * Note: UserCollectionsPanelActions.removeRepository conflicts with LocalProjectsPanel.removeRepository
- * so we omit it and provide collection-specific actions manually
  */
 interface ProjectsPanelActions
   extends
     PanelActions,
     LocalProjectsPanelActions,
     GitHubStarredPanelActions,
-    GitHubProjectsPanelActions,
-    UserCollectionsPanelActions {
+    GitHubProjectsPanelActions {
   // Workspace-specific actions
   removeRepositoryFromWorkspace?: (
     repositoryId: string,
@@ -77,12 +69,6 @@ interface ProjectsPanelActions
     repository: AlexandriaEntry,
     workspaceId: string,
   ) => Promise<string>;
-  // Add a repository to a collection (for drag-drop integration)
-  addRepositoryToCollection?: (
-    collectionId: string,
-    repositoryPath: string,
-    repositoryMetadata: RepositoryMetadata,
-  ) => Promise<void>;
   // Track a discovered repository (add to Alexandria)
   trackRepository?: (name: string, path: string) => Promise<void>;
   // Select a repository without opening a new window (for ProjectInfoPanel)
@@ -147,15 +133,11 @@ export interface ProjectsPanelContextType {
   githubProjects: DataSlice<GitHubProjectsSlice>;
   // GitHubStarredPanelContext
   githubStarred: DataSlice<GitHubStarredSlice>;
-  // UserCollectionsPanelContext
-  userCollections: DataSlice<UserCollectionsSlice>;
   // Git status for selected repository
   gitStatusWithFiles: DataSlice<GitStatusWithFiles | null>;
   // Additional properties for coordination between panels
   selectedWorkspace: Workspace | null;
   setSelectedWorkspace: (workspace: Workspace | null) => void;
-  selectedCollection: Collection | null;
-  setSelectedCollection: (collection: Collection | null) => void;
   // Stale repo review
   staleRepos: StaleRepoInfo[];
   // Default branch analysis
@@ -198,10 +180,6 @@ export const ProjectsPanelProvider: React.FC<
     null,
   );
 
-  // State for selected collection
-  const [selectedCollection, setSelectedCollection] =
-    useState<Collection | null>(null);
-
   // State for selected repository (for ProjectInfoPanel)
   const [selectedRepository, setSelectedRepository] =
     useState<AlexandriaEntry | null>(null);
@@ -243,20 +221,6 @@ export const ProjectsPanelProvider: React.FC<
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | undefined>();
   const [currentUser, setCurrentUser] = useState<string>('');
-
-  // State for user collections
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [collectionMemberships, setCollectionMemberships] = useState<
-    CollectionMembership[]
-  >([]);
-  const [collectionsLoading, setCollectionsLoading] = useState(false);
-  const [collectionsSaving, setCollectionsSaving] = useState(false);
-  const [collectionsError, setCollectionsError] = useState<string | undefined>();
-  const [collectionsGitHubRepoExists, setCollectionsGitHubRepoExists] =
-    useState<boolean | undefined>();
-  const [collectionsGitHubRepoUrl, setCollectionsGitHubRepoUrl] = useState<
-    string | null | undefined
-  >();
 
   // State for stale repo review
   const [staleRepos, setStaleRepos] = useState<StaleRepoInfo[]>([]);
@@ -872,49 +836,11 @@ export const ProjectsPanelProvider: React.FC<
     }
   }, []);
 
-  // Fetch user collections
-  const fetchCollections = useCallback(async () => {
-    setCollectionsLoading(true);
-    setCollectionsError(undefined);
-    try {
-      // Check if GitHub repo exists first
-      const repoStatusResult = await CollectionsService.checkGitHubRepo();
-      if (repoStatusResult.success && repoStatusResult.data) {
-        setCollectionsGitHubRepoExists(repoStatusResult.data.exists);
-        setCollectionsGitHubRepoUrl(repoStatusResult.data.repoUrl);
-      }
-
-      // Load collections
-      const collectionsResult = await CollectionsService.getCollections();
-      if (collectionsResult.success && collectionsResult.data) {
-        setCollections(collectionsResult.data.collections as Collection[]);
-        setCollectionMemberships(collectionsResult.data.memberships);
-      } else {
-        // No collections yet - start empty
-        setCollections([]);
-        setCollectionMemberships([]);
-      }
-    } catch (error) {
-      console.error(
-        '[ProjectsPanelProvider] Failed to fetch collections:',
-        error,
-      );
-      setCollectionsError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to load collections.',
-      );
-    } finally {
-      setCollectionsLoading(false);
-    }
-  }, []);
-
   // Fetch GitHub data on mount (these will silently fail if not authenticated)
   useEffect(() => {
     void fetchStarredRepositories();
     void fetchGitHubProjects();
-    void fetchCollections();
-  }, [fetchStarredRepositories, fetchGitHubProjects, fetchCollections]);
+  }, [fetchStarredRepositories, fetchGitHubProjects]);
 
   // Listen for workspace changes from other parts of the app
   useEffect(() => {
@@ -950,30 +876,6 @@ export const ProjectsPanelProvider: React.FC<
           workspace,
         );
         setSelectedWorkspace(workspace);
-        // Clear collection selection when workspace is selected
-        setSelectedCollection(null);
-      },
-    );
-
-    return unsubscribe;
-  }, [events]);
-
-  // Listen for collection:selected events from UserCollectionsPanel
-  useEffect(() => {
-    const unsubscribe = events.on(
-      'industry-theme.user-collections:collection:selected',
-      (event) => {
-        const { collection } = event.payload as {
-          collectionId: string;
-          collection: Collection;
-        };
-        console.info(
-          '[ProjectsPanelProvider] Collection selected event:',
-          collection,
-        );
-        setSelectedCollection(collection);
-        // Clear workspace selection when collection is selected
-        setSelectedWorkspace(null);
       },
     );
 
@@ -1231,57 +1133,6 @@ export const ProjectsPanelProvider: React.FC<
       currentUser,
       fetchGitHubProjects,
     ],
-  );
-
-  // Explicit DataSlice: userCollections
-  const userCollectionsSlice = useMemo<DataSlice<UserCollectionsSlice>>(
-    () => ({
-      scope: 'global' as const,
-      name: 'userCollections',
-      data: {
-        collections,
-        memberships: collectionMemberships,
-        loading: collectionsLoading,
-        saving: collectionsSaving,
-        error: collectionsError,
-        gitHubRepoExists: collectionsGitHubRepoExists,
-        gitHubRepoUrl: collectionsGitHubRepoUrl,
-      } as UserCollectionsSlice,
-      loading: collectionsLoading,
-      error: collectionsError ? new Error(collectionsError) : null,
-      refresh: fetchCollections,
-    }),
-    [
-      collections,
-      collectionMemberships,
-      collectionsLoading,
-      collectionsSaving,
-      collectionsError,
-      collectionsGitHubRepoExists,
-      collectionsGitHubRepoUrl,
-      fetchCollections,
-    ],
-  );
-
-  // Explicit DataSlice: collectionRepositories
-  const _collectionRepositoriesSlice = useMemo<DataSlice<unknown>>(
-    () => ({
-      scope: 'global' as const,
-      name: 'collectionRepositories',
-      data: {
-        collection: selectedCollection,
-        // Get repository IDs for the selected collection
-        repositoryIds: selectedCollection
-          ? collectionMemberships
-              .filter((m) => m.collectionId === selectedCollection.id)
-              .map((m) => m.repositoryId)
-          : [],
-      },
-      loading: collectionsLoading,
-      error: null,
-      refresh: fetchCollections,
-    }),
-    [selectedCollection, collectionMemberships, collectionsLoading, fetchCollections],
   );
 
   // Explicit DataSlice: gitStatusWithFiles
@@ -1703,238 +1554,6 @@ export const ProjectsPanelProvider: React.FC<
 
       refreshProjects: fetchGitHubProjects,
 
-      // Collections actions
-      createCollection: async (
-        name: string,
-        description?: string,
-        icon?: string,
-      ) => {
-        console.info('[ProjectsPanelProvider] Creating collection:', name);
-        setCollectionsSaving(true);
-        try {
-          const result = await CollectionsService.createCollection({
-            name,
-            description,
-            icon,
-          });
-
-          // Refresh collections to get updated list
-          await fetchCollections();
-
-          if (result.success && result.data) {
-            events.emit({
-              type: 'industry-theme.user-collections:collection:created',
-              source: 'projects-view',
-              timestamp: Date.now(),
-              payload: { collectionId: result.data.id, collection: result.data },
-            });
-            return result.data as Collection;
-          }
-          return null;
-        } catch (error) {
-          console.error(
-            '[ProjectsPanelProvider] Failed to create collection:',
-            error,
-          );
-          throw error;
-        } finally {
-          setCollectionsSaving(false);
-        }
-      },
-
-      updateCollection: async (
-        collectionId: string,
-        updates: Partial<Omit<Collection, 'id' | 'createdAt' | 'updatedAt'>>,
-      ) => {
-        console.info(
-          '[ProjectsPanelProvider] Updating collection:',
-          collectionId,
-          updates,
-        );
-        setCollectionsSaving(true);
-        try {
-          await CollectionsService.updateCollection(collectionId, updates);
-          await fetchCollections();
-        } catch (error) {
-          console.error(
-            '[ProjectsPanelProvider] Failed to update collection:',
-            error,
-          );
-          throw error;
-        } finally {
-          setCollectionsSaving(false);
-        }
-      },
-
-      deleteCollection: async (collectionId: string) => {
-        console.info(
-          '[ProjectsPanelProvider] Deleting collection:',
-          collectionId,
-        );
-        setCollectionsSaving(true);
-        try {
-          await CollectionsService.deleteCollection(collectionId);
-          await fetchCollections();
-
-          events.emit({
-            type: 'industry-theme.user-collections:collection:deleted',
-            source: 'projects-view',
-            timestamp: Date.now(),
-            payload: { collectionId },
-          });
-        } catch (error) {
-          console.error(
-            '[ProjectsPanelProvider] Failed to delete collection:',
-            error,
-          );
-          throw error;
-        } finally {
-          setCollectionsSaving(false);
-        }
-      },
-
-      addRepository: async (
-        collectionId: string,
-        repositoryId: string,
-        metadata?: { pinned?: boolean; notes?: string },
-      ) => {
-        console.info(
-          '[ProjectsPanelProvider] Adding repository to collection:',
-          repositoryId,
-          collectionId,
-        );
-        setCollectionsSaving(true);
-        try {
-          await CollectionsService.addRepository({
-            collectionId,
-            repositoryId,
-            metadata,
-          });
-          await fetchCollections();
-
-          events.emit({
-            type: 'industry-theme.user-collections:collection:repository-added',
-            source: 'projects-view',
-            timestamp: Date.now(),
-            payload: { collectionId, repositoryId },
-          });
-        } catch (error) {
-          console.error(
-            '[ProjectsPanelProvider] Failed to add repository to collection:',
-            error,
-          );
-          throw error;
-        } finally {
-          setCollectionsSaving(false);
-        }
-      },
-
-      // removeRepositoryFromCollection - from UserCollectionsPanelActions
-      removeRepositoryFromCollection: async (
-        collectionId: string,
-        repositoryId: string,
-      ) => {
-        console.info(
-          '[ProjectsPanelProvider] Removing repository from collection:',
-          repositoryId,
-          collectionId,
-        );
-        setCollectionsSaving(true);
-        try {
-          await CollectionsService.removeRepository(collectionId, repositoryId);
-          await fetchCollections();
-
-          events.emit({
-            type: 'industry-theme.user-collections:collection:repository-removed',
-            source: 'projects-view',
-            timestamp: Date.now(),
-            payload: { collectionId, repositoryId },
-          });
-        } catch (error) {
-          console.error(
-            '[ProjectsPanelProvider] Failed to remove repository from collection:',
-            error,
-          );
-          throw error;
-        } finally {
-          setCollectionsSaving(false);
-        }
-      },
-
-      addRepositoryToCollection: async (
-        collectionId: string,
-        repositoryPath: string,
-        repositoryMetadata: RepositoryMetadata,
-      ) => {
-        console.info(
-          '[ProjectsPanelProvider] Adding repository to collection:',
-          repositoryPath,
-          collectionId,
-          repositoryMetadata,
-        );
-        setCollectionsSaving(true);
-        try {
-          // Determine repository ID from metadata
-          // Format: "owner/repo" or just "name"
-          const github = repositoryMetadata?.github as { owner?: string } | undefined;
-          const repositoryId =
-            github?.owner && repositoryMetadata?.name
-              ? `${github.owner}/${repositoryMetadata.name}`
-              : repositoryMetadata?.name || repositoryPath;
-
-          await CollectionsService.addRepository({
-            collectionId,
-            repositoryId,
-            metadata: repositoryMetadata,
-          });
-          await fetchCollections();
-
-          events.emit({
-            type: 'industry-theme.user-collections:collection:repository-added',
-            source: 'worlds-view',
-            timestamp: Date.now(),
-            payload: { collectionId, repositoryId, repositoryPath },
-          });
-        } catch (error) {
-          console.error(
-            '[ProjectsPanelProvider] Failed to add repository to collection:',
-            error,
-          );
-          throw error;
-        } finally {
-          setCollectionsSaving(false);
-        }
-      },
-
-      enableGitHubSync: async () => {
-        console.info('[ProjectsPanelProvider] Enabling GitHub sync');
-        setCollectionsSaving(true);
-        try {
-          await CollectionsService.enableGitHubSync();
-          await fetchCollections();
-        } catch (error) {
-          console.error(
-            '[ProjectsPanelProvider] Failed to enable GitHub sync:',
-            error,
-          );
-          throw error;
-        } finally {
-          setCollectionsSaving(false);
-        }
-      },
-
-      refreshCollections: fetchCollections,
-
-      navigateToRepository: (repositoryId: string) => {
-        console.info(
-          '[ProjectsPanelProvider] Navigating to repository:',
-          repositoryId,
-        );
-        // Open in browser
-        const url = `https://github.com/${repositoryId}`;
-        window.open(url, '_blank');
-      },
-
       // Stale repo review actions
       getStaleRepos,
       getRandomStaleRepo,
@@ -2003,7 +1622,7 @@ export const ProjectsPanelProvider: React.FC<
         return FileCityImageService.getImage(repoPath);
       },
     }),
-    [events, selectedWorkspace, localRepositories, fetchStarredRepositories, fetchGitHubProjects, fetchCollections, getStaleRepos, getRandomStaleRepo, staleRepoPrefs, staleRepos, analyzeDefaultBranchStatus, defaultBranchRepos],
+    [events, selectedWorkspace, localRepositories, fetchStarredRepositories, fetchGitHubProjects, getStaleRepos, getRandomStaleRepo, staleRepoPrefs, staleRepos, analyzeDefaultBranchStatus, defaultBranchRepos],
   );
 
   // Create context value following web-ade pattern
@@ -2045,8 +1664,6 @@ export const ProjectsPanelProvider: React.FC<
       // Custom state properties
       selectedWorkspace,
       setSelectedWorkspace,
-      selectedCollection,
-      setSelectedCollection,
       staleRepos,
       defaultBranchRepos,
       defaultBranchAnalysisRunning,
@@ -2056,13 +1673,11 @@ export const ProjectsPanelProvider: React.FC<
       workspace: workspaceSlice,
       githubProjects: githubProjectsSlice,
       githubStarred: githubStarredSlice,
-      userCollections: userCollectionsSlice,
       gitStatusWithFiles: gitStatusWithFilesSlice,
     }),
     [
       slices,
       selectedWorkspace,
-      selectedCollection,
       selectedRepository,
       staleRepos,
       defaultBranchRepos,
@@ -2072,7 +1687,6 @@ export const ProjectsPanelProvider: React.FC<
       workspaceSlice,
       githubProjectsSlice,
       githubStarredSlice,
-      userCollectionsSlice,
       gitStatusWithFilesSlice,
     ],
   );

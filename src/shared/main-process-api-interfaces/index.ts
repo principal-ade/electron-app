@@ -1,4 +1,3 @@
-import type { CollectionsAPI } from './CollectionsAPI';
 import type { AgentConfigAPI } from './AgentConfigAPI';
 import type { AlexandriaAPI } from './AlexandriaAPI';
 import type { AlexandriaDocsAPI } from './AlexandriaDocsAPI';
@@ -83,7 +82,6 @@ export type {
   TokenWithMetadata,
 } from './AuthenticationAPI';
 export interface MainProcessAPI {
-  collections: CollectionsAPI;
   agentConfig: AgentConfigAPI;
   alexandria: AlexandriaAPI;
   alexandriaDocs: AlexandriaDocsAPI;

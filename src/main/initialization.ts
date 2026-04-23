@@ -76,7 +76,6 @@ import {
   cleanupLocalhostWatchers,
 } from './services/ipc/localhost/localhostDetectionHandlers';
 import { registerGitHubArtifactHandlers } from './services/ipc/githubArtifactHandlers';
-import { registerCollectionsHandlers } from './services/CollectionsService';
 import { ElectronClipboardAdapter } from './system/clipboardHandler';
 import { registerSkillLockHandlers } from './skills/skillLockHandlers';
 import { registerSkillEditingHandlers } from './skills/skillEditingHandlers';
@@ -289,7 +288,6 @@ const registerAllIpcHandlers = async () => {
   registerFeedbackHandlers();
   registerLocalhostDetectionHandlers();
   registerGitHubArtifactHandlers();
-  registerCollectionsHandlers();
 };
 
 // Setup terminal manager

@@ -48,7 +48,6 @@ interface UsePanelPersistenceOptions {
     | 'repositoryDetailsNested'
     | 'gitSyncView'
     | 'projectsView'
-    | 'worldsView'
     | 'skillBrowserView'
     | 'feedView';
   defaultSizes: PanelSizes | TwoPanelSizes;

@@ -7,7 +7,6 @@ import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
 import { FeedView } from '../../views/FeedView';
 import { OnboardingView } from '../../views/OnboardingView';
-import { WorldsView } from '../../views/WorldsView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
@@ -570,7 +569,6 @@ export const IntegratedShell: React.FC = () => {
             )}
             {activeView === 'settings' && <Settings initialCategory={settingsCategory} />}
             {activeView === 'auth' && <AuthView />}
-            {activeView === 'worlds' && <WorldsView />}
             {activeView === 'processes' && <LocalhostProcessesView />}
             {activeView === 'connections' && <ConnectionsView />}
             {activeView === 'skills' && <SkillBrowserView />}

@@ -6,7 +6,6 @@ import {
   Globe,
   Radio,
   ToolCase,
-  Map,
   Rss,
   GraduationCap,
 } from 'lucide-react';
@@ -43,15 +42,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showConnectionsButton, setShowConnectionsButton] = useState(false);
   const [showProcessesButton, setShowProcessesButton] = useState(false);
-  const [showWorldsButton, setShowWorldsButton] = useState(false);
-
   useEffect(() => {
     // Load user preferences for showing buttons
     UserPreferencesService.getPreferences().then((prefs) => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowConnectionsButton(prefs.showConnectionsButton ?? false);
       setShowProcessesButton(prefs.showProcessesButton ?? false);
-      setShowWorldsButton(prefs.showWorldsButton ?? false);
     });
 
     // Listen for preference changes
@@ -66,9 +62,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }
         if ('showProcessesButton' in detail) {
           setShowProcessesButton(detail.showProcessesButton ?? false);
-        }
-        if ('showWorldsButton' in detail) {
-          setShowWorldsButton(detail.showWorldsButton ?? false);
         }
       }
     };
@@ -136,16 +129,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const navItems: NavItem[] = [
     { id: 'feed', icon: <Rss size={20} />, label: 'Feed' },
-    // Only include worlds button if user has enabled it in preferences
-    ...(showWorldsButton
-      ? [
-          {
-            id: 'worlds' as NavigationView,
-            icon: <Map size={20} />,
-            label: 'Worlds',
-          },
-        ]
-      : []),
     { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },
     { id: 'onboarding', icon: <GraduationCap size={20} />, label: 'Tutorials' },
     // Only include processes button if user has enabled it in preferences

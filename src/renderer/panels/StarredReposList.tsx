@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Star, FolderGit2, Loader2, AlertCircle } from 'lucide-react';
+import { Star, Loader2, AlertCircle } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { GithubService } from '../main-process-api/GithubService';
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
@@ -232,7 +232,18 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
-                    <FolderGit2 size={20} color={theme.colors.primary} style={{ marginTop: 2 }} />
+                    <img
+                      src={repo.owner.avatar_url}
+                      alt={owner}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        flexShrink: 0,
+                        marginTop: 1,
+                      }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text }}>
                         {name}

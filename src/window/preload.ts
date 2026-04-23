@@ -50,7 +50,6 @@ import { testDebugAPI } from './main-process-api-implementations/testDebugApi';
 import { documentSearchAPI } from './main-process-api-implementations/documentSearchApi';
 import { localhostDetectionAPI } from './main-process-api-implementations/localhostDetectionApi';
 import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
-import { collectionsAPI } from './main-process-api-implementations/collectionsApi';
 import { recentReposAPI } from './main-process-api-implementations/recentReposApi';
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
 import { extensionAPI } from './main-process-api-implementations/extensionApi';
@@ -94,7 +93,6 @@ const mainProcessExposure: MainProcessAPI = {
   agentInstallation: agentInstallationAPI,
   agentConfig: agentConfigAPI,
   alexandria: alexandriaAPI,
-  collections: collectionsAPI,
   alexandriaDocs: alexandriaDocsAPI,
   workspace: workspaceApi,
   agentSession: agentSessionApi,
