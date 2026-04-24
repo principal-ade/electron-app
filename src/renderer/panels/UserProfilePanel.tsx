@@ -20,7 +20,10 @@ import {
   EyeClosed,
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
-import { WatchedActivityPanel } from './WatchedActivityPanel';
+import {
+  WatchedActivityPanel,
+  type WatchedActivityPanelActions,
+} from './WatchedActivityPanel';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitHubOrganization } from '../../shared/main-process-api-interfaces/GitHubAPI';
@@ -175,6 +178,12 @@ interface UserProfilePanelProps {
   context: UserProfilePanelContext;
   actions: UserProfilePanelActions;
   events: PanelEventEmitter;
+  /**
+   * Actions forwarded to the embedded WatchedActivityPanel (and its
+   * RepoActivityCards). Kept as a separate prop so the panel itself doesn't
+   * import renderer main-process-api services — that keeps it Storybook-safe.
+   */
+  watchedActivityActions: WatchedActivityPanelActions;
 }
 
 /**
@@ -349,6 +358,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   context,
   actions,
   events,
+  watchedActivityActions,
 }) => {
   const { theme } = useTheme();
   const user = context.currentScope?.user;
@@ -1277,6 +1287,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               source={{ kind: 'owner', login: userData.username, accountType: 'User' }}
               events={events}
               hideHeader
+              actions={watchedActivityActions}
             />
           </div>
         )}

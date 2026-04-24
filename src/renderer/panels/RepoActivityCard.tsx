@@ -1457,6 +1457,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                       payload: {
                         repoPath: summary.repoPath,
                         repoName: summary.repoName,
+                        githubOwner: summary.githubOwner,
+                        githubRepoName: summary.githubRepoName,
                         commit,
                       },
                     });

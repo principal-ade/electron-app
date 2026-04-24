@@ -14,8 +14,25 @@ import {
   type ContributedRepository,
 } from './UserProfilePanel';
 import type { RepoCardData, Contributor } from './RepoCard';
+import type { WatchedActivityPanelActions } from './WatchedActivityPanel';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
 import type { GitHubOrganization } from '../../shared/main-process-api-interfaces/GitHubAPI';
+
+const mockWatchedActivityActions: WatchedActivityPanelActions = {
+  getFileTreeForLocalRepo: async () => null,
+  getGithubTree: async () => ({
+    sha: 'mock-sha',
+    url: 'https://api.github.com/repos/octocat/mock/git/trees/mock-sha',
+    tree: [],
+    truncated: false,
+  }),
+  getAlexandriaRepositories: async () => [],
+  getChangedFilesForLocalCommit: async () => new Map(),
+  getChangedFilesForGithubCommit: async () => new Map(),
+  explainCommits: async () => ({ text: 'Mock explanation for Storybook.' }),
+  getOwnerActivity: async () => [],
+  getRepoActivity: async () => [],
+};
 
 const mockUserOrgs: GitHubOrganization[] = [
   { id: 1, login: 'vercel',     avatar_url: 'https://avatars.githubusercontent.com/u/14985020?v=4', description: 'Vercel' },
@@ -434,6 +451,7 @@ const MockUserProfilePanel: React.FC<{
       context={mockContext}
       actions={mockActions}
       events={mockEvents}
+      watchedActivityActions={mockWatchedActivityActions}
     />
   );
 };
@@ -583,7 +601,7 @@ export const Loading: Story = {
 
     return (
       <ThemeProvider>
-        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} />
+        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} watchedActivityActions={mockWatchedActivityActions} />
       </ThemeProvider>
     );
   },
@@ -617,7 +635,7 @@ export const Error: Story = {
 
     return (
       <ThemeProvider>
-        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} />
+        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} watchedActivityActions={mockWatchedActivityActions} />
       </ThemeProvider>
     );
   },
@@ -648,7 +666,7 @@ export const Empty: Story = {
 
     return (
       <ThemeProvider>
-        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} />
+        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} watchedActivityActions={mockWatchedActivityActions} />
       </ThemeProvider>
     );
   },

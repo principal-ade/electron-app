@@ -9,8 +9,11 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Loader2, GitCommit } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
-import { GithubService } from '../main-process-api/GithubService';
-import { RepoActivityCard, type RepoActivitySummary } from './RepoActivityCard';
+import {
+  RepoActivityCard,
+  type RepoActivitySummary,
+  type RepoActivityCardActions,
+} from './RepoActivityCard';
 import type { CommitActivityCard } from '../../shared/tipc/webAdeRouterTypes';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 
@@ -18,10 +21,29 @@ export type WatchedActivitySource =
   | { kind: 'owner'; login: string; accountType: 'User' | 'Organization' }
   | { kind: 'repo'; owner: string; repo: string };
 
+/**
+ * Actions for WatchedActivityPanel.
+ *
+ * Extends RepoActivityCardActions so the panel can forward them to the
+ * cards it renders, and adds the two activity-fetch calls the panel itself
+ * needs. Host wires to real services; stories pass mocks.
+ */
+export interface WatchedActivityPanelActions extends RepoActivityCardActions {
+  getOwnerActivity: (
+    login: string,
+    type: 'User' | 'Organization',
+  ) => Promise<CommitActivityCard[]>;
+  getRepoActivity: (
+    owner: string,
+    repo: string,
+  ) => Promise<CommitActivityCard[]>;
+}
+
 interface WatchedActivityPanelProps {
   source: WatchedActivitySource;
   events: PanelEventEmitter;
   hideHeader?: boolean;
+  actions: WatchedActivityPanelActions;
 }
 
 function formatHourLabel(iso: string): string {
@@ -110,7 +132,7 @@ function cardsToHourlyGroups(cards: CommitActivityCard[]): HourlyGroup[] {
     }));
 }
 
-export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ source, events, hideHeader = false }) => {
+export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ source, events, hideHeader = false, actions }) => {
   const { theme } = useTheme();
   const [cards, setCards] = useState<CommitActivityCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,8 +154,8 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
     setCards([]);
 
     const fetch = sourceKind === 'owner'
-      ? GithubService.getOwnerActivity(sourceLogin!, sourceAccountType!)
-      : GithubService.getRepoActivity(sourceOwner!, sourceRepo!);
+      ? actions.getOwnerActivity(sourceLogin!, sourceAccountType!)
+      : actions.getRepoActivity(sourceOwner!, sourceRepo!);
 
     fetch.then(result => {
       if (!cancelled) {
@@ -146,7 +168,7 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
     });
 
     return () => { cancelled = true; };
-  }, [sourceKind, sourceLogin, sourceAccountType, sourceOwner, sourceRepo]);
+  }, [sourceKind, sourceLogin, sourceAccountType, sourceOwner, sourceRepo, actions]);
 
   const hourlyGroups = useMemo(() => cardsToHourlyGroups(cards), [cards]);
 
@@ -230,6 +252,7 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
                         onToggleExpand={() => toggleExpand(key)}
                         onOpen={() => {}}
                         events={events}
+                        actions={actions}
                       />
                     );
                   })}

@@ -12,6 +12,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import { FolderGit2 } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { RepoActivityCard, type RepoActivitySummary } from './RepoActivityCard';
+import { repoActivityCardActions } from './repoActivityCardActions';
 import { GithubService } from '../main-process-api/GithubService';
 
 export interface ActivityFeedCardPanelProps {
@@ -324,6 +325,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
                       onOpen={() => handleOpenRepo(summary.repoPath)}
                       events={events}
                       entry={repoEntryMap.get(summary.repoPath)}
+                      actions={repoActivityCardActions}
                     />
                   ))}
                 </div>

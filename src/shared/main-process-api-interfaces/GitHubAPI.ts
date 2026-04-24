@@ -45,6 +45,7 @@ export enum GitHubAPIEvent {
   GET_LATEST_COMMIT = 'github:get-latest-commit',
   GET_FILE_TREE_AT_COMMIT = 'github:get-file-tree-at-commit',
   GET_CHANGED_FILES_FOR_COMMIT = 'github:get-changed-files-for-commit',
+  GET_COMMIT_DIFF = 'github:get-commit-diff',
 }
 
 // Config fetching types (formerly from ConfigAPI)
@@ -553,4 +554,10 @@ export interface GitHubAPI {
     repo: string,
     sha: string,
   ) => Promise<Record<string, ChangedFileInfo>>;
+  /** Get the unified diff for a commit (used when repo isn't cloned locally) */
+  getCommitDiff: (
+    owner: string,
+    repo: string,
+    sha: string,
+  ) => Promise<string>;
 }

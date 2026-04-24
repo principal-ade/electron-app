@@ -265,4 +265,13 @@ export const githubAPI: GitHubAPI = {
       sha,
     );
   },
+
+  getCommitDiff: async (owner: string, repo: string, sha: string) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_COMMIT_DIFF,
+      owner,
+      repo,
+      sha,
+    );
+  },
 };

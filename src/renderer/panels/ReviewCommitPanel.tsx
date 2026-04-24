@@ -9,17 +9,22 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { FileDiff, type FileDiffMetadata } from '@pierre/diffs/react';
 import { parsePatchFiles } from '@pierre/diffs';
 import { GitService } from '../main-process-api/GitService';
+import { GithubService } from '../main-process-api/GithubService';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 
 export interface ReviewCommitPanelProps {
   repoPath: string;
   repoName: string;
+  githubOwner?: string;
+  githubRepoName?: string;
   commit: ActivityCommit;
 }
 
 export const ReviewCommitPanel: React.FC<ReviewCommitPanelProps> = ({
   repoPath,
   repoName,
+  githubOwner,
+  githubRepoName,
   commit,
 }) => {
   const { theme } = useTheme();
@@ -32,7 +37,11 @@ export const ReviewCommitPanel: React.FC<ReviewCommitPanelProps> = ({
       setLoading(true);
       setError(null);
       try {
-        const diff = await GitService.getCommitDiff(repoPath, commit.hash);
+        const diff = repoPath
+          ? await GitService.getCommitDiff(repoPath, commit.hash)
+          : githubOwner && githubRepoName
+            ? await GithubService.getCommitDiff(githubOwner, githubRepoName, commit.hash)
+            : '';
         setDiffText(diff);
       } catch (err) {
         console.error('Failed to load commit diff:', err);
@@ -43,19 +52,33 @@ export const ReviewCommitPanel: React.FC<ReviewCommitPanelProps> = ({
     };
 
     loadDiff();
-  }, [repoPath, commit.hash]);
+  }, [repoPath, githubOwner, githubRepoName, commit.hash]);
 
-  // Parse the patch into individual file diffs
+  // Parse the patch into individual file diffs.
+  // We split on `diff --git` ourselves and parse each file separately so a single
+  // malformed file header (quoted paths, combined-merge diffs, etc.) doesn't make
+  // the upstream parser drop every file in the patch.
   const fileDiffs = useMemo<FileDiffMetadata[]>(() => {
     if (!diffText) return [];
-    try {
-      const parsedPatches = parsePatchFiles(diffText);
-      // Flatten all files from all patches
-      return parsedPatches.flatMap(patch => patch.files);
-    } catch (err) {
-      console.error('Failed to parse patch:', err);
-      return [];
+    const chunks = diffText.split(/(?=^diff --git )/m).filter(c => c.trim().length > 0);
+    if (chunks.length === 0) {
+      try {
+        return parsePatchFiles(diffText).flatMap(p => p.files);
+      } catch (err) {
+        console.warn('Failed to parse patch:', err);
+        return [];
+      }
     }
+    const out: FileDiffMetadata[] = [];
+    for (const chunk of chunks) {
+      try {
+        const parsed = parsePatchFiles(chunk);
+        out.push(...parsed.flatMap(p => p.files));
+      } catch (err) {
+        console.warn('Skipping unparseable file in diff:', err);
+      }
+    }
+    return out;
   }, [diffText]);
 
   return (

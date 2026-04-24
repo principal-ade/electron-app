@@ -364,4 +364,8 @@ export class GithubService {
       { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }
     >;
   }
+
+  static async getCommitDiff(owner: string, repo: string, sha: string): Promise<string> {
+    return window.mainProcess.github.getCommitDiff(owner, repo, sha);
+  }
 }

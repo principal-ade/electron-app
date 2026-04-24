@@ -431,6 +431,8 @@ const FileCityWithHighlights: React.FC<{
 
   // Create merged context for File City panel (includes agent highlight layers)
   const fileCityPanelContext = useMemo(() => {
+    const sc = (context as { storyboardContext?: { data: unknown } }).storyboardContext;
+    console.log('[FileCityWithHighlights] building context — storyboardContext.data:', sc?.data ?? 'null/undefined');
     return {
       ...context,
       // Add agent highlight layers as a typed slice property
@@ -798,6 +800,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Sync tabs to parent whenever they change (for RepositoryPanelProvider)
   useEffect(() => {
     const customTabs = tabs.filter((t) => t.contentType !== 'terminal');
+    const canvasTabs = customTabs.filter((t) => t.contentType === 'canvas-detail' || t.contentType === 'canvas-editor');
+    console.log('[DevWorkspace] syncing tabs to provider — total custom:', customTabs.length, 'canvas tabs:', canvasTabs.length, canvasTabs.map((t) => ({ contentType: t.contentType, canvasPath: (t as { canvasPath?: string }).canvasPath })));
     onTabsChange?.(customTabs);
   }, [tabs, onTabsChange]);
 

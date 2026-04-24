@@ -65,6 +65,7 @@ import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { DeleteAlexandriaEntryModal } from '../panels/components/DeleteAlexandriaEntryModal';
 import { CollectionProfilePanel } from '../panels/CollectionProfilePanel';
 import { WatchedActivityPanel } from '../panels/WatchedActivityPanel';
+import { watchedActivityPanelActions } from '../panels/watchedActivityPanelActions';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -108,6 +109,8 @@ export interface CommitReviewTab extends BaseTab {
   contentType: 'commit-review';
   repoPath: string;
   repoName: string;
+  githubOwner?: string;
+  githubRepoName?: string;
   commit: ActivityCommit;
 }
 
@@ -765,7 +768,7 @@ const UserProfileTabContent: React.FC<{
 
   return (
     <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
-      <UserProfilePanel context={userContext} actions={userActions} events={events} />
+      <UserProfilePanel context={userContext} actions={userActions} events={events} watchedActivityActions={watchedActivityPanelActions} />
     </div>
   );
 };
@@ -1123,11 +1126,18 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   useEffect(() => {
     const handleCommitReview = (event: {
       type: string;
-      payload: { repoPath: string; repoName: string; commit: ActivityCommit }
+      payload: {
+        repoPath: string;
+        repoName: string;
+        githubOwner?: string;
+        githubRepoName?: string;
+        commit: ActivityCommit;
+      };
     }) => {
       if (event.type === 'commit:review-selected') {
-        const { repoPath, repoName, commit } = event.payload;
-        const tabId = `commit-review-${repoPath}-${commit.hash}`;
+        const { repoPath, repoName, githubOwner, githubRepoName, commit } = event.payload;
+        const sourceKey = repoPath || (githubOwner && githubRepoName ? `${githubOwner}/${githubRepoName}` : repoName);
+        const tabId = `commit-review-${sourceKey}-${commit.hash}`;
 
         // Check if tab already exists
         const existingTab = tabs.find(tab => tab.id === tabId);
@@ -1144,6 +1154,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           closable: true,
           repoPath,
           repoName,
+          githubOwner,
+          githubRepoName,
           commit,
         };
 
@@ -1682,6 +1694,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
             <ReviewCommitPanel
               repoPath={reviewTab.repoPath}
               repoName={reviewTab.repoName}
+              githubOwner={reviewTab.githubOwner}
+              githubRepoName={reviewTab.githubRepoName}
               commit={reviewTab.commit}
             />
           );
@@ -1749,6 +1763,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               key={ownerTab.id}
               source={{ kind: 'owner', login: ownerTab.login, accountType: ownerTab.accountType }}
               events={eventsRef.current}
+              actions={watchedActivityPanelActions}
             />
           );
         }
@@ -1759,6 +1774,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               key={repoTab.id}
               source={{ kind: 'repo', owner: repoTab.owner, repo: repoTab.repo }}
               events={eventsRef.current}
+              actions={watchedActivityPanelActions}
             />
           );
         }

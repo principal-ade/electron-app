@@ -336,8 +336,12 @@ export class GitHubAdapter {
 
       if (
         contentType.includes('application/vnd.github.v3.raw') ||
+        contentType.includes('application/vnd.github.v3.diff') ||
+        contentType.includes('application/vnd.github.v3.patch') ||
         contentType.includes('text/plain') ||
-        options.headers?.Accept?.includes('application/vnd.github.v3.raw')
+        options.headers?.Accept?.includes('application/vnd.github.v3.raw') ||
+        options.headers?.Accept?.includes('application/vnd.github.v3.diff') ||
+        options.headers?.Accept?.includes('application/vnd.github.v3.patch')
       ) {
         // For raw content, return as text
         data = await response.text();
@@ -2481,6 +2485,18 @@ export class GitHubAdapter {
     return changedFiles;
   }
 
+  async getCommitDiff(owner: string, repo: string, sha: string): Promise<string> {
+    console.log(`[GitHub] Fetching diff for commit ${sha} in ${owner}/${repo}`);
+    const result = await this.makeGitHubAPICall(`/repos/${owner}/${repo}/commits/${sha}`, {
+      headers: { Accept: 'application/vnd.github.v3.diff' },
+    });
+    if (!result.success || typeof result.data !== 'string') {
+      console.error('[GitHub] Failed to fetch commit diff:', result.error);
+      return '';
+    }
+    return result.data;
+  }
+
   async getRepoActivity(owner: string, repo: string, days = 7): Promise<CommitActivityCard[]> {
     const token = await this.getGitHubToken();
     const authHeader = token
@@ -3596,6 +3612,18 @@ export function registerGitHubIpcHandlers(
       // Convert Map to plain object for IPC serialization
       const changedFilesMap = await adapter.getChangedFilesForCommit(owner, repo, sha);
       return Object.fromEntries(changedFilesMap);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_COMMIT_DIFF,
+    async (event, owner: string, repo: string, sha: string) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_COMMIT_DIFF');
+        return '';
+      }
+      return adapter.getCommitDiff(owner, repo, sha);
     },
   );
 
