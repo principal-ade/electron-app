@@ -22,6 +22,7 @@ import type {
   GetUserActivityInput,
   GetPinnedRepositoriesInput,
   ExplainCommitsInput,
+  ExplainWorkingChangesInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 
@@ -163,5 +164,11 @@ export const webAdeRouter = {
     .input<ExplainCommitsInput>()
     .action(async ({ input }) => {
       return webAdeService.explainCommits(input);
+    }),
+
+  explainWorkingChanges: t.procedure
+    .input<ExplainWorkingChangesInput>()
+    .action(async ({ input }) => {
+      return webAdeService.explainWorkingChanges(input);
     }),
 };

@@ -25,6 +25,8 @@ import type {
   UserActivityResponse,
   ExplainCommitsInput,
   ExplainCommitsResponse,
+  ExplainWorkingChangesInput,
+  ExplainWorkingChangesResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -695,13 +697,30 @@ export class WebAdeService {
   }
 
   async explainCommits(input: ExplainCommitsInput): Promise<ExplainCommitsResponse> {
+    return this.postSseExplain('/api/explain-commits', input, 'explain-commits');
+  }
+
+  async explainWorkingChanges(
+    input: ExplainWorkingChangesInput,
+  ): Promise<ExplainWorkingChangesResponse> {
+    return this.postSseExplain(
+      '/api/explain-working-changes',
+      input,
+      'explain-working-changes',
+    );
+  }
+
+  private async postSseExplain<T>(
+    path: string,
+    input: T,
+    label: string,
+  ): Promise<{ text: string }> {
     const token = await this.getToken();
 
-    // Derive the explain-commits URL from baseUrl (strip /api suffix, use /api/explain-commits)
     const apiBase = this.baseUrl.endsWith('/api')
       ? this.baseUrl.slice(0, -4)
       : this.baseUrl;
-    const url = `${apiBase}/api/explain-commits`;
+    const url = `${apiBase}${path}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -713,10 +732,9 @@ export class WebAdeService {
     });
 
     if (!response.ok) {
-      throw new Error(`explain-commits failed: ${response.status}`);
+      throw new Error(`${label} failed: ${response.status}`);
     }
 
-    // Response is SSE — read all chunks and extract text content
     const raw = await response.text();
     let text = '';
     for (const line of raw.split('\n')) {

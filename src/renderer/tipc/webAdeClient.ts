@@ -33,6 +33,8 @@ import type {
   GetPinnedRepositoriesInput,
   ExplainCommitsInput,
   ExplainCommitsResponse,
+  ExplainWorkingChangesInput,
+  ExplainWorkingChangesResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
@@ -75,6 +77,9 @@ export interface WebAdeClient {
 
   // AI Explain Commits
   explainCommits: (input: ExplainCommitsInput) => Promise<ExplainCommitsResponse>;
+  explainWorkingChanges: (
+    input: ExplainWorkingChangesInput,
+  ) => Promise<ExplainWorkingChangesResponse>;
 }
 
 // =============================================================================

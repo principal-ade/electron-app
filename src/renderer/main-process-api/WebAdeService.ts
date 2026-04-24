@@ -19,6 +19,8 @@ import type {
   StarredCollection,
   ExplainCommitsInput,
   ExplainCommitsResponse,
+  ExplainWorkingChangesInput,
+  ExplainWorkingChangesResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -160,5 +162,11 @@ export class WebAdeService {
 
   static async explainCommits(input: ExplainCommitsInput): Promise<ExplainCommitsResponse> {
     return webAdeClient.explainCommits(input);
+  }
+
+  static async explainWorkingChanges(
+    input: ExplainWorkingChangesInput,
+  ): Promise<ExplainWorkingChangesResponse> {
+    return webAdeClient.explainWorkingChanges(input);
   }
 }

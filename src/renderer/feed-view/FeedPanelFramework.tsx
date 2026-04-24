@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, Users, Activity, FolderGit2, User, Building2, BookMarked, Radio } from 'lucide-react';
+import { GitCommit, Users, Activity, FolderGit2, User, Building2, BookMarked, Radio, Wrench } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -66,6 +66,8 @@ import { DeleteAlexandriaEntryModal } from '../panels/components/DeleteAlexandri
 import { CollectionProfilePanel } from '../panels/CollectionProfilePanel';
 import { WatchedActivityPanel } from '../panels/WatchedActivityPanel';
 import { watchedActivityPanelActions } from '../panels/watchedActivityPanelActions';
+import { InProgressActivityPanel } from '../panels/InProgressActivityPanel';
+import { inProgressActivityPanelActions } from '../panels/inProgressActivityPanelActions';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -129,6 +131,13 @@ export interface ActivityFeedTab extends BaseTab {
 }
 
 /**
+ * In-progress tab - displays repositories with uncommitted working-tree changes
+ */
+export interface InProgressActivityTab extends BaseTab {
+  contentType: 'in-progress-activity';
+}
+
+/**
  * Project info tab - displays repository details with heatmap and file city
  */
 export interface ProjectInfoTab extends BaseTab {
@@ -176,7 +185,7 @@ export interface WatchedRepoActivityTab extends BaseTab {
 /**
  * Union type of all supported tab types in FeedView
  */
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | WatchedOwnerActivityTab | WatchedRepoActivityTab;
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | WatchedOwnerActivityTab | WatchedRepoActivityTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -996,7 +1005,10 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // Time filter state for heatmap selection
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
 
-  // Tab management - Initialize with activity feed tab
+  // Tab management - Initialize with activity feed tab.
+  // If any repo has uncommitted changes when the view mounts, a one-shot
+  // effect below swaps this for an in-progress tab so the user lands on
+  // their work-in-flight by default.
   const [tabs, setTabs] = useState<FeedTab[]>([
     {
       id: 'activity-feed',
@@ -1005,6 +1017,43 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     } as ActivityFeedTab,
   ]);
   const [activeTabId, setActiveTabId] = useState<string | null>('activity-feed');
+  const didCheckInitialDirtyRef = useRef(false);
+
+  useEffect(() => {
+    if (didCheckInitialDirtyRef.current) return;
+    if (repositories.length === 0) return;
+    didCheckInitialDirtyRef.current = true;
+
+    let cancelled = false;
+    (async () => {
+      const paths = repositories.filter((r) => r.path).map((r) => String(r.path));
+      for (const path of paths) {
+        const status = await RepositoryMonitoringService.getGitStatusWithFiles(path);
+        if (cancelled) return;
+        if (status && (status.isDirty || status.ahead > 0)) {
+          setTabs((prev) => {
+            // Only swap if the user hasn't added other tabs or switched away.
+            if (prev.length !== 1 || prev[0]?.id !== 'activity-feed') return prev;
+            return [
+              {
+                id: 'in-progress-activity',
+                contentType: 'in-progress-activity',
+                label: 'In Progress',
+              } as InProgressActivityTab,
+            ];
+          });
+          setActiveTabId((curr) => (curr === 'activity-feed' ? 'in-progress-activity' : curr));
+          return;
+        }
+      }
+    })().catch((err) => {
+      console.warn('[FeedPanelFramework] initial dirty-check failed:', err);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repositories]);
 
   // Delete modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -1669,6 +1718,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         return <Users size={14} />;
       case 'activity-feed':
         return <Activity size={14} />;
+      case 'in-progress-activity':
+        return <Wrench size={14} />;
       case 'project-info':
         return <FolderGit2 size={14} />;
       case 'user-profile':
@@ -1710,6 +1761,17 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               repositories={repositories}
               events={eventsRef.current}
               onOpenRepository={onOpenRepositoryRef.current}
+            />
+          );
+        }
+        case 'in-progress-activity': {
+          return (
+            <InProgressActivityPanel
+              key={`in-progress-${repositories.length}`}
+              repositories={repositories}
+              events={eventsRef.current}
+              onOpenRepository={onOpenRepositoryRef.current}
+              actions={inProgressActivityPanelActions}
             />
           );
         }

@@ -298,6 +298,32 @@ export interface ExplainCommitsResponse {
   text: string;
 }
 
+export type WorkingChangeStatus =
+  | 'added'
+  | 'modified'
+  | 'deleted'
+  | 'renamed'
+  | 'untracked';
+
+export interface WorkingChangeData {
+  path: string;
+  status: WorkingChangeStatus;
+  additions?: number;
+  deletions?: number;
+  staged: boolean;
+}
+
+export interface ExplainWorkingChangesInput {
+  changes: WorkingChangeData[];
+  audienceLevel: 'maintainer' | 'non-technical';
+  repoName: string;
+  branch?: string;
+}
+
+export interface ExplainWorkingChangesResponse {
+  text: string;
+}
+
 // =============================================================================
 // Router Type Definition
 // =============================================================================
@@ -412,5 +438,11 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: ExplainCommitsInput;
     }) => Promise<ExplainCommitsResponse>;
+  };
+  explainWorkingChanges: {
+    action: (args: {
+      context: ActionContext;
+      input: ExplainWorkingChangesInput;
+    }) => Promise<ExplainWorkingChangesResponse>;
   };
 };
