@@ -7,11 +7,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, Loader2, AlertCircle, Plus, Users } from 'lucide-react';
+import { FolderGit2, Loader2, AlertCircle, Plus } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
+import { CollectionCard } from './cards/CollectionCard';
 
 export interface CollectionsListProps {
   /** Event emitter for panel communication */
@@ -234,105 +235,25 @@ export const CollectionsList: React.FC<CollectionsListProps> = ({ events }) => {
         style={{
           flex: 1,
           overflow: 'auto',
-          padding: spacing.sm,
+          padding: spacing.md,
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-          {collections.map((collection) => {
-            const Icon = getIconComponent(collection.icon);
-            const repoCount = collection.repos?.length || 0;
-            const userCount = collection.users?.length || 0;
-            const itemCount = repoCount + userCount;
-
-            return (
-              <div
-                key={collection.id}
-                onClick={() => handleCollectionClick(collection)}
-                style={{
-                  padding: spacing.md,
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: theme.radii?.[1] || 4,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
-                  <Icon size={24} color={theme.colors.primary} style={{ marginTop: 2 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                      <div style={{ fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text }}>
-                        {collection.name}
-                      </div>
-                      {collection.ownerType === 'org' && collection.ownerLogin && (
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 2,
-                          padding: `1px ${spacing.xs}px`,
-                          backgroundColor: theme.colors.backgroundTertiary,
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: theme.radii?.[1] || 4,
-                          fontSize: 10,
-                          color: theme.colors.textSecondary,
-                          flexShrink: 0,
-                        }}>
-                          <Users size={10} />
-                          <span>{collection.ownerLogin}</span>
-                        </div>
-                      )}
-                    </div>
-                    {collection.description && (
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                          marginTop: spacing.xs,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                        }}
-                      >
-                        {collection.description}
-                      </div>
-                    )}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: spacing.md,
-                        marginTop: spacing.xs,
-                        fontSize: theme.fontSizes[0],
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      {repoCount > 0 && (
-                        <span>
-                          {repoCount} {repoCount === 1 ? 'repository' : 'repositories'}
-                        </span>
-                      )}
-                      {userCount > 0 && (
-                        <span>
-                          {userCount} {userCount === 1 ? 'user' : 'users'}
-                        </span>
-                      )}
-                      {itemCount === 0 && <span>Empty collection</span>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {collections.map((collection) => (
+            <CollectionCard
+              key={collection.id}
+              collection={{
+                name: collection.name,
+                description: collection.description,
+                icon: getIconComponent(collection.icon),
+                ownerLogin: collection.ownerLogin,
+                isOrgOwned: collection.ownerType === 'org',
+                repoCount: collection.repos?.length || 0,
+                userCount: collection.users?.length || 0,
+              }}
+              onClick={() => handleCollectionClick(collection)}
+            />
+          ))}
         </div>
       </div>
 

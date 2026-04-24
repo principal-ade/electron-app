@@ -11,6 +11,7 @@ import { Star, Loader2, AlertCircle, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { GithubService } from '../main-process-api/GithubService';
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
+import { StarredRepoCard } from './cards/StarredRepoCard';
 
 export interface StarredReposListProps {
   /** Event emitter for panel communication */
@@ -251,7 +252,7 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
         style={{
           flex: 1,
           overflow: 'auto',
-          padding: spacing.sm,
+          padding: spacing.md,
         }}
       >
         {filteredRepos.length === 0 && (
@@ -273,101 +274,23 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
           </div>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-          {filteredRepos
-            .map((repo) => {
-                const [owner, name] = repo.full_name.split('/');
-                return (
-                <div
-                  key={repo.id}
-                  onClick={() => handleRepoClick(repo)}
-                  style={{
-                    padding: spacing.md,
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.radii?.[1] || 4,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                    e.currentTarget.style.borderColor = theme.colors.primary;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                    {/* Avatar + name row */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
-                      <img
-                        src={repo.owner.avatar_url}
-                        alt={owner}
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: '50%',
-                          flexShrink: 0,
-                        }}
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: theme.fontSizes[2], fontWeight: 600, color: theme.colors.text }}>
-                          {name}
-                        </div>
-                        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary, marginTop: 2 }}>
-                          {owner}
-                        </div>
-                      </div>
-                    </div>
-                    {/* Description — full width */}
-                    {repo.description && (
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[1],
-                          color: theme.colors.textSecondary,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                        }}
-                      >
-                        {repo.description}
-                      </div>
-                    )}
-                    {/* Meta row — full width */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: spacing.md,
-                        fontSize: theme.fontSizes[1],
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      {repo.language && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                          <div
-                            style={{
-                              width: 10,
-                              height: 10,
-                              borderRadius: '50%',
-                              backgroundColor: theme.colors.primary,
-                            }}
-                          />
-                          <span>{repo.language}</span>
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                        <Star size={12} fill="#f5c542" color="#f5c542" />
-                        <span>{repo.stargazers_count?.toLocaleString() || 0}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          {filteredRepos.map((repo) => {
+            const [owner, name] = repo.full_name.split('/');
+            return (
+              <StarredRepoCard
+                key={repo.id}
+                repo={{
+                  owner,
+                  name,
+                  ownerAvatarUrl: repo.owner.avatar_url,
+                  description: repo.description,
+                  language: repo.language,
+                  stargazersCount: repo.stargazers_count,
+                }}
+                onClick={() => handleRepoClick(repo)}
+              />
+            );
+          })}
         </div>
       </div>
 

@@ -7,10 +7,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { User, X, Loader2 } from 'lucide-react';
+import { User, Loader2 } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import type { WatchedUser, WatchedRepo } from '../../shared/tipc/webAdeRouterTypes';
+import { WatchedUserCard } from './cards/WatchedUserCard';
+import { WatchedRepoCard } from './cards/WatchedRepoCard';
 
 export interface WatchedItemsListProps {
   /** Event emitter for panel communication */
@@ -31,7 +33,6 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
   const [watchedUsers, setWatchedUsers] = useState<WatchedUser[]>([]);
   const [watchedRepos, setWatchedRepos] = useState<WatchedRepo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [operationInProgress, setOperationInProgress] = useState<string | null>(null);
 
   // Load watched items on mount
   const loadWatches = useCallback(async () => {
@@ -90,56 +91,6 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
     };
   }, [events]);
 
-  // Unwatch user
-  const handleUnwatchUser = useCallback(
-    async (login: string) => {
-      setOperationInProgress(`user:${login}`);
-      try {
-        const response = await WebAdeService.unwatchUser(login);
-        if (response.success) {
-          setWatchedUsers(response.watchedUsers);
-          // Emit event to refresh activity feed
-          events.emit({
-            type: 'feed:activity-refresh-requested',
-            source: 'watched-items-panel',
-            timestamp: Date.now(),
-            payload: {},
-          });
-        }
-      } catch (error) {
-        console.error('[WatchedItemsList] Failed to unwatch user:', error);
-      } finally {
-        setOperationInProgress(null);
-      }
-    },
-    [events]
-  );
-
-  // Unwatch repo
-  const handleUnwatchRepo = useCallback(
-    async (owner: string, repo: string) => {
-      setOperationInProgress(`repo:${owner}/${repo}`);
-      try {
-        const response = await WebAdeService.unwatchRepo(owner, repo);
-        if (response.success) {
-          setWatchedRepos(response.watchedRepos);
-          // Emit event to refresh activity feed
-          events.emit({
-            type: 'feed:activity-refresh-requested',
-            source: 'watched-items-panel',
-            timestamp: Date.now(),
-            payload: {},
-          });
-        }
-      } catch (error) {
-        console.error('[WatchedItemsList] Failed to unwatch repo:', error);
-      } finally {
-        setOperationInProgress(null);
-      }
-    },
-    [events]
-  );
-
   return (
     <div
       style={{
@@ -189,257 +140,38 @@ export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) =>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-              {/* Watched Users */}
-              {watchedUsers.map((user) => {
-                const isInProgress = operationInProgress === `user:${user.login}`;
-                return (
-                  <div
-                    key={`user:${user.login}`}
-                    onClick={() => {
-                      events.emit({
-                        type: 'feed:watched-owner-activity-requested',
-                        source: 'watched-items-panel',
-                        timestamp: Date.now(),
-                        payload: { login: user.login, accountType: user.type ?? 'User' },
-                      });
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      width: '100%',
-                      padding: spacing.sm,
-                      backgroundColor: 'transparent',
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: theme.radii?.[1] || 4,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      position: 'relative',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    {/* Avatar */}
-                    <div
-                      style={{
-                        width: 72,
-                        height: 72,
-                        borderRadius: user.type === 'Organization' ? theme.radii?.[5] || 12 : '50%',
-                        backgroundColor: theme.colors.background,
-                        border: `1px solid ${theme.colors.border}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <img
-                        src={`https://github.com/${user.login}.png?size=120`}
-                        alt={user.login}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                        }}
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
+              {watchedUsers.map((user) => (
+                <WatchedUserCard
+                  key={`user:${user.login}`}
+                  user={{
+                    login: user.login,
+                    isOrganization: user.type === 'Organization',
+                  }}
+                  onClick={() => {
+                    events.emit({
+                      type: 'feed:watched-owner-activity-requested',
+                      source: 'watched-items-panel',
+                      timestamp: Date.now(),
+                      payload: { login: user.login, accountType: user.type ?? 'User' },
+                    });
+                  }}
+                />
+              ))}
 
-                    {/* Text content */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[1],
-                          fontWeight: 600,
-                          color: theme.colors.text,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          marginBottom: 2,
-                        }}
-                      >
-                        {user.login}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                        }}
-                      >
-                        {user.type === 'Organization' ? 'Organization' : 'User'}
-                      </div>
-                    </div>
-
-                    {/* Unwatch button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click
-                        handleUnwatchUser(user.login);
-                      }}
-                      disabled={isInProgress}
-                      style={{
-                        padding: `${spacing.xs}px ${spacing.sm}px`,
-                        fontSize: theme.fontSizes[0],
-                        color: theme.colors.textSecondary,
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: theme.radii?.[1] || 4,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: spacing.xs,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {isInProgress ? (
-                        <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                      ) : (
-                        <X size={12} />
-                      )}
-                      Unwatch
-                    </button>
-                  </div>
-                );
-              })}
-
-              {/* Watched Repositories */}
-              {watchedRepos.map((repo) => {
-                const isInProgress = operationInProgress === `repo:${repo.owner}/${repo.repo}`;
-                return (
-                  <div
-                    key={`repo:${repo.owner}/${repo.repo}`}
-                    onClick={() => {
-                      events.emit({
-                        type: 'feed:watched-repo-activity-requested',
-                        source: 'watched-items-panel',
-                        timestamp: Date.now(),
-                        payload: { owner: repo.owner, repo: repo.repo },
-                      });
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      width: '100%',
-                      padding: spacing.sm,
-                      backgroundColor: 'transparent',
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: theme.radii?.[1] || 4,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      position: 'relative',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    {/* Avatar */}
-                    <div
-                      style={{
-                        width: 72,
-                        height: 72,
-                        borderRadius: '50%',
-                        backgroundColor: theme.colors.background,
-                        border: `1px solid ${theme.colors.border}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <img
-                        src={`https://github.com/${repo.owner}.png?size=120`}
-                        alt={repo.owner}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                        }}
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-
-                    {/* Text content */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[1],
-                          fontWeight: 600,
-                          color: theme.colors.text,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          marginBottom: 2,
-                        }}
-                      >
-                        {repo.repo}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          marginBottom: 4,
-                        }}
-                      >
-                        {repo.owner}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textTertiary,
-                        }}
-                      >
-                        Repository
-                      </div>
-                    </div>
-
-                    {/* Unwatch button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click
-                        handleUnwatchRepo(repo.owner, repo.repo);
-                      }}
-                      disabled={isInProgress}
-                      style={{
-                        padding: `${spacing.xs}px ${spacing.sm}px`,
-                        fontSize: theme.fontSizes[0],
-                        color: theme.colors.textSecondary,
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: theme.radii?.[1] || 4,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: spacing.xs,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {isInProgress ? (
-                        <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                      ) : (
-                        <X size={12} />
-                      )}
-                      Unwatch
-                    </button>
-                  </div>
-                );
-              })}
+              {watchedRepos.map((repo) => (
+                <WatchedRepoCard
+                  key={`repo:${repo.owner}/${repo.repo}`}
+                  repo={{ owner: repo.owner, repo: repo.repo }}
+                  onClick={() => {
+                    events.emit({
+                      type: 'feed:watched-repo-activity-requested',
+                      source: 'watched-items-panel',
+                      timestamp: Date.now(),
+                      payload: { owner: repo.owner, repo: repo.repo },
+                    });
+                  }}
+                />
+              ))}
             </div>
           )}
         </div>

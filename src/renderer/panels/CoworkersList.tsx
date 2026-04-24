@@ -13,6 +13,7 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCoworkers';
 import { GithubService } from '../main-process-api/GithubService';
 import type { GitHubUser } from '../../shared/main-process-api-interfaces/GitHubAPI';
+import { CoworkerCard } from './cards/CoworkerCard';
 
 export interface CoworkersListProps {
   events: PanelEventEmitter;
@@ -199,104 +200,26 @@ export const CoworkersList: React.FC<CoworkersListProps> = ({
       {/* Coworkers List */}
       <div
         style={{
-          padding: spacing.sm,
+          padding: spacing.md,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: spacing.sm,
         }}
       >
         {coworkers
           .filter((coworker) => !currentUser || coworker.login !== currentUser.login)
-          .map((coworker) => {
-            const hasActivity = activeUsers.has(coworker.login);
-
-            return (
-              <button
-                key={coworker.id}
-                onClick={() => handleCoworkerClick(coworker.login)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.sm,
-                  width: '100%',
-                  padding: spacing.sm,
-                  marginBottom: spacing.xs,
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: theme.radii?.[1] || 4,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  textAlign: 'left',
-                  position: 'relative',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                }}
-              >
-                {/* Avatar with activity indicator */}
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <img
-                    src={coworker.avatar_url}
-                    alt={coworker.login}
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                    }}
-                  />
-                  {hasActivity && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: -2,
-                        right: -2,
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        backgroundColor: theme.colors.success,
-                        border: `2px solid ${theme.colors.background}`,
-                      }}
-                      title="Recent activity"
-                    />
-                  )}
-                </div>
-
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontFamily: theme.fonts.monospace,
-                      fontSize: theme.fontSizes[1],
-                      fontWeight: 600,
-                      color: theme.colors.text,
-                      marginBottom: 2,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {coworker.login}
-                  </div>
-                  {coworker.organizations.length > 0 && (
-                    <div
-                      style={{
-                        fontFamily: theme.fonts.monospace,
-                        fontSize: theme.fontSizes[0],
-                        color: theme.colors.textSecondary,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {coworker.organizations.join(', ')}
-                    </div>
-                  )}
-                </div>
-              </button>
-            );
-          })}
+          .map((coworker) => (
+            <CoworkerCard
+              key={coworker.id}
+              coworker={{
+                login: coworker.login,
+                avatarUrl: coworker.avatar_url,
+                organizations: coworker.organizations,
+                hasActivity: activeUsers.has(coworker.login),
+              }}
+              onClick={() => handleCoworkerClick(coworker.login)}
+            />
+          ))}
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Building2, Users } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCoworkers';
+import { OrganizationCard } from './cards/OrganizationCard';
 
 export interface OrganizationsListProps {
   events: PanelEventEmitter;
@@ -179,102 +180,24 @@ export const OrganizationsList: React.FC<OrganizationsListProps> = ({
       {/* Organizations List */}
       <div
         style={{
-          padding: spacing.sm,
+          padding: spacing.md,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: spacing.sm,
         }}
       >
-        {organizations.map((org) => {
-          const hasActivity = activeOrganizations.has(org.login);
-
-          return (
-            <button
-              key={org.id}
-              onClick={() => handleOrgClick(org.login)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                width: '100%',
-                padding: spacing.sm,
-                marginBottom: spacing.xs,
-                backgroundColor: 'transparent',
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: theme.radii?.[1] || 4,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                textAlign: 'left',
-                position: 'relative',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                e.currentTarget.style.borderColor = theme.colors.primary;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.borderColor = theme.colors.border;
-              }}
-            >
-              {/* Avatar with activity indicator */}
-              <div style={{ position: 'relative', flexShrink: 0 }}>
-                <img
-                  src={org.avatar_url}
-                  alt={org.login}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: theme.radii?.[1] || 4,
-                  }}
-                />
-                {hasActivity && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: -2,
-                      right: -2,
-                      width: 10,
-                      height: 10,
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.success,
-                      border: `2px solid ${theme.colors.background}`,
-                    }}
-                    title="Recent activity"
-                  />
-                )}
-              </div>
-
-              {/* Info */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontFamily: theme.fonts.monospace,
-                    fontSize: theme.fontSizes[1],
-                    fontWeight: 600,
-                    color: theme.colors.text,
-                    marginBottom: 2,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {org.login}
-                </div>
-                {org.description && (
-                  <div
-                    style={{
-                      fontFamily: theme.fonts.monospace,
-                      fontSize: theme.fontSizes[0],
-                      color: theme.colors.textSecondary,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {org.description}
-                  </div>
-                )}
-              </div>
-            </button>
-          );
-        })}
+        {organizations.map((org) => (
+          <OrganizationCard
+            key={org.id}
+            organization={{
+              login: org.login,
+              avatarUrl: org.avatar_url,
+              description: org.description,
+              hasActivity: activeOrganizations.has(org.login),
+            }}
+            onClick={() => handleOrgClick(org.login)}
+          />
+        ))}
       </div>
     </div>
   );

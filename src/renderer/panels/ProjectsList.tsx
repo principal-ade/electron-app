@@ -7,13 +7,16 @@
 
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, User, ChevronDown, ChevronRight, Circle, Search } from 'lucide-react';
+import { FolderGit2, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { GithubService } from '../main-process-api/GithubService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { ProjectRepoCard } from './cards/ProjectRepoCard';
+import { OrgSectionHeaderCard } from './cards/OrgSectionHeaderCard';
+import { OrgRepoItemCard } from './cards/OrgRepoItemCard';
 
 export interface CommitTimestamp {
   timestamp: Date | string;
@@ -395,132 +398,21 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           </div>
         ) : (
           repoSummaries.map((summary) => {
+            const gitStatus = summary.repoId ? gitStatusMap.get(summary.repoId) : null;
             return (
               <div
                 key={summary.repoId}
-                onClick={() => summary.entry && handleRepoClick(summary.entry)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.sm,
-                  width: '100%',
-                  padding: spacing.sm,
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: theme.radii?.[1] || 4,
-                  cursor: summary.entry ? 'pointer' : 'default',
-                  transition: 'all 0.15s ease',
-                  opacity: summary.entry ? 1 : 0.5,
-                }}
-                onMouseEnter={(e) => {
-                  if (summary.entry) {
-                    e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                    e.currentTarget.style.borderColor = theme.colors.primary;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (summary.entry) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                  }
-                }}
+                style={{ opacity: summary.entry ? 1 : 0.5 }}
               >
-              {/* Avatar */}
-              <div
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: '50%',
-                  backgroundColor: theme.colors.background,
-                  border: `1px solid ${theme.colors.border}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  overflow: 'hidden',
-                }}
-              >
-                {summary.githubOwner ? (
-                  <img
-                    src={`https://github.com/${summary.githubOwner}.png?size=120`}
-                    alt={summary.githubOwner}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                    }}
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                ) : null}
-                {!summary.githubOwner && (
-                  <User size={36} color={theme.colors.textSecondary} />
-                )}
-              </div>
-
-              {/* Text content */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: spacing.xs,
-                    marginBottom: 2,
+                <ProjectRepoCard
+                  repo={{
+                    repoName: summary.repoName,
+                    ownerLogin: summary.githubOwner,
+                    timeLabel: formatRelativeTime(summary.lastCommitTime),
+                    isDirty: gitStatus?.isDirty ?? false,
                   }}
-                >
-                  <div
-                    style={{
-                      fontSize: theme.fontSizes[1],
-                      fontWeight: 600,
-                      color: theme.colors.text,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {summary.repoName}
-                  </div>
-                  {/* Git status indicator */}
-                  {(() => {
-                    const gitStatus = summary.repoId ? gitStatusMap.get(summary.repoId) : null;
-                    if (gitStatus && gitStatus.isDirty) {
-                      return (
-                        <div title="In Progress - has uncommitted changes">
-                          <Circle
-                            size={8}
-                            fill={theme.colors.warning}
-                            color={theme.colors.warning}
-                          />
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
-                {summary.githubOwner && (
-                  <div
-                    style={{
-                      fontSize: theme.fontSizes[0],
-                      color: theme.colors.textSecondary,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      marginBottom: 4,
-                    }}
-                  >
-                    {summary.githubOwner}
-                  </div>
-                )}
-                <div
-                  style={{
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.textTertiary,
-                  }}
-                >
-                  {formatRelativeTime(summary.lastCommitTime)}
-                </div>
-              </div>
+                  onClick={summary.entry ? () => handleRepoClick(summary.entry!) : undefined}
+                />
               </div>
             );
           })
@@ -607,121 +499,27 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
               const isCollapsed = collapsedOrgs.has(orgName);
               const isUserOwn = currentUser === orgName;
               const isMemberOrg = userOrgs.includes(orgName);
+              const badge: 'you' | 'member' | undefined = isUserOwn
+                ? 'you'
+                : isMemberOrg
+                  ? 'member'
+                  : undefined;
 
               return (
                 <div key={orgName} style={{ marginBottom: spacing.md }}>
-                  {/* Org Header */}
-                  <div
-                    onClick={() => toggleOrgCollapsed(orgName)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      padding: spacing.sm,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: theme.radii?.[1] || 4,
-                      cursor: 'pointer',
-                      marginBottom: spacing.xs,
-                      transition: 'all 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.border;
-                    }}
-                  >
-                    {/* Chevron */}
-                    {isCollapsed ? (
-                      <ChevronRight size={16} color={theme.colors.textSecondary} />
-                    ) : (
-                      <ChevronDown size={16} color={theme.colors.textSecondary} />
-                    )}
-
-                    {/* Org Avatar */}
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: '50%',
-                        backgroundColor: theme.colors.background,
-                        border: `1px solid ${theme.colors.border}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        overflow: 'hidden',
+                  <div style={{ marginBottom: spacing.xs }}>
+                    <OrgSectionHeaderCard
+                      header={{
+                        orgName,
+                        badge,
+                        repoCount: repos.length,
+                        isUntracked: orgName === 'Untracked',
                       }}
-                    >
-                      {orgName !== 'Untracked' ? (
-                        <img
-                          src={`https://github.com/${orgName}.png?size=64`}
-                          alt={orgName}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                          }}
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <FolderGit2 size={16} color={theme.colors.textSecondary} />
-                      )}
-                    </div>
-
-                    {/* Org Name */}
-                    <div style={{ flex: 1 }}>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[1],
-                          fontWeight: 600,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        {orgName}
-                        {isUserOwn && (
-                          <span
-                            style={{
-                              marginLeft: spacing.xs,
-                              fontSize: theme.fontSizes[0],
-                              color: theme.colors.primary,
-                              fontWeight: 400,
-                            }}
-                          >
-                            (you)
-                          </span>
-                        )}
-                        {!isUserOwn && isMemberOrg && (
-                          <span
-                            style={{
-                              marginLeft: spacing.xs,
-                              fontSize: theme.fontSizes[0],
-                              color: theme.colors.primary,
-                              fontWeight: 400,
-                            }}
-                          >
-                            (member)
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Repo Count */}
-                    <div
-                      style={{
-                        fontSize: theme.fontSizes[0],
-                        color: theme.colors.textSecondary,
-                        fontFamily: theme.fonts.monospace,
-                      }}
-                    >
-                      {repos.length} {repos.length === 1 ? 'repo' : 'repos'}
-                    </div>
+                      isCollapsed={isCollapsed}
+                      onToggle={() => toggleOrgCollapsed(orgName)}
+                    />
                   </div>
 
-                  {/* Repos in Org */}
                   {!isCollapsed && (
                     <div
                       style={{
@@ -732,58 +530,11 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                       }}
                     >
                       {repos.map((repo) => (
-                        <div
+                        <OrgRepoItemCard
                           key={repo.name}
+                          repo={{ name: repo.name, description: repo.github?.description }}
                           onClick={() => handleRepoClick(repo)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: spacing.sm,
-                            padding: spacing.sm,
-                            backgroundColor: 'transparent',
-                            border: `1px solid ${theme.colors.border}`,
-                            borderRadius: theme.radii?.[1] || 4,
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                            e.currentTarget.style.borderColor = theme.colors.primary;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.borderColor = theme.colors.border;
-                          }}
-                        >
-                          <FolderGit2 size={16} color={theme.colors.textSecondary} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div
-                              style={{
-                                fontSize: theme.fontSizes[1],
-                                color: theme.colors.text,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {repo.name}
-                            </div>
-                            {repo.github?.description && (
-                              <div
-                                style={{
-                                  fontSize: theme.fontSizes[0],
-                                  color: theme.colors.textSecondary,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  marginTop: 2,
-                                }}
-                              >
-                                {repo.github.description}
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                        />
                       ))}
                     </div>
                   )}
