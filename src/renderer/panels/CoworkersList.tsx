@@ -3,7 +3,7 @@
  *
  * Displays a list of all organization members (coworkers) from the user's organizations.
  * Shows which organizations each person belongs to.
- * Clicking on a coworker opens their profile.
+ * Clicking on a coworker opens their activity feed.
  */
 
 import React, { useCallback, useState, useEffect } from 'react';
@@ -43,10 +43,10 @@ export const CoworkersList: React.FC<CoworkersListProps> = ({
 
   const handleCoworkerClick = (username: string) => {
     events.emit({
-      type: 'user:profile-selected',
+      type: 'feed:watched-owner-activity-requested',
       source: 'coworkers-list-panel',
       timestamp: Date.now(),
-      payload: { username },
+      payload: { login: username, accountType: 'User' },
     });
   };
 
