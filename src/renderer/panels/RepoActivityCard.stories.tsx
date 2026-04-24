@@ -9,8 +9,111 @@ import type { AlexandriaEntry, ValidatedRepositoryPath } from '@principal-ai/ale
 import {
   RepoActivityCard,
   type RepoActivitySummary,
+  type RepoActivityCardActions,
+  type RepoActivityChangedFiles,
 } from './RepoActivityCard';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
+
+// Mock actions — no real services wired in so Storybook can render the card
+// without pulling renderer → main-process code into the web bundle.
+const mockActions: RepoActivityCardActions = {
+  getFileTreeForLocalRepo: async () => null,
+  getGithubTree: async () => ({
+    sha: 'mock-sha',
+    url: 'https://api.github.com/repos/octocat/mock/git/trees/mock-sha',
+    tree: [],
+    truncated: false,
+  }),
+  getAlexandriaRepositories: async () => [],
+  getChangedFilesForLocalCommit: async () => new Map(),
+  getChangedFilesForGithubCommit: async () => new Map(),
+  explainCommits: async () => ({
+    text: 'Mock explanation for Storybook — the card is wired to mock actions so no real AI call is made.',
+  }),
+};
+
+// Deterministic changed-files per commit hash so line-count stats render
+// consistently across reloads.
+const mockChangedFilesCache = new Map<string, RepoActivityChangedFiles>();
+
+type DiffScale = 'small' | 'medium' | 'large' | 'xlarge';
+
+// Per-scale ceilings roughly align with diffBarWidthPct buckets (25/50/75/100).
+const diffScaleBuckets: Record<
+  DiffScale,
+  { maxAdd: number; maxDel: number; files: number }
+> = {
+  small: { maxAdd: 30, maxDel: 15, files: 2 },
+  medium: { maxAdd: 120, maxDel: 50, files: 3 },
+  large: { maxAdd: 350, maxDel: 150, files: 5 },
+  xlarge: { maxAdd: 800, maxDel: 400, files: 8 },
+};
+
+// Per-story-repo scale lookup. Repos not listed fall back to 'small'.
+const repoScaleByName: Record<string, DiffScale> = {};
+
+const sampleFiles: Array<{
+  name: string;
+  status: 'added' | 'modified' | 'deleted' | 'renamed';
+}> = [
+  { name: 'src/components/Button.tsx', status: 'modified' },
+  { name: 'src/hooks/useAuth.ts', status: 'modified' },
+  { name: 'src/utils/format.ts', status: 'added' },
+  { name: 'tests/Button.test.tsx', status: 'added' },
+  { name: 'README.md', status: 'modified' },
+  { name: 'src/legacy/old-helper.ts', status: 'deleted' },
+  { name: 'src/pages/Dashboard.tsx', status: 'modified' },
+  { name: 'src/store/slices/userSlice.ts', status: 'modified' },
+];
+
+const buildMockChangedFiles = (
+  hash: string,
+  scale: DiffScale = 'small',
+): RepoActivityChangedFiles => {
+  const cacheKey = `${scale}:${hash}`;
+  const cached = mockChangedFilesCache.get(cacheKey);
+  if (cached) return cached;
+
+  const bucket = diffScaleBuckets[scale];
+  const seed = Array.from(hash).reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const rand = (n: number) => (seed * (n + 3) * 31) % 97;
+  const fileCount = (seed % bucket.files) + 1;
+  const files: RepoActivityChangedFiles = new Map();
+
+  for (let i = 0; i < fileCount; i++) {
+    const sample = sampleFiles[(seed + i) % sampleFiles.length]!;
+    const additions =
+      sample.status === 'deleted' ? 0 : (rand(i) % bucket.maxAdd) + 1;
+    const deletions =
+      sample.status === 'added' ? 0 : rand(i + 1) % bucket.maxDel;
+    files.set(sample.name, {
+      status: sample.status,
+      additions,
+      deletions,
+    });
+  }
+
+  mockChangedFilesCache.set(cacheKey, files);
+  return files;
+};
+
+// Pull a repo name out of a local filesystem path (last segment).
+const repoNameFromPath = (path: string): string => {
+  const parts = path.split('/').filter(Boolean);
+  return parts[parts.length - 1] ?? '';
+};
+
+const mockActionsWithStats: RepoActivityCardActions = {
+  ...mockActions,
+  getChangedFilesForLocalCommit: async (repoPath, commitHash) => {
+    const scale = repoScaleByName[repoNameFromPath(repoPath)] ?? 'small';
+    return buildMockChangedFiles(commitHash, scale);
+  },
+  getChangedFilesForGithubCommit: async (_owner, repo, sha) => {
+    const scale = repoScaleByName[repo] ?? 'small';
+    return buildMockChangedFiles(sha, scale);
+  },
+};
 
 // Mock event emitter for stories
 type EventHandler = (event: PanelEvent<unknown>) => void;
@@ -142,7 +245,8 @@ const createMockSummary = (
 const RepoActivityCardStory: React.FC<{
   summary: RepoActivitySummary;
   dimmed?: boolean;
-}> = ({ summary, dimmed }) => {
+  actions?: RepoActivityCardActions;
+}> = ({ summary, dimmed, actions = mockActions }) => {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const mockEvents = new MockEventEmitter();
   const mockEntry = createMockEntry(summary.repoName);
@@ -158,6 +262,7 @@ const RepoActivityCardStory: React.FC<{
           dimmed={dimmed}
           events={mockEvents}
           entry={mockEntry}
+          actions={actions}
         />
       </div>
     </ThemeProvider>
@@ -191,6 +296,7 @@ export const SingleCommit: Story = {
         repoName: 'single-commit-repo',
         commitCount: 1,
       })}
+      actions={mockActionsWithStats}
     />
   ),
 };
@@ -203,6 +309,7 @@ export const Default: Story = {
         repoName: 'my-awesome-project',
         commitCount: 5,
       })}
+      actions={mockActionsWithStats}
     />
   ),
 };
@@ -352,10 +459,27 @@ export const LongCommitMessages: Story = {
 // Multiple cards in a feed layout
 export const FeedLayout: Story = {
   render: () => {
+    // Register a scale per repo so each card lands in a different bar-width bucket.
+    repoScaleByName['tiny-utility'] = 'small';
+    repoScaleByName['frontend-app'] = 'medium';
+    repoScaleByName['backend-api'] = 'large';
+    repoScaleByName['platform-rewrite'] = 'xlarge';
+
     const repos = [
+      createMockSummary({ repoName: 'tiny-utility', commitCount: 1 }),
       createMockSummary({ repoName: 'frontend-app', commitCount: 3 }),
-      createMockSummary({ repoName: 'backend-api', commitCount: 7, githubOwner: 'api-team', isOwnerOrg: true }),
-      createMockSummary({ repoName: 'mobile-app', commitCount: 5 }),
+      createMockSummary({
+        repoName: 'backend-api',
+        commitCount: 7,
+        githubOwner: 'api-team',
+        isOwnerOrg: true,
+      }),
+      createMockSummary({
+        repoName: 'platform-rewrite',
+        commitCount: 12,
+        githubOwner: 'platform-team',
+        isOwnerOrg: true,
+      }),
     ];
 
     return (
@@ -376,6 +500,7 @@ export const FeedLayout: Story = {
                   onOpen={() => console.info('Open repository:', summary.repoName)}
                   events={mockEvents}
                   entry={mockEntry}
+                  actions={mockActionsWithStats}
                 />
               );
             })}

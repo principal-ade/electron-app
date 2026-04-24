@@ -21,11 +21,11 @@ import {
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { GitService } from '../main-process-api/GitService';
-import { GithubService } from '../main-process-api/GithubService';
-import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import { WebAdeService } from '../main-process-api/WebAdeService';
-import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import type {
+  ExplainCommitsInput,
+  ExplainCommitsResponse,
+  GetTreeResponse,
+} from '../../shared/tipc/webAdeRouterTypes';
 import {
   ArchitectureMapHighlightLayers,
   MultiVersionCityBuilder,
@@ -33,6 +33,22 @@ import {
   type HighlightLayer,
 } from '@principal-ai/file-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+
+// Diff-stat colors — intentionally not pulled from the theme so we can tune the
+// green/red specifically for line-count readouts without affecting other
+// success/error surfaces.
+const DIFF_ADD_COLOR = '#2ea043';
+const DIFF_REMOVE_COLOR = '#cf222e';
+
+// Map a raw line-count magnitude to a bar-width percentage so a single-file
+// change doesn't visually equal a thousand-line rewrite.
+function diffBarWidthPct(lines: number): number {
+  if (lines <= 0) return 0;
+  if (lines < 100) return 25;
+  if (lines < 500) return 50;
+  if (lines < 1000) return 75;
+  return 100;
+}
 
 /**
  * Repository activity summary for the card
@@ -48,6 +64,41 @@ export interface RepoActivitySummary {
   isOwnerOrg?: boolean; // Whether the owner is an organization
 }
 
+/**
+ * Changed-file details for a single commit, keyed by file path.
+ */
+export type RepoActivityChangedFiles = Map<
+  string,
+  {
+    status: 'added' | 'modified' | 'deleted' | 'renamed';
+    additions: number;
+    deletions: number;
+  }
+>;
+
+/**
+ * Actions interface for RepoActivityCard.
+ *
+ * Host (panel) wires these up to real services; Storybook / tests can pass
+ * mocks. The card itself does not import any main-process-api services so it
+ * can be rendered in non-Electron environments.
+ */
+export interface RepoActivityCardActions {
+  getFileTreeForLocalRepo: (repoPath: string) => Promise<FileTree | null>;
+  getGithubTree: (owner: string, repo: string) => Promise<GetTreeResponse>;
+  getAlexandriaRepositories: () => Promise<AlexandriaEntry[]>;
+  getChangedFilesForLocalCommit: (
+    repoPath: string,
+    commitHash: string,
+  ) => Promise<RepoActivityChangedFiles>;
+  getChangedFilesForGithubCommit: (
+    owner: string,
+    repo: string,
+    sha: string,
+  ) => Promise<RepoActivityChangedFiles>;
+  explainCommits: (input: ExplainCommitsInput) => Promise<ExplainCommitsResponse>;
+}
+
 interface RepoActivityCardProps {
   summary: RepoActivitySummary;
   isExpanded: boolean;
@@ -56,6 +107,7 @@ interface RepoActivityCardProps {
   dimmed?: boolean;
   events?: PanelEventEmitter;
   entry?: AlexandriaEntry;
+  actions: RepoActivityCardActions;
 }
 
 /**
@@ -210,6 +262,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   dimmed = false,
   events,
   entry,
+  actions,
 }) => {
   const { theme } = useTheme();
   const hasMoreCommits = summary.commits.length > 1;
@@ -257,8 +310,9 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   const [explainText, setExplainText] = useState<string | null>(null);
   const [explainAudience, setExplainAudience] = useState<'maintainer' | 'non-technical'>('maintainer');
 
-  // Get the commit to display (animation > selected > none)
-  const displayedCommitIndex = animationCommitIndex ?? selectedCommitIndex;
+  // Get the commit to display (animation > selected > sole-commit fallback)
+  const displayedCommitIndex =
+    animationCommitIndex ?? selectedCommitIndex ?? (summary.commits.length === 1 ? 0 : null);
   const displayedCommit =
     displayedCommitIndex !== null ? summary.commits[displayedCommitIndex] : undefined;
   const displayedTime = new Date(displayedCommit?.date ?? summary.latestCommitAt);
@@ -276,12 +330,12 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
         // Check if this is a local repo or a watched GitHub repo
         if (summary.repoPath) {
-          // Local repository - use RepositoryMonitoringService
-          fileTree = await RepositoryMonitoringService.getFileTree(summary.repoPath);
+          // Local repository
+          fileTree = await actions.getFileTreeForLocalRepo(summary.repoPath);
         } else if (summary.githubOwner && summary.githubRepoName) {
           // Try web-ade's cached tree first; fall back to local clone if available
           try {
-            const treeData = await WebAdeService.getGithubTree(
+            const treeData = await actions.getGithubTree(
               summary.githubOwner,
               summary.githubRepoName
             );
@@ -295,7 +349,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           } catch {
             // web-ade failed (e.g. private repo without cookie auth) — try local clone
             if (cancelled) return;
-            const repos = await AlexandriaService.getRepositories();
+            const repos = await actions.getAlexandriaRepositories();
             const match = repos.find(
               (r: AlexandriaEntry) =>
                 r.github?.owner?.toLowerCase() === summary.githubOwner!.toLowerCase() &&
@@ -303,7 +357,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 r.path
             );
             if (match?.path) {
-              fileTree = await RepositoryMonitoringService.getFileTree(match.path);
+              fileTree = await actions.getFileTreeForLocalRepo(match.path);
             }
           }
         }
@@ -331,7 +385,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [summary.repoPath, summary.repoName, summary.githubOwner, summary.githubRepoName]);
+  }, [summary.repoPath, summary.repoName, summary.githubOwner, summary.githubRepoName, actions]);
 
   // Fetch stats for all commits
   useEffect(() => {
@@ -358,8 +412,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
             try {
               const changedFiles = hasLocalPath
-                ? await GitService.getChangedFilesForCommit(summary.repoPath, commit.hash)
-                : await GithubService.getChangedFilesForCommit(
+                ? await actions.getChangedFilesForLocalCommit(summary.repoPath, commit.hash)
+                : await actions.getChangedFilesForGithubCommit(
                     summary.githubOwner!,
                     summary.githubRepoName!,
                     commit.hash
@@ -410,7 +464,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [summary.commits, summary.repoPath]);
+  }, [summary.commits, summary.repoPath, summary.githubOwner, summary.githubRepoName, actions]);
 
   // Build changed files for highlight layers
   useEffect(() => {
@@ -781,9 +835,9 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 }}
                 style={{
                   margin: 0,
-                  marginBottom: spacing.xs,
                   fontSize: theme.fontSizes[3],
-                  fontWeight: 600,
+                  fontWeight: theme.fontWeights.semibold,
+                  lineHeight: '28px',
                   color: theme.colors.text,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -806,7 +860,10 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               </h4>
               <span
                 style={{
+                  display: 'block',
                   fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts.monospace,
+                  lineHeight: '28px',
                   color: theme.colors.textMuted,
                 }}
               >
@@ -815,8 +872,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             </div>
           </div>
 
-          {/* Commit avatars - grouped in rows of 10 with connecting line */}
-          {summary.commits.length > 0 && (
+          {/* Commit avatars - grouped in rows of 10 with connecting line (hidden for single-commit case) */}
+          {summary.commits.length > 1 && (
             <div style={{ marginBottom: spacing.md }}>
               {Array.from({ length: Math.ceil(summary.commits.length / 10) }).map((_, rowIndex) => {
                 const rowCommits = summary.commits.slice(rowIndex * 10, (rowIndex + 1) * 10);
@@ -899,8 +956,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: 12,
-                                fontWeight: 600,
+                                fontSize: theme.fontSizes[0],
+                                fontWeight: theme.fontWeights.semibold,
                                 color: theme.colors.background,
                                 transition: 'border-color 0.15s ease',
                                 boxSizing: 'content-box',
@@ -931,7 +988,208 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             </div>
           )}
 
-          {/* Author + per-commit stats OR aggregate stats */}
+          {/* Single-commit: author avatar stacked under repo avatar, name + files to the right */}
+          {summary.commits.length === 1 && summary.commits[0] ? (() => {
+            const soleCommit = summary.commits[0]!;
+            const soleStats = commitStats.get(soleCommit.hash);
+            const soleAdditions = soleStats?.additions ?? 0;
+            const soleDeletions = soleStats?.deletions ?? 0;
+            const soleTotal = soleAdditions + soleDeletions;
+            const soleBudget = diffBarWidthPct(soleTotal);
+            const soleAddedWidth = soleTotal > 0 ? (soleAdditions / soleTotal) * soleBudget : 0;
+            const soleRemovedWidth = soleTotal > 0 ? (soleDeletions / soleTotal) * soleBudget : 0;
+            return (
+            <>
+            <div
+              style={{
+                display: 'flex',
+                gap: spacing.sm,
+                alignItems: 'flex-start',
+                marginBottom: spacing.sm,
+              }}
+            >
+              <div
+                style={{
+                  width: 56,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {/* Connector line between repo avatar and author avatar */}
+                <div
+                  style={{
+                    width: 2,
+                    height: spacing.md,
+                    marginTop: -spacing.md,
+                    backgroundColor: theme.colors.primary,
+                  }}
+                />
+                {soleCommit.authorAvatarUrl ? (
+                  <img
+                    src={soleCommit.authorAvatarUrl}
+                    alt={soleCommit.author}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      border: `2px solid ${theme.colors.primary}`,
+                      objectFit: 'cover',
+                      boxSizing: 'content-box',
+                    }}
+                  />
+                ) : soleCommit.authorEmail ? (
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      border: `2px solid ${theme.colors.primary}`,
+                      backgroundColor: theme.colors.textMuted,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: theme.fontSizes[0],
+                      fontWeight: theme.fontWeights.semibold,
+                      color: theme.colors.background,
+                      boxSizing: 'content-box',
+                    }}
+                  >
+                    {soleCommit.author.charAt(0).toUpperCase()}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      backgroundColor: theme.colors.primary,
+                      border: `2px solid ${theme.colors.surface}`,
+                    }}
+                  />
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, flex: 1, minWidth: 0 }}>
+                <button
+                  onClick={() => {
+                    if (events) {
+                      events.emit({
+                        type: 'user:profile-selected',
+                        source: 'repo-activity-card',
+                        timestamp: Date.now(),
+                        payload: {
+                          username: soleCommit.author,
+                          email: soleCommit.authorEmail,
+                        },
+                      });
+                    }
+                  }}
+                  style={{
+                    fontSize: theme.fontSizes[2],
+                    color: theme.colors.text,
+                    fontWeight: theme.fontWeights.medium,
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = theme.colors.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = theme.colors.text;
+                  }}
+                >
+                  {soleCommit.author}
+                </button>
+                {(() => {
+                  const stats = commitStats.get(soleCommit.hash);
+                  if (!stats || stats.filesChanged === 0) return null;
+                  return (
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[1],
+                        fontFamily: theme.fonts.monospace,
+                        color: theme.colors.textMuted,
+                      }}
+                    >
+                      {stats.filesChanged} file{stats.filesChanged !== 1 ? 's' : ''}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+            {soleStats && (soleStats.additions > 0 || soleStats.deletions > 0) && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: spacing.xs,
+                  marginBottom: spacing.sm,
+                }}
+              >
+                {soleStats.additions > 0 && (
+                  <div
+                    style={{
+                      height: 24,
+                      width: `${soleAddedWidth}%`,
+                      minWidth: 50,
+                      backgroundColor: DIFF_ADD_COLOR,
+                      borderRadius: 3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      paddingLeft: spacing.sm,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[1],
+                        color: '#fff',
+                        fontWeight: theme.fontWeights.semibold,
+                        fontFamily: theme.fonts.monospace,
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      <span style={{ display: 'inline-block', width: 10, textAlign: 'center' }}>+</span>
+                      {soleStats.additions}
+                    </span>
+                  </div>
+                )}
+                {soleStats.deletions > 0 && (
+                  <div
+                    style={{
+                      height: 24,
+                      width: `${soleRemovedWidth}%`,
+                      minWidth: 50,
+                      backgroundColor: DIFF_REMOVE_COLOR,
+                      borderRadius: 3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      paddingLeft: spacing.sm,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[1],
+                        color: '#fff',
+                        fontWeight: theme.fontWeights.semibold,
+                        fontFamily: theme.fonts.monospace,
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      <span style={{ display: 'inline-block', width: 10, textAlign: 'center' }}>−</span>
+                      {soleStats.deletions}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+            </>
+            );
+          })() : (
+          /* Author + per-commit stats OR aggregate stats */
           <div
             style={{
               display: 'flex',
@@ -967,7 +1225,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     style={{
                       fontSize: theme.fontSizes[2],
                       color: theme.colors.text,
-                      fontWeight: 500,
+                      fontWeight: theme.fontWeights.medium,
                       background: 'none',
                       border: 'none',
                       padding: 0,
@@ -993,14 +1251,14 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   const parts: React.ReactNode[] = [];
                   if (stats.additions > 0) {
                     parts.push(
-                      <span key="add" style={{ color: theme.colors.success }}>
+                      <span key="add" style={{ color: DIFF_ADD_COLOR }}>
                         +{stats.additions}
                       </span>
                     );
                   }
                   if (stats.deletions > 0) {
                     parts.push(
-                      <span key="del" style={{ color: theme.colors.error }}>
+                      <span key="del" style={{ color: DIFF_REMOVE_COLOR }}>
                         -{stats.deletions}
                       </span>
                     );
@@ -1017,6 +1275,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     <div
                       style={{
                         fontSize: theme.fontSizes[1],
+                        fontFamily: theme.fonts.monospace,
                         marginLeft: spacing.xs,
                         display: 'flex',
                         gap: spacing.sm,
@@ -1042,9 +1301,10 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 });
                 const totalFiles = allFiles.size;
                 if (totalAdditions === 0 && totalDeletions === 0 && totalFiles === 0) return null;
-                const totalLines = totalAdditions + totalDeletions || 1;
-                const addedWidth = (totalAdditions / totalLines) * 100;
-                const removedWidth = (totalDeletions / totalLines) * 100;
+                const totalLines = totalAdditions + totalDeletions;
+                const budget = diffBarWidthPct(totalLines);
+                const addedWidth = totalLines > 0 ? (totalAdditions / totalLines) * budget : 0;
+                const removedWidth = totalLines > 0 ? (totalDeletions / totalLines) * budget : 0;
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, flex: 1 }}>
                     {/* Files changed */}
@@ -1052,6 +1312,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                       <div
                         style={{
                           fontSize: theme.fontSizes[1],
+                          fontFamily: theme.fonts.monospace,
                           color: theme.colors.textMuted,
                           marginBottom: spacing.xs,
                         }}
@@ -1067,7 +1328,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                             height: 24,
                             width: `${addedWidth}%`,
                             minWidth: 50,
-                            backgroundColor: theme.colors.success,
+                            backgroundColor: DIFF_ADD_COLOR,
                             borderRadius: 3,
                             display: 'flex',
                             alignItems: 'center',
@@ -1078,7 +1339,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                             style={{
                               fontSize: theme.fontSizes[1],
                               color: '#fff',
-                              fontWeight: 600,
+                              fontWeight: theme.fontWeights.semibold,
+                              fontFamily: theme.fonts.monospace,
                               fontVariantNumeric: 'tabular-nums',
                             }}
                           >
@@ -1095,7 +1357,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                             height: 24,
                             width: `${removedWidth}%`,
                             minWidth: 50,
-                            backgroundColor: theme.colors.error,
+                            backgroundColor: DIFF_REMOVE_COLOR,
                             borderRadius: 3,
                             display: 'flex',
                             alignItems: 'center',
@@ -1106,7 +1368,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                             style={{
                               fontSize: theme.fontSizes[1],
                               color: '#fff',
-                              fontWeight: 600,
+                              fontWeight: theme.fontWeights.semibold,
+                              fontFamily: theme.fonts.monospace,
                               fontVariantNumeric: 'tabular-nums',
                             }}
                           >
@@ -1123,13 +1386,16 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               })()
             )}
           </div>
+          )}
 
           {/* Commit message */}
           <div
             style={{
               fontSize: theme.fontSizes[2],
+              fontFamily: theme.fonts.monospace,
               color: isAnimating ? theme.colors.primary : theme.colors.text,
               marginBottom: spacing.sm,
+              paddingLeft: spacing.sm,
               transition: 'color 0.15s ease',
               minHeight: '1.5em',
             }}
@@ -1238,7 +1504,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                       filesChanged: stats?.filesChanged,
                     };
                   });
-                  const result = await WebAdeService.explainCommits({
+                  const result = await actions.explainCommits({
                     commits,
                     audienceLevel: explainAudience,
                     repoName: summary.repoName,
@@ -1352,8 +1618,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 10,
-                      fontWeight: 600,
+                      fontSize: theme.fontSizes[0],
+                      fontWeight: theme.fontWeights.semibold,
                       color: theme.colors.background,
                       flexShrink: 0,
                     }}
@@ -1379,16 +1645,17 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     <div
                       style={{
                         fontSize: theme.fontSizes[1],
+                        fontFamily: theme.fonts.monospace,
                         display: 'flex',
                         gap: spacing.xs,
                         flexShrink: 0,
                       }}
                     >
                       {stats.additions > 0 && (
-                        <span style={{ color: theme.colors.success }}>+{stats.additions}</span>
+                        <span style={{ color: DIFF_ADD_COLOR }}>+{stats.additions}</span>
                       )}
                       {stats.deletions > 0 && (
-                        <span style={{ color: theme.colors.error }}>-{stats.deletions}</span>
+                        <span style={{ color: DIFF_REMOVE_COLOR }}>-{stats.deletions}</span>
                       )}
                     </div>
                   )}
@@ -1436,7 +1703,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                         filesChanged: stats?.filesChanged,
                       };
                     });
-                    const result = await WebAdeService.explainCommits({
+                    const result = await actions.explainCommits({
                       commits,
                       audienceLevel: level,
                       repoName: summary.repoName,
