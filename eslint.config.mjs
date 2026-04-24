@@ -14,6 +14,7 @@ export default [{
     '.erb/**',
     'release/**',
     'node_modules/**',
+    'storybook-static/**',
 
     // Config files
     '*.config.js',

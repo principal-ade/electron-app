@@ -396,11 +396,15 @@ export const RepositoryPanelProvider: React.FC<
         selectedScenarioId?: string;
       }
 
+      console.log('[StoryboardContext] openTabs changed, total tabs:', (openTabs || []).length, 'contentTypes:', (openTabs || []).map((t) => (t as CanvasTabLike)?.contentType));
+
       // Find canvas tabs in openTabs
       const canvasTabs = (openTabs || []).filter((tab: unknown) => {
         const t = tab as CanvasTabLike;
         return t?.contentType === 'canvas-detail' || t?.contentType === 'canvas-editor';
       });
+
+      console.log('[StoryboardContext] canvas tabs found:', canvasTabs.length, canvasTabs.map((t) => ({ contentType: (t as CanvasTabLike).contentType, canvasPath: (t as CanvasTabLike).canvasPath })));
 
       // Find the active/visible canvas tab (last one in the array, or first with canvasPath)
       const activeCanvasTab = canvasTabs.length > 0 ? (canvasTabs[canvasTabs.length - 1] as CanvasTabLike) : null;
@@ -408,8 +412,11 @@ export const RepositoryPanelProvider: React.FC<
       // If no canvas tab, keep the last storyboard state (don't clear it)
       // This allows the File City to continue highlighting files when switching to implementation files
       if (!activeCanvasTab || !activeCanvasTab.canvasPath) {
+        console.log('[StoryboardContext] no active canvas tab — keeping last storyboard state');
         return;
       }
+
+      console.log('[StoryboardContext] active canvas tab:', { contentType: activeCanvasTab.contentType, canvasPath: activeCanvasTab.canvasPath, hasNarrativeTemplate: !!activeCanvasTab.narrativeTemplate, selectedScenarioId: activeCanvasTab.selectedScenarioId });
 
       try {
         setStoryboardContextLoading(true);
@@ -417,11 +424,14 @@ export const RepositoryPanelProvider: React.FC<
         // Load and parse the canvas file
         const canvasContent = await FileSystemService.readFile(activeCanvasTab.canvasPath);
         if (!canvasContent?.content) {
-          console.warn('[RepositoryPanelContext] Failed to read canvas file:', activeCanvasTab.canvasPath);
+          console.warn('[StoryboardContext] Failed to read canvas file:', activeCanvasTab.canvasPath);
           return;
         }
 
         const canvas = JSON.parse(canvasContent.content);
+        const otelNodes = (canvas.nodes || []).filter((n: { type?: string }) => n.type === 'otel-event');
+        const nodesWithFiles = otelNodes.filter((n: { otel?: { files?: unknown[] } }) => (n.otel?.files?.length ?? 0) > 0);
+        console.log('[StoryboardContext] canvas parsed — total nodes:', (canvas.nodes || []).length, 'otel-event nodes:', otelNodes.length, 'nodes with otel.files:', nodesWithFiles.length);
 
         // Build the full storyboard context
         // Note: openTabs is typed as unknown[], but buildStoryboardContext handles validation
@@ -450,9 +460,16 @@ export const RepositoryPanelProvider: React.FC<
           scenario: scenario as never,
         });
 
+        const manifest = (context as { manifest?: { nodeToFiles?: Map<string, string[]> } })?.manifest;
+        const manifestSize = manifest?.nodeToFiles?.size ?? 0;
+        console.log('[StoryboardContext] context built — manifest nodeToFiles size:', manifestSize, 'storyboard:', context?.storyboard?.name, 'workflow:', context?.workflow?.name, 'scenario:', context?.scenario);
+        if (manifestSize === 0) {
+          console.warn('[StoryboardContext] manifest is empty — canvas nodes may be missing otel.files entries');
+        }
+
         setStoryboardContextData(context);
       } catch (error) {
-        console.error('[RepositoryPanelContext] Failed to build storyboard context:', error);
+        console.error('[StoryboardContext] Failed to build storyboard context:', error);
       } finally {
         setStoryboardContextLoading(false);
       }
