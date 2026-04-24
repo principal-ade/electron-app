@@ -835,6 +835,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 }}
                 style={{
                   margin: 0,
+                  fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights.semibold,
                   lineHeight: '28px',
@@ -1086,6 +1087,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     }
                   }}
                   style={{
+                    fontFamily: theme.fonts?.body,
                     fontSize: theme.fontSizes[2],
                     color: theme.colors.text,
                     fontWeight: theme.fontWeights.medium,
@@ -1223,6 +1225,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                       }
                     }}
                     style={{
+                      fontFamily: theme.fonts?.body,
                       fontSize: theme.fontSizes[2],
                       color: theme.colors.text,
                       fontWeight: theme.fontWeights.medium,

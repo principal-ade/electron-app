@@ -198,26 +198,37 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
               payload: { owner, isOrg },
             });
           }}
-          style={{ padding: `${spacing.sm}px ${spacing.md}px`, borderBottom: `1px solid ${theme.colors.border}`, display: 'flex', alignItems: 'center', gap: spacing.sm, flexShrink: 0, cursor: 'pointer' }}
+          style={{ padding: `${spacing.md}px ${spacing.md}px`, borderBottom: `1px solid ${theme.colors.border}`, display: 'flex', alignItems: 'center', gap: spacing.md, flexShrink: 0, cursor: 'pointer' }}
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
           <img
-            src={`https://github.com/${source.kind === 'owner' ? source.login : source.owner}.png?size=40`}
+            src={`https://github.com/${source.kind === 'owner' ? source.login : source.owner}.png?size=80`}
             alt={label}
             style={{
-              width: 24,
-              height: 24,
+              width: 40,
+              height: 40,
               borderRadius: source.kind === 'owner' && source.accountType === 'Organization'
                 ? theme.radii?.[3] || 6
                 : '50%',
               border: `1px solid ${theme.colors.border}`,
             }}
           />
-          <span style={{ fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text }}>
-            {label}
-          </span>
-          <span style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, marginLeft: 'auto' }}>
+          {source.kind === 'repo' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              <span style={{ fontFamily: theme.fonts?.heading ?? theme.fonts?.body, fontSize: theme.fontSizes[2], fontWeight: 600, color: theme.colors.text, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {source.repo}
+              </span>
+              <span style={{ fontFamily: theme.fonts?.body, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {source.owner}
+              </span>
+            </div>
+          ) : (
+            <span style={{ fontFamily: theme.fonts?.heading ?? theme.fonts?.body, fontSize: theme.fontSizes[2], fontWeight: 600, color: theme.colors.text }}>
+              {label}
+            </span>
+          )}
+          <span style={{ fontFamily: theme.fonts?.body, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, marginLeft: 'auto' }}>
             Last 7 days
           </span>
         </div>
@@ -232,13 +243,13 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
         ) : hourlyGroups.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: theme.colors.textSecondary, gap: spacing.sm }}>
             <GitCommit size={28} style={{ opacity: 0.3 }} />
-            <span style={{ fontSize: theme.fontSizes[1] }}>No activity in the last 7 days</span>
+            <span style={{ fontFamily: theme.fonts?.body, fontSize: theme.fontSizes[1] }}>No activity in the last 7 days</span>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
             {hourlyGroups.map(group => (
               <div key={group.hourBucket}>
-                <div style={{ fontSize: theme.fontSizes[0], fontWeight: 600, color: theme.colors.textSecondary, marginBottom: spacing.sm, paddingLeft: spacing.xs }}>
+                <div style={{ fontFamily: theme.fonts?.heading ?? theme.fonts?.body, fontSize: theme.fontSizes[0], fontWeight: 600, color: theme.colors.textSecondary, marginBottom: spacing.sm, paddingLeft: spacing.xs }}>
                   {group.hourLabel}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
