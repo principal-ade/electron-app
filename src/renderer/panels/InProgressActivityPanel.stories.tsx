@@ -70,6 +70,8 @@ const mockActions: InProgressRepoCardActions = {
     const name = repoPath.split('/').pop() ?? '';
     return filesByRepo[name] ?? [];
   },
+  getAheadCommits: async () => [],
+  pushBranch: async () => ({ success: true, message: 'pushed' }),
   explainWorkingChanges: async (input) => {
     await delay(900);
     if (input.repoName === 'scheduler') {
@@ -87,6 +89,8 @@ const mockActions: InProgressRepoCardActions = {
 const emptyActions: InProgressRepoCardActions = {
   getFileTreeForLocalRepo: async () => null,
   getWorkingChanges: async () => [],
+  getAheadCommits: async () => [],
+  pushBranch: async () => ({ success: true, message: 'pushed' }),
   explainWorkingChanges: async () => ({ text: '' }),
 };
 

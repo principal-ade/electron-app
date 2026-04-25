@@ -4,14 +4,17 @@
  * stays importable in non-Electron environments (Storybook, tests).
  */
 
+import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import type { WorkingChangeData } from '../../shared/tipc/webAdeRouterTypes';
 import type {
   ExplainInProgressInput,
   ExplainInProgressResponse,
+  InProgressAheadCommit,
   InProgressChangedFile,
   InProgressFileStatus,
+  InProgressPushResult,
   InProgressRepoCardActions,
 } from './InProgressRepoCard';
 
@@ -71,8 +74,29 @@ async function explainWorkingChanges(
   });
 }
 
+async function getAheadCommits(repoPath: string): Promise<InProgressAheadCommit[]> {
+  const commits = await GitService.getAheadCommits(repoPath);
+  return commits.map((c) => ({
+    hash: c.hash,
+    message: c.message,
+    author: c.author,
+    date: c.date,
+  }));
+}
+
+async function pushBranch(repoPath: string): Promise<InProgressPushResult> {
+  const safety = await GitService.isPushSafe(repoPath);
+  const result = await GitService.push(
+    repoPath,
+    safety.needsUpstream ? { setUpstream: true } : undefined,
+  );
+  return result;
+}
+
 export const inProgressActivityPanelActions: InProgressRepoCardActions = {
   getFileTreeForLocalRepo: (repoPath) => RepositoryMonitoringService.getFileTree(repoPath),
   getWorkingChanges,
   explainWorkingChanges,
+  getAheadCommits,
+  pushBranch,
 };

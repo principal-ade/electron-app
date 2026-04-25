@@ -38,6 +38,8 @@ const baseActions = (files: InProgressChangedFile[]): InProgressRepoCardActions 
     await delay(200);
     return files;
   },
+  getAheadCommits: async () => [],
+  pushBranch: async () => ({ success: true, message: 'pushed' }),
   explainWorkingChanges: async (input) => {
     await delay(900);
     const audience = input.audienceLevel;
@@ -55,12 +57,16 @@ const baseActions = (files: InProgressChangedFile[]): InProgressRepoCardActions 
 const noChangesActions: InProgressRepoCardActions = {
   getFileTreeForLocalRepo: async () => null,
   getWorkingChanges: async () => [],
+  getAheadCommits: async () => [],
+  pushBranch: async () => ({ success: true, message: 'pushed' }),
   explainWorkingChanges: async () => ({ text: '' }),
 };
 
 const erroringActions: InProgressRepoCardActions = {
   getFileTreeForLocalRepo: async () => null,
   getWorkingChanges: async () => sampleFiles,
+  getAheadCommits: async () => [],
+  pushBranch: async () => ({ success: true, message: 'pushed' }),
   explainWorkingChanges: async () => {
     await delay(400);
     throw new Error('LLM request timed out after 30s');
@@ -70,6 +76,8 @@ const erroringActions: InProgressRepoCardActions = {
 const slowActions: InProgressRepoCardActions = {
   getFileTreeForLocalRepo: async () => null,
   getWorkingChanges: async () => sampleFiles,
+  getAheadCommits: async () => [],
+  pushBranch: async () => ({ success: true, message: 'pushed' }),
   explainWorkingChanges: async () => {
     await delay(20_000);
     return { text: 'This would eventually load.' };
@@ -153,12 +161,9 @@ const InProgressRepoCardStory: React.FC<StoryWrapperProps> = ({
   entry,
   events,
 }) => {
-  const [isExpanded, setIsExpanded] = React.useState(false);
   return (
     <InProgressRepoCard
       summary={summary}
-      isExpanded={isExpanded}
-      onToggleExpand={() => setIsExpanded((prev) => !prev)}
       onOpen={() => console.info('[Story] onOpen')}
       dimmed={dimmed}
       entry={entry}

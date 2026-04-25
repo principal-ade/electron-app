@@ -10,12 +10,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
-  ChevronDown,
-  ChevronRight,
+  Check,
+  ExternalLink,
   FolderGit2,
   GitBranch,
+  GitCommit,
   Loader2,
   Sparkles,
+  Upload,
   User,
 } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
@@ -78,17 +80,39 @@ export interface ExplainInProgressResponse {
   text: string;
 }
 
+export interface InProgressAheadCommit {
+  hash: string;
+  message: string;
+  author: string;
+  date: string;
+}
+
+export interface InProgressPushResult {
+  success: boolean;
+  message: string;
+}
+
+export interface ExplainInProgressRequest {
+  repoPath: string;
+  repoName: string;
+  branch?: string;
+  files: InProgressChangedFile[];
+}
+
 export interface InProgressRepoCardActions {
   getFileTreeForLocalRepo: (repoPath: string) => Promise<FileTree | null>;
   getWorkingChanges: (repoPath: string) => Promise<InProgressChangedFile[]>;
   explainWorkingChanges: (input: ExplainInProgressInput) => Promise<ExplainInProgressResponse>;
+  getAheadCommits: (repoPath: string) => Promise<InProgressAheadCommit[]>;
+  pushBranch: (repoPath: string) => Promise<InProgressPushResult>;
 }
 
 interface InProgressRepoCardProps {
   summary: InProgressSummary;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
   onOpen?: () => void;
+  onDismiss?: (repoPath: string) => void;
+  onExplainRequested?: (request: ExplainInProgressRequest) => void;
+  explainLoading?: boolean;
   dimmed?: boolean;
   events?: PanelEventEmitter;
   entry?: AlexandriaEntry;
@@ -125,9 +149,10 @@ const statusLabel: Record<InProgressFileStatus, string> = {
 
 export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
   summary,
-  isExpanded,
-  onToggleExpand,
   onOpen,
+  onDismiss,
+  onExplainRequested,
+  explainLoading = false,
   dimmed = false,
   events,
   entry,
@@ -141,12 +166,16 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
   const [cityLoading, setCityLoading] = useState(true);
   const [changedFiles, setChangedFiles] = useState<InProgressChangedFile[]>([]);
 
-  const [explainText, setExplainText] = useState<string | null>(null);
-  const [explainLoading, setExplainLoading] = useState(false);
-  const [explainError, setExplainError] = useState<string | null>(null);
-  const [explainAudience, setExplainAudience] =
-    useState<'maintainer' | 'non-technical'>('maintainer');
-  const explainRunRef = useRef<{ cancel: () => void } | null>(null);
+  const [aheadCommits, setAheadCommits] = useState<InProgressAheadCommit[]>([]);
+  const [aheadCommitsLoaded, setAheadCommitsLoaded] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
+  const [pushSuccess, setPushSuccess] = useState(false);
+  const [collapsing, setCollapsing] = useState(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [collapseHeight, setCollapseHeight] = useState<number | null>(null);
+
+  const aheadCount = summary.aheadCount ?? 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -196,58 +225,96 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
     };
   }, [summary.repoPath, actions]);
 
-  const runExplain = useCallback(
-    (audience: 'maintainer' | 'non-technical') => {
-      if (changedFiles.length === 0) return;
+  useEffect(() => {
+    if (aheadCount === 0) {
+      setAheadCommits([]);
+      setAheadCommitsLoaded(false);
+      return;
+    }
+    let cancelled = false;
+    setAheadCommitsLoaded(false);
+    actions
+      .getAheadCommits(summary.repoPath)
+      .then((commits) => {
+        if (cancelled) return;
+        setAheadCommits(commits);
+        setAheadCommitsLoaded(true);
+      })
+      .catch((err) => {
+        console.warn(`[InProgressRepoCard] Failed to fetch ahead commits:`, err);
+        if (cancelled) return;
+        setAheadCommits([]);
+        setAheadCommitsLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [summary.repoPath, aheadCount, actions]);
 
-      explainRunRef.current?.cancel();
-      let cancelled = false;
-      explainRunRef.current = {
-        cancel: () => {
-          cancelled = true;
-        },
-      };
+  useEffect(() => {
+    setPushError(null);
+    setPushSuccess(false);
+    setPushing(false);
+    setCollapsing(false);
+    setCollapseHeight(null);
+  }, [summary.repoPath]);
 
-      setExplainLoading(true);
-      setExplainError(null);
+  const handlePush = useCallback(async () => {
+    if (pushing) return;
+    setPushing(true);
+    setPushError(null);
+    setPushSuccess(false);
+    try {
+      const result = await actions.pushBranch(summary.repoPath);
+      if (result.success) {
+        setPushSuccess(true);
+        // Brief "Pushed" beat, then collapse the card and dismiss it.
+        window.setTimeout(() => {
+          const measured = cardRef.current?.getBoundingClientRect().height ?? 0;
+          setCollapseHeight(measured);
+          // Force a frame so the browser paints the explicit height before we
+          // transition it to 0 — otherwise the transition is skipped.
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => setCollapsing(true));
+          });
+        }, 600);
+      } else {
+        setPushError(result.message || 'Push failed');
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Push failed';
+      setPushError(message);
+    } finally {
+      setPushing(false);
+    }
+  }, [actions, summary.repoPath, pushing]);
 
-      actions
-        .explainWorkingChanges({
-          repoPath: summary.repoPath,
-          repoName: summary.repoName,
-          branch: summary.branch,
-          files: changedFiles,
-          audienceLevel: audience,
-        })
-        .then((result) => {
-          if (cancelled) return;
-          setExplainText(result.text);
-        })
-        .catch((err: unknown) => {
-          if (cancelled) return;
-          const message = err instanceof Error ? err.message : 'Failed to generate explanation';
-          setExplainError(message);
-          setExplainText(null);
-        })
-        .finally(() => {
-          if (!cancelled) setExplainLoading(false);
-        });
+  const handleCollapseEnd = useCallback(
+    (e: React.TransitionEvent<HTMLDivElement>) => {
+      if (!collapsing) return;
+      if (e.target !== e.currentTarget) return;
+      if (e.propertyName !== 'max-height') return;
+      onDismiss?.(summary.repoPath);
     },
-    [changedFiles, summary.repoPath, summary.repoName, summary.branch, actions],
+    [collapsing, onDismiss, summary.repoPath],
   );
 
-  // Reset explanation state when the repo changes so we don't show stale text
-  // from a previous instance, and cancel any in-flight request on unmount.
-  useEffect(() => {
-    explainRunRef.current?.cancel();
-    explainRunRef.current = null;
-    setExplainText(null);
-    setExplainError(null);
-    setExplainLoading(false);
-    return () => {
-      explainRunRef.current?.cancel();
-    };
-  }, [summary.repoPath]);
+  const requestExplain = useCallback(() => {
+    if (!onExplainRequested) return;
+    if (changedFiles.length === 0) return;
+    onExplainRequested({
+      repoPath: summary.repoPath,
+      repoName: summary.repoName,
+      branch: summary.branch,
+      files: changedFiles,
+    });
+  }, [
+    onExplainRequested,
+    changedFiles,
+    summary.repoPath,
+    summary.repoName,
+    summary.branch,
+  ]);
 
   const totals = useMemo(() => {
     let additions = 0;
@@ -359,13 +426,24 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
 
   return (
     <div
+      ref={cardRef}
+      onTransitionEnd={handleCollapseEnd}
       style={{
         backgroundColor: theme.colors.surface,
         borderRadius: 8,
         border: `1px solid ${theme.colors.border}`,
         overflow: 'hidden',
-        opacity: dimmed ? 0.7 : 1,
-        transition: 'opacity 0.15s ease',
+        opacity: collapsing ? 0 : dimmed ? 0.7 : 1,
+        maxHeight: collapsing
+          ? 0
+          : collapseHeight !== null
+            ? collapseHeight
+            : undefined,
+        transform: collapsing ? 'scale(0.96)' : 'scale(1)',
+        transformOrigin: 'top center',
+        pointerEvents: collapsing ? 'none' : 'auto',
+        transition:
+          'max-height 0.35s ease, opacity 0.3s ease, transform 0.3s ease',
       }}
     >
       <div style={{ display: 'flex', minHeight: 300 }}>
@@ -506,6 +584,40 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                   />
                   In progress
                 </span>
+                {onOpen && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpen();
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 8px',
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts.body,
+                      fontWeight: theme.fontWeights.semibold,
+                      color: theme.colors.text,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      lineHeight: 1.4,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <ExternalLink size={10} />
+                    <span>Open</span>
+                  </button>
+                )}
               </div>
               <div
                 style={{
@@ -525,35 +637,50 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                   </span>
                 )}
                 {totals.fileCount > 0 && (
+                  <span>
+                    · {totals.fileCount} file{totals.fileCount !== 1 ? 's' : ''} changed
+                    {totals.staged > 0 && ` (${totals.staged} staged)`}
+                  </span>
+                )}
+                {totals.fileCount > 0 && onExplainRequested && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onToggleExpand();
+                      requestExplain();
                     }}
+                    disabled={explainLoading}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: 2,
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      margin: 0,
-                      font: 'inherit',
-                      color: 'inherit',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = theme.colors.text;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = 'inherit';
+                      gap: 4,
+                      padding: '2px 8px',
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts.body,
+                      fontWeight: theme.fontWeights.semibold,
+                      color: theme.colors.primary,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.primary}`,
+                      borderRadius: 4,
+                      cursor: explainLoading ? 'default' : 'pointer',
+                      opacity: explainLoading ? 0.7 : 1,
+                      lineHeight: 1.4,
                     }}
                   >
-                    <span style={{ marginRight: 2 }}>·</span>
-                    {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                    {totals.fileCount} file{totals.fileCount !== 1 ? 's' : ''} changed
-                    {totals.staged > 0 && ` (${totals.staged} staged)`}
+                    {explainLoading ? (
+                      <>
+                        <Loader2
+                          size={10}
+                          style={{ animation: 'inProgressSpin 1s linear infinite' }}
+                        />
+                        <span>Explaining…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={10} />
+                        <span>Explain</span>
+                      </>
+                    )}
                   </button>
                 )}
                 {summary.aheadCount !== undefined && summary.aheadCount > 0 && (
@@ -561,6 +688,56 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                 )}
                 {summary.behindCount !== undefined && summary.behindCount > 0 && (
                   <span>↓{summary.behindCount}</span>
+                )}
+                {totals.fileCount === 0 && aheadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePush();
+                    }}
+                    disabled={pushing || pushSuccess}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 8px',
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts.body,
+                      fontWeight: theme.fontWeights.semibold,
+                      color: pushSuccess ? '#fff' : theme.colors.background,
+                      backgroundColor: pushSuccess
+                        ? '#2ea043'
+                        : pushing
+                          ? theme.colors.textSecondary
+                          : theme.colors.primary,
+                      border: 'none',
+                      borderRadius: 4,
+                      cursor: pushing || pushSuccess ? 'default' : 'pointer',
+                      opacity: pushing ? 0.7 : 1,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {pushing ? (
+                      <>
+                        <Loader2
+                          size={10}
+                          style={{ animation: 'inProgressSpin 1s linear infinite' }}
+                        />
+                        <span>Pushing…</span>
+                      </>
+                    ) : pushSuccess ? (
+                      <>
+                        <Check size={10} />
+                        <span>Pushed</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={10} />
+                        <span>Push</span>
+                      </>
+                    )}
+                  </button>
                 )}
                 {summary.lastEditAt && <span>{formatRelativeTime(summary.lastEditAt)}</span>}
               </div>
@@ -646,235 +823,208 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
               flex: 1,
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: spacing.sm,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  fontSize: theme.fontSizes[0],
-                  fontWeight: theme.fontWeights.semibold,
-                  color: theme.colors.textSecondary,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.5,
-                }}
-              >
-                <Sparkles size={12} />
-                <span>What&apos;s changing</span>
-              </div>
-              {(explainText || explainError || explainLoading) && (
-                <div style={{ display: 'flex', gap: 2 }}>
-                  {(['maintainer', 'non-technical'] as const).map((level) => (
-                    <button
-                      key={level}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (explainAudience === level) return;
-                        setExplainAudience(level);
-                        runExplain(level);
-                      }}
-                      style={{
-                        padding: `2px ${spacing.sm}px`,
-                        fontSize: theme.fontSizes[0],
-                        color:
-                          explainAudience === level
-                            ? theme.colors.text
-                            : theme.colors.textSecondary,
-                        backgroundColor:
-                          explainAudience === level
-                            ? theme.colors.backgroundSecondary
-                            : 'transparent',
-                        border: `1px solid ${
-                          explainAudience === level ? theme.colors.border : 'transparent'
-                        }`,
-                        borderRadius: 4,
-                        cursor: explainAudience === level ? 'default' : 'pointer',
-                      }}
-                    >
-                      {level === 'maintainer' ? 'Technical' : 'Simple'}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div
-              style={{
-                fontSize: theme.fontSizes[1],
-                lineHeight: 1.6,
-                color: explainError ? theme.colors.error : theme.colors.text,
-                whiteSpace: 'pre-wrap',
-                minHeight: 48,
-              }}
-            >
-              {explainLoading ? (
+            {totals.fileCount === 0 && aheadCount > 0 ? (
+              <>
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: spacing.xs,
+                    fontSize: theme.fontSizes[0],
+                    fontWeight: theme.fontWeights.semibold,
                     color: theme.colors.textSecondary,
-                    fontStyle: 'italic',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
                   }}
                 >
-                  <Loader2
-                    size={12}
-                    style={{ animation: 'inProgressSpin 1s linear infinite' }}
-                  />
-                  <span>Analyzing working-tree changes…</span>
+                  <GitCommit size={12} />
+                  <span>
+                    {aheadCount} commit{aheadCount !== 1 ? 's' : ''} to push
+                  </span>
                 </div>
-              ) : explainError ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                  <span>Couldn&apos;t summarize changes: {explainError}</span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      runExplain(explainAudience);
-                    }}
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    maxHeight: 180,
+                    overflowY: 'auto',
+                  }}
+                >
+                  {!aheadCommitsLoaded ? (
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[1],
+                        color: theme.colors.textMuted,
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      Loading commits…
+                    </span>
+                  ) : aheadCommits.length === 0 ? (
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[1],
+                        color: theme.colors.textMuted,
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      Couldn&apos;t list commits (no upstream tracking?).
+                    </span>
+                  ) : (
+                    aheadCommits.map((commit) => (
+                      <div
+                        key={commit.hash}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'baseline',
+                          gap: spacing.sm,
+                          padding: `${spacing.xs}px 0`,
+                          fontSize: theme.fontSizes[1],
+                          minWidth: 0,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: theme.fonts.monospace,
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textMuted,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {commit.hash.slice(0, 7)}
+                        </span>
+                        <span
+                          style={{
+                            flex: 1,
+                            color: theme.colors.text,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                          title={commit.message}
+                        >
+                          {commit.message}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textMuted,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {commit.author}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {pushError && (
+                  <div
                     style={{
-                      padding: `2px ${spacing.sm}px`,
                       fontSize: theme.fontSizes[0],
-                      color: theme.colors.text,
-                      backgroundColor: 'transparent',
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: 4,
-                      cursor: 'pointer',
+                      color: theme.colors.error,
                     }}
                   >
-                    Retry
-                  </button>
-                </div>
-              ) : explainText ? (
-                explainText
-              ) : totals.fileCount === 0 ? (
-                <span style={{ color: theme.colors.textMuted, fontStyle: 'italic' }}>
-                  No working-tree changes yet.
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    runExplain(explainAudience);
-                  }}
-                  style={{
-                    alignSelf: 'flex-start',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: spacing.xs,
-                    padding: `${spacing.xs}px ${spacing.sm}px`,
-                    fontSize: theme.fontSizes[1],
-                    color: theme.colors.primary,
-                    backgroundColor: 'transparent',
-                    border: `1px solid ${theme.colors.primary}`,
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Sparkles size={12} />
-                  <span>Explain changes</span>
-                </button>
-              )}
-            </div>
+                    {pushError}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {totals.fileCount === 0 ? (
+                  <span
+                    style={{
+                      fontSize: theme.fontSizes[1],
+                      color: theme.colors.textMuted,
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    No working-tree changes yet.
+                  </span>
+                ) : (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      maxHeight: 200,
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {changedFiles.map((file) => (
+                      <div
+                        key={`${file.path}:${file.staged ? 's' : 'u'}`}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: spacing.sm,
+                          padding: `${spacing.xs}px ${spacing.sm}px`,
+                          borderRadius: 4,
+                          fontFamily: theme.fonts.monospace,
+                          fontSize: theme.fontSizes[1],
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 16,
+                            textAlign: 'center',
+                            color:
+                              statusToHighlight[file.status] === 'added'
+                                ? DIFF_ADD_COLOR
+                                : statusToHighlight[file.status] === 'removed'
+                                  ? DIFF_REMOVE_COLOR
+                                  : theme.colors.warning,
+                            fontWeight: theme.fontWeights.semibold,
+                          }}
+                        >
+                          {statusLabel[file.status]}
+                        </span>
+                        <span
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            color: theme.colors.text,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            opacity: file.staged ? 1 : 0.75,
+                          }}
+                          title={file.path}
+                        >
+                          {file.path}
+                        </span>
+                        {file.staged && (
+                          <span
+                            style={{
+                              fontSize: theme.fontSizes[0],
+                              color: theme.colors.textMuted,
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: 3,
+                              padding: '0 6px',
+                            }}
+                          >
+                            staged
+                          </span>
+                        )}
+                        <span style={{ display: 'flex', gap: spacing.xs, flexShrink: 0 }}>
+                          {file.additions > 0 && (
+                            <span style={{ color: DIFF_ADD_COLOR }}>+{file.additions}</span>
+                          )}
+                          {file.deletions > 0 && (
+                            <span style={{ color: DIFF_REMOVE_COLOR }}>-{file.deletions}</span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
-        </div>
-      </div>
-
-      <div
-        style={{
-          borderTop: isExpanded ? `1px solid ${theme.colors.border}` : 'none',
-          backgroundColor: theme.colors.background,
-          maxHeight: isExpanded ? 260 : 0,
-          overflow: 'hidden',
-          transition: 'max-height 0.25s ease-in-out',
-        }}
-      >
-        <div
-          style={{
-            padding: spacing.md,
-            opacity: isExpanded ? 1 : 0,
-            transition: 'opacity 0.2s ease-in-out',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            maxHeight: 228,
-            overflowY: 'auto',
-          }}
-        >
-          {changedFiles.map((file) => (
-            <div
-              key={`${file.path}:${file.staged ? 's' : 'u'}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                padding: `${spacing.xs}px ${spacing.sm}px`,
-                borderRadius: 4,
-                fontFamily: theme.fonts.monospace,
-                fontSize: theme.fontSizes[1],
-              }}
-            >
-              <span
-                style={{
-                  width: 16,
-                  textAlign: 'center',
-                  color:
-                    statusToHighlight[file.status] === 'added'
-                      ? DIFF_ADD_COLOR
-                      : statusToHighlight[file.status] === 'removed'
-                        ? DIFF_REMOVE_COLOR
-                        : theme.colors.warning,
-                  fontWeight: theme.fontWeights.semibold,
-                }}
-              >
-                {statusLabel[file.status]}
-              </span>
-              <span
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  color: theme.colors.text,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  opacity: file.staged ? 1 : 0.75,
-                }}
-                title={file.path}
-              >
-                {file.path}
-              </span>
-              {file.staged && (
-                <span
-                  style={{
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.textMuted,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: 3,
-                    padding: '0 6px',
-                  }}
-                >
-                  staged
-                </span>
-              )}
-              <span style={{ display: 'flex', gap: spacing.xs, flexShrink: 0 }}>
-                {file.additions > 0 && (
-                  <span style={{ color: DIFF_ADD_COLOR }}>+{file.additions}</span>
-                )}
-                {file.deletions > 0 && (
-                  <span style={{ color: DIFF_REMOVE_COLOR }}>-{file.deletions}</span>
-                )}
-              </span>
-            </div>
-          ))}
         </div>
       </div>
 

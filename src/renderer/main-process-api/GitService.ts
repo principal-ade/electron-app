@@ -719,6 +719,31 @@ export class GitService {
     }
   }
 
+  /**
+   * Get the commits the current branch is ahead of its upstream by.
+   * Returns an empty array if there is no upstream or no commits ahead.
+   */
+  static async getAheadCommits(
+    directory: string,
+  ): Promise<GitCommitInfo[]> {
+    try {
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'log',
+        '@{u}..HEAD',
+        '--format="%H|%s|%an|%aI"',
+      ]);
+      const lines = result.stdout.trim().split('\n').filter(Boolean);
+      return lines.map((line) => {
+        const cleanLine = line.replace(/^"|"$/g, '');
+        const [hash, message, author, date] = cleanLine.split('|');
+        return { hash, message, author, date };
+      });
+    } catch (error) {
+      console.warn('[GitService] Failed to get ahead commits:', error);
+      return [];
+    }
+  }
+
   static async push(
     directory: string,
     options?: {
