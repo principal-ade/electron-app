@@ -13,7 +13,9 @@ import { FolderGit2 } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { RepoActivityCard, type RepoActivitySummary } from './RepoActivityCard';
 import { repoActivityCardActions } from './repoActivityCardActions';
+import { RepoExplainOverlay, RepoReviewOverlay, type ExplainAudience } from './RepoExplainOverlay';
 import { GithubService } from '../main-process-api/GithubService';
+import type { ExplainCommitsInput } from '../../shared/tipc/webAdeRouterTypes';
 
 export interface ActivityFeedCardPanelProps {
   /** List of repositories to show activity for */
@@ -36,6 +38,36 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
   const [timeFilter, setTimeFilter] = useState<{ start: Date; end: Date } | null>(null);
   // Repository filter state
   const [repoFilter, setRepoFilter] = useState<string | null>(null);
+  // Explain overlay state
+  const [explain, setExplain] = useState<{
+    isOpen: boolean;
+    loading: boolean;
+    repoName: string | null;
+    markdown: string | null;
+    audience: ExplainAudience;
+    pendingCommits: ExplainCommitsInput['commits'] | null;
+  }>({
+    isOpen: false,
+    loading: false,
+    repoName: null,
+    markdown: null,
+    audience: 'maintainer',
+    pendingCommits: null,
+  });
+  // Review overlay state
+  const [review, setReview] = useState<{
+    isOpen: boolean;
+    repoPath: string;
+    repoName: string;
+    githubOwner?: string;
+    githubRepoName?: string;
+    commit: ActivityCommit | null;
+  }>({
+    isOpen: false,
+    repoPath: '',
+    repoName: '',
+    commit: null,
+  });
 
   const spacing = {
     xs: 4,
@@ -74,6 +106,88 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
       events.off('feed:repository-filter-changed', handleRepoFilter);
     };
   }, [events]);
+
+  // Listen for repo explain requests from cards
+  useEffect(() => {
+    const handler = (event: { type: string; payload: { repoName: string; commits: ExplainCommitsInput['commits'] } }) => {
+      if (event.type !== 'repo:explain-requested') return;
+      setExplain(prev => ({
+        isOpen: true,
+        loading: true,
+        repoName: event.payload.repoName,
+        markdown: null,
+        audience: prev.audience,
+        pendingCommits: event.payload.commits,
+      }));
+    };
+    events.on('repo:explain-requested', handler);
+    return () => {
+      events.off('repo:explain-requested', handler);
+    };
+  }, [events]);
+
+  // Fetch explanation when a request becomes pending or audience changes
+  useEffect(() => {
+    if (!explain.pendingCommits || !explain.repoName) return;
+    let cancelled = false;
+    const commits = explain.pendingCommits;
+    const repoName = explain.repoName;
+    const audience = explain.audience;
+    setExplain(prev => ({ ...prev, loading: true, markdown: null }));
+    repoActivityCardActions.explainCommits({ commits, audienceLevel: audience, repoName })
+      .then(result => {
+        if (cancelled) return;
+        setExplain(prev => ({ ...prev, loading: false, markdown: result.text }));
+      })
+      .catch(err => {
+        console.error('[ActivityFeedCardPanel] explain failed:', err);
+        if (cancelled) return;
+        setExplain(prev => ({ ...prev, loading: false, markdown: 'Failed to generate explanation. Please try again.' }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [explain.pendingCommits, explain.audience, explain.repoName]);
+
+  const handleExplainAudienceChange = useCallback((audience: ExplainAudience) => {
+    setExplain(prev => (prev.audience === audience ? prev : { ...prev, audience }));
+  }, []);
+
+  const handleExplainClose = useCallback(() => {
+    setExplain(prev => ({ ...prev, isOpen: false }));
+  }, []);
+
+  // Listen for commit review requests from cards
+  useEffect(() => {
+    const handler = (event: {
+      type: string;
+      payload: {
+        repoPath: string;
+        repoName: string;
+        githubOwner?: string;
+        githubRepoName?: string;
+        commit: ActivityCommit;
+      };
+    }) => {
+      if (event.type !== 'commit:review-selected') return;
+      setReview({
+        isOpen: true,
+        repoPath: event.payload.repoPath,
+        repoName: event.payload.repoName,
+        githubOwner: event.payload.githubOwner,
+        githubRepoName: event.payload.githubRepoName,
+        commit: event.payload.commit,
+      });
+    };
+    events.on('commit:review-selected', handler);
+    return () => {
+      events.off('commit:review-selected', handler);
+    };
+  }, [events]);
+
+  const handleReviewClose = useCallback(() => {
+    setReview(prev => ({ ...prev, isOpen: false }));
+  }, []);
 
   // Create repo github owner map
   const repoOwnerMap = useMemo(() => {
@@ -271,6 +385,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
         flexDirection: 'column',
         backgroundColor: theme.colors.background,
         overflow: 'hidden',
+        position: 'relative',
       }}
     >
       {/* Cards list */}
@@ -334,6 +449,24 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
           </div>
         )}
       </div>
+      <RepoExplainOverlay
+        isOpen={explain.isOpen}
+        repoName={explain.repoName}
+        markdown={explain.markdown}
+        loading={explain.loading}
+        audience={explain.audience}
+        onAudienceChange={handleExplainAudienceChange}
+        onClose={handleExplainClose}
+      />
+      <RepoReviewOverlay
+        isOpen={review.isOpen}
+        repoPath={review.repoPath}
+        repoName={review.repoName}
+        githubOwner={review.githubOwner}
+        githubRepoName={review.githubRepoName}
+        commit={review.commit}
+        onClose={handleReviewClose}
+      />
     </div>
   );
 };

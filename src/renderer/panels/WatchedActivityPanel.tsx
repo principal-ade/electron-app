@@ -14,8 +14,10 @@ import {
   type RepoActivitySummary,
   type RepoActivityCardActions,
 } from './RepoActivityCard';
+import { RepoExplainOverlay, RepoReviewOverlay, type ExplainAudience } from './RepoExplainOverlay';
 import type { CommitActivityCard } from '../../shared/tipc/webAdeRouterTypes';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
+import type { ExplainCommitsInput } from '../../shared/tipc/webAdeRouterTypes';
 
 export type WatchedActivitySource =
   | { kind: 'owner'; login: string; accountType: 'User' | 'Organization' }
@@ -132,11 +134,41 @@ function cardsToHourlyGroups(cards: CommitActivityCard[]): HourlyGroup[] {
     }));
 }
 
+interface ExplainState {
+  isOpen: boolean;
+  loading: boolean;
+  repoName: string | null;
+  markdown: string | null;
+  audience: ExplainAudience;
+  pendingCommits: ExplainCommitsInput['commits'] | null;
+}
+
 export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ source, events, hideHeader = false, actions }) => {
   const { theme } = useTheme();
   const [cards, setCards] = useState<CommitActivityCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [explain, setExplain] = useState<ExplainState>({
+    isOpen: false,
+    loading: false,
+    repoName: null,
+    markdown: null,
+    audience: 'maintainer',
+    pendingCommits: null,
+  });
+  const [review, setReview] = useState<{
+    isOpen: boolean;
+    repoPath: string;
+    repoName: string;
+    githubOwner?: string;
+    githubRepoName?: string;
+    commit: ActivityCommit | null;
+  }>({
+    isOpen: false,
+    repoPath: '',
+    repoName: '',
+    commit: null,
+  });
 
   const label = source.kind === 'owner' ? source.login : `${source.owner}/${source.repo}`;
 
@@ -172,6 +204,88 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
 
   const hourlyGroups = useMemo(() => cardsToHourlyGroups(cards), [cards]);
 
+  // Listen for repo explain requests from cards
+  useEffect(() => {
+    const handler = (event: { type: string; payload: { repoName: string; commits: ExplainCommitsInput['commits'] } }) => {
+      if (event.type !== 'repo:explain-requested') return;
+      setExplain(prev => ({
+        isOpen: true,
+        loading: true,
+        repoName: event.payload.repoName,
+        markdown: null,
+        audience: prev.audience,
+        pendingCommits: event.payload.commits,
+      }));
+    };
+    events.on('repo:explain-requested', handler);
+    return () => {
+      events.off('repo:explain-requested', handler);
+    };
+  }, [events]);
+
+  // Fetch explanation whenever a request becomes pending or audience changes
+  useEffect(() => {
+    if (!explain.pendingCommits || !explain.repoName) return;
+    let cancelled = false;
+    const commits = explain.pendingCommits;
+    const repoName = explain.repoName;
+    const audience = explain.audience;
+    setExplain(prev => ({ ...prev, loading: true, markdown: null }));
+    actions.explainCommits({ commits, audienceLevel: audience, repoName })
+      .then(result => {
+        if (cancelled) return;
+        setExplain(prev => ({ ...prev, loading: false, markdown: result.text }));
+      })
+      .catch(err => {
+        console.error('[WatchedActivityPanel] explain failed:', err);
+        if (cancelled) return;
+        setExplain(prev => ({ ...prev, loading: false, markdown: 'Failed to generate explanation. Please try again.' }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [explain.pendingCommits, explain.audience, explain.repoName, actions]);
+
+  const handleExplainAudienceChange = useCallback((audience: ExplainAudience) => {
+    setExplain(prev => (prev.audience === audience ? prev : { ...prev, audience }));
+  }, []);
+
+  const handleExplainClose = useCallback(() => {
+    setExplain(prev => ({ ...prev, isOpen: false }));
+  }, []);
+
+  // Listen for commit review requests from cards
+  useEffect(() => {
+    const handler = (event: {
+      type: string;
+      payload: {
+        repoPath: string;
+        repoName: string;
+        githubOwner?: string;
+        githubRepoName?: string;
+        commit: ActivityCommit;
+      };
+    }) => {
+      if (event.type !== 'commit:review-selected') return;
+      setReview({
+        isOpen: true,
+        repoPath: event.payload.repoPath,
+        repoName: event.payload.repoName,
+        githubOwner: event.payload.githubOwner,
+        githubRepoName: event.payload.githubRepoName,
+        commit: event.payload.commit,
+      });
+    };
+    events.on('commit:review-selected', handler);
+    return () => {
+      events.off('commit:review-selected', handler);
+    };
+  }, [events]);
+
+  const handleReviewClose = useCallback(() => {
+    setReview(prev => ({ ...prev, isOpen: false }));
+  }, []);
+
   const toggleExpand = useCallback((key: string) => {
     setExpandedCards(prev => {
       const next = new Set(prev);
@@ -184,7 +298,7 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
   const spacing = { xs: 4, sm: 8, md: 16 };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: theme.colors.background, overflow: 'hidden' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: theme.colors.background, overflow: 'hidden', position: 'relative' }}>
       {/* Header */}
       {!hideHeader && (
         <div
@@ -262,6 +376,7 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
                         isExpanded={expandedCards.has(key)}
                         onToggleExpand={() => toggleExpand(key)}
                         onOpen={() => {}}
+                        hideRepoHeader={source.kind === 'repo'}
                         events={events}
                         actions={actions}
                       />
@@ -273,6 +388,25 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
           </div>
         )}
       </div>
+
+      <RepoExplainOverlay
+        isOpen={explain.isOpen}
+        repoName={explain.repoName}
+        markdown={explain.markdown}
+        loading={explain.loading}
+        audience={explain.audience}
+        onAudienceChange={handleExplainAudienceChange}
+        onClose={handleExplainClose}
+      />
+      <RepoReviewOverlay
+        isOpen={review.isOpen}
+        repoPath={review.repoPath}
+        repoName={review.repoName}
+        githubOwner={review.githubOwner}
+        githubRepoName={review.githubRepoName}
+        commit={review.commit}
+        onClose={handleReviewClose}
+      />
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>

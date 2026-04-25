@@ -6,15 +6,11 @@
  * Based on web-ade RepoActivityCard design.
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   FolderGit2,
-  ChevronDown,
-  ChevronRight,
   User,
-  Play,
-  Square,
   Sparkles,
   FileCode,
 } from 'lucide-react';
@@ -105,6 +101,7 @@ interface RepoActivityCardProps {
   onToggleExpand: () => void;
   onOpen: () => void;
   dimmed?: boolean;
+  hideRepoHeader?: boolean;
   events?: PanelEventEmitter;
   entry?: AlexandriaEntry;
   actions: RepoActivityCardActions;
@@ -260,12 +257,12 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   onToggleExpand,
   onOpen,
   dimmed = false,
+  hideRepoHeader = false,
   events,
   entry,
   actions,
 }) => {
   const { theme } = useTheme();
-  const hasMoreCommits = summary.commits.length > 1;
 
   const spacing = {
     xs: 4,
@@ -279,12 +276,6 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
   // Avatar load state
   const [avatarLoaded, setAvatarLoaded] = useState(true);
-
-  // Animation state
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [animationCommitIndex, setAnimationCommitIndex] = useState<number | null>(null);
-  const [typewriterText, setTypewriterText] = useState<string>('');
-  const animationRef = useRef<{ cancel: boolean }>({ cancel: false });
 
   // File City state
   const [cityData, setCityData] = useState<CityData | null>(null);
@@ -305,19 +296,13 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     Map<string, Array<{ filename: string; status: string; additions: number; deletions: number }>>
   >(new Map());
 
-  const [isExplainOpen, setIsExplainOpen] = useState(false);
-  const [explainLoading, setExplainLoading] = useState(false);
-  const [explainText, setExplainText] = useState<string | null>(null);
-  const [explainAudience, setExplainAudience] = useState<'maintainer' | 'non-technical'>('maintainer');
-
-  // Get the commit to display (animation > selected > sole-commit fallback)
+  // Get the commit to display (selected > sole-commit fallback)
   const displayedCommitIndex =
-    animationCommitIndex ?? selectedCommitIndex ?? (summary.commits.length === 1 ? 0 : null);
+    selectedCommitIndex ?? (summary.commits.length === 1 ? 0 : null);
   const displayedCommit =
     displayedCommitIndex !== null ? summary.commits[displayedCommitIndex] : undefined;
   const displayedTime = new Date(displayedCommit?.date ?? summary.latestCommitAt);
-  const displayedMessage =
-    isAnimating && typewriterText !== null ? typewriterText : displayedCommit?.message ?? '';
+  const displayedMessage = displayedCommit?.message ?? '';
 
   // Build File City data from repository
   useEffect(() => {
@@ -580,62 +565,6 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     return layers;
   }, [changedFiles]);
 
-  // Animation logic
-  const startAnimation = useCallback(async () => {
-    if (isAnimating) {
-      // Stop animation
-      animationRef.current.cancel = true;
-      setIsAnimating(false);
-      setAnimationCommitIndex(null);
-      setTypewriterText('');
-      return;
-    }
-
-    setIsAnimating(true);
-    animationRef.current.cancel = false;
-
-    // Animate through commits
-    const commits = summary.commits;
-
-    for (let i = 0; i < commits.length; i++) {
-      if (animationRef.current.cancel) break;
-
-      const commit = commits[i];
-      if (!commit) continue;
-
-      setAnimationCommitIndex(i);
-      setTypewriterText('');
-
-      // Typewriter effect for commit message
-      const message = commit.message;
-      for (let j = 0; j <= message.length; j++) {
-        if (animationRef.current.cancel) break;
-        setTypewriterText(message.slice(0, j));
-        await new Promise((resolve) => setTimeout(resolve, 30)); // 30ms per character
-      }
-
-      if (animationRef.current.cancel) break;
-
-      // Pause at each commit
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-
-    // Animation complete
-    if (!animationRef.current.cancel) {
-      setIsAnimating(false);
-      setAnimationCommitIndex(null);
-      setTypewriterText('');
-    }
-  }, [isAnimating, summary.commits]);
-
-  // Cleanup animation on unmount
-  useEffect(() => {
-    const ref = animationRef.current;
-    return () => {
-      ref.cancel = true;
-    };
-  }, []);
-
   // Handler to open repository profile
   const handleOpenProfile = useCallback(() => {
     if (!events) return;
@@ -762,13 +691,114 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           style={{
             flex: 1,
             padding: spacing.md,
+            paddingRight: 170,
             display: 'flex',
             flexDirection: 'column',
-            cursor: 'pointer',
+            cursor: summary.commits.length > 1 ? 'pointer' : 'default',
+            position: 'relative',
           }}
-          onClick={onToggleExpand}
+          onClick={summary.commits.length > 1 ? onToggleExpand : undefined}
         >
+          {/* Top-right action buttons */}
+          <div
+            style={{
+              position: 'absolute',
+              top: spacing.md,
+              right: spacing.md,
+              zIndex: 2,
+              display: 'flex',
+              gap: spacing.xs,
+            }}
+          >
+            {/* Review button - single-commit only */}
+            {summary.commits.length === 1 && events && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const commit = summary.commits[0];
+                  if (commit) {
+                    events.emit({
+                      type: 'commit:review-selected',
+                      source: 'repo-activity-card',
+                      timestamp: Date.now(),
+                      payload: {
+                        repoPath: summary.repoPath,
+                        repoName: summary.repoName,
+                        githubOwner: summary.githubOwner,
+                        githubRepoName: summary.githubRepoName,
+                        commit,
+                      },
+                    });
+                  }
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.primary,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${theme.colors.primary}`,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <FileCode size={12} />
+                <span>Review</span>
+              </button>
+            )}
+            {/* Explain button */}
+            {events && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const commitsPayload = summary.commits.map(c => {
+                    const stats = commitStats.get(c.hash);
+                    return {
+                      sha: c.hash,
+                      message: c.message,
+                      author: c.author,
+                      additions: stats?.additions,
+                      deletions: stats?.deletions,
+                      filesChanged: stats?.filesChanged,
+                    };
+                  });
+                  events.emit({
+                    type: 'repo:explain-requested',
+                    source: 'repo-activity-card',
+                    timestamp: Date.now(),
+                    payload: {
+                      repoName: summary.repoName,
+                      repoPath: summary.repoPath,
+                      githubOwner: summary.githubOwner,
+                      githubRepoName: summary.githubRepoName,
+                      commits: commitsPayload,
+                    },
+                  });
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.primary,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${theme.colors.primary}`,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Sparkles size={12} />
+                <span>{summary.commits.length > 1 ? 'Explain all' : 'Explain'}</span>
+              </button>
+            )}
+          </div>
           {/* Header with avatar, name, and time */}
+          {!hideRepoHeader && (
           <div
             style={{
               display: 'flex',
@@ -872,122 +902,140 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               </span>
             </div>
           </div>
+          )}
 
-          {/* Commit avatars - grouped in rows of 10 with connecting line (hidden for single-commit case) */}
-          {summary.commits.length > 1 && (
-            <div style={{ marginBottom: spacing.md }}>
-              {Array.from({ length: Math.ceil(summary.commits.length / 10) }).map((_, rowIndex) => {
-                const rowCommits = summary.commits.slice(rowIndex * 10, (rowIndex + 1) * 10);
-                return (
-                  <div
-                    key={`row-${rowCommits[0]?.hash || rowIndex}`}
-                    style={{
-                      position: 'relative',
-                      display: 'flex',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      marginBottom:
-                        rowIndex < Math.ceil(summary.commits.length / 10) - 1 ? spacing.sm : 0,
-                      height: 44,
-                      paddingLeft: 8,
-                    }}
-                  >
-                    {/* Connecting line */}
+          {/* Commit avatars - stacked left-aligned with overflow chip */}
+          {summary.commits.length > 1 && (() => {
+            const MAX_VISIBLE = 8;
+            const OVERLAP = 14;
+            const visibleCommits = summary.commits.slice(0, MAX_VISIBLE);
+            const overflow = summary.commits.length - visibleCommits.length;
+            const activeIndex = selectedCommitIndex;
+
+            return (
+              <div
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: spacing.md,
+                  paddingLeft: 8,
+                  height: 44,
+                }}
+              >
+                {/* Connecting line — peeks out to the left and runs behind the first avatar */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: -spacing.md,
+                    width: spacing.md + 8 + 20,
+                    top: '50%',
+                    height: 1,
+                    backgroundColor: theme.colors.primary,
+                    transform: 'translateY(-50%)',
+                    zIndex: 0,
+                  }}
+                />
+                {visibleCommits.map((commit, index) => {
+                  const isDisplayed = index === activeIndex;
+                  return (
                     <div
-                      style={{
-                        position: 'absolute',
-                        left: -spacing.md,
-                        right: `${50 / rowCommits.length}%`,
-                        top: '50%',
-                        height: 1,
-                        backgroundColor: theme.colors.primary,
-                        transform: 'translateY(-50%)',
-                        zIndex: 0,
+                      key={commit.hash}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCommitIndex(index);
                       }}
-                    />
-                    {/* Author avatars */}
-                    {rowCommits.map((commit, index) => {
-                      const globalIndex = rowIndex * 10 + index;
-                      const activeIndex = isAnimating ? animationCommitIndex : selectedCommitIndex;
-                      const isDisplayed = globalIndex === activeIndex;
-
-                      return (
-                        <div
-                          key={commit.hash}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedCommitIndex(globalIndex);
-                          }}
+                      style={{
+                        marginLeft: index === 0 ? 0 : -OVERLAP,
+                        position: 'relative',
+                        zIndex: isDisplayed ? 100 : visibleCommits.length - index,
+                        cursor: 'pointer',
+                        display: 'flex',
+                      }}
+                    >
+                      {commit.authorAvatarUrl ? (
+                        <img
+                          src={commit.authorAvatarUrl}
+                          alt={commit.author}
                           style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            border: isDisplayed
+                              ? `2px solid ${theme.colors.primary}`
+                              : `2px solid ${theme.colors.surface}`,
+                            objectFit: 'cover',
+                            transition: 'border-color 0.15s ease',
+                            boxSizing: 'content-box',
+                            display: 'block',
+                          }}
+                        />
+                      ) : commit.authorEmail ? (
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            border: isDisplayed
+                              ? `2px solid ${theme.colors.primary}`
+                              : `2px solid ${theme.colors.surface}`,
+                            backgroundColor: theme.colors.textMuted,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            flex: 1,
-                            height: '100%',
-                            cursor: 'pointer',
-                            zIndex: 1,
+                            fontSize: theme.fontSizes[0],
+                            fontWeight: theme.fontWeights.semibold,
+                            color: theme.colors.background,
+                            transition: 'border-color 0.15s ease',
+                            boxSizing: 'content-box',
                           }}
                         >
-                          {commit.authorAvatarUrl ? (
-                            <img
-                              src={commit.authorAvatarUrl}
-                              alt={commit.author}
-                              style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: '50%',
-                                border: isDisplayed
-                                  ? `2px solid ${theme.colors.primary}`
-                                  : `2px solid ${theme.colors.surface}`,
-                                objectFit: 'cover',
-                                transition: 'border-color 0.15s ease',
-                                boxSizing: 'content-box',
-                              }}
-                            />
-                          ) : commit.authorEmail ? (
-                            <div
-                              style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: '50%',
-                                border: isDisplayed
-                                  ? `2px solid ${theme.colors.primary}`
-                                  : `2px solid ${theme.colors.surface}`,
-                                backgroundColor: theme.colors.textMuted,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: theme.fontSizes[0],
-                                fontWeight: theme.fontWeights.semibold,
-                                color: theme.colors.background,
-                                transition: 'border-color 0.15s ease',
-                                boxSizing: 'content-box',
-                              }}
-                            >
-                              {commit.author.charAt(0).toUpperCase()}
-                            </div>
-                          ) : (
-                            <div
-                              style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: '50%',
-                                backgroundColor: isDisplayed
-                                  ? theme.colors.primary
-                                  : theme.colors.textMuted,
-                                border: `2px solid ${theme.colors.surface}`,
-                                transition: 'background-color 0.15s ease',
-                              }}
-                            />
-                          )}
+                          {commit.author.charAt(0).toUpperCase()}
                         </div>
-                      );
-                    })}
+                      ) : (
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            backgroundColor: isDisplayed
+                              ? theme.colors.primary
+                              : theme.colors.textMuted,
+                            border: `2px solid ${theme.colors.surface}`,
+                            transition: 'background-color 0.15s ease',
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+                {overflow > 0 && (
+                  <div
+                    style={{
+                      marginLeft: -OVERLAP,
+                      position: 'relative',
+                      zIndex: 0,
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      border: `2px solid ${theme.colors.surface}`,
+                      backgroundColor: theme.colors.background,
+                      color: theme.colors.textMuted,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: theme.fontSizes[0],
+                      fontWeight: theme.fontWeights.semibold,
+                      fontFamily: theme.fonts.monospace,
+                      boxSizing: 'content-box',
+                    }}
+                  >
+                    +{overflow}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })()}
 
           {/* Single-commit: author avatar stacked under repo avatar, name + files to the right */}
           {summary.commits.length === 1 && summary.commits[0] ? (() => {
@@ -1013,63 +1061,71 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 style={{
                   width: 56,
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   flexShrink: 0,
+                  position: 'relative',
                 }}
               >
-                {/* Connector line between repo avatar and author avatar */}
+                {/* Connector line to the left of the author avatar */}
                 <div
                   style={{
-                    width: 2,
-                    height: spacing.md,
-                    marginTop: -spacing.md,
+                    position: 'absolute',
+                    left: -spacing.md,
+                    right: '50%',
+                    top: '50%',
+                    height: 1,
                     backgroundColor: theme.colors.primary,
+                    transform: 'translateY(-50%)',
+                    zIndex: 0,
                   }}
                 />
-                {soleCommit.authorAvatarUrl ? (
-                  <img
-                    src={soleCommit.authorAvatarUrl}
-                    alt={soleCommit.author}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: '50%',
-                      border: `2px solid ${theme.colors.primary}`,
-                      objectFit: 'cover',
-                      boxSizing: 'content-box',
-                    }}
-                  />
-                ) : soleCommit.authorEmail ? (
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: '50%',
-                      border: `2px solid ${theme.colors.primary}`,
-                      backgroundColor: theme.colors.textMuted,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: theme.fontSizes[0],
-                      fontWeight: theme.fontWeights.semibold,
-                      color: theme.colors.background,
-                      boxSizing: 'content-box',
-                    }}
-                  >
-                    {soleCommit.author.charAt(0).toUpperCase()}
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.primary,
-                      border: `2px solid ${theme.colors.surface}`,
-                    }}
-                  />
-                )}
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  {soleCommit.authorAvatarUrl ? (
+                    <img
+                      src={soleCommit.authorAvatarUrl}
+                      alt={soleCommit.author}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        border: `2px solid ${theme.colors.primary}`,
+                        objectFit: 'cover',
+                        boxSizing: 'content-box',
+                        display: 'block',
+                      }}
+                    />
+                  ) : soleCommit.authorEmail ? (
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        border: `2px solid ${theme.colors.primary}`,
+                        backgroundColor: theme.colors.textMuted,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: theme.fontSizes[0],
+                        fontWeight: theme.fontWeights.semibold,
+                        color: theme.colors.background,
+                        boxSizing: 'content-box',
+                      }}
+                    >
+                      {soleCommit.author.charAt(0).toUpperCase()}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.primary,
+                        border: `2px solid ${theme.colors.surface}`,
+                      }}
+                    />
+                  )}
+                </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, flex: 1, minWidth: 0 }}>
                 <button
@@ -1195,100 +1251,139 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           <div
             style={{
               display: 'flex',
-              alignItems: 'center',
+              flexDirection: 'column',
               gap: spacing.xs,
               marginBottom: spacing.xs,
             }}
           >
             {displayedCommit ? (
-              <>
-                {/* Clickable author name */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: spacing.xs,
-                  }}
-                >
-                  <button
-                    onClick={() => {
-                      if (events) {
-                        events.emit({
-                          type: 'user:profile-selected',
-                          source: 'repo-activity-card',
-                          timestamp: Date.now(),
-                          payload: {
-                            username: displayedCommit.author,
-                            email: displayedCommit.authorEmail,
-                          },
-                        });
-                      }
-                    }}
-                    style={{
-                      fontFamily: theme.fonts?.body,
-                      fontSize: theme.fontSizes[2],
-                      color: theme.colors.text,
-                      fontWeight: theme.fontWeights.medium,
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                      textDecorationStyle: 'dotted',
-                      textDecorationColor: theme.colors.textSecondary,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = theme.colors.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = theme.colors.text;
-                    }}
-                  >
-                    {displayedCommit.author}
-                  </button>
-                </div>
-                {/* Per-commit stats */}
-                {(() => {
-                  const stats = commitStats.get(displayedCommit.hash);
-                  if (!stats) return null;
-                  const parts: React.ReactNode[] = [];
-                  if (stats.additions > 0) {
-                    parts.push(
-                      <span key="add" style={{ color: DIFF_ADD_COLOR }}>
-                        +{stats.additions}
-                      </span>
-                    );
-                  }
-                  if (stats.deletions > 0) {
-                    parts.push(
-                      <span key="del" style={{ color: DIFF_REMOVE_COLOR }}>
-                        -{stats.deletions}
-                      </span>
-                    );
-                  }
-                  if (stats.filesChanged > 0) {
-                    parts.push(
-                      <span key="files" style={{ color: theme.colors.textMuted }}>
-                        {stats.filesChanged} file{stats.filesChanged !== 1 ? 's' : ''}
-                      </span>
-                    );
-                  }
-                  if (parts.length === 0) return null;
-                  return (
+              (() => {
+                const stats = commitStats.get(displayedCommit.hash);
+                const additions = stats?.additions ?? 0;
+                const deletions = stats?.deletions ?? 0;
+                const filesChanged = stats?.filesChanged ?? 0;
+                const totalLines = additions + deletions;
+                const budget = diffBarWidthPct(totalLines);
+                const addedWidth = totalLines > 0 ? (additions / totalLines) * budget : 0;
+                const removedWidth = totalLines > 0 ? (deletions / totalLines) * budget : 0;
+                return (
+                  <>
+                    {/* Clickable author name + file count */}
                     <div
                       style={{
-                        fontSize: theme.fontSizes[1],
-                        fontFamily: theme.fonts.monospace,
-                        marginLeft: spacing.xs,
                         display: 'flex',
+                        alignItems: 'center',
                         gap: spacing.sm,
                       }}
                     >
-                      {parts}
+                      <button
+                        onClick={() => {
+                          if (events) {
+                            events.emit({
+                              type: 'user:profile-selected',
+                              source: 'repo-activity-card',
+                              timestamp: Date.now(),
+                              payload: {
+                                username: displayedCommit.author,
+                                email: displayedCommit.authorEmail,
+                              },
+                            });
+                          }
+                        }}
+                        style={{
+                          fontFamily: theme.fonts?.body,
+                          fontSize: theme.fontSizes[2],
+                          color: theme.colors.text,
+                          fontWeight: theme.fontWeights.medium,
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = theme.colors.primary;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = theme.colors.text;
+                        }}
+                      >
+                        {displayedCommit.author}
+                      </button>
+                      {filesChanged > 0 && (
+                        <span
+                          style={{
+                            fontSize: theme.fontSizes[1],
+                            fontFamily: theme.fonts.monospace,
+                            color: theme.colors.textMuted,
+                          }}
+                        >
+                          {filesChanged} file{filesChanged !== 1 ? 's' : ''}
+                        </span>
+                      )}
                     </div>
-                  );
-                })()}
-              </>
+                    {/* Visual diff bars */}
+                    {(additions > 0 || deletions > 0) && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                        {additions > 0 && (
+                          <div
+                            style={{
+                              height: 24,
+                              width: `${addedWidth}%`,
+                              minWidth: 50,
+                              backgroundColor: DIFF_ADD_COLOR,
+                              borderRadius: 3,
+                              display: 'flex',
+                              alignItems: 'center',
+                              paddingLeft: spacing.sm,
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: theme.fontSizes[1],
+                                color: '#fff',
+                                fontWeight: theme.fontWeights.semibold,
+                                fontFamily: theme.fonts.monospace,
+                                fontVariantNumeric: 'tabular-nums',
+                              }}
+                            >
+                              <span style={{ display: 'inline-block', width: 10, textAlign: 'center' }}>+</span>
+                              {additions}
+                            </span>
+                          </div>
+                        )}
+                        {deletions > 0 && (
+                          <div
+                            style={{
+                              height: 24,
+                              width: `${removedWidth}%`,
+                              minWidth: 50,
+                              backgroundColor: DIFF_REMOVE_COLOR,
+                              borderRadius: 3,
+                              display: 'flex',
+                              alignItems: 'center',
+                              paddingLeft: spacing.sm,
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: theme.fontSizes[1],
+                                color: '#fff',
+                                fontWeight: theme.fontWeights.semibold,
+                                fontFamily: theme.fonts.monospace,
+                                fontVariantNumeric: 'tabular-nums',
+                              }}
+                            >
+                              <span style={{ display: 'inline-block', width: 10, textAlign: 'center' }}>−</span>
+                              {deletions}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()
             ) : (
               /* Aggregate stats when no commit selected */
               (() => {
@@ -1396,176 +1491,15 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             style={{
               fontSize: theme.fontSizes[2],
               fontFamily: theme.fonts.monospace,
-              color: isAnimating ? theme.colors.primary : theme.colors.text,
+              color: theme.colors.text,
               marginBottom: spacing.sm,
               paddingLeft: spacing.sm,
-              transition: 'color 0.15s ease',
               minHeight: '1.5em',
             }}
           >
             {displayedMessage}
-            {isAnimating && <span style={{ opacity: 0.5 }}>|</span>}
           </div>
 
-          {/* Spacer to push controls to bottom */}
-          <div style={{ flex: 1 }} />
-
-          {/* Controls row */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-            }}
-          >
-            {/* Animate button */}
-            {hasMoreCommits && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  startAnimation();
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  padding: `${spacing.xs}px ${spacing.sm}px`,
-                  fontSize: theme.fontSizes[1],
-                  color: isAnimating ? theme.colors.error : theme.colors.primary,
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${isAnimating ? theme.colors.error : theme.colors.primary}`,
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {isAnimating ? <Square size={12} /> : <Play size={12} />}
-                <span>{isAnimating ? 'Stop' : 'Animate'}</span>
-              </button>
-            )}
-
-            {/* Review Diff button */}
-            {summary.commits.length > 0 && events && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Use selected commit or default to most recent (index 0)
-                  const commitIndex = displayedCommitIndex !== null ? displayedCommitIndex : 0;
-                  const commit = summary.commits[commitIndex];
-                  if (commit) {
-                    events.emit({
-                      type: 'commit:review-selected',
-                      source: 'repo-activity-card',
-                      timestamp: Date.now(),
-                      payload: {
-                        repoPath: summary.repoPath,
-                        repoName: summary.repoName,
-                        githubOwner: summary.githubOwner,
-                        githubRepoName: summary.githubRepoName,
-                        commit,
-                      },
-                    });
-                  }
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  padding: `${spacing.xs}px ${spacing.sm}px`,
-                  fontSize: theme.fontSizes[1],
-                  color: theme.colors.primary,
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${theme.colors.primary}`,
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <FileCode size={12} />
-                <span>Review</span>
-              </button>
-            )}
-
-            {/* Explain button */}
-            <button
-              onClick={async (e) => {
-                e.stopPropagation();
-                if (isExplainOpen) {
-                  setIsExplainOpen(false);
-                  return;
-                }
-                setIsExplainOpen(true);
-                if (explainText) return; // already fetched
-                setExplainLoading(true);
-                try {
-                  const commits = summary.commits.map(c => {
-                    const stats = commitStats.get(c.hash);
-                    return {
-                      sha: c.hash,
-                      message: c.message,
-                      author: c.author,
-                      additions: stats?.additions,
-                      deletions: stats?.deletions,
-                      filesChanged: stats?.filesChanged,
-                    };
-                  });
-                  const result = await actions.explainCommits({
-                    commits,
-                    audienceLevel: explainAudience,
-                    repoName: summary.repoName,
-                  });
-                  setExplainText(result.text);
-                } catch (err) {
-                  console.error('[RepoActivityCard] explain failed:', err);
-                  setExplainText('Failed to generate explanation. Please try again.');
-                } finally {
-                  setExplainLoading(false);
-                }
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-                padding: `${spacing.xs}px ${spacing.sm}px`,
-                fontSize: theme.fontSizes[1],
-                color: isExplainOpen ? theme.colors.text : theme.colors.primary,
-                backgroundColor: 'transparent',
-                border: `1px solid ${isExplainOpen ? theme.colors.border : theme.colors.primary}`,
-                borderRadius: 4,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <Sparkles size={12} />
-              <span>{isExplainOpen ? 'Hide' : 'Explain'}</span>
-            </button>
-
-            {/* Show details button */}
-            {hasMoreCommits && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleExpand();
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  padding: `${spacing.xs}px ${spacing.sm}px`,
-                  fontSize: theme.fontSizes[1],
-                  color: theme.colors.textMuted,
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                <span>{isExpanded ? 'Hide' : 'Details'}</span>
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
@@ -1613,30 +1547,56 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  {/* Author initial */}
-                  <div
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.textMuted,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: theme.fontSizes[0],
-                      fontWeight: theme.fontWeights.semibold,
-                      color: theme.colors.background,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {commit.author.charAt(0).toUpperCase()}
-                  </div>
+                  {/* Author avatar */}
+                  {commit.authorAvatarUrl ? (
+                    <img
+                      src={commit.authorAvatarUrl}
+                      alt={commit.author}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        flexShrink: 0,
+                        display: 'block',
+                      }}
+                    />
+                  ) : commit.authorEmail ? (
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.textMuted,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: theme.fontSizes[0],
+                        fontWeight: theme.fontWeights.semibold,
+                        color: theme.colors.background,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {commit.author.charAt(0).toUpperCase()}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.textMuted,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
                   {/* Message */}
                   <div
                     style={{
                       flex: 1,
                       minWidth: 0,
                       fontSize: theme.fontSizes[2],
+                      fontFamily: theme.fonts.monospace,
                       color: theme.colors.text,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -1664,6 +1624,43 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                       )}
                     </div>
                   )}
+                  {/* Per-commit Review button */}
+                  {events && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        events.emit({
+                          type: 'commit:review-selected',
+                          source: 'repo-activity-card',
+                          timestamp: Date.now(),
+                          payload: {
+                            repoPath: summary.repoPath,
+                            repoName: summary.repoName,
+                            githubOwner: summary.githubOwner,
+                            githubRepoName: summary.githubRepoName,
+                            commit,
+                          },
+                        });
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing.xs,
+                        padding: `2px ${spacing.xs}px`,
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.primary,
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${theme.colors.primary}`,
+                        borderRadius: 4,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <FileCode size={10} />
+                      <span>Review</span>
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -1671,84 +1668,6 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
         </div>
       </div>
 
-      {/* Inline AI explanation */}
-      {isExplainOpen && (
-        <div
-          style={{
-            borderTop: `1px solid ${theme.colors.border}`,
-            padding: spacing.md,
-            backgroundColor: theme.colors.background,
-            maxHeight: 300,
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: spacing.sm,
-          }}
-        >
-          {/* Audience toggle */}
-          <div style={{ display: 'flex', gap: spacing.xs }}>
-            {(['maintainer', 'non-technical'] as const).map(level => (
-              <button
-                key={level}
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (explainAudience === level) return;
-                  setExplainAudience(level);
-                  setExplainText(null);
-                  setExplainLoading(true);
-                  try {
-                    const commits = summary.commits.map(c => {
-                      const stats = commitStats.get(c.hash);
-                      return {
-                        sha: c.hash,
-                        message: c.message,
-                        author: c.author,
-                        additions: stats?.additions,
-                        deletions: stats?.deletions,
-                        filesChanged: stats?.filesChanged,
-                      };
-                    });
-                    const result = await actions.explainCommits({
-                      commits,
-                      audienceLevel: level,
-                      repoName: summary.repoName,
-                    });
-                    setExplainText(result.text);
-                  } catch (err) {
-                    console.error('[RepoActivityCard] explain failed:', err);
-                    setExplainText('Failed to generate explanation.');
-                  } finally {
-                    setExplainLoading(false);
-                  }
-                }}
-                style={{
-                  padding: `2px ${spacing.sm}px`,
-                  fontSize: theme.fontSizes[0],
-                  color: explainAudience === level ? theme.colors.text : theme.colors.textSecondary,
-                  backgroundColor: explainAudience === level ? theme.colors.backgroundSecondary : 'transparent',
-                  border: `1px solid ${explainAudience === level ? theme.colors.border : 'transparent'}`,
-                  borderRadius: 4,
-                  cursor: explainAudience === level ? 'default' : 'pointer',
-                }}
-              >
-                {level === 'maintainer' ? 'Technical' : 'Simple'}
-              </button>
-            ))}
-          </div>
-
-          {/* Explanation content */}
-          {explainLoading ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, color: theme.colors.textSecondary, fontSize: theme.fontSizes[1] }}>
-              <Sparkles size={12} style={{ animation: 'spin 1.5s linear infinite', opacity: 0.6 }} />
-              <span>Generating explanation...</span>
-            </div>
-          ) : explainText ? (
-            <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.text, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-              {explainText}
-            </div>
-          ) : null}
-        </div>
-      )}
     </div>
   );
 };

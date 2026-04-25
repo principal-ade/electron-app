@@ -245,8 +245,9 @@ const createMockSummary = (
 const RepoActivityCardStory: React.FC<{
   summary: RepoActivitySummary;
   dimmed?: boolean;
+  hideRepoHeader?: boolean;
   actions?: RepoActivityCardActions;
-}> = ({ summary, dimmed, actions = mockActions }) => {
+}> = ({ summary, dimmed, hideRepoHeader, actions = mockActions }) => {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const mockEvents = new MockEventEmitter();
   const mockEntry = createMockEntry(summary.repoName);
@@ -260,6 +261,7 @@ const RepoActivityCardStory: React.FC<{
           onToggleExpand={() => setIsExpanded(!isExpanded)}
           onOpen={() => console.info('Open repository:', summary.repoName)}
           dimmed={dimmed}
+          hideRepoHeader={hideRepoHeader}
           events={mockEvents}
           entry={mockEntry}
           actions={actions}
@@ -350,6 +352,44 @@ export const OrganizationRepo: Story = {
       })}
     />
   ),
+};
+
+// Header hidden (used inside WatchedActivityPanel where owner/repo is shown above)
+export const HiddenRepoHeader: Story = {
+  render: () => {
+    const repos = [
+      createMockSummary({ repoName: 'single-commit-no-header', commitCount: 1 }),
+      createMockSummary({ repoName: 'nested-in-watched-panel', commitCount: 5 }),
+    ];
+
+    return (
+      <ThemeProvider>
+        <div style={{ padding: '24px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '1200px' }}>
+            {repos.map((summary) => {
+              const [isExpanded, setIsExpanded] = React.useState(false);
+              const mockEvents = new MockEventEmitter();
+              const mockEntry = createMockEntry(summary.repoName);
+
+              return (
+                <RepoActivityCard
+                  key={summary.repoPath}
+                  summary={summary}
+                  isExpanded={isExpanded}
+                  onToggleExpand={() => setIsExpanded(!isExpanded)}
+                  onOpen={() => console.info('Open repository:', summary.repoName)}
+                  hideRepoHeader
+                  events={mockEvents}
+                  entry={mockEntry}
+                  actions={mockActionsWithStats}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </ThemeProvider>
+    );
+  },
 };
 
 // Dimmed state (for filtering/highlighting)

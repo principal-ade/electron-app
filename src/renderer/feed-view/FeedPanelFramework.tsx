@@ -1171,54 +1171,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events]);
 
-  // Listen for commit review events to open review tabs
-  useEffect(() => {
-    const handleCommitReview = (event: {
-      type: string;
-      payload: {
-        repoPath: string;
-        repoName: string;
-        githubOwner?: string;
-        githubRepoName?: string;
-        commit: ActivityCommit;
-      };
-    }) => {
-      if (event.type === 'commit:review-selected') {
-        const { repoPath, repoName, githubOwner, githubRepoName, commit } = event.payload;
-        const sourceKey = repoPath || (githubOwner && githubRepoName ? `${githubOwner}/${githubRepoName}` : repoName);
-        const tabId = `commit-review-${sourceKey}-${commit.hash}`;
-
-        // Check if tab already exists
-        const existingTab = tabs.find(tab => tab.id === tabId);
-        if (existingTab) {
-          setActiveTabId(tabId);
-          return;
-        }
-
-        // Create new commit review tab
-        const newTab: CommitReviewTab = {
-          id: tabId,
-          label: `${commit.hash.substring(0, 7)} - ${repoName}`,
-          contentType: 'commit-review',
-          closable: true,
-          repoPath,
-          repoName,
-          githubOwner,
-          githubRepoName,
-          commit,
-        };
-
-        setTabs(prevTabs => [...prevTabs, newTab]);
-        setActiveTabId(tabId);
-      }
-    };
-
-    events.on('commit:review-selected', handleCommitReview);
-    return () => {
-      events.off('commit:review-selected', handleCommitReview);
-    };
-  }, [events, tabs]);
-
   // Listen for live activity events to open live activity tab
   useEffect(() => {
     const handleLiveActivity = (event: { type: string }) => {
