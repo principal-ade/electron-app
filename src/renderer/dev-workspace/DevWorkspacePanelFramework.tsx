@@ -418,6 +418,34 @@ interface DevWorkspacePanelFrameworkInnerProps {
  * the parent from re-rendering when highlight layers change. Only this wrapper
  * and the File City panel will re-render on agent events.
  */
+/**
+ * Wrapper for the file-city-3d tab that pulls context, actions, and events
+ * from the RepositoryPanelProvider via hook. The renderTabContent callback
+ * uses refs to avoid invalidation, but those refs are updated in a
+ * post-render useEffect — meaning anything reading them inside the callback
+ * is one render behind. The fileTree slice loads asynchronously after the
+ * window mounts; reading via stale ref means the panel never sees the
+ * loaded data. This wrapper sidesteps the issue by consuming the hook
+ * directly so it always sees the latest context.
+ */
+const FileCity3DTabContent: React.FC = () => {
+  const { context, actions, events } = useRepositoryPanelProvider();
+  return (
+    <div
+      style={{
+        height: '100%',
+        width: '100%',
+        overflow: 'hidden',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <FileCityPanel context={context} actions={actions} events={events} />
+    </div>
+  );
+};
+
 const FileCityWithHighlights: React.FC<{
   context: ReturnType<typeof useRepositoryPanelProvider>['context'];
   actions: ReturnType<typeof useRepositoryPanelProvider>['actions'];
@@ -791,8 +819,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return () => unsubscribe();
   }, [events, activityActions]);
 
-  // Tab state for TabbedTerminalPanel (skills only - terminals are managed by the panel from context)
-  const [tabs, setTabs] = useState<DevWorkspaceTab[]>([]);
+  // Tab state for TabbedTerminalPanel (skills only - terminals are managed by
+  // the panel from context). Seeded with the File City 3D tab so it's open by
+  // default when the dev-workspace window first mounts.
+  const [tabs, setTabs] = useState<DevWorkspaceTab[]>(() => [
+    {
+      id: 'file-city-3d',
+      label: 'File City 3D',
+      contentType: 'file-city-3d',
+      closable: true,
+    } as FileCity3DTab,
+  ]);
 
   // Sync tabs to parent whenever they change (for RepositoryPanelProvider)
   useEffect(() => {
@@ -869,7 +906,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   );
 
   // Focus tab state - when set, TabbedTerminalPanel will activate the tab and call onFocusTabHandled
-  const [focusTabId, setFocusTabId] = useState<string | null>(null);
+  const [focusTabId, setFocusTabId] = useState<string | null>('file-city-3d');
   const handleFocusTabHandled = useCallback(() => setFocusTabId(null), []);
 
   // Show all terminals state - when true, shows terminals from other windows
@@ -3006,24 +3043,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         case 'file-city-3d': {
-          return (
-            <div
-              style={{
-                height: '100%',
-                width: '100%',
-                overflow: 'hidden',
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <FileCityPanel
-                context={contextRef.current}
-                actions={actionsRef.current}
-                events={eventsRef.current}
-              />
-            </div>
-          );
+          return <FileCity3DTabContent />;
         }
 
         case 'media': {

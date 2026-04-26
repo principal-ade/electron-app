@@ -2,6 +2,8 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   FileCity3D,
+  buildFolderElevatedPanels,
+  buildFolderIndex,
   type CityBuilding,
   type CityData,
   type ElevatedScopePanel,
@@ -19,6 +21,7 @@ import {
   stripRootPath,
 } from './buildCityDataFromContext';
 import { useScopeManagerOptional } from '../scope-manager-provider';
+import { useFolderExpansion } from '../folder-expansion-provider';
 import {
   ScopeInfoOverlay,
   buildElevatedPanels,
@@ -111,12 +114,34 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
     });
   }, [scopeCtx, overlaySelection, cityData]);
 
+  // Folder-driven elevated panels: collapsed folders in the files panel
+  // become umbrella tiles over the city. Cache the per-cityData index so
+  // the recursive walk only runs when expansion or city changes.
+  const folderExpansion = useFolderExpansion();
+  const folderIndex = React.useMemo(
+    () => (cityData ? buildFolderIndex(cityData) : null),
+    [cityData],
+  );
+  const folderPanels = React.useMemo<ElevatedScopePanel[]>(() => {
+    if (!cityData || !folderIndex) return [];
+    return buildFolderElevatedPanels({
+      cityData,
+      expandedFolders: folderExpansion.expandedFolders,
+      onToggleFolder: folderExpansion.toggleFolder,
+      index: folderIndex,
+    });
+  }, [cityData, folderIndex, folderExpansion]);
+
   const effectiveHighlightLayers =
     highlightLayers ?? derivedOverlay.highlightLayers;
   const effectiveFocusDirectory =
     focusDirectory !== undefined ? focusDirectory : derivedOverlay.focusDirectory;
+  // Resolution order: explicit prop > scope-driven panels > folder-driven
+  // panels. The scope panels only exist while a scope is selected, so the
+  // folder panels become the default view when no scope is active.
   const effectiveElevatedScopePanels =
-    elevatedScopePanels ?? derivedElevatedPanels;
+    elevatedScopePanels ??
+    (derivedElevatedPanels.length > 0 ? derivedElevatedPanels : folderPanels);
 
   const [selectedBuilding, setSelectedBuilding] =
     React.useState<CityBuilding | null>(null);
@@ -180,7 +205,7 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
         showControls
         heightScaling="linear"
         linearScale={0.5}
-        animation={{ startFlat: true, autoStartDelay: 300 }}
+        animation={{ startFlat: true, autoStartDelay: null }}
         focusDirectory={effectiveFocusDirectory ?? null}
         highlightLayers={effectiveHighlightLayers}
         elevatedScopePanels={effectiveElevatedScopePanels}

@@ -27,6 +27,7 @@ import {
   DEFAULT_PANEL_PRESETS,
 } from './DevWorkspaceTitlebar';
 import { ScopeManagerProvider } from './scope-manager-provider';
+import { FolderExpansionProvider } from './folder-expansion-provider';
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
@@ -1191,6 +1192,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       />
       <div className="flex-1 overflow-hidden">
         <ScopeManagerProvider repositoryPath={repositoryPath}>
+        <FolderExpansionProvider>
         <DevWorkspacePanelFramework
           key={resetKey}
           repositoryPath={repositoryPath}
@@ -1213,6 +1215,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onOpenGitHubRepo={githubInfo ? handleOpenGitHubRepo : undefined}
           sidebarsHidden={sidebarsHidden}
         />
+        </FolderExpansionProvider>
         </ScopeManagerProvider>
       </div>
 
