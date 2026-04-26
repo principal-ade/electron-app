@@ -2,7 +2,6 @@ import React from 'react';
 import type { Theme } from '@principal-ade/industry-theme';
 import type { LucideIcon } from 'lucide-react';
 import {
-  GitBranch,
   BookOpen,
   KanbanSquare,
   Network,
@@ -21,6 +20,7 @@ import {
   Terminal,
   Plug,
   Github,
+  FolderTree,
 } from 'lucide-react';
 
 /**
@@ -75,7 +75,7 @@ export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'canvasList', Icon: Network, label: 'Stories' },
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
   { id: 'agentsList', Icon: ToolCase, label: 'Skills' },
-  { id: 'gitChanges', Icon: GitBranch, label: 'Files' },
+  { id: 'files', Icon: FolderTree, label: 'Files' },
   { id: 'traceList', Icon: Activity, label: 'Traces' },
 ];
 

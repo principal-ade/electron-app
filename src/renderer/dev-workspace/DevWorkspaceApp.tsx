@@ -26,6 +26,7 @@ import {
   DevWorkspaceTitlebar,
   DEFAULT_PANEL_PRESETS,
 } from './DevWorkspaceTitlebar';
+import { ScopeManagerProvider } from './scope-manager-provider';
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
@@ -84,6 +85,7 @@ const PANEL_IDS = [
   'principalView',
   'fileCity',
   'docs',
+  'files',
   'gitChanges',
   'localhostBrowser',
   'codeQuality',
@@ -1070,7 +1072,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     setCollapsed((prev) => ({ ...prev, left: false }));
   }, []);
 
-  // Open FileCity 3D visualization as a tab
+  // Open FileCity 3D visualization as a tab in the middle pane. Our
+  // DevWorkspacePanelFramework listens for this event and creates/focuses
+  // the tab; the tab content is our FileCityPanel.
   const handleOpenFileCity3D = useCallback(() => {
     events.emit({
       type: 'file-city-3d:open',
@@ -1078,8 +1082,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       timestamp: Date.now(),
       payload: {},
     });
-    // Expand right panel if collapsed to show the tab
-    setCollapsed((prev) => ({ ...prev, right: false }));
   }, [events]);
 
   // Open repository in Finder
@@ -1188,6 +1190,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         isSyncingWorkspace={isSyncingWorkspace}
       />
       <div className="flex-1 overflow-hidden">
+        <ScopeManagerProvider repositoryPath={repositoryPath}>
         <DevWorkspacePanelFramework
           key={resetKey}
           repositoryPath={repositoryPath}
@@ -1210,6 +1213,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onOpenGitHubRepo={githubInfo ? handleOpenGitHubRepo : undefined}
           sidebarsHidden={sidebarsHidden}
         />
+        </ScopeManagerProvider>
       </div>
 
       {/* Agent Command Palette - Alt+P to open */}

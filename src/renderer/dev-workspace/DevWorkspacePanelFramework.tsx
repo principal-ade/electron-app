@@ -91,12 +91,7 @@ import {
   DependencyGraphPanelContent,
   GitChangesPanel,
   PackageCompositionPanel,
-  FileCity3DPanelContent,
-  buildCityDataFromFileTree,
-  estimateLineCounts,
-  enrichWithLineCounts,
   type PackageLayer,
-  type CityData,
 } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import {
@@ -128,6 +123,8 @@ import {
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
 import { TerminalSessionsPanel } from '../panels/terminal-sessions';
 import { MediaViewerPanel } from '../panels/MediaViewerPanel';
+import { FilesPanel } from './files-panel';
+import { FileCityPanel } from './file-city-panel';
 import type { Repository } from '../../shared/types/repository.types';
 import {
   PanelIconSidebar,
@@ -290,11 +287,11 @@ interface DashboardTab extends BaseTab {
 }
 
 /**
- * Tab type for FileCity 3D visualization panel
+ * File City 3D tab. The actual cityData / overlay state is owned inside
+ * FileCityPanel — this tab is just a marker.
  */
 interface FileCity3DTab extends BaseTab {
   contentType: 'file-city-3d';
-  cityData: CityData;
 }
 
 /**
@@ -2409,90 +2406,31 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return unsubscribe;
   }, [events]);
 
-  // Listen for file-city-3d:open events to create a new 3D city visualization tab
+  // Listen for file-city-3d:open — open or focus a File City 3D tab in the
+  // middle pane. The tab content is our FileCityPanel which manages its own
+  // CityData + scope overlay, so this handler just creates/focuses a marker tab.
   useEffect(() => {
-    const unsubscribe = events.on('file-city-3d:open', async () => {
-      // Get file tree from context
-      const fileTree = context.fileTree?.data;
-      if (!fileTree) {
-        return;
-      }
-
-      // Build city data from file tree
-      const rootPath = fileTree.metadata?.id || '';
-      const rawCityData = buildCityDataFromFileTree(fileTree, rootPath);
-
-      // Get actual line counts from main process
-      let cityData: CityData;
-      try {
-        const repoPath = context.repository?.path;
-        if (repoPath && window.mainProcess?.fileCityImage?.countLines) {
-          const rawLineCounts =
-            await window.mainProcess.fileCityImage.countLines(repoPath);
-          const _lineCountsSize = Object.keys(rawLineCounts).length;
-
-          // Transform line counts to use the correct rootPath prefix
-          // Main process returns paths like "electron-app/src/file.ts"
-          // Building paths use rootPath like "git-abc123/src/file.ts"
-          const repoName = repoPath.split('/').pop() || '';
-          const lineCounts: Record<string, number> = {};
-          for (const [filePath, count] of Object.entries(rawLineCounts)) {
-            // Only include files with valid line counts
-            if (typeof count !== 'number' || count < 0) continue;
-
-            // Replace the repo name prefix with the rootPath prefix
-            if (filePath.startsWith(repoName + '/')) {
-              const relativePath = filePath.slice(repoName.length + 1);
-              lineCounts[`${rootPath}/${relativePath}`] = count;
-            } else {
-              // Fallback: just prefix with rootPath
-              lineCounts[`${rootPath}/${filePath}`] = count;
-            }
-          }
-
-          // First enrich with actual line counts, then estimate any missing ones (binary files, etc.)
-          const enrichedCityData = enrichWithLineCounts(
-            rawCityData,
-            lineCounts,
-          );
-          cityData = estimateLineCounts(enrichedCityData);
-        } else {
-          // Fallback to estimated line counts
-          cityData = estimateLineCounts(rawCityData);
-        }
-      } catch (_error) {
-        cityData = estimateLineCounts(rawCityData);
-      }
-
+    const unsubscribe = events.on('file-city-3d:open', () => {
       setTabs((prevTabs) => {
-        // Check if a file-city-3d tab already exists
-        const existingTab = prevTabs.find(
+        const existing = prevTabs.find(
           (t) => t.contentType === 'file-city-3d',
         );
-
-        if (existingTab) {
-          // Update existing tab with new city data and focus it
-          setFocusTabId(existingTab.id);
-          return prevTabs.map((t) =>
-            t.id === existingTab.id ? ({ ...t, cityData } as FileCity3DTab) : t,
-          );
+        if (existing) {
+          setFocusTabId(existing.id);
+          return prevTabs;
         }
-
-        // Create new FileCity3D tab
         const newTab: FileCity3DTab = {
           id: 'file-city-3d',
           label: 'File City 3D',
           contentType: 'file-city-3d',
-          cityData,
           closable: true,
         };
         setFocusTabId(newTab.id);
         return [...prevTabs, newTab];
       });
     });
-
     return unsubscribe;
-  }, [events, context.fileTree?.data, context.repository?.path]);
+  }, [events]);
 
   // Listen for terminal session selection from TerminalSessionsPanel
   useEffect(() => {
@@ -3068,49 +3006,21 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         case 'file-city-3d': {
-          const fileCity3DTab = tab as FileCity3DTab;
-
           return (
             <div
               style={{
                 height: '100%',
                 width: '100%',
                 overflow: 'hidden',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
-              <FileCity3DPanelContent
-                cityData={fileCity3DTab.cityData}
-                width="100%"
-                height="100%"
-                showControls={true}
-                heightScaling="linear"
-                linearScale={0.5}
-                animation={{ startFlat: true, autoStartDelay: 300 }}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                }}
-                onBuildingClick={(building) => {
-                  // Strip the root path prefix (e.g., "git-abc123-dirty-xyz/") from the building path
-                  const pathParts = building.path.split('/');
-                  const relativePath = pathParts.slice(1).join('/'); // Remove first segment (root id)
-
-                  // Emit file:open event when a building is clicked
-                  eventsRef.current.emit({
-                    type: 'file:open',
-                    source: 'file-city-3d-tab',
-                    timestamp: Date.now(),
-                    payload: { path: relativePath },
-                  });
-                }}
+              <FileCityPanel
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
               />
             </div>
           );
@@ -3337,6 +3247,28 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           </div>
         ) : (
           <div>Documentation panel not available</div>
+        ),
+      },
+      {
+        id: 'files',
+        label: 'Files',
+        content: (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <FilesPanel
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
         ),
       },
       {

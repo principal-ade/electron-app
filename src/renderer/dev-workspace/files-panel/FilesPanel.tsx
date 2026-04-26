@@ -1,0 +1,464 @@
+import React from 'react';
+import { useTheme } from '@principal-ade/industry-theme';
+import { FileTree, useFileTree } from '@pierre/trees/react';
+import type {
+  PanelActions,
+  PanelContextValue,
+  PanelEventEmitter,
+  DataSlice,
+} from '@principal-ade/panel-framework-core';
+import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
+import { Plus } from 'lucide-react';
+import { useScopeManagerOptional } from '../scope-manager-provider';
+import { ScopesTab, AddScopeModal } from '../scopes-tab';
+
+interface FilesPanelContext extends PanelContextValue {
+  fileTree?: DataSlice<RepoFileTree | null>;
+}
+
+export interface FilesPanelProps {
+  context: FilesPanelContext;
+  actions: PanelActions;
+  events: PanelEventEmitter;
+}
+
+type ActiveTab = 'files' | 'scopes';
+type AuditMode = 'off' | 'uncovered' | 'covered';
+
+const TAB_DEFINITIONS: { id: ActiveTab; label: string; accent: string }[] = [
+  { id: 'files', label: 'File tree', accent: '#3b82f6' },
+  { id: 'scopes', label: 'Scopes', accent: '#a855f7' },
+];
+
+const AUDIT_DEFINITIONS: { mode: AuditMode; label: string; accent: string }[] = [
+  { mode: 'off', label: 'Off', accent: '#475569' },
+  { mode: 'uncovered', label: 'Uncovered', accent: '#dc2626' },
+  { mode: 'covered', label: 'Covered', accent: '#16a34a' },
+];
+
+export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {
+  const { theme } = useTheme();
+  const [activeTab, setActiveTab] = React.useState<ActiveTab>('files');
+  const scopeCtx = useScopeManagerOptional();
+
+  return (
+    <div
+      style={{
+        height: '100%',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        background: theme.colors.background,
+        color: theme.colors.text,
+        fontFamily: theme.fonts.body,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          background: theme.colors.backgroundSecondary,
+        }}
+      >
+        {TAB_DEFINITIONS.map((tab) => {
+          const active = activeTab === tab.id;
+          const disabled = tab.id === 'scopes' && !scopeCtx;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => !disabled && setActiveTab(tab.id)}
+              disabled={disabled}
+              title={
+                disabled
+                  ? 'Scopes tab requires a ScopeManagerProvider'
+                  : undefined
+              }
+              style={{
+                flex: 1,
+                padding: '10px 12px',
+                background: active
+                  ? theme.colors.background
+                  : 'transparent',
+                color: active
+                  ? theme.colors.text
+                  : disabled
+                    ? theme.colors.textSecondary
+                    : theme.colors.textSecondary,
+                border: 'none',
+                borderBottom: `2px solid ${active ? tab.accent : 'transparent'}`,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                fontSize: 12,
+                fontWeight: active ? 600 : 400,
+                opacity: disabled ? 0.5 : 1,
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === 'files' ? (
+        <FileTreeTab context={context} events={events} />
+      ) : (
+        <ScopesTab />
+      )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// File tree tab
+// ---------------------------------------------------------------------------
+
+const FileTreeTab: React.FC<{
+  context: FilesPanelContext;
+  events: PanelEventEmitter;
+}> = ({ context, events }) => {
+  const { theme } = useTheme();
+  const scopeCtx = useScopeManagerOptional();
+  const tree = context.fileTree?.data ?? null;
+  const rootPath = tree?.metadata?.id ?? '';
+
+  const allPaths = React.useMemo<string[]>(() => {
+    if (!tree) return [];
+    return tree.allFiles.map((f) => f.path).sort();
+  }, [tree]);
+
+  // Compute coverage from the active ScopeManager workspace. A path is
+  // "covered" if any scope.paths or namespace.paths matches it (exact or
+  // ancestor directory). Scope/namespace paths are repo-relative; the file
+  // tree's paths include the rootPath prefix, so we strip it before comparing.
+  const claimedPaths = React.useMemo<string[]>(() => {
+    const scopes = scopeCtx?.workspace.scopes ?? [];
+    const set = new Set<string>();
+    for (const scope of scopes) {
+      for (const p of scope.paths) set.add(p);
+      for (const ns of scope.namespaces) for (const p of ns.paths) set.add(p);
+    }
+    return Array.from(set);
+  }, [scopeCtx?.workspace.scopes]);
+
+  const isCovered = React.useCallback(
+    (treePath: string) => {
+      if (claimedPaths.length === 0) return false;
+      const candidate = stripRoot(treePath, rootPath);
+      for (const claimed of claimedPaths) {
+        if (candidate === claimed || candidate.startsWith(claimed + '/')) {
+          return true;
+        }
+      }
+      return false;
+    },
+    [claimedPaths, rootPath],
+  );
+
+  const { coveredPaths, uncoveredPaths } = React.useMemo(() => {
+    const covered: string[] = [];
+    const uncovered: string[] = [];
+    for (const p of allPaths) {
+      (isCovered(p) ? covered : uncovered).push(p);
+    }
+    return { coveredPaths: covered, uncoveredPaths: uncovered };
+  }, [allPaths, isCovered]);
+
+  const [auditMode, setAuditMode] = React.useState<AuditMode>('off');
+
+  // Force audit off when there are no scopes — the filter is meaningless.
+  const effectiveAuditMode: AuditMode =
+    claimedPaths.length === 0 ? 'off' : auditMode;
+
+  const filteredPaths = React.useMemo<string[]>(() => {
+    if (effectiveAuditMode === 'uncovered') return uncoveredPaths;
+    if (effectiveAuditMode === 'covered') return coveredPaths;
+    return allPaths;
+  }, [effectiveAuditMode, allPaths, coveredPaths, uncoveredPaths]);
+
+  const initialExpandedPaths = React.useMemo<string[]>(
+    () => (rootPath ? [rootPath] : []),
+    [rootPath],
+  );
+
+  const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
+
+  const modelRef = React.useRef<ReturnType<typeof useFileTree>['model'] | null>(
+    null,
+  );
+  const { model } = useFileTree({
+    paths: filteredPaths,
+    search: true,
+    initialExpandedPaths,
+    onSelectionChange: (selected) => {
+      const next = selected[0] ?? null;
+      setSelectedPath(next);
+      if (!next) return;
+      const item = modelRef.current?.getItem(next);
+      if (item && item.isDirectory()) return;
+      events.emit({
+        type: 'file:open',
+        source: 'files-panel',
+        timestamp: Date.now(),
+        payload: { path: stripRoot(next, rootPath) },
+      });
+    },
+  });
+  modelRef.current = model;
+
+  const isFirstSync = React.useRef(true);
+  React.useEffect(() => {
+    if (isFirstSync.current) {
+      isFirstSync.current = false;
+      return;
+    }
+    model.resetPaths(filteredPaths, { initialExpandedPaths });
+  }, [model, filteredPaths, initialExpandedPaths]);
+
+  if (!tree) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 16,
+          color: theme.colors.textSecondary,
+          fontSize: theme.fontSizes[1],
+        }}
+      >
+        No file tree available
+      </div>
+    );
+  }
+
+  const showAuditFilter = claimedPaths.length > 0;
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <SelectionHeader
+        selectedPath={selectedPath}
+        rootPath={rootPath}
+      />
+
+
+      {showAuditFilter && (
+        <div
+          style={{
+            padding: '10px 12px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}
+        >
+          <div
+            style={{
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textSecondary,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
+            Audit filter
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: 4,
+              overflow: 'hidden',
+              fontSize: 12,
+            }}
+          >
+            {AUDIT_DEFINITIONS.map(({ mode, label, accent }, i) => {
+              const count =
+                mode === 'off'
+                  ? allPaths.length
+                  : mode === 'uncovered'
+                    ? uncoveredPaths.length
+                    : coveredPaths.length;
+              const active = effectiveAuditMode === mode;
+              return (
+                <button
+                  key={mode}
+                  onClick={() => setAuditMode(mode)}
+                  style={{
+                    flex: 1,
+                    padding: '6px 4px',
+                    background: active ? accent : 'transparent',
+                    border: 'none',
+                    borderLeft:
+                      i === 0 ? 'none' : `1px solid ${theme.colors.border}`,
+                    color: active ? '#ffffff' : theme.colors.text,
+                    fontWeight: active ? 500 : 400,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    minWidth: 0,
+                  }}
+                >
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {label}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      color: active ? '#fef3c7' : theme.colors.textSecondary,
+                      fontWeight: 400,
+                    }}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <FileTree
+        model={model}
+        style={
+          {
+            flex: 1,
+            minHeight: 0,
+          } as React.CSSProperties
+        }
+      />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Selection header — shows the currently selected path and surfaces the
+// "+ Add to scope" entry point that opens AddScopeModal pre-filled with that
+// path. Only visible when a ScopeManagerProvider is mounted.
+// ---------------------------------------------------------------------------
+
+const SelectionHeader: React.FC<{
+  selectedPath: string | null;
+  rootPath: string;
+}> = ({ selectedPath, rootPath }) => {
+  const { theme } = useTheme();
+  const scopeCtx = useScopeManagerOptional();
+  const [showAddModal, setShowAddModal] = React.useState(false);
+
+  const strippedPath = selectedPath ? stripRoot(selectedPath, rootPath) : null;
+  const canAdd = !!scopeCtx && !!strippedPath;
+
+  const scopes = scopeCtx?.workspace.scopes ?? [];
+
+  const coveringScopes = React.useMemo(() => {
+    if (!scopeCtx || !strippedPath) return [];
+    return scopeCtx.workspace.scopes.filter((s) =>
+      s.paths.some(
+        (p) => strippedPath === p || strippedPath.startsWith(p + '/'),
+      ),
+    );
+  }, [scopeCtx, strippedPath]);
+
+  return (
+    <div
+      style={{
+        padding: '10px 14px',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        fontSize: theme.fontSizes[0],
+        color: theme.colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+      }}
+    >
+      Selection
+      <div
+        style={{
+          marginTop: 4,
+          fontFamily: 'monospace',
+          fontSize: theme.fontSizes[0],
+          color: theme.colors.text,
+          textTransform: 'none',
+          letterSpacing: 0,
+          wordBreak: 'break-all',
+          minHeight: 14,
+        }}
+      >
+        {strippedPath ?? '(no selection)'}
+      </div>
+
+      {canAdd && coveringScopes.length > 0 && (
+        <div
+          style={{
+            marginTop: 8,
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textSecondary,
+            textTransform: 'none',
+            letterSpacing: 0,
+          }}
+        >
+          In scope:{' '}
+          {coveringScopes.map((s, i) => (
+            <React.Fragment key={s.name}>
+              {i > 0 && ', '}
+              <code style={{ color: theme.colors.text }}>{s.name}</code>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+
+      {canAdd && (
+        <button
+          onClick={() => setShowAddModal(true)}
+          style={{
+            marginTop: 8,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '4px 10px',
+            background: theme.colors.primary,
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontSize: 11,
+            fontWeight: 500,
+            textTransform: 'none',
+            letterSpacing: 0,
+          }}
+        >
+          <Plus size={12} strokeWidth={2.5} />
+          Add to scope
+        </button>
+      )}
+
+      {showAddModal && scopeCtx && strippedPath && (
+        <AddScopeModal
+          scopes={scopes}
+          initialPaths={[strippedPath]}
+          onSubmit={(input) =>
+            scopeCtx.manager.addToScope({
+              scopeName: input.scopeName,
+              namespaceName: input.namespaceName,
+              description: input.description,
+              paths: input.paths,
+            })
+          }
+          onClose={() => setShowAddModal(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+function stripRoot(path: string, root: string): string {
+  if (root && path.startsWith(root + '/')) return path.slice(root.length + 1);
+  return path;
+}
