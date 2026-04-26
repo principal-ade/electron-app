@@ -11,7 +11,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   Check,
-  ExternalLink,
   FolderGit2,
   GitBranch,
   GitCommit,
@@ -428,6 +427,7 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
     <div
       ref={cardRef}
       onTransitionEnd={handleCollapseEnd}
+      onDoubleClick={onOpen}
       style={{
         backgroundColor: theme.colors.surface,
         borderRadius: 8,
@@ -444,6 +444,7 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
         pointerEvents: collapsing ? 'none' : 'auto',
         transition:
           'max-height 0.35s ease, opacity 0.3s ease, transform 0.3s ease',
+        cursor: onOpen ? 'pointer' : 'default',
       }}
     >
       <div style={{ display: 'flex', minHeight: 300 }}>
@@ -458,9 +459,7 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
-            cursor: onOpen ? 'pointer' : 'default',
           }}
-          onDoubleClick={onOpen}
         >
           {cityLoading ? (
             <div
@@ -584,40 +583,6 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                   />
                   In progress
                 </span>
-                {onOpen && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpen();
-                    }}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '2px 8px',
-                      fontSize: theme.fontSizes[0],
-                      fontFamily: theme.fonts.body,
-                      fontWeight: theme.fontWeights.semibold,
-                      color: theme.colors.text,
-                      backgroundColor: 'transparent',
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                      flexShrink: 0,
-                      lineHeight: 1.4,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <ExternalLink size={10} />
-                    <span>Open</span>
-                  </button>
-                )}
               </div>
               <div
                 style={{

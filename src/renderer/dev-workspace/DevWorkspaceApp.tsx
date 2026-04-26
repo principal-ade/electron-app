@@ -231,7 +231,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   // Panel control handle for imperative collapse/expand
   const panelControlRef = useRef<PanelControlHandle | null>(null);
   const [layout, setLayout] = useState<PanelLayout>({
-    left: 'terminalSessions',
+    left: 'files',
     middle: 'terminal',
     right: 'fileCity',
   });
@@ -463,7 +463,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       }),
       events.on('panel:reset-layout', () => {
         setLayout({
-          left: 'terminalSessions',
+          left: 'files',
           middle: 'terminal',
           right: 'fileCity',
         });
