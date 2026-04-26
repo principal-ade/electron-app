@@ -173,6 +173,30 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
   const [collapsing, setCollapsing] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [collapseHeight, setCollapseHeight] = useState<number | null>(null);
+  const [opening, setOpening] = useState(false);
+  const openingTimerRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (openingTimerRef.current !== null) {
+        window.clearTimeout(openingTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const handleCardDoubleClick = useCallback(() => {
+    if (!onOpen) return;
+    setOpening(true);
+    onOpen();
+    if (openingTimerRef.current !== null) {
+      window.clearTimeout(openingTimerRef.current);
+    }
+    openingTimerRef.current = window.setTimeout(() => {
+      setOpening(false);
+      openingTimerRef.current = null;
+    }, 3600);
+  }, [onOpen]);
 
   const aheadCount = summary.aheadCount ?? 0;
 
@@ -427,8 +451,9 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
     <div
       ref={cardRef}
       onTransitionEnd={handleCollapseEnd}
-      onDoubleClick={onOpen}
+      onDoubleClick={handleCardDoubleClick}
       style={{
+        position: 'relative',
         backgroundColor: theme.colors.surface,
         borderRadius: 8,
         border: `1px solid ${theme.colors.border}`,
@@ -445,8 +470,30 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
         transition:
           'max-height 0.35s ease, opacity 0.3s ease, transform 0.3s ease',
         cursor: onOpen ? 'pointer' : 'default',
+        animation:
+          opening && !collapsing
+            ? 'inProgressOpenPulse 3500ms ease-in-out'
+            : undefined,
       }}
     >
+      {opening && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 8,
+            padding: 2,
+            background: `conic-gradient(from var(--in-progress-trace-angle, 0deg), ${theme.colors.primary}00 0deg, ${theme.colors.primary} 60deg, ${theme.colors.primary}00 140deg, ${theme.colors.primary}00 360deg)`,
+            WebkitMask:
+              'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+            WebkitMaskComposite: 'xor',
+            maskComposite: 'exclude',
+            pointerEvents: 'none',
+            animation: 'inProgressTrace 3300ms linear',
+            zIndex: 2,
+          }}
+        />
+      )}
       <div style={{ display: 'flex', minHeight: 300 }}>
         <div
           style={{
@@ -1001,6 +1048,21 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
         @keyframes inProgressSpin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @property --in-progress-trace-angle {
+          syntax: '<angle>';
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes inProgressTrace {
+          from { --in-progress-trace-angle: 0deg; }
+          to { --in-progress-trace-angle: 360deg; }
+        }
+        @keyframes inProgressOpenPulse {
+          0% { transform: scale(1); }
+          8% { transform: scale(1.02); }
+          92% { transform: scale(1.02); }
+          100% { transform: scale(1); }
         }
       `}</style>
     </div>

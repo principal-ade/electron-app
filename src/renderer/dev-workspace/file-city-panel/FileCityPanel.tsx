@@ -211,6 +211,7 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
         elevatedScopePanels={effectiveElevatedScopePanels}
         selectedBuilding={selectedBuilding}
         onBuildingClick={handleBuildingClick}
+        backgroundColor={theme.colors.background}
       />
       <ScopeInfoOverlay debugLayers={effectiveHighlightLayers} />
     </div>
