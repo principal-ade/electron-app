@@ -61,6 +61,7 @@ export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {
       <div
         style={{
           display: 'flex',
+          height: 40,
           borderBottom: `1px solid ${theme.colors.border}`,
           background: theme.colors.backgroundSecondary,
         }}
@@ -80,7 +81,7 @@ export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {
               }
               style={{
                 flex: 1,
-                padding: '10px 12px',
+                padding: '0 12px',
                 background: active
                   ? theme.colors.background
                   : 'transparent',
