@@ -155,7 +155,8 @@ export const ActivityCitiesPanel: React.FC = () => {
         !error.includes('forbidden') &&
         !error.includes('no non-interactive git access') &&
         !error.includes('git fetch failed') &&
-        !error.includes("couldn't find remote ref")
+        !error.includes("couldn't find remote ref") &&
+        !error.includes('not a git repository')
       );
     });
 
