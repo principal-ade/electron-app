@@ -102,11 +102,20 @@ function scopeNodeToRecord(node: OtelScopeNode): ScopeRecord {
   const loose = node as unknown as {
     paths?: unknown;
     label?: unknown;
-    otel?: { status?: unknown };
+    otel?: { status?: unknown; description?: unknown };
   };
+  // Spec puts `description` at the top level of OtelScopeNode, but legacy
+  // canvases authored before that put it inside `otel.description`. Fall back
+  // so we don't drop the field on round-trip.
+  const description =
+    typeof node.description === 'string'
+      ? node.description
+      : typeof loose.otel?.description === 'string'
+        ? loose.otel.description
+        : undefined;
   return {
     name: otelScope ?? node.id,
-    description: node.description,
+    description,
     paths: Array.isArray(loose.paths)
       ? (loose.paths as unknown[]).filter((p): p is string => typeof p === 'string')
       : [],

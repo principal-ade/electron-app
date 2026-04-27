@@ -122,15 +122,32 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
     () => (cityData ? buildFolderIndex(cityData) : null),
     [cityData],
   );
+  // Folder umbrella tiles don't expand on click — they select. The user then
+  // confirms via the "Open" button in the bottom-right card. Toggling the
+  // same tile clears selection.
+  const [selectedFolder, setSelectedFolder] = React.useState<string | null>(
+    null,
+  );
   const folderPanels = React.useMemo<ElevatedScopePanel[]>(() => {
     if (!cityData || !folderIndex) return [];
-    return buildFolderElevatedPanels({
+    const panels = buildFolderElevatedPanels({
       cityData,
       expandedFolders: folderExpansion.expandedFolders,
-      onToggleFolder: folderExpansion.toggleFolder,
+      onToggleFolder: (path) =>
+        setSelectedFolder((prev) => (prev === path ? null : path)),
       index: folderIndex,
     });
-  }, [cityData, folderIndex, folderExpansion]);
+    if (!selectedFolder) return panels;
+    // Dim non-selected tiles so the picked folder reads as the active one.
+    return panels.map((p) =>
+      p.id === `folder::${selectedFolder}` ? p : { ...p, opacity: 0.45 },
+    );
+  }, [
+    cityData,
+    folderIndex,
+    folderExpansion.expandedFolders,
+    selectedFolder,
+  ]);
 
   const effectiveHighlightLayers =
     highlightLayers ?? derivedOverlay.highlightLayers;
@@ -139,9 +156,31 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
   // Resolution order: explicit prop > scope-driven panels > folder-driven
   // panels. The scope panels only exist while a scope is selected, so the
   // folder panels become the default view when no scope is active.
+  const folderPanelsActive =
+    !elevatedScopePanels && derivedElevatedPanels.length === 0;
   const effectiveElevatedScopePanels =
     elevatedScopePanels ??
     (derivedElevatedPanels.length > 0 ? derivedElevatedPanels : folderPanels);
+
+  // Clear folder selection when its tile is no longer in play (scope panels
+  // took over, city rebuilt, or the folder got expanded elsewhere).
+  React.useEffect(() => {
+    if (!selectedFolder) return;
+    const stillThere =
+      folderPanelsActive &&
+      folderPanels.some((p) => p.id === `folder::${selectedFolder}`);
+    if (!stillThere) setSelectedFolder(null);
+  }, [selectedFolder, folderPanelsActive, folderPanels]);
+
+  const selectedFolderPanel = selectedFolder
+    ? folderPanels.find((p) => p.id === `folder::${selectedFolder}`) ?? null
+    : null;
+
+  const handleOpenSelectedFolder = React.useCallback(() => {
+    if (!selectedFolder) return;
+    folderExpansion.toggleFolder(selectedFolder);
+    setSelectedFolder(null);
+  }, [selectedFolder, folderExpansion]);
 
   const [selectedBuilding, setSelectedBuilding] =
     React.useState<CityBuilding | null>(null);
@@ -213,7 +252,119 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
         onBuildingClick={handleBuildingClick}
         backgroundColor={theme.colors.background}
       />
-      <ScopeInfoOverlay debugLayers={effectiveHighlightLayers} />
+      <ScopeInfoOverlay />
+      {selectedFolderPanel && (
+        <SelectedFolderCard
+          folderPath={selectedFolder ?? ''}
+          color={selectedFolderPanel.color}
+          onOpen={handleOpenSelectedFolder}
+          onDismiss={() => setSelectedFolder(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+const SelectedFolderCard: React.FC<{
+  folderPath: string;
+  color: string;
+  onOpen: () => void;
+  onDismiss: () => void;
+}> = ({ folderPath, color, onOpen, onDismiss }) => {
+  const { theme } = useTheme();
+  const folderName =
+    folderPath.split('/').filter(Boolean).pop() ?? folderPath;
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: 16,
+        right: 16,
+        minWidth: 240,
+        maxWidth: 360,
+        background: `${theme.colors.backgroundSecondary}f5`,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: 8,
+        color: theme.colors.text,
+        fontFamily: theme.fonts.body,
+        fontSize: 13,
+        zIndex: 10,
+        boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+        padding: '12px 14px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span
+          style={{
+            width: 12,
+            height: 12,
+            borderRadius: 3,
+            background: color,
+            flexShrink: 0,
+          }}
+        />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div
+            style={{
+              fontFamily: 'monospace',
+              fontSize: 13,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {folderName}
+          </div>
+          {folderPath !== folderName && (
+            <div
+              style={{
+                fontSize: 10,
+                color: theme.colors.textSecondary,
+                fontFamily: 'monospace',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {folderPath}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={onDismiss}
+          aria-label="Dismiss selection"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: theme.colors.textSecondary,
+            cursor: 'pointer',
+            fontSize: 14,
+            padding: 0,
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+      </div>
+      <button
+        onClick={onOpen}
+        style={{
+          background: theme.colors.primary,
+          color: theme.colors.background,
+          border: 'none',
+          borderRadius: 4,
+          padding: '6px 10px',
+          cursor: 'pointer',
+          fontFamily: theme.fonts.body,
+          fontSize: 12,
+          fontWeight: 500,
+        }}
+      >
+        Open folder
+      </button>
     </div>
   );
 };

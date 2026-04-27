@@ -1,0 +1,7 @@
+{
+  "name": "principal-ade-main Events",
+  "type": "event-namespace",
+  "scope": "principal-ade-main",
+  "nodes": [],
+  "edges": []
+}

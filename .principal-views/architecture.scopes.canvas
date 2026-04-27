@@ -19,6 +19,9 @@
       "height": 280,
       "label": "Principal Ade Main",
       "color": "#1ad76f",
+      "paths": [
+        "src/main"
+      ],
       "otel": {
         "scope": "principal-ade-main",
         "description": "Electron main process - Node.js runtime handling IPC, services, and system operations",

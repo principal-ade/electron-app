@@ -1,6 +1,5 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import type { HighlightLayer } from '@principal-ai/file-city-react';
 import type {
   EventRecord,
   NamespaceRecord,
@@ -25,15 +24,6 @@ interface ResolvedSelection {
   ev: EventRecord | null;
 }
 
-export interface ScopeInfoOverlayProps {
-  /**
-   * The HighlightLayer[] currently being passed to FileCity3D. When provided,
-   * a collapsed debug block is rendered at the bottom of the overlay so you
-   * can sanity-check what's getting drawn.
-   */
-  debugLayers?: readonly HighlightLayer[];
-}
-
 /**
  * Right-aligned overlay anchored above FileCity3D. Shows the currently
  * selected scope/namespace/event from ScopeOverlaySelectionContext.
@@ -42,9 +32,7 @@ export interface ScopeInfoOverlayProps {
  * reflects mutations (e.g. a path added to a namespace) without round-tripping
  * through anything else.
  */
-export const ScopeInfoOverlay: React.FC<ScopeInfoOverlayProps> = ({
-  debugLayers,
-}) => {
+export const ScopeInfoOverlay: React.FC = () => {
   const scopeCtx = useScopeManagerOptional();
   const overlay = useScopeOverlaySelectionOptional();
 
@@ -67,13 +55,12 @@ export const ScopeInfoOverlay: React.FC<ScopeInfoOverlayProps> = ({
   }, [scopeCtx, overlay?.selection]);
 
   if (!resolved) return null;
-  return <ResolvedOverlay resolved={resolved} debugLayers={debugLayers} />;
+  return <ResolvedOverlay resolved={resolved} />;
 };
 
 const ResolvedOverlay: React.FC<{
   resolved: ResolvedSelection;
-  debugLayers?: readonly HighlightLayer[];
-}> = ({ resolved, debugLayers }) => {
+}> = ({ resolved }) => {
   const { theme } = useTheme();
   const { scope, ns, ev } = resolved;
 
@@ -176,7 +163,6 @@ const ResolvedOverlay: React.FC<{
             </span>
           </div>
         </div>
-        <DebugLayersBlock layers={debugLayers} theme={theme} />
       </div>
     );
   }
@@ -323,7 +309,6 @@ const ResolvedOverlay: React.FC<{
             )}
           </div>
         </div>
-        <DebugLayersBlock layers={debugLayers} theme={theme} />
       </div>
     );
   }
@@ -479,155 +464,6 @@ const ResolvedOverlay: React.FC<{
           )}
         </div>
       </div>
-      <DebugLayersBlock layers={debugLayers} theme={theme} />
-    </div>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Debug: dump the active HighlightLayer[] so we can sanity-check what's being
-// passed to FileCity3D when paths/colors aren't lining up visually.
-// ---------------------------------------------------------------------------
-
-interface ThemeShape {
-  colors: {
-    background: string;
-    border: string;
-    text: string;
-    textSecondary: string;
-  };
-}
-
-const DebugLayersBlock: React.FC<{
-  layers: readonly HighlightLayer[] | undefined;
-  theme: ThemeShape;
-}> = ({ layers, theme }) => {
-  const [open, setOpen] = React.useState(false);
-  if (!layers) return null;
-
-  const totalItems = layers.reduce((n, l) => n + l.items.length, 0);
-
-  return (
-    <div
-      style={{
-        padding: '10px 16px',
-        borderTop: `1px dashed ${theme.colors.border}`,
-        background: theme.colors.background,
-        fontSize: 11,
-        color: theme.colors.textSecondary,
-      }}
-    >
-      <button
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          width: '100%',
-          background: 'transparent',
-          border: 'none',
-          padding: 0,
-          cursor: 'pointer',
-          color: theme.colors.textSecondary,
-          fontFamily: 'monospace',
-          fontSize: 11,
-          textAlign: 'left',
-        }}
-      >
-        <span style={{ width: 10, display: 'inline-block' }}>
-          {open ? '▾' : '▸'}
-        </span>
-        <span>
-          debug: highlightLayers ({layers.length} layer
-          {layers.length === 1 ? '' : 's'}, {totalItems} item
-          {totalItems === 1 ? '' : 's'})
-        </span>
-      </button>
-      {open && (
-        <div
-          style={{
-            marginTop: 8,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-          }}
-        >
-          {layers.length === 0 && (
-            <div style={{ fontStyle: 'italic' }}>
-              No layers passed to FileCity3D.
-            </div>
-          )}
-          {layers.map((layer) => (
-            <div
-              key={layer.id}
-              style={{
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: 4,
-                padding: 6,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontFamily: 'monospace',
-                  color: theme.colors.text,
-                }}
-              >
-                <span
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: 2,
-                    background: layer.color,
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ wordBreak: 'break-all' }}>{layer.id}</span>
-                <span
-                  style={{
-                    marginLeft: 'auto',
-                    fontSize: 10,
-                    color: theme.colors.textSecondary,
-                  }}
-                >
-                  prio {layer.priority}
-                  {layer.enabled ? '' : ' · off'}
-                </span>
-              </div>
-              <div
-                style={{
-                  marginTop: 4,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                }}
-              >
-                {layer.items.map((item, i) => (
-                  <code
-                    key={`${layer.id}-${i}`}
-                    style={{
-                      fontSize: 10,
-                      color: theme.colors.text,
-                      background: theme.colors.background,
-                      padding: '2px 4px',
-                      borderRadius: 2,
-                      wordBreak: 'break-all',
-                    }}
-                  >
-                    {item.type === 'directory' ? '📁 ' : '📄 '}
-                    {item.path}
-                    {item.renderStrategy
-                      ? `  · ${item.renderStrategy}`
-                      : ''}
-                  </code>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
