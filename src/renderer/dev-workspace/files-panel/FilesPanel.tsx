@@ -399,6 +399,11 @@ const FileTreeTab: React.FC<{
           {
             flex: 1,
             minHeight: 0,
+            paddingTop: 8,
+            '--trees-bg-override': 'transparent',
+            '--trees-search-bg-override': theme.colors.backgroundSecondary,
+            '--trees-theme-list-active-selection-bg': `color-mix(in oklab, ${theme.colors.accent} 28%, transparent)`,
+            '--trees-theme-list-hover-bg': `color-mix(in oklab, ${theme.colors.accent} 14%, transparent)`,
           } as React.CSSProperties
         }
       />
