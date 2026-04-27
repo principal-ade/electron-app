@@ -5,13 +5,17 @@ import {
   useFileTree,
   useFileTreeSelector,
 } from '@pierre/trees/react';
+import type { GitStatusEntry } from '@pierre/trees';
 import type {
   PanelActions,
   PanelContextValue,
   PanelEventEmitter,
   DataSlice,
 } from '@principal-ade/panel-framework-core';
-import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
+import type {
+  FileTree as RepoFileTree,
+  GitStatusWithFiles,
+} from '@principal-ai/repository-abstraction';
 import { Plus } from 'lucide-react';
 import { useScopeManagerOptional } from '../scope-manager-provider';
 import { useFolderExpansionWriter } from '../folder-expansion-provider';
@@ -19,6 +23,7 @@ import { ScopesTab, AddScopeModal } from '../scopes-tab';
 
 interface FilesPanelContext extends PanelContextValue {
   fileTree?: DataSlice<RepoFileTree | null>;
+  gitStatusWithFiles?: DataSlice<GitStatusWithFiles | null>;
 }
 
 export interface FilesPanelProps {
@@ -188,6 +193,11 @@ const FileTreeTab: React.FC<{
 
   const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
 
+  const gitStatusEntries = React.useMemo<GitStatusEntry[]>(
+    () => buildGitStatusEntries(context.gitStatusWithFiles?.data, rootPath),
+    [context.gitStatusWithFiles?.data, rootPath],
+  );
+
   const modelRef = React.useRef<ReturnType<typeof useFileTree>['model'] | null>(
     null,
   );
@@ -195,6 +205,7 @@ const FileTreeTab: React.FC<{
     paths: filteredPaths,
     search: true,
     initialExpandedPaths,
+    gitStatus: gitStatusEntries,
     onSelectionChange: (selected) => {
       const next = selected[0] ?? null;
       setSelectedPath(next);
@@ -536,6 +547,29 @@ const SelectionHeader: React.FC<{
 function stripRoot(path: string, root: string): string {
   if (root && path.startsWith(root + '/')) return path.slice(root.length + 1);
   return path;
+}
+
+// Adapter: collapse the categorical buckets in `GitStatusWithFiles` (repo-relative
+// paths) into Pierre's flat `GitStatusEntry[]` (tree-prefixed paths). Pierre stores
+// one status per path, so when a file appears in multiple buckets the higher-
+// priority status wins. Worktree state takes precedence over index state, since
+// that's what the user is actively editing.
+function buildGitStatusEntries(
+  status: GitStatusWithFiles | null | undefined,
+  rootPath: string,
+): GitStatusEntry[] {
+  if (!status) return [];
+  const map = new Map<string, GitStatusEntry['status']>();
+  const prefix = rootPath ? rootPath + '/' : '';
+  // Lowest priority first; later writes override earlier ones.
+  for (const p of status.untrackedFiles) map.set(prefix + p, 'untracked');
+  for (const p of status.createdFiles) map.set(prefix + p, 'added');
+  for (const p of status.stagedFiles) map.set(prefix + p, 'modified');
+  for (const p of status.modifiedFiles) map.set(prefix + p, 'modified');
+  for (const p of status.deletedFiles) map.set(prefix + p, 'deleted');
+  const entries: GitStatusEntry[] = [];
+  for (const [path, s] of map) entries.push({ path, status: s });
+  return entries;
 }
 
 function shellQuote(s: string): string {
