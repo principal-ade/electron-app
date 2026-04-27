@@ -125,6 +125,7 @@ const FileTreeTab: React.FC<{
   const scopeCtx = useScopeManagerOptional();
   const tree = context.fileTree?.data ?? null;
   const rootPath = tree?.metadata?.id ?? '';
+  const repoPath = context.currentScope?.repository?.path ?? '';
 
   const allPaths = React.useMemo<string[]>(() => {
     if (!tree) return [];
@@ -393,20 +394,22 @@ const FileTreeTab: React.FC<{
         </div>
       )}
 
-      <FileTree
-        model={model}
-        style={
-          {
-            flex: 1,
-            minHeight: 0,
-            paddingTop: 8,
-            '--trees-bg-override': 'transparent',
-            '--trees-search-bg-override': theme.colors.backgroundSecondary,
-            '--trees-theme-list-active-selection-bg': `color-mix(in oklab, ${theme.colors.accent} 28%, transparent)`,
-            '--trees-theme-list-hover-bg': `color-mix(in oklab, ${theme.colors.accent} 14%, transparent)`,
-          } as React.CSSProperties
-        }
-      />
+      <FileTreeDragHost rootPath={rootPath} repoPath={repoPath}>
+        <FileTree
+          model={model}
+          style={
+            {
+              flex: 1,
+              minHeight: 0,
+              paddingTop: 8,
+              '--trees-bg-override': 'transparent',
+              '--trees-search-bg-override': theme.colors.backgroundSecondary,
+              '--trees-theme-list-active-selection-bg': `color-mix(in oklab, ${theme.colors.accent} 28%, transparent)`,
+              '--trees-theme-list-hover-bg': `color-mix(in oklab, ${theme.colors.accent} 14%, transparent)`,
+            } as React.CSSProperties
+          }
+        />
+      </FileTreeDragHost>
     </div>
   );
 };
@@ -534,3 +537,86 @@ function stripRoot(path: string, root: string): string {
   if (root && path.startsWith(root + '/')) return path.slice(root.length + 1);
   return path;
 }
+
+function shellQuote(s: string): string {
+  if (/^[\w@%+=:,./-]+$/.test(s)) return s;
+  return `'${s.replace(/'/g, `'\\''`)}'`;
+}
+
+// Pierre's <file-tree-container> renders into an open shadow root, so styles
+// and event targets from the light DOM don't reach the rows. We inject a
+// stylesheet into the shadow root to mark file rows draggable, and use a
+// capturing dragstart listener with composedPath() to read the row's
+// data-item-path before the event retargets to the host.
+const FileTreeDragHost: React.FC<
+  React.PropsWithChildren<{ rootPath: string; repoPath: string }>
+> = ({ rootPath, repoPath, children }) => {
+  const hostRef = React.useRef<HTMLDivElement | null>(null);
+  const rootRef = React.useRef({ rootPath, repoPath });
+  rootRef.current = { rootPath, repoPath };
+
+  React.useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+
+    const injectedRoots = new WeakSet<ShadowRoot>();
+    const injectStyles = () => {
+      const containers = host.querySelectorAll('file-tree-container');
+      containers.forEach((el) => {
+        const sr = (el as HTMLElement & { shadowRoot: ShadowRoot | null })
+          .shadowRoot;
+        if (!sr || injectedRoots.has(sr)) return;
+        const style = document.createElement('style');
+        style.textContent = `[data-type="item"] { -webkit-user-drag: element; cursor: grab; }`;
+        sr.appendChild(style);
+        injectedRoots.add(sr);
+      });
+    };
+
+    injectStyles();
+    const mo = new MutationObserver(injectStyles);
+    mo.observe(host, { childList: true, subtree: true });
+
+    const onDragStart = (e: DragEvent) => {
+      const path = e.composedPath();
+      let row: HTMLElement | null = null;
+      for (const node of path) {
+        if (
+          node instanceof HTMLElement &&
+          node.getAttribute?.('data-type') === 'item'
+        ) {
+          row = node;
+          break;
+        }
+      }
+      if (!row) return;
+      const treePath = row.getAttribute('data-item-path');
+      if (!treePath || !e.dataTransfer) return;
+      const { rootPath: rp, repoPath: rep } = rootRef.current;
+      const relative = stripRoot(treePath, rp);
+      const absolute = rep ? `${rep}/${relative}` : relative;
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', shellQuote(absolute));
+    };
+
+    host.addEventListener('dragstart', onDragStart, true);
+    return () => {
+      mo.disconnect();
+      host.removeEventListener('dragstart', onDragStart, true);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={hostRef}
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {children}
+    </div>
+  );
+};
