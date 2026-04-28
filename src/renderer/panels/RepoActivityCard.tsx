@@ -746,7 +746,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 }}
               >
                 <FileCode size={12} />
-                <span>Review</span>
+                <span>View Changes</span>
               </button>
             )}
             {/* Explain button */}
