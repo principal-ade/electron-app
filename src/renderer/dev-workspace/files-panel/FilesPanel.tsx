@@ -1,10 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import {
-  FileTree,
-  useFileTree,
-  useFileTreeSelector,
-} from '@pierre/trees/react';
+import { FileTree, useFileTree } from '@pierre/trees/react';
 import type { GitStatusEntry } from '@pierre/trees';
 import type {
   PanelActions,
@@ -18,7 +14,6 @@ import type {
 } from '@principal-ai/repository-abstraction';
 import { Plus } from 'lucide-react';
 import { useScopeManagerOptional } from '../scope-manager-provider';
-import { useFolderExpansionWriter } from '../folder-expansion-provider';
 import { ScopesTab, AddScopeModal } from '../scopes-tab';
 
 interface FilesPanelContext extends PanelContextValue {
@@ -230,67 +225,6 @@ const FileTreeTab: React.FC<{
     }
     model.resetPaths(filteredPaths, { initialExpandedPaths });
   }, [model, filteredPaths, initialExpandedPaths]);
-
-  // Every directory path implied by `filteredPaths` (each unique prefix of
-  // a file path). The model only exposes per-path lookups, so we keep this
-  // list to drive the expansion selector below.
-  const allDirectories = React.useMemo<string[]>(() => {
-    const set = new Set<string>();
-    for (const p of filteredPaths) {
-      let cur = p;
-      while (true) {
-        const slash = cur.lastIndexOf('/');
-        if (slash < 0) break;
-        cur = cur.slice(0, slash);
-        set.add(cur);
-      }
-    }
-    return Array.from(set);
-  }, [filteredPaths]);
-
-  // Sync the model's expansion state into the folder-expansion provider so
-  // the city panel can render umbrella tiles for collapsed folders. The
-  // equality callback short-circuits no-op renders.
-  const expandedFolders = useFileTreeSelector(
-    model,
-    React.useCallback(
-      (m) => {
-        const expanded = new Set<string>();
-        for (const dir of allDirectories) {
-          const item = m.getItem(dir);
-          if (!item || !item.isDirectory()) continue;
-          // The trees lib doesn't expose a type predicate; runtime check
-          // ensures isDirectory() before using directory-only methods.
-          const directory = item as { isExpanded(): boolean };
-          if (directory.isExpanded()) expanded.add(dir);
-        }
-        return expanded;
-      },
-      [allDirectories],
-    ),
-    React.useCallback(
-      (prev: Set<string>, next: Set<string>) => {
-        if (prev.size !== next.size) return false;
-        for (const k of prev) if (!next.has(k)) return false;
-        return true;
-      },
-      [],
-    ),
-  );
-
-  const folderWriter = useFolderExpansionWriter();
-  React.useEffect(() => {
-    folderWriter?.setExpandedFolders(expandedFolders);
-  }, [folderWriter, expandedFolders]);
-  React.useEffect(() => {
-    if (!folderWriter) return;
-    folderWriter.registerToggleHandler((folderPath) => {
-      const item = modelRef.current?.getItem(folderPath);
-      if (!item || !item.isDirectory()) return;
-      (item as { toggle(): void }).toggle();
-    });
-    return () => folderWriter.registerToggleHandler(null);
-  }, [folderWriter]);
 
   if (!tree) {
     return (

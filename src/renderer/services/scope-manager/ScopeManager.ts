@@ -53,6 +53,12 @@ export interface AddToScopeInput {
   paths: string[];
   /** Used only when creating a new scope. */
   description?: string;
+  /**
+   * Used only when creating a new namespace. Existing namespaces keep their
+   * color. Callers that care about uniqueness should compute this from the
+   * current workspace before calling.
+   */
+  namespaceColor?: string;
 }
 
 type Listener = (workspace: ScopeWorkspace) => void;
@@ -180,6 +186,7 @@ export class ScopeManager {
           scopeName,
           name: namespaceName,
           paths,
+          color: input.namespaceColor,
         });
       } else {
         for (const p of paths) {

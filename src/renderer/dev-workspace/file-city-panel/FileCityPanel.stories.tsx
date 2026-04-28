@@ -91,6 +91,9 @@ const FileCityPanelHarness: React.FC<{ paths?: string[] }> = ({ paths }) => {
     return unsubscribe;
   }, [events]);
 
+  // Note: this story doesn't mount ScopeManagerProvider/AreaManagerProvider,
+  // so the +Add buttons inside FileCityExplorer will no-op. That's intentional
+  // — exercising scope/area persistence requires a real repo path.
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex' }}>
       <FileCityPanel context={context} actions={{}} events={events} />

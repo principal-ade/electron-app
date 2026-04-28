@@ -5,8 +5,9 @@ export const fileCityPanelDefinition: PanelDefinition = {
   metadata: {
     id: 'principal-ade.file-city',
     name: 'File City',
-    description: '3D file-city visualization rendered directly via FileCity3D',
-    version: '1.0.0',
+    description:
+      '3D file-city visualization with files/scopes tabs, focus + breadcrumb, scope and area authoring backed by .principal-views/.',
+    version: '2.0.0',
     author: 'Principal ADE',
     icon: 'building',
     slices: ['fileTree'],
