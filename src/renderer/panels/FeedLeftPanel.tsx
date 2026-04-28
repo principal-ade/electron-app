@@ -171,7 +171,6 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
           flexDirection: 'column',
           gap: spacing.xs,
           padding: spacing.sm,
-          borderBottom: `1px solid ${theme.colors.border}`,
           backgroundColor: theme.colors.background,
           flexShrink: 0,
         }}
@@ -639,17 +638,21 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
           </>
         )}
 
-        {/* Feed mode toggle */}
-        <SegmentedControl
-          options={[
-            { value: 'my-activity', label: 'My Activity' },
-            { value: 'organizations', label: 'Team' },
-            { value: 'collections', label: 'Social' },
-          ]}
-          value={feedMode}
-          onChange={(value) => onFeedModeChange(value as 'my-activity' | 'collections' | 'organizations')}
-          theme={theme}
-        />
+        {/* Feed mode toggle — pulled flush to the panel edges by undoing
+            the header wrapper's horizontal padding. */}
+        <div style={{ marginLeft: -spacing.sm, marginRight: -spacing.sm }}>
+          <SegmentedControl
+            options={[
+              { value: 'my-activity', label: 'My Activity' },
+              { value: 'organizations', label: 'Team' },
+              { value: 'collections', label: 'Social' },
+            ]}
+            value={feedMode}
+            onChange={(value) => onFeedModeChange(value as 'my-activity' | 'collections' | 'organizations')}
+            theme={theme}
+            variant="underline"
+          />
+        </div>
       </div>
 
       {/* Panel content - all sub-components stay mounted, only visibility changes */}
@@ -686,7 +689,6 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
           <div
             style={{
               padding: spacing.sm,
-              borderBottom: `1px solid ${theme.colors.border}`,
               backgroundColor: theme.colors.background,
               flexShrink: 0,
             }}
@@ -700,6 +702,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
               value={collectionsSubtab}
               onChange={(value) => setCollectionsSubtab(value as 'watching' | 'starred' | 'collections')}
               theme={theme}
+              variant="pill-flat"
             />
           </div>
 

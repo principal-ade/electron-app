@@ -352,7 +352,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       <div
         style={{
           padding: spacing.sm,
-          borderBottom: `1px solid ${theme.colors.border}`,
           flexShrink: 0,
         }}
       >
@@ -365,6 +364,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           value={viewMode}
           onChange={(value) => setViewMode(value as ProjectsViewMode)}
           theme={theme}
+          variant="pill-flat"
         />
       </div>
 

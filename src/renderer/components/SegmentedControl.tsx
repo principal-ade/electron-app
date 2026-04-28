@@ -13,11 +13,14 @@ export interface SegmentedControlOption {
   label: string;
 }
 
+export type SegmentedControlVariant = 'pill' | 'pill-flat' | 'underline';
+
 export interface SegmentedControlProps {
   options: SegmentedControlOption[];
   value: string;
   onChange: (value: string) => void;
   theme: Theme;
+  variant?: SegmentedControlVariant;
 }
 
 /**
@@ -28,21 +31,73 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   value,
   onChange,
   theme,
+  variant = 'pill',
 }) => {
   const spacing = {
     xs: theme.space?.[1] || 4,
     sm: theme.space?.[2] || 8,
   };
 
+  if (variant === 'underline') {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          gap: spacing.sm,
+          borderBottom: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        {options.map((option) => {
+          const isActive = value === option.value;
+
+          return (
+            <button
+              key={option.value}
+              onClick={() => onChange(option.value)}
+              style={{
+                flex: 1,
+                padding: `${spacing.sm}px ${spacing.xs}px`,
+                fontSize: theme.fontSizes[1],
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? theme.colors.text : theme.colors.textSecondary,
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: `2px solid ${isActive ? theme.colors.primary : 'transparent'}`,
+                marginBottom: -1,
+                cursor: 'pointer',
+                transition: 'color 0.15s ease, border-color 0.15s ease',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.color = theme.colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }
+              }}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  const isFlat = variant === 'pill-flat';
+
   return (
     <div
       style={{
         display: 'flex',
-        backgroundColor: theme.colors.backgroundSecondary,
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: theme.radii?.[1] || 4,
-        padding: 2,
-        gap: 2,
+        backgroundColor: isFlat ? 'transparent' : theme.colors.backgroundSecondary,
+        border: isFlat ? 'none' : `1px solid ${theme.colors.border}`,
+        borderRadius: isFlat ? 0 : theme.radii?.[1] || 4,
+        padding: isFlat ? 0 : 2,
+        gap: isFlat ? 0 : 2,
       }}
     >
       {options.map((option) => {

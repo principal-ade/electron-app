@@ -125,6 +125,7 @@ import { TerminalSessionsPanel } from '../panels/terminal-sessions';
 import { MediaViewerPanel } from '../panels/MediaViewerPanel';
 import { FilesPanel } from './files-panel';
 import { FileCityPanel } from './file-city-panel';
+import { FloatingTerminalOverlay } from './file-city-panel/FloatingTerminalOverlay';
 import type { Repository } from '../../shared/types/repository.types';
 import {
   PanelIconSidebar,
@@ -430,6 +431,19 @@ interface DevWorkspacePanelFrameworkInnerProps {
  */
 const FileCity3DTabContent: React.FC = () => {
   const { context, actions, events } = useRepositoryPanelProvider();
+  const { context: terminalCtx, actions: terminalActions } =
+    useTerminalProvider();
+
+  const terminalPanelContext = useMemo(
+    () => ({
+      ...context,
+      terminalSessions: terminalCtx.terminalSessions,
+      terminalContext: terminalCtx.terminalContext,
+      terminal: context.terminal,
+    }),
+    [context, terminalCtx.terminalSessions, terminalCtx.terminalContext],
+  );
+
   return (
     <div
       style={{
@@ -442,6 +456,11 @@ const FileCity3DTabContent: React.FC = () => {
       }}
     >
       <FileCityPanel context={context} actions={actions} events={events} />
+      <FloatingTerminalOverlay
+        context={terminalPanelContext}
+        actions={terminalActions}
+        events={events}
+      />
     </div>
   );
 };
