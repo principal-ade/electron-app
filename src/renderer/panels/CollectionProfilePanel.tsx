@@ -9,9 +9,11 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { FolderGit2, Users, GitFork, User, ExternalLink, RefreshCw } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import { GithubService } from '../main-process-api/GithubService';
+import { CollectionRepoCard } from './cards/CollectionRepoCard';
 
 export interface CollectionProfilePanelProps {
   collection: StarredCollection;
@@ -56,6 +58,8 @@ export const CollectionProfilePanel: React.FC<CollectionProfilePanelProps> = ({
   const [collection, setCollection] = useState<StarredCollection>(initialCollection);
   const [repoInfos, setRepoInfos] = useState<Map<string, RepoInfo>>(new Map());
   const [userInfos, setUserInfos] = useState<Map<string, UserInfo>>(new Map());
+  const [fileTrees, setFileTrees] = useState<Map<string, FileTree | null>>(new Map());
+  const [treesLoading, setTreesLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadDetails = useCallback(async () => {
@@ -123,6 +127,46 @@ export const CollectionProfilePanel: React.FC<CollectionProfilePanelProps> = ({
   useEffect(() => {
     loadDetails();
   }, [loadDetails]);
+
+  useEffect(() => {
+    const repos = collection.repos || [];
+    if (repos.length === 0) {
+      setFileTrees(new Map());
+      setTreesLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setTreesLoading(true);
+
+    (async () => {
+      const next = new Map<string, FileTree | null>();
+      await Promise.allSettled(
+        repos.map(async ({ owner, repo }) => {
+          const key = `${owner}/${repo}`;
+          try {
+            const treeResponse = await WebAdeService.getGithubTree(owner, repo, 'HEAD');
+            const files = treeResponse.tree
+              .filter((entry) => entry.type === 'blob')
+              .map((entry) => entry.path);
+            const builder = new PathsFileTreeBuilder();
+            next.set(key, builder.build({ files, rootPath: repo }));
+          } catch (err) {
+            console.warn(`[CollectionProfilePanel] Failed to fetch tree for ${key}:`, err);
+            next.set(key, null);
+          }
+        })
+      );
+      if (!cancelled) {
+        setFileTrees(next);
+        setTreesLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [collection.repos]);
 
   const handleRepoClick = useCallback(
     (owner: string, repo: string) => {
@@ -294,131 +338,51 @@ export const CollectionProfilePanel: React.FC<CollectionProfilePanelProps> = ({
         {/* Repositories section */}
         {hasRepos && (
           <div style={{ marginBottom: spacing.lg }}>
+            {hasUsers && (
+              <div
+                style={{
+                  fontSize: theme.fontSizes[0],
+                  fontWeight: 600,
+                  color: theme.colors.textSecondary,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  marginBottom: spacing.sm,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                }}
+              >
+                <GitFork size={12} />
+                Repositories
+              </div>
+            )}
             <div
               style={{
-                fontSize: theme.fontSizes[0],
-                fontWeight: 600,
-                color: theme.colors.textSecondary,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                marginBottom: spacing.sm,
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))',
+                gap: spacing.md,
               }}
             >
-              <GitFork size={12} />
-              Repositories
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
               {collection.repos.map(({ owner, repo }) => {
                 const key = `${owner}/${repo}`;
                 const info = repoInfos.get(key);
+                const fileTree = fileTrees.get(key);
+                const isTreeLoading = treesLoading && !fileTrees.has(key);
                 return (
-                  <div
+                  <CollectionRepoCard
                     key={key}
+                    repo={{
+                      owner,
+                      repo,
+                      ownerAvatarUrl: info?.avatarUrl,
+                      description: info?.description,
+                      language: info?.language,
+                      stars: info?.stars,
+                    }}
+                    fileTree={fileTree}
+                    treeLoading={isTreeLoading}
                     onClick={() => handleRepoClick(owner, repo)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      padding: `${spacing.sm}px ${spacing.md}px`,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: theme.radii?.[1] || 4,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                      e.currentTarget.style.borderColor = theme.colors.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                      e.currentTarget.style.borderColor = theme.colors.border;
-                    }}
-                  >
-                    {info?.avatarUrl ? (
-                      <img
-                        src={info.avatarUrl}
-                        alt={owner}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: '50%',
-                          flexShrink: 0,
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: '50%',
-                          backgroundColor: `${theme.colors.primary}20`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <FolderGit2 size={14} color={theme.colors.primary} />
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[1],
-                          fontWeight: 600,
-                          color: theme.colors.text,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {owner}/{repo}
-                      </div>
-                      {info?.description && (
-                        <div
-                          style={{
-                            fontSize: theme.fontSizes[0],
-                            color: theme.colors.textSecondary,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {info.description}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, flexShrink: 0 }}>
-                      {info?.language && (
-                        <span
-                          style={{
-                            fontSize: theme.fontSizes[0],
-                            color: theme.colors.textSecondary,
-                            padding: `1px ${spacing.xs}px`,
-                            backgroundColor: theme.colors.backgroundTertiary,
-                            borderRadius: theme.radii?.[0] || 2,
-                          }}
-                        >
-                          {info.language}
-                        </span>
-                      )}
-                      {info?.stars !== undefined && (
-                        <span
-                          style={{
-                            fontSize: theme.fontSizes[0],
-                            color: theme.colors.textSecondary,
-                          }}
-                        >
-                          ★ {info.stars.toLocaleString()}
-                        </span>
-                      )}
-                      <ExternalLink size={12} color={theme.colors.textSecondary} />
-                    </div>
-                  </div>
+                  />
                 );
               })}
             </div>
