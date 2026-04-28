@@ -16,6 +16,7 @@ import type {
   GetTreeInput,
   GetRepoContributionsInput,
   GetStarredCollectionsInput,
+  GetOwnerStarredCollectionsInput,
   CreateCollectionInput,
   AddRepoToCollectionInput,
   RemoveRepoFromCollectionInput,
@@ -126,6 +127,12 @@ export const webAdeRouter = {
     .input<GetStarredCollectionsInput>()
     .action(async ({ input }) => {
       return webAdeService.getStarredCollections(input.includeItems ?? true);
+    }),
+
+  getOwnerStarredCollections: t.procedure
+    .input<GetOwnerStarredCollectionsInput>()
+    .action(async ({ input }) => {
+      return webAdeService.getOwnerStarredCollections(input.owner, input.includeItems ?? true);
     }),
 
   createCollection: t.procedure

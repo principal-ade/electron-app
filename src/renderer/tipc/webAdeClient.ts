@@ -26,6 +26,8 @@ import type {
   GetRepoContributionsInput,
   RepoContributionsResponse,
   GetStarredCollectionsInput,
+  GetOwnerStarredCollectionsInput,
+  OwnerStarredCollectionsResponse,
   CreateCollectionInput,
   AddRepoToCollectionInput,
   RemoveRepoFromCollectionInput,
@@ -68,6 +70,9 @@ export interface WebAdeClient {
 
   // Starred Collections
   getStarredCollections: (input: GetStarredCollectionsInput) => Promise<StarredCollection[]>;
+  getOwnerStarredCollections: (
+    input: GetOwnerStarredCollectionsInput,
+  ) => Promise<OwnerStarredCollectionsResponse>;
   createCollection: (input: CreateCollectionInput) => Promise<StarredCollection>;
   addRepoToCollection: (input: AddRepoToCollectionInput) => Promise<void>;
   removeRepoFromCollection: (input: RemoveRepoFromCollectionInput) => Promise<void>;
@@ -150,6 +155,8 @@ export type {
   RepoContributionsResponse,
   DailyContribution,
   GetStarredCollectionsInput,
+  GetOwnerStarredCollectionsInput,
+  OwnerStarredCollectionsResponse,
   CreateCollectionInput,
   AddRepoToCollectionInput,
   RemoveRepoFromCollectionInput,

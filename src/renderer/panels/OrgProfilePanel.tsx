@@ -20,6 +20,7 @@ import {
   EyeClosed,
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
+import { OwnerCollectionsTab } from './OwnerCollectionsTab';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitHubOrgMember } from '../../shared/main-process-api-interfaces/GitHubAPI';
@@ -276,7 +277,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [panelWidth, setPanelWidth] = useState<number>(0);
   const [pinnedRepoNames, setPinnedRepoNames] = useState<string[]>([]);
-  type OrgTab = 'repositories' | 'pinned';
+  type OrgTab = 'repositories' | 'pinned' | 'collections';
   const [activeTab, setActiveTab] = useState<OrgTab>('repositories');
 
   const spacing = useMemo(
@@ -1019,35 +1020,55 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
         )}
       </div>
 
-      {/* Tab bar (narrow mode with pinned repos) */}
-      {isNarrow && pinnedRepoNames.length > 0 && (
-        <div style={{
-          display: 'flex',
-          borderBottom: `1px solid ${theme.colors.border}`,
-          padding: `0 ${spacing.md}px`,
-          gap: spacing.md,
-          flexShrink: 0,
-        }}>
-          <button
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: `${spacing.sm}px ${spacing.md}px`,
-              fontSize: theme.fontSizes[2],
-              fontFamily: theme.fonts?.body,
-              fontWeight: theme.fontWeights?.semibold ?? 600,
-              color: activeTab === 'repositories' ? theme.colors.primary : theme.colors.textSecondary,
-              borderBottom: activeTab === 'repositories' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              marginBottom: -1,
-            }}
-            onClick={() => setActiveTab('repositories')}
-            onMouseEnter={(e) => { if (activeTab !== 'repositories') e.currentTarget.style.color = theme.colors.text; }}
-            onMouseLeave={(e) => { if (activeTab !== 'repositories') e.currentTarget.style.color = theme.colors.textSecondary; }}
-          >
-            Repositories
-          </button>
+      {/* Tab bar */}
+      <div style={{
+        display: 'flex',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        padding: `0 ${spacing.md}px`,
+        gap: spacing.md,
+        flexShrink: 0,
+      }}>
+        <button
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: `${spacing.sm}px ${spacing.md}px`,
+            fontSize: theme.fontSizes[2],
+            fontFamily: theme.fonts?.body,
+            fontWeight: theme.fontWeights?.semibold ?? 600,
+            color: activeTab === 'repositories' ? theme.colors.primary : theme.colors.textSecondary,
+            borderBottom: activeTab === 'repositories' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            marginBottom: -1,
+          }}
+          onClick={() => setActiveTab('repositories')}
+          onMouseEnter={(e) => { if (activeTab !== 'repositories') e.currentTarget.style.color = theme.colors.text; }}
+          onMouseLeave={(e) => { if (activeTab !== 'repositories') e.currentTarget.style.color = theme.colors.textSecondary; }}
+        >
+          Repositories
+        </button>
+        <button
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: `${spacing.sm}px ${spacing.md}px`,
+            fontSize: theme.fontSizes[2],
+            fontFamily: theme.fonts?.body,
+            fontWeight: theme.fontWeights?.semibold ?? 600,
+            color: activeTab === 'collections' ? theme.colors.primary : theme.colors.textSecondary,
+            borderBottom: activeTab === 'collections' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            marginBottom: -1,
+          }}
+          onClick={() => setActiveTab('collections')}
+          onMouseEnter={(e) => { if (activeTab !== 'collections') e.currentTarget.style.color = theme.colors.text; }}
+          onMouseLeave={(e) => { if (activeTab !== 'collections') e.currentTarget.style.color = theme.colors.textSecondary; }}
+        >
+          Collections
+        </button>
+        {isNarrow && pinnedRepoNames.length > 0 && (
           <button
             style={{
               background: 'none',
@@ -1068,8 +1089,8 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
           >
             Pinned
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Pinned tab content (narrow only) */}
       {isNarrow && activeTab === 'pinned' && pinnedRepoNames.length > 0 && (
@@ -1166,7 +1187,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
       )}
 
       {/* Repositories Grid - Scrollable section */}
-      {(activeTab === 'repositories' || (!isNarrow)) && repositories.length > 0 && (
+      {activeTab === 'repositories' && repositories.length > 0 && (
         <div
           style={{
             flex: 1,
@@ -1237,6 +1258,19 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Collections Tab - Scrollable section */}
+      {activeTab === 'collections' && org && (
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            padding: `${spacing.md}px`,
+          }}
+        >
+          <OwnerCollectionsTab ownerLogin={org.orgName} events={events} />
         </div>
       )}
 

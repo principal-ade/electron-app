@@ -21,6 +21,7 @@ import type {
   GetRepoContributionsInput,
   RepoContributionsResponse,
   StarredCollection,
+  OwnerStarredCollectionsResponse,
   GetUserActivityInput,
   UserActivityResponse,
   ExplainCommitsInput,
@@ -495,6 +496,38 @@ export class WebAdeService {
       return data.collections;
     } catch (error) {
       console.error('[WebADE] Failed to fetch starred collections:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the public starred collections owned by a specific GitHub user or org.
+   * Backed by GET /api/github/owner/[owner]/starred-collections — public endpoint.
+   */
+  async getOwnerStarredCollections(
+    owner: string,
+    includeItems = true,
+  ): Promise<OwnerStarredCollectionsResponse> {
+    const token = await this.getToken();
+    const params = includeItems ? '' : '?include_items=false';
+    const url = `${this.baseUrl}/github/owner/${encodeURIComponent(owner)}/starred-collections${params}`;
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    try {
+      const response = await fetch(url, { method: 'GET', headers });
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error(`Owner "${owner}" not found`);
+        }
+        throw new Error(
+          `Failed to fetch collections for ${owner}: ${response.status} ${response.statusText}`,
+        );
+      }
+      return (await response.json()) as OwnerStarredCollectionsResponse;
+    } catch (error) {
+      console.error(`[WebADE] Failed to fetch starred collections for ${owner}:`, error);
       throw error;
     }
   }

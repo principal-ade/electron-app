@@ -55,6 +55,23 @@ export interface GetStarredCollectionsInput {
   includeItems?: boolean;
 }
 
+export interface GetOwnerStarredCollectionsInput {
+  owner: string;
+  includeItems?: boolean;
+}
+
+export interface OwnerStarredCollectionsResponse {
+  owner: {
+    login: string;
+    id: number;
+    avatar_url: string;
+    name: string | null;
+    type: 'User' | 'Organization';
+  };
+  collections: StarredCollection[];
+  version: number;
+}
+
 export interface AddRepoToCollectionInput {
   collectionId: string;
   owner: string;
@@ -402,6 +419,12 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: GetStarredCollectionsInput;
     }) => Promise<StarredCollection[]>;
+  };
+  getOwnerStarredCollections: {
+    action: (args: {
+      context: ActionContext;
+      input: GetOwnerStarredCollectionsInput;
+    }) => Promise<OwnerStarredCollectionsResponse>;
   };
   createCollection: {
     action: (args: {

@@ -17,6 +17,7 @@ import type {
   GetTreeResponse,
   RepoContributionsResponse,
   StarredCollection,
+  OwnerStarredCollectionsResponse,
   ExplainCommitsInput,
   ExplainCommitsResponse,
   ExplainWorkingChangesInput,
@@ -129,6 +130,18 @@ export class WebAdeService {
    */
   static async getStarredCollections(includeItems = true): Promise<StarredCollection[]> {
     return webAdeClient.getStarredCollections({ includeItems });
+  }
+
+  /**
+   * Get the public starred collections owned by a specific GitHub user or org.
+   * @param owner - GitHub login of the user or organization
+   * @param includeItems - Whether to include items (repos and users) in collections (default: true)
+   */
+  static async getOwnerStarredCollections(
+    owner: string,
+    includeItems = true,
+  ): Promise<OwnerStarredCollectionsResponse> {
+    return webAdeClient.getOwnerStarredCollections({ owner, includeItems });
   }
 
   /**

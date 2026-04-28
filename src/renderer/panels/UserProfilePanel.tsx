@@ -20,6 +20,7 @@ import {
   EyeClosed,
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
+import { OwnerCollectionsTab } from './OwnerCollectionsTab';
 import {
   WatchedActivityPanel,
   type WatchedActivityPanelActions,
@@ -381,7 +382,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   const [isWatchLoading, setIsWatchLoading] = useState(false);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'pinned'>('activity');
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'pinned' | 'collections'>('activity');
 
   // Panel width for responsive pinned column
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1244,6 +1245,30 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         >
           Activity
         </button>
+        <button
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: `${spacing.sm}px ${spacing.md}px`,
+            fontSize: theme.fontSizes[2],
+            fontFamily: theme.fonts?.body,
+            fontWeight: theme.fontWeights?.semibold ?? 600,
+            color: activeTab === 'collections' ? theme.colors.primary : theme.colors.textSecondary,
+            borderBottom: activeTab === 'collections' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            marginBottom: -1,
+          }}
+          onClick={() => setActiveTab('collections')}
+          onMouseEnter={(e) => {
+            if (activeTab !== 'collections') e.currentTarget.style.color = theme.colors.text;
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== 'collections') e.currentTarget.style.color = theme.colors.textSecondary;
+          }}
+        >
+          Collections
+        </button>
         {isNarrow && pinnedRepoNames.length > 0 && (
           <button
             style={{
@@ -1289,6 +1314,13 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               hideHeader
               actions={watchedActivityActions}
             />
+          </div>
+        )}
+
+        {/* Collections Tab */}
+        {activeTab === 'collections' && userData && (
+          <div style={{ marginTop: spacing.md }}>
+            <OwnerCollectionsTab ownerLogin={userData.username} events={events} />
           </div>
         )}
 
