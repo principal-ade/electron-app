@@ -914,7 +914,7 @@ export class GitService {
    * @param directory - Repository directory
    * @returns Array of contributors with their commit counts
    */
-  static async getContributors(directory: string): Promise<Array<{ name: string; commits: number }>> {
+  static async getContributors(directory: string): Promise<Array<{ name: string; commits: number; email?: string }>> {
     console.info(`[GitService] Getting contributors for: ${directory}`);
     try {
       const result = await window.mainProcess.git.execCommand(directory, [
@@ -926,7 +926,7 @@ export class GitService {
       ]);
 
       // Parse "  count\tAuthor Name <email>"
-      const emailMap = new Map<string, { name: string; commits: number }>();
+      const emailMap = new Map<string, { name: string; commits: number; email: string }>();
       const noEmailList: Array<{ name: string; commits: number }> = [];
 
       const lines = result.stdout.trim().split('\n').filter(Boolean);
@@ -944,9 +944,10 @@ export class GitService {
               emailMap.set(email, {
                 name: existing.commits >= commits ? existing.name : name,
                 commits: existing.commits + commits,
+                email,
               });
             } else {
-              emailMap.set(email, { name, commits });
+              emailMap.set(email, { name, commits, email });
             }
           } else {
             noEmailList.push({ name, commits });
@@ -964,6 +965,162 @@ export class GitService {
     } catch (error) {
       console.error('[GitService] Failed to get contributors:', error);
       return [];
+    }
+  }
+
+  /**
+   * Build a repo-wide ownership map by blaming every tracked file at HEAD.
+   *
+   * Uses `git blame --line-porcelain -w HEAD -- <file>` per file and counts
+   * `author-mail` headers (one per source line) by email.
+   *
+   * Cost is roughly O(files × history_depth). On a moderate repo this can take
+   * tens of seconds — call once and cache.
+   *
+   * @param directory - Repository directory
+   * @param concurrency - Number of parallel blames (default 8)
+   * @returns
+   *   - `byEmail`: Map<lowercased email, Map<path, linesOwned>>
+   *   - `totalLines`: Map<path, total lines at HEAD> (lines blame could attribute)
+   *   - `totalLinesGlobal`: sum of all totalLines values
+   */
+  static async getOwnershipMap(
+    directory: string,
+    concurrency: number = 8,
+  ): Promise<{
+    byEmail: Map<string, Map<string, number>>;
+    totalLines: Map<string, number>;
+    totalLinesGlobal: number;
+  }> {
+    const byEmail = new Map<string, Map<string, number>>();
+    const totalLines = new Map<string, number>();
+    let totalLinesGlobal = 0;
+
+    let files: string[] = [];
+    try {
+      const lsResult = await window.mainProcess.git.execCommand(directory, ['ls-files']);
+      files = lsResult.stdout.split('\n').filter(Boolean);
+    } catch (error) {
+      console.error('[GitService] ls-files failed for ownership map:', error);
+      return { byEmail, totalLines, totalLinesGlobal };
+    }
+
+    let cursor = 0;
+    const blameOne = async () => {
+      while (true) {
+        const i = cursor++;
+        if (i >= files.length) return;
+        const file = files[i];
+        try {
+          const blameResult = await window.mainProcess.git.execCommand(directory, [
+            'blame',
+            '--line-porcelain',
+            '-w',
+            'HEAD',
+            '--',
+            file,
+          ]);
+          const perFileEmails = new Map<string, number>();
+          let fileLines = 0;
+          for (const line of blameResult.stdout.split('\n')) {
+            if (line.startsWith('author-mail ')) {
+              const m = /^author-mail <([^>]*)>/.exec(line);
+              if (m) {
+                const email = m[1].toLowerCase();
+                perFileEmails.set(email, (perFileEmails.get(email) ?? 0) + 1);
+                fileLines++;
+              }
+            }
+          }
+          if (fileLines > 0) {
+            totalLines.set(file, fileLines);
+            totalLinesGlobal += fileLines;
+            for (const [email, lines] of perFileEmails) {
+              let perFile = byEmail.get(email);
+              if (!perFile) {
+                perFile = new Map();
+                byEmail.set(email, perFile);
+              }
+              perFile.set(file, (perFile.get(file) ?? 0) + lines);
+            }
+          }
+        } catch {
+          // Binary file or unblameable — skip silently.
+        }
+      }
+    };
+
+    const workers = Array.from({ length: Math.max(1, concurrency) }, blameOne);
+    await Promise.all(workers);
+
+    return { byEmail, totalLines, totalLinesGlobal };
+  }
+
+  /**
+   * Get the files an author has touched, with line counts and commit counts per file.
+   * Uses `git log --author=<email> --numstat` and aggregates across all commits.
+   * @param directory - Repository directory
+   * @param email - Author email (matched against the author header; regex specials are escaped)
+   * @returns Map<filePath, { commits, linesTouched }>
+   */
+  static async getFilesTouchedByAuthor(
+    directory: string,
+    email: string,
+  ): Promise<Map<string, { commits: number; linesTouched: number }>> {
+    const escapedEmail = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    try {
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'log',
+        '--all',
+        '--no-merges',
+        `--author=${escapedEmail}`,
+        '--numstat',
+        '--pretty=tformat:__COMMIT__',
+      ]);
+
+      const files = new Map<string, { commits: number; linesTouched: number; lastCommitMarker: number }>();
+      let commitIdx = 0;
+      const renamePattern = /\{.*? => (.*?)\}/;
+
+      for (const rawLine of result.stdout.split('\n')) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        if (line === '__COMMIT__') {
+          commitIdx++;
+          continue;
+        }
+        // numstat line: <add>\t<del>\t<path>  (binary files use "-")
+        const parts = line.split('\t');
+        if (parts.length < 3) continue;
+        const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10) || 0;
+        const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10) || 0;
+        let filePath = parts[2];
+        // Handle rename notation "old/{a => b}/file" or "{old => new}"
+        const renameMatch = filePath.match(renamePattern);
+        if (renameMatch) {
+          filePath = filePath.replace(renamePattern, renameMatch[1]).replace(/\/\//g, '/');
+        }
+
+        const existing = files.get(filePath);
+        if (existing) {
+          existing.linesTouched += additions + deletions;
+          if (existing.lastCommitMarker !== commitIdx) {
+            existing.commits += 1;
+            existing.lastCommitMarker = commitIdx;
+          }
+        } else {
+          files.set(filePath, { commits: 1, linesTouched: additions + deletions, lastCommitMarker: commitIdx });
+        }
+      }
+
+      const out = new Map<string, { commits: number; linesTouched: number }>();
+      for (const [path, info] of files) {
+        out.set(path, { commits: info.commits, linesTouched: info.linesTouched });
+      }
+      return out;
+    } catch (error) {
+      console.error('[GitService] Failed to get files touched by author:', error);
+      return new Map();
     }
   }
 

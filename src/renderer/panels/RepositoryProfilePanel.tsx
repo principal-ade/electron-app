@@ -435,8 +435,39 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // State for contributors list
   const [showContributors, setShowContributors] = useState(false);
-  const [contributors, setContributors] = useState<Array<{ name: string; commits: number; avatarUrl?: string }>>([]);
+  const [contributors, setContributors] = useState<Array<{ name: string; commits: number; avatarUrl?: string; email?: string }>>([]);
   const [contributorsLoading, setContributorsLoading] = useState(false);
+
+  // Lower-cased name → email lookup, populated from local-git contributors. Lets
+  // us resolve a GitHub-sourced contributor (login only) back to an email so the
+  // file-touch query has a key.
+  const [nameToEmail, setNameToEmail] = useState<Map<string, string>>(new Map());
+
+  // Lower-cased GitHub login → git email, sampled from the GitHub commits API.
+  // This is the precise login↔email bridge that the contributors endpoint omits.
+  const [loginToEmail, setLoginToEmail] = useState<Map<string, string>>(new Map());
+
+  // Repo-wide ownership map (single blame sweep). Held in a ref so we don't
+  // copy the (potentially large) map into state; bumped via ownershipVersion
+  // so effects re-run when it changes.
+  const ownershipMapRef = useRef<{
+    byEmail: Map<string, Map<string, number>>;
+    totalLines: Map<string, number>;
+    totalLinesGlobal: number;
+  } | null>(null);
+  const [ownershipVersion, setOwnershipVersion] = useState(0);
+  const [ownershipLoading, setOwnershipLoading] = useState(false);
+  const [hoveredAuthorEmail, setHoveredAuthorEmail] = useState<string | null>(null);
+
+  // Deterministic per-author color: hash email to a hue in HSL space.
+  const colorForAuthor = (email: string): string => {
+    let hash = 0;
+    for (let i = 0; i < email.length; i++) {
+      hash = ((hash << 5) - hash + email.charCodeAt(i)) | 0;
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 70%, 55%)`;
+  };
 
   // State for git branch status (sync status) per clone
   const [branchStatusMap, setBranchStatusMap] = useState<Map<string, {
@@ -721,10 +752,30 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       }
     }
 
+    // 3. Author hover layer — files the hovered author owns at HEAD (per blame).
+    if (hoveredAuthorEmail) {
+      const owned = ownershipMapRef.current?.byEmail.get(hoveredAuthorEmail.toLowerCase());
+      if (owned && owned.size > 0) {
+        layers.push({
+          id: `author-hover-${hoveredAuthorEmail}`,
+          name: `Files owned by ${hoveredAuthorEmail}`,
+          enabled: true,
+          color: colorForAuthor(hoveredAuthorEmail),
+          priority: 0,
+          items: Array.from(owned.keys()).map(path => ({
+            type: 'file' as const,
+            path,
+            renderStrategy: 'fill' as const,
+          })),
+          opacity: 0.55,
+        });
+      }
+    }
+
     setHighlightLayers(layers);
 
     console.info('[RepositoryProfilePanel] Total highlight layers:', layers.length);
-  }, [gitStatusMap, isPlaying, repositoryData?.localClones, theme.colors, cityData, showSuffixLayers]);
+  }, [gitStatusMap, isPlaying, repositoryData?.localClones, theme.colors, cityData, showSuffixLayers, hoveredAuthorEmail, ownershipVersion]);
 
   // Load watch status when repository changes
   useEffect(() => {
@@ -1242,20 +1293,57 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
     const load = async () => {
       try {
-        let list: Array<{ name: string; commits: number; avatarUrl?: string }> = [];
+        let list: Array<{ name: string; commits: number; avatarUrl?: string; email?: string }> = [];
         const githubOwner = repositoryData?.github?.owner;
         const githubName = repositoryData?.github?.name;
+
+        // Pull in parallel:
+        // - local-git contributors (for name→email map, when a clone exists)
+        // - GitHub login→email map sampled from recent commits (when GitHub is configured)
+        const localContribsPromise = localPath ? GitService.getContributors(localPath) : Promise.resolve([]);
+        const loginEmailPromise = (githubOwner && githubName)
+          ? GithubService.getCommitAuthorEmailMap(githubOwner, githubName)
+          : Promise.resolve(new Map<string, string>());
+
         if (githubOwner && githubName) {
           const fetch = actions.getContributors ?? GithubService.getRepositoryContributors.bind(GithubService);
           const raw = await fetch(githubOwner, githubName);
           list = raw.map(c => ({ name: c.login, commits: c.contributions, avatarUrl: c.avatar_url }));
         } else if (localPath) {
-          const raw = await GitService.getContributors(localPath);
-          list = raw.map(c => ({ ...c, avatarUrl: undefined }));
+          const raw = await localContribsPromise;
+          list = raw.map(c => ({ name: c.name, commits: c.commits, email: c.email, avatarUrl: undefined }));
         }
-        if (!cancelled) setContributors(list);
+
+        const [localContribs, loginEmailMap] = await Promise.all([localContribsPromise, loginEmailPromise]);
+        const nameMap = new Map<string, string>();
+        for (const c of localContribs) {
+          if (c.email) nameMap.set(c.name.toLowerCase(), c.email);
+        }
+
+        if (!cancelled) {
+          // Backfill emails on the displayed list using the precise login→email
+          // map first, then fall back to the name→email map (best-effort).
+          if (githubOwner && githubName) {
+            list = list.map(c => ({
+              ...c,
+              email: c.email ?? loginEmailMap.get(c.name.toLowerCase()) ?? nameMap.get(c.name.toLowerCase()),
+            }));
+          }
+          console.info('[RepositoryProfilePanel] contributor maps loaded', {
+            contributors: list.length,
+            nameMap: nameMap.size,
+            loginEmailMap: loginEmailMap.size,
+          });
+          setContributors(list);
+          setNameToEmail(nameMap);
+          setLoginToEmail(loginEmailMap);
+        }
       } catch {
-        if (!cancelled) setContributors([]);
+        if (!cancelled) {
+          setContributors([]);
+          setNameToEmail(new Map());
+          setLoginToEmail(new Map());
+        }
       } finally {
         if (!cancelled) setContributorsLoading(false);
       }
@@ -1265,6 +1353,52 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repositoryData?.localClones?.[0]?.path, repositoryData?.github?.owner, repositoryData?.github?.name, actions]);
+
+  // Resolve a contributor row to a lookup email for the ownership map. Order:
+  //   1. Direct email (local-git source already has it)
+  //   2. GitHub login → email, sampled from the commits API (precise)
+  //   3. Local-git name → email (when GitHub login happens to match git name)
+  // Returns undefined if no email could be resolved (no ownership data either way).
+  const resolveContributorEmail = (c: { name: string; email?: string }): string | undefined => {
+    if (c.email) return c.email;
+    const lower = c.name.toLowerCase();
+    const fromLogin = loginToEmail.get(lower);
+    if (fromLogin) return fromLogin;
+    const fromName = nameToEmail.get(lower);
+    if (fromName) return fromName;
+    return undefined;
+  };
+
+  // Run one repo-wide blame sweep when the local clone is known. Reset on
+  // path change; we don't auto-refresh on subsequent commits — the user can
+  // reload the panel to recompute.
+  useEffect(() => {
+    const localPath = repositoryData?.localClones?.[0]?.path;
+    if (!localPath) {
+      ownershipMapRef.current = null;
+      setOwnershipVersion(v => v + 1);
+      return;
+    }
+    let cancelled = false;
+    setOwnershipLoading(true);
+    ownershipMapRef.current = null;
+    setOwnershipVersion(v => v + 1);
+    GitService.getOwnershipMap(localPath).then(map => {
+      if (cancelled) return;
+      ownershipMapRef.current = map;
+      console.info('[RepositoryProfilePanel] ownership map loaded', {
+        authors: map.byEmail.size,
+        files: map.totalLines.size,
+        totalLines: map.totalLinesGlobal,
+      });
+      setOwnershipVersion(v => v + 1);
+      setOwnershipLoading(false);
+    }).catch(err => {
+      console.error('[RepositoryProfilePanel] ownership map failed:', err);
+      if (!cancelled) setOwnershipLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [repositoryData?.localClones?.[0]?.path]);
 
   // Handle contributors stat click — data is already fetched by the effect
   const handleContributorsClick = () => {
@@ -2476,7 +2610,21 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               Top contributors
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm }}>
-              {contributors.slice(0, 6).map((contributor) => (
+              {contributors.slice(0, 6).map((contributor) => {
+                const email = resolveContributorEmail(contributor);
+                const isHovered = !!email && hoveredAuthorEmail?.toLowerCase() === email.toLowerCase();
+                const authorColor = email ? colorForAuthor(email) : null;
+                const cardBorder = isHovered && authorColor
+                  ? `1px solid ${authorColor}`
+                  : `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`;
+                const owned = email ? ownershipMapRef.current?.byEmail.get(email.toLowerCase()) : undefined;
+                const totalLinesGlobal = ownershipMapRef.current?.totalLinesGlobal ?? 0;
+                let linesOwned = 0;
+                if (owned) for (const v of owned.values()) linesOwned += v;
+                const pct = (owned && totalLinesGlobal > 0)
+                  ? (linesOwned / totalLinesGlobal) * 100
+                  : null;
+                return (
                 <div
                   key={contributor.name}
                   onClick={() => events.emit({
@@ -2485,18 +2633,24 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     timestamp: Date.now(),
                     payload: { username: contributor.name },
                   })}
+                  onMouseEnter={() => {
+                    console.info('[RepositoryProfilePanel] top-card hover', { name: contributor.name, resolvedEmail: email, nameMapSize: nameToEmail.size });
+                    if (email) setHoveredAuthorEmail(email);
+                  }}
+                  onMouseLeave={() => { setHoveredAuthorEmail(prev => (email && prev?.toLowerCase() === email.toLowerCase() ? null : prev)); }}
                   style={{
                     width: 'calc(50% - 4px)',
                     minWidth: 120,
                     padding: `${spacing.xs}px ${spacing.sm}px`,
                     borderRadius: 6,
-                    border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`,
+                    border: cardBorder,
                     backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
                     display: 'flex',
                     alignItems: 'center',
                     gap: spacing.sm,
                     boxSizing: 'border-box',
                     cursor: 'pointer',
+                    transition: 'border-color 0.15s ease',
                   }}
                 >
                   {contributor.avatarUrl ? (
@@ -2541,9 +2695,31 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     }}>
                       {formatNumber(contributor.commits)} commit{contributor.commits !== 1 ? 's' : ''}
                     </div>
+                    {isHovered && pct !== null && (
+                      <div style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts?.body,
+                        color: authorColor ?? theme.colors.textSecondary,
+                        fontWeight: theme.fontWeights?.medium ?? 500,
+                        marginTop: 2,
+                      }}>
+                        {formatNumber(linesOwned)} lines · {pct.toFixed(pct < 1 ? 2 : pct < 10 ? 1 : 0)}% of repo
+                      </div>
+                    )}
+                    {isHovered && pct === null && ownershipLoading && (
+                      <div style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.textSecondary,
+                        marginTop: 2,
+                      }}>
+                        Computing ownership…
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -2667,67 +2843,84 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm, alignContent: 'flex-start', overflow: 'auto' }}>
-                    {contributors.map((contributor) => (
-                      <div
-                        key={contributor.name}
-                        style={{
-                          width: 'calc(50% - 4px)',
-                          minWidth: 120,
-                          padding: `${spacing.xs}px ${spacing.sm}px`,
-                          borderRadius: 6,
-                          border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`,
-                          backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: spacing.sm,
-                          boxSizing: 'border-box',
-                        }}
-                      >
-                        {contributor.avatarUrl ? (
-                          <img
-                            src={contributor.avatarUrl}
-                            alt={contributor.name}
-                            style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }}
-                          />
-                        ) : (
-                          <div style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: '50%',
-                            backgroundColor: theme.colors.primary + '30',
+                    {(() => { console.info('[RepositoryProfilePanel] rendering contributor cards', { count: contributors.length, nameMapSize: nameToEmail.size }); return null; })()}
+                    {contributors.map((contributor) => {
+                      const email = resolveContributorEmail(contributor);
+                      const isHovered = !!email && hoveredAuthorEmail?.toLowerCase() === email.toLowerCase();
+                      const authorColor = email ? colorForAuthor(email) : null;
+                      const cardBorder = isHovered && authorColor
+                        ? `1px solid ${authorColor}`
+                        : `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`;
+
+                      return (
+                        <div
+                          key={contributor.name}
+                          onMouseEnter={() => {
+                            console.info('[RepositoryProfilePanel] card hover', { name: contributor.name, resolvedEmail: email, nameMapSize: nameToEmail.size });
+                            if (email) setHoveredAuthorEmail(email);
+                          }}
+                          onMouseLeave={() => { setHoveredAuthorEmail(prev => (email && prev?.toLowerCase() === email.toLowerCase() ? null : prev)); }}
+                          style={{
+                            width: 'calc(50% - 4px)',
+                            minWidth: 120,
+                            padding: `${spacing.xs}px ${spacing.sm}px`,
+                            borderRadius: 6,
+                            border: cardBorder,
+                            backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: theme.fontSizes[0],
-                            fontFamily: theme.fonts?.body,
-                            color: theme.colors.primary,
-                            flexShrink: 0,
-                          }}>
-                            {contributor.name.slice(0, 1).toUpperCase()}
-                          </div>
-                        )}
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={{
-                            fontSize: theme.fontSizes[1],
-                            fontWeight: theme.fontWeights?.semibold ?? 600,
-                            fontFamily: theme.fonts?.body,
-                            color: theme.colors.primary,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}>
-                            {contributor.name}
-                          </div>
-                          <div style={{
-                            fontSize: theme.fontSizes[0],
-                            fontFamily: theme.fonts?.body,
-                            color: theme.colors.textSecondary,
-                          }}>
-                            {formatNumber(contributor.commits)} commit{contributor.commits !== 1 ? 's' : ''}
+                            gap: spacing.sm,
+                            boxSizing: 'border-box',
+                            cursor: email ? 'pointer' : 'default',
+                            transition: 'border-color 0.15s ease',
+                          }}
+                        >
+                          {contributor.avatarUrl ? (
+                            <img
+                              src={contributor.avatarUrl}
+                              alt={contributor.name}
+                              style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: '50%',
+                              backgroundColor: theme.colors.primary + '30',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: theme.fontSizes[0],
+                              fontFamily: theme.fonts?.body,
+                              color: theme.colors.primary,
+                              flexShrink: 0,
+                            }}>
+                              {contributor.name.slice(0, 1).toUpperCase()}
+                            </div>
+                          )}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{
+                              fontSize: theme.fontSizes[1],
+                              fontWeight: theme.fontWeights?.semibold ?? 600,
+                              fontFamily: theme.fonts?.body,
+                              color: theme.colors.primary,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}>
+                              {contributor.name}
+                            </div>
+                            <div style={{
+                              fontSize: theme.fontSizes[0],
+                              fontFamily: theme.fonts?.body,
+                              color: theme.colors.textSecondary,
+                            }}>
+                              {formatNumber(contributor.commits)} commit{contributor.commits !== 1 ? 's' : ''}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )
               ) : (() => {

@@ -127,6 +127,39 @@ export class GithubService {
   }
 
   /**
+   * Build a `GitHub login → primary git email` map by sampling recent commits.
+   * The contributors endpoint omits emails; the commits endpoint is the only
+   * place GitHub returns both fields side-by-side.
+   * @param owner - Repo owner
+   * @param repo - Repo name
+   * @param perPage - Commits to sample (default 100; top contributors are
+   *                 nearly always covered by the first page)
+   * @returns Map<lowercased login, lowercased email>. First email seen per
+   *          login wins.
+   */
+  static async getCommitAuthorEmailMap(
+    owner: string,
+    repo: string,
+    perPage: number = 100,
+  ): Promise<Map<string, string>> {
+    try {
+      const commits = await GithubService.getRepositoryCommits(owner, repo, { perPage });
+      const map = new Map<string, string>();
+      for (const c of commits) {
+        const login = c.author?.login?.toLowerCase();
+        const email = c.commit?.author?.email?.toLowerCase();
+        if (login && email && !map.has(login)) {
+          map.set(login, email);
+        }
+      }
+      return map;
+    } catch (error) {
+      console.error('[GithubService] Failed to build commit author email map:', error);
+      return new Map();
+    }
+  }
+
+  /**
    * Get repository contributors from GitHub
    * Returns a list of contributors with their commit counts
    */
