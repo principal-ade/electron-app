@@ -15,6 +15,7 @@ import {
   type CityData,
   type CityDistrict,
   type ElevatedScopePanel,
+  type HighlightLayer,
 } from '@principal-ai/file-city-react';
 import type { ProjectArea } from '@principal-ai/principal-view-core';
 
@@ -284,6 +285,63 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   const [modalAreaName, setModalAreaName] = React.useState('');
   const [modalAreaDescription, setModalAreaDescription] = React.useState('');
   const [activeTab, setActiveTab] = React.useState<'files' | 'scopes'>('files');
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchInputFocused, setSearchInputFocused] = React.useState(false);
+
+  // Substring search over building paths. Case-insensitive, no debounce — the
+  // city's render path handles the per-keystroke layer churn fine for now.
+  // Returns the matched paths so the highlight layer below can fill them in.
+  const searchResults = React.useMemo<string[]>(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    const matches: string[] = [];
+    for (const b of cityData.buildings) {
+      if (b.path.toLowerCase().includes(q)) matches.push(b.path);
+    }
+    return matches;
+  }, [searchQuery, cityData]);
+
+  const searchHighlightLayer = React.useMemo<HighlightLayer | null>(() => {
+    if (searchResults.length === 0) return null;
+    return {
+      id: 'search-results',
+      name: 'Search Results',
+      enabled: true,
+      color: '#3b82f6',
+      priority: 900,
+      opacity: 0.9,
+      items: searchResults.map((path) => ({
+        path,
+        type: 'file',
+        renderStrategy: 'fill',
+      })),
+    };
+  }, [searchResults]);
+
+  const searchPanelOpen = searchQuery.trim().length > 0;
+
+  // Hovered search result → its own one-item highlight layer at a slightly
+  // higher priority than the bulk search layer, so the hovered building reads
+  // as the "currently aimed at" hit while the rest stay blue.
+  const [hoveredSearchResult, setHoveredSearchResult] = React.useState<string | null>(null);
+  const hoveredSearchHighlightLayer = React.useMemo<HighlightLayer | null>(() => {
+    if (!hoveredSearchResult) return null;
+    return {
+      id: 'search-results-hover',
+      name: 'Hovered search result',
+      enabled: true,
+      color: theme.colors.warning,
+      priority: 950,
+      opacity: 1,
+      items: [
+        {
+          path: hoveredSearchResult,
+          type: 'file',
+          renderStrategy: 'fill',
+        },
+      ],
+    };
+  }, [hoveredSearchResult, theme]);
 
   const initialCityPaths = React.useRef(cityPaths);
   const { model: treeModel } = useFileTree({
@@ -429,13 +487,31 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
 
   // City highlight layers derive from the active tab:
   //   scopes tab → selected scope's namespace fills (+ scope-level borders)
-  //   files tab  → none
+  //   files tab  → border around the currently-selected folder
   const cityHighlightLayers = React.useMemo(() => {
     if (activeTab === 'scopes') {
       return scopeInfo ? buildLayersForScope(scopeInfo.scope, toCityPath) : undefined;
     }
+    if (activeTab === 'files' && selectedPanelFolder) {
+      return [
+        {
+          id: 'folder-selection',
+          name: 'Selected folder',
+          enabled: true,
+          color: theme.colors.warning,
+          priority: 1000,
+          items: [
+            {
+              path: selectedPanelFolder,
+              type: 'directory' as const,
+              renderStrategy: 'border' as const,
+            },
+          ],
+        },
+      ];
+    }
     return undefined;
-  }, [activeTab, scopeInfo, toCityPath]);
+  }, [activeTab, scopeInfo, toCityPath, selectedPanelFolder, theme]);
 
   // Elevated scope panels — driven by the scope tree's expansion state.
   // - Collapsed scope → one gray umbrella tile per scope path.
@@ -618,12 +694,11 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
       const displayLabel = folderPath ? areaNameByCityPath.get(folderPath) : undefined;
       return displayLabel ? { ...panel, displayLabel } : panel;
     });
-    // Selection indicator: render a thin, slightly-larger panel underneath
-    // the selected folder's umbrella so an accent ring peeks out around its
-    // edges. Inserted *before* the umbrella in the list so the umbrella
-    // draws on top — only the inflated rim shows. If the folder is expanded
-    // (no umbrella in the panel list) findIndex returns -1 and no ring is
-    // drawn, which is exactly what we want.
+    // Two-layer selection ring: when the selected folder is collapsed, its
+    // umbrella tile occludes the ground-painted highlight border, so we
+    // also slip a slightly-inflated slab underneath the umbrella to show
+    // an accent rim. The expanded case is covered by the `border`-strategy
+    // highlight layer in `cityHighlightLayers`.
     if (selectedPanelFolder) {
       const idx = panels.findIndex(p => p.id === `folder::${selectedPanelFolder}`);
       if (idx >= 0) {
@@ -837,8 +912,18 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
             backgroundColor={theme.colors.background}
             textColor={theme.colors.textMuted}
             focusDirectory={focusDirectory}
-            highlightLayers={cityHighlightLayers}
-            elevatedScopePanels={cityElevatedPanels ?? folderElevatedPanels}
+            highlightLayers={(() => {
+              const extras: HighlightLayer[] = [];
+              if (searchHighlightLayer) extras.push(searchHighlightLayer);
+              if (hoveredSearchHighlightLayer) extras.push(hoveredSearchHighlightLayer);
+              if (extras.length === 0) return cityHighlightLayers;
+              return [...(cityHighlightLayers ?? []), ...extras];
+            })()}
+            elevatedScopePanels={
+              searchHighlightLayer || searchInputFocused
+                ? undefined
+                : cityElevatedPanels ?? folderElevatedPanels
+            }
             onBuildingClick={handleBuildingClick}
             animation={{
               startFlat: true,
@@ -1020,6 +1105,37 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                 </div>
               );
             })()}
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              flexShrink: 0,
+            }}
+          >
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchInputFocused(true)}
+              onBlur={() => setSearchInputFocused(false)}
+              onKeyDown={e => {
+                if (e.key === 'Escape') setSearchQuery('');
+              }}
+              placeholder="Search files…"
+              style={{
+                width: 160,
+                padding: '4px 8px',
+                background: theme.colors.background,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.radii[2],
+                color: theme.colors.text,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[0],
+                outline: 'none',
+              }}
+            />
           </div>
           {focusDirectory && (
             <button
@@ -1414,6 +1530,142 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Search-results overlay — mirrors the focus/selected-folder
+            overlays on the left, but on the right side. Only mounted while a
+            query is active so the canvas is unobstructed when search clears. */}
+        {searchPanelOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 60,
+              right: theme.space[2],
+              bottom: theme.space[3],
+              width: 320,
+              padding: '10px 12px',
+              background: withAlpha(theme.colors.background, 72),
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radii[3],
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[0],
+              zIndex: 100,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: theme.space[2],
+              boxShadow: theme.shadows[3],
+              minHeight: 0,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ ...sectionLabelStyle, flex: 1, minWidth: 0 }}>
+                Search results
+              </div>
+              <span
+                style={{
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textMuted,
+                  fontFamily: theme.fonts.monospace,
+                }}
+              >
+                {searchResults.length}
+              </span>
+            </div>
+            {searchResults.length === 0 ? (
+              <div
+                style={{
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textTertiary,
+                  fontStyle: 'italic',
+                }}
+              >
+                No files match “{searchQuery.trim()}”.
+              </div>
+            ) : (
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  margin: `0 -${theme.space[1]}`,
+                }}
+              >
+                {searchResults.map((path) => {
+                  const slash = path.lastIndexOf('/');
+                  const name = slash >= 0 ? path.slice(slash + 1) : path;
+                  const dir = slash >= 0 ? path.slice(0, slash) : '';
+                  return (
+                    <button
+                      key={path}
+                      onClick={() => onFileOpen?.(path)}
+                      title={path}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        borderRadius: theme.radii[2],
+                        padding: '4px 8px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        color: theme.colors.text,
+                        fontFamily: theme.fonts.body,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = withAlpha(theme.colors.primary, 14);
+                        setHoveredSearchResult(path);
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        setHoveredSearchResult((prev) => (prev === path ? null : prev));
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: theme.fonts.monospace,
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.text,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {name}
+                      </span>
+                      {dir && (
+                        <span
+                          style={{
+                            fontFamily: theme.fonts.monospace,
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textMuted,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {dir}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
