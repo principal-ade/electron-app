@@ -26,7 +26,6 @@ const createMockRepo = (overrides: Partial<CollectionRepoCardData> = {}): Collec
   owner: 'facebook',
   repo: 'react',
   ownerAvatarUrl: 'https://avatars.githubusercontent.com/u/69631?v=4',
-  description: 'The library for web and native user interfaces.',
   language: 'JavaScript',
   stars: 230000,
   ...overrides,
@@ -94,22 +93,7 @@ export const NoMetadata: Story = {
   render: () => (
     <Wrapper>
       <CollectionRepoCard
-        repo={createMockRepo({ description: undefined, language: undefined, stars: undefined })}
-        fileTree={buildMockTree('react')}
-        onClick={() => console.info('clicked')}
-      />
-    </Wrapper>
-  ),
-};
-
-export const LongDescription: Story = {
-  render: () => (
-    <Wrapper>
-      <CollectionRepoCard
-        repo={createMockRepo({
-          description:
-            'A long description that should clamp to two lines so the cards in a grid all stay roughly the same height even when one repo has a wordy README summary attached to it.',
-        })}
+        repo={createMockRepo({ language: undefined, stars: undefined })}
         fileTree={buildMockTree('react')}
         onClick={() => console.info('clicked')}
       />
@@ -124,7 +108,6 @@ export const Grid: Story = {
         owner: 'facebook',
         repo: 'react',
         ownerAvatarUrl: 'https://avatars.githubusercontent.com/u/69631?v=4',
-        description: 'The library for web and native user interfaces.',
         language: 'JavaScript',
         stars: 230000,
       }),
@@ -132,7 +115,6 @@ export const Grid: Story = {
         owner: 'microsoft',
         repo: 'vscode',
         ownerAvatarUrl: 'https://avatars.githubusercontent.com/u/6154722?v=4',
-        description: 'Visual Studio Code',
         language: 'TypeScript',
         stars: 162000,
       }),
@@ -140,7 +122,6 @@ export const Grid: Story = {
         owner: 'rust-lang',
         repo: 'rust',
         ownerAvatarUrl: 'https://avatars.githubusercontent.com/u/5430905?v=4',
-        description: 'Empowering everyone to build reliable and efficient software.',
         language: 'Rust',
         stars: 97000,
       }),
@@ -148,7 +129,6 @@ export const Grid: Story = {
         owner: 'django',
         repo: 'django',
         ownerAvatarUrl: 'https://avatars.githubusercontent.com/u/27804?v=4',
-        description: 'The Web framework for perfectionists with deadlines.',
         language: 'Python',
         stars: 78000,
       }),

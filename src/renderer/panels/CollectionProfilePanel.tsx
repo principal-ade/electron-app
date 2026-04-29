@@ -375,7 +375,6 @@ export const CollectionProfilePanel: React.FC<CollectionProfilePanelProps> = ({
                       owner,
                       repo,
                       ownerAvatarUrl: info?.avatarUrl,
-                      description: info?.description,
                       language: info?.language,
                       stars: info?.stars,
                     }}

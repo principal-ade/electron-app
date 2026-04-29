@@ -5,15 +5,20 @@ import {
   ArchitectureMapHighlightLayers,
   MultiVersionCityBuilder,
   type CityData,
+  type HighlightLayer,
   createFileColorHighlightLayers,
 } from '@principal-ai/file-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import { GithubService } from '../../main-process-api/GithubService';
+import type {
+  GitHubCommit,
+  ChangedFileInfo,
+} from '../../../shared/main-process-api-interfaces/GitHubAPI';
 
 export interface CollectionRepoCardData {
   owner: string;
   repo: string;
   ownerAvatarUrl?: string;
-  description?: string;
   language?: string;
   stars?: number;
 }
@@ -27,6 +32,29 @@ export interface CollectionRepoCardProps {
   treeLoading?: boolean;
 }
 
+interface LatestCommitSummary {
+  sha: string;
+  subject: string;
+  author: string;
+  authoredAt: Date;
+  filesChanged: number;
+  additions: number;
+  deletions: number;
+  files: { path: string; status: ChangedFileInfo['status'] }[];
+}
+
+function formatRelativeTime(date: Date): string {
+  const diffMs = Date.now() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 export const CollectionRepoCard: React.FC<CollectionRepoCardProps> = ({
   repo,
   onClick,
@@ -38,9 +66,8 @@ export const CollectionRepoCard: React.FC<CollectionRepoCardProps> = ({
   const radius = theme.radii?.[2] || 8;
   const avatarSrc = repo.ownerAvatarUrl ?? `https://github.com/${repo.owner}.png?size=120`;
 
-  const hasFooter = repo.description !== undefined || repo.language !== undefined || repo.stars !== undefined;
-
   const [cityData, setCityData] = useState<CityData | null>(null);
+  const [latestCommit, setLatestCommit] = useState<LatestCommitSummary | null>(null);
 
   useEffect(() => {
     if (!fileTree) {
@@ -57,10 +84,106 @@ export const CollectionRepoCard: React.FC<CollectionRepoCardProps> = ({
     }
   }, [fileTree, repo.owner, repo.repo]);
 
-  const highlightLayers = useMemo(() => {
+  useEffect(() => {
+    let cancelled = false;
+    setLatestCommit(null);
+    (async () => {
+      try {
+        const commit: GitHubCommit | null = await GithubService.getLatestCommit(
+          repo.owner,
+          repo.repo,
+        );
+        if (cancelled || !commit) return;
+        const changed = await GithubService.getChangedFilesForCommit(
+          repo.owner,
+          repo.repo,
+          commit.sha,
+        );
+        if (cancelled) return;
+        let additions = 0;
+        let deletions = 0;
+        const files: LatestCommitSummary['files'] = [];
+        for (const [path, info] of changed.entries()) {
+          additions += info.additions;
+          deletions += info.deletions;
+          files.push({ path, status: info.status });
+        }
+        const subject = commit.commit.message.split('\n')[0];
+        setLatestCommit({
+          sha: commit.sha,
+          subject,
+          author:
+            commit.author?.login ?? commit.commit.author?.name ?? 'unknown',
+          authoredAt: new Date(commit.commit.author?.date ?? Date.now()),
+          filesChanged: files.length,
+          additions,
+          deletions,
+          files,
+        });
+      } catch (err) {
+        if (!cancelled) {
+          console.warn(
+            `[CollectionRepoCard] Failed to fetch latest commit for ${repo.owner}/${repo.repo}:`,
+            err,
+          );
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [repo.owner, repo.repo]);
+
+  const highlightLayers = useMemo<HighlightLayer[]>(() => {
     if (!cityData?.buildings) return [];
-    return createFileColorHighlightLayers(cityData.buildings);
-  }, [cityData]);
+    const base = createFileColorHighlightLayers(cityData.buildings);
+    if (!latestCommit || latestCommit.files.length === 0) return base;
+    // City paths are prefixed with the repo name (PathsFileTreeBuilder uses
+    // `rootPath: repo`). GitHub returns paths relative to the repo root, so
+    // re-anchor them before matching.
+    const buildingPaths = new Set(cityData.buildings.map((b) => b.path));
+    const added: string[] = [];
+    const modified: string[] = [];
+    for (const file of latestCommit.files) {
+      if (file.status === 'deleted') continue;
+      const cityPath = `${repo.repo}/${file.path}`;
+      if (!buildingPaths.has(cityPath)) continue;
+      if (file.status === 'added') added.push(cityPath);
+      else modified.push(cityPath);
+    }
+    const overlays: HighlightLayer[] = [];
+    if (modified.length > 0) {
+      overlays.push({
+        id: 'recent-commit-modified',
+        name: 'Modified in latest commit',
+        enabled: true,
+        color: theme.colors.warning,
+        priority: 850,
+        opacity: 0.9,
+        items: modified.map((path) => ({
+          path,
+          type: 'file',
+          renderStrategy: 'fill',
+        })),
+      });
+    }
+    if (added.length > 0) {
+      overlays.push({
+        id: 'recent-commit-added',
+        name: 'Added in latest commit',
+        enabled: true,
+        color: theme.colors.success,
+        priority: 860,
+        opacity: 0.9,
+        items: added.map((path) => ({
+          path,
+          type: 'file',
+          renderStrategy: 'fill',
+        })),
+      });
+    }
+    return [...base, ...overlays];
+  }, [cityData, latestCommit, repo.repo, theme]);
 
   return (
     <div
@@ -222,24 +345,85 @@ export const CollectionRepoCard: React.FC<CollectionRepoCardProps> = ({
         )}
       </div>
 
-      {/* Footer: description */}
-      {hasFooter && repo.description && (
+      {/* Footer: latest commit */}
+      {latestCommit && (
         <div
           style={{
             padding: spacing.sm,
             borderTop: `1px solid ${theme.colors.border}`,
             backgroundColor: theme.colors.backgroundSecondary,
             fontFamily: theme.fonts?.body,
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.textSecondary,
-            lineHeight: 1.4,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
           }}
         >
-          {repo.description}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: spacing.xs,
+            }}
+          >
+            <code
+              style={{
+                fontFamily: theme.fonts?.monospace,
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textSecondary,
+                flexShrink: 0,
+              }}
+              title={latestCommit.sha}
+            >
+              {latestCommit.sha.slice(0, 7)}
+            </code>
+            <div
+              style={{
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.text,
+                lineHeight: 1.4,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: 1,
+                minWidth: 0,
+              }}
+              title={latestCommit.subject}
+            >
+              {latestCommit.subject}
+            </div>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts?.monospace,
+            }}
+          >
+            <span
+              style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: 1,
+                minWidth: 0,
+              }}
+              title={latestCommit.author}
+            >
+              {latestCommit.author}
+            </span>
+            <span style={{ flexShrink: 0 }}>
+              {formatRelativeTime(latestCommit.authoredAt)}
+            </span>
+            <span style={{ color: theme.colors.success, flexShrink: 0 }}>
+              +{latestCommit.additions}
+            </span>
+            <span style={{ color: theme.colors.error, flexShrink: 0 }}>
+              −{latestCommit.deletions}
+            </span>
+          </div>
         </div>
       )}
     </div>
