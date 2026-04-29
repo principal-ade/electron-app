@@ -191,17 +191,10 @@ export class CLIBridge extends EventEmitter {
         this.handleWorkerMessage(name, msg);
       });
 
-      // Handle stdout/stderr for debugging
+      // Handle stderr for debugging. Worker stdout is intentionally not
+      // forwarded — git blame --line-porcelain sweeps can dump megabytes of
+      // metadata that drown the terminal; the real result comes back via IPC.
       let stderrBuffer = '';
-
-      if (worker.stdout) {
-        worker.stdout.on('data', (data: Buffer) => {
-          const output = data.toString().trim();
-          if (output) {
-            this.log('debug', `[${name} stdout] ${output}`);
-          }
-        });
-      }
 
       if (worker.stderr) {
         worker.stderr.on('data', (data: Buffer) => {
