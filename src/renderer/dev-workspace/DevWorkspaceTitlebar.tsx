@@ -8,7 +8,6 @@ import {
   Copy,
   Columns3,
   Square,
-  Link,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
@@ -164,9 +163,6 @@ export interface DevWorkspaceTitlebarProps {
   repositoryPath?: string;
   // Open in Finder
   onOpenInFinder?: () => void;
-  // Remote URL and protocol switching
-  remoteUrl?: string;
-  onSwitchRemoteProtocol?: () => void;
   // Service names and trace counts
   availableServiceNames?: string[];
   serviceTraceCounts?: Map<string, number>;
@@ -198,8 +194,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   onLayoutChange,
   repositoryPath,
   onOpenInFinder,
-  remoteUrl,
-  onSwitchRemoteProtocol,
   availableServiceNames,
   serviceTraceCounts,
   lastActiveService,
@@ -353,47 +347,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 >
                   <Building2 size={14} />
                   <span>3D City</span>
-                </button>
-              )}
-
-              {/* Switch Remote Protocol Button (HTTPS <-> SSH) */}
-              {onSwitchRemoteProtocol && remoteUrl && (
-                <button
-                  onClick={onSwitchRemoteProtocol}
-                  title={`Switch to ${remoteUrl.startsWith('git@') || remoteUrl.includes('ssh://') ? 'HTTPS' : 'SSH'}`}
-                  style={{
-                    // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                    WebkitAppRegion: 'no-drag',
-                    background: theme.colors.backgroundTertiary,
-                    border: `1px solid ${theme.colors.border}`,
-                    color: theme.colors.textSecondary,
-                    cursor: 'pointer',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'all 0.2s',
-                    fontSize: `${theme.fontSizes[1]}px`,
-                    fontWeight: theme.fontWeights.medium,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundSecondary;
-                    e.currentTarget.style.borderColor = theme.colors.primary;
-                    e.currentTarget.style.color = theme.colors.text;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                    e.currentTarget.style.color = theme.colors.textSecondary;
-                  }}
-                >
-                  <Link size={14} />
-                  <span>
-                    {remoteUrl.startsWith('git@') || remoteUrl.includes('ssh://') ? 'SSH' : 'HTTPS'}
-                  </span>
                 </button>
               )}
 

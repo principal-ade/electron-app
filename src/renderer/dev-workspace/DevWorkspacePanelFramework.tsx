@@ -135,6 +135,8 @@ import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarBu
 import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
 import { NotesSidebarButton } from '../components/Sidebar/NotesSidebarButton';
 import { TypeInformationSidebarButton } from '../components/Sidebar/TypeInformationSidebarButton';
+import { GitConfigSidebarButton } from '../components/Sidebar/GitConfigSidebarButton';
+import { GitConfigPanel } from './git-config-panel';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -3710,6 +3712,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         ),
       },
       {
+        id: 'gitConfig',
+        label: 'Git Config',
+        content: (
+          <GitConfigPanel
+            repositoryPath={context.currentScope?.repository?.path}
+          />
+        ),
+      },
+      {
         id: 'notes',
         label: 'Notes',
         content: MDXEditorPanelComponent ? (
@@ -4223,6 +4234,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 }
                 onLayoutChange={onLayoutChange}
                 events={events}
+              />
+              <GitConfigSidebarButton
+                theme={theme}
+                currentLayout={
+                  layout as { left: string; middle: string; right: string }
+                }
+                onLayoutChange={onLayoutChange}
               />
             </>
           }

@@ -210,8 +210,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     github,
   } = alexandriaEntry;
 
-  // Track remote URL in state so we can update it after switching protocols
-  const [remoteUrl, setRemoteUrl] = useState(initialRemoteUrl);
+  const remoteUrl = initialRemoteUrl;
 
   // Single event bus for all panel communication
   const events = useMemo(() => new PanelEventBus(), []);
@@ -221,7 +220,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   >('xterm');
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [showWorkspaceButton, setShowWorkspaceButton] = useState(false);
-  const [collapsed, setCollapsed] = useState({ left: false, right: false });
+  const [collapsed, setCollapsed] = useState({ left: true, right: true });
   const [sidebarsHidden, setSidebarsHidden] = useState(false);
   // Store collapsed state before entering focus mode so we can restore it
   const collapsedBeforeFocusModeRef = useRef<{
@@ -979,94 +978,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   }, [repositoryPath, isSyncingWorkspace]);
 
-  // Switch git remote between HTTPS and SSH
-  const handleSwitchRemoteProtocol = useCallback(async () => {
-    if (!repositoryPath || !remoteUrl) return;
-
-    try {
-      // Parse the current URL to determine protocol
-      const isSSH =
-        remoteUrl.startsWith('git@') || remoteUrl.includes('ssh://');
-      const isHTTPS = remoteUrl.startsWith('https://');
-
-      if (!isSSH && !isHTTPS) {
-        console.warn('[DevWorkspaceApp] Unknown remote URL format:', remoteUrl);
-        return;
-      }
-
-      let newUrl: string;
-
-      if (isSSH) {
-        // Convert SSH to HTTPS
-        // git@github.com:owner/repo.git -> https://github.com/owner/repo.git
-        // ssh://git@github.com/owner/repo.git -> https://github.com/owner/repo.git
-        const sshMatch = remoteUrl.match(/git@([^:]+):(.+)/);
-        const sshUrlMatch = remoteUrl.match(/ssh:\/\/git@([^/]+)\/(.+)/);
-
-        if (sshMatch) {
-          const [, host, path] = sshMatch;
-          newUrl = `https://${host}/${path}`;
-        } else if (sshUrlMatch) {
-          const [, host, path] = sshUrlMatch;
-          newUrl = `https://${host}/${path}`;
-        } else {
-          console.warn('[DevWorkspaceApp] Could not parse SSH URL:', remoteUrl);
-          return;
-        }
-      } else {
-        // Convert HTTPS to SSH
-        // https://github.com/owner/repo.git -> git@github.com:owner/repo.git
-        const httpsMatch = remoteUrl.match(/https:\/\/([^/]+)\/(.+)/);
-
-        if (httpsMatch) {
-          const [, host, path] = httpsMatch;
-          newUrl = `git@${host}:${path}`;
-        } else {
-          console.warn(
-            '[DevWorkspaceApp] Could not parse HTTPS URL:',
-            remoteUrl,
-          );
-          return;
-        }
-      }
-
-      // Run git remote set-url origin <newUrl>
-      console.info(
-        '[DevWorkspaceApp] Switching remote URL from',
-        remoteUrl,
-        'to',
-        newUrl,
-      );
-      const { GitService } = await import('../main-process-api/GitService');
-      const result = await GitService.setRemoteUrl(
-        repositoryPath,
-        'origin',
-        newUrl,
-      );
-
-      if (!result.success) {
-        console.error(
-          '[DevWorkspaceApp] Failed to switch remote:',
-          result.message,
-        );
-        return;
-      }
-
-      console.info(
-        '[DevWorkspaceApp] Remote URL switched successfully to:',
-        newUrl,
-      );
-
-      // Update local state to reflect the change
-      setRemoteUrl(newUrl);
-    } catch (error) {
-      console.error(
-        '[DevWorkspaceApp] Failed to switch remote protocol:',
-        error,
-      );
-    }
-  }, [repositoryPath, remoteUrl]);
-
   // Show git changes panel
   const handleShowGitChanges = useCallback(() => {
     setLayout((prev) => ({ ...prev, left: 'gitChanges' }));
@@ -1178,10 +1089,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onLayoutChange={(newLayout) => setLayout(newLayout)}
         repositoryPath={repositoryPath}
         onOpenInFinder={repositoryPath ? handleOpenInFinder : undefined}
-        remoteUrl={remoteUrl}
-        onSwitchRemoteProtocol={
-          remoteUrl ? handleSwitchRemoteProtocol : undefined
-        }
         availableServiceNames={availableServiceNames}
         serviceTraceCounts={serviceTraceCounts}
         lastActiveService={lastActiveService}
