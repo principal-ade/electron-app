@@ -5,33 +5,8 @@ import { FileDiff, type FileDiffMetadata } from '@pierre/diffs/react';
 import { parsePatchFiles } from '@pierre/diffs';
 import { GitService } from '../../../main-process-api/GitService';
 
-// Mirrors `PierreFileView`'s `baseUnsafeCSS` — Chromium drops these grid
-// variables and line-layout rules from @pierre/diffs' base stylesheet in some
-// stacking contexts, which is what was making the FileDiff render look
-// broken / "white" inside this overlay.
-const pierreUnsafeCSS = `
-  [data-file], [data-diff] {
-    --diffs-grid-number-column-width: minmax(min-content, max-content);
-    --diffs-code-grid: minmax(min-content, max-content) 1fr;
-  }
-  [data-file][data-dehydrated], [data-diff][data-dehydrated] {
-    --diffs-code-grid: minmax(min-content, max-content) minmax(0, 1fr);
-  }
-  [data-line] {
-    white-space: pre;
-    display: block;
-  }
-  [data-line] span {
-    display: inline;
-    white-space: inherit;
-  }
-`;
-
 const fileDiffOptions = {
   diffStyle: 'unified',
-  theme: 'pierre-dark',
-  themeType: 'dark',
-  unsafeCSS: pierreUnsafeCSS,
 } as const;
 
 export interface CommitFileOverlayProps {

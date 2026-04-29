@@ -71,26 +71,6 @@ export const PierreFileView: React.FC<PierreFileViewProps> = ({
   );
 };
 
-const baseUnsafeCSS = `
-  [data-file], [data-diff] {
-    --diffs-grid-number-column-width: minmax(min-content, max-content);
-    --diffs-code-grid: minmax(min-content, max-content) 1fr;
-  }
-  [data-file][data-dehydrated], [data-diff][data-dehydrated] {
-    --diffs-code-grid: minmax(min-content, max-content) minmax(0, 1fr);
-  }
-  /* Re-assert line layout in case Chromium dropped these from the base
-   * stylesheet for the same reason it dropped the grid variables above. */
-  [data-line] {
-    white-space: pre;
-    display: block;
-  }
-  [data-line] span {
-    display: inline;
-    white-space: inherit;
-  }
-`;
-
 // `:host` rule plus `background-color: transparent` on every element the
 // library normally paints with --diffs-bg. We can't just override --diffs-bg
 // because the theme's own :host rule (in @layer rendered) re-derives backgrounds
@@ -112,17 +92,12 @@ const transparentBgCSS = `
 `;
 
 const pierreOptions = {
-  theme: 'pierre-dark',
-  themeType: 'dark' as const,
   disableFileHeader: true,
-  unsafeCSS: baseUnsafeCSS,
 } as const;
 
 const pierreOptionsTransparent = {
-  theme: 'pierre-dark',
-  themeType: 'dark' as const,
   disableFileHeader: true,
-  unsafeCSS: `${baseUnsafeCSS}\n${transparentBgCSS}`,
+  unsafeCSS: transparentBgCSS,
 } as const;
 
 const pierreStyle: React.CSSProperties = {
