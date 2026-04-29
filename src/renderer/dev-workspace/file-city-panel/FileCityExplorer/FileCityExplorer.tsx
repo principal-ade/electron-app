@@ -27,7 +27,10 @@ import type {
 } from '../../../services/scope-manager/types';
 import { AddToAreaModal } from './AddToAreaModal';
 import { AddToScopeModal } from './AddToScopeModal';
+import { CommitFileOverlay } from './CommitFileOverlay';
+import { RecentCommitCard } from './RecentCommitCard';
 import { ScopeInfoOverlay } from './ScopeInfoOverlay';
+import { useLatestCommit } from './useLatestCommit';
 import {
   AREA_PANEL_COLOR,
   DEFAULT_NAMESPACE_COLOR,
@@ -118,6 +121,12 @@ export interface FileCityExplorerProps {
    * conversion or city geometry.
    */
   repoLabel?: string | null;
+  /**
+   * Absolute path to the repository working tree. When provided, the
+   * RecentCommitCard fetches `git log -1` for the repo and floats top-right
+   * over the city canvas. Pass `null` to suppress the card.
+   */
+  repositoryPath?: string | null;
 }
 
 export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
@@ -126,7 +135,11 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   initialFocusDirectory,
   onFileOpen,
   repoLabel,
+  repositoryPath,
 }) => {
+  const { commit: latestCommit } = useLatestCommit(repositoryPath ?? null);
+  const [commitHighlightActive, setCommitHighlightActive] = React.useState(false);
+  const [commitFilePath, setCommitFilePath] = React.useState<string | null>(null);
   const { theme } = useTheme();
   const sectionLabelStyle = makeSectionLabelStyle(theme);
 
@@ -319,6 +332,63 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   }, [searchResults]);
 
   const searchPanelOpen = searchQuery.trim().length > 0;
+
+  // Recent-commit highlights — toggled by clicking the RecentCommitCard.
+  // Bucket added vs modified/renamed; deleted files have no buildings to
+  // highlight so we skip them. `toCityPath` re-roots repo paths into the
+  // city's coordinate system; anything that isn't a known building (gitignored,
+  // outside packageRoot, etc.) is dropped.
+  const cityBuildingPaths = React.useMemo(
+    () => new Set(cityData.buildings.map((b) => b.path)),
+    [cityData],
+  );
+  const commitHighlightLayers = React.useMemo<HighlightLayer[]>(() => {
+    if (!commitHighlightActive || !latestCommit) return [];
+    const added: string[] = [];
+    const modified: string[] = [];
+    for (const file of latestCommit.files) {
+      if (file.status === 'D') continue;
+      const cityPath = toCityPath(file.path);
+      if (!cityBuildingPaths.has(cityPath)) continue;
+      if (file.status === 'A' || file.status === 'C') {
+        added.push(cityPath);
+      } else {
+        modified.push(cityPath);
+      }
+    }
+    const layers: HighlightLayer[] = [];
+    if (modified.length > 0) {
+      layers.push({
+        id: 'recent-commit-modified',
+        name: 'Modified in latest commit',
+        enabled: true,
+        color: theme.colors.warning,
+        priority: 850,
+        opacity: 0.9,
+        items: modified.map((path) => ({
+          path,
+          type: 'file',
+          renderStrategy: 'fill',
+        })),
+      });
+    }
+    if (added.length > 0) {
+      layers.push({
+        id: 'recent-commit-added',
+        name: 'Added in latest commit',
+        enabled: true,
+        color: theme.colors.success,
+        priority: 860,
+        opacity: 0.9,
+        items: added.map((path) => ({
+          path,
+          type: 'file',
+          renderStrategy: 'fill',
+        })),
+      });
+    }
+    return layers;
+  }, [commitHighlightActive, latestCommit, cityBuildingPaths, toCityPath, theme]);
 
   // Hovered search result → its own one-item highlight layer at a slightly
   // higher priority than the bulk search layer, so the hovered building reads
@@ -865,6 +935,28 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   return (
     <div style={{ height: '100%', width: '100%', display: 'flex', background: theme.colors.background }}>
       <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+        {latestCommit && (
+          <RecentCommitCard
+            commit={latestCommit}
+            active={commitHighlightActive}
+            onClick={() => setCommitHighlightActive((v) => !v)}
+            onFileClick={(file) => setCommitFilePath(file.path)}
+            style={{
+              position: 'absolute',
+              top: 60,
+              right: theme.space[2],
+              zIndex: 110,
+            }}
+          />
+        )}
+        {latestCommit && commitFilePath && repositoryPath && (
+          <CommitFileOverlay
+            repositoryPath={repositoryPath}
+            commitHash={latestCommit.sha}
+            filePath={commitFilePath}
+            onClose={() => setCommitFilePath(null)}
+          />
+        )}
         {/* Canvas wrapper — pushed down by HEADER_HEIGHT so the focus
             bar doesn't occlude the camera's framing area. The 3D camera
             sizes itself to the canvas, so shrinking the canvas is what
@@ -911,13 +1003,16 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
             focusDirectory={focusDirectory}
             highlightLayers={(() => {
               const extras: HighlightLayer[] = [];
+              extras.push(...commitHighlightLayers);
               if (searchHighlightLayer) extras.push(searchHighlightLayer);
               if (hoveredSearchHighlightLayer) extras.push(hoveredSearchHighlightLayer);
               if (extras.length === 0) return cityHighlightLayers;
               return [...(cityHighlightLayers ?? []), ...extras];
             })()}
             elevatedScopePanels={
-              searchHighlightLayer || searchInputFocused
+              searchHighlightLayer ||
+              searchInputFocused ||
+              commitHighlightLayers.length > 0
                 ? undefined
                 : cityElevatedPanels ?? folderElevatedPanels
             }

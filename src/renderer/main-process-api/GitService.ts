@@ -34,6 +34,26 @@ export interface GitCommitInfo {
   date: string;
 }
 
+export type GitCommitFileStatus = 'A' | 'M' | 'D' | 'R' | 'C' | 'T';
+
+export interface GitCommitFileChange {
+  /** Repo-relative path (post-rename when status is `R`). */
+  path: string;
+  status: GitCommitFileStatus;
+}
+
+export interface GitCommitWithStats {
+  hash: string;
+  subject: string;
+  author: string;
+  /** ISO 8601 author timestamp (`%aI`). */
+  authoredAt: string;
+  filesChanged: number;
+  additions: number;
+  deletions: number;
+  files: GitCommitFileChange[];
+}
+
 export interface GitBranchInfo {
   branch: string;
   upstream?: string;
@@ -643,6 +663,90 @@ export class GitService {
         author: '',
         date: '',
       };
+    }
+  }
+
+  /**
+   * Single-call variant of `getLatestCommit` that also pulls `--shortstat`
+   * for the file-city RecentCommitCard. Returns `null` when the repo has no
+   * commits yet (or the call fails).
+   */
+  static async getLatestCommitWithStats(
+    directory: string,
+  ): Promise<GitCommitWithStats | null> {
+    try {
+      // Single call returns:
+      //   <hash>\0<subject>\0<author>\0<iso>
+      //   :<mode> <mode> <sha> <sha> <STATUS>\t<path>     (--raw, one per file)
+      //   <adds>\t<dels>\t<path>                          (--numstat, one per file)
+      // We can't combine --shortstat with --name-status (git silently drops
+      // shortstat), so compute totals from --numstat instead.
+      const { stdout } = await window.mainProcess.git.execCommand(directory, [
+        'log',
+        '-1',
+        '--pretty=format:%H%x00%s%x00%an%x00%aI',
+        '--raw',
+        '--numstat',
+      ]);
+
+      const lines = stdout.split('\n').filter((l) => l.length > 0);
+      if (lines.length === 0) return null;
+
+      const [hash = '', subject = '', author = '', authoredAt = ''] =
+        lines[0].split('\x00');
+      if (!hash) return null;
+
+      const files: GitCommitFileChange[] = [];
+      let additions = 0;
+      let deletions = 0;
+
+      for (const line of lines.slice(1)) {
+        if (line.startsWith(':')) {
+          // --raw: ":mode mode sha sha STATUS\tpath" or
+          //        ":mode mode sha sha R100\told\tnew" for renames/copies.
+          const parts = line.split('\t');
+          if (parts.length < 2) continue;
+          const headerTokens = parts[0].split(' ');
+          const code = headerTokens[headerTokens.length - 1] ?? '';
+          const head = code[0];
+          if (
+            head !== 'A' && head !== 'M' && head !== 'D' &&
+            head !== 'R' && head !== 'C' && head !== 'T'
+          ) {
+            continue;
+          }
+          const path = (head === 'R' || head === 'C') && parts.length >= 3
+            ? parts[2]
+            : parts[1];
+          if (!path) continue;
+          files.push({ path, status: head });
+        } else {
+          // --numstat: "<adds>\t<dels>\t<path>". Binary diffs use "-\t-\t<path>".
+          const parts = line.split('\t');
+          if (parts.length < 3) continue;
+          const adds = Number(parts[0]);
+          const dels = Number(parts[1]);
+          if (Number.isFinite(adds)) additions += adds;
+          if (Number.isFinite(dels)) deletions += dels;
+        }
+      }
+
+      return {
+        hash,
+        subject,
+        author,
+        authoredAt,
+        filesChanged: files.length,
+        additions,
+        deletions,
+        files,
+      };
+    } catch (error: unknown) {
+      console.error(
+        '[GitService] Failed to get latest commit with stats:',
+        error,
+      );
+      return null;
     }
   }
 
