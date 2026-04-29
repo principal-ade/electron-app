@@ -238,13 +238,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     document.addEventListener('mousedown', onPointerDown);
     return () => document.removeEventListener('mousedown', onPointerDown);
   }, [showAddPicker]);
-  // Anchor for the top-right "Hidden parent layers" panel: tracks the
-  // most-recently-interacted folder so the panel always shows the chain of
-  // expanded ancestors up from the user's current focus. Updated by
-  // umbrella clicks, building clicks, and file tree selections.
-  const [parentLayersAnchor, setParentLayersAnchor] = React.useState<string | null>(null);
-  // When true, the panel is hidden until the next folder interaction.
-  const [parentLayersDismissed, setParentLayersDismissed] = React.useState(false);
 
   // Sub-tree of paths under the currently selected panel folder. Computed
   // on demand so we only rebuild when the user actually opens the contents
@@ -367,8 +360,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
       // the 3D city.
       if (cityDirectoriesRef.current.has(selected)) {
         setFocusDirectoryIfUnpinned(selected);
-        setParentLayersAnchor(selected);
-        setParentLayersDismissed(false);
         return;
       }
       // Only emit on actual file paths (buildings). Anything else
@@ -382,8 +373,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
         const candidate = parts.join('/');
         if (cityDirectories.has(candidate)) {
           setFocusDirectoryIfUnpinned(candidate);
-          setParentLayersAnchor(selected);
-          setParentLayersDismissed(false);
           return;
         }
       }
@@ -673,8 +662,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
         // user already opted into the contents view, switching folders
         // keeps the contents view active for the new folder.
         setSelectedPanelFolder(folderPath);
-        setParentLayersAnchor(folderPath);
-        setParentLayersDismissed(false);
         // Cmd-click (⌘ on macOS) / Ctrl-click — same selection behaviour
         // plus immediately reveal the folder's contents (mirrors the
         // "Show contents" button: expand the folder in the tree so the
@@ -699,8 +686,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
         }
         setSelectedPanelFolder(nextSelected);
         setFocusDirectoryIfUnpinned(next);
-        setParentLayersAnchor(nextSelected);
-        setParentLayersDismissed(false);
       },
       index: folderIndex,
     });
@@ -751,25 +736,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     theme,
   ]);
 
-  // Cmd-click on a building → surface the chain of expanded ancestor folders
-  // (their umbrellas are currently hidden because they're expanded). Each
-  // entry in the popup can be clicked to collapse that ancestor, which
-  // restores its umbrella so the user can navigate back up.
-  const parentLayers = React.useMemo<string[]>(() => {
-    if (!parentLayersAnchor) return [];
-    const parts = parentLayersAnchor.split('/');
-    const out: string[] = [];
-    // Walk shallowest → deepest so the list reads outermost-first.
-    // Include the anchor itself: if it's expanded, its umbrella is hidden
-    // (children took its place), so the user should be able to collapse it
-    // back from the panel.
-    for (let i = 1; i <= parts.length; i++) {
-      const ancestor = parts.slice(0, i).join('/');
-      if (folderTreeExpansion.expanded.has(ancestor)) out.push(ancestor);
-    }
-    return out;
-  }, [parentLayersAnchor, folderTreeExpansion]);
-
   // Mirror of `onFileOpen` so the `useFileTree` callback (created once at
   // first render) can always reach the latest handler.
   const onFileOpenRef = React.useRef(onFileOpen);
@@ -780,16 +746,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   const handleBuildingClick = React.useCallback(
     (building: { path: string }) => {
       cityClickConsumedRef.current = true;
-      setParentLayersAnchor(building.path);
-      setParentLayersDismissed(false);
       onFileOpen?.(building.path);
     },
     [onFileOpen],
-  );
-
-  const collapseFolder = React.useCallback(
-    (folderPath: string) => asDir(treeModel.getItem(folderPath))?.collapse(),
-    [treeModel],
   );
 
   const openAddModal = React.useCallback(
@@ -939,7 +898,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               return;
             }
             setSelectedPanelFolder(null);
-            setParentLayersDismissed(true);
           }}
         >
           <FileCity3D
@@ -1075,8 +1033,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                         setFocusPinned(false);
                         setFocusDirectory(null);
                         setSelectedPanelFolder(null);
-                        setParentLayersAnchor(null);
-                        setParentLayersDismissed(false);
                       }}
                       title="Clear focus — show the whole repo"
                       style={{
@@ -1117,8 +1073,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                           onClick={() => {
                             setFocusDirectory(seg.path);
                             setSelectedPanelFolder(seg.path);
-                            setParentLayersAnchor(seg.path);
-                            setParentLayersDismissed(false);
                           }}
                           style={{
                             background: 'transparent',
@@ -1490,85 +1444,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                 )}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Parent-layers popup — surfaces ancestor folders whose umbrellas
-            are currently hidden (because they're expanded). Triggered by
-            Cmd/Ctrl-click on a building. Each entry collapses that
-            ancestor on click so its umbrella reappears. */}
-        {parentLayersAnchor && !parentLayersDismissed && parentLayers.length > 0 && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 72,
-              right: theme.space[2],
-              padding: '10px 12px',
-              background: withAlpha(theme.colors.background, 72),
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radii[3],
-              color: theme.colors.text,
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[0],
-              zIndex: 100,
-              maxWidth: 240,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: theme.space[2],
-              boxShadow: theme.shadows[3],
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ ...sectionLabelStyle, flex: 1, minWidth: 0 }}>
-                Hidden parent layers
-              </div>
-              <button
-                onClick={() => setParentLayersDismissed(true)}
-                title="Dismiss (reappears on next folder interaction)"
-                style={{
-                  background: 'transparent',
-                  color: theme.colors.textMuted,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: theme.radii[2],
-                  padding: '4px 8px',
-                  fontSize: theme.fontSizes[0],
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                }}
-              >
-                ✕
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: theme.space[1] }}>
-              {parentLayers.map(folderPath => {
-                const label = folderPath.split('/').pop() ?? folderPath;
-                return (
-                  <button
-                    key={folderPath}
-                    onClick={() => collapseFolder(folderPath)}
-                    title={`Collapse ${folderPath} — restores its umbrella tile`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: theme.space[2],
-                      padding: '6px 8px',
-                      background: theme.colors.backgroundSecondary,
-                      color: theme.colors.text,
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: theme.radii[2],
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontFamily: theme.fonts.body,
-                      fontSize: theme.fontSizes[0],
-                    }}
-                  >
-                    <span style={{ fontFamily: theme.fonts.monospace, fontWeight: theme.fontWeights.medium }}>{label}</span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
         )}
 
