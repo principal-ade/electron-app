@@ -1698,6 +1698,61 @@ export class GitHubAdapter {
     return [];
   }
 
+  async isFollowingUser(username: string): Promise<boolean> {
+    const token = await this.getGitHubToken();
+    if (!token) return false;
+    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    try {
+      const response = await fetch(
+        `https://api.github.com/user/following/${username}`,
+        { headers: { Authorization: authHeader, Accept: 'application/vnd.github.v3+json' } },
+      );
+      return response.status === 204;
+    } catch (err) {
+      console.error('[GitHub] Failed to check follow status:', err);
+      return false;
+    }
+  }
+
+  async followUser(username: string): Promise<void> {
+    const token = await this.getGitHubToken();
+    if (!token) throw new Error('No GitHub token available');
+    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    const response = await fetch(
+      `https://api.github.com/user/following/${username}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: authHeader,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Length': '0',
+        },
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to follow user: ${response.status}`);
+    }
+  }
+
+  async unfollowUser(username: string): Promise<void> {
+    const token = await this.getGitHubToken();
+    if (!token) throw new Error('No GitHub token available');
+    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    const response = await fetch(
+      `https://api.github.com/user/following/${username}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: authHeader,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to unfollow user: ${response.status}`);
+    }
+  }
+
   /**
    * Get members of an organization
    */

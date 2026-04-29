@@ -21,6 +21,9 @@ import type {
   GetOrgMembersInput,
   GetUserFollowersInput,
   GetUserFollowingInput,
+  FollowUserInput,
+  UnfollowUserInput,
+  IsFollowingUserInput,
   SearchUsersInput,
   SearchReposInput,
   RepoStarInput,
@@ -136,6 +139,24 @@ export const githubRouter = {
     .input<GetUserFollowingInput>()
     .action(async ({ input }) => {
       return githubAdapter.getUserFollowing(input.username);
+    }),
+
+  isFollowingUser: t.procedure
+    .input<IsFollowingUserInput>()
+    .action(async ({ input }) => {
+      return githubAdapter.isFollowingUser(input.username);
+    }),
+
+  followUser: t.procedure
+    .input<FollowUserInput>()
+    .action(async ({ input }) => {
+      return githubAdapter.followUser(input.username);
+    }),
+
+  unfollowUser: t.procedure
+    .input<UnfollowUserInput>()
+    .action(async ({ input }) => {
+      return githubAdapter.unfollowUser(input.username);
     }),
 
   getOwnerActivity: t.procedure

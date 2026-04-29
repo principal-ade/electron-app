@@ -21,6 +21,9 @@ import type {
   GetOrgMembersInput,
   GetUserFollowersInput,
   GetUserFollowingInput,
+  FollowUserInput,
+  UnfollowUserInput,
+  IsFollowingUserInput,
   SearchUsersInput,
   SearchReposInput,
   RepoStarInput,
@@ -84,6 +87,9 @@ export interface GithubClient {
   ) => Promise<GitHubRepository[]>;
   getUserFollowers: (input: GetUserFollowersInput) => Promise<GitHubUser[]>;
   getUserFollowing: (input: GetUserFollowingInput) => Promise<GitHubUser[]>;
+  isFollowingUser: (input: IsFollowingUserInput) => Promise<boolean>;
+  followUser: (input: FollowUserInput) => Promise<void>;
+  unfollowUser: (input: UnfollowUserInput) => Promise<void>;
   getOwnerActivity: (input: GetOwnerActivityInput) => Promise<CommitActivityCard[]>;
   getRepoActivity: (input: GetRepoActivityInput) => Promise<CommitActivityCard[]>;
 
@@ -174,6 +180,9 @@ export type {
   GetOrgMembersInput,
   GetUserFollowersInput,
   GetUserFollowingInput,
+  FollowUserInput,
+  UnfollowUserInput,
+  IsFollowingUserInput,
   SearchUsersInput,
   SearchReposInput,
   GitHubUser,

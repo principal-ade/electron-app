@@ -18,6 +18,8 @@ import {
   Github,
   Eye,
   EyeClosed,
+  UserPlus,
+  UserCheck,
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
 import { OwnerCollectionsTab } from './OwnerCollectionsTab';
@@ -147,6 +149,11 @@ export interface UserProfilePanelActions extends PanelActions {
    * Unfollow a GitHub user (optional)
    */
   unfollowUser?: (username: string) => Promise<void>;
+
+  /**
+   * Check if the authenticated user is following the given user
+   */
+  isFollowingUser?: (username: string) => Promise<boolean>;
 
   /**
    * Check if user is watched
@@ -381,6 +388,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   const [isWatched, setIsWatched] = useState(false);
   const [isWatchLoading, setIsWatchLoading] = useState(false);
 
+  // Follow state
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+
   // Tab state
   const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'pinned' | 'collections'>('activity');
 
@@ -543,6 +554,36 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     };
   }, [user, actions]);
 
+  // Load follow status when user changes
+  useEffect(() => {
+    if (!user || !actions.isFollowingUser) {
+      setIsFollowing(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadFollowStatus = async () => {
+      try {
+        if (!actions.isFollowingUser) {
+          return;
+        }
+        const following = await actions.isFollowingUser(user.username);
+        if (!cancelled) {
+          setIsFollowing(following);
+        }
+      } catch (err) {
+        console.error('Failed to load follow status:', err);
+      }
+    };
+
+    loadFollowStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, actions]);
+
   // Lazy fetch file trees for repositories
   useEffect(() => {
     if (repositories.length === 0 || !actions.getRepositoryFileTree) {
@@ -667,6 +708,37 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
       console.error('Failed to toggle watch:', err);
     } finally {
       setIsWatchLoading(false);
+    }
+  };
+
+  // Handle follow/unfollow user
+  const handleToggleFollow = async () => {
+    if (!user) return;
+
+    if (!actions.followUser || !actions.unfollowUser) {
+      console.warn('Follow actions not available');
+      return;
+    }
+
+    setIsFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await actions.unfollowUser(user.username);
+        setIsFollowing(false);
+      } else {
+        await actions.followUser(user.username);
+        setIsFollowing(true);
+      }
+      events.emit({
+        type: 'follow:user-toggled',
+        source: 'user-profile-panel',
+        timestamp: Date.now(),
+        payload: { username: user.username, following: !isFollowing },
+      });
+    } catch (err) {
+      console.error('Failed to toggle follow:', err);
+    } finally {
+      setIsFollowLoading(false);
     }
   };
 
@@ -923,6 +995,40 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                       {isWatched ? 'watching' : 'watch'}
                     </div>
                   </div>
+
+                  {/* Follow Button - hidden on own profile */}
+                  {actions.followUser && actions.unfollowUser &&
+                    context.githubSyncState?.authenticatedUser !== user.username && (
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        cursor: isFollowLoading ? 'not-allowed' : 'pointer',
+                        opacity: isFollowLoading ? 0.6 : 1,
+                        transition: 'opacity 0.2s ease',
+                        minWidth: '65px',
+                      }}
+                      onClick={isFollowLoading ? undefined : handleToggleFollow}
+                    >
+                      <div style={{
+                        fontSize: theme.fontSizes[3],
+                        fontWeight: theme.fontWeights?.semibold ?? 600,
+                        fontFamily: theme.fonts?.body,
+                        color: isFollowing ? theme.colors.primary : theme.colors.text,
+                        display: 'flex',
+                        justifyContent: 'center',
+                      }}>
+                        {isFollowing ? <UserCheck size={24} /> : <UserPlus size={24} />}
+                      </div>
+                      <div style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.textSecondary,
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {isFollowing ? 'following' : 'follow'}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

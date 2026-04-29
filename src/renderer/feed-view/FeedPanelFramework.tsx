@@ -563,6 +563,20 @@ const UserProfileTabContent: React.FC<{
   events: PanelEventEmitter;
   repositories: AlexandriaEntry[];
 }> = ({ username, email, events, repositories }) => {
+  const [authenticatedUser, setAuthenticatedUser] = React.useState<string | undefined>();
+
+  React.useEffect(() => {
+    let cancelled = false;
+    GithubService.getCurrentUser()
+      .then((u) => {
+        if (!cancelled && u?.login) setAuthenticatedUser(u.login);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Memoize context to prevent unnecessary re-renders
   const userContext: UserProfilePanelContext = React.useMemo(() => ({
     currentScope: {
@@ -571,8 +585,13 @@ const UserProfileTabContent: React.FC<{
         username,
       },
     },
+    githubSyncState: {
+      authenticatedUser,
+      following: [],
+      followers: [],
+    },
     refresh: async () => {},
-  }), [username]);
+  }), [username, authenticatedUser]);
 
   // Memoize actions to prevent re-fetching on every render
   const userActions: UserProfilePanelActions = React.useMemo(() => ({
@@ -762,6 +781,18 @@ const UserProfileTabContent: React.FC<{
       if (!response.success) {
         throw new Error('Failed to unwatch user');
       }
+    },
+
+    isFollowingUser: async (username: string) => {
+      return GithubService.isFollowingUser(username);
+    },
+
+    followUser: async (username: string) => {
+      return GithubService.followUser(username);
+    },
+
+    unfollowUser: async (username: string) => {
+      return GithubService.unfollowUser(username);
     },
 
     getUserOrgs: async (username: string) => {

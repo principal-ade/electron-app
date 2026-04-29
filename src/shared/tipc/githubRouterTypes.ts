@@ -113,6 +113,18 @@ export interface GetUserFollowingInput {
   username?: string;
 }
 
+export interface FollowUserInput {
+  username: string;
+}
+
+export interface UnfollowUserInput {
+  username: string;
+}
+
+export interface IsFollowingUserInput {
+  username: string;
+}
+
 export interface SearchUsersInput {
   query: string;
   perPage?: number;
@@ -268,6 +280,24 @@ export type GithubRouterType = Record<
       context: ActionContext;
       input: GetUserFollowingInput;
     }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubUser[]>;
+  };
+  isFollowingUser: {
+    action: (args: {
+      context: ActionContext;
+      input: IsFollowingUserInput;
+    }) => Promise<boolean>;
+  };
+  followUser: {
+    action: (args: {
+      context: ActionContext;
+      input: FollowUserInput;
+    }) => Promise<void>;
+  };
+  unfollowUser: {
+    action: (args: {
+      context: ActionContext;
+      input: UnfollowUserInput;
+    }) => Promise<void>;
   };
 
   // Repository Operations

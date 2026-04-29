@@ -189,6 +189,18 @@ export class GithubService {
     return result || [];
   }
 
+  static async isFollowingUser(username: string): Promise<boolean> {
+    return githubClient.isFollowingUser({ username });
+  }
+
+  static async followUser(username: string): Promise<void> {
+    return githubClient.followUser({ username });
+  }
+
+  static async unfollowUser(username: string): Promise<void> {
+    return githubClient.unfollowUser({ username });
+  }
+
   static async getOrgMembers(org: string): Promise<GitHubOrgMember[]> {
     const result = await window.mainProcess.github.getOrgMembers(org);
     return result || [];

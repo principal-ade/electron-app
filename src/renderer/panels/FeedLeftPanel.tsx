@@ -15,6 +15,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import { WatchedItemsList } from './WatchedItemsList';
 import { StarredReposList } from './StarredReposList';
 import { CollectionsList } from './CollectionsList';
+import { FollowingList } from './FollowingList';
 import { OrganizationsList } from './OrganizationsList';
 import { CoworkersList } from './CoworkersList';
 import { ProjectsList, type CommitTimestamp } from './ProjectsList';
@@ -69,7 +70,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
   };
 
   // State for collections subtab
-  const [collectionsSubtab, setCollectionsSubtab] = useState<'watching' | 'starred' | 'collections'>('watching');
+  const [collectionsSubtab, setCollectionsSubtab] = useState<'watching' | 'starred' | 'following' | 'collections'>('watching');
 
   // Local git identity (shown when signed out)
   const [localGitName, setLocalGitName] = useState<string | null>(null);
@@ -697,10 +698,11 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
               options={[
                 { value: 'watching', label: 'Watching' },
                 { value: 'starred', label: 'Starred' },
+                { value: 'following', label: 'Following' },
                 { value: 'collections', label: 'Collections' },
               ]}
               value={collectionsSubtab}
-              onChange={(value) => setCollectionsSubtab(value as 'watching' | 'starred' | 'collections')}
+              onChange={(value) => setCollectionsSubtab(value as 'watching' | 'starred' | 'following' | 'collections')}
               theme={theme}
               variant="pill-flat"
             />
@@ -728,6 +730,17 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
               }}
             >
               <StarredReposList events={events} />
+            </div>
+
+            {/* Following subtab */}
+            <div
+              style={{
+                display: collectionsSubtab === 'following' ? 'block' : 'none',
+                height: '100%',
+                width: '100%',
+              }}
+            >
+              <FollowingList events={events} />
             </div>
 
             {/* Collections subtab */}
