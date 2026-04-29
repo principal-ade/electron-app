@@ -216,6 +216,13 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   React.useEffect(() => {
     selectedPanelFolderRef.current = selectedPanelFolder;
   }, [selectedPanelFolder]);
+
+  // Empty-space-click deselect: handlers that consume a canvas click (building
+  // clicks, folder/scope umbrella clicks) flip this ref so the wrapper-div
+  // click handler knows to skip the deselect.
+  const cityClickConsumedRef = React.useRef(false);
+  // Pointer-down position to distinguish a click from a camera drag.
+  const cityClickStartRef = React.useRef<{ x: number; y: number } | null>(null);
   const [showPanelFolderContents, setShowPanelFolderContents] = React.useState(false);
   const [showAddPicker, setShowAddPicker] = React.useState(false);
   const addPickerRef = React.useRef<HTMLDivElement | null>(null);
@@ -525,7 +532,10 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
       const isScopeExpanded = treeExpansion.expandedScopes.has(scope.name);
 
       if (!isScopeExpanded) {
-        const onClick = () => asDir(scopeTreeModel.getItem(scope.name))?.toggle();
+        const onClick = () => {
+          cityClickConsumedRef.current = true;
+          asDir(scopeTreeModel.getItem(scope.name))?.toggle();
+        };
         for (const sp of scope.paths) {
           const district = districtsByPath.get(toCityPath(sp));
           if (!district) continue;
@@ -546,7 +556,10 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
         const nsKey = `${scope.name}/${ns.name}`;
         if (treeExpansion.expandedNamespaces.has(nsKey)) continue;
 
-        const onClick = () => asDir(scopeTreeModel.getItem(nsKey))?.toggle();
+        const onClick = () => {
+          cityClickConsumedRef.current = true;
+          asDir(scopeTreeModel.getItem(nsKey))?.toggle();
+        };
         for (const np of ns.paths) {
           const district = districtsByPath.get(toCityPath(np));
           if (!district) continue;
@@ -652,6 +665,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
       cityData,
       expandedFolders: folderTreeExpansion.expanded,
       onToggleFolder: (folderPath, event) => {
+        cityClickConsumedRef.current = true;
         // Plain click → surface the clicked folder in the panel-selection
         // card (with an "Open" button) instead of expanding immediately,
         // so the umbrella tile doesn't vanish out from under the click.
@@ -671,6 +685,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
         }
       },
       onDoubleClickFolder: (folderPath) => {
+        cityClickConsumedRef.current = true;
         // Double-click → focus the camera on this folder. Double-clicking
         // a folder that is *already* the focus pops the focus up by one
         // ancestor (clamped at the package root), giving an iterative
@@ -764,6 +779,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
 
   const handleBuildingClick = React.useCallback(
     (building: { path: string }) => {
+      cityClickConsumedRef.current = true;
       setParentLayersAnchor(building.path);
       setParentLayersDismissed(false);
       onFileOpen?.(building.path);
@@ -901,6 +917,29 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
             left: 0,
             right: 0,
             bottom: 0,
+          }}
+          onMouseDown={(e) => {
+            cityClickStartRef.current = { x: e.clientX, y: e.clientY };
+          }}
+          onClick={(e) => {
+            const start = cityClickStartRef.current;
+            cityClickStartRef.current = null;
+            // Camera pans/rotates fire mousedown→mouseup with movement; treat
+            // anything past a small jitter threshold as a drag, not a click.
+            const isDrag =
+              start != null &&
+              (Math.abs(e.clientX - start.x) > 4 ||
+                Math.abs(e.clientY - start.y) > 4);
+            if (isDrag) {
+              cityClickConsumedRef.current = false;
+              return;
+            }
+            if (cityClickConsumedRef.current) {
+              cityClickConsumedRef.current = false;
+              return;
+            }
+            setSelectedPanelFolder(null);
+            setParentLayersDismissed(true);
           }}
         >
           <FileCity3D
