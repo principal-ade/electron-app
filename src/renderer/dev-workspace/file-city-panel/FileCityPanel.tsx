@@ -14,6 +14,14 @@ import {
   buildCityDataFromContext,
   stripRootPath,
 } from './buildCityDataFromContext';
+import { FileOverlay } from './FileOverlay';
+
+const MEDIA_RE = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i;
+const isOverlayable = (path: string): boolean => {
+  if (MEDIA_RE.test(path)) return false;
+  if (path.endsWith('.md') || path.endsWith('.mdx')) return false;
+  return true;
+};
 
 interface FileCityPanelContext extends PanelContextValue {
   fileTree?: DataSlice<RepoFileTree | null>;
@@ -45,6 +53,10 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
 
   const [cityData, setCityData] = React.useState<CityData | null>(null);
   const [isBuilding, setIsBuilding] = React.useState(false);
+  const [overlayFile, setOverlayFile] = React.useState<{
+    filePath: string;
+    fileName: string;
+  } | null>(null);
 
   React.useEffect(() => {
     if (!tree) {
@@ -72,19 +84,50 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
   }
 
   return (
-    <FileCityExplorer
-      cityData={cityData}
-      packageRoot=""
-      repoLabel={repoLabel}
-      onFileOpen={(cityPath) => {
-        events.emit({
-          type: 'file:open',
-          source: 'file-city-panel',
-          timestamp: Date.now(),
-          payload: { path: stripRootPath(cityPath, rootPath) },
-        });
-      }}
-    />
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <FileCityExplorer
+        cityData={cityData}
+        packageRoot=""
+        repoLabel={repoLabel}
+        onFileOpen={(cityPath) => {
+          const relativePath = stripRootPath(cityPath, rootPath);
+          if (isOverlayable(relativePath)) {
+            const absolutePath = relativePath.startsWith('/')
+              ? relativePath
+              : repositoryPath
+                ? `${repositoryPath}/${relativePath}`
+                : relativePath;
+            const fileName = absolutePath.split('/').pop() || relativePath;
+            setOverlayFile({ filePath: absolutePath, fileName });
+            return;
+          }
+          events.emit({
+            type: 'file:open',
+            source: 'file-city-panel',
+            timestamp: Date.now(),
+            payload: { path: relativePath },
+          });
+        }}
+      />
+      {overlayFile && (
+        <FileOverlay
+          filePath={overlayFile.filePath}
+          fileName={overlayFile.fileName}
+          onClose={() => setOverlayFile(null)}
+          onOpenInTab={() => {
+            // Emit with a non-`file-city-panel` source so the framework opens a
+            // regular file-editor tab instead of routing to `pierre-file`.
+            events.emit({
+              type: 'file:open',
+              source: 'file-overlay',
+              timestamp: Date.now(),
+              payload: { path: overlayFile.filePath },
+            });
+            setOverlayFile(null);
+          }}
+        />
+      )}
+    </div>
   );
 };
 

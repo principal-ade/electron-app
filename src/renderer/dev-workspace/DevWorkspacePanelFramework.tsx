@@ -126,6 +126,7 @@ import { MediaViewerPanel } from '../panels/MediaViewerPanel';
 import { FilesPanel } from './files-panel';
 import { FileCityPanel } from './file-city-panel';
 import { FloatingTerminalOverlay } from './file-city-panel/FloatingTerminalOverlay';
+import { PierreFileView } from './file-city-panel/PierreFileView';
 import type { Repository } from '../../shared/types/repository.types';
 import {
   PanelIconSidebar,
@@ -208,6 +209,16 @@ interface CanvasTab extends BaseTab {
  */
 interface FileEditorTab extends BaseTab {
   contentType: 'file-editor';
+  filePath: string;
+  fileName: string;
+}
+
+/**
+ * Tab type for the Pierre `<File>` viewer (read-only diff-library renderer).
+ * Used by the 3D file-city panel for now to compare against the overlay.
+ */
+interface PierreFileTab extends BaseTab {
+  contentType: 'pierre-file';
   filePath: string;
   fileName: string;
 }
@@ -320,6 +331,7 @@ type DevWorkspaceTab =
   | CanvasEditorTab
   | CanvasTab
   | FileEditorTab
+  | PierreFileTab
   | MediaTab
   | MDXEditorTab
   | GitDiffTab
@@ -1900,7 +1912,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // - Media files (images/videos) open in media viewer
         // - Markdown files open in markdown viewer
         // - Other files: use git diff panel for modified files, file editor for new/untracked files
-        let contentType: 'markdown' | 'git-diff' | 'file-editor' | 'media';
+        // - Code/text opens from the 3D file-city panel use the Pierre <File> viewer (diagnostic)
+        let contentType:
+          | 'markdown'
+          | 'git-diff'
+          | 'file-editor'
+          | 'pierre-file'
+          | 'media';
         if (isMedia) {
           contentType = 'media';
         } else if (isMarkdown) {
@@ -1908,7 +1926,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         } else {
           const isModified =
             payload.gitStatus === 'unstaged' || payload.gitStatus === 'staged';
-          contentType = isModified ? 'git-diff' : 'file-editor';
+          if (isModified) {
+            contentType = 'git-diff';
+          } else if (event.source === 'file-city-panel') {
+            contentType = 'pierre-file';
+          } else {
+            contentType = 'file-editor';
+          }
         }
 
         // OTEL: Start event dispatch span
@@ -1965,6 +1989,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             (t) =>
               (t.contentType === 'file-editor' &&
                 (t as FileEditorTab).filePath === filePath) ||
+              (t.contentType === 'pierre-file' &&
+                (t as PierreFileTab).filePath === filePath) ||
               (t.contentType === 'markdown' &&
                 (t as MarkdownTab).filePath === filePath) ||
               (t.contentType === 'git-diff' &&
@@ -1982,7 +2008,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           // Create new tab
           // Use file path for deterministic ID (sanitize for valid ID)
-          let newTab: FileEditorTab | MarkdownTab | GitDiffTab | MediaTab;
+          let newTab:
+            | FileEditorTab
+            | PierreFileTab
+            | MarkdownTab
+            | GitDiffTab
+            | MediaTab;
           if (contentType === 'media') {
             tabId = `media-${sanitizedPath}`;
             newTab = {
@@ -2012,6 +2043,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               filePath: filePath,
               fileName: fileName,
               gitStatus: payload.gitStatus,
+              closable: true,
+            };
+          } else if (contentType === 'pierre-file') {
+            tabId = `pierre-file-${sanitizedPath}`;
+            newTab = {
+              id: tabId,
+              label: fileName,
+              contentType: 'pierre-file',
+              filePath: filePath,
+              fileName: fileName,
               closable: true,
             };
           } else {
@@ -2550,6 +2591,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return <Workflow size={14} />;
       case 'file-editor':
         return <Code size={14} />;
+      case 'pierre-file':
+        return <Code size={14} />;
       case 'git-diff':
         return <GitBranch size={14} />;
       case 'dependency-graph':
@@ -2874,6 +2917,27 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 events={eventsRef.current}
                 filePath={fileEditorTab.filePath}
                 showCloseButton={false}
+              />
+            </div>
+          );
+        }
+
+        case 'pierre-file': {
+          const pierreTab = tab as PierreFileTab;
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: theme.colors.background,
+              }}
+            >
+              <PierreFileView
+                filePath={pierreTab.filePath}
+                fileName={pierreTab.fileName}
               />
             </div>
           );
