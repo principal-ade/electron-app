@@ -275,6 +275,14 @@ export class GitHubAdapter {
 
     const token = await this.getGitHubToken();
     if (!token) {
+      const method = options.method || 'GET';
+      if (method === 'GET') {
+        console.log(
+          '[GitHub] makeGitHubAPICall: No token, falling back to gh CLI for endpoint:',
+          endpoint,
+        );
+        return this.makeGitHubAPICallViaGh(endpoint, options);
+      }
       console.error('[GitHub] makeGitHubAPICall: No GitHub token available');
       return { success: false, error: 'No GitHub token available' };
     }
@@ -368,6 +376,75 @@ export class GitHubAdapter {
         error: error instanceof Error ? error.message : String(error),
       };
     }
+  }
+
+  /**
+   * Fallback path for GET requests when no in-app GitHub token is available.
+   * Shells out to the user's `gh` CLI, which reads its own auth from
+   * `gh auth login`. Returns the same shape as makeGitHubAPICall so callers
+   * don't need to branch.
+   */
+  private async makeGitHubAPICallViaGh(
+    endpoint: string,
+    options: {
+      method?: string;
+      headers?: Record<string, string>;
+      body?: GitHubAPIRequestBody;
+    } = {},
+  ): Promise<{
+    success: boolean;
+    data?: GitHubAPIResponseData;
+    headers?: GitHubAPIResponseHeaders;
+    status?: number;
+    statusText?: string;
+    error?: string;
+  }> {
+    const args = ['gh', 'api'];
+    const accept = options.headers?.Accept;
+    if (accept) {
+      args.push('-H', `Accept: ${accept}`);
+    }
+    args.push(endpoint);
+
+    const result = await this.executeCommand(args);
+    if (!result.success) {
+      const stderr = result.stderr || '';
+      const looksUnauthed =
+        /not logged|authentication required|gh auth login/i.test(stderr);
+      const looksMissing = /command not found|ENOENT|not found/i.test(stderr);
+      const error = looksMissing
+        ? 'gh CLI is not installed'
+        : looksUnauthed
+          ? 'gh CLI is not authenticated (run `gh auth login`)'
+          : stderr || 'gh CLI fallback failed';
+      console.error('[GitHub] gh fallback failed:', error);
+      return { success: false, error };
+    }
+
+    const isRaw =
+      !!accept &&
+      (accept.includes('application/vnd.github.v3.raw') ||
+        accept.includes('application/vnd.github.v3.diff') ||
+        accept.includes('application/vnd.github.v3.patch'));
+
+    let data: GitHubAPIResponseData;
+    if (isRaw) {
+      data = result.stdout;
+    } else {
+      try {
+        data = JSON.parse(result.stdout);
+      } catch {
+        data = result.stdout;
+      }
+    }
+
+    return {
+      success: true,
+      data,
+      headers: {},
+      status: 200,
+      statusText: 'OK',
+    };
   }
 
   // DELETED: detectRepository, getGitRemotes, parseGitRemoteUrl - unused (0 calls)
