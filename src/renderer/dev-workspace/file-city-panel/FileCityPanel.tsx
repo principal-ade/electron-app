@@ -15,6 +15,8 @@ import {
   stripRootPath,
 } from './buildCityDataFromContext';
 import { FileOverlay } from './FileOverlay';
+import { SequenceDiagramOverlay } from './SequenceDiagramOverlay';
+import { useSequenceDiagram } from './useSequenceDiagram';
 
 const MEDIA_RE = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i;
 const isOverlayable = (path: string): boolean => {
@@ -58,6 +60,22 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
     fileName: string;
   } | null>(null);
 
+  const {
+    payload: sequencePayload,
+    selectedEventId: sequenceSelectedEventId,
+    setSelectedEventId: setSequenceSelectedEventId,
+    clear: clearSequence,
+  } = useSequenceDiagram(repositoryPath);
+
+  const sequenceSelection = React.useMemo(() => {
+    if (!sequencePayload || !sequenceSelectedEventId) return null;
+    const event = sequencePayload.events.find(
+      (e) => e.id === sequenceSelectedEventId,
+    );
+    if (!event?.sourcePath) return null;
+    return { sourcePath: event.sourcePath };
+  }, [sequencePayload, sequenceSelectedEventId]);
+
   React.useEffect(() => {
     if (!tree) {
       setCityData(null);
@@ -90,6 +108,7 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
         packageRoot=""
         repoLabel={repoLabel}
         repositoryPath={repositoryPath}
+        sequenceSelection={sequenceSelection}
         onFileOpen={(cityPath) => {
           const relativePath = stripRootPath(cityPath, rootPath);
           if (isOverlayable(relativePath)) {
@@ -110,6 +129,14 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
           });
         }}
       />
+      {sequencePayload && (
+        <SequenceDiagramOverlay
+          payload={sequencePayload}
+          selectedEventId={sequenceSelectedEventId}
+          onNodeClick={setSequenceSelectedEventId}
+          onClose={clearSequence}
+        />
+      )}
       {overlayFile && (
         <FileOverlay
           filePath={overlayFile.filePath}

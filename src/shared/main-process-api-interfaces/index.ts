@@ -52,6 +52,7 @@ import type { OtelCollectorAPI } from './OtelCollectorAPI';
 import type { CLIBridgeAPI } from './CLIBridgeAPI';
 import type { ExtensionAPI } from './ExtensionAPI';
 import type { FileCityImageAPI } from './FileCityImageAPI';
+import type { FileCitySequenceAPI } from './FileCitySequenceAPI';
 import type { BrunoAPI } from './BrunoAPI';
 
 /**
@@ -128,6 +129,7 @@ export interface MainProcessAPI {
   skillLock: SkillLockAPI;
   extension: ExtensionAPI;
   fileCityImage: FileCityImageAPI;
+  fileCitySequence: FileCitySequenceAPI;
   bruno: BrunoAPI;
   /** Only available in Remote Terminal Viewer window */
   terminalBridge?: TerminalBridgeAPI;

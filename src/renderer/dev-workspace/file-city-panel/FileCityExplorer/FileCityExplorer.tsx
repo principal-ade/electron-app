@@ -153,6 +153,12 @@ export interface FileCityExplorerProps {
    * over the city canvas. Pass `null` to suppress the card.
    */
   repositoryPath?: string | null;
+  /**
+   * Currently-selected sequence-diagram event. When set, paints a
+   * single-file highlight layer over the matching building so the
+   * sequence overlay can drive selection in the city below.
+   */
+  sequenceSelection?: { sourcePath: string } | null;
 }
 
 export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
@@ -162,6 +168,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   onFileOpen,
   repoLabel,
   repositoryPath,
+  sequenceSelection,
 }) => {
   const { commit: latestCommit } = useLatestCommit(repositoryPath ?? null);
   const workingTree = useWorkingTreeChanges(repositoryPath ?? null);
@@ -695,6 +702,32 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     return { scope, ns, ev };
   }, [scopeSelection, scopes]);
 
+  // Sequence-diagram selection highlight — driven by an external sequence
+  // overlay. Maps the event's repo-relative `sourcePath` into a city path
+  // and fills the matching building. Silently no-ops when the path
+  // doesn't resolve to any known building.
+  const sequenceHighlightLayer = React.useMemo<HighlightLayer | null>(() => {
+    if (!sequenceSelection?.sourcePath) return null;
+    const cityPath = toCityPath(sequenceSelection.sourcePath);
+    if (!cityBuildingPaths.has(cityPath)) return null;
+    return {
+      id: 'sequence-selection',
+      name: 'Sequence Selection',
+      enabled: true,
+      color: '#22d3ee',
+      opacity: 0.9,
+      borderWidth: 4,
+      priority: 100,
+      items: [
+        {
+          path: cityPath,
+          type: 'file',
+          renderStrategy: 'fill',
+        },
+      ],
+    };
+  }, [sequenceSelection, toCityPath, cityBuildingPaths]);
+
   // City highlight layers derive from the active tab:
   //   scopes tab → selected scope's namespace fills (+ scope-level borders)
   //   files tab  → border around the currently-selected folder
@@ -1191,6 +1224,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               if (searchHighlightLayer) extras.push(searchHighlightLayer);
               if (hoveredSearchHighlightLayer) extras.push(hoveredSearchHighlightLayer);
               if (hoveredCardHighlightLayer) extras.push(hoveredCardHighlightLayer);
+              if (sequenceHighlightLayer) extras.push(sequenceHighlightLayer);
               if (extras.length === 0) return cityHighlightLayers;
               return [...(cityHighlightLayers ?? []), ...extras];
             })()}

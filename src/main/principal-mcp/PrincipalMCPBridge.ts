@@ -12,6 +12,8 @@ import {
   ElectronFileAdapter,
   BrunoLangParserAdapter,
 } from '../bruno/adapters';
+import { registerSequenceDiagramRoutes } from '../file-city/sequenceDiagramRoutes';
+import { getSequenceDiagramStore } from '../file-city/sequenceDiagramStore';
 
 // Tracer for Principal MCP Bridge instrumentation
 const tracer = getTracer('principal-ade-main');
@@ -992,6 +994,11 @@ export class PrincipalMCPBridge extends EventEmitter {
         span.end();
       }
     });
+
+    // ============================================
+    // FILE CITY SEQUENCE DIAGRAM ROUTES
+    // ============================================
+    registerSequenceDiagramRoutes(this.app, getSequenceDiagramStore());
   }
 
   public async start(): Promise<number> {
