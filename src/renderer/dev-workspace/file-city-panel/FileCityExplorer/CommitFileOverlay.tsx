@@ -7,6 +7,7 @@ import { GitService } from '../../../main-process-api/GitService';
 
 const fileDiffOptions = {
   diffStyle: 'unified',
+  disableFileHeader: true,
 } as const;
 
 export interface CommitFileOverlayProps {
@@ -103,23 +104,42 @@ export const CommitFileOverlay: React.FC<CommitFileOverlayProps> = ({
 
   const fileName = filePath.split('/').pop() || filePath;
 
+  // FileDiffMetadata doesn't carry totals — sum the per-hunk +/− counts.
+  const { additions, deletions } = React.useMemo(() => {
+    if (!selectedDiff) return { additions: 0, deletions: 0 };
+    let a = 0;
+    let d = 0;
+    for (const hunk of selectedDiff.hunks) {
+      a += hunk.additionLines;
+      d += hunk.deletionLines;
+    }
+    return { additions: a, deletions: d };
+  }, [selectedDiff]);
+
   return (
     <div
       style={{
-        // DEBUG: expanded to full pane so the FileDiff can be inspected
-        // without the slide-in chrome cramping it. Restore the 50%-width,
-        // translucent slide-in once the styling work is done.
         position: 'absolute',
         top: 0,
         left: 0,
-        right: 0,
         bottom: 0,
-        backgroundColor: theme.colors.background,
+        width: '50%',
+        backgroundColor: `color-mix(in srgb, ${theme.colors.background} 88%, transparent)`,
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        borderRight: `1px solid ${theme.colors.border}`,
         display: 'flex',
         flexDirection: 'column',
         zIndex: 2000,
+        animation: 'commitFileOverlaySlideIn 220ms ease-out',
       }}
     >
+      <style>{`
+        @keyframes commitFileOverlaySlideIn {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+      `}</style>
       <div
         style={{
           padding: '10px 14px',
@@ -135,19 +155,43 @@ export const CommitFileOverlay: React.FC<CommitFileOverlayProps> = ({
       >
         <span
           style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 8,
             fontFamily: theme.fonts.monospace,
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
+            minWidth: 0,
           }}
           title={`${filePath} @ ${commitHash.slice(0, 7)}`}
         >
-          {fileName}
+          <span
+            style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              minWidth: 0,
+            }}
+          >
+            {fileName}
+          </span>
+          {selectedDiff && (additions > 0 || deletions > 0) && (
+            <span
+              style={{
+                fontSize: theme.fontSizes[0],
+                flexShrink: 0,
+                display: 'inline-flex',
+                gap: 6,
+              }}
+            >
+              <span style={{ color: theme.colors.success }}>+{additions}</span>
+              <span style={{ color: theme.colors.error }}>−{deletions}</span>
+            </span>
+          )}
           <span
             style={{
               color: theme.colors.textTertiary,
-              marginLeft: 8,
               fontSize: theme.fontSizes[0],
+              flexShrink: 0,
             }}
           >
             {commitHash.slice(0, 7)}
@@ -193,7 +237,7 @@ export const CommitFileOverlay: React.FC<CommitFileOverlayProps> = ({
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
+      <div style={{ flex: 1, overflow: 'auto' }}>
         {loading && (
           <div
             style={{
@@ -224,6 +268,13 @@ export const CommitFileOverlay: React.FC<CommitFileOverlayProps> = ({
               display: 'block',
               fontSize: theme.fontSizes[1],
               fontFamily: theme.fonts.monospace,
+              // Repaint the diff host with our theme bg instead of the library
+              // default (#000 in dark, #fff in light). All other surfaces —
+              // context/addition/deletion/separator — are `color-mix`ed from
+              // `--diffs-bg`, so overriding `--diffs-light-bg` and
+              // `--diffs-dark-bg` recolors them coherently in one shot.
+              ['--diffs-light-bg' as string]: theme.colors.background,
+              ['--diffs-dark-bg' as string]: theme.colors.background,
             }}
           />
         )}
