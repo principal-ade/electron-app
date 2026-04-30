@@ -761,6 +761,26 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   const [detailModal, setDetailModal] = useState<DetailModal | null>(null);
 
+  // Right-click overlay: shows a panel as a floating column flush against
+  // its sidebar without disturbing the docked layout.
+  const [leftOverlayPanelId, setLeftOverlayPanelId] = useState<string | null>(
+    null,
+  );
+  const [rightOverlayPanelId, setRightOverlayPanelId] = useState<string | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!leftOverlayPanelId && !rightOverlayPanelId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setLeftOverlayPanelId(null);
+        setRightOverlayPanelId(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [leftOverlayPanelId, rightOverlayPanelId]);
+
   // Get required props for tabbed terminal panels from TerminalContext
   const terminalContext = terminalCtx.terminalContext || 'terminal:default';
   const terminalDirectory = terminalCtx.repositoryPath || '/';
@@ -4131,6 +4151,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           onPanelChange={(panelId) =>
             onLayoutChange({ ...layout, left: panelId })
           }
+          onPanelOverlay={(panelId) =>
+            setLeftOverlayPanelId((prev) => (prev === panelId ? null : panelId))
+          }
+          overlayPanelId={leftOverlayPanelId}
           theme={theme}
           collapsed={isLeftCollapsed}
           onExpand={handleLeftExpand}
@@ -4138,6 +4162,36 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           position="left"
         />
       )}
+
+      {/* Left Panel Overlay (right-click sidebar to toggle) */}
+      {leftOverlayPanelId &&
+        !sidebarsHidden &&
+        (() => {
+          const overlayPanel = allPanels.find(
+            (p) => p.id === leftOverlayPanelId,
+          );
+          if (!overlayPanel) return null;
+          return (
+            <div
+              style={{
+                position: 'absolute',
+                left: '80px',
+                top: 0,
+                bottom: 0,
+                width: '360px',
+                zIndex: 100,
+                background: theme.colors.background,
+                borderRight: `1px solid ${theme.colors.border}`,
+                boxShadow: '4px 0 12px rgba(0, 0, 0, 0.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              {overlayPanel.content}
+            </div>
+          );
+        })()}
 
       {/* Main panel layout area */}
       <div
@@ -4208,6 +4262,36 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         )}
       </div>
 
+      {/* Right Panel Overlay (right-click sidebar to toggle) */}
+      {rightOverlayPanelId &&
+        !sidebarsHidden &&
+        (() => {
+          const overlayPanel = allPanels.find(
+            (p) => p.id === rightOverlayPanelId,
+          );
+          if (!overlayPanel) return null;
+          return (
+            <div
+              style={{
+                position: 'absolute',
+                right: '80px',
+                top: 0,
+                bottom: 0,
+                width: '360px',
+                zIndex: 100,
+                background: theme.colors.background,
+                borderLeft: `1px solid ${theme.colors.border}`,
+                boxShadow: '-4px 0 12px rgba(0, 0, 0, 0.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              {overlayPanel.content}
+            </div>
+          );
+        })()}
+
       {/* Right Panel Icon Sidebar */}
       {!sidebarsHidden && (
         <PanelIconSidebar
@@ -4215,6 +4299,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           onPanelChange={(panelId) =>
             onLayoutChange({ ...layout, right: panelId })
           }
+          onPanelOverlay={(panelId) =>
+            setRightOverlayPanelId((prev) =>
+              prev === panelId ? null : panelId,
+            )
+          }
+          overlayPanelId={rightOverlayPanelId}
           theme={theme}
           collapsed={isRightCollapsed}
           onExpand={handleRightExpand}

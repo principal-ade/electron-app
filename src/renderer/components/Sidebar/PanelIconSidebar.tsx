@@ -40,6 +40,10 @@ export interface PanelIconSidebarProps {
   currentPanelId: string;
   /** Callback when panel icon is clicked */
   onPanelChange: (panelId: string) => void;
+  /** Callback when panel icon is right-clicked (open as floating overlay) */
+  onPanelOverlay?: (panelId: string) => void;
+  /** ID of currently overlaid panel (for active styling) */
+  overlayPanelId?: string | null;
   /** Theme for styling */
   theme: Theme;
   /** Whether panel is collapsed */
@@ -98,6 +102,8 @@ export const RIGHT_PANEL_ICONS: PanelIconConfig[] = [
 export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
   currentPanelId,
   onPanelChange,
+  onPanelOverlay,
+  overlayPanelId,
   theme,
   collapsed,
   onExpand,
@@ -148,11 +154,20 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
     >
       {panelIcons.map(({ id, Icon, label }) => {
         const isActive = currentPanelId === id;
+        const isOverlayActive = overlayPanelId === id;
 
         return (
           <button
             key={id}
             onClick={() => handlePanelClick(id)}
+            onContextMenu={
+              onPanelOverlay
+                ? (e) => {
+                    e.preventDefault();
+                    onPanelOverlay(id);
+                  }
+                : undefined
+            }
             title={label}
             aria-label={label}
             style={{
@@ -186,6 +201,10 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
                 background: isActive
                   ? `${theme.colors.primary}20`
                   : 'transparent',
+                outline: isOverlayActive
+                  ? `1px dashed ${theme.colors.primary}`
+                  : 'none',
+                outlineOffset: '2px',
                 transition: 'all 0.2s ease',
               }}
               onMouseEnter={(e) => {
