@@ -359,6 +359,27 @@ export class GitService {
     }
   }
 
+  /**
+   * Combined diff of staged + unstaged tracked changes vs HEAD. Untracked
+   * files are excluded — they have no HEAD baseline so `git diff` skips
+   * them; surfaces relying on this should fall back to "no diff" for
+   * untracked paths.
+   */
+  static async getWorkingTreeDiff(directory: string): Promise<string> {
+    console.info(`[GitService] Getting working tree diff: ${directory}`);
+    try {
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'diff',
+        'HEAD',
+        '--no-color',
+      ]);
+      return result.stdout;
+    } catch (error) {
+      console.error('[GitService] Failed to get working tree diff:', error);
+      return '';
+    }
+  }
+
   static async getChangedFilesForCommit(
     directory: string,
     commitHash: string,

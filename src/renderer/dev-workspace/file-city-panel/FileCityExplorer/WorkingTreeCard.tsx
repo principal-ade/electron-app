@@ -2,33 +2,28 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { makeSectionLabelStyle, withAlpha } from './styles';
 
-export type RecentCommitFileStatus = 'A' | 'M' | 'D' | 'R' | 'C' | 'T';
+export type WorkingTreeFileStatus = 'A' | 'M' | 'D';
 
-export interface RecentCommitFile {
+export interface WorkingTreeFile {
   path: string;
-  status: RecentCommitFileStatus;
+  status: WorkingTreeFileStatus;
+  /** True when at least one change to this path is staged. */
+  staged: boolean;
 }
 
-export interface RecentCommit {
-  sha: string;
-  subject: string;
-  author: string;
-  authoredAt: Date;
+export interface WorkingTreeChanges {
+  branch: string;
+  ahead: number;
+  behind: number;
   filesChanged: number;
-  additions: number;
-  deletions: number;
-  files: RecentCommitFile[];
+  files: WorkingTreeFile[];
 }
 
-interface RecentCommitCardProps {
-  commit: RecentCommit;
+interface WorkingTreeCardProps {
+  changes: WorkingTreeChanges;
   onClick?: () => void;
-  /** When true, render a highlighted border so users can see the
-   *  paired city-highlight layer is active. */
   active?: boolean;
-  /** Fired when a row in the expanded file list is clicked. The file's
-   *  status comes through so deletes can be skipped (no diff to show). */
-  onFileClick?: (file: RecentCommitFile) => void;
+  onFileClick?: (file: WorkingTreeFile) => void;
   /** Fired with the row's repo-relative path and its status color on
    *  mouse enter, and `null` on leave. The parent uses the color to paint
    *  a darkened hover-highlight that ties the city to the row visually. */
@@ -38,20 +33,8 @@ interface RecentCommitCardProps {
   style?: React.CSSProperties;
 }
 
-function formatRelativeTime(date: Date): string {
-  const diffMs = Date.now() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-export const RecentCommitCard: React.FC<RecentCommitCardProps> = ({
-  commit,
+export const WorkingTreeCard: React.FC<WorkingTreeCardProps> = ({
+  changes,
   onClick,
   active,
   onFileClick,
@@ -82,7 +65,7 @@ export const RecentCommitCard: React.FC<RecentCommitCardProps> = ({
     ...style,
   };
 
-  const shaChipStyle: React.CSSProperties = {
+  const branchChipStyle: React.CSSProperties = {
     fontFamily: theme.fonts.monospace,
     fontSize: theme.fontSizes[0],
     color: theme.colors.textSecondary,
@@ -92,7 +75,17 @@ export const RecentCommitCard: React.FC<RecentCommitCardProps> = ({
     ),
     padding: '2px 6px',
     borderRadius: theme.radii[1],
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    maxWidth: 140,
+    whiteSpace: 'nowrap',
   };
+
+  const stagedCount = changes.files.reduce(
+    (n, f) => (f.staged ? n + 1 : n),
+    0,
+  );
+  const unstagedCount = changes.filesChanged - stagedCount;
 
   return (
     <div
@@ -105,46 +98,13 @@ export const RecentCommitCard: React.FC<RecentCommitCardProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 8,
         }}
       >
-        <div style={sectionLabelStyle}>Latest commit</div>
-        <span style={shaChipStyle}>{commit.sha.slice(0, 7)}</span>
-      </div>
-
-      <div
-        style={{
-          fontSize: theme.fontSizes[1],
-          lineHeight: 1.35,
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          wordBreak: 'break-word',
-        }}
-      >
-        {commit.subject}
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          fontSize: theme.fontSizes[0],
-          color: theme.colors.textSecondary,
-        }}
-      >
-        <span
-          style={{
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            marginRight: 8,
-          }}
-        >
-          {commit.author}
+        <div style={sectionLabelStyle}>Working tree</div>
+        <span style={branchChipStyle} title={changes.branch}>
+          {changes.branch}
         </span>
-        <span>{formatRelativeTime(commit.authoredAt)}</span>
       </div>
 
       <div
@@ -155,16 +115,27 @@ export const RecentCommitCard: React.FC<RecentCommitCardProps> = ({
           fontSize: theme.fontSizes[0],
           color: theme.colors.textTertiary,
           fontFamily: theme.fonts.monospace,
+          flexWrap: 'wrap',
         }}
       >
         <span>
-          {commit.filesChanged} file{commit.filesChanged === 1 ? '' : 's'}
+          {changes.filesChanged} file{changes.filesChanged === 1 ? '' : 's'}
         </span>
-        <span style={{ color: theme.colors.success }}>+{commit.additions}</span>
-        <span style={{ color: theme.colors.error }}>−{commit.deletions}</span>
+        {stagedCount > 0 && (
+          <span style={{ color: theme.colors.success }}>
+            {stagedCount} staged
+          </span>
+        )}
+        {unstagedCount > 0 && (
+          <span style={{ color: theme.colors.warning }}>
+            {unstagedCount} unstaged
+          </span>
+        )}
+        {changes.ahead > 0 && <span>↑{changes.ahead}</span>}
+        {changes.behind > 0 && <span>↓{changes.behind}</span>}
       </div>
 
-      {active && commit.files.length > 0 && (
+      {active && changes.files.length > 0 && (
         <div
           style={{
             marginTop: 4,
@@ -178,20 +149,23 @@ export const RecentCommitCard: React.FC<RecentCommitCardProps> = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {commit.files.map((file) => {
+          {changes.files.map((file) => {
             const statusColor =
-              file.status === 'A' || file.status === 'C'
+              file.status === 'A'
                 ? theme.colors.success
                 : file.status === 'D'
                   ? theme.colors.error
                   : theme.colors.warning;
+            // Only deletions can't open a diff (file is gone). Untracked
+            // files (status 'A' but not yet in git) will still open the
+            // overlay; the overlay's empty state handles them.
             const clickable = onFileClick != null && file.status !== 'D';
             const slash = file.path.lastIndexOf('/');
             const name = slash >= 0 ? file.path.slice(slash + 1) : file.path;
             const dir = slash >= 0 ? file.path.slice(0, slash) : '';
             return (
               <div
-                key={`${file.status}:${file.path}`}
+                key={`${file.staged ? 's' : 'u'}:${file.status}:${file.path}`}
                 title={file.path}
                 onClick={
                   clickable
@@ -236,9 +210,12 @@ export const RecentCommitCard: React.FC<RecentCommitCardProps> = ({
                     textAlign: 'center',
                     fontFamily: theme.fonts.monospace,
                     fontSize: theme.fontSizes[0],
+                    // Lowercase staged-marker variant so unstaged vs staged is
+                    // glanceable without a second column.
+                    opacity: file.staged ? 1 : 0.7,
                   }}
                 >
-                  {file.status}
+                  {file.staged ? file.status : file.status.toLowerCase()}
                 </span>
                 <div
                   style={{

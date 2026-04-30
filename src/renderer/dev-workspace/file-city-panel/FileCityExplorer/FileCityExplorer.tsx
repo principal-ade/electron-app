@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { GitCommit, GitCompareArrows } from 'lucide-react';
 import {
   FileTree,
   useFileTree,
@@ -30,7 +31,10 @@ import { AddToScopeModal } from './AddToScopeModal';
 import { CommitFileOverlay } from './CommitFileOverlay';
 import { RecentCommitCard } from './RecentCommitCard';
 import { ScopeInfoOverlay } from './ScopeInfoOverlay';
+import { WorkingTreeCard } from './WorkingTreeCard';
+import { WorkingTreeFileOverlay } from './WorkingTreeFileOverlay';
 import { useLatestCommit } from './useLatestCommit';
+import { useWorkingTreeChanges } from './useWorkingTreeChanges';
 import {
   AREA_PANEL_COLOR,
   DEFAULT_NAMESPACE_COLOR,
@@ -51,6 +55,28 @@ type FileTreeModel = UseFileTreeResult['model'];
 // re-fire on every render when the provider isn't mounted.
 const EMPTY_SCOPES: readonly ScopeRecord[] = [];
 const EMPTY_AREAS: readonly ProjectArea[] = [];
+
+/**
+ * Darken any CSS color string toward black by `amount` (0..1). Uses a
+ * scratch canvas to canonicalize whatever the theme hands us — hex, hsl,
+ * oklch, color-mix, named — into rgb so three.js can parse the result.
+ * Returns the input unchanged if parsing fails.
+ */
+function darken(color: string, amount: number): string {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return color;
+  ctx.fillStyle = '#000000';
+  ctx.fillStyle = color;
+  const resolved = ctx.fillStyle;
+  if (typeof resolved !== 'string' || !resolved.startsWith('#')) return color;
+  const hex = resolved.length === 9 ? resolved.slice(0, 7) : resolved;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const factor = 1 - Math.max(0, Math.min(1, amount));
+  return `rgb(${Math.round(r * factor)}, ${Math.round(g * factor)}, ${Math.round(b * factor)})`;
+}
 
 /**
  * Trees library returns directory selections with a trailing slash
@@ -138,8 +164,39 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   repositoryPath,
 }) => {
   const { commit: latestCommit } = useLatestCommit(repositoryPath ?? null);
+  const workingTree = useWorkingTreeChanges(repositoryPath ?? null);
   const [commitHighlightActive, setCommitHighlightActive] = React.useState(false);
-  const [commitFilePath, setCommitFilePath] = React.useState<string | null>(null);
+  const [workingTreeHighlightActive, setWorkingTreeHighlightActive] =
+    React.useState(false);
+  // Toolbar toggles for the floating cards. Defaults follow the data:
+  // dirty repo → show working-tree card only; clean repo → show latest-
+  // commit card only. Once the user clicks either toolbar button we lock
+  // in the override so subsequent data changes don't yank the cards
+  // around under them.
+  const [showLatestCommit, setShowLatestCommit] = React.useState(false);
+  const [showWorkingTree, setShowWorkingTree] = React.useState(false);
+  const cardVisibilityOverriddenRef = React.useRef(false);
+  React.useEffect(() => {
+    if (cardVisibilityOverriddenRef.current) return;
+    const dirty = workingTree != null;
+    setShowWorkingTree(dirty);
+    setShowLatestCommit(!dirty);
+  }, [workingTree]);
+  const toggleWorkingTreeCard = React.useCallback(() => {
+    cardVisibilityOverriddenRef.current = true;
+    setShowWorkingTree((v) => !v);
+  }, []);
+  const toggleLatestCommitCard = React.useCallback(() => {
+    cardVisibilityOverriddenRef.current = true;
+    setShowLatestCommit((v) => !v);
+  }, []);
+  // Single open-overlay slot — both sources render the same surface, so only
+  // one can be visible at a time and clicking a row in either card closes
+  // the previous overlay implicitly.
+  const [openOverlayFile, setOpenOverlayFile] = React.useState<{
+    source: 'commit' | 'working-tree';
+    path: string;
+  } | null>(null);
   const { theme } = useTheme();
   const sectionLabelStyle = makeSectionLabelStyle(theme);
 
@@ -343,7 +400,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     [cityData],
   );
   const commitHighlightLayers = React.useMemo<HighlightLayer[]>(() => {
-    if (!commitHighlightActive || !latestCommit) return [];
+    if (!commitHighlightActive || !latestCommit || !showLatestCommit) return [];
     const added: string[] = [];
     const modified: string[] = [];
     for (const file of latestCommit.files) {
@@ -388,7 +445,60 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
       });
     }
     return layers;
-  }, [commitHighlightActive, latestCommit, cityBuildingPaths, toCityPath, theme]);
+  }, [commitHighlightActive, showLatestCommit, latestCommit, cityBuildingPaths, toCityPath, theme]);
+
+  // Working-tree highlights — toggled by clicking the WorkingTreeCard. Same
+  // bucketing rules as the commit card: added=success, modified=warning,
+  // deleted dropped (no building exists). Untracked files often won't have
+  // a building either (city is built from package contents at load time);
+  // those silently fall away in the cityBuildingPaths filter.
+  const workingTreeHighlightLayers = React.useMemo<HighlightLayer[]>(() => {
+    if (!workingTreeHighlightActive || !workingTree || !showWorkingTree) return [];
+    const added: string[] = [];
+    const modified: string[] = [];
+    for (const file of workingTree.files) {
+      if (file.status === 'D') continue;
+      const cityPath = toCityPath(file.path);
+      if (!cityBuildingPaths.has(cityPath)) continue;
+      if (file.status === 'A') {
+        added.push(cityPath);
+      } else {
+        modified.push(cityPath);
+      }
+    }
+    const layers: HighlightLayer[] = [];
+    if (modified.length > 0) {
+      layers.push({
+        id: 'working-tree-modified',
+        name: 'Modified in working tree',
+        enabled: true,
+        color: theme.colors.warning,
+        priority: 870,
+        opacity: 0.9,
+        items: modified.map((path) => ({
+          path,
+          type: 'file',
+          renderStrategy: 'fill',
+        })),
+      });
+    }
+    if (added.length > 0) {
+      layers.push({
+        id: 'working-tree-added',
+        name: 'Added in working tree',
+        enabled: true,
+        color: theme.colors.success,
+        priority: 880,
+        opacity: 0.9,
+        items: added.map((path) => ({
+          path,
+          type: 'file',
+          renderStrategy: 'fill',
+        })),
+      });
+    }
+    return layers;
+  }, [workingTreeHighlightActive, showWorkingTree, workingTree, cityBuildingPaths, toCityPath, theme]);
 
   // Hovered search result → its own one-item highlight layer at a slightly
   // higher priority than the bulk search layer, so the hovered building reads
@@ -412,6 +522,40 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
       ],
     };
   }, [hoveredSearchResult, theme]);
+
+  // Hovered file row in either the WorkingTreeCard or RecentCommitCard →
+  // fill on the matching building. Card rows expose repo-relative paths,
+  // so re-root through `toCityPath` and skip when the building isn't in
+  // the city (untracked / outside packageRoot / etc.). The row's status
+  // color flows through so the hover paints a *darker* shade of it.
+  const [hoveredCardFile, setHoveredCardFile] = React.useState<{
+    path: string;
+    color: string;
+  } | null>(null);
+  const hoveredCardHighlightLayer = React.useMemo<HighlightLayer | null>(() => {
+    if (!hoveredCardFile) return null;
+    const cityPath = toCityPath(hoveredCardFile.path);
+    if (!cityBuildingPaths.has(cityPath)) return null;
+    // 3D fills don't stack — `getHighlightForPath` only paints the highest-
+    // priority fill match. Stay above commit (850/860), working-tree
+    // (870/880), search (900), and search-hover (950) so the hovered
+    // building is always recolored.
+    return {
+      id: 'card-row-hover',
+      name: 'Hovered file in card',
+      enabled: true,
+      color: darken(hoveredCardFile.color, 0.4),
+      priority: 1000,
+      opacity: 1,
+      items: [
+        {
+          path: cityPath,
+          type: 'file',
+          renderStrategy: 'fill',
+        },
+      ],
+    };
+  }, [hoveredCardFile, cityBuildingPaths, toCityPath]);
 
   const initialCityPaths = React.useRef(cityPaths);
   const { model: treeModel } = useFileTree({
@@ -935,26 +1079,65 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   return (
     <div style={{ height: '100%', width: '100%', display: 'flex', background: theme.colors.background }}>
       <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-        {latestCommit && (
-          <RecentCommitCard
-            commit={latestCommit}
-            active={commitHighlightActive}
-            onClick={() => setCommitHighlightActive((v) => !v)}
-            onFileClick={(file) => setCommitFilePath(file.path)}
+        {((latestCommit && showLatestCommit) ||
+          (workingTree && showWorkingTree)) && (
+          <div
             style={{
               position: 'absolute',
               top: 60,
               right: theme.space[2],
               zIndex: 110,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              maxHeight: 'calc(100% - 76px)',
+              pointerEvents: 'none',
             }}
-          />
+          >
+            {workingTree && showWorkingTree && (
+              <WorkingTreeCard
+                changes={workingTree}
+                active={workingTreeHighlightActive}
+                onClick={() => setWorkingTreeHighlightActive((v) => !v)}
+                onFileClick={(file) =>
+                  setOpenOverlayFile({
+                    source: 'working-tree',
+                    path: file.path,
+                  })
+                }
+                onFileHoverChange={setHoveredCardFile}
+                style={{ pointerEvents: 'auto' }}
+              />
+            )}
+            {latestCommit && showLatestCommit && (
+              <RecentCommitCard
+                commit={latestCommit}
+                active={commitHighlightActive}
+                onClick={() => setCommitHighlightActive((v) => !v)}
+                onFileClick={(file) =>
+                  setOpenOverlayFile({ source: 'commit', path: file.path })
+                }
+                onFileHoverChange={setHoveredCardFile}
+                style={{ pointerEvents: 'auto' }}
+              />
+            )}
+          </div>
         )}
-        {latestCommit && commitFilePath && repositoryPath && (
-          <CommitFileOverlay
+        {openOverlayFile?.source === 'commit' &&
+          latestCommit &&
+          repositoryPath && (
+            <CommitFileOverlay
+              repositoryPath={repositoryPath}
+              commitHash={latestCommit.sha}
+              filePath={openOverlayFile.path}
+              onClose={() => setOpenOverlayFile(null)}
+            />
+          )}
+        {openOverlayFile?.source === 'working-tree' && repositoryPath && (
+          <WorkingTreeFileOverlay
             repositoryPath={repositoryPath}
-            commitHash={latestCommit.sha}
-            filePath={commitFilePath}
-            onClose={() => setCommitFilePath(null)}
+            filePath={openOverlayFile.path}
+            onClose={() => setOpenOverlayFile(null)}
           />
         )}
         {/* Canvas wrapper — pushed down by HEADER_HEIGHT so the focus
@@ -1004,15 +1187,18 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
             highlightLayers={(() => {
               const extras: HighlightLayer[] = [];
               extras.push(...commitHighlightLayers);
+              extras.push(...workingTreeHighlightLayers);
               if (searchHighlightLayer) extras.push(searchHighlightLayer);
               if (hoveredSearchHighlightLayer) extras.push(hoveredSearchHighlightLayer);
+              if (hoveredCardHighlightLayer) extras.push(hoveredCardHighlightLayer);
               if (extras.length === 0) return cityHighlightLayers;
               return [...(cityHighlightLayers ?? []), ...extras];
             })()}
             elevatedScopePanels={
               searchHighlightLayer ||
               searchInputFocused ||
-              commitHighlightLayers.length > 0
+              commitHighlightLayers.length > 0 ||
+              workingTreeHighlightLayers.length > 0
                 ? undefined
                 : cityElevatedPanels ?? folderElevatedPanels
             }
@@ -1225,6 +1411,62 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               }}
             />
           </div>
+          {workingTree && (
+            <button
+              onClick={toggleWorkingTreeCard}
+              title={
+                showWorkingTree
+                  ? 'Hide working-tree card'
+                  : 'Show working-tree card'
+              }
+              style={{
+                background: showWorkingTree
+                  ? withAlpha(theme.colors.primary, 18)
+                  : 'transparent',
+                color: showWorkingTree
+                  ? theme.colors.primary
+                  : theme.colors.textMuted,
+                border: `1px solid ${showWorkingTree ? theme.colors.primary : theme.colors.border}`,
+                borderRadius: theme.radii[2],
+                padding: '4px 6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                lineHeight: 0,
+                flexShrink: 0,
+              }}
+            >
+              <GitCompareArrows size={14} />
+            </button>
+          )}
+          {latestCommit && (
+            <button
+              onClick={toggleLatestCommitCard}
+              title={
+                showLatestCommit
+                  ? 'Hide latest-commit card'
+                  : 'Show latest-commit card'
+              }
+              style={{
+                background: showLatestCommit
+                  ? withAlpha(theme.colors.primary, 18)
+                  : 'transparent',
+                color: showLatestCommit
+                  ? theme.colors.primary
+                  : theme.colors.textMuted,
+                border: `1px solid ${showLatestCommit ? theme.colors.primary : theme.colors.border}`,
+                borderRadius: theme.radii[2],
+                padding: '4px 6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                lineHeight: 0,
+                flexShrink: 0,
+              }}
+            >
+              <GitCommit size={14} />
+            </button>
+          )}
           {focusDirectory && (
             <button
               onClick={() => setFocusPinned(p => !p)}
