@@ -745,26 +745,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     onCollapsedChangeRef.current({ ...collapsedStateRef.current });
   }, []);
 
-  // Handle resize from user drag - just update local collapsed state
-  const handlePanelResizeInternal = useCallback(
-    (sizes: { left: number; middle: number; right: number }) => {
-      // Update collapsed state based on resize
-      const newLeftCollapsed = sizes.left < 5;
-      const newRightCollapsed = sizes.right < 5;
-      setIsLeftCollapsed(newLeftCollapsed);
-      setIsRightCollapsed(newRightCollapsed);
-      collapsedStateRef.current = {
-        left: newLeftCollapsed,
-        right: newRightCollapsed,
-      };
-      // Update parent collapsed state (but NOT panelSizes - no feedback loop)
-      onCollapsedChangeRef.current({
-        left: newLeftCollapsed,
-        right: newRightCollapsed,
-      });
-    },
-    [],
-  );
+  // Collapsed state is owned by onLeft/RightCollapseComplete + onLeft/RightExpandComplete.
+  // Don't derive it from onPanelResize sizes: the library reports the *remembered*
+  // expanded size while collapsed, which would make us flip collapsed→false even though
+  // the panel is visually at 0. That caused sidebar icons to need two clicks to open.
 
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -4174,7 +4158,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           collapsed={collapsed}
           showCollapseButtons={false}
           theme={theme}
-          onPanelResize={handlePanelResizeInternal}
           onLeftCollapseComplete={handleLeftCollapseCompleteInternal}
           onLeftExpandComplete={handleLeftExpandCompleteInternal}
           onRightCollapseComplete={handleRightCollapseCompleteInternal}
