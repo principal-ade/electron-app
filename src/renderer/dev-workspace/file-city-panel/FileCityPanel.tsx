@@ -16,6 +16,11 @@ import {
 } from './buildCityDataFromContext';
 import { FileOverlay } from './FileOverlay';
 import { SequenceDiagramOverlay } from './SequenceDiagramOverlay';
+import { SequenceEventDetailOverlay } from './SequenceEventDetailOverlay';
+import {
+  SequenceLeaderLine,
+  type SequenceLeaderLineHandle,
+} from './SequenceLeaderLine';
 import { useSequenceDiagram } from './useSequenceDiagram';
 
 const MEDIA_RE = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i;
@@ -67,14 +72,48 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
     clear: clearSequence,
   } = useSequenceDiagram(repositoryPath);
 
-  const sequenceSelection = React.useMemo(() => {
+  const selectedSequenceEvent = React.useMemo(() => {
     if (!sequencePayload || !sequenceSelectedEventId) return null;
-    const event = sequencePayload.events.find(
-      (e) => e.id === sequenceSelectedEventId,
+    return (
+      sequencePayload.events.find((e) => e.id === sequenceSelectedEventId) ??
+      null
     );
-    if (!event?.sourcePath) return null;
-    return { sourcePath: event.sourcePath };
   }, [sequencePayload, sequenceSelectedEventId]);
+
+  const sequenceSelection = React.useMemo(() => {
+    if (!selectedSequenceEvent?.sourcePath) return null;
+    return { sourcePath: selectedSequenceEvent.sourcePath };
+  }, [selectedSequenceEvent]);
+
+  const selectedEventAbsolutePath = React.useMemo(() => {
+    const sourcePath = selectedSequenceEvent?.sourcePath;
+    if (!sourcePath) return null;
+    if (sourcePath.startsWith('/')) return sourcePath;
+    if (!repositoryPath) return sourcePath;
+    return `${repositoryPath}/${sourcePath}`;
+  }, [selectedSequenceEvent, repositoryPath]);
+
+  const selectedBuilding = React.useMemo(() => {
+    const sourcePath = selectedSequenceEvent?.sourcePath;
+    if (!sourcePath || !cityData) return null;
+    return (
+      cityData.buildings.find((b) => b.path === sourcePath) ??
+      cityData.buildings.find((b) => b.path.endsWith(`/${sourcePath}`)) ??
+      null
+    );
+  }, [selectedSequenceEvent, cityData]);
+
+  const cityCenter = React.useMemo(() => {
+    if (!cityData) return null;
+    return {
+      x: (cityData.bounds.minX + cityData.bounds.maxX) / 2,
+      z: (cityData.bounds.minZ + cityData.bounds.maxZ) / 2,
+    };
+  }, [cityData]);
+
+  const panelContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const leaderLineRef = React.useRef<SequenceLeaderLineHandle | null>(null);
+  const detailOverlayRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     if (!tree) {
@@ -102,13 +141,20 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div
+      ref={panelContainerRef}
+      style={{ position: 'relative', width: '100%', height: '100%' }}
+    >
       <FileCityExplorer
         cityData={cityData}
         packageRoot=""
         repoLabel={repoLabel}
         repositoryPath={repositoryPath}
         sequenceSelection={sequenceSelection}
+        hideFolderPanels={!!sequencePayload}
+        onCameraFrame={(camera, size) => {
+          leaderLineRef.current?.onCameraFrame(camera, size);
+        }}
         onFileOpen={(cityPath) => {
           const relativePath = stripRootPath(cityPath, rootPath);
           if (isOverlayable(relativePath)) {
@@ -135,6 +181,36 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
           selectedEventId={sequenceSelectedEventId}
           onNodeClick={setSequenceSelectedEventId}
           onClose={clearSequence}
+        />
+      )}
+      <SequenceLeaderLine
+        ref={leaderLineRef}
+        containerRef={panelContainerRef}
+        building={selectedSequenceEvent ? selectedBuilding : null}
+        cityCenter={cityCenter}
+        targetRef={detailOverlayRef}
+      />
+
+      {selectedSequenceEvent && (
+        <SequenceEventDetailOverlay
+          ref={detailOverlayRef}
+          event={selectedSequenceEvent}
+          absolutePath={selectedEventAbsolutePath}
+          bottomOffset="50%"
+          onClose={() => setSequenceSelectedEventId(null)}
+          onOpenInTab={
+            selectedEventAbsolutePath
+              ? () => {
+                  events.emit({
+                    type: 'file:open',
+                    source: 'file-overlay',
+                    timestamp: Date.now(),
+                    payload: { path: selectedEventAbsolutePath },
+                  });
+                  setSequenceSelectedEventId(null);
+                }
+              : undefined
+          }
         />
       )}
       {overlayFile && (

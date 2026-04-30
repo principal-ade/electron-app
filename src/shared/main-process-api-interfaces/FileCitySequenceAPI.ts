@@ -21,6 +21,30 @@ export enum FileCitySequenceEvent {
 }
 
 /**
+ * Optional code snippet attached to a sequence event. Used by the right-
+ * edge detail overlay to render a Pierre snippet view scoped to a line
+ * range of `SequenceEvent.sourcePath`.
+ */
+export interface SequenceEventSnippet {
+  /** First line of the snippet (1-based, inclusive). */
+  startLine: number;
+  /** Last line of the snippet (1-based, inclusive). */
+  endLine: number;
+  /** Line to highlight as the focus point; defaults to `startLine`. */
+  focusLine?: number;
+  /** Lines of context above/below the snippet; defaults to 2. */
+  contextLines?: number;
+}
+
+/**
+ * Augmented sequence event used by File City. Adds an optional
+ * `snippet` reference on top of the upstream `SequenceEvent` shape.
+ */
+export type FileCitySequenceEventDef = SequenceEvent & {
+  snippet?: SequenceEventSnippet;
+};
+
+/**
  * Payload accepted by `POST /api/file-city/sequence` and broadcast to
  * all renderer windows. Re-exports `SequenceEvent`/`SequenceEdge` from
  * `@principal-ai/principal-view-react` so callers reference one shape.
@@ -34,7 +58,7 @@ export interface SequenceDiagramPayload {
    */
   repositoryPath?: string;
   /** Events in display order */
-  events: SequenceEvent[];
+  events: FileCitySequenceEventDef[];
   /** Edges between events */
   edges: SequenceEdge[];
 }

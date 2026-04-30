@@ -18,6 +18,16 @@ import {
   type ElevatedScopePanel,
   type HighlightLayer,
 } from '@principal-ai/file-city-react';
+import type * as THREE from 'three';
+
+/**
+ * Mirror of `OnCameraFrame` from `@principal-ai/file-city-react`'s internals;
+ * not re-exported from the package's public surface.
+ */
+type OnCameraFrame = (
+  camera: THREE.Camera,
+  size: { width: number; height: number },
+) => void;
 import type { ProjectArea } from '@principal-ai/principal-view-core';
 
 import { useScopeManagerOptional } from '../../scope-manager-provider';
@@ -159,6 +169,18 @@ export interface FileCityExplorerProps {
    * sequence overlay can drive selection in the city below.
    */
   sequenceSelection?: { sourcePath: string } | null;
+  /**
+   * When true, the elevated folder/scope panels floating above the city
+   * are suppressed. Useful when another overlay (like the sequence
+   * diagram) should be the primary structure shown.
+   */
+  hideFolderPanels?: boolean;
+  /**
+   * Forwarded to `FileCity3D`. Fires once per R3F render frame with the
+   * live camera and canvas size; lets the host project building world
+   * positions to screen pixels for HTML/SVG overlays (leader lines, etc).
+   */
+  onCameraFrame?: OnCameraFrame;
 }
 
 export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
@@ -169,6 +191,8 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   repoLabel,
   repositoryPath,
   sequenceSelection,
+  hideFolderPanels,
+  onCameraFrame,
 }) => {
   const { commit: latestCommit } = useLatestCommit(repositoryPath ?? null);
   const workingTree = useWorkingTreeChanges(repositoryPath ?? null);
@@ -1229,6 +1253,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               return [...(cityHighlightLayers ?? []), ...extras];
             })()}
             elevatedScopePanels={
+              hideFolderPanels ||
               searchHighlightLayer ||
               searchInputFocused ||
               commitHighlightLayers.length > 0 ||
@@ -1245,6 +1270,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               friction: 16,
             }}
             showControls={true}
+            onCameraFrame={onCameraFrame}
           />
         </div>
 

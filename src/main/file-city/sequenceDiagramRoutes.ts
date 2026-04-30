@@ -6,8 +6,9 @@
 import type { Application, Request, Response } from 'express';
 import type {
   SequenceDiagramPayload,
-  SequenceEvent,
   SequenceEdge,
+  FileCitySequenceEventDef,
+  SequenceEventSnippet,
 } from '../../shared/main-process-api-interfaces/FileCitySequenceAPI';
 import { SequenceDiagramStore } from './sequenceDiagramStore';
 
@@ -18,6 +19,42 @@ interface ValidationFailure {
 interface ValidationSuccess {
   ok: true;
   payload: SequenceDiagramPayload;
+}
+
+function validateSnippet(
+  eventId: string,
+  snippet: unknown,
+  sourcePath: unknown,
+): string | null {
+  if (!snippet || typeof snippet !== 'object') {
+    return `event ${eventId}: snippet must be an object`;
+  }
+  if (typeof sourcePath !== 'string' || sourcePath.length === 0) {
+    return `event ${eventId}: snippet requires a sourcePath on the event`;
+  }
+  const s = snippet as Partial<SequenceEventSnippet>;
+  if (!Number.isInteger(s.startLine) || (s.startLine as number) < 1) {
+    return `event ${eventId}: snippet.startLine must be a positive integer`;
+  }
+  if (!Number.isInteger(s.endLine) || (s.endLine as number) < 1) {
+    return `event ${eventId}: snippet.endLine must be a positive integer`;
+  }
+  if ((s.endLine as number) < (s.startLine as number)) {
+    return `event ${eventId}: snippet.endLine must be >= startLine`;
+  }
+  if (
+    s.focusLine !== undefined &&
+    (!Number.isInteger(s.focusLine) || (s.focusLine as number) < 1)
+  ) {
+    return `event ${eventId}: snippet.focusLine must be a positive integer`;
+  }
+  if (
+    s.contextLines !== undefined &&
+    (!Number.isInteger(s.contextLines) || (s.contextLines as number) < 0)
+  ) {
+    return `event ${eventId}: snippet.contextLines must be a non-negative integer`;
+  }
+  return null;
 }
 
 function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
@@ -33,7 +70,7 @@ function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
     return { ok: false, error: 'edges must be an array' };
   }
 
-  const events = b.events as SequenceEvent[];
+  const events = b.events as FileCitySequenceEventDef[];
   const ids = new Set<string>();
   for (const ev of events) {
     if (!ev || typeof ev.id !== 'string' || typeof ev.name !== 'string') {
@@ -43,6 +80,10 @@ function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
       return { ok: false, error: `duplicate event id: ${ev.id}` };
     }
     ids.add(ev.id);
+    if (ev.snippet !== undefined) {
+      const snippetError = validateSnippet(ev.id, ev.snippet, ev.sourcePath);
+      if (snippetError) return { ok: false, error: snippetError };
+    }
   }
 
   const edges = b.edges as SequenceEdge[];
