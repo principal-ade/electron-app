@@ -15,8 +15,8 @@ export interface PierreSnippetViewProps {
   focusLine?: number;
   /** Lines of context above/below the snippet; defaults to 2. */
   contextLines?: number;
-  /** Override Pierre's container background to transparent. */
-  transparent?: boolean;
+  /** Override Pierre's container background. Any CSS color string. */
+  background?: string;
 }
 
 export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
@@ -26,7 +26,7 @@ export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
   endLine,
   focusLine,
   contextLines = 2,
-  transparent = false,
+  background,
 }) => {
   const { theme } = useTheme();
   const [contents, setContents] = React.useState<string | null>(null);
@@ -115,7 +115,9 @@ export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
       </div>
       <File
         file={fileObject}
-        options={transparent ? pierreOptionsTransparent : pierreOptions}
+        options={
+          background ? buildPierreOptions(background) : pierreOptions
+        }
         selectedLines={
           slice.focusOffset != null
             ? { start: slice.focusOffset, end: slice.focusOffset }
@@ -127,19 +129,19 @@ export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
   );
 };
 
-const transparentBgCSS = `
+const buildBackgroundCSS = (color: string) => `
   :host {
-    background: transparent !important;
+    background: ${color} !important;
   }
   pre, code,
   [data-gutter], [data-content],
   [data-line], [data-column-number],
   [data-gutter-buffer], [data-line-annotation], [data-no-newline],
   [data-separator], [data-separator-wrapper] {
-    background: transparent !important;
+    background: ${color} !important;
   }
   [data-line] span {
-    background: transparent !important;
+    background: ${color} !important;
   }
 `;
 
@@ -147,10 +149,10 @@ const pierreOptions = {
   disableFileHeader: true,
 } as const;
 
-const pierreOptionsTransparent = {
+const buildPierreOptions = (background: string) => ({
   disableFileHeader: true,
-  unsafeCSS: transparentBgCSS,
-} as const;
+  unsafeCSS: buildBackgroundCSS(background),
+});
 
 const pierreStyle: React.CSSProperties = {
   display: 'block',

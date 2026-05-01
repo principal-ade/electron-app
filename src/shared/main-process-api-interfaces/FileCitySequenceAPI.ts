@@ -21,11 +21,12 @@ export enum FileCitySequenceEvent {
 }
 
 /**
- * Optional code snippet attached to a sequence event. Used by the right-
- * edge detail overlay to render a Pierre snippet view scoped to a line
- * range of `SequenceEvent.sourcePath`.
+ * Default snippet variant — reads `event.sourcePath` and renders a single-file
+ * window. `kind` may be omitted for back-compat; missing `kind` is treated as
+ * `'slice'`.
  */
-export interface SequenceEventSnippet {
+export interface SliceSnippet {
+  kind?: 'slice';
   /** First line of the snippet (1-based, inclusive). */
   startLine: number;
   /** Last line of the snippet (1-based, inclusive). */
@@ -37,11 +38,44 @@ export interface SequenceEventSnippet {
 }
 
 /**
+ * Diff snippet variant — renders a before/after view inline. Used by code-
+ * review walkthroughs where each event represents a change region in a PR.
+ */
+export interface DiffSnippet {
+  kind: 'diff';
+  /** Pre-change file contents (full file or a pre-sliced window). */
+  oldContents: string;
+  /**
+   * Post-change file contents. When omitted, the renderer reads the current
+   * contents at `event.sourcePath` and diffs against `oldContents`.
+   */
+  newContents?: string;
+  /** Optional snippet window (1-based) applied to both sides before diffing. */
+  startLine?: number;
+  endLine?: number;
+  /** Line in the post-change window to call out (1-based). */
+  focusLine?: number;
+  /** Lines of unchanged context kept around the window; defaults to 2. */
+  contextLines?: number;
+  /** Pierre rendering style. Defaults to `'unified'`. */
+  diffStyle?: 'unified' | 'split';
+}
+
+export type SequenceEventSnippet = SliceSnippet | DiffSnippet;
+
+/**
  * Augmented sequence event used by File City. Adds an optional
  * `snippet` reference on top of the upstream `SequenceEvent` shape.
  */
 export type FileCitySequenceEventDef = SequenceEvent & {
   snippet?: SequenceEventSnippet;
+  /**
+   * Optional human-readable description of the change/event. Surfaced in
+   * the left-edge explainer overlay when the event is selected — useful for
+   * code-review walkthroughs where each event needs a "why" alongside the
+   * snippet.
+   */
+  description?: string;
 };
 
 /**

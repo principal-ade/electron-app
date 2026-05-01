@@ -7,15 +7,14 @@ import { FileSystemService } from '../../main-process-api/FileSystemService';
 export interface PierreFileViewProps {
   filePath: string;
   fileName: string;
-  /** If true, override the diffs container background to transparent so a
-   * parent overlay can show through the code area. */
-  transparent?: boolean;
+  /** Override Pierre's container background. Any CSS color string. */
+  background?: string;
 }
 
 export const PierreFileView: React.FC<PierreFileViewProps> = ({
   filePath,
   fileName,
-  transparent = false,
+  background,
 }) => {
   const { theme } = useTheme();
   const [contents, setContents] = React.useState<string | null>(null);
@@ -65,29 +64,29 @@ export const PierreFileView: React.FC<PierreFileViewProps> = ({
   return (
     <File
       file={fileObject}
-      options={transparent ? pierreOptionsTransparent : pierreOptions}
+      options={background ? buildPierreOptions(background) : pierreOptions}
       style={pierreStyle}
     />
   );
 };
 
-// `:host` rule plus `background-color: transparent` on every element the
-// library normally paints with --diffs-bg. We can't just override --diffs-bg
-// because the theme's own :host rule (in @layer rendered) re-derives backgrounds
-// from --diffs-dark-bg via color-mix; @layer unsafe wins outright.
-const transparentBgCSS = `
+// `:host` rule plus background override on every element the library normally
+// paints with --diffs-bg. We can't just override --diffs-bg because the theme's
+// own :host rule (in @layer rendered) re-derives backgrounds from --diffs-dark-bg
+// via color-mix; @layer unsafe wins outright.
+const buildBackgroundCSS = (color: string) => `
   :host {
-    background: transparent !important;
+    background: ${color} !important;
   }
   pre, code,
   [data-gutter], [data-content],
   [data-line], [data-column-number],
   [data-gutter-buffer], [data-line-annotation], [data-no-newline],
   [data-separator], [data-separator-wrapper] {
-    background: transparent !important;
+    background: ${color} !important;
   }
   [data-line] span {
-    background: transparent !important;
+    background: ${color} !important;
   }
 `;
 
@@ -95,10 +94,10 @@ const pierreOptions = {
   disableFileHeader: true,
 } as const;
 
-const pierreOptionsTransparent = {
+const buildPierreOptions = (background: string) => ({
   disableFileHeader: true,
-  unsafeCSS: transparentBgCSS,
-} as const;
+  unsafeCSS: buildBackgroundCSS(background),
+});
 
 const pierreStyle: React.CSSProperties = {
   display: 'block',

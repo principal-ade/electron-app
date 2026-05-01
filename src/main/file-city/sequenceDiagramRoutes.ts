@@ -8,7 +8,6 @@ import type {
   SequenceDiagramPayload,
   SequenceEdge,
   FileCitySequenceEventDef,
-  SequenceEventSnippet,
 } from '../../shared/main-process-api-interfaces/FileCitySequenceAPI';
 import { SequenceDiagramStore } from './sequenceDiagramStore';
 
@@ -32,26 +31,62 @@ function validateSnippet(
   if (typeof sourcePath !== 'string' || sourcePath.length === 0) {
     return `event ${eventId}: snippet requires a sourcePath on the event`;
   }
-  const s = snippet as Partial<SequenceEventSnippet>;
-  if (!Number.isInteger(s.startLine) || (s.startLine as number) < 1) {
-    return `event ${eventId}: snippet.startLine must be a positive integer`;
+  const s = snippet as Record<string, unknown>;
+  const kind = (s.kind as string | undefined) ?? 'slice';
+
+  if (kind !== 'slice' && kind !== 'diff') {
+    return `event ${eventId}: snippet.kind must be 'slice' or 'diff'`;
   }
-  if (!Number.isInteger(s.endLine) || (s.endLine as number) < 1) {
-    return `event ${eventId}: snippet.endLine must be a positive integer`;
+
+  // Window props (start/end/focus/context) follow the same rules in both
+  // variants — required for slice, optional for diff.
+  const isPosInt = (v: unknown) => Number.isInteger(v) && (v as number) >= 1;
+  const isNonNegInt = (v: unknown) =>
+    Number.isInteger(v) && (v as number) >= 0;
+
+  if (kind === 'slice') {
+    if (!isPosInt(s.startLine)) {
+      return `event ${eventId}: snippet.startLine must be a positive integer`;
+    }
+    if (!isPosInt(s.endLine)) {
+      return `event ${eventId}: snippet.endLine must be a positive integer`;
+    }
+    if ((s.endLine as number) < (s.startLine as number)) {
+      return `event ${eventId}: snippet.endLine must be >= startLine`;
+    }
+  } else {
+    if (typeof s.oldContents !== 'string' || s.oldContents.length === 0) {
+      return `event ${eventId}: diff snippet requires a non-empty oldContents string`;
+    }
+    if (s.newContents !== undefined && typeof s.newContents !== 'string') {
+      return `event ${eventId}: diff snippet.newContents must be a string when provided`;
+    }
+    if (s.startLine !== undefined && !isPosInt(s.startLine)) {
+      return `event ${eventId}: snippet.startLine must be a positive integer`;
+    }
+    if (s.endLine !== undefined && !isPosInt(s.endLine)) {
+      return `event ${eventId}: snippet.endLine must be a positive integer`;
+    }
+    if (
+      s.startLine !== undefined &&
+      s.endLine !== undefined &&
+      (s.endLine as number) < (s.startLine as number)
+    ) {
+      return `event ${eventId}: snippet.endLine must be >= startLine`;
+    }
+    if (
+      s.diffStyle !== undefined &&
+      s.diffStyle !== 'unified' &&
+      s.diffStyle !== 'split'
+    ) {
+      return `event ${eventId}: snippet.diffStyle must be 'unified' or 'split'`;
+    }
   }
-  if ((s.endLine as number) < (s.startLine as number)) {
-    return `event ${eventId}: snippet.endLine must be >= startLine`;
-  }
-  if (
-    s.focusLine !== undefined &&
-    (!Number.isInteger(s.focusLine) || (s.focusLine as number) < 1)
-  ) {
+
+  if (s.focusLine !== undefined && !isPosInt(s.focusLine)) {
     return `event ${eventId}: snippet.focusLine must be a positive integer`;
   }
-  if (
-    s.contextLines !== undefined &&
-    (!Number.isInteger(s.contextLines) || (s.contextLines as number) < 0)
-  ) {
+  if (s.contextLines !== undefined && !isNonNegInt(s.contextLines)) {
     return `event ${eventId}: snippet.contextLines must be a non-negative integer`;
   }
   return null;

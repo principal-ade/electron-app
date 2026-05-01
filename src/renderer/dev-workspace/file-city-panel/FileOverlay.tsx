@@ -11,6 +11,10 @@ export interface FileOverlayProps {
   onOpenInTab?: () => void;
 }
 
+const MIN_WIDTH_PX = 320;
+const MIN_LEFT_GAP_PX = 80;
+const RESIZE_HANDLE_WIDTH = 6;
+
 export const FileOverlay: React.FC<FileOverlayProps> = ({
   filePath,
   fileName,
@@ -18,6 +22,10 @@ export const FileOverlay: React.FC<FileOverlayProps> = ({
   onOpenInTab,
 }) => {
   const { theme } = useTheme();
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const [widthPx, setWidthPx] = React.useState<number | null>(null);
+  const [isResizing, setIsResizing] = React.useState(false);
+  const [hasEntered, setHasEntered] = React.useState(false);
 
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -27,22 +35,48 @@ export const FileOverlay: React.FC<FileOverlayProps> = ({
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
+  const onResizeStart = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const parent = containerRef.current?.parentElement;
+    if (!parent) return;
+    const parentRect = parent.getBoundingClientRect();
+    setIsResizing(true);
+
+    const onMove = (ev: MouseEvent) => {
+      const next = Math.max(
+        MIN_WIDTH_PX,
+        Math.min(parentRect.width - MIN_LEFT_GAP_PX, parentRect.right - ev.clientX),
+      );
+      setWidthPx(next);
+    };
+    const onUp = () => {
+      setIsResizing(false);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, []);
+
   return (
     <div
+      ref={containerRef}
+      onAnimationEnd={() => setHasEntered(true)}
       style={{
         position: 'absolute',
         top: 0,
         right: 0,
         bottom: 0,
-        width: '50%',
-        backgroundColor: `color-mix(in srgb, ${theme.colors.background} 88%, transparent)`,
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
+        width: widthPx != null ? `${widthPx}px` : '50%',
+        backgroundColor: theme.colors.background,
         borderLeft: `1px solid ${theme.colors.border}`,
         display: 'flex',
         flexDirection: 'column',
         zIndex: 2000,
-        animation: 'fileCityOverlaySlideIn 220ms ease-out',
+        animation: hasEntered
+          ? undefined
+          : 'fileCityOverlaySlideIn 220ms ease-out',
+        userSelect: isResizing ? 'none' : undefined,
       }}
     >
       <style>{`
@@ -51,6 +85,24 @@ export const FileOverlay: React.FC<FileOverlayProps> = ({
           to { transform: translateX(0); }
         }
       `}</style>
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize file overlay"
+        onMouseDown={onResizeStart}
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: -RESIZE_HANDLE_WIDTH / 2,
+          width: RESIZE_HANDLE_WIDTH,
+          cursor: 'col-resize',
+          zIndex: 1,
+          background: isResizing
+            ? `color-mix(in srgb, ${theme.colors.primary} 40%, transparent)`
+            : 'transparent',
+        }}
+      />
       <div
         style={{
           padding: '10px 14px',
@@ -118,7 +170,7 @@ export const FileOverlay: React.FC<FileOverlayProps> = ({
         <PierreFileView
           filePath={filePath}
           fileName={fileName}
-          transparent
+          background={theme.colors.background}
         />
       </div>
     </div>

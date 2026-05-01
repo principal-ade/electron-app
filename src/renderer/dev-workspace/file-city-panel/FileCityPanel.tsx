@@ -17,6 +17,7 @@ import {
 import { FileOverlay } from './FileOverlay';
 import { SequenceDiagramOverlay } from './SequenceDiagramOverlay';
 import { SequenceEventDetailOverlay } from './SequenceEventDetailOverlay';
+import { SequenceEventExplainerOverlay } from './SequenceEventExplainerOverlay';
 import {
   SequenceLeaderLine,
   type SequenceLeaderLineHandle,
@@ -72,13 +73,17 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
     clear: clearSequence,
   } = useSequenceDiagram(repositoryPath);
 
-  const selectedSequenceEvent = React.useMemo(() => {
-    if (!sequencePayload || !sequenceSelectedEventId) return null;
-    return (
-      sequencePayload.events.find((e) => e.id === sequenceSelectedEventId) ??
-      null
+  const selectedEventIndex = React.useMemo(() => {
+    if (!sequencePayload || !sequenceSelectedEventId) return -1;
+    return sequencePayload.events.findIndex(
+      (e) => e.id === sequenceSelectedEventId,
     );
   }, [sequencePayload, sequenceSelectedEventId]);
+
+  const selectedSequenceEvent = React.useMemo(() => {
+    if (!sequencePayload || selectedEventIndex < 0) return null;
+    return sequencePayload.events[selectedEventIndex] ?? null;
+  }, [sequencePayload, selectedEventIndex]);
 
   const sequenceSelection = React.useMemo(() => {
     if (!selectedSequenceEvent?.sourcePath) return null;
@@ -192,11 +197,38 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
       />
 
       {selectedSequenceEvent && (
+        <SequenceEventExplainerOverlay
+          event={selectedSequenceEvent}
+          bottomOffset="50%"
+        />
+      )}
+      {selectedSequenceEvent && sequencePayload && (
         <SequenceEventDetailOverlay
           ref={detailOverlayRef}
           event={selectedSequenceEvent}
           absolutePath={selectedEventAbsolutePath}
           bottomOffset="50%"
+          position={{
+            index: selectedEventIndex + 1,
+            total: sequencePayload.events.length,
+          }}
+          onPrev={
+            selectedEventIndex > 0
+              ? () =>
+                  setSequenceSelectedEventId(
+                    sequencePayload.events[selectedEventIndex - 1].id,
+                  )
+              : undefined
+          }
+          onNext={
+            selectedEventIndex >= 0 &&
+            selectedEventIndex < sequencePayload.events.length - 1
+              ? () =>
+                  setSequenceSelectedEventId(
+                    sequencePayload.events[selectedEventIndex + 1].id,
+                  )
+              : undefined
+          }
           onClose={() => setSequenceSelectedEventId(null)}
           onOpenInTab={
             selectedEventAbsolutePath
