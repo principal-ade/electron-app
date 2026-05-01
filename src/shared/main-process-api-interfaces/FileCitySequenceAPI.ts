@@ -91,6 +91,12 @@ export interface SequenceDiagramPayload {
    * targets only the matching File City panel when several are open.
    */
   repositoryPath?: string;
+  /**
+   * Optional markdown summary of the whole flow. Surfaced in the left-edge
+   * overlay when no event is selected; per-event `description` takes over
+   * once the user picks an event.
+   */
+  summary?: string;
   /** Events in display order */
   events: FileCitySequenceEventDef[];
   /** Edges between events */

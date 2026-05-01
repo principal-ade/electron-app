@@ -17,7 +17,7 @@ import {
 import { FileOverlay } from './FileOverlay';
 import { SequenceDiagramOverlay } from './SequenceDiagramOverlay';
 import { SequenceEventDetailOverlay } from './SequenceEventDetailOverlay';
-import { SequenceEventExplainerOverlay } from './SequenceEventExplainerOverlay';
+import { SequenceMarkdownOverlay } from './SequenceMarkdownOverlay';
 import {
   SequenceLeaderLine,
   type SequenceLeaderLineHandle,
@@ -116,6 +116,30 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
     };
   }, [cityData]);
 
+  // Left-edge markdown panel: per-event description wins; payload summary
+  // is the fallback so the overlay always has a "what is this" panel.
+  const markdownOverlayProps = React.useMemo(() => {
+    const eventDescription = selectedSequenceEvent?.description?.trim();
+    if (selectedSequenceEvent && eventDescription) {
+      return {
+        eyebrow: 'Change notes',
+        title: selectedSequenceEvent.label ?? selectedSequenceEvent.name,
+        markdown: eventDescription,
+        slideIdPrefix: `sequence-explainer-${selectedSequenceEvent.id}`,
+      };
+    }
+    const payloadSummary = sequencePayload?.summary?.trim();
+    if (sequencePayload && payloadSummary) {
+      return {
+        eyebrow: 'Overview',
+        title: sequencePayload.title ?? 'Sequence',
+        markdown: payloadSummary,
+        slideIdPrefix: 'sequence-summary',
+      };
+    }
+    return null;
+  }, [selectedSequenceEvent, sequencePayload]);
+
   const panelContainerRef = React.useRef<HTMLDivElement | null>(null);
   const leaderLineRef = React.useRef<SequenceLeaderLineHandle | null>(null);
   const detailOverlayRef = React.useRef<HTMLDivElement | null>(null);
@@ -196,9 +220,9 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
         targetRef={detailOverlayRef}
       />
 
-      {selectedSequenceEvent && (
-        <SequenceEventExplainerOverlay
-          event={selectedSequenceEvent}
+      {markdownOverlayProps && (
+        <SequenceMarkdownOverlay
+          {...markdownOverlayProps}
           bottomOffset="50%"
         />
       )}

@@ -97,6 +97,7 @@ The electron-app already has everything needed to host this:
 | `src/renderer/dev-workspace/file-city-panel/PierreSnippetView.tsx` | Pierre `<File>` (from `@pierre/diffs/react`) wrapper that slices the file to the snippet's line range and shows the original range in a header |
 | `src/renderer/dev-workspace/file-city-panel/PierreSnippetDiffView.tsx` | Pierre `<FileDiff>` wrapper for the diff snippet variant. Parses old + new contents via `parseDiffFromFile`, applies the optional snippet window to both sides, and forwards `background` / `diffStyle` |
 | `src/renderer/dev-workspace/file-city-panel/SequenceLeaderLine.tsx` | SVG overlay; per-frame imperative path/marker updates from `onCameraFrame` |
+| `src/renderer/dev-workspace/file-city-panel/SequenceMarkdownOverlay.tsx` | Left-edge floating markdown panel rendered with `IndustryMarkdownSlide`; one slot, two sources (event `description` or payload `summary`) |
 | `src/renderer/dev-workspace/file-city-panel/useSequenceDiagram.ts` | Hook: subscribes to IPC, rehydrates via `getCurrent`, exposes `{payload, selectedEventId, setSelectedEventId, clear}` |
 
 The shared `MainProcessAPI` (`src/shared/main-process-api-interfaces/index.ts`) and the dev-workspace `DevWorkspaceMainProcessAPI` (`src/shared/main-process-api-interfaces/DevWorkspaceAPI.ts`) both gained a `fileCitySequence: FileCitySequenceAPI` field, exposed by `preload.ts` and `preload-dev-workspace.ts`.
@@ -119,6 +120,12 @@ interface SequenceDiagramPayload {
   title?: string;
   /** Optional repo path; used to target a specific File City panel when multiple are open */
   repositoryPath?: string;
+  /**
+   * Optional markdown that describes the whole flow. Surfaced in the
+   * left-edge overlay when no event is selected; per-event `description`
+   * takes over once the user picks an event.
+   */
+  summary?: string;
   /** Required — events in display order */
   events: SequenceEvent[];   // from @principal-ai/principal-view-react
   /** Required — edges between events */
@@ -312,10 +319,11 @@ This layer is appended to the existing `extras` array inside the `<FileCity3D hi
 
 ### Overlay components
 
-Three overlay components mount on top of `<FileCityExplorer>` inside `FileCityPanel.tsx`:
+Four overlay components mount on top of `<FileCityExplorer>` inside `FileCityPanel.tsx`:
 
 - `SequenceDiagramOverlay` — bottom drawer, 50% panel height. Prop-driven (`payload`, `selectedEventId`, `onNodeClick`, `onClose`).
 - `SequenceEventDetailOverlay` — right-edge drawer (38% panel width, min 360px), `top: 0` to `bottom: 50%` so it sits above the bottom drawer. Header shows `event.label` + `fileName · Lines X–Y`, plus close + open-in-tab buttons. The body is `<PierreSnippetView>` when both `sourcePath` and `snippet` are present, otherwise a placeholder. Esc closes; the building stays selected so you can pick a different node from the diagram.
+- `SequenceMarkdownOverlay` — left-edge floating panel (28% width, min 280px), `top: FLOAT_INSET` to `bottom: 50% + FLOAT_INSET`, mounted whenever a markdown source is available. Renders an eyebrow + title header followed by `IndustryMarkdownSlide`. The slot is shared by two sources, with priority: the selected event's `description` wins, otherwise the payload's `summary` is used. The panel is silent (returns `null`) when neither is present.
 - `SequenceLeaderLine` — full-panel SVG (`pointer-events: none; overflow: visible; z-index: 31`) drawing a single dashed bezier from the building's projected screen position to the detail overlay's left edge. See [Leader line](#leader-line).
 
 The panel resolves `selectedEventId` → event once and threads selection down to the explorer plus the overlays:

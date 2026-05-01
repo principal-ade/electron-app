@@ -2,10 +2,15 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 
-import type { FileCitySequenceEventDef } from '../../../shared/main-process-api-interfaces/FileCitySequenceAPI';
-
-export interface SequenceEventExplainerOverlayProps {
-  event: FileCitySequenceEventDef;
+export interface SequenceMarkdownOverlayProps {
+  /** Small caps label shown above the title (e.g. "Overview", "Change notes"). */
+  eyebrow: string;
+  /** Bold heading shown under the eyebrow. */
+  title: string;
+  /** Markdown body. The overlay short-circuits to `null` when this is empty. */
+  markdown: string;
+  /** Stable prefix used by `IndustryMarkdownSlide` for slide ids. */
+  slideIdPrefix: string;
   /** Bottom inset (number → px, string → CSS) so the panel sits above the sequence drawer. */
   bottomOffset: number | string;
 }
@@ -14,18 +19,22 @@ const PANEL_WIDTH_PCT = 28;
 const FLOAT_INSET = 16;
 const MIN_WIDTH_PX = 280;
 
-export const SequenceEventExplainerOverlay: React.FC<
-  SequenceEventExplainerOverlayProps
-> = ({ event, bottomOffset }) => {
+export const SequenceMarkdownOverlay: React.FC<SequenceMarkdownOverlayProps> = ({
+  eyebrow,
+  title,
+  markdown,
+  slideIdPrefix,
+  bottomOffset,
+}) => {
   const { theme } = useTheme();
-  const description = event.description?.trim() ?? '';
+  const body = markdown.trim();
 
   const bottomOffsetCss =
     typeof bottomOffset === 'number' ? `${bottomOffset}px` : bottomOffset;
 
   const [hasEntered, setHasEntered] = React.useState(false);
 
-  if (!description) return null;
+  if (!body) return null;
 
   return (
     <div
@@ -82,7 +91,7 @@ export const SequenceEventExplainerOverlay: React.FC<
             textTransform: 'uppercase',
           }}
         >
-          Change notes
+          {eyebrow}
         </span>
         <span
           style={{
@@ -92,9 +101,9 @@ export const SequenceEventExplainerOverlay: React.FC<
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}
-          title={event.label ?? event.name}
+          title={title}
         >
-          {event.label ?? event.name}
+          {title}
         </span>
       </div>
 
@@ -107,8 +116,8 @@ export const SequenceEventExplainerOverlay: React.FC<
          * its internal scroll container engage. */}
         <div style={{ position: 'absolute', inset: 0 }}>
           <IndustryMarkdownSlide
-            content={description}
-            slideIdPrefix={`sequence-explainer-${event.id}`}
+            content={body}
+            slideIdPrefix={slideIdPrefix}
             slideIndex={0}
             isVisible
             theme={theme}

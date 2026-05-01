@@ -148,6 +148,7 @@ function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
     title: typeof b.title === 'string' ? b.title : undefined,
     repositoryPath:
       typeof b.repositoryPath === 'string' ? b.repositoryPath : undefined,
+    summary: typeof b.summary === 'string' ? b.summary : undefined,
   };
   return { ok: true, payload };
 }
