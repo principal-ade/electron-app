@@ -129,7 +129,9 @@ export const SequenceEventDetailOverlay = React.forwardRef<
         position: 'absolute',
         top: FLOAT_INSET,
         right: FLOAT_INSET,
-        maxHeight: `calc(100% - ${FLOAT_INSET}px - ${bottomOffsetCss})`,
+        // Match the markdown overlay's bottom edge: top inset + bottom inset
+        // both contribute, plus the drawer's bottom offset.
+        maxHeight: `calc(100% - ${FLOAT_INSET * 2}px - ${bottomOffsetCss})`,
         width:
           widthPx != null
             ? `${widthPx}px`

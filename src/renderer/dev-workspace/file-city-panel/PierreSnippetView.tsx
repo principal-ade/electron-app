@@ -55,8 +55,8 @@ export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
   }, [filePath]);
 
   // Slice the file contents to the requested window. Pierre's React `<File>`
-  // doesn't accept `renderRange`, so we compute it ourselves. The gutter then
-  // numbers from 1; the original line range is shown in our own header above.
+  // doesn't accept `renderRange`, so we compute it ourselves and offset the
+  // gutter line numbers back to the file's true range via `onPostRender`.
   const slice = React.useMemo(() => {
     if (contents == null) return null;
     const allLines = contents.split('\n');
@@ -80,6 +80,43 @@ export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
     () => (slice ? { name: fileName, contents: slice.contents } : null),
     [fileName, slice],
   );
+
+  // Rewrite gutter line numbers so they reflect the original file range
+  // (e.g. 28..50) instead of Pierre's default 1..N over the slice. Each gutter
+  // row carries a `data-line-index` (0-based, slice-local), so we can compute
+  // the desired number idempotently as `lineIndex + 1 + offset`.
+  const lineNumberOffset = slice ? slice.sliceStart - 1 : 0;
+  const onPostRender = React.useCallback(
+    (fileContainer: HTMLElement) => {
+      if (lineNumberOffset === 0) return;
+      const root: ParentNode = fileContainer.shadowRoot ?? fileContainer;
+      const items = root.querySelectorAll<HTMLElement>(
+        '[data-column-number][data-line-index]',
+      );
+      items.forEach((el) => {
+        const idxStr = el.dataset.lineIndex;
+        if (idxStr == null) return;
+        const idx = Number.parseInt(idxStr, 10);
+        if (Number.isNaN(idx)) return;
+        const display = String(idx + 1 + lineNumberOffset);
+        if (el.dataset.columnNumber !== display) {
+          el.dataset.columnNumber = display;
+        }
+        const span = el.querySelector<HTMLElement>(
+          '[data-line-number-content]',
+        );
+        if (span && span.textContent !== display) {
+          span.textContent = display;
+        }
+      });
+    },
+    [lineNumberOffset],
+  );
+
+  const options = React.useMemo(() => {
+    const base = background ? buildPierreOptions(background) : pierreOptions;
+    return { ...base, onPostRender };
+  }, [background, onPostRender]);
 
   if (error) {
     return (
@@ -115,9 +152,7 @@ export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
       </div>
       <File
         file={fileObject}
-        options={
-          background ? buildPierreOptions(background) : pierreOptions
-        }
+        options={options}
         selectedLines={
           slice.focusOffset != null
             ? { start: slice.focusOffset, end: slice.focusOffset }

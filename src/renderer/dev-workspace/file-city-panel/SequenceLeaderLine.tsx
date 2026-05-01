@@ -123,15 +123,18 @@ export const SequenceLeaderLine = React.forwardRef<
       const sx = canvasLeft + (v.x * 0.5 + 0.5) * size.width;
       const sy = canvasTop + (v.y * -0.5 + 0.5) * size.height;
 
-      // Aim at the center of the node's nearest edge so the line lands
-      // on the node, not in its middle.
-      const nodeCenterX = nodeRect.left + nodeRect.width / 2 - containerRect.left;
-      const nodeCenterY = nodeRect.top + nodeRect.height / 2 - containerRect.top;
+      // Aim at the overlay's header band — the line meets the panel near
+      // the title rather than at a vertical midpoint that reads as "this
+      // specific line in the snippet". `HEADER_BAND_OFFSET` lands the
+      // anchor on the header row so the marker sits next to the title.
+      const HEADER_BAND_OFFSET = 22;
+      const nodeCenterX =
+        nodeRect.left + nodeRect.width / 2 - containerRect.left;
       const aimRight = nodeCenterX < sx;
       const bx = aimRight
         ? nodeRect.right - containerRect.left
         : nodeRect.left - containerRect.left;
-      const by = nodeCenterY;
+      const by = nodeRect.top - containerRect.top + HEADER_BAND_OFFSET;
 
       // Cubic bezier with horizontal tangents — same shape as the prototype.
       const dxRaw = (bx - sx) * 0.5;
@@ -178,7 +181,7 @@ export const SequenceLeaderLine = React.forwardRef<
         inset: 0,
         pointerEvents: 'none',
         overflow: 'visible',
-        zIndex: 31,
+        zIndex: 2000,
       }}
     >
       <path

@@ -271,7 +271,6 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
                     timestamp: Date.now(),
                     payload: { path: selectedEventAbsolutePath },
                   });
-                  setSequenceSelectedEventId(null);
                 }
               : undefined
           }
