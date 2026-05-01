@@ -116,6 +116,12 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
     };
   }, [cityData]);
 
+  // Drawer height is lifted up here so the left-edge markdown overlay and
+  // right-edge detail drawer can anchor their `bottomOffset` to the same
+  // value the user is dragging.
+  const [drawerHeightPct, setDrawerHeightPct] = React.useState(50);
+  const drawerBottomOffset = `${drawerHeightPct}%`;
+
   // Left-edge markdown panel: per-event description wins; payload summary
   // is the fallback so the overlay always has a "what is this" panel.
   const markdownOverlayProps = React.useMemo(() => {
@@ -210,6 +216,8 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
           selectedEventId={sequenceSelectedEventId}
           onNodeClick={setSequenceSelectedEventId}
           onClose={clearSequence}
+          heightPct={drawerHeightPct}
+          onHeightChange={setDrawerHeightPct}
         />
       )}
       <SequenceLeaderLine
@@ -223,7 +231,7 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
       {markdownOverlayProps && (
         <SequenceMarkdownOverlay
           {...markdownOverlayProps}
-          bottomOffset="50%"
+          bottomOffset={drawerBottomOffset}
         />
       )}
       {selectedSequenceEvent && sequencePayload && (
@@ -231,7 +239,7 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
           ref={detailOverlayRef}
           event={selectedSequenceEvent}
           absolutePath={selectedEventAbsolutePath}
-          bottomOffset="50%"
+          bottomOffset={drawerBottomOffset}
           position={{
             index: selectedEventIndex + 1,
             total: sequencePayload.events.length,
