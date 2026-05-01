@@ -1,6 +1,9 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { TerminalPanel } from '@industry-theme/xterm-terminal-panel';
+import {
+  TerminalSession,
+  getTerminalDirectory,
+} from '@industry-theme/xterm-terminal-panel';
 import type {
   TerminalPanelActions,
   TerminalPanelProps,
@@ -10,7 +13,6 @@ import { ChevronDown, ChevronUp, TerminalSquare } from 'lucide-react';
 export interface FloatingTerminalOverlayProps {
   context: TerminalPanelProps['context'];
   actions: TerminalPanelActions;
-  events: TerminalPanelProps['events'];
   /** rgba background tint applied to the terminal surface. */
   backgroundColor?: string;
   /** Initial collapsed state. */
@@ -30,7 +32,6 @@ const OVERLAY_SESSION_CONTEXT = 'overlay:file-city';
 export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = ({
   context,
   actions,
-  events,
   backgroundColor = 'rgba(20, 20, 20, 0.55)',
   defaultCollapsed = true,
 }) => {
@@ -41,16 +42,10 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
   // collapse/expand preserves the shell + scrollback.
   const [hasOpened, setHasOpened] = React.useState(!defaultCollapsed);
 
-  // Inject the overlay-specific session context on session creation.
-  const overlayActions = React.useMemo<typeof actions>(() => {
-    if (!actions.createTerminalSession) return actions;
-    const orig = actions.createTerminalSession;
-    return {
-      ...actions,
-      createTerminalSession: (opts) =>
-        orig({ ...opts, context: OVERLAY_SESSION_CONTEXT }),
-    };
-  }, [actions]);
+  // TerminalSession takes an explicit cwd; mirror what TerminalPanel used to
+  // resolve internally by reading the repository/workspace path from the
+  // panel-framework context.
+  const cwd = getTerminalDirectory(context, 'repository') ?? undefined;
 
   return (
     <div
@@ -119,11 +114,11 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
             display: collapsed ? 'none' : 'block',
           }}
         >
-          <TerminalPanel
-            context={context}
-            actions={overlayActions}
-            events={events}
-            allowTransparency
+          <TerminalSession
+            actions={actions}
+            sessionContext={OVERLAY_SESSION_CONTEXT}
+            cwd={cwd}
+            transparent
             backgroundColor="rgba(0, 0, 0, 0)"
           />
         </div>

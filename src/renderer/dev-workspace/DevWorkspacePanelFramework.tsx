@@ -473,7 +473,6 @@ const FileCity3DTabContent: React.FC = () => {
       <FloatingTerminalOverlay
         context={terminalPanelContext}
         actions={terminalActions}
-        events={events}
       />
     </div>
   );
