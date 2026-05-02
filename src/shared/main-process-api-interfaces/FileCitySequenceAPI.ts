@@ -84,6 +84,25 @@ export type FileCitySequenceEventDef = SequenceEvent & {
 };
 
 /**
+ * Layout options forwarded to `<SequenceDiagramRenderer>`. Currently surfaces
+ * the subset that callers tend to want for narrative authoring; extend this
+ * bucket as more upstream `UseSequenceLayoutOptions` knobs prove useful.
+ */
+export interface SequenceLayoutOptions {
+  /**
+   * Resolved namespaces in left-to-right order. Listed lanes are placed
+   * first; any unlisted lanes (including ones that materialize after a
+   * drill-down) fall back to first-event order behind them. Unknown entries
+   * are ignored, so callers can safely list namespaces that may not be
+   * present in every dataset.
+   *
+   * Without this option, lane order follows the order events first appear
+   * in `payload.events` (as of `@principal-ai/principal-view-react@0.15.9`).
+   */
+  laneOrder?: string[];
+}
+
+/**
  * Payload accepted by `POST /api/file-city/sequence` and broadcast to
  * all renderer windows. Re-exports `SequenceEvent`/`SequenceEdge` from
  * `@principal-ai/principal-view-react` so callers reference one shape.
@@ -111,6 +130,8 @@ export interface SequenceDiagramPayload {
   events: FileCitySequenceEventDef[];
   /** Edges between events */
   edges: SequenceEdge[];
+  /** Renderer layout knobs (lane ordering, etc.). */
+  layoutOptions?: SequenceLayoutOptions;
   /** ISO 8601 timestamp set on first persist. */
   createdAt?: string;
   /** ISO 8601 timestamp updated on every persist. */

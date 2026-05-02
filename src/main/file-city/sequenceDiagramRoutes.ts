@@ -8,6 +8,7 @@ import type {
   SequenceDiagramPayload,
   SequenceEdge,
   FileCitySequenceEventDef,
+  SequenceLayoutOptions,
 } from '../../shared/main-process-api-interfaces/FileCitySequenceAPI';
 import { SequenceDiagramStore } from './sequenceDiagramStore';
 
@@ -92,6 +93,30 @@ function validateSnippet(
   return null;
 }
 
+function validateLayoutOptions(
+  raw: unknown,
+): { ok: true; value: SequenceLayoutOptions | undefined } | ValidationFailure {
+  if (raw === undefined || raw === null) return { ok: true, value: undefined };
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, error: 'layoutOptions must be an object' };
+  }
+  const r = raw as Record<string, unknown>;
+  const result: SequenceLayoutOptions = {};
+  if (r.laneOrder !== undefined) {
+    if (
+      !Array.isArray(r.laneOrder) ||
+      !r.laneOrder.every((v) => typeof v === 'string')
+    ) {
+      return {
+        ok: false,
+        error: 'layoutOptions.laneOrder must be an array of strings',
+      };
+    }
+    result.laneOrder = r.laneOrder as string[];
+  }
+  return { ok: true, value: result };
+}
+
 function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
   if (!body || typeof body !== 'object') {
     return { ok: false, error: 'request body must be a JSON object' };
@@ -145,6 +170,9 @@ function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
     }
   }
 
+  const layoutResult = validateLayoutOptions(b.layoutOptions);
+  if (!layoutResult.ok) return layoutResult;
+
   const payload: SequenceDiagramPayload = {
     events,
     edges,
@@ -153,6 +181,7 @@ function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
     repositoryPath:
       typeof b.repositoryPath === 'string' ? b.repositoryPath : undefined,
     summary: typeof b.summary === 'string' ? b.summary : undefined,
+    layoutOptions: layoutResult.value,
   };
   return { ok: true, payload };
 }
