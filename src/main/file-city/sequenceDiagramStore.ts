@@ -1,44 +1,108 @@
 /**
- * In-memory store for the latest sequence-diagram payload(s) pushed via
- * the HTTP bridge, plus the broadcast helper that fans them out to all
- * renderer windows.
+ * Disk-backed store for File City sequence-diagram payloads, plus the IPC
+ * surface that backs the `mainProcess.fileCitySequence` API in the renderer
+ * and the broadcast helpers fired by the HTTP routes.
  *
- * Payloads are keyed by `repositoryPath` so a multi-window setup can
- * target a specific File City panel. Payloads without a repo path fall
- * into a single `__default__` slot.
+ * Payloads live on disk via `SequenceDiagramPersistence`; this module owns
+ * the IPC + broadcast layer on top.
  */
 
 import { BrowserWindow, ipcMain } from 'electron';
 import {
   FileCitySequenceEvent,
+  type SequenceDiagramIndexEntry,
   type SequenceDiagramPayload,
 } from '../../shared/main-process-api-interfaces/FileCitySequenceAPI';
+import { SequenceDiagramPersistence } from './sequenceDiagramPersistence';
 
-const DEFAULT_KEY = '__default__';
+export interface SetOptions {
+  /** Whether to broadcast PAYLOAD_SET and mark the entry active. Default true. */
+  activate?: boolean;
+}
 
-const keyFor = (payload: Pick<SequenceDiagramPayload, 'repositoryPath'>): string =>
-  payload.repositoryPath ?? DEFAULT_KEY;
+export interface SetResult {
+  payload: SequenceDiagramPayload;
+  broadcastTo: number;
+  evictedIds: string[];
+}
 
 export class SequenceDiagramStore {
-  private payloads = new Map<string, SequenceDiagramPayload>();
+  private persistence = new SequenceDiagramPersistence();
 
-  set(payload: SequenceDiagramPayload): number {
-    this.payloads.set(keyFor(payload), payload);
-    return broadcast(FileCitySequenceEvent.PAYLOAD_SET, payload);
+  async set(
+    incoming: SequenceDiagramPayload,
+    options: SetOptions = {},
+  ): Promise<SetResult> {
+    const activate = options.activate !== false;
+    const { payload, evictedIds } = await this.persistence.save(incoming, {
+      activate,
+    });
+    let broadcastTo = 0;
+    if (activate) {
+      broadcastTo = broadcast(FileCitySequenceEvent.PAYLOAD_SET, payload);
+    }
+    broadcast(FileCitySequenceEvent.LIBRARY_CHANGED, {
+      repositoryPath: payload.repositoryPath,
+    });
+    return { payload, broadcastTo, evictedIds };
   }
 
-  clear(repositoryPath?: string): number {
-    const key = repositoryPath ?? DEFAULT_KEY;
-    this.payloads.delete(key);
-    return broadcast(FileCitySequenceEvent.PAYLOAD_CLEARED, { repositoryPath });
+  async clear(repositoryPath?: string): Promise<number> {
+    await this.persistence.deactivate(repositoryPath);
+    const broadcastTo = broadcast(FileCitySequenceEvent.PAYLOAD_CLEARED, {
+      repositoryPath,
+    });
+    broadcast(FileCitySequenceEvent.LIBRARY_CHANGED, { repositoryPath });
+    return broadcastTo;
   }
 
-  get(repositoryPath?: string): SequenceDiagramPayload | null {
-    return this.payloads.get(repositoryPath ?? DEFAULT_KEY) ?? null;
+  async activate(id: string): Promise<{
+    payload: SequenceDiagramPayload | null;
+    broadcastTo: number;
+  }> {
+    const payload = await this.persistence.setActive(id);
+    if (!payload) return { payload: null, broadcastTo: 0 };
+    const broadcastTo = broadcast(
+      FileCitySequenceEvent.PAYLOAD_SET,
+      payload,
+    );
+    broadcast(FileCitySequenceEvent.LIBRARY_CHANGED, {
+      repositoryPath: payload.repositoryPath,
+    });
+    return { payload, broadcastTo };
   }
 
-  getAll(): SequenceDiagramPayload[] {
-    return Array.from(this.payloads.values());
+  async delete(id: string): Promise<{ found: boolean }> {
+    const result = await this.persistence.deleteById(id);
+    if (!result) return { found: false };
+    if (result.wasActive) {
+      broadcast(FileCitySequenceEvent.PAYLOAD_CLEARED, {
+        repositoryPath: result.repositoryPath,
+      });
+    }
+    broadcast(FileCitySequenceEvent.LIBRARY_CHANGED, {
+      repositoryPath: result.repositoryPath,
+    });
+    return { found: true };
+  }
+
+  get(repositoryPath?: string): Promise<SequenceDiagramPayload | null> {
+    return this.persistence.getActive(repositoryPath);
+  }
+
+  getAll(): Promise<SequenceDiagramPayload[]> {
+    return this.persistence.getActiveAll();
+  }
+
+  loadById(id: string): Promise<SequenceDiagramPayload | null> {
+    return this.persistence.loadById(id);
+  }
+
+  list(repositoryPath?: string): Promise<{
+    entries: SequenceDiagramIndexEntry[];
+    activeId: string | null;
+  }> {
+    return this.persistence.listEntries(repositoryPath);
   }
 }
 
@@ -69,4 +133,17 @@ export function registerSequenceDiagramHandlers(): void {
     FileCitySequenceEvent.GET_CURRENT,
     (_event, repositoryPath?: string) => store.get(repositoryPath),
   );
+  ipcMain.handle(
+    FileCitySequenceEvent.LIST,
+    (_event, repositoryPath?: string) => store.list(repositoryPath),
+  );
+  ipcMain.handle(FileCitySequenceEvent.LOAD, (_event, id: string) =>
+    store.loadById(id),
+  );
+  ipcMain.handle(FileCitySequenceEvent.ACTIVATE, async (_event, id: string) => {
+    await store.activate(id);
+  });
+  ipcMain.handle(FileCitySequenceEvent.DELETE, async (_event, id: string) => {
+    await store.delete(id);
+  });
 }

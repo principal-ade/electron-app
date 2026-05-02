@@ -138,6 +138,7 @@ import { NotesSidebarButton } from '../components/Sidebar/NotesSidebarButton';
 import { TypeInformationSidebarButton } from '../components/Sidebar/TypeInformationSidebarButton';
 import { GitConfigSidebarButton } from '../components/Sidebar/GitConfigSidebarButton';
 import { GitConfigPanel } from './git-config-panel';
+import { SequenceDiagramsPanel } from './sequence-diagrams-panel';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -3783,6 +3784,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         label: 'Git Config',
         content: (
           <GitConfigPanel
+            repositoryPath={context.currentScope?.repository?.path}
+          />
+        ),
+      },
+      {
+        id: 'sequenceDiagrams',
+        label: 'Sequence Diagrams',
+        content: (
+          <SequenceDiagramsPanel
             repositoryPath={context.currentScope?.repository?.path}
           />
         ),

@@ -2,6 +2,7 @@ import { ipcRenderer } from 'electron';
 import {
   FileCitySequenceEvent,
   type FileCitySequenceAPI,
+  type SequenceDiagramIndexEntry,
   type SequenceDiagramPayload,
 } from '../../shared/main-process-api-interfaces/FileCitySequenceAPI';
 
@@ -35,6 +36,41 @@ export const fileCitySequenceAPI: FileCitySequenceAPI = {
     return () => {
       ipcRenderer.removeListener(
         FileCitySequenceEvent.PAYLOAD_CLEARED,
+        handler,
+      );
+    };
+  },
+
+  list: async (
+    repositoryPath?: string,
+  ): Promise<{
+    entries: SequenceDiagramIndexEntry[];
+    activeId: string | null;
+  }> => {
+    return ipcRenderer.invoke(FileCitySequenceEvent.LIST, repositoryPath);
+  },
+
+  load: async (id: string): Promise<SequenceDiagramPayload | null> => {
+    return ipcRenderer.invoke(FileCitySequenceEvent.LOAD, id);
+  },
+
+  activate: async (id: string): Promise<void> => {
+    await ipcRenderer.invoke(FileCitySequenceEvent.ACTIVATE, id);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await ipcRenderer.invoke(FileCitySequenceEvent.DELETE, id);
+  },
+
+  onLibraryChanged: (callback) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      info: { repositoryPath?: string },
+    ) => callback(info);
+    ipcRenderer.on(FileCitySequenceEvent.LIBRARY_CHANGED, handler);
+    return () => {
+      ipcRenderer.removeListener(
+        FileCitySequenceEvent.LIBRARY_CHANGED,
         handler,
       );
     };

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { SequenceDiagramPayload } from '../../../shared/main-process-api-interfaces/FileCitySequenceAPI';
+import { SequenceDiagramService } from '../../services/SequenceDiagramService';
 
 export interface UseSequenceDiagramResult {
   payload: SequenceDiagramPayload | null;
@@ -19,8 +20,9 @@ const matchesRepo = (
 
 /**
  * Subscribes to sequence-diagram payloads broadcast from the main
- * process. Filters by `repositoryPath` so a panel only displays a
- * payload meant for its repo (or any payload that omits the field).
+ * process via `SequenceDiagramService`. Filters by `repositoryPath` so a
+ * panel only displays a payload meant for its repo (or any payload that
+ * omits the field).
  */
 export function useSequenceDiagram(
   repositoryPath: string | null,
@@ -30,28 +32,23 @@ export function useSequenceDiagram(
 
   useEffect(() => {
     let cancelled = false;
-    const api = window.mainProcess?.fileCitySequence;
-    if (!api) return;
 
-    api
-      .getCurrent(repositoryPath ?? undefined)
-      .then((current) => {
+    SequenceDiagramService.getCurrent(repositoryPath ?? undefined).then(
+      (current) => {
         if (cancelled) return;
         if (current && matchesRepo(current, repositoryPath)) {
           setPayload(current);
         }
-      })
-      .catch(() => {
-        /* main not ready yet — IPC subscriptions below will catch later sets */
-      });
+      },
+    );
 
-    const offSet = api.onPayloadSet((next) => {
+    const offSet = SequenceDiagramService.onPayloadSet((next) => {
       if (!matchesRepo(next, repositoryPath)) return;
       setPayload(next);
       setSelectedEventId(null);
     });
 
-    const offCleared = api.onPayloadCleared((info) => {
+    const offCleared = SequenceDiagramService.onPayloadCleared((info) => {
       if (info.repositoryPath && info.repositoryPath !== repositoryPath) return;
       setPayload(null);
       setSelectedEventId(null);

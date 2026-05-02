@@ -21,6 +21,7 @@ import {
   Plug,
   Github,
   FolderTree,
+  Workflow,
 } from 'lucide-react';
 
 /**
@@ -81,6 +82,7 @@ export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
   { id: 'agentsList', Icon: ToolCase, label: 'Skills' },
   { id: 'traceList', Icon: Activity, label: 'Traces' },
+  { id: 'sequenceDiagrams', Icon: Workflow, label: 'Diagrams' },
 ];
 
 /**

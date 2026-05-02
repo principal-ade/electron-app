@@ -18,6 +18,11 @@ export enum FileCitySequenceEvent {
   PAYLOAD_SET = 'file-city:sequence-diagram:set',
   PAYLOAD_CLEARED = 'file-city:sequence-diagram:cleared',
   GET_CURRENT = 'file-city:sequence-diagram:get-current',
+  LIBRARY_CHANGED = 'file-city:sequence-diagram:library-changed',
+  LIST = 'file-city:sequence-diagram:list',
+  LOAD = 'file-city:sequence-diagram:load',
+  ACTIVATE = 'file-city:sequence-diagram:activate',
+  DELETE = 'file-city:sequence-diagram:delete',
 }
 
 /**
@@ -84,6 +89,11 @@ export type FileCitySequenceEventDef = SequenceEvent & {
  * `@principal-ai/principal-view-react` so callers reference one shape.
  */
 export interface SequenceDiagramPayload {
+  /**
+   * Stable id for the payload. Assigned server-side when not supplied.
+   * Used as the storage key and for activate/delete operations.
+   */
+  id?: string;
   /** Optional title shown in the drawer header */
   title?: string;
   /**
@@ -101,6 +111,27 @@ export interface SequenceDiagramPayload {
   events: FileCitySequenceEventDef[];
   /** Edges between events */
   edges: SequenceEdge[];
+  /** ISO 8601 timestamp set on first persist. */
+  createdAt?: string;
+  /** ISO 8601 timestamp updated on every persist. */
+  updatedAt?: string;
+}
+
+/**
+ * Manifest entry for a saved sequence-diagram payload. Holds metadata only;
+ * the full payload is read on demand from disk when activated.
+ */
+export interface SequenceDiagramIndexEntry {
+  id: string;
+  repositoryPath?: string;
+  title?: string;
+  /** First ~200 chars of `payload.summary`, when present. */
+  summaryPreview?: string;
+  eventCount: number;
+  hasDiffSnippets: boolean;
+  createdAt: string;
+  updatedAt: string;
+  sizeBytes: number;
 }
 
 export type { SequenceEvent, SequenceEdge };
@@ -126,6 +157,37 @@ export interface FileCitySequenceAPI {
 
   /** Subscribe to "payload cleared" events. Returns an unsubscribe function. */
   onPayloadCleared: (
+    callback: (info: { repositoryPath?: string }) => void,
+  ) => () => void;
+
+  /**
+   * List saved payloads. With `repositoryPath`, filters to entries for that
+   * repo (plus repo-agnostic entries). Without it, returns every entry.
+   * `activeId` is the id currently active for the queried repo (or for the
+   * default slot when no repo is supplied).
+   */
+  list: (repositoryPath?: string) => Promise<{
+    entries: SequenceDiagramIndexEntry[];
+    activeId: string | null;
+  }>;
+
+  /** Read a saved payload by id without activating it. */
+  load: (id: string) => Promise<SequenceDiagramPayload | null>;
+
+  /**
+   * Mark a saved payload active for its repository and broadcast
+   * `PAYLOAD_SET` so any open File City panels update.
+   */
+  activate: (id: string) => Promise<void>;
+
+  /**
+   * Permanently delete a saved payload from disk + manifest. If the deleted
+   * entry was active, broadcasts `PAYLOAD_CLEARED` for its repo.
+   */
+  delete: (id: string) => Promise<void>;
+
+  /** Subscribe to library changes (set / delete / activate). */
+  onLibraryChanged: (
     callback: (info: { repositoryPath?: string }) => void,
   ) => () => void;
 }

@@ -34,9 +34,8 @@ The electron-app already has everything needed to host this:
 
 ## Non-goals
 
-- Persisting payloads across app restarts.
 - Authoring sequence diagrams inside the app.
-- Multi-payload stacking (only the latest payload is shown).
+- Multi-payload stacking (only the latest *active* payload is shown — saved payloads are managed separately, see [persistence doc](file-city-sequence-diagram-persistence.md)).
 - Multi-snippet stacking (only the selected event's snippet is shown).
 
 ## Architecture Overview

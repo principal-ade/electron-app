@@ -104,6 +104,9 @@ function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
   if (!Array.isArray(b.edges)) {
     return { ok: false, error: 'edges must be an array' };
   }
+  if (b.id !== undefined && (typeof b.id !== 'string' || b.id.length === 0)) {
+    return { ok: false, error: 'id must be a non-empty string when provided' };
+  }
 
   const events = b.events as FileCitySequenceEventDef[];
   const ids = new Set<string>();
@@ -145,6 +148,7 @@ function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
   const payload: SequenceDiagramPayload = {
     events,
     edges,
+    id: typeof b.id === 'string' ? b.id : undefined,
     title: typeof b.title === 'string' ? b.title : undefined,
     repositoryPath:
       typeof b.repositoryPath === 'string' ? b.repositoryPath : undefined,
@@ -157,31 +161,140 @@ export function registerSequenceDiagramRoutes(
   app: Application,
   store: SequenceDiagramStore,
 ): void {
-  app.post('/api/file-city/sequence', (req: Request, res: Response) => {
+  app.post('/api/file-city/sequence', async (req: Request, res: Response) => {
     const result = validatePayload(req.body);
     if (!result.ok) {
       res.status(400).json({ success: false, error: result.error });
       return;
     }
-    const broadcastTo = store.set(result.payload);
-    res.json({ success: true, broadcastTo });
+    const activate =
+      req.body && typeof req.body === 'object' && 'activate' in req.body
+        ? req.body.activate !== false
+        : true;
+    try {
+      const { payload, broadcastTo, evictedIds } = await store.set(
+        result.payload,
+        { activate },
+      );
+      res.json({
+        success: true,
+        id: payload.id,
+        broadcastTo,
+        evictedIds,
+      });
+    } catch (err) {
+      console.error('[sequenceDiagramRoutes] set failed', err);
+      res.status(500).json({ success: false, error: 'failed to persist' });
+    }
   });
 
-  app.delete('/api/file-city/sequence', (req: Request, res: Response) => {
+  // Library list — must come before `/:id` so it isn't treated as an id.
+  app.get(
+    '/api/file-city/sequence/library',
+    async (req: Request, res: Response) => {
+      const repositoryPath =
+        typeof req.query.repositoryPath === 'string'
+          ? req.query.repositoryPath
+          : undefined;
+      try {
+        const result = await store.list(repositoryPath);
+        res.json({ success: true, ...result });
+      } catch (err) {
+        console.error('[sequenceDiagramRoutes] list failed', err);
+        res.status(500).json({ success: false, error: 'failed to list' });
+      }
+    },
+  );
+
+  app.post(
+    '/api/file-city/sequence/activate',
+    async (req: Request, res: Response) => {
+      const id =
+        req.body && typeof req.body === 'object' && typeof req.body.id === 'string'
+          ? req.body.id
+          : null;
+      if (!id) {
+        res
+          .status(400)
+          .json({ success: false, error: 'id (string) is required' });
+        return;
+      }
+      try {
+        const { payload, broadcastTo } = await store.activate(id);
+        if (!payload) {
+          res.status(404).json({ success: false, error: 'unknown id' });
+          return;
+        }
+        res.json({ success: true, broadcastTo });
+      } catch (err) {
+        console.error('[sequenceDiagramRoutes] activate failed', err);
+        res.status(500).json({ success: false, error: 'failed to activate' });
+      }
+    },
+  );
+
+  app.delete(
+    '/api/file-city/sequence/:id',
+    async (req: Request, res: Response) => {
+      const id = String(req.params.id);
+      try {
+        const { found } = await store.delete(id);
+        if (!found) {
+          res.status(404).json({ success: false, error: 'unknown id' });
+          return;
+        }
+        res.json({ success: true });
+      } catch (err) {
+        console.error('[sequenceDiagramRoutes] delete by id failed', err);
+        res.status(500).json({ success: false, error: 'failed to delete' });
+      }
+    },
+  );
+
+  app.get(
+    '/api/file-city/sequence/:id',
+    async (req: Request, res: Response) => {
+      const id = String(req.params.id);
+      try {
+        const payload = await store.loadById(id);
+        if (!payload) {
+          res.status(404).json({ success: false, error: 'unknown id' });
+          return;
+        }
+        res.json({ success: true, payload });
+      } catch (err) {
+        console.error('[sequenceDiagramRoutes] load by id failed', err);
+        res.status(500).json({ success: false, error: 'failed to load' });
+      }
+    },
+  );
+
+  app.delete('/api/file-city/sequence', async (req: Request, res: Response) => {
     const repositoryPath =
       typeof req.query.repositoryPath === 'string'
         ? req.query.repositoryPath
         : undefined;
-    const broadcastTo = store.clear(repositoryPath);
-    res.json({ success: true, broadcastTo });
+    try {
+      const broadcastTo = await store.clear(repositoryPath);
+      res.json({ success: true, broadcastTo });
+    } catch (err) {
+      console.error('[sequenceDiagramRoutes] clear failed', err);
+      res.status(500).json({ success: false, error: 'failed to clear' });
+    }
   });
 
-  app.get('/api/file-city/sequence', (req: Request, res: Response) => {
-    if (typeof req.query.repositoryPath === 'string') {
-      const payload = store.get(req.query.repositoryPath);
-      res.json({ success: true, payload });
-      return;
+  app.get('/api/file-city/sequence', async (req: Request, res: Response) => {
+    try {
+      if (typeof req.query.repositoryPath === 'string') {
+        const payload = await store.get(req.query.repositoryPath);
+        res.json({ success: true, payload });
+        return;
+      }
+      const payloads = await store.getAll();
+      res.json({ success: true, payloads });
+    } catch (err) {
+      console.error('[sequenceDiagramRoutes] get failed', err);
+      res.status(500).json({ success: false, error: 'failed to read' });
     }
-    res.json({ success: true, payloads: store.getAll() });
   });
 }
