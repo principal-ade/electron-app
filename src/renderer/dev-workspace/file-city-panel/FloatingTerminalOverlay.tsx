@@ -8,7 +8,14 @@ import type {
   TerminalPanelActions,
   TerminalPanelProps,
 } from '@industry-theme/xterm-terminal-panel';
-import { ChevronDown, ChevronUp, TerminalSquare } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Contrast,
+  Maximize2,
+  Minimize2,
+  TerminalSquare,
+} from 'lucide-react';
 
 export interface FloatingTerminalOverlayProps {
   context: TerminalPanelProps['context'];
@@ -22,6 +29,8 @@ export interface FloatingTerminalOverlayProps {
 const COLLAPSED_HEIGHT = 36;
 const EXPANDED_HEIGHT = 320;
 const PANEL_WIDTH = 520;
+const MIN_WIDTH = 320;
+const MIN_EXPANDED_HEIGHT = 160;
 
 // Tag for the overlay's PTY session. Anything not starting with the docked
 // TabbedTerminalPanel's terminalContext (e.g. "terminal:default") is treated
@@ -37,6 +46,46 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
 }) => {
   const { theme } = useTheme();
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
+  const [opaque, setOpaque] = React.useState(true);
+  const [size, setSize] = React.useState({
+    width: PANEL_WIDTH,
+    height: EXPANDED_HEIGHT,
+  });
+  const [isResizing, setIsResizing] = React.useState(false);
+  const [maximized, setMaximized] = React.useState(false);
+
+  const handleResizeMouseDown = React.useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startWidth = size.width;
+      const startHeight = size.height;
+      setIsResizing(true);
+
+      const onMove = (ev: MouseEvent) => {
+        // Anchored to bottom-right, so dragging up-and-left grows the panel.
+        const nextWidth = Math.max(
+          MIN_WIDTH,
+          startWidth + (startX - ev.clientX),
+        );
+        const nextHeight = Math.max(
+          MIN_EXPANDED_HEIGHT,
+          startHeight + (startY - ev.clientY),
+        );
+        setSize({ width: nextWidth, height: nextHeight });
+      };
+      const onUp = () => {
+        setIsResizing(false);
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    [size.width, size.height],
+  );
   // Lazy-mount: don't spawn a PTY until the user expands the panel for the
   // first time. Once mounted, the panel stays mounted so subsequent
   // collapse/expand preserves the shell + scrollback.
@@ -53,21 +102,46 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
         position: 'absolute',
         bottom: 16,
         right: 16,
-        width: PANEL_WIDTH,
-        height: collapsed ? COLLAPSED_HEIGHT : EXPANDED_HEIGHT,
-        background: backgroundColor,
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
+        ...(maximized && !collapsed
+          ? { top: 16, left: 16, width: 'auto', height: 'auto' }
+          : {
+              width: size.width,
+              height: collapsed ? COLLAPSED_HEIGHT : size.height,
+            }),
+        background: opaque ? theme.colors.background : backgroundColor,
+        backdropFilter: opaque ? 'none' : 'blur(10px)',
+        WebkitBackdropFilter: opaque ? 'none' : 'blur(10px)',
         border: `1px solid ${theme.colors.border}`,
         borderRadius: 10,
         boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        zIndex: 20,
-        transition: 'height 160ms ease',
+        zIndex: 3000,
+        transition: isResizing ? 'none' : 'height 160ms ease',
       }}
     >
+      {!collapsed && !maximized && (
+        <div
+          onMouseDown={handleResizeMouseDown}
+          title="Drag to resize"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: 14,
+            height: 14,
+            cursor: 'nwse-resize',
+            zIndex: 1,
+            // Subtle corner mark so the user can find the handle.
+            background:
+              'linear-gradient(135deg, transparent 0 6px, ' +
+              theme.colors.textSecondary +
+              ' 6px 7px, transparent 7px 100%)',
+            opacity: 0.6,
+          }}
+        />
+      )}
       <div
         onClick={() => {
           setCollapsed((prev) => {
@@ -98,7 +172,65 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
           <TerminalSquare size={14} color={theme.colors.textSecondary} />
           <span>Terminal</span>
         </div>
-        {collapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpaque((prev) => !prev);
+            }}
+            title={opaque ? 'Make translucent' : 'Make opaque'}
+            aria-label={opaque ? 'Make translucent' : 'Make opaque'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 22,
+              height: 22,
+              padding: 0,
+              border: 'none',
+              borderRadius: 4,
+              background: opaque ? theme.colors.border : 'transparent',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+            }}
+          >
+            <Contrast size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMaximized((prev) => {
+                const next = !prev;
+                // Maximizing while collapsed should also expand.
+                if (next && collapsed) {
+                  setCollapsed(false);
+                  setHasOpened(true);
+                }
+                return next;
+              });
+            }}
+            title={maximized ? 'Restore' : 'Fill view'}
+            aria-label={maximized ? 'Restore' : 'Fill view'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 22,
+              height: 22,
+              padding: 0,
+              border: 'none',
+              borderRadius: 4,
+              background: 'transparent',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+            }}
+          >
+            {maximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+          </button>
+          {collapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </div>
       </div>
 
       {/*
