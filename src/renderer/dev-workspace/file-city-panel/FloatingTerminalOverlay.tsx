@@ -53,15 +53,23 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
   });
   const [isResizing, setIsResizing] = React.useState(false);
   const [maximized, setMaximized] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
 
   const handleResizeMouseDown = React.useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      // When maximized, capture the current rendered size and exit maximized
+      // so the bottom-right-anchored drag math stays consistent.
+      const rect = containerRef.current?.getBoundingClientRect();
+      const startWidth = maximized && rect ? rect.width : size.width;
+      const startHeight = maximized && rect ? rect.height : size.height;
+      if (maximized) {
+        setMaximized(false);
+        setSize({ width: startWidth, height: startHeight });
+      }
       const startX = e.clientX;
       const startY = e.clientY;
-      const startWidth = size.width;
-      const startHeight = size.height;
       setIsResizing(true);
 
       const onMove = (ev: MouseEvent) => {
@@ -84,7 +92,7 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
     },
-    [size.width, size.height],
+    [size.width, size.height, maximized],
   );
   // Lazy-mount: don't spawn a PTY until the user expands the panel for the
   // first time. Once mounted, the panel stays mounted so subsequent
@@ -98,6 +106,7 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
 
   return (
     <div
+      ref={containerRef}
       style={{
         position: 'absolute',
         bottom: 16,
@@ -121,7 +130,7 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
         transition: isResizing ? 'none' : 'height 160ms ease',
       }}
     >
-      {!collapsed && !maximized && (
+      {!collapsed && (
         <div
           onMouseDown={handleResizeMouseDown}
           title="Drag to resize"
