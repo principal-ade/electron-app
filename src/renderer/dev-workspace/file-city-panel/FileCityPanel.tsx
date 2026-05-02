@@ -90,6 +90,15 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
     return { sourcePath: selectedSequenceEvent.sourcePath };
   }, [selectedSequenceEvent]);
 
+  const sequenceSourcePaths = React.useMemo<string[] | null>(() => {
+    if (!sequencePayload) return null;
+    const paths = new Set<string>();
+    for (const ev of sequencePayload.events) {
+      if (ev.sourcePath) paths.add(ev.sourcePath);
+    }
+    return paths.size > 0 ? Array.from(paths) : null;
+  }, [sequencePayload]);
+
   const selectedEventAbsolutePath = React.useMemo(() => {
     const sourcePath = selectedSequenceEvent?.sourcePath;
     if (!sourcePath) return null;
@@ -186,6 +195,7 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
         repoLabel={repoLabel}
         repositoryPath={repositoryPath}
         sequenceSelection={sequenceSelection}
+        sequenceSourcePaths={sequenceSourcePaths}
         hideFolderPanels={!!sequencePayload}
         onCameraFrame={(camera, size) => {
           leaderLineRef.current?.onCameraFrame(camera, size);

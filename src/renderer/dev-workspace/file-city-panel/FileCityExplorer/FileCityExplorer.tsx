@@ -18,6 +18,7 @@ import {
   type ElevatedScopePanel,
   type HighlightLayer,
 } from '@principal-ai/file-city-react';
+import { getFileColor } from '@principal-ai/file-city-builder';
 import type * as THREE from 'three';
 
 /**
@@ -170,6 +171,12 @@ export interface FileCityExplorerProps {
    */
   sequenceSelection?: { sourcePath: string } | null;
   /**
+   * Repo-relative paths for every event in the active sequence diagram.
+   * When non-empty, the city dims everything outside this set so only the
+   * files referenced by the explainer keep their natural color.
+   */
+  sequenceSourcePaths?: readonly string[] | null;
+  /**
    * When true, the elevated folder/scope panels floating above the city
    * are suppressed. Useful when another overlay (like the sequence
    * diagram) should be the primary structure shown.
@@ -191,6 +198,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   repoLabel,
   repositoryPath,
   sequenceSelection,
+  sequenceSourcePaths,
   hideFolderPanels,
   onCameraFrame,
 }) => {
@@ -752,6 +760,50 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     };
   }, [sequenceSelection, toCityPath, cityBuildingPaths]);
 
+  // Sequence "files involved" highlight — covers every event's sourcePath,
+  // not just the selected one. Each involved building gets a `fill` layer
+  // re-painting it with its own natural (suffix-based) color, so when we
+  // override `defaultBuildingColor` to neutral grey for the rest of the city
+  // these buildings stay visually distinct. Grouped by color so we end up
+  // with one layer per unique extension color, not one per file.
+  const sequenceFilesHighlightLayers = React.useMemo<HighlightLayer[] | null>(() => {
+    if (!sequenceSourcePaths || sequenceSourcePaths.length === 0) return null;
+    const buildingByPath = new Map(cityData.buildings.map((b) => [b.path, b]));
+    const byColor = new Map<string, string[]>();
+    const seen = new Set<string>();
+    for (const sourcePath of sequenceSourcePaths) {
+      const cityPath = toCityPath(sourcePath);
+      if (seen.has(cityPath)) continue;
+      const building = buildingByPath.get(cityPath);
+      if (!building) continue;
+      seen.add(cityPath);
+      const color = building.color ?? getFileColor(building.path);
+      if (!color) continue;
+      const list = byColor.get(color) ?? [];
+      list.push(cityPath);
+      byColor.set(color, list);
+    }
+    if (byColor.size === 0) return null;
+    let i = 0;
+    return Array.from(byColor.entries()).map(([color, paths]) => ({
+      id: `sequence-files-${i++}`,
+      name: 'Sequence files',
+      enabled: true,
+      color,
+      opacity: 1,
+      priority: 50,
+      items: paths.map((path) => ({
+        path,
+        type: 'file' as const,
+        renderStrategy: 'fill' as const,
+      })),
+    }));
+  }, [sequenceSourcePaths, cityData.buildings, toCityPath]);
+
+  const sequenceFilesActive =
+    sequenceFilesHighlightLayers !== null &&
+    sequenceFilesHighlightLayers.length > 0;
+
   // City highlight layers derive from the active tab:
   //   scopes tab → selected scope's namespace fills (+ scope-level borders)
   //   files tab  → border around the currently-selected folder
@@ -1248,10 +1300,16 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               if (searchHighlightLayer) extras.push(searchHighlightLayer);
               if (hoveredSearchHighlightLayer) extras.push(hoveredSearchHighlightLayer);
               if (hoveredCardHighlightLayer) extras.push(hoveredCardHighlightLayer);
+              if (sequenceFilesHighlightLayers) {
+                extras.push(...sequenceFilesHighlightLayers);
+              }
               if (sequenceHighlightLayer) extras.push(sequenceHighlightLayer);
               if (extras.length === 0) return cityHighlightLayers;
               return [...(cityHighlightLayers ?? []), ...extras];
             })()}
+            defaultBuildingColor={
+              sequenceFilesActive ? theme.colors.textTertiary : undefined
+            }
             elevatedScopePanels={
               hideFolderPanels ||
               searchHighlightLayer ||

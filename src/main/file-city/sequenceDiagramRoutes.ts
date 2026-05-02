@@ -11,6 +11,29 @@ import type {
   SequenceLayoutOptions,
 } from '../../shared/main-process-api-interfaces/FileCitySequenceAPI';
 import { SequenceDiagramStore } from './sequenceDiagramStore';
+import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { openDevWorkspaceWindow } from '../window/devWorkspaceWindowHandlers';
+import { applicationWindows, specialWindows } from '../window/modernWindowManager';
+
+type WindowOpened = 'focused' | 'created' | 'none';
+
+async function ensureDevWorkspaceWindow(
+  repositoryPath: string,
+): Promise<WindowOpened> {
+  const repos = await AlexandriaRegistryService.getInstance().getRepositories();
+  const entry = repos.find((r) => r.path === repositoryPath);
+  if (!entry) return 'none';
+
+  const windowKey = `dev-workspace-${entry.path}`;
+  const existingId = specialWindows.get(windowKey);
+  const existingWindow =
+    existingId !== undefined ? applicationWindows.get(existingId) : undefined;
+  const aliveBefore = !!existingWindow && !existingWindow.window.isDestroyed();
+
+  const result = await openDevWorkspaceWindow({ alexandriaEntry: entry });
+  if (!result) return 'none';
+  return aliveBefore ? 'focused' : 'created';
+}
 
 interface ValidationFailure {
   ok: false;
@@ -205,11 +228,20 @@ export function registerSequenceDiagramRoutes(
         result.payload,
         { activate },
       );
+      let windowOpened: WindowOpened = 'none';
+      if (activate && payload.repositoryPath) {
+        try {
+          windowOpened = await ensureDevWorkspaceWindow(payload.repositoryPath);
+        } catch (err) {
+          console.error('[sequenceDiagramRoutes] ensure window failed', err);
+        }
+      }
       res.json({
         success: true,
         id: payload.id,
         broadcastTo,
         evictedIds,
+        windowOpened,
       });
     } catch (err) {
       console.error('[sequenceDiagramRoutes] set failed', err);
