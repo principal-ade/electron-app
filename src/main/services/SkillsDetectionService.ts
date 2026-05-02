@@ -34,10 +34,18 @@ export interface LocalSkill {
 /**
  * Predefined skill directory presets for different AI assistants
  */
-const PRESET_SKILL_DIRECTORIES: PresetDirectory[] = [
+interface PresetDirectoryConfig extends PresetDirectory {
+  // Parent dir that signals the user uses this agent. If it exists, the preset
+  // is shown in the install modal even when the skills/ subfolder hasn't been
+  // created yet. `null` means always show (used for the canonical store).
+  agentRootPath: string | null;
+}
+
+const PRESET_SKILL_DIRECTORIES: PresetDirectoryConfig[] = [
   {
     id: 'agent-universal',
     path: '{HOME}/.agents/skills',
+    agentRootPath: null,
     displayName: 'Agents',
     description: 'Universal agent skills compatible with all AI assistants',
     icon: '🤖',
@@ -45,6 +53,7 @@ const PRESET_SKILL_DIRECTORIES: PresetDirectory[] = [
   {
     id: 'claude-specific',
     path: '{HOME}/.claude/skills',
+    agentRootPath: '{HOME}/.claude',
     displayName: 'Claude',
     description: 'Claude-specific skills for Anthropic\'s Claude',
     icon: '🎯',
@@ -52,6 +61,7 @@ const PRESET_SKILL_DIRECTORIES: PresetDirectory[] = [
   {
     id: 'opencode',
     path: '{HOME}/.config/opencode/skill',
+    agentRootPath: '{HOME}/.config/opencode',
     displayName: 'OpenCode',
     description: 'Skills for OpenCode AI assistant',
     icon: '💻',
@@ -59,6 +69,7 @@ const PRESET_SKILL_DIRECTORIES: PresetDirectory[] = [
   {
     id: 'cursor-ide',
     path: '{HOME}/.cursor/skills',
+    agentRootPath: '{HOME}/.cursor',
     displayName: 'Cursor',
     description: 'Skills for Cursor IDE AI assistant',
     icon: '⌨️',
@@ -66,6 +77,7 @@ const PRESET_SKILL_DIRECTORIES: PresetDirectory[] = [
   {
     id: 'windsurf',
     path: '{HOME}/.windsurf/skills',
+    agentRootPath: '{HOME}/.windsurf',
     displayName: 'Windsurf',
     description: 'Skills for Windsurf AI assistant',
     icon: '🌊',
@@ -137,13 +149,20 @@ export class SkillsDetectionService {
       const dirPath = preset.path.replace('{HOME}', this.homeDir);
       const skills = await this.findSkillsInDirectory(dirPath);
 
-      // Always include Claude directory if it exists, even if empty
-      const isClaudeDirectory = preset.id === 'claude-specific';
-      const directoryExists = fs.existsSync(dirPath);
+      // Show the preset if any of these are true:
+      // - it has skills installed
+      // - the skills/ dir exists (even empty)
+      // - the agent's root dir exists, signalling the user uses this agent
+      //   (skills/ will be created on install)
+      // - agentRootPath is null (canonical store — always show)
+      const agentRootExists =
+        preset.agentRootPath === null ||
+        fs.existsSync(preset.agentRootPath.replace('{HOME}', this.homeDir));
 
-      if (skills.length > 0 || (isClaudeDirectory && directoryExists)) {
+      if (skills.length > 0 || fs.existsSync(dirPath) || agentRootExists) {
+        const { agentRootPath: _agentRootPath, ...presetOut } = preset;
         detectedDirs.push({
-          ...preset,
+          ...presetOut,
           path: dirPath,
           skillCount: skills.length,
           skills,
