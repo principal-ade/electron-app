@@ -244,16 +244,33 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
 
       {/*
         Lazy-mount on first open, then keep mounted so collapse/expand
-        doesn't unmount and tear down the PTY. When collapsed, we just hide
-        the container — the session keeps running underneath.
+        doesn't unmount and tear down the PTY. While collapsed we keep the
+        wrapper at its expanded dimensions and rely on the outer container's
+        height clamp + overflow:hidden to clip it; using display:none here
+        would let xterm's FitAddon observe a 0×0 box and cache cols=rows=0,
+        producing a broken layout on re-expand.
       */}
       {hasOpened && (
         <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            display: collapsed ? 'none' : 'block',
-          }}
+          style={
+            collapsed
+              ? {
+                  position: 'absolute',
+                  top: COLLAPSED_HEIGHT,
+                  left: 0,
+                  width: size.width,
+                  height: Math.max(
+                    MIN_EXPANDED_HEIGHT,
+                    size.height - COLLAPSED_HEIGHT,
+                  ),
+                  visibility: 'hidden',
+                  pointerEvents: 'none',
+                }
+              : {
+                  flex: 1,
+                  minHeight: 0,
+                }
+          }
         >
           <TerminalSession
             actions={actions}
