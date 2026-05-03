@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 
 export interface SequenceMarkdownOverlayProps {
@@ -13,6 +14,12 @@ export interface SequenceMarkdownOverlayProps {
   slideIdPrefix: string;
   /** Bottom inset (number → px, string → CSS) so the panel sits above the sequence drawer. */
   bottomOffset: number | string;
+  /** Position of the current event in the sequence; renders an "n / total" pill. */
+  position?: { index: number; total: number };
+  /** Called when the user clicks the previous-event chevron. Omit to disable. */
+  onPrev?: () => void;
+  /** Called when the user clicks the next-event chevron. Omit to disable. */
+  onNext?: () => void;
 }
 
 const PANEL_WIDTH_PCT = 28;
@@ -26,9 +33,28 @@ export const SequenceMarkdownOverlay: React.FC<SequenceMarkdownOverlayProps> = (
   markdown,
   slideIdPrefix,
   bottomOffset,
+  position,
+  onPrev,
+  onNext,
 }) => {
   const { theme } = useTheme();
   const body = markdown.trim();
+
+  React.useEffect(() => {
+    // Alt+arrow mirrors browser back/forward semantics — plain arrow keys are
+    // reserved for the snippet pane's own scrolling.
+    const handler = (e: KeyboardEvent) => {
+      if (e.altKey && e.key === 'ArrowLeft' && onPrev) {
+        e.preventDefault();
+        onPrev();
+      } else if (e.altKey && e.key === 'ArrowRight' && onNext) {
+        e.preventDefault();
+        onNext();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onPrev, onNext]);
 
   const bottomOffsetCss =
     typeof bottomOffset === 'number' ? `${bottomOffset}px` : bottomOffset;
@@ -131,6 +157,26 @@ export const SequenceMarkdownOverlay: React.FC<SequenceMarkdownOverlayProps> = (
           from { transform: translateX(-100%); }
           to { transform: translateX(0); }
         }
+        .sequence-md-nav-btn {
+          transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+        }
+        .sequence-md-nav-btn:not(:disabled):hover {
+          background-color: ${theme.colors.border};
+          color: ${theme.colors.text};
+        }
+        .sequence-md-nav-btn:not(:disabled):active {
+          background-color: color-mix(in srgb, ${theme.colors.primary} 18%, transparent);
+          border-color: ${theme.colors.primary};
+        }
+        .sequence-md-start-btn {
+          transition: background-color 120ms ease, transform 80ms ease;
+        }
+        .sequence-md-start-btn:hover {
+          background-color: color-mix(in srgb, ${theme.colors.primary} 88%, white);
+        }
+        .sequence-md-start-btn:active {
+          transform: translateY(1px);
+        }
       `}</style>
 
       <div
@@ -189,6 +235,86 @@ export const SequenceMarkdownOverlay: React.FC<SequenceMarkdownOverlayProps> = (
         </div>
       </div>
 
+      {position && position.index === 0 && onNext ? (
+        <div
+          style={{
+            padding: '8px 14px',
+            borderTop: `1px solid ${theme.colors.border}`,
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            onClick={onNext}
+            title="Start sequence (Alt+→)"
+            className="sequence-md-start-btn"
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              background: theme.colors.primary,
+              color: theme.colors.background,
+              border: 'none',
+              borderRadius: 6,
+              cursor: 'pointer',
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              fontWeight: 600,
+            }}
+          >
+            Start
+          </button>
+        </div>
+      ) : (
+        (onPrev || onNext || position) && (
+          <div
+            style={{
+              padding: '8px 14px',
+              borderTop: `1px solid ${theme.colors.border}`,
+              display: 'flex',
+              alignItems: 'stretch',
+              gap: 0,
+              flexShrink: 0,
+            }}
+          >
+            <button
+              type="button"
+              onClick={onPrev}
+              disabled={!onPrev}
+              aria-label="Previous event"
+              title="Previous event (Alt+←)"
+              className="sequence-md-nav-btn"
+              style={navButtonStyle(theme, !onPrev, 'left')}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span
+              style={{
+                flex: '0 0 30%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textSecondary,
+              }}
+            >
+              {position ? `${position.index} / ${position.total}` : ''}
+            </span>
+            <button
+              type="button"
+              onClick={onNext}
+              disabled={!onNext}
+              aria-label="Next event"
+              title="Next event (Alt+→)"
+              className="sequence-md-nav-btn"
+              style={navButtonStyle(theme, !onNext, 'right')}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )
+      )}
+
       <div
         role="separator"
         aria-orientation="vertical"
@@ -222,3 +348,21 @@ export const SequenceMarkdownOverlay: React.FC<SequenceMarkdownOverlayProps> = (
     </div>
   );
 };
+
+const navButtonStyle = (
+  theme: ReturnType<typeof useTheme>['theme'],
+  disabled: boolean,
+  _side: 'left' | 'right',
+): React.CSSProperties => ({
+  flex: '0 0 35%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'transparent',
+  border: `1px solid ${theme.colors.border}`,
+  borderRadius: 6,
+  color: disabled ? theme.colors.border : theme.colors.textSecondary,
+  cursor: disabled ? 'default' : 'pointer',
+  padding: '6px 0',
+  opacity: disabled ? 0.5 : 1,
+});

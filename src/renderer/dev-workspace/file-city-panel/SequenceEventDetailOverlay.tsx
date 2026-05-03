@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
 import type { FileCitySequenceEventDef } from '../../../shared/main-process-api-interfaces/FileCitySequenceAPI';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
@@ -15,12 +15,6 @@ export interface SequenceEventDetailOverlayProps {
   bottomOffset: number | string;
   onClose: () => void;
   onOpenInTab?: () => void;
-  /** Position of this event in the sequence; used to render an "n / total" pill. */
-  position?: { index: number; total: number };
-  /** Called when the user clicks the previous-event chevron. Omit to disable. */
-  onPrev?: () => void;
-  /** Called when the user clicks the next-event chevron. Omit to disable. */
-  onNext?: () => void;
 }
 
 const PANEL_WIDTH_PCT = 38;
@@ -33,16 +27,7 @@ export const SequenceEventDetailOverlay = React.forwardRef<
   HTMLDivElement,
   SequenceEventDetailOverlayProps
 >(function SequenceEventDetailOverlay(
-  {
-    event,
-    absolutePath,
-    bottomOffset,
-    onClose,
-    onOpenInTab,
-    position,
-    onPrev,
-    onNext,
-  },
+  { event, absolutePath, bottomOffset, onClose, onOpenInTab },
   forwardedRef,
 ) {
   const { theme } = useTheme();
@@ -77,23 +62,11 @@ export const SequenceEventDetailOverlay = React.forwardRef<
 
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
-      // Allow alt+arrow to move between events, mirroring browser back/forward
-      // semantics — plain arrow keys are reserved for the snippet itself.
-      if (e.altKey && e.key === 'ArrowLeft' && onPrev) {
-        e.preventDefault();
-        onPrev();
-      } else if (e.altKey && e.key === 'ArrowRight' && onNext) {
-        e.preventDefault();
-        onNext();
-      }
+      if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, onPrev, onNext]);
+  }, [onClose]);
 
   const onResizeStart = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -129,9 +102,10 @@ export const SequenceEventDetailOverlay = React.forwardRef<
         position: 'absolute',
         top: FLOAT_INSET,
         right: FLOAT_INSET,
-        // Match the markdown overlay's bottom edge: top inset + bottom inset
-        // both contribute, plus the drawer's bottom offset.
-        maxHeight: `calc(100% - ${FLOAT_INSET * 2}px - ${bottomOffsetCss})`,
+        // Anchor the bottom edge (mirroring the markdown overlay) so the
+        // panel has a *definite* height — otherwise transient placeholder
+        // states like "Loading…" collapse the panel to the content size.
+        bottom: `calc(${bottomOffsetCss} + ${FLOAT_INSET}px)`,
         width:
           widthPx != null
             ? `${widthPx}px`
@@ -279,59 +253,6 @@ export const SequenceEventDetailOverlay = React.forwardRef<
         )}
       </div>
 
-      {(onPrev || onNext || position) && (
-        <div
-          style={{
-            padding: '8px 14px',
-            borderTop: `1px solid ${theme.colors.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 12,
-            flexShrink: 0,
-          }}
-        >
-          <button
-            type="button"
-            onClick={onPrev}
-            disabled={!onPrev}
-            aria-label="Previous event"
-            title="Previous event (Alt+←)"
-            style={iconButtonStyle(
-              onPrev ? theme.colors.textSecondary : theme.colors.border,
-              !onPrev,
-            )}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          {position && (
-            <span
-              style={{
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.textSecondary,
-                minWidth: 40,
-                textAlign: 'center',
-              }}
-            >
-              {position.index} / {position.total}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={onNext}
-            disabled={!onNext}
-            aria-label="Next event"
-            title="Next event (Alt+→)"
-            style={iconButtonStyle(
-              onNext ? theme.colors.textSecondary : theme.colors.border,
-              !onNext,
-            )}
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      )}
     </div>
   );
 });

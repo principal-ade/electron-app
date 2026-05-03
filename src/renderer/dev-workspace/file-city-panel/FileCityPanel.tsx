@@ -17,6 +17,10 @@ import {
 import { FileOverlay } from './FileOverlay';
 import { SequenceDiagramOverlay } from './SequenceDiagramOverlay';
 import { SequenceEventDetailOverlay } from './SequenceEventDetailOverlay';
+import {
+  SequenceFilesOverlay,
+  type SequenceStep,
+} from './SequenceFilesOverlay';
 import { SequenceMarkdownOverlay } from './SequenceMarkdownOverlay';
 import {
   SequenceLeaderLine,
@@ -106,6 +110,27 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
     if (!repositoryPath) return sourcePath;
     return `${repositoryPath}/${sourcePath}`;
   }, [selectedSequenceEvent, repositoryPath]);
+
+  const sequenceSteps = React.useMemo<SequenceStep[]>(() => {
+    if (!sequencePayload) return [];
+    const out: SequenceStep[] = [];
+    sequencePayload.events.forEach((ev, idx) => {
+      if (!ev.sourcePath) return;
+      const absolutePath = ev.sourcePath.startsWith('/')
+        ? ev.sourcePath
+        : repositoryPath
+          ? `${repositoryPath}/${ev.sourcePath}`
+          : null;
+      out.push({
+        eventId: ev.id,
+        stepIndex: idx + 1,
+        eventLabel: ev.label ?? ev.name,
+        relativePath: ev.sourcePath,
+        absolutePath,
+      });
+    });
+    return out;
+  }, [sequencePayload, repositoryPath]);
 
   const selectedBuilding = React.useMemo(() => {
     const sourcePath = selectedSequenceEvent?.sourcePath;
@@ -242,6 +267,37 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
         <SequenceMarkdownOverlay
           {...markdownOverlayProps}
           bottomOffset={drawerBottomOffset}
+          position={
+            sequencePayload && sequencePayload.events.length > 0
+              ? {
+                  // -1 (nothing selected, summary view) renders as `0 / N`,
+                  // signalling the sequence hasn't started yet.
+                  index: Math.max(0, selectedEventIndex + 1),
+                  total: sequencePayload.events.length,
+                }
+              : undefined
+          }
+          onPrev={
+            sequencePayload && selectedEventIndex >= 0
+              ? () =>
+                  setSequenceSelectedEventId(
+                    selectedEventIndex > 0
+                      ? sequencePayload.events[selectedEventIndex - 1].id
+                      : null,
+                  )
+              : undefined
+          }
+          onNext={
+            sequencePayload &&
+            sequencePayload.events.length > 0 &&
+            selectedEventIndex < sequencePayload.events.length - 1
+              ? () =>
+                  setSequenceSelectedEventId(
+                    sequencePayload.events[Math.max(0, selectedEventIndex + 1)]
+                      .id,
+                  )
+              : undefined
+          }
         />
       )}
       {selectedSequenceEvent && sequencePayload && (
@@ -250,27 +306,6 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
           event={selectedSequenceEvent}
           absolutePath={selectedEventAbsolutePath}
           bottomOffset={drawerBottomOffset}
-          position={{
-            index: selectedEventIndex + 1,
-            total: sequencePayload.events.length,
-          }}
-          onPrev={
-            selectedEventIndex > 0
-              ? () =>
-                  setSequenceSelectedEventId(
-                    sequencePayload.events[selectedEventIndex - 1].id,
-                  )
-              : undefined
-          }
-          onNext={
-            selectedEventIndex >= 0 &&
-            selectedEventIndex < sequencePayload.events.length - 1
-              ? () =>
-                  setSequenceSelectedEventId(
-                    sequencePayload.events[selectedEventIndex + 1].id,
-                  )
-              : undefined
-          }
           onClose={() => setSequenceSelectedEventId(null)}
           onOpenInTab={
             selectedEventAbsolutePath
@@ -284,6 +319,23 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
                 }
               : undefined
           }
+        />
+      )}
+      {!selectedSequenceEvent && sequencePayload && (
+        <SequenceFilesOverlay
+          steps={sequenceSteps}
+          totalEvents={sequencePayload.events.length}
+          bottomOffset={drawerBottomOffset}
+          onSelectStep={(step) => setSequenceSelectedEventId(step.eventId)}
+          onOpenFile={(step) => {
+            if (!step.absolutePath) return;
+            events.emit({
+              type: 'file:open',
+              source: 'file-overlay',
+              timestamp: Date.now(),
+              payload: { path: step.absolutePath },
+            });
+          }}
         />
       )}
       {overlayFile && (

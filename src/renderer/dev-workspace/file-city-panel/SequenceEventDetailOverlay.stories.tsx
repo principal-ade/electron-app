@@ -120,9 +120,6 @@ interface HarnessProps {
   bottomOffset: number | string;
   override: ReadFileOverride;
   withOpenInTab?: boolean;
-  /** When provided, ignore `event`/`absolutePath` and walk through this list using the prev/next chevrons. */
-  events?: Array<{ event: FileCitySequenceEventDef; absolutePath: string | null }>;
-  initialIndex?: number;
 }
 
 const Harness: React.FC<HarnessProps> = ({
@@ -131,8 +128,6 @@ const Harness: React.FC<HarnessProps> = ({
   bottomOffset,
   override,
   withOpenInTab = true,
-  events,
-  initialIndex = 0,
 }) => {
   window.__SEQUENCE_DETAIL_STORY__ = override;
   React.useEffect(
@@ -145,19 +140,6 @@ const Harness: React.FC<HarnessProps> = ({
   );
 
   const [open, setOpen] = React.useState(true);
-  const [index, setIndex] = React.useState(initialIndex);
-
-  const useList = events && events.length > 0;
-  const currentEvent = useList ? events[index].event : event;
-  const currentPath = useList ? events[index].absolutePath : absolutePath;
-  const position = useList
-    ? { index: index + 1, total: events.length }
-    : undefined;
-  const onPrev = useList && index > 0 ? () => setIndex((i) => i - 1) : undefined;
-  const onNext =
-    useList && index < events.length - 1
-      ? () => setIndex((i) => i + 1)
-      : undefined;
 
   return (
     <div
@@ -186,19 +168,16 @@ const Harness: React.FC<HarnessProps> = ({
       )}
       {open && (
         <SequenceEventDetailOverlay
-          event={currentEvent}
-          absolutePath={currentPath}
+          event={event}
+          absolutePath={absolutePath}
           bottomOffset={bottomOffset}
-          position={position}
-          onPrev={onPrev}
-          onNext={onNext}
           onClose={() => setOpen(false)}
           onOpenInTab={
             withOpenInTab
               ? () =>
                   console.info(
                     '[SequenceEventDetailOverlay story] open-in-tab',
-                    currentPath,
+                    absolutePath,
                   )
               : undefined
           }
@@ -348,62 +327,6 @@ export const NoSourcePath: Story = {
       description: {
         story:
           'Event has no source path resolved — body renders the "No source path" placeholder; header has no filename row.',
-      },
-    },
-  },
-};
-
-export const WithNavigation: Story = {
-  args: {
-    bottomOffset: 0,
-    override: { kind: 'content', content: SAMPLE_TS },
-    initialIndex: 1,
-    event: baseEvent, // unused — `events` takes over
-    absolutePath: null,
-    events: [
-      {
-        event: {
-          id: 'evt-1',
-          name: 'work-queue.enqueue',
-          label: 'WorkQueue.enqueue',
-          type: 'method',
-          participant: 'WorkQueue',
-          sourcePath: 'src/WorkQueue.ts',
-          snippet: { startLine: 14, endLine: 21, focusLine: 19, contextLines: 2 },
-        },
-        absolutePath: '/mock/repo/src/WorkQueue.ts',
-      },
-      {
-        event: {
-          id: 'evt-2',
-          name: 'work-queue.dequeue',
-          label: 'WorkQueue.dequeue',
-          type: 'method',
-          participant: 'WorkQueue',
-          sourcePath: 'src/WorkQueue.ts',
-          snippet: { startLine: 24, endLine: 30, focusLine: 26, contextLines: 2 },
-        },
-        absolutePath: '/mock/repo/src/WorkQueue.ts',
-      },
-      {
-        event: {
-          id: 'evt-3',
-          name: 'work-queue.id',
-          label: 'cryptoRandomId()',
-          type: 'function',
-          participant: 'WorkQueue',
-          sourcePath: 'src/WorkQueue.ts',
-          snippet: { startLine: 33, endLine: 35, focusLine: 34, contextLines: 2 },
-        },
-        absolutePath: '/mock/repo/src/WorkQueue.ts',
-      },
-    ],
-  },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Three-event sequence with prev/next chevrons in the top bar. Use the buttons or `Alt+←` / `Alt+→` to step through; the position pill shows `n / total`. Boundary buttons render disabled.',
       },
     },
   },

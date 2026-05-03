@@ -181,7 +181,10 @@ export const SequenceLeaderLine = React.forwardRef<
         inset: 0,
         pointerEvents: 'none',
         overflow: 'visible',
-        zIndex: 2000,
+        // Above the 3D canvas (auto z-index) but below the sequence drawer
+        // (z 30) and the floating overlays (z 1900), so the line only paints
+        // over the city map — not the diagram or panels.
+        zIndex: 25,
       }}
     >
       <path
