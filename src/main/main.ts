@@ -135,6 +135,23 @@ async function handleDeepLink(url: string): Promise<void> {
 // Security: Disable remote module
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 
+// Dev-only: enable Chrome DevTools Protocol so memory/CPU can be inspected via curl/CDP.
+// Renderer side uses Chromium's remote-debugging-port; main process uses Node's inspector.
+// Set ELECTRON_DEBUG_PORT / ELECTRON_INSPECT_PORT to override.
+if (process.env.NODE_ENV === 'development') {
+  const debugPort = process.env.ELECTRON_DEBUG_PORT ?? '9222';
+  app.commandLine.appendSwitch('remote-debugging-port', debugPort);
+
+  const inspectPort = Number(process.env.ELECTRON_INSPECT_PORT ?? '9223');
+  const { open: openInspector } = require('node:inspector') as typeof import('node:inspector');
+  try {
+    openInspector(inspectPort);
+    console.info(`[Main] Node inspector listening on ws://localhost:${inspectPort}`);
+  } catch (err) {
+    console.warn('[Main] Could not open inspector:', err);
+  }
+}
+
 // Register as the default protocol handler for principal-ade:// URLs
 // This allows web-ade to open the desktop app with deep links
 const PROTOCOL_NAME = 'principal-ade';

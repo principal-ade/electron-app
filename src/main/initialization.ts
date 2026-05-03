@@ -267,7 +267,11 @@ const registerAllIpcHandlers = async () => {
   setupShellHandlers();
   registerDockerHandlers();
   registerOptimizedDockerHandlers();
-  registerDocumentSearchHandlers();
+  if (process.env.ENABLE_DOC_INDEX === 'true') {
+    registerDocumentSearchHandlers();
+  } else {
+    console.info('[Init] Document search handlers disabled (set ENABLE_DOC_INDEX=true to enable)');
+  }
 
   // LLM Models handlers have been removed
   const typedStore = await getTypedStorageManager();
