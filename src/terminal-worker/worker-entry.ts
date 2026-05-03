@@ -148,6 +148,7 @@ interface PtyModule {
 // Scrollback buffer settings for legacy mode
 const SCROLLBACK_MAX_CHUNKS = 10000; // Max number of data chunks to store
 const SCROLLBACK_TRIM_TO = 5000; // Trim to this many chunks when limit is exceeded
+const SCROLLBACK_MAX_BYTES = 10 * 1024 * 1024; // 10 MB per session — drops oldest chunks once exceeded
 
 // Session state
 interface TerminalSession {
@@ -159,6 +160,7 @@ interface TerminalSession {
   createdAt: number;
   lastActivity: number;
   scrollback: string[]; // Stores PTY output for replay on reconnection (legacy mode)
+  scrollbackBytes: number; // Tracked byte size of scrollback for cap enforcement
 }
 
 // State
@@ -346,6 +348,7 @@ async function connectToDaemon(_socketPath: string): Promise<void> {
           createdAt: new Date(info.createdAt).getTime(),
           lastActivity: new Date(info.lastActivity).getTime(),
           scrollback: [], // Not used in daemon mode (daemon handles scrollback)
+          scrollbackBytes: 0,
         };
         sessions.set(info.id, session);
         sessionPorts.set(info.id, new Map());
@@ -430,6 +433,7 @@ function createSessionLegacy(
       createdAt: now,
       lastActivity: now,
       scrollback: [], // Initialize scrollback buffer
+      scrollbackBytes: 0,
     };
 
     sessions.set(sessionId, session);
@@ -440,10 +444,18 @@ function createSessionLegacy(
 
       // Store output in scrollback buffer for replay on reconnection
       session.scrollback.push(data);
+      session.scrollbackBytes += data.length;
 
-      // Trim scrollback if it exceeds the limit
+      // Trim by chunk count
       if (session.scrollback.length > SCROLLBACK_MAX_CHUNKS) {
-        session.scrollback = session.scrollback.slice(-SCROLLBACK_TRIM_TO);
+        const dropped = session.scrollback.splice(0, session.scrollback.length - SCROLLBACK_TRIM_TO);
+        for (const chunk of dropped) session.scrollbackBytes -= chunk.length;
+      }
+
+      // Trim by byte size — drop oldest chunks until under the cap
+      while (session.scrollbackBytes > SCROLLBACK_MAX_BYTES && session.scrollback.length > 1) {
+        const dropped = session.scrollback.shift();
+        if (dropped) session.scrollbackBytes -= dropped.length;
       }
 
       sendToRenderer(sessionId, data);
@@ -526,6 +538,7 @@ async function createSessionDaemon(
       createdAt: now,
       lastActivity: now,
       scrollback: [], // Not used in daemon mode (daemon handles scrollback)
+      scrollbackBytes: 0,
     };
     sessions.set(sessionId, session);
     sessionPorts.set(sessionId, new Map());
