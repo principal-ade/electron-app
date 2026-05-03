@@ -325,7 +325,7 @@ export const CollectionRepoCard: React.FC<CollectionRepoCardProps> = ({
             canvasBackgroundColor={theme.colors.background}
             defaultBuildingColor={theme.colors.backgroundSecondary}
             defaultDirectoryColor={theme.colors.background}
-            maxCanvasSize={4096}
+            maxCanvasSize={1024}
           />
         ) : treeLoading ? (
           <div

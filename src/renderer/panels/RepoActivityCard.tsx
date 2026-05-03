@@ -679,7 +679,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               fullSize
               showFileNames={false}
               canvasBackgroundColor={theme.colors.background}
-              maxCanvasSize={4096}
+              maxCanvasSize={1024}
             />
           ) : (
             <FolderGit2 size={64} color={theme.colors.textMuted} style={{ opacity: 0.3 }} />

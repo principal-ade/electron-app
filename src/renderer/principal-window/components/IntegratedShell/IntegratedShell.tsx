@@ -572,9 +572,7 @@ export const IntegratedShell: React.FC = () => {
             {activeView === 'processes' && <LocalhostProcessesView />}
             {activeView === 'connections' && <ConnectionsView />}
             {activeView === 'skills' && <SkillBrowserView />}
-            <div style={{ display: activeView === 'activity-cities' ? 'flex' : 'none', flex: 1, flexDirection: 'column' }}>
-              <ActivityCitiesPanel />
-            </div>
+            {activeView === 'activity-cities' && <ActivityCitiesPanel />}
             {activeView === 'online-users' && <OnlineUsersPanel />}
           </div>
         </div>

@@ -3245,6 +3245,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               showFileTypeIcons={true}
               showDirectoryLabels={true}
               fullSize={true}
+              maxCanvasSize={2048}
             />
           ) : (
             <div
