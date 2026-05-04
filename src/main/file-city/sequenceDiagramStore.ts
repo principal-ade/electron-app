@@ -11,12 +11,24 @@ import { BrowserWindow, ipcMain } from 'electron';
 import * as crypto from 'crypto';
 import {
   FileCitySequenceEvent,
+  SequenceDiagramShareError,
+  type FileCitySequenceFetchSharedResult,
+  type FileCitySequenceShareResult,
   type SequenceDiagramIndexEntry,
+  type SequenceDiagramListSharedOptions,
+  type SequenceDiagramListSharedResult,
   type SequenceDiagramPayload,
+  type SequenceDiagramShareEnvelope,
+  type SequenceDiagramShareOptions,
   type SequenceNote,
   type SequenceNoteDraft,
 } from '../../shared/main-process-api-interfaces/FileCitySequenceAPI';
 import { SequenceDiagramPersistence } from './sequenceDiagramPersistence';
+import {
+  fetchSharedSequenceDiagram,
+  listSharedSequenceDiagrams,
+  shareSequenceDiagram,
+} from './sequenceDiagramShare';
 
 export interface SetOptions {
   /** Whether to broadcast PAYLOAD_SET and mark the entry active. Default true. */
@@ -162,6 +174,65 @@ export class SequenceDiagramStore {
     }
     broadcast(FileCitySequenceEvent.PAYLOAD_SET, updated);
   }
+
+  share(
+    id: string,
+    options?: SequenceDiagramShareOptions,
+  ): Promise<FileCitySequenceShareResult> {
+    return shareSequenceDiagram(
+      { loadPayload: (payloadId) => this.persistence.loadById(payloadId) },
+      id,
+      options,
+    );
+  }
+
+  listShared(
+    options?: SequenceDiagramListSharedOptions,
+  ): Promise<SequenceDiagramListSharedResult> {
+    return listSharedSequenceDiagrams(options);
+  }
+
+  fetchShared(
+    owner: string,
+    repo: string,
+    id: string,
+  ): Promise<FileCitySequenceFetchSharedResult> {
+    return fetchSharedSequenceDiagram(owner, repo, id);
+  }
+
+  setTransient(payload: SequenceDiagramPayload): { broadcastTo: number } {
+    const broadcastTo = broadcast(FileCitySequenceEvent.PAYLOAD_SET, payload);
+    return { broadcastTo };
+  }
+}
+
+/**
+ * Wrap a thrown SequenceDiagramShareError into the IPC envelope so the typed
+ * code survives structured-clone serialization across the preload boundary.
+ * Anything else gets the generic WEB_ADE_ERROR bucket so the renderer always
+ * has a code to switch on.
+ */
+async function shareEnvelope<T>(
+  fn: () => Promise<T>,
+): Promise<SequenceDiagramShareEnvelope<T>> {
+  try {
+    return { ok: true, value: await fn() };
+  } catch (err) {
+    if (err instanceof SequenceDiagramShareError) {
+      return {
+        ok: false,
+        code: err.code,
+        message: err.message,
+        details: err.details,
+      };
+    }
+    console.error('[SequenceDiagramStore] share IPC failed', err);
+    return {
+      ok: false,
+      code: 'WEB_ADE_ERROR',
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
 
 function broadcast(eventName: FileCitySequenceEvent, payload: unknown): number {
@@ -218,6 +289,27 @@ export function registerSequenceDiagramHandlers(): void {
     FileCitySequenceEvent.NOTE_DELETE,
     async (_event, payloadId: string, noteId: string) => {
       await store.deleteNote(payloadId, noteId);
+    },
+  );
+  ipcMain.handle(
+    FileCitySequenceEvent.SHARE,
+    (_event, id: string, options: SequenceDiagramShareOptions | null) =>
+      shareEnvelope(() => store.share(id, options ?? undefined)),
+  );
+  ipcMain.handle(
+    FileCitySequenceEvent.LIST_SHARED,
+    (_event, options: SequenceDiagramListSharedOptions | null) =>
+      shareEnvelope(() => store.listShared(options ?? undefined)),
+  );
+  ipcMain.handle(
+    FileCitySequenceEvent.FETCH_SHARED,
+    (_event, owner: string, repo: string, id: string) =>
+      shareEnvelope(() => store.fetchShared(owner, repo, id)),
+  );
+  ipcMain.handle(
+    FileCitySequenceEvent.SET_TRANSIENT,
+    (_event, payload: SequenceDiagramPayload) => {
+      store.setTransient(payload);
     },
   );
 }

@@ -1,12 +1,28 @@
 import { ipcRenderer } from 'electron';
 import {
   FileCitySequenceEvent,
+  SequenceDiagramShareError,
   type FileCitySequenceAPI,
+  type FileCitySequenceFetchSharedResult,
+  type FileCitySequenceShareResult,
   type SequenceDiagramIndexEntry,
+  type SequenceDiagramListSharedOptions,
+  type SequenceDiagramListSharedResult,
   type SequenceDiagramPayload,
+  type SequenceDiagramShareEnvelope,
+  type SequenceDiagramShareOptions,
   type SequenceNote,
   type SequenceNoteDraft,
 } from '../../shared/main-process-api-interfaces/FileCitySequenceAPI';
+
+const unwrapShare = <T>(envelope: SequenceDiagramShareEnvelope<T>): T => {
+  if (envelope.ok) return envelope.value;
+  throw new SequenceDiagramShareError(
+    envelope.code,
+    envelope.message,
+    envelope.details,
+  );
+};
 
 export const fileCitySequenceAPI: FileCitySequenceAPI = {
   getCurrent: async (
@@ -108,5 +124,44 @@ export const fileCitySequenceAPI: FileCitySequenceAPI = {
       payloadId,
       noteId,
     );
+  },
+
+  share: async (
+    id: string,
+    options?: SequenceDiagramShareOptions,
+  ): Promise<FileCitySequenceShareResult> => {
+    const envelope: SequenceDiagramShareEnvelope<FileCitySequenceShareResult> =
+      await ipcRenderer.invoke(FileCitySequenceEvent.SHARE, id, options ?? null);
+    return unwrapShare(envelope);
+  },
+
+  listShared: async (
+    options?: SequenceDiagramListSharedOptions,
+  ): Promise<SequenceDiagramListSharedResult> => {
+    const envelope: SequenceDiagramShareEnvelope<SequenceDiagramListSharedResult> =
+      await ipcRenderer.invoke(
+        FileCitySequenceEvent.LIST_SHARED,
+        options ?? null,
+      );
+    return unwrapShare(envelope);
+  },
+
+  fetchShared: async (
+    owner: string,
+    repo: string,
+    id: string,
+  ): Promise<FileCitySequenceFetchSharedResult> => {
+    const envelope: SequenceDiagramShareEnvelope<FileCitySequenceFetchSharedResult> =
+      await ipcRenderer.invoke(
+        FileCitySequenceEvent.FETCH_SHARED,
+        owner,
+        repo,
+        id,
+      );
+    return unwrapShare(envelope);
+  },
+
+  setTransient: async (payload: SequenceDiagramPayload): Promise<void> => {
+    await ipcRenderer.invoke(FileCitySequenceEvent.SET_TRANSIENT, payload);
   },
 };

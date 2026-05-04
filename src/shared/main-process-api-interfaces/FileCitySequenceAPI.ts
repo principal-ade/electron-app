@@ -26,6 +26,10 @@ export enum FileCitySequenceEvent {
   NOTE_CREATE = 'file-city:sequence-diagram:note-create',
   NOTE_UPDATE = 'file-city:sequence-diagram:note-update',
   NOTE_DELETE = 'file-city:sequence-diagram:note-delete',
+  SHARE = 'file-city:sequence-diagram:share',
+  LIST_SHARED = 'file-city:sequence-diagram:list-shared',
+  FETCH_SHARED = 'file-city:sequence-diagram:fetch-shared',
+  SET_TRANSIENT = 'file-city:sequence-diagram:set-transient',
 }
 
 /**
@@ -162,6 +166,140 @@ export interface SequenceDiagramIndexEntry {
   createdAt: string;
   updatedAt: string;
   sizeBytes: number;
+}
+
+/**
+ * Shared-payload manifest entry returned by web-ade. Mirrors the on-disk
+ * `SequenceDiagramIndexEntry` plus the GitHub identity that uploaded the
+ * record. Type duplication with web-ade is expected until a shared package
+ * lands — see the doc.
+ */
+export interface SharedSequenceDiagramIndexEntry {
+  id: string;
+  title?: string;
+  summaryPreview?: string;
+  eventCount: number;
+  hasDiffSnippets: boolean;
+  createdBy: { githubId: number; githubLogin: string };
+  /** GitHub numeric repo id at upload time, used as a rename-stable backstop. */
+  githubRepoId: number;
+  createdAt: string;
+  updatedAt: string;
+  sizeBytes: number;
+}
+
+export interface FileCitySequenceShareResult {
+  url: string;
+  id: string;
+  entry: SharedSequenceDiagramIndexEntry;
+}
+
+export interface SequenceDiagramListSharedResult {
+  /**
+   * Resolved owner/repo for the listing. Returned so the renderer can call
+   * `fetchShared` later without a separate origin-resolution round trip.
+   */
+  origin: { owner: string; repo: string };
+  entries: SharedSequenceDiagramIndexEntry[];
+}
+
+/**
+ * Fully-qualified locator for a shared payload on web-ade. Together with the
+ * payload itself this is what the renderer needs to render a shared row +
+ * activate it on click.
+ */
+export interface FileCitySequenceFetchSharedResult {
+  entry: SharedSequenceDiagramIndexEntry;
+  payload: SequenceDiagramPayload;
+}
+
+export type SequenceDiagramShareErrorCode =
+  /** Repo at `repositoryPath` has no GitHub remote — share/list/fetch unavailable. */
+  | 'NO_GITHUB_REMOTE'
+  /** No GitHub token in secure storage — user needs to sign in. */
+  | 'NO_GITHUB_TOKEN'
+  /** Local payload id not found on disk. */
+  | 'PAYLOAD_NOT_FOUND'
+  /**
+   * Bake step found diff snippets pointing at files that no longer exist on
+   * disk. Caller should confirm and retry with `allowMissing: true`.
+   * `details.missing` carries the human-readable list.
+   */
+  | 'MISSING_FILES_NEEDS_CONFIRM'
+  /** Baked payload exceeds the 10 MB cap web-ade enforces. */
+  | 'PAYLOAD_TOO_LARGE'
+  /** Web-ade said the requester lacks GitHub read access to the repo. */
+  | 'NO_REPO_ACCESS'
+  /** Web-ade returned 404 for the listing or single-fetch by id. */
+  | 'SHARE_NOT_FOUND'
+  /** Web-ade rejected a snippet for being neither baked nor `gitRef`-tagged. */
+  | 'SNIPPET_NOT_BAKED'
+  /** Network/timeout reaching web-ade. */
+  | 'NETWORK_ERROR'
+  /** Web-ade returned a non-OK response that doesn't map to one of the above. */
+  | 'WEB_ADE_ERROR';
+
+/**
+ * Typed error thrown by `share` / `listShared` / `fetchShared`. Lives in the
+ * shared package so renderer code can `instanceof`-discriminate without
+ * importing from main. The preload layer rehydrates this from the IPC
+ * `{ ok: false, code, message, details? }` envelope.
+ */
+export class SequenceDiagramShareError extends Error {
+  public readonly code: SequenceDiagramShareErrorCode;
+  public readonly details?: unknown;
+
+  constructor(
+    code: SequenceDiagramShareErrorCode,
+    message: string,
+    details?: unknown,
+  ) {
+    super(message);
+    this.name = 'SequenceDiagramShareError';
+    this.code = code;
+    this.details = details;
+  }
+}
+
+/**
+ * IPC-safe envelope used by share/list-shared/fetch-shared handlers.
+ * Errors thrown inside the handler are converted to the `{ ok: false }` arm
+ * so the typed code survives structured-clone serialization. The preload
+ * unwraps and re-throws as `SequenceDiagramShareError`.
+ */
+export type SequenceDiagramShareEnvelope<T> =
+  | { ok: true; value: T }
+  | {
+      ok: false;
+      code: SequenceDiagramShareErrorCode;
+      message: string;
+      details?: unknown;
+    };
+
+export interface SequenceDiagramShareOptions {
+  /** Override the git-remote-derived owner. Sanity-checked against the regex. */
+  owner?: string;
+  /** Override the git-remote-derived repo. Sanity-checked against the regex. */
+  repo?: string;
+  /**
+   * Repo path the share is for. Required when the renderer can't infer it
+   * from the payload (`payload.repositoryPath` may be absent for repo-
+   * agnostic entries). When supplied this is what the bake step + git-remote
+   * lookup runs against.
+   */
+  repositoryPath?: string;
+  /**
+   * If true, accept missing files during the bake step rather than throwing
+   * `MISSING_FILES_NEEDS_CONFIRM`. Used as the user's confirmation retry.
+   */
+  allowMissing?: boolean;
+}
+
+export interface SequenceDiagramListSharedOptions {
+  owner?: string;
+  repo?: string;
+  /** Required when the renderer doesn't already have owner/repo in scope. */
+  repositoryPath?: string;
 }
 
 /**
@@ -323,4 +461,51 @@ export interface FileCitySequenceAPI {
 
   /** Delete a note. Re-broadcasts PAYLOAD_SET. */
   deleteNote: (payloadId: string, noteId: string) => Promise<void>;
+
+  /**
+   * Publish a saved payload to web-ade so anyone with GitHub read access to
+   * the same repo can view it. Bakes diff-snippet `newContents` from disk
+   * before posting. Resolves owner/repo from the local git remote when
+   * `options.owner`/`options.repo` aren't supplied.
+   *
+   * Throws `SequenceDiagramShareError` for typed failures (no remote, no
+   * token, missing files, no repo access, payload too large, network).
+   */
+  share: (
+    id: string,
+    options?: SequenceDiagramShareOptions,
+  ) => Promise<FileCitySequenceShareResult>;
+
+  /**
+   * List shared payloads for the current repo as known to web-ade. Resolves
+   * owner/repo from the local git remote when not supplied. Returns an empty
+   * array (not an error) when there's no GitHub remote, no token, or web-ade
+   * has no shares yet — those are expected non-error states for sidebar
+   * rendering.
+   *
+   * Throws `SequenceDiagramShareError` for `NO_REPO_ACCESS` and other web-ade
+   * failures so the panel can surface a retry affordance.
+   */
+  listShared: (
+    options?: SequenceDiagramListSharedOptions,
+  ) => Promise<SequenceDiagramListSharedResult>;
+
+  /**
+   * Hydrate a single shared payload by id. Used when the user clicks a row
+   * in the "Shared with this repo" section. Throws `SequenceDiagramShareError`
+   * with `SHARE_NOT_FOUND` on 404.
+   */
+  fetchShared: (
+    owner: string,
+    repo: string,
+    id: string,
+  ) => Promise<FileCitySequenceFetchSharedResult>;
+
+  /**
+   * Broadcast a payload to all open File City panels via PAYLOAD_SET without
+   * persisting it to the local manifest. Used to "preview" a payload that
+   * lives elsewhere (e.g. just hydrated from web-ade) without polluting the
+   * local library with shared records the user didn't author.
+   */
+  setTransient: (payload: SequenceDiagramPayload) => Promise<void>;
 }
