@@ -25,6 +25,46 @@ const INDEX_FILENAME = 'index.json';
 const SUMMARY_PREVIEW_MAX = 200;
 const PER_REPO_CAP = 50;
 
+/**
+ * Migrate legacy single-line slice anchors (`{ lineNumber, lineText }`) to the
+ * current ranges-array shape. Idempotent — payloads already in the new shape
+ * pass through untouched. Run on every load so existing on-disk notes keep
+ * working without a one-shot migration script.
+ */
+function migrateNoteAnchors(
+  payload: SequenceDiagramPayload,
+): SequenceDiagramPayload {
+  if (!payload.notes || payload.notes.length === 0) return payload;
+  let touched = false;
+  const migrated = payload.notes.map((note) => {
+    if (note.kind !== 'snippet') return note;
+    const anchor = note.anchor as
+      | { kind: 'slice'; ranges?: unknown; lineNumber?: number; lineText?: string }
+      | { kind: 'diff' };
+    if (anchor.kind !== 'slice') return note;
+    if (Array.isArray(anchor.ranges)) return note;
+    const lineNumber =
+      typeof anchor.lineNumber === 'number' ? anchor.lineNumber : 1;
+    const lineText = typeof anchor.lineText === 'string' ? anchor.lineText : '';
+    touched = true;
+    return {
+      ...note,
+      anchor: {
+        kind: 'slice' as const,
+        ranges: [
+          {
+            startLine: lineNumber,
+            endLine: lineNumber,
+            startLineText: lineText,
+            endLineText: lineText,
+          },
+        ],
+      },
+    };
+  });
+  return touched ? { ...payload, notes: migrated } : payload;
+}
+
 export const ACTIVE_DEFAULT_KEY = '__default__';
 
 interface IndexFileV1 {
@@ -146,7 +186,8 @@ export class SequenceDiagramPersistence {
     );
     try {
       const raw = await fs.readFile(file, 'utf8');
-      return JSON.parse(raw) as SequenceDiagramPayload;
+      const parsed = JSON.parse(raw) as SequenceDiagramPayload;
+      return migrateNoteAnchors(parsed);
     } catch (err) {
       console.error(
         '[SequenceDiagramPersistence] Failed to load payload',
@@ -175,12 +216,23 @@ export class SequenceDiagramPersistence {
     const existingIdx = idx.entries.findIndex((e) => e.id === id);
     const existing = existingIdx >= 0 ? idx.entries[existingIdx] : null;
 
+    // Lift notes from the existing payload on disk so external re-pushes
+    // (which never carry `notes` — validation strips them) don't wipe
+    // user-authored notes. Renderer-driven note mutations go through
+    // `applyToPayload`, which writes notes onto the same on-disk record.
+    let preservedNotes = incoming.notes;
+    if (preservedNotes === undefined && existing) {
+      const onDisk = await this.loadById(id);
+      preservedNotes = onDisk?.notes;
+    }
+
     const payload: SequenceDiagramPayload & {
       id: string;
       createdAt: string;
       updatedAt: string;
     } = {
       ...incoming,
+      notes: preservedNotes,
       id,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
@@ -207,6 +259,63 @@ export class SequenceDiagramPersistence {
 
     await this.persistIndex();
     return { payload, evictedIds };
+  }
+
+  /**
+   * Load a payload by id, run a mutator, write the result back, and refresh
+   * the index entry. Does not change active state. Used by note CRUD so the
+   * renderer can mutate `payload.notes` without going through `save` (which
+   * carries different semantics around timestamps + activation).
+   */
+  async applyToPayload(
+    id: string,
+    mutator: (
+      payload: SequenceDiagramPayload & {
+        id: string;
+        createdAt: string;
+        updatedAt: string;
+      },
+    ) => SequenceDiagramPayload,
+  ): Promise<SequenceDiagramPayload | null> {
+    const idx = await this.getIndex();
+    const existingIdx = idx.entries.findIndex((e) => e.id === id);
+    if (existingIdx < 0) return null;
+    const existing = idx.entries[existingIdx];
+    const onDisk = await this.loadById(id);
+    if (!onDisk) return null;
+    const now = new Date().toISOString();
+    const stamped = {
+      ...onDisk,
+      id,
+      createdAt: onDisk.createdAt ?? existing.createdAt,
+      updatedAt: onDisk.updatedAt ?? existing.updatedAt,
+    } as SequenceDiagramPayload & {
+      id: string;
+      createdAt: string;
+      updatedAt: string;
+    };
+    const mutated = mutator(stamped);
+    const next: SequenceDiagramPayload & {
+      id: string;
+      createdAt: string;
+      updatedAt: string;
+    } = {
+      ...mutated,
+      id,
+      createdAt: stamped.createdAt,
+      updatedAt: now,
+    };
+    const subdir = subdirFor(next.repositoryPath);
+    await fs.mkdir(path.join(this.baseDir, subdir), { recursive: true });
+    const file = path.join(this.baseDir, subdir, `${id}.json`);
+    const serialized = JSON.stringify(next, null, 2);
+    await fs.writeFile(file, serialized, 'utf8');
+    idx.entries[existingIdx] = buildEntry(
+      next,
+      Buffer.byteLength(serialized, 'utf8'),
+    );
+    await this.persistIndex();
+    return next;
   }
 
   async setActive(id: string): Promise<SequenceDiagramPayload | null> {

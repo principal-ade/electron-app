@@ -8,10 +8,13 @@
  */
 
 import { BrowserWindow, ipcMain } from 'electron';
+import * as crypto from 'crypto';
 import {
   FileCitySequenceEvent,
   type SequenceDiagramIndexEntry,
   type SequenceDiagramPayload,
+  type SequenceNote,
+  type SequenceNoteDraft,
 } from '../../shared/main-process-api-interfaces/FileCitySequenceAPI';
 import { SequenceDiagramPersistence } from './sequenceDiagramPersistence';
 
@@ -104,6 +107,61 @@ export class SequenceDiagramStore {
   }> {
     return this.persistence.listEntries(repositoryPath);
   }
+
+  async createNote(
+    payloadId: string,
+    draft: SequenceNoteDraft,
+  ): Promise<SequenceNote> {
+    const now = new Date().toISOString();
+    const note: SequenceNote = {
+      ...draft,
+      id: `note-${crypto.randomUUID()}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const updated = await this.persistence.applyToPayload(payloadId, (p) => ({
+      ...p,
+      notes: [...(p.notes ?? []), note],
+    }));
+    if (!updated) {
+      throw new Error(`payload ${payloadId} not found`);
+    }
+    broadcast(FileCitySequenceEvent.PAYLOAD_SET, updated);
+    return note;
+  }
+
+  async updateNote(
+    payloadId: string,
+    noteId: string,
+    body: string,
+  ): Promise<SequenceNote> {
+    let edited: SequenceNote | null = null;
+    const updated = await this.persistence.applyToPayload(payloadId, (p) => {
+      const existing = (p.notes ?? []).find((n) => n.id === noteId);
+      if (!existing) return p;
+      edited = { ...existing, body, updatedAt: new Date().toISOString() };
+      return {
+        ...p,
+        notes: (p.notes ?? []).map((n) => (n.id === noteId ? edited! : n)),
+      };
+    });
+    if (!updated || !edited) {
+      throw new Error(`note ${noteId} not found on payload ${payloadId}`);
+    }
+    broadcast(FileCitySequenceEvent.PAYLOAD_SET, updated);
+    return edited;
+  }
+
+  async deleteNote(payloadId: string, noteId: string): Promise<void> {
+    const updated = await this.persistence.applyToPayload(payloadId, (p) => ({
+      ...p,
+      notes: (p.notes ?? []).filter((n) => n.id !== noteId),
+    }));
+    if (!updated) {
+      throw new Error(`payload ${payloadId} not found`);
+    }
+    broadcast(FileCitySequenceEvent.PAYLOAD_SET, updated);
+  }
 }
 
 function broadcast(eventName: FileCitySequenceEvent, payload: unknown): number {
@@ -146,4 +204,20 @@ export function registerSequenceDiagramHandlers(): void {
   ipcMain.handle(FileCitySequenceEvent.DELETE, async (_event, id: string) => {
     await store.delete(id);
   });
+  ipcMain.handle(
+    FileCitySequenceEvent.NOTE_CREATE,
+    (_event, payloadId: string, draft: SequenceNoteDraft) =>
+      store.createNote(payloadId, draft),
+  );
+  ipcMain.handle(
+    FileCitySequenceEvent.NOTE_UPDATE,
+    (_event, payloadId: string, noteId: string, body: string) =>
+      store.updateNote(payloadId, noteId, body),
+  );
+  ipcMain.handle(
+    FileCitySequenceEvent.NOTE_DELETE,
+    async (_event, payloadId: string, noteId: string) => {
+      await store.deleteNote(payloadId, noteId);
+    },
+  );
 }

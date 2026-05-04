@@ -2,10 +2,39 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ExternalLink } from 'lucide-react';
 
-import type { FileCitySequenceEventDef } from '../../../shared/main-process-api-interfaces/FileCitySequenceAPI';
+import type {
+  FileCitySequenceEventDef,
+  SequenceNote,
+} from '../../../shared/main-process-api-interfaces/FileCitySequenceAPI';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
+import { SequenceNotesService } from '../../services/SequenceNotesService';
 import { PierreSnippetView } from './PierreSnippetView';
 import { PierreSnippetDiffView } from './PierreSnippetDiffView';
+import {
+  SnippetNotePanel,
+  computeThreadKey,
+  type ComposerRange,
+  type SnippetNote,
+  type SnippetUiRange,
+  type NotesSelection,
+} from './SnippetNotes';
+
+const toUiNote = (n: SequenceNote): SnippetNote | null => {
+  if (n.kind !== 'snippet') return null;
+  if (n.anchor.kind !== 'slice') return null; // diff anchor support comes later
+  const ranges: SnippetUiRange[] = n.anchor.ranges.map((r) => ({
+    startLine: r.startLine,
+    endLine: r.endLine,
+  }));
+  return {
+    id: n.id,
+    threadKey: computeThreadKey(ranges),
+    ranges,
+    body: n.body,
+    author: n.author,
+    createdAt: new Date(n.createdAt).getTime(),
+  };
+};
 
 export interface SequenceEventDetailOverlayProps {
   event: FileCitySequenceEventDef;
@@ -13,12 +42,19 @@ export interface SequenceEventDetailOverlayProps {
   absolutePath: string | null;
   /** Bottom inset (number → px, string → CSS) so the panel sits above the sequence drawer. */
   bottomOffset: number | string;
+  /** Stable id of the active payload — required to mutate notes. */
+  payloadId: string | undefined;
+  /** Notes attached to the active payload (overlay filters by event.id). */
+  payloadNotes: SequenceNote[] | undefined;
   onClose: () => void;
   onOpenInTab?: () => void;
 }
 
 const PANEL_WIDTH_PCT = 38;
 const FLOAT_INSET = 16;
+// Clears the FileCityExplorer focus bar (canvas mounts at top: 56) plus a
+// small gap so the overlay reads as "below the top chrome".
+const TOP_INSET = 72;
 const MIN_WIDTH_PX = 360;
 const MIN_LEFT_GAP_PX = 80;
 const RESIZE_HANDLE_WIDTH = 6;
@@ -27,7 +63,15 @@ export const SequenceEventDetailOverlay = React.forwardRef<
   HTMLDivElement,
   SequenceEventDetailOverlayProps
 >(function SequenceEventDetailOverlay(
-  { event, absolutePath, bottomOffset, onClose, onOpenInTab },
+  {
+    event,
+    absolutePath,
+    bottomOffset,
+    payloadId,
+    payloadNotes,
+    onClose,
+    onOpenInTab,
+  },
   forwardedRef,
 ) {
   const { theme } = useTheme();
@@ -59,6 +103,179 @@ export const SequenceEventDetailOverlay = React.forwardRef<
   const [widthPx, setWidthPx] = React.useState<number | null>(null);
   const [isResizing, setIsResizing] = React.useState(false);
   const [hasEntered, setHasEntered] = React.useState(false);
+
+  // Notes filtered to this event + projected to the UI shape consumed by
+  // SnippetNoteIndicator / SnippetNotePanel. Diff-anchor notes are dropped
+  // for now — slice-only is what PierreSnippetView wires up.
+  const notes = React.useMemo<SnippetNote[]>(() => {
+    if (!payloadNotes) return [];
+    return payloadNotes
+      .filter(
+        (n): n is SequenceNote & { kind: 'snippet' } =>
+          n.kind === 'snippet' && n.scope.eventId === event.id,
+      )
+      .map(toUiNote)
+      .filter((n): n is SnippetNote => n != null);
+  }, [payloadNotes, event.id]);
+
+  const [notesSelection, setNotesSelection] =
+    React.useState<NotesSelection | null>(null);
+  React.useEffect(() => {
+    setNotesSelection(null);
+  }, [event.id]);
+
+  const composerOpen = notesSelection?.kind === 'composer';
+
+  /**
+   * Append a range to the in-progress composer (or open one if none active).
+   * Same range (matching start+end) is a no-op so dragging twice over the
+   * same span doesn't add duplicate chips. Removing a range is its inverse.
+   */
+  const appendComposerRange = React.useCallback((range: ComposerRange) => {
+    setNotesSelection((prev) => {
+      if (prev?.kind !== 'composer') {
+        return { kind: 'composer', ranges: [range] };
+      }
+      const exists = prev.ranges.some(
+        (r) => r.startLine === range.startLine && r.endLine === range.endLine,
+      );
+      if (exists) return prev;
+      return { kind: 'composer', ranges: [...prev.ranges, range] };
+    });
+  }, []);
+
+  const removeComposerRange = React.useCallback((range: SnippetUiRange) => {
+    setNotesSelection((prev) => {
+      if (prev?.kind !== 'composer') return prev;
+      const next = prev.ranges.filter(
+        (r) =>
+          !(r.startLine === range.startLine && r.endLine === range.endLine),
+      );
+      if (next.length === 0) return null;
+      return { kind: 'composer', ranges: next };
+    });
+  }, []);
+
+  /** Pick fingerprint endpoints from an existing thread's anchor for replies. */
+  const lineTextsFromThread = React.useCallback(
+    (
+      threadKey: string,
+    ): { startLineText: string; endLineText: string }[] | null => {
+      const head = (payloadNotes ?? []).find(
+        (n) =>
+          n.kind === 'snippet' &&
+          n.scope.eventId === event.id &&
+          n.anchor.kind === 'slice' &&
+          computeThreadKey(
+            n.anchor.ranges.map((r) => ({
+              startLine: r.startLine,
+              endLine: r.endLine,
+            })),
+          ) === threadKey,
+      );
+      if (!head || head.anchor.kind !== 'slice') return null;
+      return head.anchor.ranges.map((r) => ({
+        startLineText: r.startLineText,
+        endLineText: r.endLineText,
+      }));
+    },
+    [payloadNotes, event.id],
+  );
+
+  const createSnippetNote = React.useCallback(
+    async (ranges: ComposerRange[], body: string) => {
+      if (!payloadId || ranges.length === 0) return;
+      await SequenceNotesService.create(payloadId, {
+        kind: 'snippet',
+        scope: { eventId: event.id },
+        anchor: {
+          kind: 'slice',
+          ranges: ranges.map((r) => ({
+            startLine: r.startLine,
+            endLine: r.endLine,
+            startLineText: r.startLineText,
+            endLineText: r.endLineText,
+          })),
+        },
+        body,
+        author: 'You',
+      });
+    },
+    [payloadId, event.id],
+  );
+
+  const handleSubmitNote = React.useCallback(
+    async (ranges: ComposerRange[], body: string) => {
+      await createSnippetNote(ranges, body);
+      const uiRanges: SnippetUiRange[] = ranges.map((r) => ({
+        startLine: r.startLine,
+        endLine: r.endLine,
+      }));
+      setNotesSelection({
+        kind: 'thread',
+        threadKey: computeThreadKey(uiRanges),
+      });
+    },
+    [createSnippetNote],
+  );
+
+  const handleReplyNote = React.useCallback(
+    async (threadKey: string, body: string) => {
+      // Replies share the head note's anchor — copy its ranges + fingerprints.
+      const fingerprints = lineTextsFromThread(threadKey);
+      const head = (payloadNotes ?? []).find(
+        (n) =>
+          n.kind === 'snippet' &&
+          n.scope.eventId === event.id &&
+          n.anchor.kind === 'slice' &&
+          computeThreadKey(
+            n.anchor.ranges.map((r) => ({
+              startLine: r.startLine,
+              endLine: r.endLine,
+            })),
+          ) === threadKey,
+      );
+      if (!head || head.anchor.kind !== 'slice' || !fingerprints) return;
+      const ranges: ComposerRange[] = head.anchor.ranges.map((r, i) => ({
+        startLine: r.startLine,
+        endLine: r.endLine,
+        startLineText: fingerprints[i]?.startLineText ?? r.startLineText,
+        endLineText: fingerprints[i]?.endLineText ?? r.endLineText,
+      }));
+      await createSnippetNote(ranges, body);
+    },
+    [lineTextsFromThread, payloadNotes, event.id, createSnippetNote],
+  );
+
+  const handleDeleteNote = React.useCallback(
+    async (id: string) => {
+      if (!payloadId) return;
+      await SequenceNotesService.remove(payloadId, id);
+    },
+    [payloadId],
+  );
+
+  // Detail-overlay width fed to the notes side panel so it docks just to the
+  // left of the snippet drawer and follows when the user drags the resizer.
+  const detailWidthCss =
+    widthPx != null
+      ? `${widthPx}px`
+      : `calc(${PANEL_WIDTH_PCT}% - ${FLOAT_INSET}px)`;
+  const NOTES_PANEL_WIDTH = 320;
+  const NOTES_PANEL_GAP = 12;
+  const notesPanelStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: TOP_INSET,
+    bottom: `calc(${bottomOffsetCss} + ${FLOAT_INSET}px)`,
+    width: NOTES_PANEL_WIDTH,
+    right: `calc(${detailWidthCss} + ${FLOAT_INSET}px + ${NOTES_PANEL_GAP}px)`,
+    // Above the markdown overlay (z 1900) so an open thread wins when the
+    // snippet drawer is dragged wide enough that the notes panel reaches the
+    // left side of the workspace. The leader-line dot (z 1901) anchors at the
+    // snippet drawer's right edge and doesn't share screen space with the
+    // notes panel, so their z order doesn't matter visually.
+    zIndex: 1950,
+  };
 
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -95,12 +312,13 @@ export const SequenceEventDetailOverlay = React.forwardRef<
   }, []);
 
   return (
+    <>
     <div
       ref={setRef}
       onAnimationEnd={() => setHasEntered(true)}
       style={{
         position: 'absolute',
-        top: FLOAT_INSET,
+        top: TOP_INSET,
         right: FLOAT_INSET,
         // Anchor the bottom edge (mirroring the markdown overlay) so the
         // panel has a *definite* height — otherwise transient placeholder
@@ -249,11 +467,36 @@ export const SequenceEventDetailOverlay = React.forwardRef<
             focusLine={snippet.focusLine}
             contextLines={snippet.contextLines}
             background={theme.colors.background}
+            notes={notes}
+            activeThreadKey={
+              notesSelection?.kind === 'thread'
+                ? notesSelection.threadKey
+                : null
+            }
+            composerOpen={composerOpen}
+            onOpenThread={(threadKey) =>
+              setNotesSelection({ kind: 'thread', threadKey })
+            }
+            onCloseThread={() => setNotesSelection(null)}
+            onOpenComposer={(input) => appendComposerRange(input)}
           />
         )}
       </div>
 
     </div>
+    {notesSelection && (
+      <SnippetNotePanel
+        selection={notesSelection}
+        notes={notes}
+        style={notesPanelStyle}
+        onClose={() => setNotesSelection(null)}
+        onSubmitNote={handleSubmitNote}
+        onReplyNote={handleReplyNote}
+        onDeleteNote={handleDeleteNote}
+        onRemoveComposerRange={removeComposerRange}
+      />
+    )}
+    </>
   );
 });
 

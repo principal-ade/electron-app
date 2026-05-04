@@ -1,7 +1,13 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { IndustryMarkdownSlide } from 'themed-markdown';
+import {
+  IndustryMarkdownSlide,
+  type Annotation,
+  type AnnotationSelection,
+} from 'themed-markdown';
+
+import { MarkdownSelectionPill } from './MarkdownNotes';
 
 export interface SequenceMarkdownOverlayProps {
   /** Small caps label shown above the title (e.g. "Overview", "Change notes"). */
@@ -20,10 +26,33 @@ export interface SequenceMarkdownOverlayProps {
   onPrev?: () => void;
   /** Called when the user clicks the next-event chevron. Omit to disable. */
   onNext?: () => void;
+
+  /** Inline annotations to render on the markdown body (highlights + badges). */
+  annotations?: Annotation[];
+  /** id of the annotation whose notes panel is currently open. */
+  activeAnnotationId?: string | null;
+  /** Click on a highlight → toggle its notes panel. */
+  onAnnotationClick?: (annotationId: string) => void;
+  /** Click the floating "Add note" pill on a fresh selection. */
+  onCreateNoteForSelection?: (anchor: {
+    exact: string;
+    prefix?: string;
+    suffix?: string;
+  }) => void;
+  /**
+   * While a composer is in progress the floating pill is suppressed — the
+   * selection highlight is owned by a draft annotation in `annotations`.
+   */
+  composerOpen?: boolean;
+  /** Forward a ref to the panel container so siblings can position relative to it. */
+  containerRef?: React.MutableRefObject<HTMLDivElement | null>;
 }
 
 const PANEL_WIDTH_PCT = 28;
 const FLOAT_INSET = 16;
+// Clears the FileCityExplorer focus bar (canvas mounts at top: 56) plus a
+// small gap so the overlay reads as "below the top chrome".
+const TOP_INSET = 72;
 const MIN_WIDTH_PX = 280;
 const RESIZE_HANDLE_WIDTH = 6;
 
@@ -36,6 +65,12 @@ export const SequenceMarkdownOverlay: React.FC<SequenceMarkdownOverlayProps> = (
   position,
   onPrev,
   onNext,
+  annotations,
+  activeAnnotationId,
+  onAnnotationClick,
+  onCreateNoteForSelection,
+  composerOpen,
+  containerRef: externalContainerRef,
 }) => {
   const { theme } = useTheme();
   const body = markdown.trim();
@@ -66,7 +101,44 @@ export const SequenceMarkdownOverlay: React.FC<SequenceMarkdownOverlayProps> = (
   const [isResizing, setIsResizing] = React.useState(false);
 
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const setContainerRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      containerRef.current = node;
+      if (externalContainerRef) externalContainerRef.current = node;
+    },
+    [externalContainerRef],
+  );
   const dragStateRef = React.useRef<{ startX: number; startWidth: number } | null>(null);
+
+  // Last non-null selection inside the markdown body. The floating pill
+  // anchors to its rect; clicking the pill bubbles the anchor up.
+  const [pendingSelection, setPendingSelection] =
+    React.useState<AnnotationSelection | null>(null);
+  const handleSelectionChange = React.useCallback(
+    (selection: AnnotationSelection | null) => {
+      setPendingSelection(selection);
+    },
+    [],
+  );
+  // themed-markdown is React.memo'd; pass a stable click handler so the
+  // slide doesn't re-mount on parent state churn.
+  const handleAnnotationClick = React.useCallback(
+    (annotationId: string) => {
+      onAnnotationClick?.(annotationId);
+    },
+    [onAnnotationClick],
+  );
+
+  // themed-markdown's default amber is too subtle on dark backgrounds — pin
+  // the highlight to the theme's primary color so it matches the snippet
+  // pill aesthetic and is unambiguously visible.
+  const annotationStyleVars = React.useMemo(
+    () => ({
+      backgroundColor: `color-mix(in srgb, ${theme.colors.primary} 22%, transparent)`,
+      activeBackgroundColor: `color-mix(in srgb, ${theme.colors.primary} 45%, transparent)`,
+    }),
+    [theme.colors.primary],
+  );
 
   const handleResizePointerDown = React.useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -118,11 +190,11 @@ export const SequenceMarkdownOverlay: React.FC<SequenceMarkdownOverlayProps> = (
 
   return (
     <div
-      ref={containerRef}
+      ref={setContainerRef}
       onAnimationEnd={() => setHasEntered(true)}
       style={{
         position: 'absolute',
-        top: FLOAT_INSET,
+        top: TOP_INSET,
         left: FLOAT_INSET,
         // Anchor the bottom edge too so the column has a *definite* height —
         // `IndustryMarkdownSlide` renders with `height: 100%` and only
@@ -231,8 +303,31 @@ export const SequenceMarkdownOverlay: React.FC<SequenceMarkdownOverlayProps> = (
             theme={theme}
             transparentBackground
             enableKeyboardScrolling={false}
+            annotations={annotations}
+            activeAnnotationId={activeAnnotationId ?? null}
+            onAnnotationClick={
+              onAnnotationClick ? handleAnnotationClick : undefined
+            }
+            onSelectionChange={
+              onCreateNoteForSelection ? handleSelectionChange : undefined
+            }
+            annotationStyle={annotationStyleVars}
           />
         </div>
+        {!composerOpen && pendingSelection && onCreateNoteForSelection && (
+          <MarkdownSelectionPill
+            rect={{
+              left: pendingSelection.rect.left,
+              top: pendingSelection.rect.top,
+              right: pendingSelection.rect.right,
+              bottom: pendingSelection.rect.bottom,
+            }}
+            onClick={() => {
+              onCreateNoteForSelection(pendingSelection.anchor);
+              setPendingSelection(null);
+            }}
+          />
+        )}
       </div>
 
       {position && position.index === 0 && onNext ? (

@@ -289,7 +289,7 @@
     "simple-peer": "^9.11.1",
     "socket.io-client": "^4.8.1",
     "stream-browserify": "^3.0.0",
-    "themed-markdown": "^0.1.83",
+    "themed-markdown": "^0.1.87",
     "three": "^0.172.0",
     "ts-json-schema-generator": "^2.4.0",
     "uuid": "^11.1.0",

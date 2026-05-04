@@ -44,8 +44,16 @@ export function useSequenceDiagram(
 
     const offSet = SequenceDiagramService.onPayloadSet((next) => {
       if (!matchesRepo(next, repositoryPath)) return;
-      setPayload(next);
-      setSelectedEventId(null);
+      // Only reset selection when the *active payload* changes (different
+      // id). Same-id broadcasts include note CRUD and external re-pushes —
+      // those just refresh content; the user shouldn't be kicked back to
+      // summary just because they added a comment.
+      setPayload((prev) => {
+        if (prev?.id !== next.id) {
+          setSelectedEventId(null);
+        }
+        return next;
+      });
     });
 
     const offCleared = SequenceDiagramService.onPayloadCleared((info) => {

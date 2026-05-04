@@ -173,40 +173,57 @@ export const SequenceLeaderLine = React.forwardRef<
   );
 
   return (
-    <svg
-      width="100%"
-      height="100%"
-      style={{
-        position: 'absolute',
-        inset: 0,
-        pointerEvents: 'none',
-        overflow: 'visible',
-        // Above the 3D canvas (auto z-index) but below the sequence drawer
-        // (z 30) and the floating overlays (z 1900), so the line only paints
-        // over the city map — not the diagram or panels.
-        zIndex: 25,
-      }}
-    >
-      <path
-        ref={pathRef}
-        fill="none"
-        strokeWidth={1.75}
-        strokeDasharray="5 4"
-        opacity={0}
-      />
-      <rect
-        ref={buildingMarkerRef}
-        width={7}
-        height={7}
-        stroke="#0f1419"
-        strokeWidth={1.25}
-        opacity={0}
-      />
-      <circle
-        ref={nodeMarkerRef}
-        r={3.5}
-        opacity={0}
-      />
-    </svg>
+    <>
+      <svg
+        width="100%"
+        height="100%"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          overflow: 'visible',
+          // Above the 3D canvas (auto z-index) but below the sequence drawer
+          // (z 30) and the floating overlays (z 1900), so the line only paints
+          // over the city map — not the diagram or panels.
+          zIndex: 25,
+        }}
+      >
+        <path
+          ref={pathRef}
+          fill="none"
+          strokeWidth={1.75}
+          strokeDasharray="5 4"
+          opacity={0}
+        />
+        <rect
+          ref={buildingMarkerRef}
+          width={7}
+          height={7}
+          stroke="#0f1419"
+          strokeWidth={1.25}
+          opacity={0}
+        />
+      </svg>
+      {/* Drawer-edge dot rendered in its own layer above the right overlay
+        * (z 1900) so it visually attaches to the panel instead of being
+        * clipped by it. Coordinates come from the same per-frame projection. */}
+      <svg
+        width="100%"
+        height="100%"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          overflow: 'visible',
+          zIndex: 1901,
+        }}
+      >
+        <circle
+          ref={nodeMarkerRef}
+          r={3.5}
+          opacity={0}
+        />
+      </svg>
+    </>
   );
 });

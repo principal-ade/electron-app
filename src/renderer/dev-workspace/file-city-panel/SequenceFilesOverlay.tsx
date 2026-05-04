@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, MessageSquare } from 'lucide-react';
 
 export interface SequenceStep {
   /** Stable id of the underlying sequence event. */
@@ -13,6 +13,8 @@ export interface SequenceStep {
   relativePath: string;
   /** Resolved absolute path; null when it can't be resolved (no repo path). */
   absolutePath: string | null;
+  /** Total notes anchored to this event (snippet + description-scoped markdown). */
+  noteCount: number;
 }
 
 export interface SequenceFilesOverlayProps {
@@ -29,6 +31,9 @@ export interface SequenceFilesOverlayProps {
 
 const PANEL_WIDTH_PCT = 38;
 const FLOAT_INSET = 16;
+// Clears the FileCityExplorer focus bar (canvas mounts at top: 56) plus a
+// small gap so the overlay reads as "below the top chrome".
+const TOP_INSET = 72;
 const MIN_WIDTH_PX = 360;
 const MIN_LEFT_GAP_PX = 80;
 const RESIZE_HANDLE_WIDTH = 6;
@@ -82,7 +87,7 @@ export const SequenceFilesOverlay: React.FC<SequenceFilesOverlayProps> = ({
       onAnimationEnd={() => setHasEntered(true)}
       style={{
         position: 'absolute',
-        top: FLOAT_INSET,
+        top: TOP_INSET,
         right: FLOAT_INSET,
         bottom: `calc(${bottomOffsetCss} + ${FLOAT_INSET}px)`,
         width:
@@ -254,14 +259,51 @@ export const SequenceFilesOverlay: React.FC<SequenceFilesOverlayProps> = ({
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div
                           style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
                             fontSize: theme.fontSizes[1],
                             fontWeight: 500,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
                           }}
                         >
-                          {step.eventLabel}
+                          <span
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {step.eventLabel}
+                          </span>
+                          {step.noteCount > 0 && (
+                            <span
+                              aria-label={`${step.noteCount} ${step.noteCount === 1 ? 'note' : 'notes'}`}
+                              title={`${step.noteCount} ${step.noteCount === 1 ? 'note' : 'notes'}`}
+                              style={{
+                                flexShrink: 0,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                padding: '2px 8px',
+                                borderRadius: 999,
+                                background: `color-mix(in srgb, ${theme.colors.primary} 14%, ${theme.colors.background})`,
+                                border: `1px solid color-mix(in srgb, ${theme.colors.primary} 35%, ${theme.colors.border})`,
+                                color: theme.colors.text,
+                                fontSize: theme.fontSizes[0],
+                                fontWeight: 600,
+                                fontVariantNumeric: 'tabular-nums',
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              <MessageSquare
+                                size={11}
+                                color={theme.colors.primary}
+                              />
+                              {step.noteCount}
+                            </span>
+                          )}
                         </div>
                         <div
                           style={{

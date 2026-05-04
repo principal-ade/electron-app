@@ -9,6 +9,8 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
 
+import type { Annotation } from 'themed-markdown';
+
 import { FileCityExplorer } from './FileCityExplorer';
 import {
   buildCityDataFromContext,
@@ -27,6 +29,43 @@ import {
   type SequenceLeaderLineHandle,
 } from './SequenceLeaderLine';
 import { useSequenceDiagram } from './useSequenceDiagram';
+import {
+  MarkdownNotePanel,
+  type MarkdownNote,
+  type MarkdownNotesSelection,
+} from './MarkdownNotes';
+import { SequenceNotesService } from '../../services/SequenceNotesService';
+import type {
+  MarkdownNoteScope,
+  SequenceNote,
+} from '../../../shared/main-process-api-interfaces/FileCitySequenceAPI';
+
+const DRAFT_MARKDOWN_ANNOTATION_ID = '__draft-md__';
+
+const sameMarkdownScope = (
+  a: MarkdownNoteScope,
+  b: MarkdownNoteScope,
+): boolean => {
+  if (a.kind === 'summary' && b.kind === 'summary') return true;
+  if (a.kind === 'description' && b.kind === 'description')
+    return a.eventId === b.eventId;
+  return false;
+};
+
+const toMarkdownUiNote = (n: SequenceNote): MarkdownNote | null => {
+  if (n.kind !== 'markdown') return null;
+  return {
+    id: n.id,
+    anchor: {
+      exact: n.anchor.exact,
+      prefix: n.anchor.prefix,
+      suffix: n.anchor.suffix,
+    },
+    body: n.body,
+    author: n.author,
+    createdAt: new Date(n.createdAt).getTime(),
+  };
+};
 
 const MEDIA_RE = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i;
 const isOverlayable = (path: string): boolean => {
@@ -113,6 +152,19 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
 
   const sequenceSteps = React.useMemo<SequenceStep[]>(() => {
     if (!sequencePayload) return [];
+    // Count notes per event id — snippet notes scope by eventId; markdown
+    // notes count when their scope is a description anchored to the event.
+    const noteCounts = new Map<string, number>();
+    for (const note of sequencePayload.notes ?? []) {
+      const eventId =
+        note.kind === 'snippet'
+          ? note.scope.eventId
+          : note.scope.kind === 'description'
+            ? note.scope.eventId
+            : null;
+      if (!eventId) continue;
+      noteCounts.set(eventId, (noteCounts.get(eventId) ?? 0) + 1);
+    }
     const out: SequenceStep[] = [];
     sequencePayload.events.forEach((ev, idx) => {
       if (!ev.sourcePath) return;
@@ -127,6 +179,7 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
         eventLabel: ev.label ?? ev.name,
         relativePath: ev.sourcePath,
         absolutePath,
+        noteCount: noteCounts.get(ev.id) ?? 0,
       });
     });
     return out;
@@ -183,6 +236,210 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
   const panelContainerRef = React.useRef<HTMLDivElement | null>(null);
   const leaderLineRef = React.useRef<SequenceLeaderLineHandle | null>(null);
   const detailOverlayRef = React.useRef<HTMLDivElement | null>(null);
+  const markdownOverlayContainerRef = React.useRef<HTMLDivElement | null>(
+    null,
+  );
+
+  // Active markdown scope — derived from whether an event is selected. Notes
+  // filter by this so the right set surfaces in summary vs description mode.
+  const markdownScope = React.useMemo<MarkdownNoteScope | null>(() => {
+    if (!markdownOverlayProps) return null;
+    if (selectedSequenceEvent) {
+      return { kind: 'description', eventId: selectedSequenceEvent.id };
+    }
+    return { kind: 'summary' };
+  }, [markdownOverlayProps, selectedSequenceEvent]);
+
+  const markdownNotes = React.useMemo<MarkdownNote[]>(() => {
+    if (!sequencePayload?.notes || !markdownScope) return [];
+    return sequencePayload.notes
+      .filter(
+        (n): n is SequenceNote & { kind: 'markdown' } =>
+          n.kind === 'markdown' && sameMarkdownScope(n.scope, markdownScope),
+      )
+      .map(toMarkdownUiNote)
+      .filter((n): n is MarkdownNote => n != null);
+  }, [sequencePayload?.notes, markdownScope]);
+
+  const [markdownNotesSelection, setMarkdownNotesSelection] =
+    React.useState<MarkdownNotesSelection | null>(null);
+
+  // Reset the selection when the markdown scope changes — switching events
+  // mid-thread or mid-composition would leave a stale panel up otherwise.
+  const scopeKey = markdownScope
+    ? markdownScope.kind === 'description'
+      ? `d-${markdownScope.eventId}`
+      : 's'
+    : '-';
+  React.useEffect(() => {
+    setMarkdownNotesSelection(null);
+  }, [scopeKey]);
+
+  const markdownComposerOpen = markdownNotesSelection?.kind === 'composer';
+
+  // Build the annotations array for the markdown body. One annotation per
+  // saved note (count = replies-on-same-anchor); plus a draft annotation
+  // while a composer is in progress so the highlight stays visible.
+  const markdownAnnotations = React.useMemo<Annotation[]>(() => {
+    const result: Annotation[] = [];
+    const counts = new Map<string, number>();
+    for (const n of markdownNotes) {
+      counts.set(n.anchor.exact, (counts.get(n.anchor.exact) ?? 0) + 1);
+    }
+    const seenAnchors = new Set<string>();
+    for (const n of markdownNotes) {
+      if (seenAnchors.has(n.anchor.exact)) continue;
+      seenAnchors.add(n.anchor.exact);
+      result.push({
+        id: n.id,
+        anchor: {
+          exact: n.anchor.exact,
+          prefix: n.anchor.prefix,
+          suffix: n.anchor.suffix,
+        },
+        count: counts.get(n.anchor.exact),
+      });
+    }
+    if (markdownNotesSelection?.kind === 'composer') {
+      result.push({
+        id: DRAFT_MARKDOWN_ANNOTATION_ID,
+        anchor: {
+          exact: markdownNotesSelection.anchor.exact,
+          prefix: markdownNotesSelection.anchor.prefix,
+          suffix: markdownNotesSelection.anchor.suffix,
+        },
+      });
+    }
+    return result;
+  }, [markdownNotes, markdownNotesSelection]);
+
+  const activeMarkdownAnnotationId = React.useMemo<string | null>(() => {
+    if (!markdownNotesSelection) return null;
+    if (markdownNotesSelection.kind === 'composer') {
+      return DRAFT_MARKDOWN_ANNOTATION_ID;
+    }
+    // For threads we mark the first note in the thread as active — themed-
+    // markdown highlights its anchor's range.
+    const head = markdownNotes.find(
+      (n) => n.id === markdownNotesSelection.noteId,
+    );
+    if (!head) return null;
+    const anchorMatch = markdownNotes.find(
+      (n) => n.anchor.exact === head.anchor.exact,
+    );
+    return anchorMatch?.id ?? head.id;
+  }, [markdownNotesSelection, markdownNotes]);
+
+  const handleMarkdownAnnotationClick = React.useCallback(
+    (annotationId: string) => {
+      if (annotationId === DRAFT_MARKDOWN_ANNOTATION_ID) return;
+      setMarkdownNotesSelection((prev) => {
+        if (prev?.kind === 'thread' && prev.noteId === annotationId) {
+          return null;
+        }
+        return { kind: 'thread', noteId: annotationId };
+      });
+    },
+    [],
+  );
+
+  const handleCreateMarkdownNoteForSelection = React.useCallback(
+    (anchor: { exact: string; prefix?: string; suffix?: string }) => {
+      setMarkdownNotesSelection({ kind: 'composer', anchor });
+    },
+    [],
+  );
+
+  const handleSubmitMarkdownNote = React.useCallback(
+    async (
+      anchor: { exact: string; prefix?: string; suffix?: string },
+      body: string,
+    ) => {
+      if (!sequencePayload?.id || !markdownScope) return;
+      const note = await SequenceNotesService.create(sequencePayload.id, {
+        kind: 'markdown',
+        scope: markdownScope,
+        anchor: {
+          kind: 'text-quote',
+          exact: anchor.exact,
+          prefix: anchor.prefix,
+          suffix: anchor.suffix,
+        },
+        body,
+        author: 'You',
+      });
+      if (note) {
+        setMarkdownNotesSelection({ kind: 'thread', noteId: note.id });
+      }
+    },
+    [sequencePayload?.id, markdownScope],
+  );
+
+  const handleReplyMarkdownNote = React.useCallback(
+    async (noteId: string, body: string) => {
+      if (!sequencePayload?.id || !markdownScope) return;
+      const head = markdownNotes.find((n) => n.id === noteId);
+      if (!head) return;
+      await SequenceNotesService.create(sequencePayload.id, {
+        kind: 'markdown',
+        scope: markdownScope,
+        anchor: {
+          kind: 'text-quote',
+          exact: head.anchor.exact,
+          prefix: head.anchor.prefix,
+          suffix: head.anchor.suffix,
+        },
+        body,
+        author: 'You',
+      });
+    },
+    [sequencePayload?.id, markdownScope, markdownNotes],
+  );
+
+  const handleDeleteMarkdownNote = React.useCallback(
+    async (id: string) => {
+      if (!sequencePayload?.id) return;
+      await SequenceNotesService.remove(sequencePayload.id, id);
+    },
+    [sequencePayload?.id],
+  );
+
+  // Track the markdown overlay's right edge so the notes panel can dock
+  // immediately to its right and follow the user's resize handle.
+  const [markdownOverlayWidth, setMarkdownOverlayWidth] = React.useState<
+    number | null
+  >(null);
+  React.useEffect(() => {
+    const el = markdownOverlayContainerRef.current;
+    if (!el || !markdownOverlayProps) {
+      setMarkdownOverlayWidth(null);
+      return;
+    }
+    const update = () => setMarkdownOverlayWidth(el.getBoundingClientRect().width);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [markdownOverlayProps]);
+
+  const MARKDOWN_NOTES_PANEL_WIDTH = 320;
+  const MARKDOWN_NOTES_PANEL_GAP = 12;
+  const markdownNotesPanelStyle = React.useMemo<
+    React.CSSProperties | null
+  >(() => {
+    if (!markdownOverlayWidth) return null;
+    return {
+      position: 'absolute',
+      top: 72,
+      bottom: `calc(${drawerBottomOffset} + 16px)`,
+      left: 16 + markdownOverlayWidth + MARKDOWN_NOTES_PANEL_GAP,
+      width: MARKDOWN_NOTES_PANEL_WIDTH,
+      // Above the markdown overlay (z 1900) — same level as snippet notes
+      // panel — so dragging the markdown overlay wider doesn't bury the
+      // notes panel under it.
+      zIndex: 1950,
+    };
+  }, [markdownOverlayWidth, drawerBottomOffset]);
 
   React.useEffect(() => {
     if (!tree) {
@@ -266,6 +523,12 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
       {markdownOverlayProps && (
         <SequenceMarkdownOverlay
           {...markdownOverlayProps}
+          containerRef={markdownOverlayContainerRef}
+          annotations={markdownAnnotations}
+          activeAnnotationId={activeMarkdownAnnotationId}
+          onAnnotationClick={handleMarkdownAnnotationClick}
+          onCreateNoteForSelection={handleCreateMarkdownNoteForSelection}
+          composerOpen={markdownComposerOpen}
           bottomOffset={drawerBottomOffset}
           position={
             sequencePayload && sequencePayload.events.length > 0
@@ -300,28 +563,18 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
           }
         />
       )}
-      {selectedSequenceEvent && sequencePayload && (
-        <SequenceEventDetailOverlay
-          ref={detailOverlayRef}
-          event={selectedSequenceEvent}
-          absolutePath={selectedEventAbsolutePath}
-          bottomOffset={drawerBottomOffset}
-          onClose={() => setSequenceSelectedEventId(null)}
-          onOpenInTab={
-            selectedEventAbsolutePath
-              ? () => {
-                  events.emit({
-                    type: 'file:open',
-                    source: 'file-overlay',
-                    timestamp: Date.now(),
-                    payload: { path: selectedEventAbsolutePath },
-                  });
-                }
-              : undefined
-          }
+      {markdownNotesSelection && markdownNotesPanelStyle && (
+        <MarkdownNotePanel
+          selection={markdownNotesSelection}
+          notes={markdownNotes}
+          style={markdownNotesPanelStyle}
+          onClose={() => setMarkdownNotesSelection(null)}
+          onSubmitNote={handleSubmitMarkdownNote}
+          onReplyNote={handleReplyMarkdownNote}
+          onDeleteNote={handleDeleteMarkdownNote}
         />
       )}
-      {!selectedSequenceEvent && sequencePayload && (
+      {sequencePayload && (
         <SequenceFilesOverlay
           steps={sequenceSteps}
           totalEvents={sequencePayload.events.length}
@@ -336,6 +589,29 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
               payload: { path: step.absolutePath },
             });
           }}
+        />
+      )}
+      {selectedSequenceEvent && sequencePayload && (
+        <SequenceEventDetailOverlay
+          ref={detailOverlayRef}
+          event={selectedSequenceEvent}
+          absolutePath={selectedEventAbsolutePath}
+          bottomOffset={drawerBottomOffset}
+          payloadId={sequencePayload.id}
+          payloadNotes={sequencePayload.notes}
+          onClose={() => setSequenceSelectedEventId(null)}
+          onOpenInTab={
+            selectedEventAbsolutePath
+              ? () => {
+                  events.emit({
+                    type: 'file:open',
+                    source: 'file-overlay',
+                    timestamp: Date.now(),
+                    payload: { path: selectedEventAbsolutePath },
+                  });
+                }
+              : undefined
+          }
         />
       )}
       {overlayFile && (

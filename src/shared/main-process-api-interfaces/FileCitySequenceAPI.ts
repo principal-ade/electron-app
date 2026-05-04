@@ -23,6 +23,9 @@ export enum FileCitySequenceEvent {
   LOAD = 'file-city:sequence-diagram:load',
   ACTIVATE = 'file-city:sequence-diagram:activate',
   DELETE = 'file-city:sequence-diagram:delete',
+  NOTE_CREATE = 'file-city:sequence-diagram:note-create',
+  NOTE_UPDATE = 'file-city:sequence-diagram:note-update',
+  NOTE_DELETE = 'file-city:sequence-diagram:note-delete',
 }
 
 /**
@@ -136,6 +139,12 @@ export interface SequenceDiagramPayload {
   createdAt?: string;
   /** ISO 8601 timestamp updated on every persist. */
   updatedAt?: string;
+  /**
+   * User-authored notes anchored to events on this payload. Mutated only
+   * through the IPC notes endpoints — never accepted from external HTTP
+   * callers (validation strips this field on `POST /api/file-city/sequence`).
+   */
+  notes?: SequenceNote[];
 }
 
 /**
@@ -154,6 +163,89 @@ export interface SequenceDiagramIndexEntry {
   updatedAt: string;
   sizeBytes: number;
 }
+
+/**
+ * Note attached to a snippet or markdown span. Lives on the payload
+ * (`payload.notes`) so persistence + IPC broadcast piggyback on the existing
+ * payload path. Only the renderer can mutate notes — external HTTP POSTs of
+ * payloads have any `notes` field stripped during validation.
+ */
+export interface SequenceSnippetNote {
+  id: string;
+  kind: 'snippet';
+  scope: { eventId: string };
+  anchor: SnippetSliceAnchor | SnippetDiffAnchor;
+  body: string;
+  author?: string;
+  /** ISO 8601 */
+  createdAt: string;
+  /** ISO 8601 — equal to createdAt until first edit. */
+  updatedAt: string;
+}
+
+/**
+ * Markdown notes anchor to a quoted span using the W3C text-quote selector
+ * (matches themed-markdown's `Annotation.anchor` shape).
+ */
+export interface MarkdownTextQuoteAnchor {
+  kind: 'text-quote';
+  exact: string;
+  prefix?: string;
+  suffix?: string;
+}
+
+/**
+ * Where in the markdown overlay the note is anchored. The overlay swaps
+ * between an event's `description` and the payload's `summary`, so we tag
+ * which surface the note belongs to.
+ */
+export type MarkdownNoteScope =
+  | { kind: 'description'; eventId: string }
+  | { kind: 'summary' };
+
+export interface SequenceMarkdownNote {
+  id: string;
+  kind: 'markdown';
+  scope: MarkdownNoteScope;
+  anchor: MarkdownTextQuoteAnchor;
+  body: string;
+  author?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SliceRange {
+  /** 1-based absolute line in the source file (inclusive). */
+  startLine: number;
+  /** 1-based absolute line (inclusive). For single-line ranges, equals startLine. */
+  endLine: number;
+  /** startLine's text at creation time — re-anchor fingerprint. */
+  startLineText: string;
+  /** endLine's text at creation time. Equals startLineText for single-line ranges. */
+  endLineText: string;
+}
+
+export interface SnippetSliceAnchor {
+  kind: 'slice';
+  /**
+   * One or more disjoint ranges this note covers. Multi-range notes show one
+   * indicator pill per range start; the side panel renders one thread.
+   */
+  ranges: SliceRange[];
+}
+
+export interface SnippetDiffAnchor {
+  kind: 'diff';
+  side: 'deletions' | 'additions';
+  lineNumber: number;
+}
+
+export type SequenceNote = SequenceSnippetNote | SequenceMarkdownNote;
+
+/** Payload accepted by createNote IPC. Server fills id/createdAt/updatedAt. */
+export type SequenceNoteDraft =
+  | Omit<SequenceSnippetNote, 'id' | 'createdAt' | 'updatedAt'>
+  | Omit<SequenceMarkdownNote, 'id' | 'createdAt' | 'updatedAt'>;
 
 export type { SequenceEvent, SequenceEdge };
 
@@ -211,4 +303,24 @@ export interface FileCitySequenceAPI {
   onLibraryChanged: (
     callback: (info: { repositoryPath?: string }) => void,
   ) => () => void;
+
+  /**
+   * Create a note on the given payload. Returns the persisted note (with
+   * server-assigned id + timestamps). Re-broadcasts PAYLOAD_SET so all
+   * windows pick up the new note.
+   */
+  createNote: (
+    payloadId: string,
+    draft: SequenceNoteDraft,
+  ) => Promise<SequenceNote>;
+
+  /** Update a note's body. Refreshes updatedAt + re-broadcasts PAYLOAD_SET. */
+  updateNote: (
+    payloadId: string,
+    noteId: string,
+    body: string,
+  ) => Promise<SequenceNote>;
+
+  /** Delete a note. Re-broadcasts PAYLOAD_SET. */
+  deleteNote: (payloadId: string, noteId: string) => Promise<void>;
 }

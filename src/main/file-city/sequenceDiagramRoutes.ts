@@ -196,6 +196,9 @@ function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
   const layoutResult = validateLayoutOptions(b.layoutOptions);
   if (!layoutResult.ok) return layoutResult;
 
+  // Notes are user-authored content; never accept them from external HTTP
+  // callers. The store preserves existing notes from disk when replacing a
+  // payload by id, so re-pushes don't drop them.
   const payload: SequenceDiagramPayload = {
     events,
     edges,

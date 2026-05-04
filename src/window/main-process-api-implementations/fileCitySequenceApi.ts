@@ -4,6 +4,8 @@ import {
   type FileCitySequenceAPI,
   type SequenceDiagramIndexEntry,
   type SequenceDiagramPayload,
+  type SequenceNote,
+  type SequenceNoteDraft,
 } from '../../shared/main-process-api-interfaces/FileCitySequenceAPI';
 
 export const fileCitySequenceAPI: FileCitySequenceAPI = {
@@ -74,5 +76,37 @@ export const fileCitySequenceAPI: FileCitySequenceAPI = {
         handler,
       );
     };
+  },
+
+  createNote: async (
+    payloadId: string,
+    draft: SequenceNoteDraft,
+  ): Promise<SequenceNote> => {
+    return ipcRenderer.invoke(
+      FileCitySequenceEvent.NOTE_CREATE,
+      payloadId,
+      draft,
+    );
+  },
+
+  updateNote: async (
+    payloadId: string,
+    noteId: string,
+    body: string,
+  ): Promise<SequenceNote> => {
+    return ipcRenderer.invoke(
+      FileCitySequenceEvent.NOTE_UPDATE,
+      payloadId,
+      noteId,
+      body,
+    );
+  },
+
+  deleteNote: async (payloadId: string, noteId: string): Promise<void> => {
+    await ipcRenderer.invoke(
+      FileCitySequenceEvent.NOTE_DELETE,
+      payloadId,
+      noteId,
+    );
   },
 };

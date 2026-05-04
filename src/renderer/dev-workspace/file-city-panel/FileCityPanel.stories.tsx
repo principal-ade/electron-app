@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React, { useMemo } from 'react';
-import { ThemeProvider, useTheme } from '@principal-ade/industry-theme';
+import { ThemeProvider } from '@principal-ade/industry-theme';
 import {
   PanelEventBus,
   type DataSlice,
@@ -14,6 +14,8 @@ import {
 import type {
   SequenceDiagramPayload,
   FileCitySequenceEventDef,
+  SequenceNote,
+  SequenceNoteDraft,
 } from '../../../shared/main-process-api-interfaces/FileCitySequenceAPI';
 import { FileCityPanel } from './FileCityPanel';
 
@@ -173,6 +175,55 @@ function clearSequence(repositoryPath?: string) {
   sequenceMock.clearedListeners.forEach((cb) => cb({ repositoryPath }));
 }
 
+let mockNoteCounter = 0;
+function mockCreateNote(
+  payloadId: string,
+  draft: SequenceNoteDraft,
+): SequenceNote {
+  if (!sequenceMock.current || sequenceMock.current.id !== payloadId) {
+    throw new Error(`mock: payload ${payloadId} not active`);
+  }
+  const now = new Date().toISOString();
+  const note: SequenceNote = {
+    ...draft,
+    id: `mock-note-${++mockNoteCounter}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+  sequenceMock.current = {
+    ...sequenceMock.current,
+    notes: [...(sequenceMock.current.notes ?? []), note],
+  };
+  sequenceMock.setListeners.forEach((cb) => cb(sequenceMock.current!));
+  return note;
+}
+function mockDeleteNote(payloadId: string, noteId: string): void {
+  if (!sequenceMock.current || sequenceMock.current.id !== payloadId) return;
+  sequenceMock.current = {
+    ...sequenceMock.current,
+    notes: (sequenceMock.current.notes ?? []).filter((n) => n.id !== noteId),
+  };
+  sequenceMock.setListeners.forEach((cb) => cb(sequenceMock.current!));
+}
+function mockUpdateNote(
+  payloadId: string,
+  noteId: string,
+  body: string,
+): SequenceNote | null {
+  if (!sequenceMock.current || sequenceMock.current.id !== payloadId) return null;
+  let edited: SequenceNote | null = null;
+  sequenceMock.current = {
+    ...sequenceMock.current,
+    notes: (sequenceMock.current.notes ?? []).map((n) => {
+      if (n.id !== noteId) return n;
+      edited = { ...n, body, updatedAt: new Date().toISOString() };
+      return edited;
+    }),
+  };
+  sequenceMock.setListeners.forEach((cb) => cb(sequenceMock.current!));
+  return edited;
+}
+
 if (typeof window !== 'undefined' && window.mainProcess) {
   if (!window.mainProcess.fileCitySequence) {
     (window.mainProcess as unknown as Record<string, unknown>).fileCitySequence =
@@ -185,6 +236,16 @@ if (typeof window !== 'undefined' && window.mainProcess) {
         onPayloadCleared: (cb: ClearedCb) => {
           sequenceMock.clearedListeners.add(cb);
           return () => sequenceMock.clearedListeners.delete(cb);
+        },
+        createNote: async (payloadId: string, draft: SequenceNoteDraft) =>
+          mockCreateNote(payloadId, draft),
+        updateNote: async (
+          payloadId: string,
+          noteId: string,
+          body: string,
+        ) => mockUpdateNote(payloadId, noteId, body),
+        deleteNote: async (payloadId: string, noteId: string) => {
+          mockDeleteNote(payloadId, noteId);
         },
       };
   }
@@ -204,8 +265,72 @@ if (typeof window !== 'undefined' && window.mainProcess) {
 // Sample sequence payloads exercising different snippet shapes.
 // ---------------------------------------------------------------------------
 const LOGIN_FLOW: SequenceDiagramPayload = {
+  id: 'story-login-flow',
   title: 'Login flow',
   repositoryPath: REPO_PATH,
+  summary: `A 3-step trace of what happens when a user submits the login form: the auth hook posts credentials, a utility formats the response payload size for the success toast, and the success modal mounts.
+
+### How to read this
+- Click any event in the sequence drawer to open its snippet.
+- The matching building lights up in the city, with a leader line connecting the two.
+- Pick any event for a deeper-dive description; this overview returns when nothing is selected.`,
+  notes: [
+    {
+      id: 'story-note-1',
+      kind: 'snippet',
+      scope: { eventId: 'evt-login' },
+      anchor: {
+        kind: 'slice',
+        ranges: [
+          {
+            startLine: 7,
+            endLine: 7,
+            startLineText: "    return fetch('/api/login', {",
+            endLineText: "    return fetch('/api/login', {",
+          },
+        ],
+      },
+      body: 'Should we await this fetch instead of using `.then()`? Throwing on `!res.ok` would let callers catch errors with try/catch — see PR #482 for the eventual rewrite.',
+      author: 'Fernando',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    },
+    {
+      id: 'story-note-2',
+      kind: 'snippet',
+      scope: { eventId: 'evt-login' },
+      anchor: {
+        kind: 'slice',
+        ranges: [
+          {
+            startLine: 7,
+            endLine: 7,
+            startLineText: "    return fetch('/api/login', {",
+            endLineText: "    return fetch('/api/login', {",
+          },
+        ],
+      },
+      body: 'Agreed. Worth doing here too so the runtime trace matches the typed version.',
+      author: 'Reviewer',
+      createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    },
+    {
+      id: 'story-md-note-1',
+      kind: 'markdown',
+      scope: { kind: 'summary' },
+      anchor: {
+        kind: 'text-quote',
+        exact: 'the success modal mounts',
+        prefix: 'for the success toast, and ',
+        suffix: '.',
+      },
+      body: "Worth calling out that the modal mount happens on the *resolved* value of the login promise — failures should bypass it. We don't yet handle that in the runtime trace.",
+      author: 'Fernando',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+    },
+  ],
   events: [
     {
       id: 'evt-login',
@@ -214,6 +339,11 @@ const LOGIN_FLOW: SequenceDiagramPayload = {
       type: 'method',
       participant: 'auth',
       sourcePath: 'src/hooks/useAuth.ts',
+      description: `Entry point for the login flow. Posts \`{ email, password }\` to \`/api/login\` and resolves with the parsed JSON.
+
+### Notes
+- This is the **runtime** trace, not the typed/error-handled version from PR #482.
+- On success, the resolved value is forwarded to the success toast (next step), then to the modal mount (final step).`,
       snippet: { startLine: 6, endLine: 14, focusLine: 7, contextLines: 2 },
     },
     {
@@ -223,6 +353,7 @@ const LOGIN_FLOW: SequenceDiagramPayload = {
       type: 'function',
       participant: 'utils',
       sourcePath: 'src/utils/format.ts',
+      description: `Formats the response payload size for the success toast. Currently bottoms out at KB — the multi-unit upgrade lives in \`REVIEW_WALKTHROUGH\`.`,
       snippet: { startLine: 1, endLine: 11, focusLine: 4, contextLines: 1 },
     },
     {
@@ -232,6 +363,7 @@ const LOGIN_FLOW: SequenceDiagramPayload = {
       type: 'component',
       participant: 'ui',
       sourcePath: 'src/components/Modal.tsx',
+      description: `Final step — the success modal renders once \`login()\` resolves. The body is unstyled scaffolding here; outside-click dismissal is added in PR #482.`,
       snippet: { startLine: 9, endLine: 17, focusLine: 12, contextLines: 2 },
     } satisfies FileCitySequenceEventDef,
   ],
@@ -290,8 +422,22 @@ export function Modal({ open, onClose, children }) {
 `;
 
 const REVIEW_WALKTHROUGH: SequenceDiagramPayload = {
+  id: 'story-review-walkthrough',
   title: 'PR #482 — typed auth + format upgrades',
   repositoryPath: REPO_PATH,
+  summary: `A 3-stop walkthrough of a small PR that tightens types and fixes two longstanding UX papercuts.
+
+### Stops
+1. **\`useAuth\`** — typed login + error handling.
+2. **\`formatBytes\`** — multi-unit scaling so large repos stop rendering as \`1894323.4 KB\`.
+3. **\`<Modal />\`** — outside-click closes, inside-click stops.
+
+### How to read this
+- Click any node, or use the chevrons under the snippet, to step through the diff stops.
+- Each stop replaces this overview with a per-stop explainer; clear the selection to come back here.
+
+### Risk
+Low overall — see each stop's "Risk" section for specifics.`,
   events: [
     {
       id: 'rev-1',
@@ -300,9 +446,7 @@ const REVIEW_WALKTHROUGH: SequenceDiagramPayload = {
       type: 'change',
       participant: 'auth',
       sourcePath: 'src/hooks/useAuth.ts',
-      description: `## Typed login + error handling
-
-Adds an explicit \`User\` interface and migrates \`login\` from a \`.then()\` chain to \`async/await\`.
+      description: `Adds an explicit \`User\` interface and migrates \`login\` from a \`.then()\` chain to \`async/await\`.
 
 ### Why
 The previous implementation **silently swallowed non-2xx responses** — callers got a resolved promise with whatever JSON the server returned, including error envelopes. We now throw on \`!res.ok\`, which lets the caller's \`try/catch\` fall through naturally.
@@ -327,9 +471,7 @@ Low — only call sites that relied on getting an error envelope back as data wi
       type: 'change',
       participant: 'utils',
       sourcePath: 'src/utils/format.ts',
-      description: `## Multi-unit byte scaling
-
-Generalises \`formatBytes\` to scale through **KB → MB → GB → TB** instead of stopping at KB, and adds \`number\`/\`string\` types.
+      description: `Generalises \`formatBytes\` to scale through **KB → MB → GB → TB** instead of stopping at KB, and adds \`number\`/\`string\` types.
 
 ### Why
 The size column in the file-tree was rendering large repos as e.g. \`1894323.4 KB\`. The unit loop matches the convention used elsewhere in the workspace.
@@ -350,9 +492,7 @@ The size column in the file-tree was rendering large repos as e.g. \`1894323.4 K
       type: 'change',
       participant: 'ui',
       sourcePath: 'src/components/Modal.tsx',
-      description: `## Outside-click closes, inside-click stops
-
-Wires the backdrop \`onClick\` to \`onClose\` and adds \`stopPropagation\` on the inner content so clicks on the modal body don't dismiss it.
+      description: `Wires the backdrop \`onClick\` to \`onClose\` and adds \`stopPropagation\` on the inner content so clicks on the modal body don't dismiss it.
 
 ### Why
 The modal previously rendered **without any click-to-dismiss affordance** — keyboard \`Esc\` worked, but clicking outside did nothing, which was confusing for first-time users.
@@ -373,23 +513,6 @@ The modal previously rendered **without any click-to-dismiss affordance** — ke
   ],
 };
 
-const SHORT_FLOW: SequenceDiagramPayload = {
-  title: 'Button click',
-  repositoryPath: REPO_PATH,
-  events: [
-    {
-      id: 'evt-button',
-      name: 'ui.button.click',
-      label: 'Button.onClick',
-      type: 'handler',
-      participant: 'ui',
-      sourcePath: 'src/components/Button.tsx',
-      snippet: { startLine: 9, endLine: 16, focusLine: 13, contextLines: 2 },
-    },
-  ],
-  edges: [],
-};
-
 interface MockContext extends PanelContextValue {
   fileTree: DataSlice<RepoFileTree | null>;
   repository: { path: string; name: string };
@@ -399,14 +522,11 @@ interface HarnessProps {
   paths?: string[];
   /** Push this payload immediately on mount (after a tick to let the city build). */
   initialSequence?: SequenceDiagramPayload | null;
-  /** Show a control panel for pushing/clearing sequence payloads at runtime. */
-  showSequenceControls?: boolean;
 }
 
 const FileCityPanelHarness: React.FC<HarnessProps> = ({
   paths,
   initialSequence,
-  showSequenceControls = false,
 }) => {
   const events = useMemo(() => new PanelEventBus(), []);
   const fileTree = useMemo(
@@ -466,80 +586,6 @@ const FileCityPanelHarness: React.FC<HarnessProps> = ({
       }}
     >
       <FileCityPanel context={context} actions={{}} events={events} />
-      {showSequenceControls && <SequenceControls />}
-    </div>
-  );
-};
-
-const SequenceControls: React.FC = () => {
-  const { theme } = useTheme();
-  const buttonStyle: React.CSSProperties = {
-    padding: '6px 10px',
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSizes[0],
-    color: theme.colors.text,
-    background: theme.colors.backgroundSecondary ?? theme.colors.background,
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: 6,
-    cursor: 'pointer',
-  };
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 16,
-        left: 16,
-        zIndex: 3000,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-        padding: 10,
-        background: `color-mix(in srgb, ${theme.colors.background} 92%, transparent)`,
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: 8,
-        backdropFilter: 'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
-      }}
-    >
-      <span
-        style={{
-          fontFamily: theme.fonts.body,
-          fontSize: theme.fontSizes[0],
-          color: theme.colors.textSecondary,
-          letterSpacing: 0.4,
-          textTransform: 'uppercase',
-        }}
-      >
-        Sequence
-      </span>
-      <button
-        type="button"
-        style={buttonStyle}
-        onClick={() => pushSequence(LOGIN_FLOW)}
-      >
-        Push login flow (3 events)
-      </button>
-      <button
-        type="button"
-        style={buttonStyle}
-        onClick={() => pushSequence(SHORT_FLOW)}
-      >
-        Push button click (1 event)
-      </button>
-      <button
-        type="button"
-        style={buttonStyle}
-        onClick={() => pushSequence(REVIEW_WALKTHROUGH)}
-      >
-        Push review walkthrough (3 diffs)
-      </button>
-      <button
-        type="button"
-        style={buttonStyle}
-        onClick={() => clearSequence(REPO_PATH)}
-      >
-        Clear
-      </button>
     </div>
   );
 };
@@ -589,13 +635,12 @@ export const Deep: Story = {
 export const WithSequenceDiagram: Story = {
   args: {
     initialSequence: LOGIN_FLOW,
-    showSequenceControls: true,
   },
   parameters: {
     docs: {
       description: {
         story:
-          'Pushes a 3-event login flow on mount. Click any node in the sequence drawer to select it — the snippet detail overlay opens on the right with a leader line to the matching building in the city. Use the Sequence control panel (top-left) to swap payloads or clear.',
+          'Pushes a 3-event login flow on mount. Click any node in the sequence drawer to select it — the snippet detail overlay opens on the right with a leader line to the matching building in the city.',
       },
     },
   },
@@ -617,13 +662,13 @@ export const ReviewWalkthrough: Story = {
 
 export const SequenceWorkshop: Story = {
   args: {
-    showSequenceControls: true,
+    initialSequence: LOGIN_FLOW,
   },
   parameters: {
     docs: {
       description: {
         story:
-          'Empty panel — use the Sequence control panel (top-left) to push payloads on demand. Useful for testing payload transitions and the leader-line target updates.',
+          'Iteration workbench for the sequence overlay UI — pushes the login flow on mount and leaves the panel ready for tweaking the diagram, snippet drawer, leader line, and (eventually) notes/feedback affordances.',
       },
     },
   },

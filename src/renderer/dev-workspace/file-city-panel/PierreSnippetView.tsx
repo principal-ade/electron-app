@@ -1,8 +1,27 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { File } from '@pierre/diffs/react';
+import type { LineAnnotation, SelectedLineRange } from '@pierre/diffs';
 
 import { FileSystemService } from '../../main-process-api/FileSystemService';
+import {
+  SnippetNoteIndicator,
+  type SnippetNote,
+  type SnippetUiRange,
+} from './SnippetNotes';
+
+interface SliceAnnotationMetadata {
+  /** Absolute line in the source file (always equals range.startLine). */
+  absoluteLine: number;
+  /** Notes in the thread anchored to this range. */
+  notes: SnippetNote[];
+  /** The specific range this pill marks (one pill per range). */
+  range: SnippetUiRange;
+  /** threadKey of the underlying thread — used by the click handler. */
+  threadKey: string;
+  active: boolean;
+  disabled: boolean;
+}
 
 export interface PierreSnippetViewProps {
   filePath: string;
@@ -17,6 +36,28 @@ export interface PierreSnippetViewProps {
   contextLines?: number;
   /** Override Pierre's container background. Any CSS color string. */
   background?: string;
+  /** Notes anchored to absolute file ranges. */
+  notes?: SnippetNote[];
+  /** Thread whose notes panel is currently open (renders matching indicators as active). */
+  activeThreadKey?: string | null;
+  /** While true, indicators are dimmed and don't respond to clicks. */
+  composerOpen?: boolean;
+  /** Open the side panel in thread-view mode for the given threadKey. */
+  onOpenThread?: (threadKey: string) => void;
+  /** Close the side panel — wired to indicator clicks on the active thread. */
+  onCloseThread?: () => void;
+  /**
+   * Open or extend the side panel composer with a range. Called when the
+   * user uses Pierre's gutter "+" (with or without a multi-line drag-select).
+   * The line text endpoints are captured so the consumer can persist them as
+   * re-anchor fingerprints on the note's anchor.
+   */
+  onOpenComposer?: (input: {
+    startLine: number;
+    endLine: number;
+    startLineText: string;
+    endLineText: string;
+  }) => void;
 }
 
 export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
@@ -27,6 +68,12 @@ export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
   focusLine,
   contextLines = 2,
   background,
+  notes,
+  activeThreadKey,
+  composerOpen,
+  onOpenThread,
+  onCloseThread,
+  onOpenComposer,
 }) => {
   const { theme } = useTheme();
   const [contents, setContents] = React.useState<string | null>(null);
@@ -81,10 +128,16 @@ export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
     [fileName, slice],
   );
 
-  // Rewrite gutter line numbers so they reflect the original file range
-  // (e.g. 28..50) instead of Pierre's default 1..N over the slice. Each gutter
-  // row carries a `data-line-index` (0-based, slice-local), so we can compute
-  // the desired number idempotently as `lineIndex + 1 + offset`.
+  // Rewrite the *visible* gutter numbers so they show the original file range
+  // (e.g. 320..334) instead of Pierre's default 1..N over the slice. Each
+  // gutter row carries a `data-line-index` (0-based, slice-local), so the
+  // desired number is `lineIndex + 1 + offset`.
+  //
+  // Critically we do NOT rewrite `data-column-number`. Pierre's
+  // InteractionManager reads that attribute to build `SelectedLineRange` for
+  // the gutter-utility callback (and probably other features) — overwriting
+  // it would feed absolute file lines back into Pierre's slice-local model
+  // and break the math in `onGutterUtilityClick`.
   const lineNumberOffset = slice ? slice.sliceStart - 1 : 0;
   const onPostRender = React.useCallback(
     (fileContainer: HTMLElement) => {
@@ -99,9 +152,6 @@ export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
         const idx = Number.parseInt(idxStr, 10);
         if (Number.isNaN(idx)) return;
         const display = String(idx + 1 + lineNumberOffset);
-        if (el.dataset.columnNumber !== display) {
-          el.dataset.columnNumber = display;
-        }
         const span = el.querySelector<HTMLElement>(
           '[data-line-number-content]',
         );
@@ -113,10 +163,96 @@ export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
     [lineNumberOffset],
   );
 
+  // Group notes into threads (matching ranges arrays). Each thread renders
+  // one pill per range start. Pierre supports multiple annotations per line
+  // (AnnotationLineMap), so two threads sharing a startLine stack naturally.
+  const lineAnnotations = React.useMemo<
+    LineAnnotation<SliceAnnotationMetadata>[]
+  >(() => {
+    if (!slice) return [];
+    const threadsByKey = new Map<string, SnippetNote[]>();
+    for (const n of notes ?? []) {
+      const arr = threadsByKey.get(n.threadKey) ?? [];
+      arr.push(n);
+      threadsByKey.set(n.threadKey, arr);
+    }
+    const result: LineAnnotation<SliceAnnotationMetadata>[] = [];
+    for (const [threadKey, threadNotes] of threadsByKey) {
+      const head = threadNotes[0];
+      const active = activeThreadKey === threadKey;
+      const seen = new Set<string>();
+      for (const range of head.ranges) {
+        const key = `${range.startLine}-${range.endLine}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const sliceLocal = range.startLine - slice.sliceStart + 1;
+        if (sliceLocal < 1) continue;
+        result.push({
+          lineNumber: sliceLocal,
+          metadata: {
+            absoluteLine: range.startLine,
+            notes: threadNotes,
+            range,
+            threadKey,
+            active,
+            disabled: !!composerOpen,
+          },
+        });
+      }
+    }
+    return result;
+  }, [slice, notes, activeThreadKey, composerOpen]);
+
+  const renderAnnotation = React.useCallback(
+    (annotation: LineAnnotation<SliceAnnotationMetadata>) => {
+      if (!annotation.metadata) return null;
+      const {
+        notes: threadNotes,
+        range,
+        threadKey,
+        active,
+        disabled,
+      } = annotation.metadata;
+      return (
+        <SnippetNoteIndicator
+          notes={threadNotes}
+          range={range}
+          active={active}
+          disabled={disabled}
+          onClick={() => {
+            if (disabled) return;
+            if (active) onCloseThread?.();
+            else onOpenThread?.(threadKey);
+          }}
+        />
+      );
+    },
+    [onOpenThread, onCloseThread],
+  );
+
+  const onGutterUtilityClick = React.useCallback(
+    (range: SelectedLineRange) => {
+      if (!slice || !onOpenComposer) return;
+      const startLine = range.start + slice.sliceStart - 1;
+      const endLine = range.end + slice.sliceStart - 1;
+      const sliceLines = slice.contents.split('\n');
+      const startLineText = sliceLines[startLine - slice.sliceStart] ?? '';
+      const endLineText = sliceLines[endLine - slice.sliceStart] ?? '';
+      onOpenComposer({ startLine, endLine, startLineText, endLineText });
+    },
+    [slice, onOpenComposer],
+  );
+
   const options = React.useMemo(() => {
     const base = background ? buildPierreOptions(background) : pierreOptions;
-    return { ...base, onPostRender };
-  }, [background, onPostRender]);
+    return {
+      ...base,
+      onPostRender,
+      enableGutterUtility: !!onOpenComposer,
+      enableLineSelection: !!onOpenComposer,
+      onGutterUtilityClick,
+    };
+  }, [background, onPostRender, onOpenComposer, onGutterUtilityClick]);
 
   if (error) {
     return (
@@ -153,6 +289,8 @@ export const PierreSnippetView: React.FC<PierreSnippetViewProps> = ({
       <File
         file={fileObject}
         options={options}
+        lineAnnotations={lineAnnotations}
+        renderAnnotation={renderAnnotation}
         selectedLines={
           slice.focusOffset != null
             ? { start: slice.focusOffset, end: slice.focusOffset }
