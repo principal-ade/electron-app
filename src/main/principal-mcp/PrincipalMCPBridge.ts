@@ -14,6 +14,8 @@ import {
 } from '../bruno/adapters';
 import { registerSequenceDiagramRoutes } from '../file-city/sequenceDiagramRoutes';
 import { getSequenceDiagramStore } from '../file-city/sequenceDiagramStore';
+import { registerDocumentNotesRoutes } from '../document-notes/documentNotesRoutes';
+import { getDocumentNotesPersistence } from '../document-notes/documentNotesPersistence';
 
 // Tracer for Principal MCP Bridge instrumentation
 const tracer = getTracer('principal-ade-main');
@@ -999,6 +1001,11 @@ export class PrincipalMCPBridge extends EventEmitter {
     // FILE CITY SEQUENCE DIAGRAM ROUTES
     // ============================================
     registerSequenceDiagramRoutes(this.app, getSequenceDiagramStore());
+
+    // ============================================
+    // DOCUMENT NOTES ROUTES
+    // ============================================
+    registerDocumentNotesRoutes(this.app, getDocumentNotesPersistence());
   }
 
   public async start(): Promise<number> {

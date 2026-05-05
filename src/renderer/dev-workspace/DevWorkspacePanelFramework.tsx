@@ -97,7 +97,7 @@ import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels'
 import {
   MarkdownPanel,
   type MarkdownPanelProps,
-} from '@industry-theme/markdown-panels';
+} from '../panels/markdown-panel';
 import {
   FileEditorPanel,
   GitDiffPanel,
@@ -2756,6 +2756,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 actions={actionsRef.current}
                 events={eventsRef.current}
                 filePath={markdownTab.filePath}
+                repositoryPath={
+                  contextRef.current?.currentScope?.repository?.path
+                }
                 width={width}
               />
             </div>

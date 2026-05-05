@@ -26,7 +26,7 @@ import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { CodeCityPanel } from '@industry-theme/file-city-panel';
 import { localhostProcessesPanels, RecentRepositoriesPanel } from '../panels';
 import { EventBusPanel, AgentToolsPanel } from '@industry-theme/agent-driven-ui-panels';
-import { MarkdownPanel } from '@industry-theme/markdown-panels';
+import { MarkdownPanel } from '../panels/markdown-panel';
 import { StoryboardListPanel, CanvasEditorPanel } from '@industry-theme/principal-view-panels';
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
 import { panels as agentPanels } from '@industry-theme/agent-panels'; // Keep as array - multiple panels with different IDs
