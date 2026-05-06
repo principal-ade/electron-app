@@ -23,31 +23,13 @@ import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { presenceWindowBridge } from '../services/PresenceWindowBridge';
 import { GitClientFactory } from '../utils/gitClientFactory';
+import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 
-/**
- * Parse owner/repo from a GitHub remote URL
- * Supports: https://github.com/owner/repo.git, git@github.com:owner/repo.git
- */
 function parseGitHubRemoteUrl(
   remoteUrl: string | undefined,
 ): { owner: string; repo: string } | null {
   if (!remoteUrl) return null;
-
-  // HTTPS format: https://github.com/owner/repo.git
-  const httpsMatch = remoteUrl.match(
-    /github\.com\/([^/]+)\/([^/.]+)(?:\.git)?/,
-  );
-  if (httpsMatch) {
-    return { owner: httpsMatch[1], repo: httpsMatch[2] };
-  }
-
-  // SSH format: git@github.com:owner/repo.git
-  const sshMatch = remoteUrl.match(/github\.com:([^/]+)\/([^/.]+)(?:\.git)?/);
-  if (sshMatch) {
-    return { owner: sshMatch[1], repo: sshMatch[2] };
-  }
-
-  return null;
+  return parseGitHubUrl(remoteUrl);
 }
 
 const DEV_WORKSPACE_PURPOSE = 'dev-workspace';

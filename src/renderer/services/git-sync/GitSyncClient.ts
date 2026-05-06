@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { parseGitHubUrl } from '../../../shared/utils/githubUrlParser';
 
 export interface GitSyncConfig {
   serverUrl: string;
@@ -752,8 +753,8 @@ export class GitSyncClient extends EventEmitter {
    * Extract repository ID from URL
    */
   private extractRepoId(repoUrl: string): string {
-    const match = repoUrl.match(/github\.com[:/]([^/]+\/[^/.]+)/);
-    return match ? match[1] : repoUrl;
+    const parsed = parseGitHubUrl(repoUrl);
+    return parsed ? `${parsed.owner}/${parsed.repo}` : repoUrl;
   }
 
   /**

@@ -6,6 +6,7 @@ import { GitEvents } from '../../shared/main-process-api-interfaces/GitAPI';
 import { GitRemoteService } from '@principal-ai/repository-monitoring-server';
 import AuthStateManager from '../services/AuthStateManager';
 import { GitCredentialHelper } from '../services/GitCredentialHelper';
+import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 
 // Create a single instance of the git service
 const gitService = new GitRepositoryService();
@@ -81,13 +82,13 @@ export function registerGitHandlers(): void {
         }
 
         // Extract owner/repo from URL
-        const match = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
-        if (!match) {
+        const parsed = parseGitHubUrl(remoteUrl);
+        if (!parsed) {
           console.warn('[Git] Could not parse GitHub URL:', remoteUrl);
           return false;
         }
 
-        const [, owner, repo] = match;
+        const { owner, repo } = parsed;
         const apiUrl = `https://api.github.com/repos/${owner}/${repo}`;
 
         return new Promise<boolean>((resolve) => {

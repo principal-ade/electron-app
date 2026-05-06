@@ -38,6 +38,7 @@ import { FileSystemService } from '../main-process-api/FileSystemService';
 import { WindowService } from '../main-process-api/WindowService';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
 import { APP_BRANDING } from '../../shared/config/appBranding';
+import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 
 /**
@@ -873,15 +874,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
   // Extract GitHub owner/repo from remote URL if available
   const githubInfo = useMemo(() => {
-    if (repository.remoteUrl) {
-      const match = repository.remoteUrl.match(
-        /github\.com[/:]([^/]+)\/([^/.]+)/,
-      );
-      if (match) {
-        return { owner: match[1], repo: match[2] };
-      }
-    }
-    return null;
+    if (!repository.remoteUrl) return null;
+    return parseGitHubUrl(repository.remoteUrl);
   }, [repository.remoteUrl]);
 
   // Open in Web-ADE handler - only available for GitHub repos

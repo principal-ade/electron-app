@@ -36,6 +36,7 @@ import { FileTreeCore, createFileTreeSource, PathsFileTreeBuilder } from '@princ
 import type { PackagesSliceData } from '@principal-ai/codebase-composition';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
+import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import { getTracer } from '../telemetry';
@@ -579,19 +580,7 @@ export const RepositoryPanelProvider: React.FC<
   // Helper to extract owner/repo from git remote URL
   const parseGitHubRemote = (
     remoteUrl: string,
-  ): { owner: string; repo: string } | null => {
-    // Handle SSH format: git@github.com:owner/repo.git
-    const sshMatch = remoteUrl.match(/git@github\.com:([^/]+)\/([^.]+)/);
-    if (sshMatch) {
-      return { owner: sshMatch[1], repo: sshMatch[2] };
-    }
-    // Handle HTTPS format: https://github.com/owner/repo.git
-    const httpsMatch = remoteUrl.match(/github\.com\/([^/]+)\/([^/.]+)/);
-    if (httpsMatch) {
-      return { owner: httpsMatch[1], repo: httpsMatch[2] };
-    }
-    return null;
-  };
+  ): { owner: string; repo: string } | null => parseGitHubUrl(remoteUrl);
 
   // Fetch file tree when repository changes and subscribe to cache sync updates
   // Strategy: Load cached data first for instant display, then refresh in background
