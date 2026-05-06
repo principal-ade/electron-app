@@ -203,7 +203,10 @@ export class TrailStore {
     options?: TrailShareOptions,
   ): Promise<FileCityTrailShareResult> {
     return shareTrail(
-      { loadPayload: (payloadId) => this.persistence.loadById(payloadId) },
+      {
+        loadPayload: (payloadId) => this.persistence.loadById(payloadId),
+        loadEntry: (payloadId) => this.persistence.loadEntryById(payloadId),
+      },
       id,
       options,
     );

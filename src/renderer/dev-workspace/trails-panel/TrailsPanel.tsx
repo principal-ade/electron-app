@@ -1,8 +1,31 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { RefreshCw, Route } from 'lucide-react';
+import { AlertCircle, RefreshCw, Route } from 'lucide-react';
+import type { BaseTrailIndexEntry } from '@industry-theme/file-city-panel';
+import { APP_BRANDING } from '../../../shared/config/appBranding';
 import { useTrailLibrary } from './useTrailLibrary';
+import { useTrailShares } from './useTrailShares';
 import { TrailRow } from './TrailRow';
+import { SharedTrailRow } from './SharedTrailRow';
+import { TrailShareModal } from './TrailShareModal';
+import { TrailShareService } from '../../services/TrailShareService';
+
+const webAdeBaseUrl = (): string =>
+  process.env.NODE_ENV === 'development'
+    ? APP_BRANDING.WEB_ADE_URL.DEVELOPMENT
+    : APP_BRANDING.WEB_ADE_URL.PRODUCTION;
+
+const trailShareUrl = (id: string): string => `${webAdeBaseUrl()}/trail/${id}`;
+
+interface ShareModalState {
+  trail: BaseTrailIndexEntry;
+  initialUrl: string | null;
+  /**
+   * `local` trails can run the share IPC; `shared` rows always open in
+   * success state with `initialUrl` pre-filled.
+   */
+  source: 'local' | 'shared';
+}
 
 export interface TrailsPanelProps {
   repositoryPath?: string;
@@ -18,15 +41,66 @@ const repoBasename = (repositoryPath?: string): string | null => {
 export const TrailsPanel: React.FC<TrailsPanelProps> = ({ repositoryPath }) => {
   const { theme } = useTheme();
   const library = useTrailLibrary(repositoryPath ?? null);
+  const shares = useTrailShares(repositoryPath ?? null);
+  const [shareModal, setShareModal] = useState<ShareModalState | null>(null);
 
   const repoLabel = repoBasename(repositoryPath);
 
   const handleRefresh = useCallback(async () => {
-    await library.refresh();
-  }, [library]);
+    await Promise.all([library.refresh(), shares.refresh()]);
+  }, [library, shares]);
+
+  const handleOpenShareModal = useCallback(
+    async (id: string) => {
+      const entry = library.entries.find((e) => e.id === id);
+      if (!entry) return;
+      setShareModal({
+        trail: entry,
+        initialUrl: shares.sharedUrlByLocalId.get(id) ?? null,
+        source: 'local',
+      });
+    },
+    [library.entries, shares.sharedUrlByLocalId],
+  );
+
+  const handleCopyLinkForShared = useCallback(
+    (id: string) => {
+      const entry = shares.entries.find((e) => e.id === id);
+      if (!entry) return;
+      setShareModal({
+        trail: entry,
+        initialUrl: trailShareUrl(id),
+        source: 'shared',
+      });
+    },
+    [shares.entries],
+  );
+
+  const handleShareCompleted = useCallback(
+    (id: string, url: string) => {
+      shares.recordShare(id, url);
+      // Refresh the shared list so the just-shared entry appears under
+      // "Shared with this repo" — round-trip verification path.
+      shares.refresh();
+    },
+    [shares],
+  );
+
+  const handleActivateShared = useCallback(
+    async (id: string) => {
+      const fetched = await shares.hydrate(id);
+      if (!fetched) {
+        throw new Error('No origin resolved for this repo.');
+      }
+      await TrailShareService.setTransient(fetched.payload);
+    },
+    [shares],
+  );
 
   const localReady = !library.loading;
   const localEmpty = library.entries.length === 0;
+  const showSharedSection = shares.availability !== 'unavailable';
+  const sharedLoading = shares.availability === 'pending' || shares.loading;
 
   return (
     <div
@@ -81,7 +155,7 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({ repositoryPath }) => {
           onClick={handleRefresh}
           title="Refresh"
           aria-label="Refresh"
-          disabled={library.loading}
+          disabled={library.loading || sharedLoading}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -91,7 +165,8 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({ repositoryPath }) => {
             border: `1px solid ${theme.colors.border}`,
             background: 'transparent',
             color: theme.colors.textSecondary,
-            cursor: library.loading ? 'not-allowed' : 'pointer',
+            cursor:
+              library.loading || sharedLoading ? 'not-allowed' : 'pointer',
           }}
         >
           <RefreshCw size={12} />
@@ -105,28 +180,120 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({ repositoryPath }) => {
           padding: '12px 16px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '16px',
         }}
       >
-        {!localReady && <Loading theme={theme} />}
-        {localReady && localEmpty && (
-          <EmptyState theme={theme} repositoryPath={repositoryPath} />
+        <Section
+          theme={theme}
+          title={showSharedSection ? 'On this machine' : null}
+        >
+          {!localReady && <Loading theme={theme} />}
+          {localReady && localEmpty && (
+            <EmptyState theme={theme} repositoryPath={repositoryPath} />
+          )}
+          {localReady &&
+            !localEmpty &&
+            library.entries.map((entry) => (
+              <TrailRow
+                key={entry.id}
+                entry={entry}
+                isActive={entry.id === library.activeId}
+                onActivate={library.activate}
+                onRemove={library.remove}
+                shareUrl={shares.sharedUrlByLocalId.get(entry.id) ?? null}
+                onShare={handleOpenShareModal}
+              />
+            ))}
+        </Section>
+
+        {showSharedSection && (
+          <Section theme={theme} title="Shared with this repo">
+            {sharedLoading && <Loading theme={theme} />}
+            {!sharedLoading && shares.availability === 'error' && (
+              <ErrorRow
+                theme={theme}
+                message={
+                  shares.errorMessage ??
+                  'Could not load shared trails from web-ade.'
+                }
+                onRetry={shares.refresh}
+              />
+            )}
+            {!sharedLoading &&
+              shares.availability === 'available' &&
+              shares.entries.length === 0 && (
+                <div
+                  style={{
+                    padding: '12px 4px',
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  No shares yet for this repo.
+                </div>
+              )}
+            {!sharedLoading &&
+              shares.availability === 'available' &&
+              shares.entries.map((entry) => (
+                <SharedTrailRow
+                  key={entry.id}
+                  entry={entry}
+                  onActivate={handleActivateShared}
+                  onCopyLink={handleCopyLinkForShared}
+                />
+              ))}
+          </Section>
         )}
-        {localReady &&
-          !localEmpty &&
-          library.entries.map((entry) => (
-            <TrailRow
-              key={entry.id}
-              entry={entry}
-              isActive={entry.id === library.activeId}
-              onActivate={library.activate}
-              onRemove={library.remove}
-            />
-          ))}
       </div>
+
+      {shareModal && (
+        <TrailShareModal
+          trail={shareModal.trail}
+          repositoryPath={
+            shareModal.source === 'local' ? repositoryPath : undefined
+          }
+          initialUrl={shareModal.initialUrl}
+          onClose={() => setShareModal(null)}
+          onShared={
+            shareModal.source === 'local'
+              ? (url) => handleShareCompleted(shareModal.trail.id, url)
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 };
+
+const Section: React.FC<{
+  theme: ReturnType<typeof useTheme>['theme'];
+  title: string | null;
+  children: React.ReactNode;
+}> = ({ theme, title, children }) => (
+  <section
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+    }}
+  >
+    {title && (
+      <div
+        style={{
+          fontSize: theme.fontSizes[0],
+          fontWeight: theme.fontWeights.semibold,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          color: theme.colors.textSecondary,
+          paddingBottom: '4px',
+        }}
+      >
+        {title}
+      </div>
+    )}
+    {children}
+  </section>
+);
 
 const Loading: React.FC<{ theme: ReturnType<typeof useTheme>['theme'] }> = ({
   theme,
@@ -140,6 +307,46 @@ const Loading: React.FC<{ theme: ReturnType<typeof useTheme>['theme'] }> = ({
     }}
   >
     Loading…
+  </div>
+);
+
+const ErrorRow: React.FC<{
+  theme: ReturnType<typeof useTheme>['theme'];
+  message: string;
+  onRetry: () => void;
+}> = ({ theme, message, onRetry }) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '10px 12px',
+      borderRadius: '8px',
+      border: `1px solid ${theme.colors.border}`,
+      background: theme.colors.background,
+      color: theme.colors.error ?? theme.colors.textSecondary,
+      fontSize: theme.fontSizes[0],
+    }}
+  >
+    <AlertCircle size={14} />
+    <span style={{ flex: 1, minWidth: 0 }} title={message}>
+      {message}
+    </span>
+    <button
+      type="button"
+      onClick={onRetry}
+      style={{
+        padding: '4px 8px',
+        borderRadius: '6px',
+        border: `1px solid ${theme.colors.border}`,
+        background: 'transparent',
+        color: theme.colors.textSecondary,
+        cursor: 'pointer',
+        fontSize: theme.fontSizes[0],
+      }}
+    >
+      Retry
+    </button>
   </div>
 );
 

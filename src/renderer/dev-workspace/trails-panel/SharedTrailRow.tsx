@@ -1,9 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Check, GitCompare, Share2, Trash2 } from 'lucide-react';
-import type { TrailIndexEntry } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
-
-const RECENT_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+import { GitCompare, Link2, Loader2, Share2 } from 'lucide-react';
+import type { SharedTrailIndexEntry } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 
 const relativeTime = (iso: string): string => {
   const then = new Date(iso).getTime();
@@ -21,78 +19,55 @@ const relativeTime = (iso: string): string => {
   return `${Math.floor(months / 12)}y ago`;
 };
 
-export interface TrailRowProps {
-  entry: TrailIndexEntry;
-  isActive: boolean;
-  onActivate: (id: string) => void;
-  onRemove: (id: string) => void;
+export interface SharedTrailRowProps {
+  entry: SharedTrailIndexEntry;
   /**
-   * Per-session shared URL for this id, set by the panel after a successful
-   * share. Drives the "shared" pill on the row; the modal handles the
-   * actual copy-link affordance.
+   * Hydrate + render the shared trail. The panel implements this by calling
+   * `useTrailShares.hydrate(id)` and pushing the payload through
+   * `TrailShareService.setTransient`.
    */
-  shareUrl?: string | null;
+  onActivate: (id: string) => Promise<void>;
   /**
-   * If supplied, renders the share button on this row. Clicking it opens
-   * the share modal (handled by the parent panel); this row doesn't run
-   * the IPC itself.
+   * Open the share modal in success state with the trail's web-ade URL
+   * pre-filled. Lets users grab the link without re-sharing.
    */
-  onShare?: (id: string) => void | Promise<void>;
+  onCopyLink?: (id: string) => void;
 }
 
-export const TrailRow: React.FC<TrailRowProps> = ({
+export const SharedTrailRow: React.FC<SharedTrailRowProps> = ({
   entry,
-  isActive,
   onActivate,
-  onRemove,
-  shareUrl,
-  onShare,
+  onCopyLink,
 }) => {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
+  const [activating, setActivating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Always re-activate. Re-activating a current active trail is a cheap
-  // idempotent re-broadcast that surfaces the trail tab in case the user
-  // closed it — which is the main reason a user re-clicks an active row.
-  const handleActivate = useCallback(() => {
-    onActivate(entry.id);
-  }, [entry.id, onActivate]);
-
-  const handleRemove = useCallback(
+  const handleCopyLink = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      const created = new Date(entry.createdAt).getTime();
-      const isRecent =
-        !Number.isNaN(created) && Date.now() - created < RECENT_THRESHOLD_MS;
-      if (
-        !isRecent &&
-        !window.confirm(
-          `Delete "${entry.title || 'Untitled trail'}"? This cannot be undone.`,
-        )
-      ) {
-        return;
-      }
-      onRemove(entry.id);
+      onCopyLink?.(entry.id);
     },
-    [entry, onRemove],
+    [entry.id, onCopyLink],
   );
 
-  const handleShare = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onShare?.(entry.id);
-    },
-    [entry.id, onShare],
-  );
+  const handleActivate = useCallback(async () => {
+    if (activating) return;
+    setActivating(true);
+    setError(null);
+    try {
+      await onActivate(entry.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load this share.');
+    } finally {
+      setActivating(false);
+    }
+  }, [activating, entry.id, onActivate]);
 
   const title =
     entry.title?.trim() || `Untitled trail · ${entry.markerCount} markers`;
-  const shareButtonTitle = shareUrl
-    ? 'Open share dialog (copy link)'
-    : 'Share to web-ade';
-  const shareButtonColor = shareUrl
-    ? theme.colors.primary
-    : theme.colors.textSecondary;
+  const author = entry.createdBy?.githubLogin;
 
   return (
     <div
@@ -113,15 +88,11 @@ export const TrailRow: React.FC<TrailRowProps> = ({
         gap: '10px',
         padding: '10px 12px',
         borderRadius: '8px',
-        border: `1px solid ${
-          isActive ? theme.colors.primary : theme.colors.border
-        }`,
-        background: isActive
+        border: `1px solid ${theme.colors.border}`,
+        background: hovered
           ? theme.colors.backgroundSecondary
-          : hovered
-            ? theme.colors.backgroundSecondary
-            : theme.colors.background,
-        cursor: 'pointer',
+          : theme.colors.background,
+        cursor: activating ? 'wait' : 'pointer',
         position: 'relative',
         transition: 'background 120ms, border-color 120ms',
       }}
@@ -131,7 +102,7 @@ export const TrailRow: React.FC<TrailRowProps> = ({
         style={{
           width: '3px',
           borderRadius: '2px',
-          background: isActive ? theme.colors.primary : 'transparent',
+          background: 'transparent',
         }}
       />
       <div
@@ -151,14 +122,11 @@ export const TrailRow: React.FC<TrailRowProps> = ({
             minWidth: 0,
           }}
         >
-          {isActive && (
-            <Check
-              size={12}
-              strokeWidth={2.5}
-              color={theme.colors.primary}
-              aria-label="Active"
-            />
-          )}
+          <Share2
+            size={12}
+            color={theme.colors.primary}
+            aria-label="Shared on web-ade"
+          />
           <span
             style={{
               fontSize: theme.fontSizes[1],
@@ -174,25 +142,6 @@ export const TrailRow: React.FC<TrailRowProps> = ({
           >
             {title}
           </span>
-          {shareUrl && (
-            <span
-              title="Shared to web-ade this session"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '3px',
-                padding: '1px 6px',
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.primary,
-                border: `1px solid ${theme.colors.primary}`,
-                borderRadius: '999px',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <Share2 size={10} />
-              shared
-            </span>
-          )}
           {entry.repoNames.length > 1 && (
             <span
               title={`Multi-repo trail: ${entry.repoNames.join(', ')}`}
@@ -241,7 +190,13 @@ export const TrailRow: React.FC<TrailRowProps> = ({
         >
           <span>{entry.markerCount} markers</span>
           <span aria-hidden>·</span>
-          <span title={entry.createdAt}>{relativeTime(entry.createdAt)}</span>
+          <span title={entry.updatedAt}>{relativeTime(entry.updatedAt)}</span>
+          {author && (
+            <>
+              <span aria-hidden>·</span>
+              <span title={`GitHub: ${author}`}>by {author}</span>
+            </>
+          )}
         </div>
         {entry.summaryPreview && (
           <div
@@ -258,6 +213,20 @@ export const TrailRow: React.FC<TrailRowProps> = ({
             {entry.summaryPreview}
           </div>
         )}
+        {error && (
+          <div
+            title={error}
+            style={{
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.error ?? theme.colors.textSecondary,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {error}
+          </div>
+        )}
       </div>
       <div
         style={{
@@ -267,47 +236,45 @@ export const TrailRow: React.FC<TrailRowProps> = ({
           alignSelf: 'flex-start',
         }}
       >
-        {onShare && (
+        {onCopyLink && !activating && (
           <button
             type="button"
-            onClick={handleShare}
-            title={shareButtonTitle}
-            aria-label={shareButtonTitle}
+            onClick={handleCopyLink}
+            title="Copy share link"
+            aria-label="Copy share link"
             style={{
               padding: '4px',
               borderRadius: '6px',
               border: 'none',
               background: 'transparent',
-              color: shareButtonColor,
+              color: theme.colors.textSecondary,
               cursor: 'pointer',
-              opacity: hovered || isActive || shareUrl ? 1 : 0,
-              transition: 'opacity 120ms, color 120ms',
+              opacity: hovered ? 1 : 0,
+              transition: 'opacity 120ms',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Share2 size={14} />
+            <Link2 size={14} />
           </button>
         )}
-        <button
-          type="button"
-          onClick={handleRemove}
-          title="Delete trail"
-          aria-label={`Delete ${title}`}
-          style={{
-            padding: '4px',
-            borderRadius: '6px',
-            border: 'none',
-            background: 'transparent',
-            color: theme.colors.textSecondary,
-            cursor: 'pointer',
-            opacity: hovered || isActive ? 1 : 0,
-            transition: 'opacity 120ms',
-          }}
-        >
-          <Trash2 size={14} />
-        </button>
+        {activating && (
+          <div
+            style={{
+              padding: '4px',
+              color: theme.colors.textSecondary,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Loader2
+              size={14}
+              style={{ animation: 'spin 1s linear infinite' }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

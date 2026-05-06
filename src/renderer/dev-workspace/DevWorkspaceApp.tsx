@@ -102,7 +102,7 @@ const PANEL_IDS = [
   'agentsList',
   'githubIssues',
   'githubIssueDetail',
-  'sequenceDiagrams',
+  'trails',
 ];
 
 // Quick commands for the command palette autocomplete
