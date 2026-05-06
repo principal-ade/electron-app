@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { MessageSquare, Send, Trash2, X } from 'lucide-react';
+import { Check, Copy, MessageSquare, Send, Trash2, X } from 'lucide-react';
 
 export interface MarkdownNote {
   id: string;
@@ -43,6 +43,18 @@ interface SelectionPillProps {
   /** Pixel rect of the current selection in the parent container's coords. */
   rect: { left: number; top: number; right: number; bottom: number };
   onClick: () => void;
+  /**
+   * When provided, an additional copy button is rendered next to "Add note".
+   * Receives no args; the parent owns the selection text and the success
+   * affordance via the `copied` prop.
+   */
+  onCopy?: () => void | Promise<void>;
+  /**
+   * When true, the copy button paints a check icon + "Copied" instead of
+   * the default copy affordance. Parent-controlled so Cmd+C can flash the
+   * same feedback as a click.
+   */
+  copied?: boolean;
 }
 
 /**
@@ -52,16 +64,17 @@ interface SelectionPillProps {
 export const MarkdownSelectionPill: React.FC<SelectionPillProps> = ({
   rect,
   onClick,
+  onCopy,
+  copied = false,
 }) => {
   const { theme } = useTheme();
+
   // Anchor at the selection's end (right edge), nudged slightly above so the
   // pill doesn't overlap the highlighted text.
   const left = rect.right;
   const top = Math.max(0, rect.top - 36);
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
       onMouseDown={(e) => {
         // Don't tear the live selection by stealing focus before the click.
         e.preventDefault();
@@ -75,23 +88,70 @@ export const MarkdownSelectionPill: React.FC<SelectionPillProps> = ({
         transform: 'translateX(-50%)',
         zIndex: 1955,
         display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '4px 10px',
+        alignItems: 'stretch',
         background: theme.colors.primary,
         color: theme.colors.background,
-        border: 'none',
         borderRadius: 999,
-        cursor: 'pointer',
+        boxShadow: '0 6px 16px rgba(0, 0, 0, 0.32)',
         fontFamily: theme.fonts.body,
         fontSize: theme.fontSizes[0],
         fontWeight: 600,
-        boxShadow: '0 6px 16px rgba(0, 0, 0, 0.32)',
+        overflow: 'hidden',
       }}
     >
-      <MessageSquare size={12} />
-      Add note
-    </button>
+      <button
+        type="button"
+        onClick={onClick}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '4px 10px',
+          background: 'transparent',
+          color: 'inherit',
+          border: 'none',
+          cursor: 'pointer',
+          font: 'inherit',
+        }}
+      >
+        <MessageSquare size={12} />
+        Add note
+      </button>
+      {onCopy && (
+        <>
+          <span
+            aria-hidden
+            style={{
+              width: 1,
+              background: 'rgba(255, 255, 255, 0.35)',
+              alignSelf: 'stretch',
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              void onCopy();
+            }}
+            aria-label={copied ? 'Copied' : 'Copy selection'}
+            title={copied ? 'Copied' : 'Copy selection'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '4px 10px',
+              background: 'transparent',
+              color: 'inherit',
+              border: 'none',
+              cursor: 'pointer',
+              font: 'inherit',
+            }}
+          >
+            {copied ? <Check size={12} /> : <Copy size={12} />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        </>
+      )}
+    </div>
   );
 };
 

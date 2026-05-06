@@ -269,6 +269,12 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   const [workspaceForRemoval, setWorkspaceForRemoval] =
     useState<Workspace | null>(null);
 
+  // Currently displayed markdown file in the right panel. The MarkdownPanel
+  // owns its own read + watch — we just feed it the path.
+  const [activeMarkdownPath, setActiveMarkdownPath] = useState<string | null>(
+    null,
+  );
+
   // Handle removal modal close
   const handleCloseRemoveModal = useCallback(() => {
     setIsRemoveModalOpen(false);
@@ -524,8 +530,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       }
 
       try {
-        // Set the active file (reads content and updates slice)
-        await actions.setActiveFile?.(filePath);
+        setActiveMarkdownPath(filePath);
 
         // Switch the right panel to markdown-viewer
         onLayoutChange({ ...layout, right: 'markdown-viewer' });
@@ -962,6 +967,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               context={context}
               actions={actions}
               events={events}
+              filePath={activeMarkdownPath}
+              repositoryPath={selectedRepository?.path}
             />
           </div>
         ) : (

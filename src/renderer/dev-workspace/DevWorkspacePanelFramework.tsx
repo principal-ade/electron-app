@@ -955,20 +955,23 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   >([]);
   const [showRightPanelHistory, setShowRightPanelHistory] = useState(false);
 
-  // Handle clicking on a history item to re-open that file
-  const handleHistoryItemClick = useCallback(
-    async (filePath: string) => {
-      setShowRightPanelHistory(false);
-      await actions.setActiveFile?.(filePath);
-      // Move to front of history
-      const fileName = filePath.split('/').pop() || 'Document';
-      setRightPanelHistory((prev) => {
-        const filtered = prev.filter((item) => item.filePath !== filePath);
-        return [{ filePath, fileName, openedAt: Date.now() }, ...filtered];
-      });
-    },
-    [actions],
+  // Currently displayed markdown file in the right panel. The panel reads
+  // the file itself (and watches it for changes) — we just hand it the path.
+  const [activeMarkdownPath, setActiveMarkdownPath] = useState<string | null>(
+    null,
   );
+
+  // Handle clicking on a history item to re-open that file
+  const handleHistoryItemClick = useCallback((filePath: string) => {
+    setShowRightPanelHistory(false);
+    setActiveMarkdownPath(filePath);
+    // Move to front of history
+    const fileName = filePath.split('/').pop() || 'Document';
+    setRightPanelHistory((prev) => {
+      const filtered = prev.filter((item) => item.filePath !== filePath);
+      return [{ filePath, fileName, openedAt: Date.now() }, ...filtered];
+    });
+  }, []);
 
   // Track terminal panel container width using ResizeObserver
   const [terminalPanelWidth, setTerminalPanelWidth] = useState<number>(0);
@@ -1136,8 +1139,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       });
 
       try {
-        // Set the active file (reads content and updates slice)
-        await actions.setActiveFile?.(filePath);
+        setActiveMarkdownPath(filePath);
 
         // Add to right panel history (avoid duplicates, move to front if exists)
         const fileName = filePath.split('/').pop() || 'Document';
@@ -3703,6 +3705,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 context={context}
                 actions={actions}
                 events={events}
+                filePath={activeMarkdownPath}
+                repositoryPath={
+                  context?.currentScope?.repository?.path
+                }
               />
             </div>
           </div>
@@ -4142,6 +4148,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       handleAssociationRatioChange,
       renderAssociatedContent,
       getAssociatedHeader,
+      activeMarkdownPath,
+      rightPanelHistory,
+      showRightPanelHistory,
+      handleHistoryItemClick,
     ],
   );
 

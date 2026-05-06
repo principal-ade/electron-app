@@ -3,11 +3,9 @@ import { Plus, Minus } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { DocumentView } from 'themed-markdown';
 import type { AnnotationSelection } from 'themed-markdown';
-import type { RepositoryInfo } from '@principal-ade/markdown-utils';
 import 'themed-markdown/dist/index.css';
 import type {
   PanelActions,
-  ActiveFileContext,
   PanelComponentProps,
 } from '@principal-ade/panel-framework-core';
 import type {
@@ -15,19 +13,13 @@ import type {
   TextQuoteAnchor,
 } from '../../../shared/types/document-notes.types';
 import { DocumentNotesService } from '../../main-process-api/DocumentNotesService';
+import { useFileWatch } from '../../hooks/useFileWatch';
+import { MarkdownSelectionPill } from '../../dev-workspace/file-city-panel/MarkdownNotes';
 import { NotePopover } from './NotePopover';
 
 export interface MarkdownPanelActions extends PanelActions {
   readFile: (path: string) => Promise<string>;
 }
-
-export interface MarkdownPanelContext extends ActiveFileContext {}
-
-const getBasePath = (filePath: string): string => {
-  const parts = filePath.split('/');
-  parts.pop();
-  return parts.join('/');
-};
 
 /**
  * Strip `prefix` from `absPath` if it's a directory prefix; otherwise
@@ -60,12 +52,12 @@ export interface ContentChangeInfo {
 }
 
 export interface MarkdownPanelProps
-  extends PanelComponentProps<MarkdownPanelActions, MarkdownPanelContext> {
+  extends PanelComponentProps<MarkdownPanelActions> {
   filePath?: string | null;
   /**
    * Absolute path of the repository the file belongs to. Used to key notes
-   * per-repo when the panel is loading via `filePath` (the slice path
-   * derives this from the active-file source instead).
+   * per-repo; if omitted, notes fall into the repo-agnostic bucket keyed by
+   * the absolute file path.
    */
   repositoryPath?: string;
   width?: number;
@@ -73,7 +65,6 @@ export interface MarkdownPanelProps
 }
 
 export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
-  context,
   actions,
   events,
   filePath: filePathProp,
@@ -87,43 +78,48 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
 
   const previousContentRef = useRef<{ path: string; content: string } | null>(null);
 
-  const [propBasedContent, setPropBasedContent] = useState<{
+  // The panel owns its file load. We re-read whenever `filePath` changes
+  // or the file watcher reports a change on disk.
+  const [fileState, setFileState] = useState<{
     path: string;
     content: string;
     loading: boolean;
     error: Error | null;
   } | null>(null);
 
-  useEffect(() => {
+  const loadFile = useCallback(async () => {
     if (!filePathProp) {
-      setPropBasedContent(null);
+      setFileState(null);
       return;
     }
-
-    if (propBasedContent?.path === filePathProp && !propBasedContent.loading) {
-      return;
+    setFileState((prev) => ({
+      path: filePathProp,
+      content: prev?.path === filePathProp ? prev.content : '',
+      loading: true,
+      error: null,
+    }));
+    try {
+      const content = await actions.readFile(filePathProp);
+      setFileState({ path: filePathProp, content, loading: false, error: null });
+    } catch (err) {
+      console.error('[MarkdownPanel] Failed to load file:', err);
+      setFileState({
+        path: filePathProp,
+        content: '',
+        loading: false,
+        error: err instanceof Error ? err : new Error(String(err)),
+      });
     }
-
-    const loadContent = async () => {
-      console.log('[MarkdownPanel] Loading file from prop:', filePathProp);
-      setPropBasedContent({ path: filePathProp, content: '', loading: true, error: null });
-
-      try {
-        const content = await actions.readFile(filePathProp);
-        setPropBasedContent({ path: filePathProp, content, loading: false, error: null });
-      } catch (err) {
-        console.error('[MarkdownPanel] Failed to load file:', err);
-        setPropBasedContent({
-          path: filePathProp,
-          content: '',
-          loading: false,
-          error: err instanceof Error ? err : new Error(String(err)),
-        });
-      }
-    };
-
-    loadContent();
   }, [filePathProp, actions]);
+
+  useEffect(() => {
+    void loadFile();
+  }, [loadFile]);
+
+  // Reload when the file changes on disk.
+  useFileWatch(filePathProp ?? null, loadFile, {
+    enabled: !!filePathProp,
+  });
 
   useEffect(() => {
     const checkMobile = () => {
@@ -154,28 +150,9 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
     });
   }, [events]);
 
-  const { activeFile: activeFileSlice } = context;
-
-  const usePropBasedContent = filePathProp && propBasedContent?.path === filePathProp;
-
-  const activeFile = usePropBasedContent
-    ? {
-        data: {
-          path: propBasedContent.path,
-          content: propBasedContent.content,
-          type: 'markdown' as const,
-        },
-        loading: propBasedContent.loading,
-        error: propBasedContent.error,
-      }
-    : activeFileSlice;
-
-  const isMarkdown =
-    activeFile?.data?.type === 'markdown' ||
-    activeFile?.data?.path?.match(/\.(md|mdx|markdown)$/i);
-
-  const markdownContent = activeFile?.data?.content || '';
-  const currentFilePath = activeFile?.data?.path || '';
+  const currentFilePath = fileState?.path ?? '';
+  const markdownContent = fileState?.content ?? '';
+  const isMarkdown = !!currentFilePath.match(/\.(md|mdx|markdown)$/i);
 
   useEffect(() => {
     const prev = previousContentRef.current;
@@ -203,80 +180,33 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
         timestamp: Date.now(),
         payload: changeInfo,
       });
-
-      console.log('[MarkdownPanel] Content changed:', {
-        path: currentFilePath,
-        charDiff: changeInfo.charDiff,
-      });
     }
 
     previousContentRef.current = { path: currentFilePath, content: markdownContent };
   }, [markdownContent, currentFilePath, onContentChange, events]);
 
-  const repositoryInfo: RepositoryInfo | undefined = useMemo(() => {
-    if (usePropBasedContent || !activeFileSlice?.data) return undefined;
-
-    const source = 'source' in activeFileSlice.data ? activeFileSlice.data.source : undefined;
-    if (!source) return undefined;
-
-    const branch =
-      source.locationType === 'branch'
-        ? source.location
-        : source.metadata?.currentBranch || 'main';
-
-    return {
-      owner: source.owner,
-      repo: source.name,
-      branch,
-      basePath: getBasePath(activeFileSlice?.data?.path || ''),
-    };
-  }, [usePropBasedContent, activeFileSlice?.data]);
-
   // Notes wiring -----------------------------------------------------------
-  // Key under which notes for the current document are stored. Local repos
-  // get a real repositoryPath; remote sources and prop-based loads land in
-  // the repo-agnostic bucket keyed by the absolute path.
+  // Key under which notes for the current document are stored. With a
+  // repositoryPath we relativize so notes follow the repo; without one we
+  // land in the repo-agnostic bucket keyed by the absolute path.
   const noteKey = useMemo<{
     repositoryPath: string | undefined;
     relativeFilePath: string;
   } | null>(() => {
-    if (usePropBasedContent && propBasedContent) {
-      if (repositoryPathProp) {
-        return {
-          repositoryPath: repositoryPathProp,
-          relativeFilePath: relativizeIfPrefix(
-            propBasedContent.path,
-            repositoryPathProp,
-          ),
-        };
-      }
-      return {
-        repositoryPath: undefined,
-        relativeFilePath: propBasedContent.path,
-      };
-    }
     if (!currentFilePath) return null;
-    const source =
-      activeFileSlice?.data && 'source' in activeFileSlice.data
-        ? activeFileSlice.data.source
-        : undefined;
-    if (source?.type === 'local' && source.location) {
+    if (repositoryPathProp) {
       return {
-        repositoryPath: source.location,
-        relativeFilePath: relativizeIfPrefix(currentFilePath, source.location),
+        repositoryPath: repositoryPathProp,
+        relativeFilePath: relativizeIfPrefix(currentFilePath, repositoryPathProp),
       };
     }
     return { repositoryPath: undefined, relativeFilePath: currentFilePath };
-  }, [
-    usePropBasedContent,
-    propBasedContent,
-    repositoryPathProp,
-    currentFilePath,
-    activeFileSlice?.data,
-  ]);
+  }, [currentFilePath, repositoryPathProp]);
 
   const [notes, setNotes] = useState<DocumentNote[]>([]);
   const [notesVersion, setNotesVersion] = useState(0);
+  const [pendingSelection, setPendingSelection] =
+    useState<AnnotationSelection | null>(null);
   const [draft, setDraft] = useState<{
     anchor: AnnotationSelection['anchor'];
     rect: DOMRect;
@@ -307,16 +237,20 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
 
   // File change closes any open popover so we don't apply edits to the wrong doc.
   useEffect(() => {
+    setPendingSelection(null);
     setDraft(null);
     setEditing(null);
   }, [noteKey?.repositoryPath, noteKey?.relativeFilePath]);
 
   const handleSelectionChange = useCallback(
     (selection: AnnotationSelection | null) => {
-      // Ignore selection-clear notifications. The textarea inside the draft
-      // popover steals focus on first keystroke, which clears the document
-      // selection and would otherwise dismiss the popover mid-typing.
-      // Dismissal is owned by the popover (Cancel / Esc / outside-click).
+      // Ignore null selection notifications. The native selection collapses
+      // for many reasons that shouldn't dismiss the pill: clicking the pill
+      // itself, the textarea inside an open popover stealing focus, or the
+      // synthetic-highlight re-render. The pill is dismissed by explicit
+      // actions (Add note, Copy timer, Escape) or by replacing the
+      // selection with a fresh one.
+      if (draft || editing) return;
       if (!selection) return;
       if (!isSafeAnchor(selection.anchor)) {
         console.warn(
@@ -324,11 +258,86 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
         );
         return;
       }
-      setEditing(null);
-      setDraft({ anchor: selection.anchor, rect: selection.rect });
+      setPendingSelection(selection);
     },
-    [],
+    [draft, editing],
   );
+
+  // Escape clears the pill when no popover is open (popovers own their own
+  // Escape handling).
+  useEffect(() => {
+    if (!pendingSelection || draft || editing) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setPendingSelection(null);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [pendingSelection, draft, editing]);
+
+  const handleStartDraftFromPill = useCallback(() => {
+    if (!pendingSelection) return;
+    setEditing(null);
+    setDraft({
+      anchor: pendingSelection.anchor,
+      rect: pendingSelection.rect,
+    });
+    setPendingSelection(null);
+  }, [pendingSelection]);
+
+  const [copied, setCopied] = useState(false);
+
+  const handleCopySelection = useCallback(async () => {
+    const text = pendingSelection?.anchor.exact;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch (err) {
+      console.error('[MarkdownPanel] copy failed', err);
+    }
+  }, [pendingSelection]);
+
+  // After flashing "Copied", dismiss the pill + highlight. The user has
+  // gotten what they wanted; leaving the selection up just gets in the way.
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => {
+      setCopied(false);
+      setPendingSelection(null);
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  // Painting the synthetic highlight collapses the native browser selection,
+  // so Cmd/Ctrl+C falls through to an empty selection by default. Intercept
+  // it while the pill is showing and route through the same copy path the
+  // button uses so we get the same "Copied" flash + dismissal.
+  useEffect(() => {
+    if (!pendingSelection || draft || editing) return;
+    const handler = (e: KeyboardEvent) => {
+      const isCopy = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c';
+      if (!isCopy) return;
+      const target = e.target as HTMLElement | null;
+      // Don't override copy when the focus is inside an editable field —
+      // the user might be copying from an input or textarea.
+      if (target) {
+        const tag = target.tagName;
+        if (
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+      }
+      e.preventDefault();
+      void handleCopySelection();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [pendingSelection, draft, editing, handleCopySelection]);
 
   const handleAnnotationClick = useCallback(
     (id: string, event: MouseEvent) => {
@@ -338,6 +347,7 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
       const rect =
         target?.getBoundingClientRect() ??
         new DOMRect(event.clientX, event.clientY, 0, 0);
+      setPendingSelection(null);
       setDraft(null);
       setEditing({ note, rect });
     },
@@ -373,11 +383,13 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
     [noteKey, editing],
   );
 
-  // While the popover is open the document's text selection is lost (the
-  // textarea steals focus). We synthesize a transient annotation for the
-  // draft so DocumentView highlights the anchored text using its own
-  // annotation styling.
+  // The native browser selection isn't a reliable visual cue here: themed-
+  // markdown re-renders on selection changes and the highlight flickers /
+  // disappears. We synthesize a transient annotation both for the pending
+  // pill state and the open-draft state so DocumentView paints the
+  // anchored range using its own annotation styling.
   const DRAFT_ANNOTATION_ID = '__draft__';
+  const PENDING_ANNOTATION_ID = '__pending__';
   const annotationsForView = useMemo(() => {
     const safeNotes = notes.filter((n) => {
       if (isSafeAnchor(n.anchor)) return true;
@@ -388,20 +400,34 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
       );
       return false;
     });
-    if (!draft) return safeNotes;
-    return [
-      ...safeNotes,
-      {
-        id: DRAFT_ANNOTATION_ID,
-        anchor: draft.anchor,
-        metadata: { body: '', createdAt: '', updatedAt: '' },
-      },
-    ];
-  }, [notes, draft]);
+    if (draft) {
+      return [
+        ...safeNotes,
+        {
+          id: DRAFT_ANNOTATION_ID,
+          anchor: draft.anchor,
+          metadata: { body: '', createdAt: '', updatedAt: '' },
+        },
+      ];
+    }
+    if (pendingSelection) {
+      return [
+        ...safeNotes,
+        {
+          id: PENDING_ANNOTATION_ID,
+          anchor: pendingSelection.anchor,
+          metadata: { body: '', createdAt: '', updatedAt: '' },
+        },
+      ];
+    }
+    return safeNotes;
+  }, [notes, draft, pendingSelection]);
 
   const activeAnnotationId = draft
     ? DRAFT_ANNOTATION_ID
-    : (editing?.note.id ?? null);
+    : pendingSelection
+      ? PENDING_ANNOTATION_ID
+      : (editing?.note.id ?? null);
 
   const handleDeleteEdit = useCallback(async () => {
     if (!noteKey || !editing) return;
@@ -441,7 +467,7 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
     });
   };
 
-  if (activeFile?.loading) {
+  if (fileState?.loading && !fileState.content) {
     return (
       <div
         style={{
@@ -455,14 +481,14 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
       >
         <div style={{ textAlign: 'center' }}>
           <p style={{ color: theme.colors.textSecondary }}>
-            Loading {activeFile.data?.path || 'file'}...
+            Loading {fileState.path || 'file'}...
           </p>
         </div>
       </div>
     );
   }
 
-  if (activeFile?.error) {
+  if (fileState?.error) {
     return (
       <div
         style={{
@@ -477,14 +503,14 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
         <div style={{ textAlign: 'center', color: theme.colors.error }}>
           <p>Error loading markdown file</p>
           <p style={{ fontSize: '14px', marginTop: '8px' }}>
-            {activeFile.error.message}
+            {fileState.error.message}
           </p>
         </div>
       </div>
     );
   }
 
-  if (!activeFile?.data || !isMarkdown) {
+  if (!fileState || !isMarkdown) {
     return (
       <div
         style={{
@@ -520,13 +546,26 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
         onCheckboxChange={() => {}}
         slideIdPrefix="markdown-panel"
         maxWidth="100%"
-        repositoryInfo={repositoryInfo}
         width={width}
         annotations={annotationsForView}
         activeAnnotationId={activeAnnotationId}
         onSelectionChange={handleSelectionChange}
         onAnnotationClick={handleAnnotationClick}
       />
+
+      {!draft && !editing && pendingSelection && (
+        <MarkdownSelectionPill
+          rect={{
+            left: pendingSelection.rect.left,
+            top: pendingSelection.rect.top,
+            right: pendingSelection.rect.right,
+            bottom: pendingSelection.rect.bottom,
+          }}
+          onClick={handleStartDraftFromPill}
+          onCopy={handleCopySelection}
+          copied={copied}
+        />
+      )}
 
       {draft && (
         <NotePopover
