@@ -3,8 +3,8 @@
  * `window.mainProcess.fileCityTrail` so components/hooks never touch the
  * preload surface directly.
  *
- * Parallel to `SequenceDiagramService`. Sibling: `TrailLibraryService`
- * (saved-trail ops), `TrailNotesService` (note CRUD).
+ * Sibling: `TrailLibraryService` (saved-trail ops), `TrailNotesService`
+ * (note CRUD).
  */
 
 import type { TrailPayload } from '@industry-theme/file-city-panel';

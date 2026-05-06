@@ -54,7 +54,6 @@ import { recentReposAPI } from './main-process-api-implementations/recentReposAp
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
 import { extensionAPI } from './main-process-api-implementations/extensionApi';
 import { fileCityImageAPI } from './main-process-api-implementations/fileCityImageApi';
-import { fileCitySequenceAPI } from './main-process-api-implementations/fileCitySequenceApi';
 import { fileCityTrailAPI } from './main-process-api-implementations/fileCityTrailApi';
 import { documentNotesAPI } from './main-process-api-implementations/documentNotesApi';
 import { brunoAPI } from './main-process-api-implementations/brunoApi';
@@ -139,7 +138,6 @@ const mainProcessExposure: MainProcessAPI = {
   skillLock: skillLockAPI,
   extension: extensionAPI,
   fileCityImage: fileCityImageAPI,
-  fileCitySequence: fileCitySequenceAPI,
   fileCityTrail: fileCityTrailAPI,
   documentNotes: documentNotesAPI,
   bruno: brunoAPI,

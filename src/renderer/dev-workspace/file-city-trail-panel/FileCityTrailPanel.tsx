@@ -4,9 +4,8 @@
  * supplies the required context (fileTree, lineCounts, trail, repository)
  * + actions (openFile, readFile, trail-note CRUD).
  *
- * Parallel to the existing `FileCityPanel` (which keeps its non-trail
- * features). The trail explorer renders sequence-view trails today; non-
- * sequence views are scaffolded in the schema but not yet implemented.
+ * The trail explorer renders sequence-view trails today; non-sequence
+ * views are scaffolded in the schema but not yet implemented.
  */
 
 import React from 'react';

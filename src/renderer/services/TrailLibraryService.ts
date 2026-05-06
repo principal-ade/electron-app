@@ -2,8 +2,6 @@
  * Renderer service for the saved-trail library backing the dev-workspace
  * "Trails" sidebar panel. Sole owner of `window.mainProcess.fileCityTrail`
  * calls related to listing, loading, activating, and deleting saved trails.
- *
- * Parallel to `SequenceDiagramLibraryService`.
  */
 
 import type { TrailPayload } from '@industry-theme/file-city-panel';

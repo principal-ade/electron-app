@@ -2,8 +2,6 @@
  * Disk-backed store for File City trail payloads, plus the IPC surface
  * that backs the `mainProcess.fileCityTrail` API in the renderer and the
  * broadcast helpers fired by the HTTP routes.
- *
- * Parallel implementation to `sequenceDiagramStore.ts`.
  */
 
 import { BrowserWindow, ipcMain } from 'electron';

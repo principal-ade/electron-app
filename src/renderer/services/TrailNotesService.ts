@@ -5,8 +5,6 @@
  *
  * Notes live on the payload (`payload.notes`); mutations re-broadcast
  * `PAYLOAD_SET` so subscribers via `TrailService` pick them up.
- *
- * Parallel to `SequenceNotesService`.
  */
 
 import type {

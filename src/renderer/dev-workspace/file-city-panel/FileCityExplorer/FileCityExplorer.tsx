@@ -18,17 +18,6 @@ import {
   type ElevatedScopePanel,
   type HighlightLayer,
 } from '@principal-ai/file-city-react';
-import { getFileColor } from '@principal-ai/file-city-builder';
-import type * as THREE from 'three';
-
-/**
- * Mirror of `OnCameraFrame` from `@principal-ai/file-city-react`'s internals;
- * not re-exported from the package's public surface.
- */
-type OnCameraFrame = (
-  camera: THREE.Camera,
-  size: { width: number; height: number },
-) => void;
 import type { ProjectArea } from '@principal-ai/principal-view-core';
 
 import { useScopeManagerOptional } from '../../scope-manager-provider';
@@ -164,30 +153,6 @@ export interface FileCityExplorerProps {
    * over the city canvas. Pass `null` to suppress the card.
    */
   repositoryPath?: string | null;
-  /**
-   * Currently-selected sequence-diagram event. When set, paints a
-   * single-file highlight layer over the matching building so the
-   * sequence overlay can drive selection in the city below.
-   */
-  sequenceSelection?: { sourcePath: string } | null;
-  /**
-   * Repo-relative paths for every event in the active sequence diagram.
-   * When non-empty, the city dims everything outside this set so only the
-   * files referenced by the explainer keep their natural color.
-   */
-  sequenceSourcePaths?: readonly string[] | null;
-  /**
-   * When true, the elevated folder/scope panels floating above the city
-   * are suppressed. Useful when another overlay (like the sequence
-   * diagram) should be the primary structure shown.
-   */
-  hideFolderPanels?: boolean;
-  /**
-   * Forwarded to `FileCity3D`. Fires once per R3F render frame with the
-   * live camera and canvas size; lets the host project building world
-   * positions to screen pixels for HTML/SVG overlays (leader lines, etc).
-   */
-  onCameraFrame?: OnCameraFrame;
 }
 
 export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
@@ -197,10 +162,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   onFileOpen,
   repoLabel,
   repositoryPath,
-  sequenceSelection,
-  sequenceSourcePaths,
-  hideFolderPanels,
-  onCameraFrame,
 }) => {
   const { commit: latestCommit } = useLatestCommit(repositoryPath ?? null);
   const workingTree = useWorkingTreeChanges(repositoryPath ?? null);
@@ -734,76 +695,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     return { scope, ns, ev };
   }, [scopeSelection, scopes]);
 
-  // Sequence-diagram selection highlight — driven by an external sequence
-  // overlay. Maps the event's repo-relative `sourcePath` into a city path
-  // and fills the matching building. Silently no-ops when the path
-  // doesn't resolve to any known building.
-  const sequenceHighlightLayer = React.useMemo<HighlightLayer | null>(() => {
-    if (!sequenceSelection?.sourcePath) return null;
-    const cityPath = toCityPath(sequenceSelection.sourcePath);
-    if (!cityBuildingPaths.has(cityPath)) return null;
-    return {
-      id: 'sequence-selection',
-      name: 'Sequence Selection',
-      enabled: true,
-      color: '#22d3ee',
-      opacity: 0.9,
-      borderWidth: 4,
-      priority: 100,
-      items: [
-        {
-          path: cityPath,
-          type: 'file',
-          renderStrategy: 'fill',
-        },
-      ],
-    };
-  }, [sequenceSelection, toCityPath, cityBuildingPaths]);
-
-  // Sequence "files involved" highlight — covers every event's sourcePath,
-  // not just the selected one. Each involved building gets a `fill` layer
-  // re-painting it with its own natural (suffix-based) color, so when we
-  // override `defaultBuildingColor` to neutral grey for the rest of the city
-  // these buildings stay visually distinct. Grouped by color so we end up
-  // with one layer per unique extension color, not one per file.
-  const sequenceFilesHighlightLayers = React.useMemo<HighlightLayer[] | null>(() => {
-    if (!sequenceSourcePaths || sequenceSourcePaths.length === 0) return null;
-    const buildingByPath = new Map(cityData.buildings.map((b) => [b.path, b]));
-    const byColor = new Map<string, string[]>();
-    const seen = new Set<string>();
-    for (const sourcePath of sequenceSourcePaths) {
-      const cityPath = toCityPath(sourcePath);
-      if (seen.has(cityPath)) continue;
-      const building = buildingByPath.get(cityPath);
-      if (!building) continue;
-      seen.add(cityPath);
-      const color = building.color ?? getFileColor(building.path);
-      if (!color) continue;
-      const list = byColor.get(color) ?? [];
-      list.push(cityPath);
-      byColor.set(color, list);
-    }
-    if (byColor.size === 0) return null;
-    let i = 0;
-    return Array.from(byColor.entries()).map(([color, paths]) => ({
-      id: `sequence-files-${i++}`,
-      name: 'Sequence files',
-      enabled: true,
-      color,
-      opacity: 1,
-      priority: 50,
-      items: paths.map((path) => ({
-        path,
-        type: 'file' as const,
-        renderStrategy: 'fill' as const,
-      })),
-    }));
-  }, [sequenceSourcePaths, cityData.buildings, toCityPath]);
-
-  const sequenceFilesActive =
-    sequenceFilesHighlightLayers !== null &&
-    sequenceFilesHighlightLayers.length > 0;
-
   // City highlight layers derive from the active tab:
   //   scopes tab → selected scope's namespace fills (+ scope-level borders)
   //   files tab  → border around the currently-selected folder
@@ -1300,18 +1191,10 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               if (searchHighlightLayer) extras.push(searchHighlightLayer);
               if (hoveredSearchHighlightLayer) extras.push(hoveredSearchHighlightLayer);
               if (hoveredCardHighlightLayer) extras.push(hoveredCardHighlightLayer);
-              if (sequenceFilesHighlightLayers) {
-                extras.push(...sequenceFilesHighlightLayers);
-              }
-              if (sequenceHighlightLayer) extras.push(sequenceHighlightLayer);
               if (extras.length === 0) return cityHighlightLayers;
               return [...(cityHighlightLayers ?? []), ...extras];
             })()}
-            defaultBuildingColor={
-              sequenceFilesActive ? theme.colors.textTertiary : undefined
-            }
             elevatedScopePanels={
-              hideFolderPanels ||
               searchHighlightLayer ||
               searchInputFocused ||
               commitHighlightLayers.length > 0 ||
@@ -1328,7 +1211,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               friction: 16,
             }}
             showControls={true}
-            onCameraFrame={onCameraFrame}
           />
         </div>
 

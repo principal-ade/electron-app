@@ -52,7 +52,6 @@ import type { OtelCollectorAPI } from './OtelCollectorAPI';
 import type { CLIBridgeAPI } from './CLIBridgeAPI';
 import type { ExtensionAPI } from './ExtensionAPI';
 import type { FileCityImageAPI } from './FileCityImageAPI';
-import type { FileCitySequenceAPI } from './FileCitySequenceAPI';
 import type { FileCityTrailAPI } from './FileCityTrailAPI';
 import type { DocumentNotesAPI } from './DocumentNotesAPI';
 import type { BrunoAPI } from './BrunoAPI';
@@ -131,7 +130,6 @@ export interface MainProcessAPI {
   skillLock: SkillLockAPI;
   extension: ExtensionAPI;
   fileCityImage: FileCityImageAPI;
-  fileCitySequence: FileCitySequenceAPI;
   fileCityTrail: FileCityTrailAPI;
   documentNotes: DocumentNotesAPI;
   bruno: BrunoAPI;

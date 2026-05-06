@@ -9,9 +9,7 @@
  *   - HTTPS calls against `/api/trails` (POST share, GET list, GET single)
  *   - Translation of HTTP failures into typed `TrailShareError`s
  *
- * Mirrors `sequenceDiagramShare.ts` 1:1; the only differences are the route
- * path, the marker-walking shape, and the explicit notes strip — see
- * web-ade/docs/file-city-trail-sharing.md for the contract.
+ * See `web-ade/docs/file-city-trail-sharing.md` for the contract.
  *
  * The store delegates here from its IPC handlers; rendering code never
  * imports this directly.

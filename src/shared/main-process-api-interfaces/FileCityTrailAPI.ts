@@ -5,11 +5,10 @@
  * Explorer panel in the renderer, where they are rendered with the upstream
  * `FileCityTrailExplorerPanel` component.
  *
- * Parallel implementation to `FileCitySequenceAPI`. Trails are a separate
- * medium — see `docs/TRAIL_DESIGN.md` in
- * `@industry-theme/file-city-panel` for the design. This module mirrors
- * the sequence-diagram surface 1:1 but talks in `TrailPayload` /
- * `TrailNote` shapes from the upstream package.
+ * Trails are an authored-walkthrough medium — see `docs/TRAIL_DESIGN.md`
+ * in `@industry-theme/file-city-panel` for the design. The renderer-
+ * facing surface talks in `TrailPayload` / `TrailNote` shapes from that
+ * upstream package.
  *
  * Trail payloads are deliberately portable — they never carry filesystem
  * paths. The host (electron) keeps `repositoryPath` on the index entry
@@ -24,11 +23,7 @@ import type {
   BaseTrailIndexEntry,
 } from '@industry-theme/file-city-panel';
 
-/**
- * IPC event names for File City trail operations. Mirrors the
- * sequence-diagram channel layout under a `file-city:trail:*` prefix so
- * the two implementations don't collide.
- */
+/** IPC event names for File City trail operations. */
 export enum FileCityTrailEvent {
   PAYLOAD_SET = 'file-city:trail:set',
   PAYLOAD_CLEARED = 'file-city:trail:cleared',
@@ -63,9 +58,9 @@ export interface TrailIndexEntry extends BaseTrailIndexEntry {
 }
 
 /**
- * Shared-trail manifest entry returned by web-ade. Mirrors the on-disk
- * `TrailIndexEntry` shape but replaces filesystem coupling with the
- * GitHub identity that uploaded the record.
+ * Shared-trail manifest entry returned by web-ade. Replaces the on-disk
+ * `TrailIndexEntry`'s filesystem coupling with the GitHub identity that
+ * uploaded the record.
  */
 export interface SharedTrailIndexEntry extends BaseTrailIndexEntry {
   createdBy: { githubId: number; githubLogin: string };
@@ -164,11 +159,7 @@ export interface TrailPayloadSetEnvelope {
   repositoryPath?: string;
 }
 
-/**
- * Renderer-facing API for the File City trail bus. Mirrors `FileCitySequenceAPI`
- * shape; the renderer holds parallel services so the two media coexist
- * without sharing implementation.
- */
+/** Renderer-facing API for the File City trail bus. */
 export interface FileCityTrailAPI {
   /**
    * Returns the latest trail for the given repo path (or the default slot

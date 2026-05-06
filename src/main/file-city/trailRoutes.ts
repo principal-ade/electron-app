@@ -2,10 +2,10 @@
  * Express routes for pushing/clearing/inspecting File City trail payloads.
  * Mounted on the Principal MCP Bridge.
  *
- * Parallel to `sequenceDiagramRoutes.ts`. Trail payloads do NOT carry a
- * `repositoryPath` (the schema is intentionally portable); host bucketing
- * happens via a top-level `repositoryPath` field on the request body
- * which the persistence layer stores on the index entry only.
+ * Trail payloads do NOT carry a `repositoryPath` (the schema is
+ * intentionally portable); host bucketing happens via a top-level
+ * `repositoryPath` field on the request body which the persistence layer
+ * stores on the index entry only.
  */
 
 import type { Application, Request, Response } from 'express';

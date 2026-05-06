@@ -3,8 +3,7 @@
  * `window.mainProcess.fileCityTrail.{share,listShared,fetchShared}` so
  * components/hooks never touch the preload surface directly.
  *
- * Parallel to `SequenceDiagramShareService`. Re-throws so user-meaningful
- * error states surface in the UI.
+ * Re-throws so user-meaningful error states surface in the UI.
  */
 
 import {

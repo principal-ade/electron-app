@@ -8,10 +8,9 @@
  *     repo-agnostic/<id>.json    payloads with no repositoryPath
  *     <projectHash>/<id>.json    payloads keyed by md5(repositoryPath)
  *
- * Parallel to `sequenceDiagramPersistence.ts`. Trail payloads are
- * deliberately portable — they never carry filesystem paths. The host
- * keeps `repositoryPath` on the index entry only, separate from the
- * payload itself.
+ * Trail payloads are deliberately portable — they never carry filesystem
+ * paths. The host keeps `repositoryPath` on the index entry only,
+ * separate from the payload itself.
  *
  * The manifest is rebuilt from disk if missing or unparseable.
  */

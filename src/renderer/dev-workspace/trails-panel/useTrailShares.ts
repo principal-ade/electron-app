@@ -14,8 +14,6 @@ import { TrailShareService } from '../../services/TrailShareService';
  *
  * `error` — listing reached the network/web-ade layer and failed (e.g.
  * `NO_REPO_ACCESS`). The panel shows the section header with a retry.
- *
- * Parallel to `useSequenceDiagramShares`.
  */
 export type SharedAvailability = 'pending' | 'unavailable' | 'available' | 'error';
 

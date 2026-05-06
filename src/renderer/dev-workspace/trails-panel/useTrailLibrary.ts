@@ -14,8 +14,6 @@ export interface UseTrailLibraryResult {
 /**
  * Subscribes to LIBRARY_CHANGED and re-lists saved trail payloads for the
  * given repository. Filters refresh broadcasts by `repositoryPath`.
- *
- * Parallel to `useSequenceDiagramLibrary`.
  */
 export function useTrailLibrary(
   repositoryPath: string | null,
