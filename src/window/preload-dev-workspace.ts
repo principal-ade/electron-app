@@ -37,6 +37,7 @@ import { otelCollectorApi } from './main-process-api-implementations/otelCollect
 import { gitAPI } from './main-process-api-implementations/gitApi';
 import { fileCityImageAPI } from './main-process-api-implementations/fileCityImageApi';
 import { fileCitySequenceAPI } from './main-process-api-implementations/fileCitySequenceApi';
+import { fileCityTrailAPI } from './main-process-api-implementations/fileCityTrailApi';
 import { documentNotesAPI } from './main-process-api-implementations/documentNotesApi';
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
@@ -66,6 +67,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   git: gitAPI,
   fileCityImage: fileCityImageAPI,
   fileCitySequence: fileCitySequenceAPI,
+  fileCityTrail: fileCityTrailAPI,
   documentNotes: documentNotesAPI,
   skillLock: skillLockAPI,
   appVersionManager: appVersionManagerApi,

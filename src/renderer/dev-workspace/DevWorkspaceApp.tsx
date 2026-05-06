@@ -991,6 +991,18 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     });
   }, [events]);
 
+  // Parallel: open the trail explorer panel as a tab. The framework also
+  // auto-opens this tab when a trail PAYLOAD_SET arrives, so users only
+  // need this button to re-surface the panel after closing it.
+  const handleOpenFileCityTrail = useCallback(() => {
+    events.emit({
+      type: 'file-city-trail:open',
+      source: 'dev-workspace-titlebar',
+      timestamp: Date.now(),
+      payload: {},
+    });
+  }, [events]);
+
   // Open repository in Finder
   const handleOpenInFinder = useCallback(() => {
     if (!repositoryPath) return;
@@ -1068,6 +1080,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         selectedSource={selectedSource}
         onShowGitChanges={handleShowGitChanges}
         onOpenFileCity3D={handleOpenFileCity3D}
+        onOpenFileCityTrail={handleOpenFileCityTrail}
         terminalImplementation={terminalImplementation}
         onToggleTerminalImplementation={
           showTerminalToggle ? handleToggleTerminalImplementation : undefined

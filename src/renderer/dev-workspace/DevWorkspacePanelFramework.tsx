@@ -125,6 +125,7 @@ import { TerminalSessionsPanel } from '../panels/terminal-sessions';
 import { MediaViewerPanel } from '../panels/MediaViewerPanel';
 import { FilesPanel } from './files-panel';
 import { FileCityPanel } from './file-city-panel';
+import { FileCityTrailPanel } from './file-city-trail-panel';
 import { FloatingTerminalOverlay } from './file-city-panel/FloatingTerminalOverlay';
 import { PierreFileView } from './file-city-panel/PierreFileView';
 import type { Repository } from '../../shared/types/repository.types';
@@ -139,6 +140,8 @@ import { TypeInformationSidebarButton } from '../components/Sidebar/TypeInformat
 import { GitConfigSidebarButton } from '../components/Sidebar/GitConfigSidebarButton';
 import { GitConfigPanel } from './git-config-panel';
 import { SequenceDiagramsPanel } from './sequence-diagrams-panel';
+import { TrailsPanel } from './trails-panel';
+import { TrailService } from '../services/TrailService';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -310,6 +313,15 @@ interface FileCity3DTab extends BaseTab {
 }
 
 /**
+ * File City Trail tab. Mounts the parallel trail explorer panel
+ * (`FileCityTrailPanel`). The trail-specific state lives inside that
+ * panel — this tab is just a marker.
+ */
+interface FileCityTrailTab extends BaseTab {
+  contentType: 'file-city-trail';
+}
+
+/**
  * Props for the Bruno RequestPanel including optional selected request
  */
 interface BrunoRequestPanelProps {
@@ -341,7 +353,8 @@ type DevWorkspaceTab =
   | MultiCanvasTab
   | BrunoRequestTab
   | DashboardTab
-  | FileCity3DTab;
+  | FileCity3DTab
+  | FileCityTrailTab;
 
 /**
  * History item for right panel document viewing
@@ -475,6 +488,29 @@ const FileCity3DTabContent: React.FC = () => {
         context={terminalPanelContext}
         actions={terminalActions}
       />
+    </div>
+  );
+};
+
+/**
+ * Renders the parallel trail explorer panel. Mirrors the FileCity3D tab
+ * pattern — uses the repository panel provider so the trail panel sees
+ * fileTree/lineCounts/repository directly.
+ */
+const FileCityTrailTabContent: React.FC = () => {
+  const { context, actions, events } = useRepositoryPanelProvider();
+  return (
+    <div
+      style={{
+        height: '100%',
+        width: '100%',
+        overflow: 'hidden',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <FileCityTrailPanel context={context} actions={actions} events={events} />
     </div>
   );
 };
@@ -2537,6 +2573,45 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return unsubscribe;
   }, [events]);
 
+  // Parallel handler for the trail explorer panel. Same marker-tab pattern.
+  const openFileCityTrailTab = useCallback(() => {
+    setTabs((prevTabs) => {
+      const existing = prevTabs.find(
+        (t) => t.contentType === 'file-city-trail',
+      );
+      if (existing) {
+        setFocusTabId(existing.id);
+        return prevTabs;
+      }
+      const newTab: FileCityTrailTab = {
+        id: 'file-city-trail',
+        label: 'File City Trail',
+        contentType: 'file-city-trail',
+        closable: true,
+      };
+      setFocusTabId(newTab.id);
+      return [...prevTabs, newTab];
+    });
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = events.on('file-city-trail:open', openFileCityTrailTab);
+    return unsubscribe;
+  }, [events, openFileCityTrailTab]);
+
+  // Auto-open the trail tab whenever a trail PAYLOAD_SET arrives that's
+  // bucketed to this repo (or has no repositoryPath — transient broadcasts).
+  // Mirrors the route's `ensureDevWorkspaceWindow` behavior on the renderer
+  // side: posting a trail to /api/file-city/trail with `repositoryPath` set
+  // both opens the window and surfaces the trail panel.
+  useEffect(() => {
+    return TrailService.onPayloadSet(({ repositoryPath: nextRepo }) => {
+      const myRepo = context.currentScope?.repository?.path ?? null;
+      if (nextRepo && myRepo && nextRepo !== myRepo) return;
+      openFileCityTrailTab();
+    });
+  }, [context.currentScope?.repository?.path, openFileCityTrailTab]);
+
   // Listen for terminal session selection from TerminalSessionsPanel
   useEffect(() => {
     const unsubscribe = events.on(
@@ -2610,6 +2685,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       case 'dashboard':
         return <Gauge size={14} />;
       case 'file-city-3d':
+        return <Building2 size={14} />;
+      case 'file-city-trail':
         return <Building2 size={14} />;
       case 'media': {
         const mediaTab = tab as MediaTab;
@@ -3138,6 +3215,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         case 'file-city-3d': {
           return <FileCity3DTabContent />;
+        }
+
+        case 'file-city-trail': {
+          return <FileCityTrailTabContent />;
         }
 
         case 'media': {
@@ -3802,6 +3883,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         label: 'Sequence Diagrams',
         content: (
           <SequenceDiagramsPanel
+            repositoryPath={context.currentScope?.repository?.path}
+          />
+        ),
+      },
+      {
+        id: 'trails',
+        label: 'Trails',
+        content: (
+          <TrailsPanel
             repositoryPath={context.currentScope?.repository?.path}
           />
         ),

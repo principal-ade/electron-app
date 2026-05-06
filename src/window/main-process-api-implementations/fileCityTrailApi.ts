@@ -1,0 +1,153 @@
+import { ipcRenderer } from 'electron';
+import {
+  FileCityTrailEvent,
+  TrailShareError,
+  type FileCityTrailAPI,
+  type FileCityTrailFetchSharedResult,
+  type FileCityTrailShareResult,
+  type TrailIndexEntry,
+  type TrailListSharedOptions,
+  type TrailListSharedResult,
+  type TrailPayloadSetEnvelope,
+  type TrailShareEnvelope,
+  type TrailShareOptions,
+} from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
+import type {
+  TrailPayload,
+  TrailNote,
+  TrailNoteDraft,
+} from '@industry-theme/file-city-panel';
+
+const unwrapShare = <T>(envelope: TrailShareEnvelope<T>): T => {
+  if (envelope.ok) return envelope.value;
+  throw new TrailShareError(envelope.code, envelope.message, envelope.details);
+};
+
+export const fileCityTrailAPI: FileCityTrailAPI = {
+  getCurrent: async (
+    repositoryPath?: string,
+  ): Promise<TrailPayload | null> => {
+    return ipcRenderer.invoke(FileCityTrailEvent.GET_CURRENT, repositoryPath);
+  },
+
+  onPayloadSet: (callback) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      envelope: TrailPayloadSetEnvelope,
+    ) => callback(envelope);
+    ipcRenderer.on(FileCityTrailEvent.PAYLOAD_SET, handler);
+    return () => {
+      ipcRenderer.removeListener(FileCityTrailEvent.PAYLOAD_SET, handler);
+    };
+  },
+
+  onPayloadCleared: (callback) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      info: { repositoryPath?: string },
+    ) => callback(info);
+    ipcRenderer.on(FileCityTrailEvent.PAYLOAD_CLEARED, handler);
+    return () => {
+      ipcRenderer.removeListener(FileCityTrailEvent.PAYLOAD_CLEARED, handler);
+    };
+  },
+
+  list: async (
+    repositoryPath?: string,
+  ): Promise<{
+    entries: TrailIndexEntry[];
+    activeId: string | null;
+  }> => {
+    return ipcRenderer.invoke(FileCityTrailEvent.LIST, repositoryPath);
+  },
+
+  load: async (id: string): Promise<TrailPayload | null> => {
+    return ipcRenderer.invoke(FileCityTrailEvent.LOAD, id);
+  },
+
+  activate: async (id: string): Promise<void> => {
+    await ipcRenderer.invoke(FileCityTrailEvent.ACTIVATE, id);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await ipcRenderer.invoke(FileCityTrailEvent.DELETE, id);
+  },
+
+  onLibraryChanged: (callback) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      info: { repositoryPath?: string },
+    ) => callback(info);
+    ipcRenderer.on(FileCityTrailEvent.LIBRARY_CHANGED, handler);
+    return () => {
+      ipcRenderer.removeListener(FileCityTrailEvent.LIBRARY_CHANGED, handler);
+    };
+  },
+
+  createNote: async (
+    payloadId: string,
+    draft: TrailNoteDraft,
+  ): Promise<TrailNote> => {
+    return ipcRenderer.invoke(
+      FileCityTrailEvent.NOTE_CREATE,
+      payloadId,
+      draft,
+    );
+  },
+
+  updateNote: async (
+    payloadId: string,
+    noteId: string,
+    body: string,
+  ): Promise<TrailNote> => {
+    return ipcRenderer.invoke(
+      FileCityTrailEvent.NOTE_UPDATE,
+      payloadId,
+      noteId,
+      body,
+    );
+  },
+
+  deleteNote: async (payloadId: string, noteId: string): Promise<void> => {
+    await ipcRenderer.invoke(FileCityTrailEvent.NOTE_DELETE, payloadId, noteId);
+  },
+
+  share: async (
+    id: string,
+    options?: TrailShareOptions,
+  ): Promise<FileCityTrailShareResult> => {
+    const envelope: TrailShareEnvelope<FileCityTrailShareResult> =
+      await ipcRenderer.invoke(FileCityTrailEvent.SHARE, id, options ?? null);
+    return unwrapShare(envelope);
+  },
+
+  listShared: async (
+    options?: TrailListSharedOptions,
+  ): Promise<TrailListSharedResult> => {
+    const envelope: TrailShareEnvelope<TrailListSharedResult> =
+      await ipcRenderer.invoke(
+        FileCityTrailEvent.LIST_SHARED,
+        options ?? null,
+      );
+    return unwrapShare(envelope);
+  },
+
+  fetchShared: async (
+    owner: string,
+    repo: string,
+    id: string,
+  ): Promise<FileCityTrailFetchSharedResult> => {
+    const envelope: TrailShareEnvelope<FileCityTrailFetchSharedResult> =
+      await ipcRenderer.invoke(
+        FileCityTrailEvent.FETCH_SHARED,
+        owner,
+        repo,
+        id,
+      );
+    return unwrapShare(envelope);
+  },
+
+  setTransient: async (payload: TrailPayload): Promise<void> => {
+    await ipcRenderer.invoke(FileCityTrailEvent.SET_TRANSIENT, payload);
+  },
+};

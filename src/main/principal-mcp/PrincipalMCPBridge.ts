@@ -14,6 +14,8 @@ import {
 } from '../bruno/adapters';
 import { registerSequenceDiagramRoutes } from '../file-city/sequenceDiagramRoutes';
 import { getSequenceDiagramStore } from '../file-city/sequenceDiagramStore';
+import { registerTrailRoutes } from '../file-city/trailRoutes';
+import { getTrailStore } from '../file-city/trailStore';
 import { registerDocumentNotesRoutes } from '../document-notes/documentNotesRoutes';
 import { getDocumentNotesPersistence } from '../document-notes/documentNotesPersistence';
 
@@ -1001,6 +1003,11 @@ export class PrincipalMCPBridge extends EventEmitter {
     // FILE CITY SEQUENCE DIAGRAM ROUTES
     // ============================================
     registerSequenceDiagramRoutes(this.app, getSequenceDiagramStore());
+
+    // ============================================
+    // FILE CITY TRAIL ROUTES (parallel to sequence)
+    // ============================================
+    registerTrailRoutes(this.app, getTrailStore());
 
     // ============================================
     // DOCUMENT NOTES ROUTES
