@@ -33,6 +33,7 @@ import {
   type ServerScanResult,
 } from '../main-process-api/LocalhostDetectionService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { Purl } from '@principal-ai/alexandria-core-library';
 import type {
   FileTree,
   GitStatusWithFiles,
@@ -147,8 +148,8 @@ interface ExtendedPanelActions extends PanelActions {
   navigateToLocalhost?: (port: number, path?: string) => void;
   // Local Projects panel actions
   selectDirectory?: () => Promise<{ path: string; name: string } | null>;
-  registerRepository?: (name: string, path: string) => Promise<void>;
-  removeLocalRepository?: (name: string, deleteLocal: boolean) => Promise<void>;
+  registerRepository?: (path: string, remoteUrl?: string) => Promise<void>;
+  removeLocalRepository?: (path: string, deleteLocal: boolean) => Promise<void>;
   openLocalRepository?: (entryOrId: AlexandriaEntry | string) => Promise<void>;
   // Active file management for markdown panel
   setActiveFile?: (filePath: string | null) => Promise<void>;
@@ -1351,8 +1352,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           );
 
           try {
+            // The context API takes a string repositoryId for compatibility
+            // with event payloads. Workspace memberships are keyed by purl.
             await WorkspaceService.removeRepositoryFromWorkspace(
-              repositoryId,
+              repositoryId as Purl,
               workspaceId,
             );
 
@@ -1505,10 +1508,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           }
         },
 
-        registerRepository: async (name: string, path: string) => {
+        registerRepository: async (path: string, remoteUrl?: string) => {
           try {
-            await AlexandriaService.registerRepository(name, path);
-            console.info('[PanelContext] Registered repository:', name, path);
+            await AlexandriaService.registerRepository(path, remoteUrl);
+            console.info('[PanelContext] Registered repository:', path);
           } catch (error) {
             console.error(
               '[PanelContext] Failed to register repository:',
@@ -1518,10 +1521,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           }
         },
 
-        removeLocalRepository: async (name: string, deleteLocal: boolean) => {
+        removeLocalRepository: async (path: string, deleteLocal: boolean) => {
           try {
-            await AlexandriaService.removeRepository(name, deleteLocal);
-            console.info('[PanelContext] Removed repository:', name);
+            await AlexandriaService.removeRepository(path, deleteLocal);
+            console.info('[PanelContext] Removed repository:', path);
           } catch (error) {
             console.error('[PanelContext] Failed to remove repository:', error);
             throw error;

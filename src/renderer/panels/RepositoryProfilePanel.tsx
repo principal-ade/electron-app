@@ -159,7 +159,10 @@ export interface RepositoryProfilePanelActions extends PanelActions {
   /**
    * Register a cloned or existing local repository with Alexandria
    */
-  registerRepository: (name: string, path: string) => Promise<AlexandriaEntry>;
+  registerRepository: (
+    path: string,
+    remoteUrl?: string,
+  ) => Promise<AlexandriaEntry>;
 
   /**
    * Get contributors for a GitHub repository (optional)

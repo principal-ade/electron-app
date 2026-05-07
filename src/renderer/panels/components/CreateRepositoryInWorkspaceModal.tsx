@@ -259,12 +259,10 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
           await FileSystemService.deleteFile(placeholderPath);
         }
 
-        // Step 3: Register with Alexandria
+        // Step 3: Register with Alexandria — local-only, no remote yet.
         setProgressStep('registering');
-        const registeredRepo = await AlexandriaService.registerRepository(
-          repoName,
-          targetPath,
-        );
+        const registeredRepo =
+          await AlexandriaService.registerRepository(targetPath);
 
         // Step 4: Add to workspace (if applicable)
         if (targetWorkspace) {
@@ -323,8 +321,8 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
         setProgressStep('registering');
 
         const registeredRepo = await AlexandriaService.registerRepository(
-          repository.name,
           targetPath,
+          cloneUrl,
         );
 
         // Step 4: Add to workspace (if applicable)

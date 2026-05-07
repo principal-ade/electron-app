@@ -14,6 +14,7 @@ import {
 import type {
   AlexandriaEntry,
   CodebaseView,
+  Purl,
   Workspace,
   WorkspaceMembership,
 } from '@principal-ai/alexandria-core-library';
@@ -56,19 +57,13 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Get repository by name
-   */
-  async getRepository(name: string): Promise<AlexandriaEntry | null> {
-    const entries = this.outpostManager.getAllEntries();
-    return entries.find((e) => e.name === name) || null;
-  }
-
-  /**
-   * Get repository by local path
+   * Get repository by local path. Path is the canonical key — every clone has
+   * a unique path, but `name` is a display label that can collide (forks).
    */
   async getRepositoryByPath(path: string): Promise<AlexandriaEntry | null> {
-    const entries = this.outpostManager.getAllEntries();
-    return entries.find((e) => e.path === path) || null;
+    return (await this.outpostManager.getRepositoryByPath(path)) as
+      | AlexandriaEntry
+      | null;
   }
 
   /**
@@ -166,14 +161,13 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Register a new repository with local path
+   * Register a new repository at `path`. The library derives the display name
+   * from the remote URL (`owner/repo` for GitHub) — callers no longer pass it.
    */
   async registerRepository(
-    name: string,
     path: string,
     remoteUrl?: string,
   ): Promise<AlexandriaEntry> {
-    // If no remote URL provided, try to get it from git
     if (!remoteUrl) {
       try {
         const remotes = await gitClientFactory.getRemotes(path);
@@ -187,20 +181,19 @@ export class AlexandriaRegistryService {
       }
     }
 
-    // Register with optional remote URL (new API: path, remoteUrl, customName)
-    await this.outpostManager.registerRepository(path, remoteUrl, name);
+    const registered = (await this.outpostManager.registerRepository(
+      path,
+      remoteUrl,
+    )) as AlexandriaEntry;
 
-    // Fetch and update GitHub metadata if it's a GitHub repo
     if (remoteUrl && remoteUrl.includes('github.com')) {
       const githubMetadata = await this.fetchGitHubMetadata(remoteUrl);
       if (githubMetadata) {
         try {
-          // Use the new updateGitHubMetadata method from Alexandria
-          await this.outpostManager.updateGitHubMetadata(name, githubMetadata);
-          console.log(
-            '[registerRepository] Updated GitHub metadata for:',
-            name,
-          );
+          return (await this.outpostManager.updateGitHubMetadata(
+            path,
+            githubMetadata,
+          )) as AlexandriaEntry;
         } catch (error) {
           console.error(
             '[registerRepository] Failed to update GitHub metadata:',
@@ -210,125 +203,84 @@ export class AlexandriaRegistryService {
       }
     }
 
-    // Return the updated entry
-    const entry = this.outpostManager
-      .getAllEntries()
-      .find((e) => e.name === name);
-    if (!entry) {
-      throw new Error(`Failed to get entry after registration for ${name}`);
-    }
-    return entry;
+    return registered;
   }
 
   /**
-   * Add a repository from a remote URL (for UI compatibility)
-   * This will register it without a local path initially
+   * Remove a repository at `path` from the registry.
+   * @param path - Repository local path
+   * @param deleteLocal - Whether to delete local files as well
    */
-  async addRepository(params: {
-    name: string;
-    remoteUrl?: string;
-    localPath?: string;
-    description?: string;
-  }): Promise<AlexandriaEntry> {
-    // If we have a local path, register it properly
-    if (params.localPath) {
-      return this.registerRepository(
-        params.name,
-        params.localPath,
-        params.remoteUrl,
-      );
-    }
-
-    // Otherwise, we need to handle remote-only repos differently
-    // For now, throw an error since AlexandriaOutpostManager requires a local path
-    throw new Error(
-      'Remote-only repositories are not yet supported. Please provide a local path.',
-    );
-  }
-
-  /**
-   * Remove a repository by name
-   * @param name - Repository name to remove
-   * @param deleteLocal - Whether to delete local files (optional)
-   * @returns Promise<boolean> indicating success
-   */
-  async removeRepository(name: string, deleteLocal = false): Promise<boolean> {
+  async removeRepository(path: string, deleteLocal = false): Promise<boolean> {
     try {
-      // Get the repository details before removal
-      const repository = await this.getRepository(name);
+      const repository = await this.getRepositoryByPath(path);
       if (!repository) {
-        console.warn(`Repository not found: ${name}`);
+        console.warn(`Repository not found at path: ${path}`);
         return false;
       }
 
-      // Remove from registry using the public API
-      const removed = this.outpostManager.removeRepository(name);
+      const removed = this.outpostManager.removeRepository(path);
 
       if (!removed) {
-        console.warn(`Failed to remove repository from registry: ${name}`);
+        console.warn(`Failed to remove repository at path: ${path}`);
         return false;
       }
 
-      // Optionally delete local files
-      if (deleteLocal && repository.path) {
+      if (deleteLocal) {
         try {
-          await FileSystemService.deleteDirectory(repository.path);
-          console.log(
-            `Deleted local files for repository: ${name} at ${repository.path}`,
-          );
+          await FileSystemService.deleteDirectory(path);
+          console.log(`Deleted local files for repository at ${path}`);
         } catch (error) {
-          console.error(`Failed to delete local files for ${name}:`, error);
-          // Continue even if deletion fails - registry removal succeeded
+          console.error(`Failed to delete local files at ${path}:`, error);
         }
       }
 
-      console.log(`Repository removed from registry: ${name}`);
+      console.log(`Repository removed from registry: ${path}`);
       return true;
     } catch (error) {
-      console.error(`Error removing repository ${name}:`, error);
+      console.error(`Error removing repository at ${path}:`, error);
       return false;
     }
   }
 
   /**
-   * Update repository metadata
-   * @param name - Repository name
-   * @param updates - Partial updates to apply
-   * @returns Updated repository entry
+   * Update repository metadata, keyed on path.
    */
   async updateRepository(
-    name: string,
-    updates: Partial<Omit<AlexandriaEntry, 'name' | 'registeredAt'>>,
+    path: string,
+    updates: Partial<Omit<AlexandriaEntry, 'path' | 'registeredAt'>>,
   ): Promise<AlexandriaEntry> {
-    return this.outpostManager.updateRepository(name, updates);
+    return this.outpostManager.updateRepository(
+      path,
+      updates,
+    ) as Promise<AlexandriaEntry>;
   }
 
   /**
-   * Update the lastOpenedAt timestamp for a repository
-   * @param name - Repository name
+   * Update the lastOpenedAt timestamp for the repository at `path`.
    */
-  async updateLastOpened(name: string): Promise<void> {
+  async updateLastOpened(path: string): Promise<void> {
     const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('alexandria.registry.timestamp_updated');
     const timestamp = new Date().toISOString();
 
     span.setAttributes({
-      repository_name: name,
+      repository_path: path,
       timestamp,
     });
 
     try {
-      await this.outpostManager.updateRepository(name, {
+      await this.outpostManager.updateRepository(path, {
         lastOpenedAt: timestamp,
       });
 
       span.addEvent('alexandria.outpost.repository_updated', {
-        repository_name: name,
+        repository_path: path,
         field_updated: 'lastOpenedAt',
       });
 
       span.addEvent('alexandria.storage.metadata_persisted', {
-        repository_name: name,
+        repository_path: path,
       });
 
       span.setStatus({ code: SpanStatusCode.OK });
@@ -374,16 +326,13 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Refresh repository metadata (re-scan for views and update git info)
+   * Refresh repository metadata (re-scan for views and update git info), keyed on path.
    */
-  async refreshRepository(name: string): Promise<AlexandriaEntry | null> {
-    // Get the repository to find its path
-    const entries = this.outpostManager.getAllEntries();
-    const repo = entries.find((e) => e.name === name);
+  async refreshRepository(path: string): Promise<AlexandriaEntry | null> {
+    const repo = await this.getRepositoryByPath(path);
     if (!repo) return null;
 
     try {
-      // Always fetch and update GitHub metadata when explicitly refreshing
       const githubMetadata = await this.fetchGitHubMetadata(repo.remoteUrl);
       console.log(
         '[refreshRepository] Fetched GitHub metadata:',
@@ -391,17 +340,8 @@ export class AlexandriaRegistryService {
       );
       if (githubMetadata) {
         try {
-          await this.outpostManager.updateGitHubMetadata(name, githubMetadata);
-          console.log('[refreshRepository] Updated GitHub metadata for:', name);
-
-          // Verify the update was persisted
-          const verifyEntry = this.outpostManager
-            .getAllEntries()
-            .find((e) => e.name === name);
-          console.log('[refreshRepository] Verified entry after update:', {
-            name: verifyEntry?.name,
-            description: verifyEntry?.github?.description,
-          });
+          await this.outpostManager.updateGitHubMetadata(path, githubMetadata);
+          console.log('[refreshRepository] Updated GitHub metadata for:', path);
         } catch (error) {
           console.error(
             '[refreshRepository] Failed to update GitHub metadata:',
@@ -410,10 +350,7 @@ export class AlexandriaRegistryService {
         }
       }
 
-      // Get the updated entry
-      const updatedEntry = this.outpostManager
-        .getAllEntries()
-        .find((e) => e.name === name);
+      const updatedEntry = await this.getRepositoryByPath(path);
 
       if (!updatedEntry) return repo;
 
@@ -445,26 +382,9 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Get all markdown document paths for a repository
-   * These are the overview documents associated with CodebaseViews
-   * @param name - Repository name
-   * @returns Array of markdown document paths relative to repository root
+   * Get all markdown document paths for a repository at `path`.
    */
-  async getRepositoryDocuments(name: string): Promise<string[]> {
-    const entry = await this.getRepository(name);
-    if (!entry) {
-      throw new Error(`Repository not found: ${name}`);
-    }
-
-    return this.outpostManager.getAlexandriaEntryDocs(entry);
-  }
-
-  /**
-   * Get all markdown document paths for a repository by path
-   * @param path - Repository path
-   * @returns Array of markdown document paths relative to repository root
-   */
-  async getRepositoryDocumentsByPath(path: string): Promise<string[]> {
+  async getRepositoryDocuments(path: string): Promise<string[]> {
     const entry = await this.getRepositoryByPath(path);
     if (!entry) {
       throw new Error(`Repository not found at path: ${path}`);
@@ -474,43 +394,33 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Get excluded document files from Alexandria configuration
-   * These are markdown files that should not be tracked or indexed
-   * @param name - Repository name
-   * @returns Array of excluded file paths
+   * Get excluded document files from Alexandria configuration for the
+   * repository at `path`.
    */
-  async getExcludedDocuments(name: string): Promise<string[]> {
-    const entry = await this.getRepository(name);
+  async getExcludedDocuments(path: string): Promise<string[]> {
+    const entry = await this.getRepositoryByPath(path);
     if (!entry) {
-      throw new Error(`Repository not found: ${name}`);
+      throw new Error(`Repository not found at path: ${path}`);
     }
 
     return this.outpostManager.getAlexandriaEntryExcludedDocs(entry);
   }
 
   /**
-   * Get all markdown documents for a repository with exclusions applied
-   * @param name - Repository name
-   * @returns Object with documents and excluded paths
+   * Get all markdown documents for the repository at `path` with exclusions applied.
    */
-  async getRepositoryDocumentsWithExclusions(name: string): Promise<{
+  async getRepositoryDocumentsWithExclusions(path: string): Promise<{
     documents: string[];
     excluded: string[];
   }> {
-    const entry = await this.getRepository(name);
+    const entry = await this.getRepositoryByPath(path);
     if (!entry) {
-      throw new Error(`Repository not found: ${name}`);
+      throw new Error(`Repository not found at path: ${path}`);
     }
 
-    // Get ALL markdown documents in the repository (respecting .gitignore)
     const allDocuments = await this.outpostManager.getAllDocs(entry, true);
-
-    // Get documents that are excluded from tracking requirements
-    // These are still valid documents but don't need to be associated with views
     const excluded = this.outpostManager.getAlexandriaEntryExcludedDocs(entry);
 
-    // For search indexing, we want to index ALL documents including excluded ones
-    // The excluded list is returned for informational purposes only
     return {
       documents: allDocuments,
       excluded,
@@ -561,30 +471,9 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Get all markdown files in a repository (tracked and untracked)
-   * @param name - Repository name
-   * @param useGitignore - Whether to respect .gitignore files (default: true)
-   * @returns Array of all markdown file paths
+   * Get all markdown files in the repository at `path` (tracked and untracked).
    */
   async getAllMarkdownDocuments(
-    name: string,
-    useGitignore = true,
-  ): Promise<string[]> {
-    const entry = await this.getRepository(name);
-    if (!entry) {
-      throw new Error(`Repository not found: ${name}`);
-    }
-
-    return this.outpostManager.getAllDocs(entry, useGitignore);
-  }
-
-  /**
-   * Get all markdown files by repository path
-   * @param path - Repository path
-   * @param useGitignore - Whether to respect .gitignore files (default: true)
-   * @returns Array of all markdown file paths
-   */
-  async getAllMarkdownDocumentsByPath(
     path: string,
     useGitignore = true,
   ): Promise<string[]> {
@@ -597,31 +486,9 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Get untracked markdown documents in a repository
-   * These are markdown files not associated with any CodebaseView
-   * @param name - Repository name
-   * @param useGitignore - Whether to respect .gitignore files (default: true)
-   * @returns Array of untracked markdown file paths
+   * Get untracked markdown documents in the repository at `path`.
    */
   async getUntrackedDocuments(
-    name: string,
-    useGitignore = true,
-  ): Promise<string[]> {
-    const entry = await this.getRepository(name);
-    if (!entry) {
-      throw new Error(`Repository not found: ${name}`);
-    }
-
-    return this.outpostManager.getUntrackedDocs(entry, useGitignore);
-  }
-
-  /**
-   * Get untracked markdown documents by repository path
-   * @param path - Repository path
-   * @param useGitignore - Whether to respect .gitignore files (default: true)
-   * @returns Array of untracked markdown file paths
-   */
-  async getUntrackedDocumentsByPath(
     path: string,
     useGitignore = true,
   ): Promise<string[]> {
@@ -634,14 +501,10 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Get comprehensive document information for a repository
-   * Returns tracked, untracked, and excluded documents
-   * @param name - Repository name
-   * @param useGitignore - Whether to respect .gitignore files (default: true)
-   * @returns Object with categorized document arrays
+   * Get tracked, untracked, and excluded documents for the repository at `path`.
    */
   async getComprehensiveDocuments(
-    name: string,
+    path: string,
     useGitignore = true,
   ): Promise<{
     tracked: string[];
@@ -649,9 +512,9 @@ export class AlexandriaRegistryService {
     excluded: string[];
     all: string[];
   }> {
-    const entry = await this.getRepository(name);
+    const entry = await this.getRepositoryByPath(path);
     if (!entry) {
-      throw new Error(`Repository not found: ${name}`);
+      throw new Error(`Repository not found at path: ${path}`);
     }
 
     const [tracked, untracked, excluded, all] = await Promise.all([
@@ -761,7 +624,7 @@ export class AlexandriaRegistryService {
    * Add a repository to a workspace
    */
   async addRepositoryToWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
     metadata?: Record<string, unknown>,
   ): Promise<void> {
@@ -776,7 +639,7 @@ export class AlexandriaRegistryService {
    * Remove a repository from a workspace
    */
   async removeRepositoryFromWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
   ): Promise<void> {
     return this.outpostManager.workspaces.removeRepositoryFromWorkspace(
@@ -798,7 +661,7 @@ export class AlexandriaRegistryService {
    * Get all workspaces that contain a specific repository
    */
   async getRepositoryWorkspaces(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
   ): Promise<Workspace[]> {
     return this.outpostManager.workspaces.getRepositoryWorkspaces(repository);
   }
@@ -821,7 +684,7 @@ export class AlexandriaRegistryService {
    * Check if a repository is in a workspace
    */
   async isRepositoryInWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
   ): Promise<boolean> {
     return this.outpostManager.workspaces.isRepositoryInWorkspace(

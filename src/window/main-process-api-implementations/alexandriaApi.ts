@@ -41,9 +41,9 @@ export const alexandriaAPI: AlexandriaAPI = {
     };
     const handleRemoved = (
       _event: Electron.IpcRendererEvent,
-      data: { name: string },
+      data: { path: string },
     ) => {
-      callback({ type: AlexandriaEventType.REMOVED, name: data.name });
+      callback({ type: AlexandriaEventType.REMOVED, path: data.path });
     };
 
     ipcRenderer.on(AlexandriaAPIEvent.REPOSITORY_ADDED, handleAdded);
@@ -69,27 +69,25 @@ export const alexandriaAPI: AlexandriaAPI = {
   // All RPC calls use TIPC router methods (with alexandria_ prefix)
   getRepositories: () => tipcInvoke('getRepositories'),
 
-  getRepository: (name: string) => tipcInvoke('getRepository', { name }),
-
   getRepositoryByPath: (path: string) =>
     tipcInvoke('getRepositoryByPath', { path }),
 
-  registerRepository: (name: string, path: string) =>
-    tipcInvoke('registerRepository', { name, path }),
+  registerRepository: (path: string, remoteUrl?: string) =>
+    tipcInvoke('registerRepository', { path, remoteUrl }),
 
-  removeRepository: (name: string, deleteLocal?: boolean) =>
-    tipcInvoke('removeRepository', { name, deleteLocal }),
+  removeRepository: (path: string, deleteLocal?: boolean) =>
+    tipcInvoke('removeRepository', { path, deleteLocal }),
 
   searchRepositories: (query: string) =>
     tipcInvoke('searchRepositories', { query }),
 
   getRepositoriesWithViews: () => tipcInvoke('getRepositoriesWithViews'),
 
-  refreshRepository: (name: string) =>
-    tipcInvoke('refreshRepository', { name }),
+  refreshRepository: (path: string) =>
+    tipcInvoke('refreshRepository', { path }),
 
-  updateLastOpened: (name: string) =>
-    tipcInvoke('updateLastOpened', { name }),
+  updateLastOpened: (path: string) =>
+    tipcInvoke('updateLastOpened', { path }),
 
   getRepositoryCount: () => tipcInvoke('getRepositoryCount'),
 

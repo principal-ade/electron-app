@@ -28,21 +28,17 @@ export type {
 // Input Types
 // =============================================================================
 
-export interface GetRepositoryInput {
-  name: string;
-}
-
 export interface GetRepositoryByPathInput {
   path: string;
 }
 
 export interface RegisterRepositoryInput {
-  name: string;
   path: string;
+  remoteUrl?: string;
 }
 
 export interface RemoveRepositoryInput {
-  name: string;
+  path: string;
   deleteLocal?: boolean;
 }
 
@@ -51,11 +47,11 @@ export interface SearchRepositoriesInput {
 }
 
 export interface RefreshRepositoryInput {
-  name: string;
+  path: string;
 }
 
 export interface UpdateLastOpenedInput {
-  name: string;
+  path: string;
 }
 
 export interface GetCodebaseViewsInput {
@@ -89,13 +85,6 @@ export type AlexandriaRouterType = Record<
       context: ActionContext;
       input?: void;
     }) => Promise<AlexandriaEntry[]>;
-  };
-
-  alexandria_getRepository: {
-    action: (args: {
-      context: ActionContext;
-      input: GetRepositoryInput;
-    }) => Promise<AlexandriaEntry | null>;
   };
 
   alexandria_getRepositoryByPath: {

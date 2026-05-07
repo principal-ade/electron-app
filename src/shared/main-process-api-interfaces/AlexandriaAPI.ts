@@ -16,7 +16,7 @@ export enum AlexandriaEventType {
 export interface AlexandriaChangeEvent {
   type: AlexandriaEventType;
   repository?: AlexandriaEntry;
-  name?: string;
+  path?: string;
 }
 
 export enum AlexandriaAPIEvent {
@@ -53,26 +53,23 @@ export interface AlexandriaAPI {
   getRepositories(): Promise<AlexandriaEntry[]>;
 
   /**
-   * Get a specific repository by name
-   */
-  getRepository(name: string): Promise<AlexandriaEntry | null>;
-
-  /**
    * Get a repository by its local path
    */
   getRepositoryByPath(path: string): Promise<AlexandriaEntry | null>;
 
   /**
-   * Register a new repository with a local path
+   * Register a new repository at the given local path. The library derives
+   * identity (purl, name) from the remote URL.
    */
-  registerRepository(name: string, path: string): Promise<AlexandriaEntry>;
+  registerRepository(
+    path: string,
+    remoteUrl?: string,
+  ): Promise<AlexandriaEntry>;
 
   /**
-   * Remove a repository from the registry
-   * @param name - Repository name to remove
-   * @param deleteLocal - Whether to delete local files (optional)
+   * Remove the repository at `path` from the registry.
    */
-  removeRepository(name: string, deleteLocal?: boolean): Promise<boolean>;
+  removeRepository(path: string, deleteLocal?: boolean): Promise<boolean>;
 
   /**
    * Search repositories by query
@@ -85,14 +82,14 @@ export interface AlexandriaAPI {
   getRepositoriesWithViews(): Promise<AlexandriaEntry[]>;
 
   /**
-   * Refresh repository metadata (re-scan for views, etc)
+   * Refresh metadata for the repository at `path`.
    */
-  refreshRepository(name: string): Promise<AlexandriaEntry | null>;
+  refreshRepository(path: string): Promise<AlexandriaEntry | null>;
 
   /**
-   * Update the lastOpenedAt timestamp for a repository
+   * Update the lastOpenedAt timestamp for the repository at `path`.
    */
-  updateLastOpened(name: string): Promise<void>;
+  updateLastOpened(path: string): Promise<void>;
 
   /**
    * Get total repository count

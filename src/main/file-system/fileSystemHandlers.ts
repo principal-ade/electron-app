@@ -2732,26 +2732,18 @@ This placeholder skill can be safely deleted once you've installed your first sk
               console.log(`[scanFoldersForRepos] Could not get remote URL for ${repo.name}:`, error);
             }
 
-            // Check for name conflict and generate unique name if needed
-            let finalName = repo.name;
-            let nameCounter = 2;
-            while (await alexandriaService.getRepository(finalName)) {
-              finalName = `${repo.name}-${nameCounter}`;
-              nameCounter++;
-            }
+            // Path is the canonical key — name collisions across forks are
+            // expected and handled by the library (purl-based identity).
+            const registered = await alexandriaService.registerRepository(
+              repo.path,
+              remoteUrl,
+            );
 
-            if (finalName !== repo.name) {
-              console.log(`[scanFoldersForRepos] Name conflict detected, using: ${finalName} instead of ${repo.name}`);
-            }
-
-            // Register the repository
-            await alexandriaService.registerRepository(finalName, repo.path, remoteUrl);
-
-            console.log(`[scanFoldersForRepos] Successfully registered: ${finalName} at ${repo.path}`);
+            console.log(`[scanFoldersForRepos] Successfully registered: ${registered.name} at ${repo.path}`);
 
             return {
               ...repo,
-              name: finalName, // Use the final name (may be modified for uniqueness)
+              name: registered.name,
               registered: true,
               alreadyRegistered: false
             };

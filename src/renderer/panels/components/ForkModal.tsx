@@ -19,7 +19,10 @@ interface ForkModalProps {
   onClose: () => void;
   repoOwner: string;
   repoName: string;
-  registerRepository: (name: string, path: string) => Promise<AlexandriaEntry>;
+  registerRepository: (
+    path: string,
+    remoteUrl?: string,
+  ) => Promise<AlexandriaEntry>;
 }
 
 type Step = 'select' | 'progress' | 'complete';
@@ -108,7 +111,7 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
       if (!cloneOk) throw new Error('Clone failed — check your connection and try again.');
 
       setProgressStep('registering');
-      const registered = await registerRepository(forkedRepo.name, clonePath);
+      const registered = await registerRepository(clonePath, cloneUrl);
 
       setProgressStep('adding');
       const workspace = await WorkspaceService.getDefaultWorkspace();

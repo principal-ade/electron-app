@@ -18,6 +18,7 @@ import type {
   Workspace,
   WorkspaceMembership,
   AlexandriaEntry,
+  Purl,
 } from '@principal-ai/alexandria-core-library';
 import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
 import { applicationWindows, PrimaryWindowType } from '../window/types';
@@ -255,7 +256,7 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
   // ===== Membership Management =====
 
   async addRepositoryToWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
     metadata?: Record<string, unknown>,
   ): Promise<void> {
@@ -265,17 +266,15 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       metadata,
     );
 
-    // Get the full repository entry to access the path
-    const repoEntry =
-      typeof repository === 'string'
-        ? await this.service.getRepository(repository)
-        : repository;
+    const repoEntry = typeof repository === 'string' ? null : repository;
     const repoId =
       repoEntry?.github?.id ||
       repoEntry?.name ||
       (typeof repository === 'string' ? repository : repository.name);
 
-    // Acquire watch for any open workspace windows (non-blocking)
+    // Acquire watch for any open workspace windows (non-blocking).
+    // Skipped when called by purl alone — the registry has the path, but
+    // resolving it would require choosing among multiple clones.
     if (repoEntry?.path) {
       this.acquireWatchForWorkspaceWindows(
         repoEntry.path as string,
@@ -294,20 +293,16 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
   }
 
   async removeRepositoryFromWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
   ): Promise<void> {
-    // Get the full repository entry BEFORE removing (to access the path)
-    const repoEntry =
-      typeof repository === 'string'
-        ? await this.service.getRepository(repository)
-        : repository;
+    const repoEntry = typeof repository === 'string' ? null : repository;
     const repoId =
       repoEntry?.github?.id ||
       repoEntry?.name ||
       (typeof repository === 'string' ? repository : repository.name);
 
-    // Release watch for any open workspace windows BEFORE removing
+    // Release watch for any open workspace windows BEFORE removing.
     if (repoEntry?.path) {
       await this.releaseWatchForWorkspaceWindows(
         repoEntry.path as string,
@@ -332,7 +327,7 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
   }
 
   async getRepositoryWorkspaces(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
   ): Promise<Workspace[]> {
     return this.service.getRepositoryWorkspaces(repository);
   }
@@ -346,7 +341,7 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
   }
 
   async isRepositoryInWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
   ): Promise<boolean> {
     return this.service.isRepositoryInWorkspace(repository, workspaceId);
@@ -461,21 +456,17 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       );
       await fs.move(oldPath, targetPath, { overwrite: false });
 
-      // Step 5: Update the repository entry in the registry with the new path
+      // Step 5: Re-key the registry from oldPath to targetPath. Path is the
+      // immutable identity in the new API, so this is deregister + register.
+      // Workspace memberships are keyed by purl and survive re-registration.
       console.log(
-        `[Workspace] Updating Alexandria registry with new path: ${targetPath}`,
+        `[Workspace] Re-keying Alexandria registry: ${oldPath} -> ${targetPath}`,
       );
-      await this.service.updateRepository(repository.name, {
-        path: targetPath as typeof repository.path,
-      });
-
-      // Step 6: Get updated entry from registry for event broadcasting
-      const updatedEntry = await this.service.getRepository(repository.name);
-      if (!updatedEntry) {
-        throw new Error(
-          `Failed to retrieve updated repository entry for ${repository.name}`,
-        );
-      }
+      await this.service.removeRepository(oldPath, false);
+      const updatedEntry = await this.service.registerRepository(
+        targetPath,
+        repository.remoteUrl,
+      );
 
       // Step 7: Re-register repository with new path
       console.log(
@@ -494,7 +485,7 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
 
       // Step 9: Broadcast REPOSITORY_UPDATED event (Alexandria) for Feed panels
       console.log(
-        `[Workspace] Broadcasting REPOSITORY_UPDATED event for ${repository.name}`,
+        `[Workspace] Broadcasting REPOSITORY_UPDATED event for ${updatedEntry.name}`,
       );
       this.broadcastAlexandriaEvent(
         AlexandriaAPIEvent.REPOSITORY_UPDATED,
@@ -502,7 +493,7 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       );
 
       // Step 10: Broadcast MEMBERSHIP_CHANGED event (Workspace) for workspace state
-      const repoId = repository.github?.id || repository.name;
+      const repoId = updatedEntry.github?.id || updatedEntry.name;
       console.log(
         `[Workspace] Broadcasting MEMBERSHIP_CHANGED event for workspace ${workspaceId}`,
       );
@@ -621,21 +612,16 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       );
       await fs.move(oldPath, targetPath, { overwrite: false });
 
-      // Step 5: Update the repository entry in the registry with the new path
+      // Step 5: Re-key the registry from oldPath to targetPath (path is the
+      // immutable identity, so this is deregister + register).
       console.log(
-        `[Workspace] Updating Alexandria registry with new path: ${targetPath}`,
+        `[Workspace] Re-keying Alexandria registry: ${oldPath} -> ${targetPath}`,
       );
-      await this.service.updateRepository(repository.name, {
-        path: targetPath as typeof repository.path,
-      });
-
-      // Step 6: Get updated entry from registry for event broadcasting
-      const updatedEntry = await this.service.getRepository(repository.name);
-      if (!updatedEntry) {
-        throw new Error(
-          `Failed to retrieve updated repository entry for ${repository.name}`,
-        );
-      }
+      await this.service.removeRepository(oldPath, false);
+      const updatedEntry = await this.service.registerRepository(
+        targetPath,
+        repository.remoteUrl,
+      );
 
       // Step 7: Re-register repository with new path
       console.log(
@@ -782,7 +768,7 @@ export function registerWorkspaceHandlers(): void {
     WorkspaceAPIEvent.ADD_REPOSITORY_TO_WORKSPACE,
     (
       _event: IpcMainInvokeEvent,
-      repository: AlexandriaEntry | string,
+      repository: AlexandriaEntry | Purl,
       workspaceId: string,
       metadata?: Record<string, unknown>,
     ) => handler.addRepositoryToWorkspace(repository, workspaceId, metadata),
@@ -792,7 +778,7 @@ export function registerWorkspaceHandlers(): void {
     WorkspaceAPIEvent.REMOVE_REPOSITORY_FROM_WORKSPACE,
     (
       _event: IpcMainInvokeEvent,
-      repository: AlexandriaEntry | string,
+      repository: AlexandriaEntry | Purl,
       workspaceId: string,
     ) => handler.removeRepositoryFromWorkspace(repository, workspaceId),
   );
@@ -805,7 +791,7 @@ export function registerWorkspaceHandlers(): void {
 
   ipcMain.handle(
     WorkspaceAPIEvent.GET_REPOSITORY_WORKSPACES,
-    (_event: IpcMainInvokeEvent, repository: AlexandriaEntry | string) =>
+    (_event: IpcMainInvokeEvent, repository: AlexandriaEntry | Purl) =>
       handler.getRepositoryWorkspaces(repository),
   );
 
@@ -820,7 +806,7 @@ export function registerWorkspaceHandlers(): void {
     WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE,
     (
       _event: IpcMainInvokeEvent,
-      repository: AlexandriaEntry | string,
+      repository: AlexandriaEntry | Purl,
       workspaceId: string,
     ) => handler.isRepositoryInWorkspace(repository, workspaceId),
   );

@@ -413,14 +413,12 @@ const AlexandriaWorkspaceContent: React.FC = () => {
           // Check if this repository is in our workspace and update it if so
           setWorkspaceRepositories((prevRepos) => {
             const repoIndex = prevRepos.findIndex(
-              (r) =>
-                r.name === event.repository?.name ||
-                r.github?.id === event.repository?.github?.id,
+              (r) => r.path === event.repository?.path,
             );
             if (repoIndex !== -1) {
               console.info(
                 '[AlexandriaWorkspaceApp] Repository updated, refreshing local state:',
-                event.repository?.name,
+                event.repository?.path,
               );
               const newRepos = [...prevRepos];
               newRepos[repoIndex] = event.repository as AlexandriaEntry;
@@ -428,14 +426,14 @@ const AlexandriaWorkspaceContent: React.FC = () => {
             }
             return prevRepos;
           });
-        } else if (event.type === 'removed' && event.name) {
+        } else if (event.type === 'removed' && event.path) {
           // Remove the repository from our local state if it was deleted
           setWorkspaceRepositories((prevRepos) => {
-            const filtered = prevRepos.filter((r) => r.name !== event.name);
+            const filtered = prevRepos.filter((r) => r.path !== event.path);
             if (filtered.length !== prevRepos.length) {
               console.info(
                 '[AlexandriaWorkspaceApp] Repository removed, updating local state:',
-                event.name,
+                event.path,
               );
             }
             return filtered;

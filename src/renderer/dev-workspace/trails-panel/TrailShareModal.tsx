@@ -16,6 +16,11 @@ import { TrailShareService } from '../../services/TrailShareService';
 
 const COPY_FEEDBACK_MS = 1500;
 
+const buildAgentCommand = (trailId: string) =>
+  `npx -y @principal-ai/principal-view-cli@latest trail ${trailId}`;
+
+type CopiedKind = 'url' | 'agent' | null;
+
 type ModalState =
   | { kind: 'idle' }
   | { kind: 'sharing' }
@@ -62,7 +67,7 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
   const [state, setState] = useState<ModalState>(
     initialUrl ? { kind: 'success', url: initialUrl } : { kind: 'idle' },
   );
-  const [copiedAt, setCopiedAt] = useState<number | null>(null);
+  const [copiedKind, setCopiedKind] = useState<CopiedKind>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -116,18 +121,18 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
   const handleAllowMissing = useCallback(() => runShare(true), [runShare]);
   const handleRetry = useCallback(() => setState({ kind: 'idle' }), []);
 
-  const handleCopy = useCallback(async (url: string) => {
+  const handleCopy = useCallback(async (text: string, kind: CopiedKind) => {
     try {
-      await navigator.clipboard.writeText(url);
-      setCopiedAt(Date.now());
+      await navigator.clipboard.writeText(text);
+      setCopiedKind(kind);
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
       copyTimeoutRef.current = setTimeout(
-        () => setCopiedAt(null),
+        () => setCopiedKind(null),
         COPY_FEEDBACK_MS,
       );
     } catch {
       // navigator.clipboard can fail in restricted webviews — fall back to
-      // surfacing the URL for manual copy. The textarea is already visible.
+      // surfacing the value for manual copy. The textarea is already visible.
     }
   }, []);
 
@@ -251,8 +256,12 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
           <SuccessBody
             theme={theme}
             url={state.url}
-            copied={copiedAt != null}
-            onCopy={() => handleCopy(state.url)}
+            agentCommand={buildAgentCommand(trail.id)}
+            copiedKind={copiedKind}
+            onCopyUrl={() => handleCopy(state.url, 'url')}
+            onCopyAgent={() =>
+              handleCopy(buildAgentCommand(trail.id), 'agent')
+            }
             onOpenExternal={() => handleOpenInBrowser(state.url)}
             onClose={onClose}
           />
@@ -410,105 +419,189 @@ const MissingFilesBody: React.FC<{
 const SuccessBody: React.FC<{
   theme: Theme;
   url: string;
-  copied: boolean;
-  onCopy: () => void;
+  agentCommand: string;
+  copiedKind: CopiedKind;
+  onCopyUrl: () => void;
+  onCopyAgent: () => void;
   onOpenExternal: () => void;
   onClose: () => void;
-}> = ({ theme, url, copied, onCopy, onOpenExternal, onClose }) => (
-  <>
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '10px 12px',
-        borderRadius: '6px',
-        background: theme.colors.backgroundSecondary,
-        border: `1px solid ${theme.colors.primary}`,
-        marginBottom: '12px',
-        color: theme.colors.primary,
-        fontSize: theme.fontSizes[1],
-      }}
-    >
-      <Check size={16} />
-      Trail shared. Anyone with GitHub read access to the repo can view it.
-    </div>
-
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'stretch',
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: '6px',
-        overflow: 'hidden',
-        marginBottom: '20px',
-      }}
-    >
-      <input
-        type="text"
-        readOnly
-        value={url}
-        onFocus={(e) => e.currentTarget.select()}
+}> = ({
+  theme,
+  url,
+  agentCommand,
+  copiedKind,
+  onCopyUrl,
+  onCopyAgent,
+  onOpenExternal,
+  onClose,
+}) => {
+  const copiedUrl = copiedKind === 'url';
+  const copiedAgent = copiedKind === 'agent';
+  return (
+    <>
+      <div
         style={{
-          flex: 1,
-          minWidth: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
           padding: '10px 12px',
-          border: 'none',
+          borderRadius: '6px',
           background: theme.colors.backgroundSecondary,
-          color: theme.colors.text,
-          fontFamily: theme.fonts.monospace,
-          fontSize: theme.fontSizes[0],
-          outline: 'none',
-        }}
-      />
-      <button
-        type="button"
-        onClick={onCopy}
-        title={copied ? 'Copied' : 'Copy link'}
-        aria-label={copied ? 'Copied' : 'Copy link'}
-        style={{
-          padding: '0 12px',
-          background: 'transparent',
-          border: 'none',
-          borderLeft: `1px solid ${theme.colors.border}`,
-          color: copied ? theme.colors.primary : theme.colors.textSecondary,
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          fontSize: theme.fontSizes[0],
+          border: `1px solid ${theme.colors.primary}`,
+          marginBottom: '16px',
+          color: theme.colors.primary,
+          fontSize: theme.fontSizes[1],
         }}
       >
-        {copied ? <Check size={14} /> : <Copy size={14} />}
-        {copied ? 'Copied' : 'Copy'}
-      </button>
-      <button
-        type="button"
-        onClick={onOpenExternal}
-        title="Open in browser"
-        aria-label="Open in browser"
-        style={{
-          padding: '0 12px',
-          background: 'transparent',
-          border: 'none',
-          borderLeft: `1px solid ${theme.colors.border}`,
-          color: theme.colors.textSecondary,
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          fontSize: theme.fontSizes[0],
-        }}
-      >
-        <ExternalLink size={14} />
-      </button>
-    </div>
+        <Check size={16} />
+        Trail shared. Anyone with GitHub read access to the repo can view it.
+      </div>
 
-    <ButtonRow>
-      <PrimaryButton theme={theme} onClick={onClose}>
-        Done
-      </PrimaryButton>
-    </ButtonRow>
-  </>
+      <FieldLabel theme={theme}>Link</FieldLabel>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'stretch',
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: '6px',
+          overflow: 'hidden',
+          marginBottom: '16px',
+        }}
+      >
+        <input
+          type="text"
+          readOnly
+          value={url}
+          onFocus={(e) => e.currentTarget.select()}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: '10px 12px',
+            border: 'none',
+            background: theme.colors.backgroundSecondary,
+            color: theme.colors.text,
+            fontFamily: theme.fonts.monospace,
+            fontSize: theme.fontSizes[0],
+            outline: 'none',
+          }}
+        />
+        <button
+          type="button"
+          onClick={onCopyUrl}
+          title={copiedUrl ? 'Copied' : 'Copy link'}
+          aria-label={copiedUrl ? 'Copied' : 'Copy link'}
+          style={{
+            padding: '0 12px',
+            background: 'transparent',
+            border: 'none',
+            borderLeft: `1px solid ${theme.colors.border}`,
+            color: copiedUrl ? theme.colors.primary : theme.colors.textSecondary,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: theme.fontSizes[0],
+          }}
+        >
+          {copiedUrl ? <Check size={14} /> : <Copy size={14} />}
+          {copiedUrl ? 'Copied' : 'Copy'}
+        </button>
+        <button
+          type="button"
+          onClick={onOpenExternal}
+          title="Open in browser"
+          aria-label="Open in browser"
+          style={{
+            padding: '0 12px',
+            background: 'transparent',
+            border: 'none',
+            borderLeft: `1px solid ${theme.colors.border}`,
+            color: theme.colors.textSecondary,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            fontSize: theme.fontSizes[0],
+          }}
+        >
+          <ExternalLink size={14} />
+        </button>
+      </div>
+
+      <FieldLabel theme={theme}>Copy for agents</FieldLabel>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'stretch',
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: '6px',
+          overflow: 'hidden',
+          marginBottom: '20px',
+        }}
+      >
+        <input
+          type="text"
+          readOnly
+          value={agentCommand}
+          onFocus={(e) => e.currentTarget.select()}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: '10px 12px',
+            border: 'none',
+            background: theme.colors.backgroundSecondary,
+            color: theme.colors.text,
+            fontFamily: theme.fonts.monospace,
+            fontSize: theme.fontSizes[0],
+            outline: 'none',
+          }}
+        />
+        <button
+          type="button"
+          onClick={onCopyAgent}
+          title={copiedAgent ? 'Copied' : 'Copy CLI command'}
+          aria-label={copiedAgent ? 'Copied' : 'Copy CLI command'}
+          style={{
+            padding: '0 12px',
+            background: 'transparent',
+            border: 'none',
+            borderLeft: `1px solid ${theme.colors.border}`,
+            color: copiedAgent
+              ? theme.colors.primary
+              : theme.colors.textSecondary,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: theme.fontSizes[0],
+          }}
+        >
+          {copiedAgent ? <Check size={14} /> : <Copy size={14} />}
+          {copiedAgent ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+
+      <ButtonRow>
+        <PrimaryButton theme={theme} onClick={onClose}>
+          Done
+        </PrimaryButton>
+      </ButtonRow>
+    </>
+  );
+};
+
+const FieldLabel: React.FC<{
+  theme: Theme;
+  children: React.ReactNode;
+}> = ({ theme, children }) => (
+  <div
+    style={{
+      fontSize: theme.fontSizes[0],
+      color: theme.colors.textSecondary,
+      marginBottom: '6px',
+    }}
+  >
+    {children}
+  </div>
 );
 
 const ErrorBody: React.FC<{

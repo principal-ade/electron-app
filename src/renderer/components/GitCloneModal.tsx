@@ -18,7 +18,10 @@ interface GitCloneModalProps {
   onClose: () => void;
   onRepositoryAdded?: (repo: AlexandriaEntry) => void;
   initialUrl?: string;
-  registerRepository: (name: string, path: string) => Promise<AlexandriaEntry>;
+  registerRepository: (
+    path: string,
+    remoteUrl?: string,
+  ) => Promise<AlexandriaEntry>;
 }
 
 type CloneStep =
@@ -447,11 +450,9 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       if (success) {
         setCloneProgress('Registering repository...');
 
-        // Register with Alexandria
-        const registeredRepo = await registerRepository(
-          repoName,
-          targetPath,
-        );
+        // Register with Alexandria — identity is derived by the library from
+        // the remote URL, never from the bare repo name.
+        const registeredRepo = await registerRepository(targetPath, cloneUrl);
 
         setCloneProgress('Clone complete!');
         setCurrentStep('complete');
@@ -515,11 +516,9 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     setError('');
 
     try {
-      // Register with Alexandria
-      const registeredRepo = await registerRepository(
-        repoName,
-        pathToRegister,
-      );
+      // Register with Alexandria — let the library derive identity from the
+      // origin remote it discovers at this path.
+      const registeredRepo = await registerRepository(pathToRegister);
 
       setCloneProgress('Registration complete!');
       setCurrentStep('complete');

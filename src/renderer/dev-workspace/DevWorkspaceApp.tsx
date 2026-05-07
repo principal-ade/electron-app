@@ -623,8 +623,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
       // Check if this event is for our repository
       if (event.type === AlexandriaEventType.REMOVED) {
-        // Repository was removed - we could close the window or show a message
-        if (event.name === repositoryName) {
+        if (event.path === repositoryPath) {
           console.info(
             '[DevWorkspaceApp] Repository was removed from Alexandria registry',
           );
@@ -640,7 +639,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     });
 
     return () => unsubscribe();
-  }, [repositoryPath, repositoryName]);
+  }, [repositoryPath]);
 
   // Subscribe to workspace file change events
   useEffect(() => {

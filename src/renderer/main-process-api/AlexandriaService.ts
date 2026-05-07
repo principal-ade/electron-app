@@ -27,10 +27,6 @@ export class AlexandriaService {
     return alexandriaClient.getRepositories();
   }
 
-  static async getRepository(name: string): Promise<AlexandriaEntry | null> {
-    return alexandriaClient.getRepository({ name });
-  }
-
   static async getRepositoryByPath(
     path: string,
   ): Promise<AlexandriaEntry | null> {
@@ -38,17 +34,17 @@ export class AlexandriaService {
   }
 
   static async registerRepository(
-    name: string,
     path: string,
+    remoteUrl?: string,
   ): Promise<AlexandriaEntry> {
-    return alexandriaClient.registerRepository({ name, path });
+    return alexandriaClient.registerRepository({ path, remoteUrl });
   }
 
   static async removeRepository(
-    name: string,
+    path: string,
     deleteLocal?: boolean,
   ): Promise<boolean> {
-    return alexandriaClient.removeRepository({ name, deleteLocal });
+    return alexandriaClient.removeRepository({ path, deleteLocal });
   }
 
   static async clearAllData(): Promise<{
@@ -67,22 +63,22 @@ export class AlexandriaService {
   }
 
   static async refreshRepository(
-    name: string,
+    path: string,
   ): Promise<AlexandriaEntry | null> {
-    return alexandriaClient.refreshRepository({ name });
+    return alexandriaClient.refreshRepository({ path });
   }
 
-  static async updateLastOpened(name: string): Promise<void> {
+  static async updateLastOpened(path: string): Promise<void> {
     const tracer = getTracer('principal-ade-alexandria');
     const span = tracer.startSpan('alexandria.service.update_last_opened_called');
-    span.setAttribute('repository_name', name);
+    span.setAttribute('repository_path', path);
 
     try {
       span.addEvent('alexandria.ipc.update_last_opened_sent', {
         channel: 'alexandria:update-last-opened',
-        repository_name: name,
+        repository_path: path,
       });
-      await alexandriaClient.updateLastOpened({ name });
+      await alexandriaClient.updateLastOpened({ path });
       span.setStatus({ code: SpanStatusCode.OK });
     } catch (error) {
       span.recordException(

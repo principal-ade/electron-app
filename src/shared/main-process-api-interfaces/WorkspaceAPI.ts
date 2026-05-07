@@ -6,6 +6,7 @@ import type {
   Workspace,
   WorkspaceMembership,
   AlexandriaEntry,
+  Purl,
 } from '@principal-ai/alexandria-core-library';
 
 export enum WorkspaceAPIEvent {
@@ -97,7 +98,7 @@ export interface WorkspaceAPI {
    * Add a repository to a workspace
    */
   addRepositoryToWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
     metadata?: Record<string, unknown>,
   ): Promise<void>;
@@ -106,7 +107,7 @@ export interface WorkspaceAPI {
    * Remove a repository from a workspace
    */
   removeRepositoryFromWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
   ): Promise<void>;
 
@@ -119,7 +120,7 @@ export interface WorkspaceAPI {
    * Get all workspaces that contain a specific repository
    */
   getRepositoryWorkspaces(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
   ): Promise<Workspace[]>;
 
   // ===== Query Methods =====
@@ -133,7 +134,7 @@ export interface WorkspaceAPI {
    * Check if a repository is in a workspace
    */
   isRepositoryInWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
   ): Promise<boolean>;
 

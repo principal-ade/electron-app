@@ -562,8 +562,8 @@ export function setupQuickOpenHandlers(): void {
         } = require('../stores/AlexandriaRegistryService');
         const alexandriaService = AlexandriaRegistryService.getInstance();
         const registeredRepo = await alexandriaService.registerRepository(
-          repoName,
           targetPath,
+          cloneUrl,
         );
 
         log.info(`[Quick Open] Registered repository: ${registeredRepo.name}`);

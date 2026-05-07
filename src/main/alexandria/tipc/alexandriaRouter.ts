@@ -11,7 +11,6 @@
 import { tipc } from '@egoist/tipc/main';
 import { BrowserWindow } from 'electron';
 import type {
-  GetRepositoryInput,
   GetRepositoryByPathInput,
   RegisterRepositoryInput,
   RemoveRepositoryInput,
@@ -42,13 +41,13 @@ function broadcastAlexandriaEvent(
     | AlexandriaAPIEvent.REPOSITORY_ADDED
     | AlexandriaAPIEvent.REPOSITORY_UPDATED
     | AlexandriaAPIEvent.REPOSITORY_REMOVED,
-  data: AlexandriaEntry | { name: string },
+  data: AlexandriaEntry | { path: string },
 ): void {
   const windows = BrowserWindow.getAllWindows();
   const activeWindows = windows.filter((w) => !w.isDestroyed());
 
   // Track broadcast for recently-opened flow
-  if (eventType === AlexandriaAPIEvent.REPOSITORY_UPDATED) {
+  if (eventType === AlexandriaAPIEvent.REPOSITORY_UPDATED && 'name' in data) {
     const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan(
       'alexandria.event.repository_updated_broadcast',
@@ -114,12 +113,6 @@ export const alexandriaRouter = {
     return registryService.getRepositories();
   }),
 
-  alexandria_getRepository: t.procedure
-    .input<GetRepositoryInput>()
-    .action(async ({ input }) => {
-      return registryService.getRepository(input.name);
-    }),
-
   alexandria_getRepositoryByPath: t.procedure
     .input<GetRepositoryByPathInput>()
     .action(async ({ input }) => {
@@ -147,44 +140,31 @@ export const alexandriaRouter = {
   alexandria_registerRepository: t.procedure
     .input<RegisterRepositoryInput>()
     .action(async ({ input }) => {
-      try {
-        const repo = await registryService.registerRepository(
-          input.name,
-          input.path,
-        );
-        broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_ADDED, repo);
-        await registerWithMonitoring(repo);
-        return repo;
-      } catch (error) {
-        // If repo already exists, return existing repo (idempotent operation)
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('already exists')) {
-          const existing = await registryService.getRepository(input.name);
-          if (existing) {
-            return existing;
-          }
-        }
-        // Re-throw any other errors
-        throw error;
+      const existing = await registryService.getRepositoryByPath(input.path);
+      if (existing) {
+        return existing;
       }
+      const repo = await registryService.registerRepository(
+        input.path,
+        input.remoteUrl,
+      );
+      broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_ADDED, repo);
+      await registerWithMonitoring(repo);
+      return repo;
     }),
 
   alexandria_removeRepository: t.procedure
     .input<RemoveRepositoryInput>()
     .action(async ({ input }) => {
-      const existing = await registryService.getRepository(input.name);
       const success = await registryService.removeRepository(
-        input.name,
+        input.path,
         input.deleteLocal,
       );
       if (success) {
         broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_REMOVED, {
-          name: input.name,
+          path: input.path,
         });
-        if (existing?.path) {
-          await unregisterFromMonitoring(existing.path as string);
-        }
+        await unregisterFromMonitoring(input.path);
       }
       return success;
     }),
@@ -197,7 +177,7 @@ export const alexandriaRouter = {
   alexandria_refreshRepository: t.procedure
     .input<RefreshRepositoryInput>()
     .action(async ({ input }) => {
-      const repo = await registryService.refreshRepository(input.name);
+      const repo = await registryService.refreshRepository(input.path);
       if (repo) {
         broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_UPDATED, repo);
       }
@@ -209,10 +189,10 @@ export const alexandriaRouter = {
     .action(async ({ input }) => {
       const tracer = getTracer('principal-ade-main');
       const span = tracer.startSpan('alexandria.main.ipc_handler_invoked');
-      span.setAttribute('repository_name', input.name);
+      span.setAttribute('repository_path', input.path);
 
       try {
-        await registryService.updateLastOpened(input.name);
+        await registryService.updateLastOpened(input.path);
         span.setStatus({ code: SpanStatusCode.OK });
       } catch (error) {
         span.recordException(

@@ -21,42 +21,38 @@ export class AlexandriaDocsApiEventHandler implements AlexandriaDocsAPI {
   }
 
   async getDocuments(entry: AlexandriaEntry): Promise<string[]> {
-    // Use the entry's name to get documents
-    if (!entry.name) {
-      throw new Error('Alexandria entry must have a name');
+    if (!entry.path) {
+      throw new Error('Alexandria entry must have a path');
     }
-    return this.registryService.getRepositoryDocuments(entry.name);
+    return this.registryService.getRepositoryDocuments(entry.path);
   }
 
   async getExcludedDocuments(entry: AlexandriaEntry): Promise<string[]> {
-    // Use the entry's name to get excluded documents
-    if (!entry.name) {
-      throw new Error('Alexandria entry must have a name');
+    if (!entry.path) {
+      throw new Error('Alexandria entry must have a path');
     }
-    return this.registryService.getExcludedDocuments(entry.name);
+    return this.registryService.getExcludedDocuments(entry.path);
   }
 
   async getDocumentsWithExclusions(entry: AlexandriaEntry): Promise<{
     documents: string[];
     excluded: string[];
   }> {
-    // Use the entry's name to get documents with exclusions
-    if (!entry.name) {
-      throw new Error('Alexandria entry must have a name');
+    if (!entry.path) {
+      throw new Error('Alexandria entry must have a path');
     }
     return this.registryService.getRepositoryDocumentsWithExclusions(
-      entry.name,
+      entry.path,
     );
   }
 
   async getComprehensiveDocuments(
     entry: AlexandriaEntry,
   ): Promise<ComprehensiveDocuments> {
-    // Use the entry's name to get comprehensive documents (always respecting .gitignore)
-    if (!entry.name) {
-      throw new Error('Alexandria entry must have a name');
+    if (!entry.path) {
+      throw new Error('Alexandria entry must have a path');
     }
-    return this.registryService.getComprehensiveDocuments(entry.name, true);
+    return this.registryService.getComprehensiveDocuments(entry.path, true);
   }
 
   async getDocumentsWithFiles(

@@ -23,6 +23,7 @@ import type {
   Workspace,
   AlexandriaEntry,
 } from '@principal-ai/alexandria-core-library/types';
+import type { Purl } from '@principal-ai/alexandria-core-library';
 import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import type {
   WorkspacesSlice,
@@ -70,14 +71,14 @@ interface ProjectsPanelActions
     workspaceId: string,
   ) => Promise<string>;
   // Track a discovered repository (add to Alexandria)
-  trackRepository?: (name: string, path: string) => Promise<void>;
+  trackRepository?: (path: string) => Promise<void>;
   // Select a repository without opening a new window (for ProjectInfoPanel)
   selectRepository?: (entry: AlexandriaEntry) => Promise<void>;
   // Stale repo review actions
   getStaleRepos?: () => Promise<StaleRepoInfo[]>;
   getRandomStaleRepo?: () => Promise<StaleRepoInfo | null>;
-  snoozeStaleRepo?: (repoName: string) => Promise<void>;
-  deleteStaleRepo?: (repoName: string) => Promise<void>;
+  snoozeStaleRepo?: (repoPath: string) => Promise<void>;
+  deleteStaleRepo?: (repoPath: string) => Promise<void>;
   getStaleRepoCount?: () => number;
   shouldShowStaleBadge?: () => boolean;
   // Default branch analysis actions
@@ -468,7 +469,7 @@ export const ProjectsPanelProvider: React.FC<
 
           for (const repo of discovered) {
             try {
-              await AlexandriaService.registerRepository(repo.name, repo.path);
+              await AlexandriaService.registerRepository(repo.path);
               successCount++;
             } catch (error) {
               // If repo already exists, treat as success (desired end state)
@@ -570,8 +571,8 @@ export const ProjectsPanelProvider: React.FC<
     });
 
     for (const repo of localRepositories) {
-      // Skip if snoozed
-      const snoozeUntil = staleRepoPrefs.snoozedRepos[repo.name];
+      // Skip if snoozed (snooze map is keyed by path)
+      const snoozeUntil = staleRepoPrefs.snoozedRepos[repo.path];
       if (snoozeUntil && snoozeUntil > now) {
         continue;
       }
@@ -584,7 +585,7 @@ export const ProjectsPanelProvider: React.FC<
         // Check if directory info is invalid (doesn't exist or failed to read)
         if (!dirInfo || dirInfo.mtime === epochTime) {
           // Directory doesn't exist or can't be read - mark for cleanup
-          orphanedEntries.push(repo.name);
+          orphanedEntries.push(repo.path);
           continue;
         }
 
@@ -608,18 +609,18 @@ export const ProjectsPanelProvider: React.FC<
         }
       } catch {
         // Directory doesn't exist - mark for cleanup
-        orphanedEntries.push(repo.name);
+        orphanedEntries.push(repo.path);
       }
     }
 
     // Clean up orphaned entries (folders that no longer exist)
     if (orphanedEntries.length > 0) {
       console.info(`[ProjectsPanelProvider] Cleaning up ${orphanedEntries.length} orphaned Alexandria entries`);
-      for (const name of orphanedEntries) {
+      for (const path of orphanedEntries) {
         try {
-          await AlexandriaService.removeRepository(name, false);
+          await AlexandriaService.removeRepository(path, false);
         } catch (error) {
-          console.warn(`[ProjectsPanelProvider] Failed to clean up orphaned entry ${name}:`, error);
+          console.warn(`[ProjectsPanelProvider] Failed to clean up orphaned entry at ${path}:`, error);
         }
       }
       // Refresh local repositories after cleanup
@@ -1227,26 +1228,22 @@ export const ProjectsPanelProvider: React.FC<
         return { path, name };
       },
 
-      registerRepository: async (name: string, path: string) => {
-        console.info(
-          '[ProjectsPanelProvider] Registering repository:',
-          name,
-          path,
-        );
-        await AlexandriaService.registerRepository(name, path);
+      registerRepository: async (path: string, remoteUrl?: string) => {
+        console.info('[ProjectsPanelProvider] Registering repository:', path);
+        await AlexandriaService.registerRepository(path, remoteUrl);
 
         // Refresh local repositories
         const repos = await AlexandriaService.getRepositories();
         setLocalRepositories(repos);
       },
 
-      removeLocalRepository: async (name: string, deleteLocal: boolean) => {
+      removeLocalRepository: async (path: string, deleteLocal: boolean) => {
         console.info(
           '[ProjectsPanelProvider] Removing local repository:',
-          name,
+          path,
           deleteLocal,
         );
-        await AlexandriaService.removeRepository(name, deleteLocal);
+        await AlexandriaService.removeRepository(path, deleteLocal);
 
         // Refresh local repositories
         const repos = await AlexandriaService.getRepositories();
@@ -1254,13 +1251,9 @@ export const ProjectsPanelProvider: React.FC<
       },
 
       // Track a discovered repository (add to Alexandria)
-      trackRepository: async (name: string, path: string) => {
-        console.info(
-          '[ProjectsPanelProvider] Tracking repository:',
-          name,
-          path,
-        );
-        await AlexandriaService.registerRepository(name, path);
+      trackRepository: async (path: string) => {
+        console.info('[ProjectsPanelProvider] Tracking repository:', path);
+        await AlexandriaService.registerRepository(path);
 
         // Refresh local repositories (this will also trigger discovered repos refresh)
         const repos = await AlexandriaService.getRepositories();
@@ -1368,7 +1361,7 @@ export const ProjectsPanelProvider: React.FC<
           workspaceId,
         );
         await WorkspaceService.removeRepositoryFromWorkspace(
-          repositoryId,
+          repositoryId as Purl,
           workspaceId,
         );
 
@@ -1558,12 +1551,12 @@ export const ProjectsPanelProvider: React.FC<
       getStaleRepos,
       getRandomStaleRepo,
 
-      snoozeStaleRepo: async (repoName: string) => {
-        console.info('[ProjectsPanelProvider] Snoozing stale repo:', repoName);
+      snoozeStaleRepo: async (repoPath: string) => {
+        console.info('[ProjectsPanelProvider] Snoozing stale repo:', repoPath);
         const snoozeUntil = Date.now() + staleRepoPrefs.snoozeDurationDays * 24 * 60 * 60 * 1000;
         const updatedSnoozed = {
           ...staleRepoPrefs.snoozedRepos,
-          [repoName]: snoozeUntil,
+          [repoPath]: snoozeUntil,
         };
 
         await UserPreferencesService.updatePreferences({
@@ -1580,16 +1573,16 @@ export const ProjectsPanelProvider: React.FC<
         }));
 
         // Remove from stale repos list
-        setStaleRepos((prev) => prev.filter((r) => r.entry.name !== repoName));
+        setStaleRepos((prev) => prev.filter((r) => r.entry.path !== repoPath));
       },
 
-      deleteStaleRepo: async (repoName: string) => {
-        console.info('[ProjectsPanelProvider] Deleting stale repo:', repoName);
+      deleteStaleRepo: async (repoPath: string) => {
+        console.info('[ProjectsPanelProvider] Deleting stale repo:', repoPath);
         // Delete from disk (deleteLocal = true)
-        await AlexandriaService.removeRepository(repoName, true);
+        await AlexandriaService.removeRepository(repoPath, true);
 
         // Remove from stale repos list
-        setStaleRepos((prev) => prev.filter((r) => r.entry.name !== repoName));
+        setStaleRepos((prev) => prev.filter((r) => r.entry.path !== repoPath));
 
         // Refresh local repositories
         const repos = await AlexandriaService.getRepositories();

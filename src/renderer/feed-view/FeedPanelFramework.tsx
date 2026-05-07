@@ -251,7 +251,7 @@ const RepositoryProfileTabContent: React.FC<{
         // Re-fetch from Alexandria on refresh to pick up updated localClones (e.g. after cloning)
         let repo: AlexandriaEntry = repository;
         if (refreshTrigger > 0) {
-          const freshEntry = await AlexandriaService.getRepository(repository.name);
+          const freshEntry = await AlexandriaService.getRepositoryByPath(repository.path);
           if (freshEntry) repo = freshEntry;
         }
 
@@ -533,8 +533,8 @@ const RepositoryProfileTabContent: React.FC<{
       await GithubService.unstarRepository(owner, repo);
     },
 
-    registerRepository: async (name: string, path: string) => {
-      return AlexandriaService.registerRepository(name, path);
+    registerRepository: async (path: string, remoteUrl?: string) => {
+      return AlexandriaService.registerRepository(path, remoteUrl);
     },
 
     getContributors: async (owner: string, repo: string) => {
@@ -1599,7 +1599,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       if (!entryToDelete) return;
 
       try {
-        await AlexandriaService.removeRepository(entryToDelete.name, deleteLocal);
+        await AlexandriaService.removeRepository(entryToDelete.path, deleteLocal);
 
         // Update the project info tab for this repository if it's open
         // Convert it to remote-only instead of closing it

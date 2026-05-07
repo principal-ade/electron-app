@@ -170,8 +170,8 @@ export interface RepositoryPanelActions extends PanelActions {
   openFile?: (filePath: string) => Promise<void>;
   // Local Projects panel actions
   selectDirectory?: () => Promise<{ path: string; name: string } | null>;
-  registerRepository?: (name: string, path: string) => Promise<void>;
-  removeLocalRepository?: (name: string, deleteLocal: boolean) => Promise<void>;
+  registerRepository?: (path: string, remoteUrl?: string) => Promise<void>;
+  removeLocalRepository?: (path: string, deleteLocal: boolean) => Promise<void>;
   openLocalRepository?: (entry: AlexandriaEntry) => Promise<void>;
   // Active file management for markdown panel
   setActiveFile?: (filePath: string | null) => Promise<void>;
@@ -2001,12 +2001,11 @@ export const RepositoryPanelProvider: React.FC<
         }
       },
 
-      registerRepository: async (name: string, path: string) => {
+      registerRepository: async (path: string, remoteUrl?: string) => {
         try {
-          await AlexandriaService.registerRepository(name, path);
+          await AlexandriaService.registerRepository(path, remoteUrl);
           console.info(
             '[RepositoryPanelProvider] Registered repository:',
-            name,
             path,
           );
         } catch (error) {
@@ -2018,10 +2017,10 @@ export const RepositoryPanelProvider: React.FC<
         }
       },
 
-      removeLocalRepository: async (name: string, deleteLocal: boolean) => {
+      removeLocalRepository: async (path: string, deleteLocal: boolean) => {
         try {
-          await AlexandriaService.removeRepository(name, deleteLocal);
-          console.info('[RepositoryPanelProvider] Removed repository:', name);
+          await AlexandriaService.removeRepository(path, deleteLocal);
+          console.info('[RepositoryPanelProvider] Removed repository:', path);
         } catch (error) {
           console.error(
             '[RepositoryPanelProvider] Failed to remove repository:',

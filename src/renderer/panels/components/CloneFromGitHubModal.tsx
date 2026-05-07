@@ -309,7 +309,6 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
 
     try {
       let cloneUrl = parsedUrl.url;
-      let repoName = parsedUrl.repo;
 
       // Step 0: Fork if needed
       if (willFork && (needsFork || initialFork)) {
@@ -330,7 +329,6 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
 
         // Use the forked repo's clone URL
         cloneUrl = forkedRepo.clone_url;
-        repoName = forkedRepo.name;
         setForkedRepoUrl(forkedRepo.html_url);
       }
 
@@ -351,8 +349,8 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
       setProgressStep('registering');
 
       const registeredRepo = await AlexandriaService.registerRepository(
-        repoName,
         targetPath,
+        cloneUrl,
       );
 
       // Step 3: Add to workspace

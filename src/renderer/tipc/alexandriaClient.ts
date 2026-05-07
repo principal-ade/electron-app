@@ -13,7 +13,6 @@ import type {
   AlexandriaRouterType,
   AlexandriaEntry,
   CodebaseView,
-  GetRepositoryInput,
   GetRepositoryByPathInput,
   RegisterRepositoryInput,
   RemoveRepositoryInput,
@@ -36,7 +35,6 @@ import type {
 export interface AlexandriaClient {
   // Repository Queries
   getRepositories: () => Promise<AlexandriaEntry[]>;
-  getRepository: (input: GetRepositoryInput) => Promise<AlexandriaEntry | null>;
   getRepositoryByPath: (
     input: GetRepositoryByPathInput,
   ) => Promise<AlexandriaEntry | null>;
@@ -73,9 +71,6 @@ export interface AlexandriaClient {
 
 interface TipcAlexandriaClient {
   alexandria_getRepositories: () => Promise<AlexandriaEntry[]>;
-  alexandria_getRepository: (
-    input: GetRepositoryInput,
-  ) => Promise<AlexandriaEntry | null>;
   alexandria_getRepositoryByPath: (
     input: GetRepositoryByPathInput,
   ) => Promise<AlexandriaEntry | null>;
@@ -136,7 +131,6 @@ function getTipcClient(): TipcAlexandriaClient {
  */
 export const alexandriaClient: AlexandriaClient = {
   getRepositories: () => getTipcClient().alexandria_getRepositories(),
-  getRepository: (input) => getTipcClient().alexandria_getRepository(input),
   getRepositoryByPath: (input) =>
     getTipcClient().alexandria_getRepositoryByPath(input),
   searchRepositories: (input) =>
@@ -165,7 +159,6 @@ export const alexandriaClient: AlexandriaClient = {
 export type {
   AlexandriaEntry,
   CodebaseView,
-  GetRepositoryInput,
   GetRepositoryByPathInput,
   RegisterRepositoryInput,
   RemoveRepositoryInput,

@@ -8,6 +8,7 @@ import type {
   WorkspaceMembership,
   AlexandriaEntry,
 } from '@principal-ai/alexandria-core-library/types';
+import type { Purl } from '@principal-ai/alexandria-core-library';
 import type { WorkspaceChangeEvent } from '../../shared/main-process-api-interfaces/WorkspaceAPI';
 
 export class WorkspaceService {
@@ -48,7 +49,7 @@ export class WorkspaceService {
   // ===== Membership Management =====
 
   static async addRepositoryToWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
     metadata?: Record<string, unknown>,
   ): Promise<void> {
@@ -60,7 +61,7 @@ export class WorkspaceService {
   }
 
   static async removeRepositoryFromWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
   ): Promise<void> {
     return window.mainProcess.workspace.removeRepositoryFromWorkspace(
@@ -76,7 +77,7 @@ export class WorkspaceService {
   }
 
   static async getRepositoryWorkspaces(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
   ): Promise<Workspace[]> {
     return window.mainProcess.workspace.getRepositoryWorkspaces(repository);
   }
@@ -90,7 +91,7 @@ export class WorkspaceService {
   }
 
   static async isRepositoryInWorkspace(
-    repository: AlexandriaEntry | string,
+    repository: AlexandriaEntry | Purl,
     workspaceId: string,
   ): Promise<boolean> {
     return window.mainProcess.workspace.isRepositoryInWorkspace(

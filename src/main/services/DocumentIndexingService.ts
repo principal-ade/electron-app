@@ -152,10 +152,10 @@ export class DocumentIndexingService {
               `[DocumentIndexingService] Scanning repository: ${repo.name} at ${repo.path}`,
             );
 
-            // Use AlexandriaRegistryService to get documents
+            // Use AlexandriaRegistryService to get documents (path-keyed)
             const { documents } =
               await this.alexandriaRegistry.getRepositoryDocumentsWithExclusions(
-                repo.name,
+                repo.path,
               );
 
             console.log(
