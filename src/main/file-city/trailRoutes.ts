@@ -15,7 +15,12 @@ import type {
   TrailView,
   SequenceMarkerRef,
 } from '@industry-theme/file-city-panel';
-import { TrailStore } from './trailStore';
+import { TrailStore, sendToRepoWindows } from './trailStore';
+import { fetchSharedTrail } from './trailShare';
+import {
+  FileCityTrailEvent,
+  TrailShareError,
+} from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { openDevWorkspaceWindow } from '../window/devWorkspaceWindowHandlers';
 import { applicationWindows, specialWindows } from '../window/modernWindowManager';
@@ -236,10 +241,10 @@ export function registerTrailRoutes(
         ? req.body.activate !== false
         : true;
     try {
-      const { payload, broadcastTo, evictedIds } = await store.set(
-        result.payload,
-        { activate, repositoryPath: result.repositoryPath },
-      );
+      const { payload, evictedIds } = await store.set(result.payload, {
+        activate,
+        repositoryPath: result.repositoryPath,
+      });
       let windowOpened: WindowOpened = 'none';
       if (activate && result.repositoryPath) {
         try {
@@ -248,6 +253,19 @@ export function registerTrailRoutes(
           console.error('[trailRoutes] ensure window failed', err);
         }
       }
+      let broadcastTo = 0;
+      if (activate) {
+        broadcastTo = sendToRepoWindows(
+          FileCityTrailEvent.PAYLOAD_SET,
+          { payload, repositoryPath: result.repositoryPath },
+          result.repositoryPath,
+        );
+      }
+      sendToRepoWindows(
+        FileCityTrailEvent.LIBRARY_CHANGED,
+        { repositoryPath: result.repositoryPath },
+        result.repositoryPath,
+      );
       res.json({
         success: true,
         id: payload.id,
@@ -291,11 +309,21 @@ export function registerTrailRoutes(
         return;
       }
       try {
-        const { payload, broadcastTo } = await store.activate(id);
-        if (!payload) {
+        const result = await store.activate(id);
+        if (!result) {
           res.status(404).json({ success: false, error: 'unknown id' });
           return;
         }
+        const broadcastTo = sendToRepoWindows(
+          FileCityTrailEvent.PAYLOAD_SET,
+          { payload: result.payload, repositoryPath: result.repositoryPath },
+          result.repositoryPath,
+        );
+        sendToRepoWindows(
+          FileCityTrailEvent.LIBRARY_CHANGED,
+          { repositoryPath: result.repositoryPath },
+          result.repositoryPath,
+        );
         res.json({ success: true, broadcastTo });
       } catch (err) {
         console.error('[trailRoutes] activate failed', err);
@@ -309,15 +337,56 @@ export function registerTrailRoutes(
     async (req: Request, res: Response) => {
       const id = String(req.params.id);
       try {
-        const { found } = await store.delete(id);
+        const { found, wasActive, repositoryPath } = await store.delete(id);
         if (!found) {
           res.status(404).json({ success: false, error: 'unknown id' });
           return;
         }
+        if (wasActive) {
+          sendToRepoWindows(
+            FileCityTrailEvent.PAYLOAD_CLEARED,
+            { repositoryPath },
+            repositoryPath,
+          );
+        }
+        sendToRepoWindows(
+          FileCityTrailEvent.LIBRARY_CHANGED,
+          { repositoryPath },
+          repositoryPath,
+        );
         res.json({ success: true });
       } catch (err) {
         console.error('[trailRoutes] delete by id failed', err);
         res.status(500).json({ success: false, error: 'failed to delete' });
+      }
+    },
+  );
+
+  // Hydrate a private web-ade share by (owner, repo, id). The GitHub token
+  // lives in the main process, so an external curl can't reach web-ade
+  // directly — this route runs the authed fetch on the caller's behalf and
+  // returns the full payload. Mounted before `/:id` for path specificity.
+  app.get(
+    '/api/file-city/trail/share/:owner/:repo/:id',
+    async (req: Request, res: Response) => {
+      const owner = String(req.params.owner);
+      const repo = String(req.params.repo);
+      const id = String(req.params.id);
+      try {
+        const result = await fetchSharedTrail(owner, repo, id);
+        res.json({ success: true, payload: result.payload });
+      } catch (err) {
+        if (err instanceof TrailShareError) {
+          const status = err.code === 'SHARE_NOT_FOUND' ? 404 : 502;
+          res
+            .status(status)
+            .json({ success: false, error: err.message, code: err.code });
+          return;
+        }
+        console.error('[trailRoutes] fetch shared failed', err);
+        res
+          .status(500)
+          .json({ success: false, error: 'failed to fetch shared trail' });
       }
     },
   );
@@ -346,7 +415,17 @@ export function registerTrailRoutes(
         ? req.query.repositoryPath
         : undefined;
     try {
-      const broadcastTo = await store.clear(repositoryPath);
+      await store.clear(repositoryPath);
+      const broadcastTo = sendToRepoWindows(
+        FileCityTrailEvent.PAYLOAD_CLEARED,
+        { repositoryPath },
+        repositoryPath,
+      );
+      sendToRepoWindows(
+        FileCityTrailEvent.LIBRARY_CHANGED,
+        { repositoryPath },
+        repositoryPath,
+      );
       res.json({ success: true, broadcastTo });
     } catch (err) {
       console.error('[trailRoutes] clear failed', err);

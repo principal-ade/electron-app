@@ -50,10 +50,18 @@ export class TrailShareService {
     return api.fetchShared(owner, repo, id);
   }
 
-  /** Render a payload via PAYLOAD_SET broadcast without persisting locally. */
-  static async setTransient(payload: TrailPayload): Promise<void> {
+  /**
+   * Push a payload to the panel for `repositoryPath`'s windows via
+   * `PAYLOAD_SET` without persisting locally. The caller is the renderer
+   * that just hydrated the share, so it knows the repo it should be
+   * scoped to. Used to preview a fetched-but-unsaved shared trail.
+   */
+  static async setTransient(
+    payload: TrailPayload,
+    repositoryPath: string | undefined,
+  ): Promise<void> {
     const api = window.mainProcess?.fileCityTrail;
     if (!api) throw missingApiError();
-    return api.setTransient(payload);
+    return api.setTransient(payload, repositoryPath);
   }
 }

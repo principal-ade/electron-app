@@ -193,11 +193,27 @@ export interface FileCityTrailAPI {
   /** Read a saved trail by id without activating it. */
   load: (id: string) => Promise<TrailPayload | null>;
 
-  /** Mark a saved trail active for its repository and broadcast `PAYLOAD_SET`. */
-  activate: (id: string) => Promise<void>;
+  /**
+   * Mark a saved trail active for its repository. Returns the activated
+   * payload + repositoryPath so the calling renderer can update its own
+   * state directly. Returns `null` if the id is unknown. Renderer-initiated
+   * activations do not emit `PAYLOAD_SET`; HTTP-initiated activations do
+   * (targeted to the repo's windows).
+   */
+  activate: (
+    id: string,
+  ) => Promise<{ payload: TrailPayload; repositoryPath?: string } | null>;
 
-  /** Permanently delete a saved trail from disk + manifest. */
-  delete: (id: string) => Promise<void>;
+  /**
+   * Permanently delete a saved trail from disk + manifest. Returns whether
+   * the entry was found, whether it was the active one, and the repo path
+   * so the calling renderer can update local state directly.
+   */
+  delete: (id: string) => Promise<{
+    found: boolean;
+    wasActive: boolean;
+    repositoryPath?: string;
+  }>;
 
   /** Subscribe to library changes (set / delete / activate). */
   onLibraryChanged: (
@@ -249,9 +265,13 @@ export interface FileCityTrailAPI {
   ) => Promise<FileCityTrailFetchSharedResult>;
 
   /**
-   * Broadcast a payload to all open trail panels via PAYLOAD_SET without
-   * persisting it. Used to preview a payload from web-ade without polluting
-   * the local library.
+   * Push a payload to renderer trail panels for a specific repo via
+   * `PAYLOAD_SET`, without persisting it. Used to preview a payload
+   * fetched from web-ade without polluting the local library. The
+   * `repositoryPath` argument scopes the push to that repo's windows.
    */
-  setTransient: (payload: TrailPayload) => Promise<void>;
+  setTransient: (
+    payload: TrailPayload,
+    repositoryPath: string | undefined,
+  ) => Promise<void>;
 }

@@ -141,6 +141,7 @@ import { GitConfigSidebarButton } from '../components/Sidebar/GitConfigSidebarBu
 import { GitConfigPanel } from './git-config-panel';
 import { TrailsPanel } from './trails-panel';
 import { TrailService } from '../services/TrailService';
+import { TRAIL_EVENT, type TrailActivatedEvent } from './trail-events';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -2598,18 +2599,41 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return unsubscribe;
   }, [events, openFileCityTrailTab]);
 
-  // Auto-open the trail tab whenever a trail PAYLOAD_SET arrives that's
-  // bucketed to this repo (or has no repositoryPath — transient broadcasts).
-  // Mirrors the route's `ensureDevWorkspaceWindow` behavior on the renderer
-  // side: posting a trail to /api/file-city/trail with `repositoryPath` set
-  // both opens the window and surfaces the trail panel.
+  // Auto-open the trail tab whenever a trail activation arrives for this
+  // window's repo. Two sources:
+  //   - IPC `PAYLOAD_SET` — pushed by HTTP route handlers via
+  //     `sendToRepoWindows` (e.g. an external `curl POST /api/file-city/trail`).
+  //   - Renderer event `file-city-trail:activated` — emitted in this window
+  //     when a user clicks a row in the Trails sidebar.
+  //
+  // Same filter shape on both paths: a targeted update with a repositoryPath
+  // only opens when it matches this window. Untargeted IPC pushes (no
+  // repositoryPath) used to fan out to every window — the targeted-send
+  // refactor in main no longer emits those, so this branch is effectively
+  // unreachable but kept defensively.
   useEffect(() => {
-    return TrailService.onPayloadSet(({ repositoryPath: nextRepo }) => {
-      const myRepo = context.currentScope?.repository?.path ?? null;
-      if (nextRepo && myRepo && nextRepo !== myRepo) return;
+    const myRepo = context.currentScope?.repository?.path ?? null;
+    const matches = (nextRepo: string | undefined | null): boolean =>
+      !nextRepo || nextRepo === myRepo;
+
+    const offIpc = TrailService.onPayloadSet(({ repositoryPath: nextRepo }) => {
+      if (!matches(nextRepo)) return;
       openFileCityTrailTab();
     });
-  }, [context.currentScope?.repository?.path, openFileCityTrailTab]);
+
+    const offRenderer = events.on<TrailActivatedEvent>(
+      TRAIL_EVENT.activated,
+      (event) => {
+        if (!matches(event.payload.repositoryPath)) return;
+        openFileCityTrailTab();
+      },
+    );
+
+    return () => {
+      offIpc();
+      offRenderer();
+    };
+  }, [context.currentScope?.repository?.path, openFileCityTrailTab, events]);
 
   // Listen for terminal session selection from TerminalSessionsPanel
   useEffect(() => {
@@ -3883,6 +3907,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         content: (
           <TrailsPanel
             repositoryPath={context.currentScope?.repository?.path}
+            events={events}
           />
         ),
       },

@@ -37,23 +37,44 @@ export class TrailLibraryService {
     }
   }
 
-  static async activate(id: string): Promise<void> {
+  /**
+   * Returns the activated payload + repositoryPath, or `null` if the id
+   * was unknown / the bridge is unavailable. Renderer-initiated activations
+   * do not emit IPC `PAYLOAD_SET` — the caller updates state from this
+   * return value and emits a renderer event for in-window coordination.
+   */
+  static async activate(
+    id: string,
+  ): Promise<{ payload: TrailPayload; repositoryPath?: string } | null> {
     const api = window.mainProcess?.fileCityTrail;
-    if (!api) return;
+    if (!api) return null;
     try {
-      await api.activate(id);
+      return await api.activate(id);
     } catch (err) {
       console.error('[TrailLibraryService] activate failed', err);
+      return null;
     }
   }
 
-  static async remove(id: string): Promise<void> {
+  /**
+   * Returns the deletion outcome so the caller can clear local state when
+   * the deleted entry was the active one. Renderer-initiated deletes do
+   * not emit IPC `PAYLOAD_CLEARED`.
+   */
+  static async remove(id: string): Promise<{
+    found: boolean;
+    wasActive: boolean;
+    repositoryPath?: string;
+  }> {
     const api = window.mainProcess?.fileCityTrail;
-    if (!api) return;
+    if (!api) {
+      return { found: false, wasActive: false, repositoryPath: undefined };
+    }
     try {
-      await api.delete(id);
+      return await api.delete(id);
     } catch (err) {
       console.error('[TrailLibraryService] remove failed', err);
+      return { found: false, wasActive: false, repositoryPath: undefined };
     }
   }
 

@@ -32,12 +32,19 @@ export interface SharedTrailRowProps {
    * pre-filled. Lets users grab the link without re-sharing.
    */
   onCopyLink?: (id: string) => void;
+  /**
+   * GitHub origin (owner/repo) the share belongs to. Embedded into the
+   * drag payload so an agent in a terminal can hydrate the private share
+   * via the local bridge endpoint without needing a token.
+   */
+  origin?: { owner: string; repo: string } | null;
 }
 
 export const SharedTrailRow: React.FC<SharedTrailRowProps> = ({
   entry,
   onActivate,
   onCopyLink,
+  origin,
 }) => {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
@@ -69,10 +76,23 @@ export const SharedTrailRow: React.FC<SharedTrailRowProps> = ({
     entry.title?.trim() || `Untitled trail · ${entry.markerCount} markers`;
   const author = entry.createdBy?.githubLogin;
 
+  const handleDragStart = useCallback(
+    (e: React.DragEvent) => {
+      if (!e.dataTransfer || !origin) return;
+      const url = `http://localhost:3054/api/file-city/trail/share/${encodeURIComponent(origin.owner)}/${encodeURIComponent(origin.repo)}/${encodeURIComponent(entry.id)}`;
+      const payload = `Use file-city trail "${title}" (shared, id: ${entry.id}) as context — fetch via:\ncurl -s ${url}`;
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', payload);
+    },
+    [entry.id, origin, title],
+  );
+
   return (
     <div
       role="button"
       tabIndex={0}
+      draggable={!!origin}
+      onDragStart={handleDragStart}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={handleActivate}

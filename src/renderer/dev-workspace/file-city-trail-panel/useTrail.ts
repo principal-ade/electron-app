@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
+import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TrailService } from '../../services/TrailService';
+import {
+  TRAIL_EVENT,
+  type TrailActivatedEvent,
+  type TrailClearedEvent,
+} from '../trail-events';
 
 export interface UseTrailResult {
   payload: TrailPayload | null;
@@ -8,14 +14,22 @@ export interface UseTrailResult {
 }
 
 /**
- * Subscribes to trail payloads broadcast from the main process via
- * `TrailService`. Filters by `repositoryPath` so a panel only sees the trail
- * meant for its repo.
+ * Tracks the active trail payload for a repo. Updates come from two
+ * sources:
  *
- * Trails do NOT carry `repositoryPath` on the portable payload — the host
- * keeps it on the broadcast envelope. See `TrailPayloadSetEnvelope`.
+ * 1. **Renderer event bus** — click-driven mutations in this same window
+ *    (TrailsPanel activate/clear) emit on `events` so this hook updates
+ *    without round-tripping through main's IPC.
+ * 2. **IPC `onPayloadSet` / `onPayloadCleared`** — pushed by HTTP route
+ *    handlers via `sendToRepoWindows` for state changes initiated outside
+ *    this renderer.
+ *
+ * Both paths apply the same repo-scoped filter.
  */
-export function useTrail(repositoryPath: string | null): UseTrailResult {
+export function useTrail(
+  repositoryPath: string | null,
+  events?: PanelEventEmitter,
+): UseTrailResult {
   const [payload, setPayload] = useState<TrailPayload | null>(null);
 
   useEffect(() => {
@@ -26,24 +40,45 @@ export function useTrail(repositoryPath: string | null): UseTrailResult {
       if (current) setPayload(current);
     });
 
-    const offSet = TrailService.onPayloadSet(({ payload: next, repositoryPath: nextRepo }) => {
-      // Transient broadcasts (no repositoryPath) target every panel; bucketed
-      // broadcasts only the matching one.
-      if (nextRepo && nextRepo !== repositoryPath) return;
-      setPayload(next);
-    });
+    const matches = (nextRepo: string | undefined): boolean =>
+      !nextRepo || nextRepo === repositoryPath;
 
-    const offCleared = TrailService.onPayloadCleared((info) => {
-      if (info.repositoryPath && info.repositoryPath !== repositoryPath) return;
+    const offIpcSet = TrailService.onPayloadSet(
+      ({ payload: next, repositoryPath: nextRepo }) => {
+        if (!matches(nextRepo)) return;
+        setPayload(next);
+      },
+    );
+
+    const offIpcCleared = TrailService.onPayloadCleared((info) => {
+      if (!matches(info.repositoryPath)) return;
       setPayload(null);
     });
 
+    const offRendererActivated = events?.on<TrailActivatedEvent>(
+      TRAIL_EVENT.activated,
+      (event) => {
+        if (!matches(event.payload.repositoryPath)) return;
+        setPayload(event.payload.payload);
+      },
+    );
+
+    const offRendererCleared = events?.on<TrailClearedEvent>(
+      TRAIL_EVENT.cleared,
+      (event) => {
+        if (!matches(event.payload.repositoryPath)) return;
+        setPayload(null);
+      },
+    );
+
     return () => {
       cancelled = true;
-      offSet();
-      offCleared();
+      offIpcSet();
+      offIpcCleared();
+      offRendererActivated?.();
+      offRendererCleared?.();
     };
-  }, [repositoryPath]);
+  }, [repositoryPath, events]);
 
   const clear = useCallback(() => setPayload(null), []);
 

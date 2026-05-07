@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { AlertCircle, RefreshCw, Route } from 'lucide-react';
 import type { BaseTrailIndexEntry } from '@industry-theme/file-city-panel';
+import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { APP_BRANDING } from '../../../shared/config/appBranding';
 import { useTrailLibrary } from './useTrailLibrary';
 import { useTrailShares } from './useTrailShares';
@@ -9,6 +10,11 @@ import { TrailRow } from './TrailRow';
 import { SharedTrailRow } from './SharedTrailRow';
 import { TrailShareModal } from './TrailShareModal';
 import { TrailShareService } from '../../services/TrailShareService';
+import {
+  TRAIL_EVENT,
+  type TrailActivatedEvent,
+  type TrailClearedEvent,
+} from '../trail-events';
 
 const webAdeBaseUrl = (): string =>
   process.env.NODE_ENV === 'development'
@@ -29,6 +35,13 @@ interface ShareModalState {
 
 export interface TrailsPanelProps {
   repositoryPath?: string;
+  /**
+   * Renderer-local event bus. Mutations performed here (activate, delete,
+   * preview a shared trail) emit on this bus so sibling components in the
+   * same window — the trail panel, the framework's auto-open hook — can
+   * react without round-tripping through main's IPC broadcast.
+   */
+  events?: PanelEventEmitter;
 }
 
 const repoBasename = (repositoryPath?: string): string | null => {
@@ -38,7 +51,10 @@ const repoBasename = (repositoryPath?: string): string | null => {
   return idx >= 0 ? trimmed.slice(idx + 1) : trimmed;
 };
 
-export const TrailsPanel: React.FC<TrailsPanelProps> = ({ repositoryPath }) => {
+export const TrailsPanel: React.FC<TrailsPanelProps> = ({
+  repositoryPath,
+  events,
+}) => {
   const { theme } = useTheme();
   const library = useTrailLibrary(repositoryPath ?? null);
   const shares = useTrailShares(repositoryPath ?? null);
@@ -49,6 +65,39 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({ repositoryPath }) => {
   const handleRefresh = useCallback(async () => {
     await Promise.all([library.refresh(), shares.refresh()]);
   }, [library, shares]);
+
+  const handleActivateLocal = useCallback(
+    async (id: string) => {
+      const result = await library.activate(id);
+      if (!result || !events) return;
+      events.emit<TrailActivatedEvent>({
+        type: TRAIL_EVENT.activated,
+        source: 'trails-panel',
+        timestamp: Date.now(),
+        payload: {
+          payload: result.payload,
+          repositoryPath: result.repositoryPath,
+        },
+      });
+    },
+    [library, events],
+  );
+
+  const handleRemoveLocal = useCallback(
+    async (id: string) => {
+      const result = await library.remove(id);
+      if (!events) return;
+      if (result.wasActive) {
+        events.emit<TrailClearedEvent>({
+          type: TRAIL_EVENT.cleared,
+          source: 'trails-panel',
+          timestamp: Date.now(),
+          payload: { repositoryPath: result.repositoryPath },
+        });
+      }
+    },
+    [library, events],
+  );
 
   const handleOpenShareModal = useCallback(
     async (id: string) => {
@@ -92,9 +141,20 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({ repositoryPath }) => {
       if (!fetched) {
         throw new Error('No origin resolved for this repo.');
       }
-      await TrailShareService.setTransient(fetched.payload);
+      await TrailShareService.setTransient(fetched.payload, repositoryPath);
+      // Mirror the local-activate path so sibling components in this window
+      // pick up the preview without waiting on the main-process push.
+      events?.emit<TrailActivatedEvent>({
+        type: TRAIL_EVENT.activated,
+        source: 'trails-panel',
+        timestamp: Date.now(),
+        payload: {
+          payload: fetched.payload,
+          repositoryPath,
+        },
+      });
     },
-    [shares],
+    [shares, repositoryPath, events],
   );
 
   const localReady = !library.loading;
@@ -198,8 +258,8 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({ repositoryPath }) => {
                 key={entry.id}
                 entry={entry}
                 isActive={entry.id === library.activeId}
-                onActivate={library.activate}
-                onRemove={library.remove}
+                onActivate={handleActivateLocal}
+                onRemove={handleRemoveLocal}
                 shareUrl={shares.sharedUrlByLocalId.get(entry.id) ?? null}
                 onShare={handleOpenShareModal}
               />
@@ -240,6 +300,7 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({ repositoryPath }) => {
                   entry={entry}
                   onActivate={handleActivateShared}
                   onCopyLink={handleCopyLinkForShared}
+                  origin={shares.origin}
                 />
               ))}
           </Section>

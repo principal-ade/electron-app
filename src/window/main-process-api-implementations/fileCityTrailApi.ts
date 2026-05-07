@@ -65,12 +65,20 @@ export const fileCityTrailAPI: FileCityTrailAPI = {
     return ipcRenderer.invoke(FileCityTrailEvent.LOAD, id);
   },
 
-  activate: async (id: string): Promise<void> => {
-    await ipcRenderer.invoke(FileCityTrailEvent.ACTIVATE, id);
+  activate: async (
+    id: string,
+  ): Promise<{ payload: TrailPayload; repositoryPath?: string } | null> => {
+    return ipcRenderer.invoke(FileCityTrailEvent.ACTIVATE, id);
   },
 
-  delete: async (id: string): Promise<void> => {
-    await ipcRenderer.invoke(FileCityTrailEvent.DELETE, id);
+  delete: async (
+    id: string,
+  ): Promise<{
+    found: boolean;
+    wasActive: boolean;
+    repositoryPath?: string;
+  }> => {
+    return ipcRenderer.invoke(FileCityTrailEvent.DELETE, id);
   },
 
   onLibraryChanged: (callback) => {
@@ -147,7 +155,14 @@ export const fileCityTrailAPI: FileCityTrailAPI = {
     return unwrapShare(envelope);
   },
 
-  setTransient: async (payload: TrailPayload): Promise<void> => {
-    await ipcRenderer.invoke(FileCityTrailEvent.SET_TRANSIENT, payload);
+  setTransient: async (
+    payload: TrailPayload,
+    repositoryPath: string | undefined,
+  ): Promise<void> => {
+    await ipcRenderer.invoke(
+      FileCityTrailEvent.SET_TRANSIENT,
+      payload,
+      repositoryPath,
+    );
   },
 };

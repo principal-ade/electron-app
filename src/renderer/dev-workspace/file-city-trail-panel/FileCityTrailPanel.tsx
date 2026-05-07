@@ -67,7 +67,7 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
   const repoOwner = context.repository?.owner ?? null;
   const repoName = context.repository?.name ?? null;
 
-  const { payload } = useTrail(repositoryPath);
+  const { payload } = useTrail(repositoryPath, events);
 
   // ---- repository identifier (trail panel-private) ------------------------
   const repository = React.useMemo<FileCityTrailExplorerRepository | null>(() => {

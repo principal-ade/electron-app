@@ -1,10 +1,17 @@
 /**
  * Disk-backed store for File City trail payloads, plus the IPC surface
- * that backs the `mainProcess.fileCityTrail` API in the renderer and the
- * broadcast helpers fired by the HTTP routes.
+ * that backs the `mainProcess.fileCityTrail` API in the renderer and a
+ * targeted-send helper used by the HTTP routes to push state into
+ * renderer windows that didn't initiate the change.
+ *
+ * Architecture note: store methods do **not** broadcast. They return rich
+ * values so IPC callers (renderer-initiated mutations) update their own
+ * state from the response. HTTP route handlers, which can't rely on the
+ * caller already having the result, use `sendToRepoWindows()` after a
+ * mutation to push to renderer windows scoped to the affected repo.
  */
 
-import { BrowserWindow, ipcMain } from 'electron';
+import { ipcMain } from 'electron';
 import * as crypto from 'crypto';
 import {
   FileCityTrailEvent,
@@ -28,9 +35,10 @@ import {
   listSharedTrails,
   shareTrail,
 } from './trailShare';
+import { applicationWindows } from '../window/types';
 
 export interface SetOptions {
-  /** Whether to broadcast PAYLOAD_SET and mark the entry active. Default true. */
+  /** Whether to mark the entry active in persistence. Default true. */
   activate?: boolean;
   /**
    * Host-private filesystem path the trail belongs to. Persisted on the
@@ -41,7 +49,6 @@ export interface SetOptions {
 
 export interface SetResult {
   payload: TrailPayload;
-  broadcastTo: number;
   evictedIds: string[];
 }
 
@@ -57,57 +64,37 @@ export class TrailStore {
       activate,
       repositoryPath: options.repositoryPath,
     });
-    let broadcastTo = 0;
-    if (activate) {
-      broadcastTo = broadcast(FileCityTrailEvent.PAYLOAD_SET, {
-        payload,
-        repositoryPath: options.repositoryPath,
-      });
-    }
-    broadcast(FileCityTrailEvent.LIBRARY_CHANGED, {
-      repositoryPath: options.repositoryPath,
-    });
-    return { payload, broadcastTo, evictedIds };
+    return { payload, evictedIds };
   }
 
-  async clear(repositoryPath?: string): Promise<number> {
+  async clear(repositoryPath?: string): Promise<void> {
     await this.persistence.deactivate(repositoryPath);
-    const broadcastTo = broadcast(FileCityTrailEvent.PAYLOAD_CLEARED, {
-      repositoryPath,
-    });
-    broadcast(FileCityTrailEvent.LIBRARY_CHANGED, { repositoryPath });
-    return broadcastTo;
   }
 
   async activate(id: string): Promise<{
-    payload: TrailPayload | null;
-    broadcastTo: number;
-  }> {
+    payload: TrailPayload;
+    repositoryPath: string | undefined;
+  } | null> {
     const payload = await this.persistence.setActive(id);
-    if (!payload) return { payload: null, broadcastTo: 0 };
+    if (!payload) return null;
     const entry = await this.persistence.loadEntryById(id);
-    const broadcastTo = broadcast(FileCityTrailEvent.PAYLOAD_SET, {
-      payload,
-      repositoryPath: entry?.repositoryPath,
-    });
-    broadcast(FileCityTrailEvent.LIBRARY_CHANGED, {
-      repositoryPath: entry?.repositoryPath,
-    });
-    return { payload, broadcastTo };
+    return { payload, repositoryPath: entry?.repositoryPath };
   }
 
-  async delete(id: string): Promise<{ found: boolean }> {
+  async delete(id: string): Promise<{
+    found: boolean;
+    wasActive: boolean;
+    repositoryPath: string | undefined;
+  }> {
     const result = await this.persistence.deleteById(id);
-    if (!result) return { found: false };
-    if (result.wasActive) {
-      broadcast(FileCityTrailEvent.PAYLOAD_CLEARED, {
-        repositoryPath: result.repositoryPath,
-      });
+    if (!result) {
+      return { found: false, wasActive: false, repositoryPath: undefined };
     }
-    broadcast(FileCityTrailEvent.LIBRARY_CHANGED, {
+    return {
+      found: true,
+      wasActive: result.wasActive,
       repositoryPath: result.repositoryPath,
-    });
-    return { found: true };
+    };
   }
 
   get(repositoryPath?: string): Promise<TrailPayload | null> {
@@ -147,11 +134,6 @@ export class TrailStore {
     if (!updated) {
       throw new Error(`trail ${payloadId} not found`);
     }
-    const entry = await this.persistence.loadEntryById(payloadId);
-    broadcast(FileCityTrailEvent.PAYLOAD_SET, {
-      payload: updated,
-      repositoryPath: entry?.repositoryPath,
-    });
     return note;
   }
 
@@ -173,11 +155,6 @@ export class TrailStore {
     if (!updated || !edited) {
       throw new Error(`note ${noteId} not found on trail ${payloadId}`);
     }
-    const entry = await this.persistence.loadEntryById(payloadId);
-    broadcast(FileCityTrailEvent.PAYLOAD_SET, {
-      payload: updated,
-      repositoryPath: entry?.repositoryPath,
-    });
     return edited;
   }
 
@@ -189,11 +166,6 @@ export class TrailStore {
     if (!updated) {
       throw new Error(`trail ${payloadId} not found`);
     }
-    const entry = await this.persistence.loadEntryById(payloadId);
-    broadcast(FileCityTrailEvent.PAYLOAD_SET, {
-      payload: updated,
-      repositoryPath: entry?.repositoryPath,
-    });
   }
 
   share(
@@ -224,11 +196,21 @@ export class TrailStore {
     return fetchSharedTrail(owner, repo, id);
   }
 
-  setTransient(payload: TrailPayload): { broadcastTo: number } {
-    const broadcastTo = broadcast(FileCityTrailEvent.PAYLOAD_SET, {
-      payload,
-    });
-    return { broadcastTo };
+  /**
+   * Render a payload via PAYLOAD_SET targeted at a specific repo's
+   * windows, without persisting locally. Renderer flow uses this to
+   * preview a fetched-but-unsaved shared trail without writing through.
+   */
+  setTransient(
+    payload: TrailPayload,
+    repositoryPath: string | undefined,
+  ): { sentTo: number } {
+    const sentTo = sendToRepoWindows(
+      FileCityTrailEvent.PAYLOAD_SET,
+      { payload, repositoryPath },
+      repositoryPath,
+    );
+    return { sentTo };
   }
 }
 
@@ -255,14 +237,29 @@ async function shareEnvelope<T>(
   }
 }
 
-function broadcast(eventName: FileCityTrailEvent, payload: unknown): number {
-  const windows = BrowserWindow.getAllWindows();
+/**
+ * Push an IPC event to renderer windows scoped to a specific
+ * `repositoryPath`. Used by HTTP route handlers (and the transient
+ * preview path) to notify other windows of state changes they didn't
+ * initiate. IPC mutation handlers do **not** use this — their callers
+ * receive the result inline and update their own state.
+ *
+ * If `repositoryPath` is undefined, sends nothing — a state change with
+ * no repo bucket has no window to address. Returns the number of
+ * windows the event was delivered to.
+ */
+export function sendToRepoWindows(
+  eventName: FileCityTrailEvent,
+  payload: unknown,
+  repositoryPath: string | undefined,
+): number {
+  if (!repositoryPath) return 0;
   let delivered = 0;
-  for (const window of windows) {
-    if (!window.isDestroyed()) {
-      window.webContents.send(eventName, payload);
-      delivered += 1;
-    }
+  for (const appWindow of applicationWindows.values()) {
+    if (appWindow.metadata?.localPath !== repositoryPath) continue;
+    if (appWindow.window.isDestroyed()) continue;
+    appWindow.window.webContents.send(eventName, payload);
+    delivered += 1;
   }
   return delivered;
 }
@@ -289,12 +286,12 @@ export function registerTrailHandlers(): void {
   ipcMain.handle(FileCityTrailEvent.LOAD, (_event, id: string) =>
     store.loadById(id),
   );
-  ipcMain.handle(FileCityTrailEvent.ACTIVATE, async (_event, id: string) => {
-    await store.activate(id);
-  });
-  ipcMain.handle(FileCityTrailEvent.DELETE, async (_event, id: string) => {
-    await store.delete(id);
-  });
+  ipcMain.handle(FileCityTrailEvent.ACTIVATE, (_event, id: string) =>
+    store.activate(id),
+  );
+  ipcMain.handle(FileCityTrailEvent.DELETE, (_event, id: string) =>
+    store.delete(id),
+  );
   ipcMain.handle(
     FileCityTrailEvent.NOTE_CREATE,
     (_event, payloadId: string, draft: TrailNoteDraft) =>
@@ -328,8 +325,8 @@ export function registerTrailHandlers(): void {
   );
   ipcMain.handle(
     FileCityTrailEvent.SET_TRANSIENT,
-    (_event, payload: TrailPayload) => {
-      store.setTransient(payload);
+    (_event, payload: TrailPayload, repositoryPath: string | undefined) => {
+      store.setTransient(payload, repositoryPath);
     },
   );
 }

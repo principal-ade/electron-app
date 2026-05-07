@@ -87,6 +87,16 @@ export const TrailRow: React.FC<TrailRowProps> = ({
 
   const title =
     entry.title?.trim() || `Untitled trail · ${entry.markerCount} markers`;
+
+  const handleDragStart = useCallback(
+    (e: React.DragEvent) => {
+      if (!e.dataTransfer) return;
+      const payload = `Use file-city trail "${title}" (id: ${entry.id}) as context — fetch via:\ncurl -s http://localhost:3054/api/file-city/trail/${entry.id}`;
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', payload);
+    },
+    [entry.id, title],
+  );
   const shareButtonTitle = shareUrl
     ? 'Open share dialog (copy link)'
     : 'Share to web-ade';
@@ -98,6 +108,8 @@ export const TrailRow: React.FC<TrailRowProps> = ({
     <div
       role="button"
       tabIndex={0}
+      draggable
+      onDragStart={handleDragStart}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={handleActivate}
