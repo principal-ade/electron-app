@@ -135,6 +135,9 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
 
   return (
     <div
+      onMouseDown={(e) => {
+        if ((e.target as HTMLElement).closest('button')) e.preventDefault();
+      }}
       style={{
         width: '80px',
         height: '100%',

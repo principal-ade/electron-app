@@ -252,6 +252,9 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
 
   return (
     <div
+      onMouseDown={(e) => {
+        if ((e.target as HTMLElement).closest('button')) e.preventDefault();
+      }}
       style={{ display: 'contents' }}
     >
       <BaseTitlebar confirmBeforeClose={true}>
