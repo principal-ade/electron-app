@@ -5,6 +5,7 @@
 
 import { electronCLI } from '../electron-cli-bridge';
 import type { GitExecutor } from '../electron-cli-bridge';
+import type { ExecuteResult } from '../electron-cli-bridge/types';
 import { gitLensAdapter } from '../quality-lenses/GitLensAdapter';
 import type { CommitInfo } from '../quality-lenses/GitLensAdapter';
 import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
@@ -128,6 +129,30 @@ export class GitClientFactory {
       },
 
       raw: async (args: string[], options?: GitRawOptions) => {
+        const buildError = (result: ExecuteResult): Error => {
+          const baseMsg =
+            result.stderr ||
+            result.stdout ||
+            `Command failed with exit code ${result.exitCode}`;
+          // Tag with the bridge's reason if our own limits killed the child,
+          // so callers can surface "timed out" / "output too large" instead
+          // of pattern-matching truncated stderr.
+          const prefix =
+            result.failureReason === 'timeout'
+              ? `Command timed out after ${result.duration}ms`
+              : result.failureReason === 'buffer'
+                ? `Command output exceeded buffer limit after ${result.duration}ms`
+                : null;
+          const err = new Error(prefix ? `${prefix}: ${baseMsg}` : baseMsg);
+          return Object.assign(err, {
+            failureReason: result.failureReason,
+            signal: result.signal,
+            duration: result.duration,
+            exitCode: result.exitCode,
+            stderr: result.stderr,
+          });
+        };
+
         try {
           const result = await git.raw(_baseDir, args, options);
 
@@ -146,12 +171,7 @@ export class GitClientFactory {
             return ''; // Return empty string for empty repo
           }
 
-          // For failed commands, throw an error with the stderr message
-          const errorMsg =
-            result.stderr ||
-            result.stdout ||
-            `Command failed with exit code ${result.exitCode}`;
-          throw new Error(errorMsg);
+          throw buildError(result);
         } catch (error) {
           // If the error is the "object could not be cloned" error, it's an IPC issue
           if (
@@ -168,11 +188,7 @@ export class GitClientFactory {
             if (result.success) {
               return result.stdout || '';
             }
-            const errorMsg =
-              result.stderr ||
-              result.stdout ||
-              `Command failed with exit code ${result.exitCode}`;
-            throw new Error(errorMsg);
+            throw buildError(result);
           }
           throw error;
         }

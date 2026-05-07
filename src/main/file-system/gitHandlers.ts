@@ -205,25 +205,69 @@ export function registerGitHandlers(): void {
           normalizedUrl,
         );
 
-        await git.raw(['clone', normalizedUrl, targetPath], {
-          env: cloneEnv,
-          timeout: 120000, // 2 minutes for clone operation
-        });
+        const cloneStart = Date.now();
+        try {
+          await git.raw(['clone', normalizedUrl, targetPath], {
+            env: cloneEnv,
+            timeout: 120000, // 2 minutes for clone operation
+          });
+          console.log(
+            `[Git] Clone succeeded in ${Date.now() - cloneStart}ms:`,
+            normalizedUrl,
+          );
+        } catch (rawError) {
+          console.log(
+            `[Git] Clone failed after ${Date.now() - cloneStart}ms:`,
+            normalizedUrl,
+          );
+          throw rawError;
+        }
 
         return true;
       } catch (error) {
         console.error('[Git] Failed to clone repository:', error);
         console.error('[Git] Clone diagnostics:', diagnostics);
 
-        // Parse the error to provide helpful messages
+        // Pull structured info attached by gitClientFactory.raw — these
+        // distinguish bridge-level kills (timeout, maxBuffer) from a real
+        // git-level failure where stderr would be informative.
+        interface RawError extends Error {
+          failureReason?: 'timeout' | 'buffer' | 'killed' | 'exit';
+          signal?: string;
+          duration?: number;
+          exitCode?: number;
+          stderr?: string;
+        }
+        const rawErr = error as RawError;
         const errorMsg = error instanceof Error ? error.message : String(error);
 
         // Create a detailed error response
         let userMessage = 'Failed to clone repository.';
         const suggestions: string[] = [];
 
-        // Parse common git error patterns
-        if (
+        // Branch on bridge-level failure reasons first — these are *our*
+        // limits, not git's, and the stderr below is unreliable in these cases.
+        if (rawErr.failureReason === 'timeout') {
+          const secs = Math.round((rawErr.duration ?? 120000) / 1000);
+          userMessage = `Clone timed out after ${secs}s.`;
+          suggestions.push(
+            '**The clone operation hit Principal\'s 2-minute internal timeout:**',
+            '',
+            '• Large repositories or slow connections can exceed this limit',
+            '• Cloning from a terminal has no such timeout and may succeed',
+            '• Try again — transient network slowness can be the cause',
+            '• If it consistently times out, this repo likely needs the timeout extended or streaming clone enabled',
+          );
+        } else if (rawErr.failureReason === 'buffer') {
+          const secs = Math.round((rawErr.duration ?? 0) / 1000);
+          userMessage = `Clone output exceeded internal 10MB buffer after ${secs}s.`;
+          suggestions.push(
+            '**The clone produced too much progress output for the buffered worker:**',
+            '',
+            '• This is a Principal limitation, not a git or network failure',
+            '• Streaming clone mode would avoid this — please report the repo URL',
+          );
+        } else if (
           errorMsg.includes('Authentication failed') ||
           errorMsg.includes('authentication')
         ) {
@@ -372,18 +416,29 @@ export function registerGitHandlers(): void {
           );
         }
 
-        // Throw enhanced error
-        interface EnhancedError extends Error {
-          details: string;
-          diagnostics: CloneDiagnostics;
-          originalError: string;
+        // Raw bridge-level diagnostics — included on every clone failure so we
+        // can tell at a glance whether it was our timeout/buffer or a real git error.
+        if (
+          rawErr.failureReason ||
+          rawErr.signal ||
+          typeof rawErr.duration === 'number'
+        ) {
+          suggestions.push(
+            `• Failure reason: ${rawErr.failureReason ?? 'unknown'}`,
+            `• Signal: ${rawErr.signal ?? 'none'}`,
+            `• Exit code: ${rawErr.exitCode ?? 'n/a'}`,
+            `• Duration: ${rawErr.duration ?? 'n/a'}ms`,
+          );
         }
 
-        const enhancedError = new Error(userMessage) as EnhancedError;
-        enhancedError.details = suggestions.join('\n');
-        enhancedError.diagnostics = diagnostics;
-        enhancedError.originalError = errorMsg;
-        throw enhancedError;
+        // Embed details into the message itself — Electron IPC drops custom
+        // properties off Error objects, so a sibling `details` field would
+        // never reach the renderer. The modal splits on this sentinel.
+        const detailsBody = suggestions.join('\n');
+        const composed = detailsBody
+          ? `${userMessage}\n\n[__CLONE_DETAILS__]\n${detailsBody}`
+          : userMessage;
+        throw new Error(composed);
       }
     },
   );

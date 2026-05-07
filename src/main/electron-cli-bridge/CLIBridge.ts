@@ -323,6 +323,8 @@ export class CLIBridge extends EventEmitter {
           stderr: response.stderr || '',
           exitCode: response.exitCode || 0,
           duration,
+          failureReason: response.failureReason,
+          signal: response.signal,
         };
         pendingCall.resolve(result);
         this.pendingCalls.delete(response.id);

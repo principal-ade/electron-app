@@ -107,6 +107,28 @@ class CommandExecutor {
       stderr = error.stderr ? error.stderr.toString() : '';
       exitCode = error.status || 1;
 
+      // Classify why the child died — distinguishes the bridge's own
+      // limits (timeout, maxBuffer) from a genuine non-zero exit so the
+      // UI can surface a useful message instead of "exit 1, nothing in stderr".
+      let failureReason;
+      if (error.code === 'ETIMEDOUT') {
+        failureReason = 'timeout';
+      } else if (
+        error.code === 'ENOBUFS' ||
+        (error.message && /maxBuffer/i.test(error.message))
+      ) {
+        failureReason = 'buffer';
+      } else if (error.killed && error.signal) {
+        failureReason = 'killed';
+      } else if (exitCode !== 0) {
+        failureReason = 'exit';
+      }
+
+      const signal = error.signal || undefined;
+
+      console.log(
+        `[Worker] Command failed: code=${error.code} signal=${signal} killed=${error.killed} exitCode=${exitCode} stderr.length=${stderr.length} reason=${failureReason}`
+      );
 
       // For git commands, return both stdout and stderr properly
       if (command === 'git') {
@@ -116,7 +138,9 @@ class CommandExecutor {
           data: stdout || '',  // stdout in data field
           stderr: stderr || '',  // stderr in separate field
           exitCode: exitCode,
-          duration: Date.now() - startTime
+          duration: Date.now() - startTime,
+          failureReason,
+          signal,
         };
       }
 

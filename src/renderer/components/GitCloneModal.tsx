@@ -472,14 +472,14 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     } catch (err) {
       console.error('Error during cloning:', err);
 
-      // Extract error message and details
-      interface EnhancedError extends Error {
-        details?: string;
-      }
-
-      const errorMessage =
+      // The main process throws Error(`${userMessage}\n\n[__CLONE_DETAILS__]\n${details}`)
+      // because Electron IPC drops custom Error properties. Split here.
+      const raw =
         err instanceof Error ? err.message : 'Failed to clone repository';
-      const details = (err as EnhancedError)?.details || '';
+      const sentinel = '\n\n[__CLONE_DETAILS__]\n';
+      const idx = raw.indexOf(sentinel);
+      const errorMessage = idx >= 0 ? raw.slice(0, idx) : raw;
+      const details = idx >= 0 ? raw.slice(idx + sentinel.length) : '';
 
       setError(errorMessage);
       setErrorDetails(details);

@@ -20,12 +20,16 @@ export interface ExecuteOptions {
   shell?: boolean;
 }
 
+export type CommandFailureReason = 'timeout' | 'buffer' | 'killed' | 'exit';
+
 export interface ExecuteResult {
   success: boolean;
   stdout: string;
   stderr: string;
   exitCode: number;
   duration: number;
+  failureReason?: CommandFailureReason;
+  signal?: string;
 }
 
 export interface StreamOptions extends ExecuteOptions {
@@ -51,6 +55,8 @@ export interface WorkerResponse {
   exitCode?: number;
   error?: string;
   duration?: number;
+  failureReason?: CommandFailureReason;
+  signal?: string;
 }
 
 // ESLint specific types
