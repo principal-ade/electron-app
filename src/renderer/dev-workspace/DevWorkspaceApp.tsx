@@ -26,6 +26,11 @@ import {
   DevWorkspaceTitlebar,
   DEFAULT_PANEL_PRESETS,
 } from './DevWorkspaceTitlebar';
+import {
+  DEFAULT_DEV_WORKSPACE_CONFIG,
+  mergeDevWorkspaceConfig,
+  type DevWorkspaceConfig,
+} from './DevWorkspaceConfigModal';
 import { ScopeManagerProvider } from './scope-manager-provider';
 import { AreaManagerProvider } from './area-manager-provider';
 import type { Repository } from '../../shared/types/repository.types';
@@ -258,6 +263,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     null,
   );
   const [isSyncingWorkspace, setIsSyncingWorkspace] = useState(false);
+  const [devWorkspaceConfig, setDevWorkspaceConfig] =
+    useState<DevWorkspaceConfig>(DEFAULT_DEV_WORKSPACE_CONFIG);
 
   // Callback when scope names are discovered from library.yaml by RepositoryPanelContext
   const handleScopeNamesDiscovered = useCallback((scopeNames: string[]) => {
@@ -828,6 +835,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         setShowTerminalToggle(prefs.showTerminalImplementationToggle ?? false);
         // Load workspace button visibility preference (default: true)
         setShowWorkspaceButton(prefs.titlebarButtons?.workspace ?? false);
+        // Load dev-workspace config (titlebar/sidebar visibility)
+        setDevWorkspaceConfig(mergeDevWorkspaceConfig(prefs.devWorkspace));
       } catch (error) {
         console.error(
           '[DevWorkspaceApp] Failed to load terminal preference:',
@@ -851,10 +860,28 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       if (prefs.titlebarButtons?.workspace !== undefined) {
         setShowWorkspaceButton(prefs.titlebarButtons.workspace);
       }
+      if (prefs.devWorkspace !== undefined) {
+        setDevWorkspaceConfig(mergeDevWorkspaceConfig(prefs.devWorkspace));
+      }
     });
 
     return unsubscribe;
   }, []);
+
+  const handleDevWorkspaceConfigChange = useCallback(
+    (next: DevWorkspaceConfig) => {
+      setDevWorkspaceConfig(next);
+      UserPreferencesService.updatePreferences({
+        devWorkspace: next,
+      }).catch((error) => {
+        console.error(
+          '[DevWorkspaceApp] Failed to save dev-workspace config:',
+          error,
+        );
+      });
+    },
+    [],
+  );
 
   const handleToggleTerminalImplementation = async () => {
     const newImpl = terminalImplementation === 'ghostty' ? 'xterm' : 'ghostty';
@@ -1103,6 +1130,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onSidebarsHiddenChange={handleSidebarsHiddenChange}
         onSyncWorkspace={handleSyncWorkspace}
         isSyncingWorkspace={isSyncingWorkspace}
+        config={devWorkspaceConfig}
+        onConfigChange={handleDevWorkspaceConfigChange}
       />
       <div className="flex-1 overflow-hidden">
         <ScopeManagerProvider repositoryPath={repositoryPath}>
@@ -1128,6 +1157,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           }
           onOpenGitHubRepo={githubInfo ? handleOpenGitHubRepo : undefined}
           sidebarsHidden={sidebarsHidden}
+          leftSidebarIconVisibility={devWorkspaceConfig.leftSidebarIcons}
+          rightSidebarIconVisibility={devWorkspaceConfig.rightSidebarIcons}
         />
         </AreaManagerProvider>
         </ScopeManagerProvider>

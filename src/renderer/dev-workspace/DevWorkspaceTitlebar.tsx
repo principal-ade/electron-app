@@ -4,8 +4,6 @@ import {
   Cloud,
   CloudOff,
   Terminal,
-  Check,
-  Copy,
   Columns3,
   Square,
   PanelLeftClose,
@@ -13,9 +11,16 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Building2,
-  FolderOpen,
   RefreshCw,
+  Settings,
+  StickyNote,
+  GitBranch,
 } from 'lucide-react';
+import { FileSystemService } from '../main-process-api/FileSystemService';
+import {
+  DevWorkspaceConfigModal,
+  type DevWorkspaceConfig,
+} from './DevWorkspaceConfigModal';
 import { useTheme } from '@principal-ade/industry-theme';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
 import { GitSyncStatusIndicator } from '../components/Titlebar/GitSyncStatusIndicator';
@@ -175,6 +180,9 @@ export interface DevWorkspaceTitlebarProps {
   // Workspace sync to otel-events-manager
   onSyncWorkspace?: () => void;
   isSyncingWorkspace?: boolean;
+  // Dev workspace config (titlebar button + sidebar icon visibility)
+  config: DevWorkspaceConfig;
+  onConfigChange: (next: DevWorkspaceConfig) => void;
 }
 
 export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
@@ -204,21 +212,33 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   onSidebarsHiddenChange,
   onSyncWorkspace,
   isSyncingWorkspace = false,
+  config,
+  onConfigChange,
 }) => {
   const { theme } = useTheme();
-  const [copiedPath, setCopiedPath] = useState(false);
   const [servicesExpanded, setServicesExpanded] = useState(false);
+  const [configModalOpen, setConfigModalOpen] = useState(false);
 
-  // Handle copy repository path
-  const handleCopyPath = async () => {
-    if (!repositoryPath) return;
-    try {
-      await navigator.clipboard.writeText(repositoryPath);
-      setCopiedPath(true);
-      setTimeout(() => setCopiedPath(false), 2000);
-    } catch (error) {
-      console.error('[DevWorkspaceTitlebar] Failed to copy path:', error);
+  // Open Notes panel (creates .principal/notes.md if missing)
+  const handleOpenNotes = async () => {
+    if (!repositoryPath || !_currentLayout || !onLayoutChange) return;
+    const notesPath = `${repositoryPath}/.principal/notes.md`;
+    const existing = await FileSystemService.readFile(notesPath);
+    if (!existing) {
+      try {
+        await FileSystemService.writeFile(notesPath, '# Notes\n\n');
+        await new Promise((r) => setTimeout(r, 100));
+      } catch {
+        return;
+      }
     }
+    onLayoutChange({ ..._currentLayout, right: 'notes' });
+  };
+
+  // Open Git Config panel
+  const handleOpenGitConfig = () => {
+    if (!_currentLayout || !onLayoutChange) return;
+    onLayoutChange({ ..._currentLayout, right: 'gitConfig' });
   };
 
   // Get local clone path for git status
@@ -318,7 +338,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               }}
             >
               {/* File City 3D Button */}
-              {onOpenFileCity3D && (
+              {onOpenFileCity3D && config.titlebar.fileCity3D && (
                 <button
                   onClick={onOpenFileCity3D}
                   title="Open File City 3D visualization"
@@ -357,7 +377,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               )}
 
               {/* File City Trail Button */}
-              {onOpenFileCityTrail && (
+              {onOpenFileCityTrail && config.titlebar.trail && (
                 <button
                   onClick={onOpenFileCityTrail}
                   title="Open File City Trail explorer"
@@ -396,7 +416,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               )}
 
               {/* Service Trace Counts Display */}
-              {availableServiceNames && availableServiceNames.length > 0 && (
+              {config.titlebar.traces && availableServiceNames && availableServiceNames.length > 0 && (
                 <div
                   style={{
                     position: 'relative',
@@ -523,7 +543,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               )}
 
               {/* Workspace Sync Button */}
-              {onSyncWorkspace && (
+              {onSyncWorkspace && config.titlebar.sync && (
                 <button
                   onClick={onSyncWorkspace}
                   disabled={isSyncingWorkspace}
@@ -793,7 +813,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
             WebkitAppRegion: 'no-drag',
           }}
         >
-          {/* Hover-reveal buttons: Path, Finder, Alexandria, Terminal toggle */}
+          {/* Hover-reveal buttons: Notes, Git Config, Alexandria, Terminal toggle */}
           <div
             style={{
               display: 'flex',
@@ -801,23 +821,27 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               gap: '8px',
             }}
           >
-            {/* Copy Path Button */}
-            {repositoryPath && (
+            {/* Notes Button */}
+            {config.titlebar.notes && repositoryPath && onLayoutChange && (
               <button
-                onClick={handleCopyPath}
-                title={
-                  copiedPath ? 'Copied!' : `Copy path: ${repositoryPath}`
-                }
+                onClick={handleOpenNotes}
+                title="Open Notes"
                 style={{
                   // @ts-ignore - WebkitAppRegion is not in CSSProperties
                   WebkitAppRegion: 'no-drag',
-                  background: copiedPath
-                    ? theme.colors.success
-                    : theme.colors.backgroundTertiary,
-                  border: `1px solid ${copiedPath ? theme.colors.success : theme.colors.border}`,
-                  color: copiedPath
-                    ? theme.colors.background
-                    : theme.colors.textSecondary,
+                  background:
+                    _currentLayout?.right === 'notes'
+                      ? theme.colors.primary + '20'
+                      : theme.colors.backgroundTertiary,
+                  border: `1px solid ${
+                    _currentLayout?.right === 'notes'
+                      ? theme.colors.primary
+                      : theme.colors.border
+                  }`,
+                  color:
+                    _currentLayout?.right === 'notes'
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary,
                   cursor: 'pointer',
                   padding: '6px 12px',
                   borderRadius: '6px',
@@ -828,39 +852,33 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                   fontSize: `${theme.fontSizes[1]}px`,
                   fontWeight: theme.fontWeights.medium,
                 }}
-                onMouseEnter={(e) => {
-                  if (!copiedPath) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundSecondary;
-                    e.currentTarget.style.borderColor = theme.colors.primary;
-                    e.currentTarget.style.color = theme.colors.text;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!copiedPath) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                    e.currentTarget.style.color = theme.colors.textSecondary;
-                  }
-                }}
               >
-                {copiedPath ? <Check size={14} /> : <Copy size={14} />}
-                <span>{copiedPath ? 'Copied' : 'Path'}</span>
+                <StickyNote size={14} />
+                <span>Notes</span>
               </button>
             )}
 
-            {/* Open in Finder Button */}
-            {onOpenInFinder && (
+            {/* Git Config Button */}
+            {config.titlebar.gitConfig && onLayoutChange && (
               <button
-                onClick={onOpenInFinder}
-                title="Open in Finder"
+                onClick={handleOpenGitConfig}
+                title="Open Git Config"
                 style={{
                   // @ts-ignore - WebkitAppRegion is not in CSSProperties
                   WebkitAppRegion: 'no-drag',
-                  background: theme.colors.backgroundTertiary,
-                  border: `1px solid ${theme.colors.border}`,
-                  color: theme.colors.textSecondary,
+                  background:
+                    _currentLayout?.right === 'gitConfig'
+                      ? theme.colors.primary + '20'
+                      : theme.colors.backgroundTertiary,
+                  border: `1px solid ${
+                    _currentLayout?.right === 'gitConfig'
+                      ? theme.colors.primary
+                      : theme.colors.border
+                  }`,
+                  color:
+                    _currentLayout?.right === 'gitConfig'
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary,
                   cursor: 'pointer',
                   padding: '6px 12px',
                   borderRadius: '6px',
@@ -871,21 +889,9 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                   fontSize: `${theme.fontSizes[1]}px`,
                   fontWeight: theme.fontWeights.medium,
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.color = theme.colors.text;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                }}
               >
-                <FolderOpen size={14} />
-                <span>Finder</span>
+                <GitBranch size={14} />
+                <span>Git Config</span>
               </button>
             )}
 
@@ -970,7 +976,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
             )}
 
             {/* Focus Mode Toggle - Hide/Show both icon sidebars */}
-            {onSidebarsHiddenChange && (
+            {onSidebarsHiddenChange && config.titlebar.focus && (
               <button
                 onClick={() => onSidebarsHiddenChange(!sidebarsHidden)}
                 title={
@@ -1065,10 +1071,50 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 )}
               </button>
             )}
+
+            {/* Configuration gear button (always visible) */}
+            <button
+              onClick={() => setConfigModalOpen(true)}
+              title="Configure dev workspace"
+              aria-label="Configure dev workspace"
+              style={{
+                // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                WebkitAppRegion: 'no-drag',
+                background: 'transparent',
+                border: 'none',
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+                e.currentTarget.style.color = theme.colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <Settings size={18} />
+            </button>
           </div>
 
         </div>
       </BaseTitlebar>
+      <DevWorkspaceConfigModal
+        isOpen={configModalOpen}
+        onClose={() => setConfigModalOpen(false)}
+        config={config}
+        onChange={onConfigChange}
+        repositoryPath={repositoryPath}
+        onOpenInFinder={onOpenInFinder}
+      />
     </div>
   );
 };

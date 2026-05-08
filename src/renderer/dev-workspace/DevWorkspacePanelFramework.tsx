@@ -132,12 +132,11 @@ import type { Repository } from '../../shared/types/repository.types';
 import {
   PanelIconSidebar,
   RIGHT_PANEL_ICONS,
+  LEFT_PANEL_ICONS,
 } from '../components/Sidebar/PanelIconSidebar';
 import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarButton';
 import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
-import { NotesSidebarButton } from '../components/Sidebar/NotesSidebarButton';
 import { TypeInformationSidebarButton } from '../components/Sidebar/TypeInformationSidebarButton';
-import { GitConfigSidebarButton } from '../components/Sidebar/GitConfigSidebarButton';
 import { GitConfigPanel } from './git-config-panel';
 import { TrailsPanel } from './trails-panel';
 import { TrailService } from '../services/TrailService';
@@ -417,6 +416,9 @@ export interface DevWorkspacePanelFrameworkProps {
   onOpenGitHubRepo?: () => void;
   /** Hide the icon sidebars (focus mode) */
   sidebarsHidden?: boolean;
+  /** Visibility filter for left/right sidebar panel icons (id -> visible) */
+  leftSidebarIconVisibility?: Record<string, boolean>;
+  rightSidebarIconVisibility?: Record<string, boolean>;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -438,6 +440,8 @@ interface DevWorkspacePanelFrameworkInnerProps {
   onOpenGitHubActions?: () => void;
   onOpenGitHubRepo?: () => void;
   sidebarsHidden?: boolean;
+  leftSidebarIconVisibility?: Record<string, boolean>;
+  rightSidebarIconVisibility?: Record<string, boolean>;
 }
 
 /**
@@ -590,8 +594,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   onOpenGitHubActions,
   onOpenGitHubRepo,
   sidebarsHidden,
+  leftSidebarIconVisibility,
+  rightSidebarIconVisibility,
 }) => {
   const { theme } = useTheme();
+
+  // Filtered panel icon lists based on user preferences
+  const leftPanelIcons = useMemo(
+    () =>
+      leftSidebarIconVisibility
+        ? LEFT_PANEL_ICONS.filter(
+            (icon) => leftSidebarIconVisibility[icon.id] !== false,
+          )
+        : LEFT_PANEL_ICONS,
+    [leftSidebarIconVisibility],
+  );
+  const rightPanelIcons = useMemo(
+    () =>
+      rightSidebarIconVisibility
+        ? RIGHT_PANEL_ICONS.filter(
+            (icon) => rightSidebarIconVisibility[icon.id] !== false,
+          )
+        : RIGHT_PANEL_ICONS,
+    [rightSidebarIconVisibility],
+  );
 
   // Ref for imperative panel layout control
   const panelLayoutRef = useRef<ConfigurablePanelLayoutHandle>(null);
@@ -4287,6 +4313,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           onExpand={handleLeftExpand}
           onCollapse={handleLeftCollapse}
           position="left"
+          panelIcons={leftPanelIcons}
         />
       )}
 
@@ -4437,18 +4464,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           onExpand={handleRightExpand}
           onCollapse={handleRightCollapse}
           position="right"
-          panelIcons={RIGHT_PANEL_ICONS}
+          panelIcons={rightPanelIcons}
           onOpenInWebADE={onOpenInWebADE}
           onOpenGitHubActions={onOpenGitHubActions}
           onOpenGitHubRepo={onOpenGitHubRepo}
-          onSplitPanels={
-            onPanelSizesChange
-              ? () => {
-                  // Set 50/50 split between middle and right (left goes to 0)
-                  onPanelSizesChange({ left: 0, middle: 50, right: 50 });
-                }
-              : undefined
-          }
           customButtons={
             <>
               <StorybookSidebarButton
@@ -4481,14 +4500,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 onPanelSizesChange={onPanelSizesChange}
                 events={events}
               />
-              <NotesSidebarButton
-                theme={theme}
-                repositoryPath={context.currentScope?.repository?.path}
-                currentLayout={
-                  layout as { left: string; middle: string; right: string }
-                }
-                onLayoutChange={onLayoutChange}
-              />
               <TypeInformationSidebarButton
                 theme={theme}
                 packages={context.packages?.data?.packages}
@@ -4498,13 +4509,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 }
                 onLayoutChange={onLayoutChange}
                 events={events}
-              />
-              <GitConfigSidebarButton
-                theme={theme}
-                currentLayout={
-                  layout as { left: string; middle: string; right: string }
-                }
-                onLayoutChange={onLayoutChange}
               />
             </>
           }
@@ -4545,6 +4549,8 @@ export const DevWorkspacePanelFramework: React.FC<
   onOpenGitHubActions,
   onOpenGitHubRepo,
   sidebarsHidden,
+  leftSidebarIconVisibility,
+  rightSidebarIconVisibility,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -4598,6 +4604,8 @@ export const DevWorkspacePanelFramework: React.FC<
             onOpenGitHubActions={onOpenGitHubActions}
             onOpenGitHubRepo={onOpenGitHubRepo}
             sidebarsHidden={sidebarsHidden}
+            leftSidebarIconVisibility={leftSidebarIconVisibility}
+            rightSidebarIconVisibility={rightSidebarIconVisibility}
           />
         </AgentHighlightProvider>
       </TerminalProvider>

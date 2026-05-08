@@ -149,6 +149,36 @@ export interface UserPreferences {
     openThread?: boolean; // Show/hide the open thread button in titlebar (default: false)
   };
 
+  // Dev Workspace window: visibility of titlebar buttons and panel icon sidebars.
+  // All toggles default to true (current behavior shows everything) unless noted otherwise.
+  devWorkspace?: {
+    titlebar?: {
+      fileCity3D?: boolean;
+      trail?: boolean;
+      traces?: boolean;
+      sync?: boolean;
+      focus?: boolean;
+      notes?: boolean;
+      gitConfig?: boolean;
+    };
+    leftSidebarIcons?: {
+      files?: boolean;
+      terminalSessions?: boolean;
+      packageComposition?: boolean;
+      canvasList?: boolean;
+      docs?: boolean;
+      agentsList?: boolean;
+      traceList?: boolean;
+      trails?: boolean;
+    };
+    rightSidebarIcons?: {
+      fileCity?: boolean;
+      codeQuality?: boolean;
+      kanban?: boolean;
+      bruno?: boolean;
+    };
+  };
+
   // Theme preferences
   selectedTheme?: string; // Name of the selected theme (built-in or custom)
   customThemes?: Record<string, Record<string, unknown>>; // User-defined custom themes

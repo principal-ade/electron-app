@@ -16,7 +16,6 @@ import {
   PanelRightOpen,
   Globe,
   Play,
-  Columns2,
   Terminal,
   Plug,
   Github,
@@ -65,8 +64,6 @@ export interface PanelIconSidebarProps {
   onOpenGitHubActions?: () => void;
   /** Callback to open GitHub repository (shown above collapse button) */
   onOpenGitHubRepo?: () => void;
-  /** Callback to split middle and right panels 50/50 */
-  onSplitPanels?: () => void;
   /** Custom buttons to render after panel icons */
   customButtons?: React.ReactNode;
 }
@@ -116,7 +113,6 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
   onOpenInWebADE,
   onOpenGitHubActions,
   onOpenGitHubRepo,
-  onSplitPanels,
   customButtons,
 }) => {
   const handlePanelClick = (panelId: string) => {
@@ -160,6 +156,9 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
       {panelIcons.map(({ id, Icon, label }) => {
         const isActive = currentPanelId === id;
         const isOverlayActive = overlayPanelId === id;
+        // When the panel is collapsed, the icon shouldn't show the active
+        // highlight — only the label stays colored to indicate the active slot.
+        const iconActive = isActive && !collapsed;
 
         return (
           <button
@@ -188,7 +187,7 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
               border: 'none',
               background: 'transparent',
               cursor: 'pointer',
-              color: isActive
+              color: iconActive
                 ? theme.colors.primary
                 : theme.colors.textSecondary,
               transition: 'all 0.2s ease',
@@ -203,7 +202,7 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: '8px',
-                background: isActive
+                background: iconActive
                   ? `${theme.colors.primary}20`
                   : 'transparent',
                 outline: isOverlayActive
@@ -213,12 +212,12 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
                 transition: 'all 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                if (!isActive) {
+                if (!iconActive) {
                   e.currentTarget.style.background = theme.colors.border;
                 }
               }}
               onMouseLeave={(e) => {
-                if (!isActive) {
+                if (!iconActive) {
                   e.currentTarget.style.background = 'transparent';
                 }
               }}
@@ -238,6 +237,9 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
+                color: isActive
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary,
               }}
             >
               {label}
@@ -253,65 +255,7 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
       {(showCollapseButton ||
         onOpenInWebADE ||
         onOpenGitHubActions ||
-        onOpenGitHubRepo ||
-        onSplitPanels) && <div style={{ flex: 1 }} />}
-
-      {/* Split panels button */}
-      {onSplitPanels && (
-        <button
-          onClick={onSplitPanels}
-          title="Split panels 50/50"
-          aria-label="Split panels 50/50"
-          style={{
-            width: 'calc(100% - 20px)',
-            height: '64px',
-            margin: '4px 10px',
-            padding: '4px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '4px',
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            color: theme.colors.textSecondary,
-            transition: 'all 0.2s ease',
-          }}
-        >
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '8px',
-              background: 'transparent',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = theme.colors.border;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-            }}
-          >
-            <Columns2 size={20} strokeWidth={1.5} />
-          </div>
-          <span
-            style={{
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[0],
-              fontWeight: theme.fontWeights.body,
-              lineHeight: theme.lineHeights.tight,
-              textAlign: 'center',
-            }}
-          >
-            Split
-          </span>
-        </button>
-      )}
+        onOpenGitHubRepo) && <div style={{ flex: 1 }} />}
 
       {/* Web-ADE button */}
       {onOpenInWebADE && (
