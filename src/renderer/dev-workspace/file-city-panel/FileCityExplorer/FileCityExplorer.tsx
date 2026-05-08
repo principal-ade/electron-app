@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, GitCompareArrows } from 'lucide-react';
+import { GitCommit, GitCompareArrows, Route } from 'lucide-react';
 import {
   FileTree,
   useFileTree,
@@ -18,7 +18,9 @@ import {
   type ElevatedScopePanel,
   type HighlightLayer,
 } from '@principal-ai/file-city-react';
+import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { ProjectArea } from '@principal-ai/principal-view-core';
+import { TRAIL_EVENT, type TrailActivatedEvent } from '../../trail-events';
 
 import { useScopeManagerOptional } from '../../scope-manager-provider';
 import { useAreaManagerOptional } from '../../area-manager-provider';
@@ -30,10 +32,13 @@ import { AddToAreaModal } from './AddToAreaModal';
 import { AddToScopeModal } from './AddToScopeModal';
 import { CommitFileOverlay } from './CommitFileOverlay';
 import { RecentCommitCard } from './RecentCommitCard';
+import { RecentTrailsCard } from './RecentTrailsCard';
 import { ScopeInfoOverlay } from './ScopeInfoOverlay';
 import { WorkingTreeCard } from './WorkingTreeCard';
 import { WorkingTreeFileOverlay } from './WorkingTreeFileOverlay';
 import { useLatestCommit } from './useLatestCommit';
+import { useTrailFilePaths } from './useTrailFilePaths';
+import { useTrailLibrary } from '../../trails-panel/useTrailLibrary';
 import { useWorkingTreeChanges } from './useWorkingTreeChanges';
 import {
   AREA_PANEL_COLOR,
@@ -153,6 +158,12 @@ export interface FileCityExplorerProps {
    * over the city canvas. Pass `null` to suppress the card.
    */
   repositoryPath?: string | null;
+  /**
+   * Renderer-local event bus for cross-panel coordination. Used to emit
+   * trail activations so the framework's auto-open hook surfaces the
+   * file-city-trail panel from the Trails card's Open button.
+   */
+  events?: PanelEventEmitter;
 }
 
 export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
@@ -162,6 +173,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   onFileOpen,
   repoLabel,
   repositoryPath,
+  events,
 }) => {
   const { commit: latestCommit } = useLatestCommit(repositoryPath ?? null);
   const workingTree = useWorkingTreeChanges(repositoryPath ?? null);
@@ -190,6 +202,39 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     cardVisibilityOverriddenRef.current = true;
     setShowLatestCommit((v) => !v);
   }, []);
+  // Trails: heat map across every saved trail's marker files, plus a
+  // border highlight for the user-selected trail. On by default — toolbar
+  // toggle hides both the card and the city layers in one click.
+  const [showTrails, setShowTrails] = React.useState(true);
+  const [selectedTrailId, setSelectedTrailId] = React.useState<string | null>(
+    null,
+  );
+  const { entries: trailEntries, activate: activateTrail } = useTrailLibrary(
+    repositoryPath ?? null,
+  );
+  const { byTrail: trailPathsByTrail, trailCountByPath } =
+    useTrailFilePaths(trailEntries);
+  const toggleTrails = React.useCallback(() => {
+    setShowTrails((v) => !v);
+  }, []);
+  // Open a trail in its own panel — mirrors TrailsPanel.handleActivateLocal
+  // so the framework's auto-open hook surfaces the file-city-trail panel.
+  const handleOpenTrail = React.useCallback(
+    async (id: string) => {
+      const result = await activateTrail(id);
+      if (!result || !events) return;
+      events.emit<TrailActivatedEvent>({
+        type: TRAIL_EVENT.activated,
+        source: 'file-city-panel',
+        timestamp: Date.now(),
+        payload: {
+          payload: result.payload,
+          repositoryPath: result.repositoryPath,
+        },
+      });
+    },
+    [activateTrail, events],
+  );
   // Single open-overlay slot — both sources render the same surface, so only
   // one can be visible at a time and clicking a row in either card closes
   // the previous overlay implicitly.
@@ -503,6 +548,86 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     }
     return layers;
   }, [workingTreeHighlightActive, showWorkingTree, workingTree, cityBuildingPaths, toCityPath, theme]);
+
+  // Trail heat map — aggregates files touched across every saved trail.
+  // Files touched by 1 trail land in the low-opacity layer; 2+ trails in
+  // the high-opacity layer. The layer split is the only way to vary
+  // opacity per file given that HighlightLayer is single-color.
+  const trailHighlightLayers = React.useMemo<HighlightLayer[]>(() => {
+    if (!showTrails || trailCountByPath.size === 0) return [];
+    const lowItems: string[] = [];
+    const highItems: string[] = [];
+    for (const [path, count] of trailCountByPath) {
+      const cityPath = toCityPath(path);
+      if (!cityBuildingPaths.has(cityPath)) continue;
+      if (count >= 2) highItems.push(cityPath);
+      else lowItems.push(cityPath);
+    }
+    const layers: HighlightLayer[] = [];
+    if (lowItems.length > 0) {
+      layers.push({
+        id: 'trail-heatmap-low',
+        name: 'Trail heat map (1 trail)',
+        enabled: true,
+        color: theme.colors.info,
+        priority: 700,
+        opacity: 0.35,
+        items: lowItems.map((path) => ({
+          path,
+          type: 'file',
+          renderStrategy: 'fill',
+        })),
+      });
+    }
+    if (highItems.length > 0) {
+      layers.push({
+        id: 'trail-heatmap-high',
+        name: 'Trail heat map (2+ trails)',
+        enabled: true,
+        color: theme.colors.info,
+        priority: 710,
+        opacity: 0.7,
+        items: highItems.map((path) => ({
+          path,
+          type: 'file',
+          renderStrategy: 'fill',
+        })),
+      });
+    }
+    return layers;
+  }, [showTrails, trailCountByPath, cityBuildingPaths, toCityPath, theme]);
+
+  // Selected trail → contrasting fill that overrides the info-tinted heat
+  // map on the buildings this specific trail touches. Highest fill priority
+  // among the trail layers so it wins on overlap.
+  const selectedTrailHighlightLayer = React.useMemo<HighlightLayer | null>(() => {
+    if (!showTrails || !selectedTrailId) return null;
+    const paths = trailPathsByTrail.get(selectedTrailId);
+    if (!paths || paths.length === 0) return null;
+    const items: string[] = [];
+    const seen = new Set<string>();
+    for (const p of paths) {
+      const cityPath = toCityPath(p);
+      if (seen.has(cityPath)) continue;
+      if (!cityBuildingPaths.has(cityPath)) continue;
+      seen.add(cityPath);
+      items.push(cityPath);
+    }
+    if (items.length === 0) return null;
+    return {
+      id: 'trail-selected-fill',
+      name: 'Selected trail',
+      enabled: true,
+      color: theme.colors.warning,
+      priority: 920,
+      opacity: 0.95,
+      items: items.map((path) => ({
+        path,
+        type: 'file',
+        renderStrategy: 'fill',
+      })),
+    };
+  }, [showTrails, selectedTrailId, trailPathsByTrail, cityBuildingPaths, toCityPath, theme]);
 
   // Hovered search result → its own one-item highlight layer at a slightly
   // higher priority than the bulk search layer, so the hovered building reads
@@ -1089,6 +1214,29 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   return (
     <div style={{ height: '100%', width: '100%', display: 'flex', background: theme.colors.background }}>
       <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+        {showTrails && trailEntries.length > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 60,
+              left: theme.space[2],
+              zIndex: 110,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              maxHeight: 'calc(100% - 76px)',
+              pointerEvents: 'none',
+            }}
+          >
+            <RecentTrailsCard
+              entries={trailEntries}
+              selectedTrailId={selectedTrailId}
+              onSelectTrail={setSelectedTrailId}
+              onOpenTrail={events ? handleOpenTrail : undefined}
+              style={{ pointerEvents: 'auto' }}
+            />
+          </div>
+        )}
         {((latestCommit && showLatestCommit) ||
           (workingTree && showWorkingTree)) && (
           <div
@@ -1196,8 +1344,10 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
             focusDirectory={focusDirectory}
             highlightLayers={(() => {
               const extras: HighlightLayer[] = [];
+              extras.push(...trailHighlightLayers);
               extras.push(...commitHighlightLayers);
               extras.push(...workingTreeHighlightLayers);
+              if (selectedTrailHighlightLayer) extras.push(selectedTrailHighlightLayer);
               if (searchHighlightLayer) extras.push(searchHighlightLayer);
               if (hoveredSearchHighlightLayer) extras.push(hoveredSearchHighlightLayer);
               if (hoveredCardHighlightLayer) extras.push(hoveredCardHighlightLayer);
@@ -1208,7 +1358,8 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               searchHighlightLayer ||
               searchInputFocused ||
               commitHighlightLayers.length > 0 ||
-              workingTreeHighlightLayers.length > 0
+              workingTreeHighlightLayers.length > 0 ||
+              trailHighlightLayers.length > 0
                 ? undefined
                 : cityElevatedPanels ?? folderElevatedPanels
             }
@@ -1475,6 +1626,34 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               }}
             >
               <GitCommit size={14} />
+            </button>
+          )}
+          {trailEntries.length > 0 && (
+            <button
+              onClick={toggleTrails}
+              title={
+                showTrails
+                  ? 'Hide trail heat map'
+                  : 'Show trail heat map'
+              }
+              style={{
+                background: showTrails
+                  ? withAlpha(theme.colors.info, 18)
+                  : 'transparent',
+                color: showTrails
+                  ? theme.colors.info
+                  : theme.colors.textMuted,
+                border: `1px solid ${showTrails ? theme.colors.info : theme.colors.border}`,
+                borderRadius: theme.radii[2],
+                padding: '4px 6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                lineHeight: 0,
+                flexShrink: 0,
+              }}
+            >
+              <Route size={14} />
             </button>
           )}
           {focusDirectory && (
