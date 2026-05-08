@@ -21,8 +21,11 @@ export const ScopesTab: React.FC = () => {
   const selection = overlay?.selection ?? null;
   const setSelection = overlay?.setSelection;
 
+  // @pierre/trees' Builder rejects consecutive duplicate paths; overlapping
+  // scope/namespace configs can produce the same encoded path twice, so dedupe
+  // before resetPaths can crash on it.
   const paths = React.useMemo(
-    () => buildScopeTreePaths(workspace.scopes),
+    () => Array.from(new Set(buildScopeTreePaths(workspace.scopes))),
     [workspace.scopes],
   );
 

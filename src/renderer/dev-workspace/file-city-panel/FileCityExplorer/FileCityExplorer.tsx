@@ -316,9 +316,13 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   const panelFolderContentsPaths = React.useMemo(() => {
     if (!selectedPanelFolder || !showPanelFolderContents) return [] as string[];
     const prefix = selectedPanelFolder + '/';
-    return cityPaths.filter(p => p.startsWith(prefix))
+    const stripped = cityPaths.filter(p => p.startsWith(prefix))
       .map(p => p.slice(prefix.length))
       .sort();
+    // @pierre/trees' Builder rejects consecutive duplicate paths; FS-watcher
+    // batches can leak a duplicate into cityPaths, so dedupe before resetPaths
+    // can crash on it.
+    return Array.from(new Set(stripped));
   }, [selectedPanelFolder, showPanelFolderContents, cityPaths]);
 
   const initialPanelFolderPaths = React.useRef<string[]>([]);
@@ -594,7 +598,13 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     },
   });
 
-  const scopeTreePaths = React.useMemo(() => buildScopeTreePaths(scopes), [scopes]);
+  // @pierre/trees' Builder rejects consecutive duplicate paths; overlapping
+  // scope/namespace configs can produce the same encoded path twice, so dedupe
+  // before resetPaths can crash on it.
+  const scopeTreePaths = React.useMemo(
+    () => Array.from(new Set(buildScopeTreePaths(scopes))),
+    [scopes],
+  );
   const initialScopeTreePaths = React.useRef(scopeTreePaths);
   const initialExpandedScopeIds = React.useRef(scopes.map(s => s.name));
   const { model: scopeTreeModel } = useFileTree({

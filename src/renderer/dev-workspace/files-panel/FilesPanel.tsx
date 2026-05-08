@@ -176,9 +176,16 @@ const FileTreeTab: React.FC<{
     claimedPaths.length === 0 ? 'off' : auditMode;
 
   const filteredPaths = React.useMemo<string[]>(() => {
-    if (effectiveAuditMode === 'uncovered') return uncoveredPaths;
-    if (effectiveAuditMode === 'covered') return coveredPaths;
-    return allPaths;
+    const base =
+      effectiveAuditMode === 'uncovered'
+        ? uncoveredPaths
+        : effectiveAuditMode === 'covered'
+          ? coveredPaths
+          : allPaths;
+    // @pierre/trees' Builder rejects consecutive duplicate paths; FS-watcher
+    // batches can coalesce a delete+add for the same path and leak a duplicate
+    // into tree.allFiles, so dedupe before resetPaths can crash on it.
+    return Array.from(new Set(base));
   }, [effectiveAuditMode, allPaths, coveredPaths, uncoveredPaths]);
 
   const initialExpandedPaths = React.useMemo<string[]>(
