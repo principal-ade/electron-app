@@ -1,6 +1,7 @@
 import React, {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -21,6 +22,148 @@ import {
 } from '../../../contexts/TerminalContext';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+
+/**
+ * Single footprint glyph — matches the SVG used on the web-ade home page.
+ * Drawn pointing "up"; rotate the wrapper to orient it along a trail.
+ */
+const Footprint: React.FC<{
+  side: 'left' | 'right';
+  size?: number;
+  color: string;
+  strokeWidth?: number;
+}> = ({ side, size = 20, color, strokeWidth = 2 }) => (
+  <svg
+    viewBox="2 1 9 18"
+    width={size}
+    height={size * (18 / 9)}
+    fill="none"
+    stroke={color}
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ transform: side === 'right' ? 'scaleX(-1)' : undefined }}
+    aria-hidden
+  >
+    <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" />
+    <path d="M4 13h4" />
+  </svg>
+);
+
+/**
+ * Diagonal trail of alternating left/right footprints. The row is centered
+ * on (anchorX, anchorY) of the parent and rotated around that point, so two
+ * trails with opposite rotations cross paths through the anchor.
+ *
+ * Each footprint fades in and out on a continuous loop, staggered along
+ * the trail so the row appears to "walk" across.
+ */
+const FootprintTrail: React.FC<{
+  /** Trail orientation. Restricted to horizontal/vertical multiples of 90°. */
+  rotationDeg: 0 | 90 | 180 | 270;
+  anchorX?: string;
+  anchorY?: string;
+  count?: number;
+  color: string;
+  size?: number;
+  gap?: number;
+  opacity?: number;
+  /** Stagger between consecutive feet starting to fade in, in seconds */
+  stepSec?: number;
+  /** Per-foot fade-in duration, in seconds */
+  fadeInSec?: number;
+  /** Time the full trail stays visible after the last foot lights up */
+  holdSec?: number;
+  /** Time the whole trail takes to fade out, in seconds */
+  fadeOutSec?: number;
+  /** Global cycle duration shared across trails (so they take turns) */
+  cycleSec: number;
+  /** Phase offset within the cycle, in seconds */
+  delaySec?: number;
+}> = ({
+  rotationDeg,
+  anchorX = '50%',
+  anchorY = '50%',
+  count = 16,
+  color,
+  size = 22,
+  gap = 30,
+  opacity = 0.28,
+  stepSec = 0.15,
+  fadeInSec = 0.3,
+  holdSec = 1.2,
+  fadeOutSec = 0.6,
+  cycleSec,
+  delaySec = 0,
+}) => {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+
+  // The whole trail fades out together at this moment within the cycle:
+  const fadeOutStart = (count - 1) * stepSec + fadeInSec + holdSec;
+  const fadeOutEnd = fadeOutStart + fadeOutSec;
+  const foOutStartPct = (fadeOutStart / cycleSec) * 100;
+  const foOutEndPct = (fadeOutEnd / cycleSec) * 100;
+
+  // One keyframe per foot — same fade-out for all, but per-foot fade-in time.
+  const keyframes = Array.from({ length: count }, (_, i) => {
+    const fadeInStart = i * stepSec;
+    const fadeInEnd = fadeInStart + fadeInSec;
+    const inStartPct = (fadeInStart / cycleSec) * 100;
+    const inEndPct = (fadeInEnd / cycleSec) * 100;
+    return `
+      @keyframes trail-${id}-foot-${i} {
+        0%, ${inStartPct.toFixed(3)}% { opacity: 0; }
+        ${inEndPct.toFixed(3)}% { opacity: var(--trails-foot-opacity, 0.28); }
+        ${foOutStartPct.toFixed(3)}% { opacity: var(--trails-foot-opacity, 0.28); }
+        ${foOutEndPct.toFixed(3)}%, 100% { opacity: 0; }
+      }
+    `;
+  }).join('\n');
+
+  return (
+    <>
+      <style>{keyframes}</style>
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: anchorY,
+          left: anchorX,
+          display: 'flex',
+          alignItems: 'center',
+          gap,
+          transform: `translate(-50%, -50%) rotate(${rotationDeg}deg)`,
+          transformOrigin: 'center',
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {Array.from({ length: count }).map((_, i) => {
+          const side: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right';
+          return (
+            <span
+              key={i}
+              style={{
+                transform: `translateY(${side === 'left' ? '-7px' : '7px'}) rotate(90deg)`,
+                transformOrigin: 'center',
+                flexShrink: 0,
+                opacity: 0,
+                animationName: `trail-${id}-foot-${i}`,
+                animationDuration: `${cycleSec}s`,
+                animationTimingFunction: 'ease-in-out',
+                animationIterationCount: 'infinite',
+                animationDelay: `${delaySec}s`,
+                ['--trails-foot-opacity' as never]: String(opacity),
+              }}
+            >
+              <Footprint side={side} size={size} color={color} />
+            </span>
+          );
+        })}
+      </div>
+    </>
+  );
+};
 
 /**
  * Inner content — assumes TerminalProvider is mounted above it.
@@ -44,8 +187,13 @@ const TrailsViewInner: React.FC<{
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Tab state for the TabbedTerminalPanel (stub — no tabs are spawned yet)
+  // Tab state for the TabbedTerminalPanel — one tab per opened project.
+  // The panel only reads `initialTabs` on mount, so we bump `remountKey` to
+  // remount the panel when we add a tab. Existing terminal sessions reconnect
+  // via their tab-id-keyed `terminalContext` so processes are preserved.
   const [tabs, setTabs] = useState<TerminalTab[]>([]);
+  const [focusTabId, setFocusTabId] = useState<string | null>(null);
+  const [remountKey, setRemountKey] = useState(0);
 
   // Whether the search dropdown is visible (focused or hovered)
   const [searchOpen, setSearchOpen] = useState(false);
@@ -132,16 +280,32 @@ const TrailsViewInner: React.FC<{
 
   const showingRecents = query.trim().length === 0;
 
-  // When user clicks an entry, hide the overlay (stub — no terminal session yet).
+  // When user clicks an entry: open a terminal tab at the project path
+  // (or focus the existing one), then dismiss the search overlay.
   const handleSelect = useCallback(
     (entry: AlexandriaEntry) => {
+      const path = String(entry.path);
+      const existing = tabs.find((t) => t.directory === path);
+      if (existing) {
+        setFocusTabId(existing.id);
+      } else {
+        const newTab: TerminalTab = {
+          id: `trails-${Date.now()}`,
+          label: entry.name,
+          contentType: 'terminal',
+          directory: path,
+          closable: true,
+        };
+        setTabs((prev) => [...prev, newTab]);
+        setFocusTabId(newTab.id);
+        setRemountKey((k) => k + 1);
+      }
       onSelectProject(entry);
     },
-    [onSelectProject],
+    [tabs, onSelectProject],
   );
 
-  const overlayBg =
-    'color-mix(in srgb, ' + theme.colors.background + ' 92%, transparent)';
+  const overlayBg = theme.colors.background;
 
   return (
     <div
@@ -156,6 +320,7 @@ const TrailsViewInner: React.FC<{
       {/* Tabbed terminal panel (underlay) */}
       <div style={{ position: 'absolute', inset: 0 }}>
         <TabbedTerminalPanel<TerminalTab>
+          key={remountKey}
           context={terminalPanelContext}
           actions={terminalActions as TerminalPanelActions}
           events={events}
@@ -165,6 +330,8 @@ const TrailsViewInner: React.FC<{
           workingStates={workingStates}
           initialTabs={tabs}
           onTabsChange={setTabs}
+          requestFocusTabId={focusTabId}
+          onFocusTabHandled={() => setFocusTabId(null)}
         />
       </div>
 
@@ -207,28 +374,133 @@ const TrailsViewInner: React.FC<{
             display: 'flex',
             flexDirection: 'column',
             backgroundColor: overlayBg,
-            backdropFilter: 'blur(6px)',
-            WebkitBackdropFilter: 'blur(6px)',
+            overflow: 'hidden',
           }}
         >
-          {/* Marquee section (placeholder) */}
+          {/* Footprint trails — span the entire overlay, behind all content. */}
+          {/* When the user focuses the search input, the trails fade out and */}
+          {/* their animations pause until the input is blurred. */}
+          <div
+            aria-hidden
+            className={searchOpen ? 'trails-paused' : undefined}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              zIndex: 0,
+              opacity: searchOpen ? 0 : 1,
+              transition: 'opacity 300ms ease-out',
+            }}
+          >
+            {/*
+              Trails take turns. Cycle is shared globally; each trail's
+              delaySec offsets it within the cycle. With 6 trails of ~4s
+              each, a 24s cycle gives each its own slot.
+            */}
+            {(() => {
+              const CYCLE = 24;
+              const SLOT = CYCLE / 6;
+              return (
+                <>
+                  {/* First trail — runs just below the title, walking right */}
+                  <FootprintTrail
+                    rotationDeg={0}
+                    anchorX="50%"
+                    anchorY="33%"
+                    color={theme.colors.primary}
+                    count={20}
+                    opacity={0.32}
+                    cycleSec={CYCLE}
+                    delaySec={0 * SLOT}
+                  />
+                  {/* Short vertical trail in the bottom-left, walking down */}
+                  <FootprintTrail
+                    rotationDeg={90}
+                    anchorX="14%"
+                    anchorY="82%"
+                    color={theme.colors.primary}
+                    count={5}
+                    size={20}
+                    opacity={0.22}
+                    cycleSec={CYCLE}
+                    delaySec={1 * SLOT}
+                  />
+                  {/* Horizontal trail at the top of the marquee, walking left */}
+                  <FootprintTrail
+                    rotationDeg={180}
+                    anchorX="50%"
+                    anchorY="5%"
+                    color={theme.colors.primary}
+                    count={22}
+                    opacity={0.32}
+                    cycleSec={CYCLE}
+                    delaySec={2 * SLOT}
+                  />
+                  {/* Short vertical trail in the bottom-right, walking up */}
+                  <FootprintTrail
+                    rotationDeg={270}
+                    anchorX="86%"
+                    anchorY="82%"
+                    color={theme.colors.primary}
+                    count={5}
+                    size={20}
+                    opacity={0.22}
+                    cycleSec={CYCLE}
+                    delaySec={3 * SLOT}
+                  />
+                  {/* Horizontal trail well below the input, walking right */}
+                  <FootprintTrail
+                    rotationDeg={0}
+                    anchorX="50%"
+                    anchorY="68%"
+                    color={theme.colors.primary}
+                    count={22}
+                    opacity={0.22}
+                    cycleSec={CYCLE}
+                    delaySec={4 * SLOT}
+                  />
+                  {/* Horizontal trail near the bottom, walking left */}
+                  <FootprintTrail
+                    rotationDeg={180}
+                    anchorX="50%"
+                    anchorY="94%"
+                    color={theme.colors.primary}
+                    count={20}
+                    size={20}
+                    opacity={0.18}
+                    cycleSec={CYCLE}
+                    delaySec={5 * SLOT}
+                  />
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Marquee section */}
           <div
             style={{
               flex: '0 0 auto',
               height: '40vh',
               minHeight: 220,
+              position: 'relative',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: theme.colors.primary,
-              fontFamily: theme.fonts.heading ?? theme.fonts.body,
-              fontSize: 'clamp(48px, 8vw, 96px)',
-              fontWeight: theme.fontWeights.bold,
-              letterSpacing: '-0.02em',
-              lineHeight: 1,
+              zIndex: 1,
             }}
           >
-            Code Trails
+            <div
+              style={{
+                color: theme.colors.primary,
+                fontFamily: theme.fonts.heading ?? theme.fonts.body,
+                fontSize: 'clamp(48px, 8vw, 96px)',
+                fontWeight: theme.fontWeights.bold,
+                letterSpacing: '-0.02em',
+                lineHeight: 1,
+              }}
+            >
+              Code Trails
+            </div>
           </div>
 
           {/* Search section */}
@@ -240,6 +512,8 @@ const TrailsViewInner: React.FC<{
               alignItems: 'center',
               paddingTop: 32,
               overflow: 'hidden',
+              position: 'relative',
+              zIndex: 1,
             }}
           >
             <div
@@ -269,6 +543,9 @@ const TrailsViewInner: React.FC<{
                   .trails-search-input::placeholder {
                     color: ${theme.colors.textSecondary};
                     opacity: 0.5;
+                  }
+                  .trails-paused span {
+                    animation-play-state: paused !important;
                   }
                 `}</style>
                 <input
