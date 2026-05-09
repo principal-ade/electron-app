@@ -1,55 +1,59 @@
 /**
  * Disk persistence for File City trail payloads.
  *
- * Layout under `app.getPath('userData')`:
+ * Layout under `~/.principal/trails/` — same path the CLI's trail cache
+ * (`@principal-ai/principal-view-cli`) uses, so the standalone trail-viewer
+ * can read trails authored by the desktop app and vice-versa:
  *
- *   file-city-trails/
- *     index.json                 manifest (entries[] + active{})
- *     repo-agnostic/<id>.json    payloads with no repositoryPath
- *     <projectHash>/<id>.json    payloads keyed by md5(repositoryPath)
+ *   ~/.principal/trails/
+ *     _index.json                          host-private manifest (entries[] + active{})
+ *     <purl-ns>/<purl-name>/<id>.json      payload anchored by repos[0] Purl
+ *     by-id/<id>.json                      fallback when no Purl can be derived
  *
- * Trail payloads are deliberately portable — they never carry filesystem
- * paths. The host keeps `repositoryPath` on the index entry only,
- * separate from the payload itself.
- *
- * The manifest is rebuilt from disk if missing or unparseable.
+ * Each per-trail file is the raw `TrailPayload` JSON — no wrapper. The
+ * host-private `repositoryPath` (which clone on this machine produced the
+ * trail) and `cachePath` (which bucket the file landed in) live on the
+ * index entry only, never in the payload. The manifest is rebuilt by
+ * scanning the tree if missing or unparseable; on first run we also
+ * migrate any trails left in the old `<userData>/file-city-trails/` layout.
  */
 
 import { app } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import * as os from 'os';
 import * as crypto from 'crypto';
-import type {
-  TrailPayload,
-} from '@industry-theme/file-city-panel';
+import type { TrailPayload } from '@industry-theme/file-city-panel';
+import {
+  createLocalRepoPurl,
+  parsePurl,
+  type Purl,
+} from '@principal-ai/alexandria-core-library';
 import type { TrailIndexEntry } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 
-const REPO_AGNOSTIC_DIR = 'repo-agnostic';
-const INDEX_FILENAME = 'index.json';
+const BY_ID_DIR = 'by-id';
+const INDEX_FILENAME = '_index.json';
 const SUMMARY_PREVIEW_MAX = 200;
 const PER_REPO_CAP = 50;
 
 export const ACTIVE_DEFAULT_KEY = '__default__';
 
-interface IndexFileV1 {
-  version: 1;
-  entries: TrailIndexEntry[];
+interface IndexEntryV2 extends TrailIndexEntry {
+  /** Path relative to ROOT (e.g. `github/owner/repo/abc.json`, `by-id/abc.json`). */
+  cachePath: string;
+}
+
+interface IndexFileV2 {
+  version: 2;
+  entries: IndexEntryV2[];
   active: Record<string, string | null>;
 }
 
-const emptyIndex = (): IndexFileV1 => ({
-  version: 1,
+const emptyIndex = (): IndexFileV2 => ({
+  version: 2,
   entries: [],
   active: {},
 });
-
-const projectHash = (repositoryPath: string): string => {
-  const normalized = path.resolve(repositoryPath);
-  return crypto.createHash('md5').update(normalized).digest('hex');
-};
-
-const subdirFor = (repositoryPath?: string): string =>
-  repositoryPath ? projectHash(repositoryPath) : REPO_AGNOSTIC_DIR;
 
 const activeKey = (repositoryPath?: string): string =>
   repositoryPath ?? ACTIVE_DEFAULT_KEY;
@@ -64,16 +68,57 @@ const summaryPreview = (summary?: string): string => {
 const hasDiffSnippets = (payload: TrailPayload): boolean =>
   payload.markers.some((m) => m.snippet?.kind === 'diff');
 
-const repoNamesOf = (payload: TrailPayload): string[] => {
-  const names = (payload.repos ?? []).map((r) => r.name).filter(Boolean);
-  return names;
-};
+const repoNamesOf = (payload: TrailPayload): string[] =>
+  (payload.repos ?? []).map((r) => r.name).filter(Boolean);
+
+const sanitizeSegment = (value: string): string =>
+  value.replace(/[^A-Za-z0-9._-]/g, '_');
+
+/**
+ * Decide which on-disk bucket a trail's JSON should live in. Mirrors the CLI
+ * trail cache locator so both producers write to the same shape:
+ *   1. `repos[0].id` parses as Purl → `<namespace>/<name>/`
+ *   2. `repositoryPath` provided   → mint a `pkg:local/...` Purl from it
+ *   3. neither                      → `by-id/`
+ */
+function chooseBucket(
+  payload: TrailPayload,
+  repositoryPath: string | undefined,
+): { bucket: string; cachePath: string } {
+  const id = sanitizeSegment(payload.id);
+
+  const fromRepos = bucketFromPurl(payload.repos?.[0]?.id, id);
+  if (fromRepos) return fromRepos;
+
+  if (repositoryPath) {
+    const localPurl = createLocalRepoPurl(path.resolve(repositoryPath));
+    const fromLocal = bucketFromPurl(localPurl, id);
+    if (fromLocal) return fromLocal;
+  }
+
+  return { bucket: BY_ID_DIR, cachePath: path.join(BY_ID_DIR, `${id}.json`) };
+}
+
+function bucketFromPurl(
+  purl: Purl | string | undefined,
+  safeId: string,
+): { bucket: string; cachePath: string } | null {
+  if (typeof purl !== 'string') return null;
+  const parsed = parsePurl(purl);
+  if (!parsed?.namespace) return null;
+  const ns = sanitizeSegment(parsed.namespace);
+  const name = sanitizeSegment(parsed.name);
+  if (!ns || !name) return null;
+  const bucket = path.join(ns, name);
+  return { bucket, cachePath: path.join(bucket, `${safeId}.json`) };
+}
 
 const buildEntry = (
   payload: TrailPayload,
   repositoryPath: string | undefined,
   sizeBytes: number,
-): TrailIndexEntry => ({
+  cachePath: string,
+): IndexEntryV2 => ({
   id: payload.id,
   title: payload.title || 'Untitled trail',
   summaryPreview: summaryPreview(payload.summary),
@@ -84,33 +129,31 @@ const buildEntry = (
   updatedAt: payload.updatedAt,
   sizeBytes,
   repositoryPath,
+  cachePath,
 });
 
-/**
- * Persistence record passed across the public API. The on-disk file stores
- * the portable `payload` plus a host-private `repositoryPath` sidecar so
- * the persistence layer can bucket payloads by repo without polluting the
- * portable schema.
- */
-interface OnDiskRecord {
-  /** The portable trail payload — written to disk and shipped to renderers. */
-  payload: TrailPayload;
-  /** Host-private path for repo bucketing. Not part of the trail schema. */
-  repositoryPath?: string;
-}
+const stripCachePath = ({
+  cachePath: _cachePath,
+  ...rest
+}: IndexEntryV2): TrailIndexEntry => rest;
 
 export class TrailPersistence {
   private readonly baseDir: string;
   private readonly indexPath: string;
-  private index: IndexFileV1 | null = null;
+  private readonly legacyBaseDir: string;
+  private index: IndexFileV2 | null = null;
   private writeQueue: Promise<void> = Promise.resolve();
 
   constructor() {
-    this.baseDir = path.join(app.getPath('userData'), 'file-city-trails');
+    this.baseDir = path.join(os.homedir(), '.principal', 'trails');
     this.indexPath = path.join(this.baseDir, INDEX_FILENAME);
+    this.legacyBaseDir = path.join(
+      app.getPath('userData'),
+      'file-city-trails',
+    );
   }
 
-  private async getIndex(): Promise<IndexFileV1> {
+  private async getIndex(): Promise<IndexFileV2> {
     if (!this.index) {
       await fs.mkdir(this.baseDir, { recursive: true });
       this.index = await this.loadIndex();
@@ -131,7 +174,7 @@ export class TrailPersistence {
       : idx.entries.slice();
     entries.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
     const activeId = idx.active[activeKey(repositoryPath)] ?? null;
-    return { entries, activeId };
+    return { entries: entries.map(stripCachePath), activeId };
   }
 
   async getActive(repositoryPath?: string): Promise<TrailPayload | null> {
@@ -154,19 +197,15 @@ export class TrailPersistence {
     const idx = await this.getIndex();
     const entry = idx.entries.find((e) => e.id === id);
     if (!entry) return null;
-    const record = await this.readRecord(id, entry.repositoryPath);
-    return record?.payload ?? null;
+    return this.readPayload(entry.cachePath);
   }
 
   async loadEntryById(id: string): Promise<TrailIndexEntry | null> {
     const idx = await this.getIndex();
-    return idx.entries.find((e) => e.id === id) ?? null;
+    const entry = idx.entries.find((e) => e.id === id);
+    return entry ? stripCachePath(entry) : null;
   }
 
-  /**
-   * Persist a payload. Assigns id + timestamps when missing. When `activate`
-   * is true, marks the payload as active for its repository in the manifest.
-   */
   async save(
     incoming: TrailPayload,
     options: { activate: boolean; repositoryPath?: string },
@@ -183,8 +222,8 @@ export class TrailPersistence {
     // `applyToPayload`, which writes notes back onto the same record.
     let preservedNotes = incoming.notes;
     if (preservedNotes === undefined && existing) {
-      const onDisk = await this.readRecord(id, existing.repositoryPath);
-      preservedNotes = onDisk?.payload.notes;
+      const onDisk = await this.readPayload(existing.cachePath);
+      preservedNotes = onDisk?.notes;
     }
 
     const payload: TrailPayload = {
@@ -197,17 +236,22 @@ export class TrailPersistence {
     };
 
     const repositoryPath = options.repositoryPath ?? existing?.repositoryPath;
-    const subdir = subdirFor(repositoryPath);
-    await fs.mkdir(path.join(this.baseDir, subdir), { recursive: true });
-    const file = path.join(this.baseDir, subdir, `${id}.json`);
-    const record: OnDiskRecord = { payload, repositoryPath };
-    const serialized = JSON.stringify(record, null, 2);
+    const { cachePath } = chooseBucket(payload, repositoryPath);
+    const file = path.join(this.baseDir, cachePath);
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    const serialized = JSON.stringify(payload, null, 2);
     await fs.writeFile(file, serialized, 'utf8');
+
+    // If the bucket changed (e.g. payload gained a Purl), drop the stale file.
+    if (existing && existing.cachePath !== cachePath) {
+      await this.unlinkRelative(existing.cachePath);
+    }
 
     const entry = buildEntry(
       payload,
       repositoryPath,
       Buffer.byteLength(serialized, 'utf8'),
+      cachePath,
     );
     if (existingIdx >= 0) {
       idx.entries[existingIdx] = entry;
@@ -225,10 +269,6 @@ export class TrailPersistence {
     return { payload, evictedIds };
   }
 
-  /**
-   * Load a payload, run a mutator, write the result back, refresh the index
-   * entry. Does not change active state. Used by note CRUD.
-   */
   async applyToPayload(
     id: string,
     mutator: (payload: TrailPayload) => TrailPayload,
@@ -237,14 +277,14 @@ export class TrailPersistence {
     const existingIdx = idx.entries.findIndex((e) => e.id === id);
     if (existingIdx < 0) return null;
     const existing = idx.entries[existingIdx];
-    const onDisk = await this.readRecord(id, existing.repositoryPath);
+    const onDisk = await this.readPayload(existing.cachePath);
     if (!onDisk) return null;
     const now = new Date().toISOString();
     const stamped: TrailPayload = {
-      ...onDisk.payload,
+      ...onDisk,
       id,
-      createdAt: onDisk.payload.createdAt ?? existing.createdAt,
-      updatedAt: onDisk.payload.updatedAt ?? existing.updatedAt,
+      createdAt: onDisk.createdAt ?? existing.createdAt,
+      updatedAt: onDisk.updatedAt ?? existing.updatedAt,
     };
     const mutated = mutator(stamped);
     const next: TrailPayload = {
@@ -253,19 +293,19 @@ export class TrailPersistence {
       createdAt: stamped.createdAt,
       updatedAt: now,
     };
-    const subdir = subdirFor(existing.repositoryPath);
-    await fs.mkdir(path.join(this.baseDir, subdir), { recursive: true });
-    const file = path.join(this.baseDir, subdir, `${id}.json`);
-    const record: OnDiskRecord = {
-      payload: next,
-      repositoryPath: existing.repositoryPath,
-    };
-    const serialized = JSON.stringify(record, null, 2);
+    const { cachePath } = chooseBucket(next, existing.repositoryPath);
+    const file = path.join(this.baseDir, cachePath);
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    const serialized = JSON.stringify(next, null, 2);
     await fs.writeFile(file, serialized, 'utf8');
+    if (existing.cachePath !== cachePath) {
+      await this.unlinkRelative(existing.cachePath);
+    }
     idx.entries[existingIdx] = buildEntry(
       next,
       existing.repositoryPath,
       Buffer.byteLength(serialized, 'utf8'),
+      cachePath,
     );
     await this.persistIndex();
     return next;
@@ -297,19 +337,7 @@ export class TrailPersistence {
     const entry = idx.entries[entryIdx];
     idx.entries.splice(entryIdx, 1);
 
-    const file = path.join(
-      this.baseDir,
-      subdirFor(entry.repositoryPath),
-      `${id}.json`,
-    );
-    try {
-      await fs.unlink(file);
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code !== 'ENOENT') {
-        console.error('[TrailPersistence] Failed to unlink payload', id, err);
-      }
-    }
+    await this.unlinkRelative(entry.cachePath);
 
     const key = activeKey(entry.repositoryPath);
     const wasActive = idx.active[key] === id;
@@ -320,29 +348,31 @@ export class TrailPersistence {
     return { repositoryPath: entry.repositoryPath, wasActive };
   }
 
-  private async readRecord(
-    id: string,
-    repositoryPath: string | undefined,
-  ): Promise<OnDiskRecord | null> {
-    const file = path.join(this.baseDir, subdirFor(repositoryPath), `${id}.json`);
+  private async readPayload(cachePath: string): Promise<TrailPayload | null> {
+    const file = path.join(this.baseDir, cachePath);
     try {
       const raw = await fs.readFile(file, 'utf8');
-      const parsed = JSON.parse(raw) as OnDiskRecord | TrailPayload;
-      // Tolerate older records that stored the bare payload without the
-      // wrapper. Detect by the presence of `markers` (TrailPayload) vs.
-      // `payload` (OnDiskRecord).
-      if ((parsed as OnDiskRecord).payload) {
-        return parsed as OnDiskRecord;
-      }
-      return { payload: parsed as TrailPayload, repositoryPath };
+      return JSON.parse(raw) as TrailPayload;
     } catch (err) {
-      console.error('[TrailPersistence] Failed to load payload', id, err);
+      console.error('[TrailPersistence] Failed to load payload', cachePath, err);
       return null;
     }
   }
 
+  private async unlinkRelative(cachePath: string): Promise<void> {
+    const file = path.join(this.baseDir, cachePath);
+    try {
+      await fs.unlink(file);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== 'ENOENT') {
+        console.error('[TrailPersistence] Failed to unlink', cachePath, err);
+      }
+    }
+  }
+
   private async enforceCap(
-    idx: IndexFileV1,
+    idx: IndexFileV2,
     repositoryPath?: string,
   ): Promise<string[]> {
     const matching = idx.entries
@@ -352,19 +382,7 @@ export class TrailPersistence {
     const toEvict = matching.slice(PER_REPO_CAP);
     const evictedIds: string[] = [];
     for (const entry of toEvict) {
-      const file = path.join(
-        this.baseDir,
-        subdirFor(entry.repositoryPath),
-        `${entry.id}.json`,
-      );
-      try {
-        await fs.unlink(file);
-      } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
-        if (code !== 'ENOENT') {
-          console.error('[TrailPersistence] Failed to evict', entry.id, err);
-        }
-      }
+      await this.unlinkRelative(entry.cachePath);
       evictedIds.push(entry.id);
       const key = activeKey(entry.repositoryPath);
       if (idx.active[key] === entry.id) {
@@ -380,85 +398,177 @@ export class TrailPersistence {
     return evictedIds;
   }
 
-  private async loadIndex(): Promise<IndexFileV1> {
+  private async loadIndex(): Promise<IndexFileV2> {
     try {
       const raw = await fs.readFile(this.indexPath, 'utf8');
-      const parsed = JSON.parse(raw) as Partial<IndexFileV1>;
-      if (parsed?.version === 1 && Array.isArray(parsed.entries)) {
+      const parsed = JSON.parse(raw) as Partial<IndexFileV2>;
+      if (parsed?.version === 2 && Array.isArray(parsed.entries)) {
         return {
-          version: 1,
-          entries: parsed.entries,
+          version: 2,
+          entries: parsed.entries as IndexEntryV2[],
           active: parsed.active ?? {},
         };
       }
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
       if (code !== 'ENOENT') {
-        console.warn('[TrailPersistence] index.json unreadable, rebuilding', err);
+        console.warn(
+          '[TrailPersistence] _index.json unreadable, rebuilding',
+          err,
+        );
       }
     }
+    const migrated = await this.migrateLegacyIfPresent();
+    if (migrated) return migrated;
     return this.rebuildIndex();
   }
 
-  private async rebuildIndex(): Promise<IndexFileV1> {
-    const idx = emptyIndex();
-    let subdirs: string[];
+  /**
+   * Walk `<userData>/file-city-trails/` (the pre-`~/.principal/trails`
+   * layout), copy every payload into the new tree, and return a populated
+   * index. Leaves the legacy directory in place — the caller can clean it
+   * up after a release once nothing reads it anymore.
+   */
+  private async migrateLegacyIfPresent(): Promise<IndexFileV2 | null> {
+    let legacyRaw: string;
     try {
-      subdirs = await fs.readdir(this.baseDir);
+      legacyRaw = await fs.readFile(
+        path.join(this.legacyBaseDir, 'index.json'),
+        'utf8',
+      );
     } catch {
-      return idx;
+      return null;
     }
-    for (const subdir of subdirs) {
-      const subdirPath = path.join(this.baseDir, subdir);
-      let stat;
+
+    let legacyIndex: {
+      entries?: Array<TrailIndexEntry>;
+      active?: Record<string, string | null>;
+    };
+    try {
+      legacyIndex = JSON.parse(legacyRaw);
+    } catch {
+      return null;
+    }
+
+    const idx = emptyIndex();
+    let migrated = 0;
+    for (const legacyEntry of legacyIndex.entries ?? []) {
+      const subdir = legacyEntry.repositoryPath
+        ? crypto
+            .createHash('md5')
+            .update(path.resolve(legacyEntry.repositoryPath))
+            .digest('hex')
+        : 'repo-agnostic';
+      const legacyFile = path.join(
+        this.legacyBaseDir,
+        subdir,
+        `${legacyEntry.id}.json`,
+      );
+      let raw: string;
       try {
-        stat = await fs.stat(subdirPath);
+        raw = await fs.readFile(legacyFile, 'utf8');
       } catch {
         continue;
       }
-      if (!stat.isDirectory()) continue;
-      let files: string[];
+      let parsed: { payload?: TrailPayload } | TrailPayload;
       try {
-        files = await fs.readdir(subdirPath);
+        parsed = JSON.parse(raw);
       } catch {
         continue;
       }
-      for (const filename of files) {
-        if (!filename.endsWith('.json')) continue;
-        const file = path.join(subdirPath, filename);
-        try {
-          const raw = await fs.readFile(file, 'utf8');
-          const parsed = JSON.parse(raw) as OnDiskRecord | TrailPayload;
-          const fallbackId = filename.replace(/\.json$/, '');
-          const record: OnDiskRecord = (parsed as OnDiskRecord).payload
-            ? (parsed as OnDiskRecord)
-            : { payload: parsed as TrailPayload };
-          const payload = record.payload;
-          const createdAt = payload.createdAt ?? new Date().toISOString();
-          const stamped: TrailPayload = {
-            ...payload,
-            id: payload.id || fallbackId,
-            createdAt,
-            updatedAt: payload.updatedAt ?? createdAt,
-            title: payload.title || 'Untitled trail',
-          };
-          idx.entries.push(
-            buildEntry(
-              stamped,
-              record.repositoryPath,
-              Buffer.byteLength(raw, 'utf8'),
-            ),
-          );
-        } catch (err) {
-          console.warn(
-            '[TrailPersistence] Skipping unparseable file',
-            file,
-            err,
-          );
-        }
-      }
+      const payload: TrailPayload =
+        (parsed as { payload?: TrailPayload }).payload ??
+        (parsed as TrailPayload);
+      if (!payload?.id) continue;
+
+      const { cachePath } = chooseBucket(payload, legacyEntry.repositoryPath);
+      const file = path.join(this.baseDir, cachePath);
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      const serialized = JSON.stringify(payload, null, 2);
+      await fs.writeFile(file, serialized, 'utf8');
+      idx.entries.push(
+        buildEntry(
+          payload,
+          legacyEntry.repositoryPath,
+          Buffer.byteLength(serialized, 'utf8'),
+          cachePath,
+        ),
+      );
+      migrated++;
     }
+
+    if (legacyIndex.active) {
+      idx.active = { ...legacyIndex.active };
+    }
+
+    if (migrated > 0) {
+      console.info(
+        `[TrailPersistence] Migrated ${migrated} trail(s) from ${this.legacyBaseDir} to ${this.baseDir}`,
+      );
+    }
+
+    this.index = idx;
+    await this.persistIndex();
     return idx;
+  }
+
+  /**
+   * Walk the on-disk tree rooted at `~/.principal/trails/` and rebuild the
+   * index from whatever payloads we find. Skips the index file itself and
+   * any non-JSON files.
+   */
+  private async rebuildIndex(): Promise<IndexFileV2> {
+    const idx = emptyIndex();
+    await this.walkAndIndex(this.baseDir, '', idx);
+    return idx;
+  }
+
+  private async walkAndIndex(
+    dir: string,
+    relPrefix: string,
+    idx: IndexFileV2,
+  ): Promise<void> {
+    let entries: { name: string; isDirectory: () => boolean }[];
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const abs = path.join(dir, entry.name);
+      const rel = relPrefix ? path.join(relPrefix, entry.name) : entry.name;
+      if (entry.isDirectory()) {
+        await this.walkAndIndex(abs, rel, idx);
+        continue;
+      }
+      if (entry.name === INDEX_FILENAME) continue;
+      if (!entry.name.endsWith('.json')) continue;
+      let raw: string;
+      try {
+        raw = await fs.readFile(abs, 'utf8');
+      } catch {
+        continue;
+      }
+      let parsed: TrailPayload;
+      try {
+        parsed = JSON.parse(raw) as TrailPayload;
+      } catch {
+        console.warn('[TrailPersistence] Skipping unparseable file', abs);
+        continue;
+      }
+      const fallbackId = entry.name.replace(/\.json$/, '');
+      const createdAt = parsed.createdAt ?? new Date().toISOString();
+      const stamped: TrailPayload = {
+        ...parsed,
+        id: parsed.id || fallbackId,
+        createdAt,
+        updatedAt: parsed.updatedAt ?? createdAt,
+        title: parsed.title || 'Untitled trail',
+      };
+      idx.entries.push(
+        buildEntry(stamped, undefined, Buffer.byteLength(raw, 'utf8'), rel),
+      );
+    }
   }
 
   private persistIndex(): Promise<void> {
