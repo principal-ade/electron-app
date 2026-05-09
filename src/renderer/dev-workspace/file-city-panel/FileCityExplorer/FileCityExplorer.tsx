@@ -212,8 +212,11 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   const { entries: trailEntries, activate: activateTrail } = useTrailLibrary(
     repositoryPath ?? null,
   );
-  const { byTrail: trailPathsByTrail, trailCountByPath } =
-    useTrailFilePaths(trailEntries);
+  const {
+    byTrail: trailPathsByTrail,
+    trailCountByPath,
+    summaryByTrail: trailSummaryByTrail,
+  } = useTrailFilePaths(trailEntries);
   const toggleTrails = React.useCallback(() => {
     setShowTrails((v) => !v);
   }, []);
@@ -1232,6 +1235,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               entries={trailEntries}
               selectedTrailId={selectedTrailId}
               onSelectTrail={setSelectedTrailId}
+              summaryByTrail={trailSummaryByTrail}
               onOpenTrail={events ? handleOpenTrail : undefined}
               style={{ pointerEvents: 'auto' }}
             />

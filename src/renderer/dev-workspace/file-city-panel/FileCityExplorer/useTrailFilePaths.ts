@@ -7,12 +7,15 @@ export interface TrailFilePaths {
   byTrail: Map<string, string[]>;
   /** Aggregated path → number of trails that touch it. Drives the heat map. */
   trailCountByPath: Map<string, number>;
+  /** Per-trail full markdown summary from the loaded payload (untruncated). */
+  summaryByTrail: Map<string, string>;
   loading: boolean;
 }
 
 const EMPTY: TrailFilePaths = {
   byTrail: new Map(),
   trailCountByPath: new Map(),
+  summaryByTrail: new Map(),
   loading: false,
 };
 
@@ -37,14 +40,16 @@ export function useTrailFilePaths(
             if (marker.sourcePath) paths.push(marker.sourcePath);
           }
         }
-        return [entry.id, paths] as const;
+        return [entry.id, paths, payload?.summary ?? ''] as const;
       }),
     ).then((rows) => {
       if (cancelled) return;
       const byTrail = new Map<string, string[]>();
       const trailCountByPath = new Map<string, number>();
-      for (const [id, paths] of rows) {
+      const summaryByTrail = new Map<string, string>();
+      for (const [id, paths, summary] of rows) {
         byTrail.set(id, paths);
+        if (summary) summaryByTrail.set(id, summary);
         const seen = new Set<string>();
         for (const p of paths) {
           if (seen.has(p)) continue;
@@ -52,7 +57,7 @@ export function useTrailFilePaths(
           trailCountByPath.set(p, (trailCountByPath.get(p) ?? 0) + 1);
         }
       }
-      setResult({ byTrail, trailCountByPath, loading: false });
+      setResult({ byTrail, trailCountByPath, summaryByTrail, loading: false });
     });
     return () => {
       cancelled = true;
