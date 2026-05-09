@@ -34,6 +34,7 @@ interface IntegratedTitlebarProps {
   onUpdateClick?: () => void;
   hideUpdateButton?: boolean;
   onShowOnboardingWizard?: () => void;
+  hideSearch?: boolean;
 }
 
 export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
@@ -46,6 +47,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   onUpdateClick,
   hideUpdateButton = false,
   onShowOnboardingWizard,
+  hideSearch = false,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showThemeButton, setShowThemeButton] = useState(false);
@@ -123,21 +125,23 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       <TitlebarUpdateButton onClick={onUpdateClick} hidden={hideUpdateButton} />
 
       {/* Centered GitHub Search Bar */}
-      <div
-        style={{
-          position: 'fixed',
-          left: '50vw',
-          transform: 'translateX(-50%)',
-          top: '0',
-          height: '56px',
-          display: 'flex',
-          alignItems: 'center',
-          WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-          zIndex: 101,
-        }}
-      >
-        <TitlebarGitHubSearch />
-      </div>
+      {!hideSearch && (
+        <div
+          style={{
+            position: 'fixed',
+            left: '50vw',
+            transform: 'translateX(-50%)',
+            top: '0',
+            height: '56px',
+            display: 'flex',
+            alignItems: 'center',
+            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            zIndex: 101,
+          }}
+        >
+          <TitlebarGitHubSearch />
+        </div>
+      )}
 
       {/* Right controls */}
       <div

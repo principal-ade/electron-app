@@ -10,6 +10,7 @@ import { OnboardingView } from '../../views/OnboardingView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
+import { TrailsView } from '../../views/TrailsView';
 import { ActivityCitiesPanel } from '../../../panels/ActivityCitiesPanel';
 import { OnlineUsersPanel } from '../../../panels/OnlineUsersPanel';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -30,6 +31,7 @@ export type NavigationView = InteractiveShellNavigationView;
 
 // Available views for switch command
 const VIEW_OPTIONS = [
+  'trails',
   'feed',
   'onboarding',
   'settings',
@@ -105,7 +107,7 @@ const getViewDefaults = (
 };
 
 export const IntegratedShell: React.FC = () => {
-  const [activeView, setActiveView] = useState<NavigationView>('activity-cities');
+  const [activeView, setActiveView] = useState<NavigationView>('trails');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | undefined>(undefined);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
@@ -116,6 +118,7 @@ export const IntegratedShell: React.FC = () => {
   const [viewCollapsedStates, setViewCollapsedStates] = useState<
     Record<string, { left: boolean; right: boolean }>
   >({
+    trails: { left: false, right: false },
     feed: { left: false, right: false },
     onboarding: { left: false, right: false },
     auth: { left: false, right: false },
@@ -385,8 +388,9 @@ export const IntegratedShell: React.FC = () => {
           return { success: true };
         }
         case 'reset':
-          setActiveView('activity-cities');
+          setActiveView('trails');
           setViewCollapsedStates({
+            trails: { left: false, right: false },
             feed: { left: false, right: false },
             onboarding: { left: false, right: false },
             auth: { left: false, right: false },
@@ -518,8 +522,8 @@ export const IntegratedShell: React.FC = () => {
             setSettingsCategory('updates');
             handleViewChange('settings');
           }}
-          onShowOnboardingWizard={() => setShowOnboardingWizard(true)}
           hideUpdateButton={activeView === 'settings'}
+          hideSearch
         />
 
         {/* Main content area with rounded corners for Slack-style cutout */}
@@ -560,6 +564,7 @@ export const IntegratedShell: React.FC = () => {
             }}
           >
             {/* Views will be rendered here based on activeView */}
+            {activeView === 'trails' && <TrailsView />}
             {activeView === 'feed' && <FeedView />}
             {activeView === 'onboarding' && (
               <OnboardingView onComplete={() => handleViewChange('feed')} />
