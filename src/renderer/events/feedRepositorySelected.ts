@@ -72,11 +72,11 @@ export function payloadFromGithub(
   };
 }
 
-// Shim used by the receiver until ProjectInfoPanel (which still demands an
-// AlexandriaEntry) is replaced. Returns the real localEntry when available;
-// otherwise builds a minimal entry with `path: ''` so display code keeps
-// working — git/path-dependent code paths must guard on `localEntry` instead
-// of trusting `path`.
+// Shim used by the receiver: RepositoryProfileTabContent still takes an
+// AlexandriaEntry. Returns the real localEntry when available; otherwise
+// builds a minimal entry with `path: ''` so display code keeps working —
+// git/path-dependent code paths must guard on `localEntry` instead of
+// trusting `path`.
 export function payloadToTabEntry(payload: FeedRepositorySelectedPayload): AlexandriaEntry {
   if (payload.localEntry) return payload.localEntry;
   const github = payload.github;

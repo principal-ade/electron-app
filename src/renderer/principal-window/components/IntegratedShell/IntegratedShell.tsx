@@ -11,8 +11,6 @@ import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
 import { TrailsView } from '../../views/TrailsView';
-import { ActivityCitiesPanel } from '../../../panels/ActivityCitiesPanel';
-import { OnlineUsersPanel } from '../../../panels/OnlineUsersPanel';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { WindowService } from '../../../main-process-api/WindowService';
@@ -40,8 +38,6 @@ const VIEW_OPTIONS = [
   'processes',
   'connections',
   'skills',
-  'activity-cities',
-  'online-users',
 ];
 
 // Quick commands for the command palette autocomplete
@@ -123,13 +119,10 @@ export const IntegratedShell: React.FC = () => {
     onboarding: { left: false, right: false },
     auth: { left: false, right: false },
     monitoring: { left: false, right: false },
-    search: { left: false, right: false },
     settings: { left: false, right: false },
     processes: { left: false, right: false },
     connections: { left: false, right: false },
     skills: { left: false, right: false },
-    'activity-cities': { left: false, right: false },
-    'online-users': { left: false, right: false },
   });
 
   // Get current view's collapsed states
@@ -146,8 +139,8 @@ export const IntegratedShell: React.FC = () => {
         if (prefs.interactiveShell?.activeNavigationView) {
           // Cast to string to handle legacy values from storage
           const savedView = prefs.interactiveShell.activeNavigationView as string;
-          // Migrate removed views to 'feed'
-          const legacyViews = ['workspaces', 'local-projects', 'remote-projects', 'starred-projects', 'network'];
+          // Migrate removed views to 'feed' (removed 2026-04-19 in commit b742f44b2)
+          const legacyViews = ['local-projects', 'remote-projects', 'starred-projects', 'network'];
           const view = legacyViews.includes(savedView) ? 'feed' : savedView;
           setActiveView(view as NavigationView);
         }
@@ -395,13 +388,10 @@ export const IntegratedShell: React.FC = () => {
             onboarding: { left: false, right: false },
             auth: { left: false, right: false },
             monitoring: { left: false, right: false },
-            search: { left: false, right: false },
             settings: { left: false, right: false },
             processes: { left: false, right: false },
             connections: { left: false, right: false },
             skills: { left: false, right: false },
-            'activity-cities': { left: false, right: false },
-            'online-users': { left: false, right: false },
           });
           return { success: true };
         default:
@@ -450,19 +440,17 @@ export const IntegratedShell: React.FC = () => {
         }
       }),
       events.on('panel:reset-layout', () => {
-        setActiveView('activity-cities');
+        setActiveView('trails');
         setViewCollapsedStates({
+          trails: { left: false, right: false },
           feed: { left: false, right: false },
           onboarding: { left: false, right: false },
           auth: { left: false, right: false },
           monitoring: { left: false, right: false },
-          search: { left: false, right: false },
           settings: { left: false, right: false },
           processes: { left: false, right: false },
           connections: { left: false, right: false },
           skills: { left: false, right: false },
-          'activity-cities': { left: false, right: false },
-          'online-users': { left: false, right: false },
         });
       }),
     ];
@@ -577,8 +565,6 @@ export const IntegratedShell: React.FC = () => {
             {activeView === 'processes' && <LocalhostProcessesView />}
             {activeView === 'connections' && <ConnectionsView />}
             {activeView === 'skills' && <SkillBrowserView />}
-            {activeView === 'activity-cities' && <ActivityCitiesPanel />}
-            {activeView === 'online-users' && <OnlineUsersPanel />}
           </div>
         </div>
       </div>

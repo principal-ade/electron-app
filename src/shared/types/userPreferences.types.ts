@@ -24,15 +24,12 @@ export type InteractiveShellNavigationView =
   | 'trails'
   | 'feed'
   | 'onboarding'
-  | 'search'
   | 'settings'
   | 'monitoring'
   | 'auth'
   | 'processes'
   | 'connections'
-  | 'skills'
-  | 'activity-cities'
-  | 'online-users';
+  | 'skills';
 
 // Onboarding state types
 export interface OnboardingCardState {
@@ -132,6 +129,7 @@ export interface UserPreferences {
   showSearchButton?: boolean; // Show/hide the search button in side nav (default: false)
   showConnectionsButton?: boolean; // Show/hide the connections button in side nav (default: false)
   showProcessesButton?: boolean; // Show/hide the processes button in side nav (default: false)
+  showOnboardingButton?: boolean; // Show/hide the onboarding/tutorials button in side nav (default: false)
   showGitSyncPanel?: boolean; // Show/hide the git sync panel (default: false)
   showExtensionsButton?: boolean; // Show/hide the extensions button in settings (default: false)
   showTerminalDebugButton?: boolean; // Show/hide the debug button in terminal panels (default: false)

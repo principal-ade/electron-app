@@ -88,8 +88,6 @@ npx knip --files
 - `src/renderer/hooks/useRemoteCommitHeatMap.ts`
 - `src/renderer/hooks/useSkillsPendingChanges.ts`
 - `src/renderer/hooks/useWatchedActivityFeed.ts`
-- `src/renderer/panels/ProjectInfoPanel.tsx`
-- `src/renderer/panels/UserFeedPanel.tsx`
 - `src/renderer/principal-window/views/SkillBrowserView/GlobalDirectoriesConfig.tsx`
 - `src/renderer/principal-window/views/SkillBrowserView/PendingChangesPanel.tsx`
 
