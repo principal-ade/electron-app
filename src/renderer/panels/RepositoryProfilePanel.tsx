@@ -1105,15 +1105,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     setBouncingButton(clonePath);
     setTimeout(() => setBouncingButton(null), 2000);
 
-    // Look up the registered entry; if the clone exists on disk but isn't
-    // registered yet, register it now (no-op when already present after the
-    // path-rekey).
     const existing = await AlexandriaService.getRepositoryByPath(clonePath);
     const entry = existing ?? await AlexandriaService.registerRepository(
       clonePath,
       repositoryData.htmlUrl || undefined,
     );
-
     await actions.openRepository(entry);
   };
 

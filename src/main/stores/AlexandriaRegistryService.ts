@@ -61,9 +61,7 @@ export class AlexandriaRegistryService {
    * a unique path, but `name` is a display label that can collide (forks).
    */
   async getRepositoryByPath(path: string): Promise<AlexandriaEntry | null> {
-    return (await this.outpostManager.getRepositoryByPath(path)) as
-      | AlexandriaEntry
-      | null;
+    return this.outpostManager.getRepositoryByPath(path);
   }
 
   /**
@@ -181,19 +179,19 @@ export class AlexandriaRegistryService {
       }
     }
 
-    const registered = (await this.outpostManager.registerRepository(
+    const registered = await this.outpostManager.registerRepository(
       path,
       remoteUrl,
-    )) as AlexandriaEntry;
+    );
 
     if (remoteUrl && remoteUrl.includes('github.com')) {
       const githubMetadata = await this.fetchGitHubMetadata(remoteUrl);
       if (githubMetadata) {
         try {
-          return (await this.outpostManager.updateGitHubMetadata(
+          return await this.outpostManager.updateGitHubMetadata(
             path,
             githubMetadata,
-          )) as AlexandriaEntry;
+          );
         } catch (error) {
           console.error(
             '[registerRepository] Failed to update GitHub metadata:',
