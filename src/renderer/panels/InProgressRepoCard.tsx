@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { payloadFromLocalEntry } from '../events/feedRepositorySelected';
 import {
   ArchitectureMapHighlightLayers,
   MultiVersionCityBuilder,
@@ -423,7 +424,7 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
         type: 'feed:repository-selected',
         source: 'in-progress-repo-card',
         timestamp: Date.now(),
-        payload: { repository: entry },
+        payload: payloadFromLocalEntry(entry),
       });
     }
   }, [entry, events]);

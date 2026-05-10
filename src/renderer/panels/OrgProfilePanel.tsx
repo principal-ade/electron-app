@@ -22,7 +22,11 @@ import {
 import { RepoCard, type RepoCardData } from './RepoCard';
 import { OwnerCollectionsTab } from './OwnerCollectionsTab';
 import type { FileTree } from '@principal-ai/repository-abstraction';
-import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import {
+  payloadFromGithub,
+  payloadFromLocalEntry,
+  type FeedRepositorySelectedPayload,
+} from '../events/feedRepositorySelected';
 import type { GitHubOrgMember } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 /**
@@ -234,9 +238,19 @@ function formatNumber(num: number): string {
   return String(num);
 }
 
-/**
- * Get initials from name or org name
- */
+function payloadFromRepoCard(repo: RepoCardData): FeedRepositorySelectedPayload {
+  if (repo.alexandriaEntry) return payloadFromLocalEntry(repo.alexandriaEntry);
+  return payloadFromGithub({
+    owner: repo.githubOwner ?? '',
+    name: repo.githubRepoName ?? repo.repoName,
+    description: repo.description,
+    stars: repo.stars,
+    primaryLanguage: repo.language,
+    isPublic: !repo.isPrivate,
+    lastUpdated: repo.updatedAt,
+  });
+}
+
 function getInitials(name?: string, orgName?: string): string {
   const displayName = name || orgName || '?';
   const parts = displayName.split(/[\s-_]/);
@@ -938,29 +952,13 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                   <div
                     key={nameWithOwner}
                     onClick={() => {
-                      const repositoryEntry: AlexandriaEntry = repoData?.alexandriaEntry || ({
-                        path: repoData?.repoPath || '',
-                        name: name ?? nameWithOwner,
-                        remoteUrl: `https://github.com/${owner}/${name}.git`,
-                        registeredAt: repoData?.createdAt || new Date().toISOString(),
-                        hasViews: false,
-                        viewCount: 0,
-                        views: [],
-                        github: {
-                          id: nameWithOwner,
-                          owner: owner ?? '',
-                          name: name ?? nameWithOwner,
-                          stars: repoData?.stars || 0,
-                          description: repoData?.description,
-                          primaryLanguage: repoData?.language,
-                          lastUpdated: new Date().toISOString(),
-                        },
-                      } as unknown as AlexandriaEntry);
                       events.emit({
                         type: 'feed:repository-selected',
                         source: 'OrgProfilePanel',
                         timestamp: Date.now(),
-                        payload: { repository: repositoryEntry },
+                        payload: repoData
+                          ? payloadFromRepoCard(repoData)
+                          : payloadFromGithub({ owner: owner ?? '', name: name ?? nameWithOwner }),
                       });
                     }}
                     style={{
@@ -1105,29 +1103,13 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                 <div
                   key={nameWithOwner}
                   onClick={() => {
-                    const repositoryEntry: AlexandriaEntry = repoData?.alexandriaEntry || ({
-                      path: repoData?.repoPath || '',
-                      name: name ?? nameWithOwner,
-                      remoteUrl: `https://github.com/${owner}/${name}.git`,
-                      registeredAt: repoData?.createdAt || new Date().toISOString(),
-                      hasViews: false,
-                      viewCount: 0,
-                      views: [],
-                      github: {
-                        id: nameWithOwner,
-                        owner: owner ?? '',
-                        name: name ?? nameWithOwner,
-                        stars: repoData?.stars || 0,
-                        description: repoData?.description,
-                        primaryLanguage: repoData?.language,
-                        lastUpdated: new Date().toISOString(),
-                      },
-                    } as unknown as AlexandriaEntry);
                     events.emit({
                       type: 'feed:repository-selected',
                       source: 'OrgProfilePanel',
                       timestamp: Date.now(),
-                      payload: { repository: repositoryEntry },
+                      payload: repoData
+                        ? payloadFromRepoCard(repoData)
+                        : payloadFromGithub({ owner: owner ?? '', name: name ?? nameWithOwner }),
                     });
                   }}
                   style={{
@@ -1225,32 +1207,11 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                     repo={repo}
                     fileTree={fileTree}
                     onClick={() => {
-                      // Use full AlexandriaEntry if available, otherwise create minimal one
-                      const repositoryEntry: AlexandriaEntry = repo.alexandriaEntry || ({
-                        path: repo.repoPath || '',
-                        name: repo.repoName,
-                        remoteUrl: `https://github.com/${repo.githubOwner}/${repo.githubRepoName}.git`,
-                        registeredAt: repo.createdAt || new Date().toISOString(),
-                        hasViews: false,
-                        viewCount: 0,
-                        views: [],
-                        github: {
-                          id: `${repo.githubOwner}/${repo.githubRepoName}`,
-                          owner: repo.githubOwner || '',
-                          name: repo.githubRepoName || repo.repoName,
-                          stars: repo.stars || 0,
-                          description: repo.description,
-                          primaryLanguage: repo.language,
-                          lastUpdated: new Date().toISOString(),
-                        },
-                      } as unknown as AlexandriaEntry);
-
-                      // Emit event to open repository profile
                       events.emit({
                         type: 'feed:repository-selected',
                         source: 'OrgProfilePanel',
                         timestamp: Date.now(),
-                        payload: { repository: repositoryEntry },
+                        payload: payloadFromRepoCard(repo),
                       });
                     }}
                   />

@@ -10,6 +10,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { FolderGit2, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { payloadFromLocalEntry } from '../events/feedRepositorySelected';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { GithubService } from '../main-process-api/GithubService';
@@ -174,7 +175,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         type: 'feed:repository-selected',
         source: 'projects-list-panel',
         timestamp: Date.now(),
-        payload: { repository: entry },
+        payload: payloadFromLocalEntry(entry),
       });
     },
     [events]

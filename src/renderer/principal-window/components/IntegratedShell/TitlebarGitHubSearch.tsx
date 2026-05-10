@@ -3,12 +3,13 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { ExternalLink, Search, Star, User } from 'lucide-react';
 import { githubClient } from '../../../tipc/githubClient';
 import type { GitHubRepository, GitHubUser } from '../../../../shared/tipc/githubRouterTypes';
-import type {
-  AlexandriaEntry,
-  ValidatedRepositoryPath,
-} from '@principal-ai/alexandria-core-library/types';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import { findClonedGithubEntry } from '../../../utils/alexandriaIdentity';
+import {
+  payloadFromGithub,
+  payloadFromLocalEntry,
+} from '../../../events/feedRepositorySelected';
 
 type ParsedGitHubUrl =
   | { type: 'user'; username: string }
@@ -34,25 +35,6 @@ const formatStars = (n?: number): string => {
   return String(n);
 };
 
-const toAlexandriaEntry = (repo: GitHubRepository): AlexandriaEntry => ({
-  name: repo.name,
-  path: '' as unknown as ValidatedRepositoryPath,
-  remoteUrl: repo.html_url,
-  registeredAt: new Date().toISOString(),
-  hasViews: false,
-  viewCount: 0,
-  views: [],
-  github: {
-    id: repo.full_name,
-    owner: repo.owner.login,
-    name: repo.name,
-    description: repo.description ?? undefined,
-    stars: repo.stargazers_count ?? 0,
-    lastUpdated: repo.updated_at,
-    isPublic: !repo.private,
-    defaultBranch: repo.default_branch,
-  },
-});
 
 export const TitlebarGitHubSearch: React.FC = () => {
   const { theme } = useTheme();
@@ -147,7 +129,6 @@ export const TitlebarGitHubSearch: React.FC = () => {
 
   const handleSelectRepo = useCallback(
     (repo: GitHubRepository) => {
-      const entry = toAlexandriaEntry(repo);
       events.emit({
         type: 'panel:switch',
         source: 'titlebar-search',
@@ -158,7 +139,15 @@ export const TitlebarGitHubSearch: React.FC = () => {
         type: 'feed:repository-selected',
         source: 'titlebar-search',
         timestamp: Date.now(),
-        payload: { repository: entry },
+        payload: payloadFromGithub({
+          owner: repo.owner.login,
+          name: repo.name,
+          description: repo.description ?? undefined,
+          stars: repo.stargazers_count ?? 0,
+          lastUpdated: repo.updated_at,
+          isPublic: !repo.private,
+          defaultBranch: repo.default_branch,
+        }),
       });
       clearSearch();
     },
@@ -206,28 +195,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
   const openRepoByOwnerName = useCallback(
     async (owner: string, repoName: string) => {
       const allEntries = await AlexandriaService.getRepositories();
-      const existing = allEntries.find(
-        (e) => e.github?.owner === owner && e.github?.name === repoName,
-      );
-      const entry: AlexandriaEntry = existing ?? {
-        name: repoName,
-        path: '' as unknown as ValidatedRepositoryPath,
-        remoteUrl: `https://github.com/${owner}/${repoName}`,
-        registeredAt: new Date().toISOString(),
-        hasViews: false,
-        viewCount: 0,
-        views: [],
-        github: {
-          id: `${owner}/${repoName}`,
-          owner,
-          name: repoName,
-          description: undefined,
-          stars: 0,
-          lastUpdated: new Date().toISOString(),
-          isPublic: true,
-          defaultBranch: 'main',
-        },
-      };
+      const existing = findClonedGithubEntry(allEntries, owner, repoName);
       events.emit({
         type: 'panel:switch',
         source: 'titlebar-search',
@@ -238,7 +206,9 @@ export const TitlebarGitHubSearch: React.FC = () => {
         type: 'feed:repository-selected',
         source: 'titlebar-search',
         timestamp: Date.now(),
-        payload: { repository: entry },
+        payload: existing
+          ? payloadFromLocalEntry(existing)
+          : payloadFromGithub({ owner, name: repoName }),
       });
       clearSearch();
     },

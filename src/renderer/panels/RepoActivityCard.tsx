@@ -17,6 +17,10 @@ import {
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import {
+  payloadFromGithub,
+  payloadFromLocalEntry,
+} from '../events/feedRepositorySelected';
 import type {
   ExplainCommitsInput,
   ExplainCommitsResponse,
@@ -569,43 +573,25 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   const handleOpenProfile = useCallback(() => {
     if (!events) return;
 
-    // If we have an Alexandria entry (local repo), use it directly
     if (entry) {
       events.emit({
         type: 'feed:repository-selected',
         source: 'repo-activity-card',
         timestamp: Date.now(),
-        payload: {
-          repository: entry,
-        },
+        payload: payloadFromLocalEntry(entry),
       });
       return;
     }
 
-    // For watched GitHub repos without local entry, create a synthetic entry
     if (summary.githubOwner && summary.githubRepoName) {
       events.emit({
         type: 'feed:repository-selected',
         source: 'repo-activity-card',
         timestamp: Date.now(),
-        payload: {
-          repository: {
-            path: '',
-            name: summary.githubRepoName,
-            remoteUrl: `https://github.com/${summary.githubOwner}/${summary.githubRepoName}.git`,
-            registeredAt: new Date().toISOString(),
-            hasViews: false,
-            viewCount: 0,
-            views: [],
-            github: {
-              id: `${summary.githubOwner}/${summary.githubRepoName}`,
-              owner: summary.githubOwner,
-              name: summary.githubRepoName,
-              stars: 0,
-              lastUpdated: new Date().toISOString(),
-            },
-          },
-        },
+        payload: payloadFromGithub({
+          owner: summary.githubOwner,
+          name: summary.githubRepoName,
+        }),
       });
     }
   }, [entry, events, summary.githubOwner, summary.githubRepoName]);

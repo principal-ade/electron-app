@@ -14,6 +14,7 @@ import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import { GithubService } from '../main-process-api/GithubService';
 import { CollectionRepoCard } from './cards/CollectionRepoCard';
+import { payloadFromGithub } from '../events/feedRepositorySelected';
 
 export interface CollectionProfilePanelProps {
   collection: StarredCollection;
@@ -174,13 +175,7 @@ export const CollectionProfilePanel: React.FC<CollectionProfilePanelProps> = ({
         type: 'feed:repository-selected',
         source: 'collection-profile-panel',
         timestamp: Date.now(),
-        payload: {
-          repository: {
-            name: repo,
-            path: '',
-            github: { owner, name: repo },
-          },
-        },
+        payload: payloadFromGithub({ owner, name: repo }),
       });
     },
     [events]

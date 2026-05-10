@@ -23,6 +23,10 @@ import { GithubService } from '../../../main-process-api/GithubService';
 import { FileCityImageService } from '../../../main-process-api/FileCityImageService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { FeedPanelFramework } from '../../../feed-view/FeedPanelFramework';
+import {
+  payloadFromLocalEntry,
+  type FeedRepositorySelectedPayload,
+} from '../../../events/feedRepositorySelected';
 
 // Keep SearchResult type for backwards compatibility
 export type SearchResultSource = 'local' | 'github' | 'starred';
@@ -89,7 +93,7 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   // Bridge feed events from the principal event bus into the local feed bus
   useEffect(() => {
-    const unsubRepoSelected = principalEvents.on<{ repository: AlexandriaEntry }>(
+    const unsubRepoSelected = principalEvents.on<FeedRepositorySelectedPayload>(
       'feed:repository-selected',
       (event) => {
         events.emit({
@@ -280,12 +284,11 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       },
 
       selectRepository: async (entry: AlexandriaEntry) => {
-        // Emit event for navigation - will be handled by IntegratedShell
         events.emit({
           type: 'feed:repository-selected',
           source: 'feed-view',
           timestamp: Date.now(),
-          payload: { repository: entry },
+          payload: payloadFromLocalEntry(entry),
         });
       },
 

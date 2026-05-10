@@ -12,6 +12,7 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { GithubService } from '../main-process-api/GithubService';
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { StarredRepoCard } from './cards/StarredRepoCard';
+import { payloadFromGithub } from '../events/feedRepositorySelected';
 
 export interface StarredReposListProps {
   /** Event emitter for panel communication */
@@ -80,24 +81,12 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
         type: 'feed:repository-selected',
         source: 'starred-repos-list',
         timestamp: Date.now(),
-        payload: {
-          repository: {
-            path: '',
-            name: name,
-            remoteUrl: `https://github.com/${owner}/${name}.git`,
-            registeredAt: new Date().toISOString(),
-            hasViews: false,
-            viewCount: 0,
-            views: [],
-            github: {
-              id: repo.full_name,
-              owner: owner,
-              name: name,
-              stars: repo.stargazers_count || 0,
-              lastUpdated: repo.updated_at,
-            },
-          },
-        },
+        payload: payloadFromGithub({
+          owner,
+          name,
+          stars: repo.stargazers_count ?? 0,
+          lastUpdated: repo.updated_at,
+        }),
       });
     },
     [events]

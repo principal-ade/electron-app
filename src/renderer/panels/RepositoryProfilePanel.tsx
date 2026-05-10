@@ -45,6 +45,7 @@ import {
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { DocumentView } from 'themed-markdown';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { payloadFromGithub } from '../events/feedRepositorySelected';
 import type { LocalClone } from '../../shared/types/repository.types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import * as LucideIcons from 'lucide-react';
@@ -2245,29 +2246,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 <button
                   onClick={() => {
                     const forkName = repositoryData.github!.name;
-                    const repositoryEntry = {
-                      path: '',
-                      name: forkName,
-                      remoteUrl: `https://github.com/${forkedRepoOwner}/${forkName}.git`,
-                      registeredAt: new Date().toISOString(),
-                      hasViews: false,
-                      viewCount: 0,
-                      views: [],
-                      github: {
-                        id: `${forkedRepoOwner}/${forkName}`,
-                        owner: forkedRepoOwner,
-                        name: forkName,
-                        stars: 0,
-                        description: null,
-                        primaryLanguage: null,
-                        lastUpdated: new Date().toISOString(),
-                      },
-                    } as unknown as AlexandriaEntry;
                     events.emit({
                       type: 'feed:repository-selected',
                       source: 'repository-profile-panel',
                       timestamp: Date.now(),
-                      payload: { repository: repositoryEntry },
+                      payload: payloadFromGithub({ owner: forkedRepoOwner, name: forkName }),
                     });
                   }}
                   style={{

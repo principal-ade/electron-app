@@ -21,6 +21,11 @@ import {
 import type { PanelEventEmitter, RepositoryMetadata } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
+import { findClonedGithubEntry } from '../utils/alexandriaIdentity';
+import {
+  payloadToTabEntry,
+  type FeedRepositorySelectedPayload,
+} from '../events/feedRepositorySelected';
 import {
   TerminalProvider,
   useTerminalProvider,
@@ -721,11 +726,7 @@ const UserProfileTabContent: React.FC<{
         );
 
         return result.repos.map((repo) => {
-          // Try to find matching local Alexandria entry
-          const alexandriaEntry = repositories.find(
-            entry => entry.github?.owner === repo.owner.login &&
-                     entry.github?.name === repo.name
-          );
+          const alexandriaEntry = findClonedGithubEntry(repositories, repo.owner.login, repo.name);
 
           return {
             repoName: repo.name,
@@ -909,11 +910,7 @@ const OrgProfileTabContent: React.FC<{
         const repos = await GithubService.getOrgRepositories(orgName, { perPage: 100 });
 
         return repos.map((repo) => {
-          // Try to find matching local Alexandria entry
-          const alexandriaEntry = repositories.find(
-            entry => entry.github?.owner === repo.owner.login &&
-                     entry.github?.name === repo.name
-          );
+          const alexandriaEntry = findClonedGithubEntry(repositories, repo.owner.login, repo.name);
 
           return {
             repoName: repo.name,
@@ -1238,27 +1235,25 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   useEffect(() => {
     const handleRepositorySelected = (event: {
       type: string;
-      payload: { repository: AlexandriaEntry }
+      payload: FeedRepositorySelectedPayload;
     }) => {
       if (event.type === 'feed:repository-selected') {
-        const { repository } = event.payload;
-        const owner = repository.github?.owner;
-        const tabId = owner ? `project-info-${owner}/${repository.name}` : `project-info-${repository.name}`;
+        const { purl, github } = event.payload;
+        const tabId = `project-info-${purl}`;
+        const label = github ? `${github.owner}/${github.name}` : purl;
 
-        // Check if tab already exists
         const existingTab = tabs.find(tab => tab.id === tabId);
         if (existingTab) {
           setActiveTabId(tabId);
           return;
         }
 
-        // Create new project info tab
         const newTab: ProjectInfoTab = {
           id: tabId,
-          label: owner ? `${owner}/${repository.name}` : repository.name,
+          label,
           contentType: 'project-info',
           closable: true,
-          repository,
+          repository: payloadToTabEntry(event.payload),
         };
 
         setTabs(prevTabs => [...prevTabs, newTab]);
