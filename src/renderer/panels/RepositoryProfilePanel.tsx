@@ -46,6 +46,7 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import { DocumentView } from 'themed-markdown';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { payloadFromGithub } from '../events/feedRepositorySelected';
+import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import type { LocalClone } from '../../shared/types/repository.types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import * as LucideIcons from 'lucide-react';
@@ -1099,38 +1100,21 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // Handle open repository for a specific clone
   const handleOpenRepository = async (clonePath: string) => {
-    if (repositoryData) {
-      // Start bounce animation
-      setBouncingButton(clonePath);
+    if (!repositoryData) return;
 
-      // Stop animation after 2 seconds
-      setTimeout(() => {
-        setBouncingButton(null);
-      }, 2000);
+    setBouncingButton(clonePath);
+    setTimeout(() => setBouncingButton(null), 2000);
 
-      // Convert RepositoryProfileData to AlexandriaEntry format
-      const repositoryEntry = {
-        name: repositoryData.name,
-        path: clonePath,
-        remoteUrl: repositoryData.htmlUrl || '',
-        registeredAt: repositoryData.createdAt,
-        hasViews: false,
-        viewCount: 0,
-        views: [],
-        github: repositoryData.github ? {
-          id: `${repositoryData.github.owner}/${repositoryData.github.name}`,
-          owner: repositoryData.github.owner,
-          name: repositoryData.github.name,
-          stars: repositoryData.stars || 0,
-          description: repositoryData.description,
-          primaryLanguage: repositoryData.language,
-          lastUpdated: repositoryData.updatedAt,
-        } : undefined,
-      } as unknown as AlexandriaEntry;
+    // Look up the registered entry; if the clone exists on disk but isn't
+    // registered yet, register it now (no-op when already present after the
+    // path-rekey).
+    const existing = await AlexandriaService.getRepositoryByPath(clonePath);
+    const entry = existing ?? await AlexandriaService.registerRepository(
+      clonePath,
+      repositoryData.htmlUrl || undefined,
+    );
 
-      // Call the action to open the repository
-      await actions.openRepository(repositoryEntry);
-    }
+    await actions.openRepository(entry);
   };
 
   // Handle delete clone

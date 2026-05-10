@@ -975,30 +975,25 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     [],
   );
 
-  // Repository entry slice (for PackageCompositionPanel GitHub visibility)
+  // Repository entry slice (for PackageCompositionPanel GitHub visibility).
+  // Looks up the registered entry by path; null when the repo isn't in the
+  // registry. Upstream PackageCompositionPanel reads `data?.github?.isPublic`
+  // with optional chaining and handles null gracefully.
+  const currentAlexandriaEntry = useMemo(() => {
+    if (!repository?.path || alexandriaRepositories.length === 0) return null;
+    return alexandriaRepositories.find(entry => entry.path === repository.path) ?? null;
+  }, [repository?.path, alexandriaRepositories]);
+
   const repositoryEntrySlice = useMemo<DataSlice<AlexandriaEntry | null>>(
     () => ({
       scope: 'repository' as const,
       name: 'repositoryEntry',
-      data: repository
-        ? ({
-            name: repository.name,
-            path: repository.path as unknown as AlexandriaEntry['path'],
-            remoteUrl: (repository as { remoteUrl?: string }).remoteUrl,
-            registeredAt: new Date().toISOString(),
-            hasViews: false,
-            viewCount: 0,
-            views: [],
-            github: (repository as { github?: AlexandriaEntry['github'] }).github,
-          } as AlexandriaEntry)
-        : null,
-      loading: false,
+      data: currentAlexandriaEntry,
+      loading: alexandriaRepositoriesLoading,
       error: null,
-      refresh: async () => {
-        console.info('[PanelContext] Refreshing repository entry...');
-      },
+      refresh: async () => {},
     }),
-    [repository],
+    [currentAlexandriaEntry, alexandriaRepositoriesLoading],
   );
 
   // Empty slices Map for backward compatibility with PanelContextValue interface

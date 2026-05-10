@@ -57,12 +57,23 @@ function getDevWorkspacePreloadPath(): string {
 export async function openDevWorkspaceWindow(
   options: DevWorkspaceOptions,
 ): Promise<{ windowId: number } | null> {
-  const { alexandriaEntry } = options;
+  const registry = AlexandriaRegistryService.getInstance();
+  // Every dev-workspace window must be backed by a registered AlexandriaEntry —
+  // path is the registry primary key, and downstream slices/lookups depend on
+  // it. If the caller passed an entry whose path isn't in the registry
+  // (stale state, external trigger, race), register it now.
+  const alexandriaEntry =
+    (await registry.getRepositoryByPath(options.alexandriaEntry.path)) ??
+    (await registry.registerRepository(
+      options.alexandriaEntry.path,
+      options.alexandriaEntry.remoteUrl,
+    ));
+
   const windowName = `${DEV_WORKSPACE_PURPOSE}-${alexandriaEntry.path}`;
   const tracer = getTracer('principal-ade-main');
 
-  // Update lastOpenedAt timestamp for the repository (fire-and-forget)
-  // This is done centrally here so ALL entry points (quick open, deep links, etc.) update the timestamp
+  // Update lastOpenedAt timestamp for the repository (fire-and-forget).
+  // Centralized here so ALL entry points (quick open, deep links, etc.) update the timestamp.
   const updateSpan = tracer.startSpan(
     'alexandria.dev_workspace.update_last_opened',
   );
@@ -71,8 +82,8 @@ export async function openDevWorkspaceWindow(
     repository_path: alexandriaEntry.path,
   });
 
-  AlexandriaRegistryService.getInstance()
-    .updateLastOpened(alexandriaEntry.name)
+  registry
+    .updateLastOpened(alexandriaEntry.path)
     .then(() => {
       updateSpan.setStatus({ code: SpanStatusCode.OK });
       updateSpan.end();
@@ -87,11 +98,9 @@ export async function openDevWorkspaceWindow(
       );
       updateSpan.setStatus({ code: SpanStatusCode.ERROR });
       updateSpan.end();
-      // Don't block opening the window if update fails
     });
 
-  // Refresh GitHub metadata for the repository (fire-and-forget)
-  // This ensures we have up-to-date description, stars, topics, etc.
+  // Refresh GitHub metadata for the repository (fire-and-forget).
   const refreshSpan = tracer.startSpan(
     'alexandria.dev_workspace.refresh_github_metadata',
   );
@@ -100,8 +109,8 @@ export async function openDevWorkspaceWindow(
     repository_path: alexandriaEntry.path,
   });
 
-  AlexandriaRegistryService.getInstance()
-    .refreshRepository(alexandriaEntry.name)
+  registry
+    .refreshRepository(alexandriaEntry.path)
     .then((updatedEntry) => {
       if (updatedEntry) {
         console.log(

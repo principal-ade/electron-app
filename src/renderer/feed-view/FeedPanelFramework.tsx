@@ -20,10 +20,14 @@ import {
 } from '@principal-ade/panel-layouts';
 import type { PanelEventEmitter, RepositoryMetadata } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
-import { findClonedGithubEntry } from '../utils/alexandriaIdentity';
 import {
-  payloadToTabEntry,
+  extractPurlFromRemoteUrl,
+  type GithubRepository,
+  type Purl,
+} from '@principal-ai/alexandria-core-library';
+import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
+import { findClonedGithubEntry, githubRepoPurl } from '../utils/alexandriaIdentity';
+import {
   type FeedRepositorySelectedPayload,
 } from '../events/feedRepositorySelected';
 import {
@@ -147,7 +151,9 @@ export interface InProgressActivityTab extends BaseTab {
  */
 export interface ProjectInfoTab extends BaseTab {
   contentType: 'project-info';
-  repository: AlexandriaEntry;
+  purl: Purl;
+  github?: GithubRepository;
+  localEntry?: AlexandriaEntry;
 }
 
 /**
@@ -231,20 +237,35 @@ interface FeedPanelFrameworkInnerProps {
   onFeedModeChange?: (mode: 'my-activity' | 'collections' | 'organizations') => void;
 }
 
+// `localClones` isn't on the formal AlexandriaEntry type — some entries
+// carry it as a renderer-side extension. Falls back to a single-clone array
+// derived from `path` when the entry has a path but no clones list.
+function extractLocalClones(
+  entry: AlexandriaEntry | undefined,
+): Array<{ path: string; addedAt: number }> | undefined {
+  if (!entry) return undefined;
+  const maybeClones = (entry as { localClones?: unknown }).localClones;
+  if (Array.isArray(maybeClones)) {
+    return maybeClones as Array<{ path: string; addedAt: number }>;
+  }
+  return entry.path ? [{ path: entry.path, addedAt: Date.now() }] : undefined;
+}
+
 /**
  * Wrapper component for repository profile tab content
  * Extracted to prevent remounting when switching tabs
  */
 const RepositoryProfileTabContent: React.FC<{
-  repository: AlexandriaEntry;
+  purl: Purl;
+  github?: GithubRepository;
+  localEntry?: AlexandriaEntry;
   events: PanelEventEmitter;
-}> = ({ repository, events }) => {
+}> = ({ purl, github, localEntry, events }) => {
   const [repositoryData, setRepositoryData] = React.useState<RepositoryProfileData | undefined>(undefined);
   const [loading, setLoading] = React.useState(true);
   const [refreshTrigger, setRefreshTrigger] = React.useState(0);
 
-  // Use commit heatmap hook for local repos only
-  const heatMapData = useCommitHeatMap(repository.path ?? null);
+  const heatMapData = useCommitHeatMap(localEntry?.path ?? null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -253,23 +274,28 @@ const RepositoryProfileTabContent: React.FC<{
       setLoading(true);
 
       try {
-        // Re-fetch from Alexandria on refresh to pick up updated localClones (e.g. after cloning)
-        let repo: AlexandriaEntry = repository;
-        if (refreshTrigger > 0) {
-          const freshEntry = await AlexandriaService.getRepositoryByPath(repository.path);
-          if (freshEntry) repo = freshEntry;
+        // Re-fetch on refresh to pick up updated localClones (e.g. after cloning).
+        let entry: AlexandriaEntry | undefined = localEntry;
+        let gh: GithubRepository | undefined = github;
+        if (refreshTrigger > 0 && localEntry) {
+          const freshEntry = await AlexandriaService.getRepositoryByPath(localEntry.path);
+          if (freshEntry) {
+            entry = freshEntry;
+            gh = freshEntry.github ?? gh;
+          }
         }
 
         if (cancelled) return;
 
-        // Show avatar and basic info immediately before async fetches
-        if (repo.github?.owner) {
+        const displayName = gh ? `${gh.owner}/${gh.name}` : (entry?.name ?? purl);
+
+        if (gh?.owner) {
           setRepositoryData((prev) => ({
-            name: repo.name,
-            fullName: `${repo.github!.owner}/${repo.github!.name || repo.name}`,
-            owner: repo.github!.owner,
-            ownerAvatarUrl: `https://github.com/${repo.github!.owner}.png`,
-            description: repo.github?.description || undefined,
+            name: entry?.name ?? gh.name,
+            fullName: `${gh.owner}/${gh.name}`,
+            owner: gh.owner,
+            ownerAvatarUrl: `https://github.com/${gh.owner}.png`,
+            description: gh.description || undefined,
             stars: 0,
             forks: 0,
             watchers: 0,
@@ -277,14 +303,14 @@ const RepositoryProfileTabContent: React.FC<{
             size: 0,
             activityData: prev?.activityData ?? new Map(),
             totalCommits: prev?.totalCommits ?? 0,
-            defaultBranch: repo.github?.defaultBranch || 'main',
-            createdAt: repo.registeredAt || new Date().toISOString(),
-            updatedAt: repo.lastOpenedAt || new Date().toISOString(),
-            htmlUrl: `https://github.com/${repo.github!.owner}/${repo.github!.name || repo.name}`,
+            defaultBranch: gh.defaultBranch || 'main',
+            createdAt: entry?.registeredAt || new Date().toISOString(),
+            updatedAt: entry?.lastOpenedAt || new Date().toISOString(),
+            htmlUrl: `https://github.com/${gh.owner}/${gh.name}`,
             isPrivate: undefined,
-            isLocal: !!repo.path,
-            localClones: ('localClones' in repo && Array.isArray(repo.localClones)) ? repo.localClones : (repo.path ? [{ path: repo.path, addedAt: Date.now() }] : undefined),
-            github: repo.github ? { ...repo.github } : undefined,
+            isLocal: !!entry?.path,
+            localClones: extractLocalClones(entry),
+            github: { ...gh },
           }));
         }
 
@@ -292,21 +318,16 @@ const RepositoryProfileTabContent: React.FC<{
         const activityData = new Map<string, number>();
         let totalCommits = 0;
 
-        if (repo.path) {
-          // Local repository - use heatmap data from hook
+        if (entry?.path) {
           heatMapData.commits.forEach((commit) => {
             activityData.set(commit.date, commit.count);
           });
           activityData.forEach((count) => {
             totalCommits += count;
           });
-        } else if (repo.github?.owner && repo.github?.name) {
-          // Remote repository - fetch from web-ade
+        } else if (gh?.owner && gh?.name) {
           try {
-            const contributions = await WebAdeService.getRepoContributions(
-              repo.github.owner,
-              repo.github.name
-            );
+            const contributions = await WebAdeService.getRepoContributions(gh.owner, gh.name);
             contributions.contributions.forEach((day) => {
               activityData.set(day.date, day.count);
             });
@@ -317,16 +338,15 @@ const RepositoryProfileTabContent: React.FC<{
           }
         }
 
-        // Fetch full repository data from GitHub API if available
         let ownerType: 'User' | 'Organization' | undefined = undefined;
         let githubCreatedAt: string | undefined = undefined;
         let githubUpdatedAt: string | undefined = undefined;
         let githubDefaultBranch: string | undefined = undefined;
         let githubIsPrivate: boolean | undefined = undefined;
 
-        if (repo.github?.owner && repo.github?.name) {
+        if (gh?.owner && gh?.name) {
           try {
-            const githubRepo = await GithubService.getRepository(repo.github.owner, repo.github.name);
+            const githubRepo = await GithubService.getRepository(gh.owner, gh.name);
             console.info('[RepositoryProfileTab] Fetched GitHub repository:', githubRepo);
             ownerType = githubRepo?.owner.type;
             githubCreatedAt = githubRepo?.created_at;
@@ -338,23 +358,17 @@ const RepositoryProfileTabContent: React.FC<{
           }
         }
 
-        // Fetch contributor count - local or from GitHub
         let contributors: number | undefined = undefined;
-        if (repo.path) {
-          // Local repository - use git
+        if (entry?.path) {
           try {
-            contributors = await GitService.getContributorCount(repo.path);
+            contributors = await GitService.getContributorCount(entry.path);
             console.info('[RepositoryProfileTab] Contributor count (local):', contributors);
           } catch (err) {
             console.warn('[RepositoryProfileTab] Failed to fetch contributor count:', err);
           }
-        } else if (repo.github?.owner && repo.github?.name) {
-          // Remote repository - use GitHub API
+        } else if (gh?.owner && gh?.name) {
           try {
-            const githubContributors = await GithubService.getRepositoryContributors(
-              repo.github.owner,
-              repo.github.name
-            );
+            const githubContributors = await GithubService.getRepositoryContributors(gh.owner, gh.name);
             contributors = githubContributors.length;
             console.info('[RepositoryProfileTab] Contributor count (GitHub):', contributors);
           } catch (err) {
@@ -363,33 +377,31 @@ const RepositoryProfileTabContent: React.FC<{
         }
 
         const profileData: RepositoryProfileData = {
-          name: repo.name,
-          fullName: repo.github?.owner ? `${repo.github.owner}/${repo.github.name || repo.name}` : repo.name,
-          owner: repo.github?.owner || 'local',
-          ownerAvatarUrl: repo.github?.owner ? `https://github.com/${repo.github.owner}.png` : undefined,
+          name: entry?.name ?? gh?.name ?? displayName,
+          fullName: gh ? `${gh.owner}/${gh.name}` : displayName,
+          owner: gh?.owner || 'local',
+          ownerAvatarUrl: gh?.owner ? `https://github.com/${gh.owner}.png` : undefined,
           ownerType,
-          description: repo.github?.description || undefined,
-          language: undefined, // Not available in AlexandriaEntry
-          stars: 0, // Not available for local repos
-          forks: 0, // Not available for local repos
-          watchers: 0, // Not available for local repos
-          openIssues: 0, // Not available for local repos
-          size: 0, // Could be calculated but not essential
+          description: gh?.description || undefined,
+          language: undefined,
+          stars: 0,
+          forks: 0,
+          watchers: 0,
+          openIssues: 0,
+          size: 0,
           activityData,
           totalCommits: totalCommits || 0,
           contributors,
-          defaultBranch: githubDefaultBranch || repo.github?.defaultBranch || 'main',
-          createdAt: githubCreatedAt || repo.registeredAt || new Date().toISOString(),
-          updatedAt: githubUpdatedAt || repo.lastOpenedAt || new Date().toISOString(),
-          htmlUrl: repo.github?.owner && repo.github?.name
-            ? `https://github.com/${repo.github.owner}/${repo.github.name}`
-            : undefined,
+          defaultBranch: githubDefaultBranch || gh?.defaultBranch || 'main',
+          createdAt: githubCreatedAt || entry?.registeredAt || new Date().toISOString(),
+          updatedAt: githubUpdatedAt || entry?.lastOpenedAt || new Date().toISOString(),
+          htmlUrl: gh ? `https://github.com/${gh.owner}/${gh.name}` : undefined,
           isPrivate: githubIsPrivate,
-          isLocal: !!repo.path,
-          localClones: ('localClones' in repo && Array.isArray(repo.localClones)) ? repo.localClones : (repo.path ? [{ path: repo.path, addedAt: Date.now() }] : undefined),
-          github: repo.github ? {
-            ...repo.github,
-            defaultBranch: githubDefaultBranch || repo.github.defaultBranch || undefined,
+          isLocal: !!entry?.path,
+          localClones: extractLocalClones(entry),
+          github: gh ? {
+            ...gh,
+            defaultBranch: githubDefaultBranch || gh.defaultBranch || undefined,
           } : undefined,
         };
 
@@ -412,7 +424,7 @@ const RepositoryProfileTabContent: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [heatMapData.commits, repository, refreshTrigger]);
+  }, [heatMapData.commits, purl, github, localEntry, refreshTrigger]);
 
   // Subscribe to Alexandria repository changes to update profile in real-time
   React.useEffect(() => {
@@ -421,21 +433,23 @@ const RepositoryProfileTabContent: React.FC<{
         return;
       }
 
-      // Check if this update is for the repository we're currently viewing
-      const isMatch =
-        event.repository.name === repository.name ||
-        event.repository.path === repository.path ||
-        (event.repository.github?.id && repository.github?.id &&
-         event.repository.github.id === repository.github.id);
+      const eventEntry = event.repository;
+      const eventPurl =
+        eventEntry.purl ??
+        eventEntry.github?.purl ??
+        (eventEntry.remoteUrl ? extractPurlFromRemoteUrl(eventEntry.remoteUrl) : null) ??
+        (eventEntry.github
+          ? githubRepoPurl(eventEntry.github.owner, eventEntry.github.name)
+          : null);
 
-      if (isMatch) {
-        console.info('[RepositoryProfileTab] Repository updated, refreshing profile data:', event.repository.name);
+      if (eventPurl === purl) {
+        console.info('[RepositoryProfileTab] Repository updated, refreshing profile data:', eventEntry.name);
         setRefreshTrigger(prev => prev + 1);
       }
     });
 
     return unsubscribe;
-  }, [repository]);
+  }, [purl]);
 
   // Refresh when a clone is added from the profile panel
   React.useEffect(() => {
@@ -448,19 +462,41 @@ const RepositoryProfileTabContent: React.FC<{
     };
   }, [events]);
 
-  // Create minimal context and actions
-  // Memoize to prevent unnecessary re-renders and re-fetching
+  // Synchronous placeholder so projectContext.repository is never undefined
+  // before the async fetch in the effect above completes.
+  const placeholderProfileData = React.useMemo<RepositoryProfileData>(() => ({
+    name: localEntry?.name ?? github?.name ?? purl,
+    fullName: github ? `${github.owner}/${github.name}` : (localEntry?.name ?? purl),
+    owner: github?.owner ?? 'local',
+    ownerAvatarUrl: github?.owner ? `https://github.com/${github.owner}.png` : undefined,
+    description: github?.description || undefined,
+    stars: 0,
+    forks: 0,
+    watchers: 0,
+    openIssues: 0,
+    size: 0,
+    activityData: new Map(),
+    totalCommits: 0,
+    defaultBranch: github?.defaultBranch || 'main',
+    createdAt: localEntry?.registeredAt || new Date().toISOString(),
+    updatedAt: localEntry?.lastOpenedAt || new Date().toISOString(),
+    htmlUrl: github ? `https://github.com/${github.owner}/${github.name}` : undefined,
+    isLocal: !!localEntry?.path,
+    localClones: extractLocalClones(localEntry),
+    github,
+  }), [purl, github, localEntry]);
+
   const projectContext = React.useMemo(() => ({
     currentScope: {
       type: 'repository' as const,
-      repository: (repositoryData || repository) as unknown as RepositoryMetadata
+      repository: (repositoryData ?? placeholderProfileData) as unknown as RepositoryMetadata,
     },
     slices: new Map(),
     adapters: {},
     isSliceLoading: () => loading,
     refresh: async () => {},
     clearSlice: () => {},
-  }), [repositoryData, repository, loading]);
+  }), [repositoryData, placeholderProfileData, loading]);
 
   const projectActions = React.useMemo(() => ({
     openFile: async () => {},
@@ -1238,7 +1274,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       payload: FeedRepositorySelectedPayload;
     }) => {
       if (event.type === 'feed:repository-selected') {
-        const { purl, github } = event.payload;
+        const { purl, github, localEntry } = event.payload;
         const tabId = `project-info-${purl}`;
         const label = github ? `${github.owner}/${github.name}` : purl;
 
@@ -1253,7 +1289,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           label,
           contentType: 'project-info',
           closable: true,
-          repository: payloadToTabEntry(event.payload),
+          purl,
+          github,
+          localEntry,
         };
 
         setTabs(prevTabs => [...prevTabs, newTab]);
@@ -1600,28 +1638,15 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         // Convert it to remote-only instead of closing it
         const openTab = tabs.find(
           tab => tab.contentType === 'project-info' &&
-          (tab as ProjectInfoTab).repository.name === entryToDelete.name
+          (tab as ProjectInfoTab).localEntry?.path === entryToDelete.path
         ) as ProjectInfoTab | undefined;
 
         if (openTab && entryToDelete.github) {
-          // Update the tab to show it as a remote-only repository
-          setTabs(prevTabs => prevTabs.map(tab => {
-            if (tab.id === openTab.id) {
-              // Create a remote-only version of the repository
-              const { path: _path, ...repoWithoutPath } = entryToDelete;
-              const remoteOnlyRepo: Partial<AlexandriaEntry> = {
-                ...repoWithoutPath,
-                // Keep GitHub info so it can still show as remote
-              };
-              return {
-                ...openTab,
-                repository: remoteOnlyRepo as AlexandriaEntry,
-              };
-            }
-            return tab;
-          }));
+          setTabs(prevTabs => prevTabs.map(tab =>
+            tab.id === openTab.id ? { ...openTab, localEntry: undefined } : tab,
+          ));
         } else if (openTab && !entryToDelete.github) {
-          // If there's no GitHub info, we can't show it as remote-only, so close the tab
+          // No github info means there's nothing to show remote-only — close the tab.
           setTabs(prevTabs => prevTabs.filter(tab => tab.id !== openTab.id));
           if (activeTabId === openTab.id) {
             setActiveTabId('activity-feed');
@@ -1757,8 +1782,10 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           const projectTab = tab as ProjectInfoTab;
           return (
             <RepositoryProfileTabContent
-              key={projectTab.repository.path || tab.id}
-              repository={projectTab.repository}
+              key={projectTab.localEntry?.path ?? tab.id}
+              purl={projectTab.purl}
+              github={projectTab.github}
+              localEntry={projectTab.localEntry}
               events={eventsRef.current}
             />
           );

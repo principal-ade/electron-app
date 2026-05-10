@@ -2635,25 +2635,21 @@ export const RepositoryPanelProvider: React.FC<
     return alexandriaRepositories.find(entry => entry.path === repositoryPath) || null;
   }, [repositoryPath, alexandriaRepositories]);
 
+  // Returns null if the workspace path isn't in the registry yet — upstream
+  // PackageCompositionPanel reads `data?.github?.isPublic` with optional
+  // chaining and handles null. Post-rekey, openDevWorkspaceWindow guarantees
+  // registration before the window opens, so a miss here only happens during
+  // the brief load window before alexandriaRepositories arrives.
   const repositoryEntrySlice = useMemo<DataSlice<AlexandriaEntry | null>>(
     () => ({
       scope: 'repository' as const,
       name: 'repositoryEntry',
-      data: currentAlexandriaEntry || (repositoryPath
-        ? ({
-            name: repositoryPath.split('/').pop() || '',
-            path: repositoryPath as unknown as AlexandriaEntry['path'],
-            registeredAt: new Date().toISOString(),
-            hasViews: false,
-            viewCount: 0,
-            views: [],
-          } as AlexandriaEntry)
-        : null),
+      data: currentAlexandriaEntry,
       loading: alexandriaRepositoriesLoading,
       error: null,
       refresh: async () => {},
     }),
-    [repositoryPath, currentAlexandriaEntry, alexandriaRepositoriesLoading],
+    [currentAlexandriaEntry, alexandriaRepositoriesLoading],
   );
 
   // Explicit DataSlice: gitStatusWithFiles
