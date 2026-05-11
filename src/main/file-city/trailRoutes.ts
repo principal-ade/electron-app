@@ -8,6 +8,8 @@
  * stores on the index entry only.
  */
 
+import { promises as fs } from 'fs';
+import path from 'path';
 import type { Application, Request, Response } from 'express';
 import type {
   TrailPayload,
@@ -30,9 +32,22 @@ type WindowOpened = 'focused' | 'created' | 'none';
 async function ensureDevWorkspaceWindow(
   repositoryPath: string,
 ): Promise<WindowOpened> {
-  const repos = await AlexandriaRegistryService.getInstance().getRepositories();
-  const entry = repos.find((r) => r.path === repositoryPath);
-  if (!entry) return 'none';
+  const registry = AlexandriaRegistryService.getInstance();
+  let entry = await registry.getRepositoryByPath(repositoryPath);
+  if (!entry) {
+    try {
+      const stat = await fs.stat(path.join(repositoryPath, '.git'));
+      if (!stat.isDirectory() && !stat.isFile()) return 'none';
+    } catch {
+      return 'none';
+    }
+    try {
+      entry = await registry.registerRepository(repositoryPath);
+    } catch (err) {
+      console.error('[trailRoutes] auto-register failed', err);
+      return 'none';
+    }
+  }
 
   const windowKey = `dev-workspace-${entry.path}`;
   const existingId = specialWindows.get(windowKey);

@@ -150,6 +150,12 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
       deleteTrailNote: async (payloadId, noteId) => {
         await TrailNotesService.remove(payloadId, noteId);
       },
+      // Sign-off persistence is not yet implemented in the Electron host —
+      // the multi-reviewer workflow targets the web version. These stubs
+      // satisfy the action contract so the panel mounts; the LGTM button
+      // animates optimistically but the stamp won't persist across reloads.
+      createTrailSignOff: async () => null,
+      deleteTrailSignOff: async () => {},
     }),
     [repositoryPath, events],
   );

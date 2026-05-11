@@ -2642,6 +2642,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     const matches = (nextRepo: string | undefined | null): boolean =>
       !nextRepo || nextRepo === myRepo;
 
+    // Catch the race where the route fired PAYLOAD_SET while opening this
+    // window — the IPC message arrived before this subscriber existed, so
+    // ask main for the active trail and open the tab if one is present.
+    let cancelled = false;
+    TrailService.getCurrent(myRepo ?? undefined).then((current) => {
+      if (cancelled || !current) return;
+      openFileCityTrailTab();
+    });
+
     const offIpc = TrailService.onPayloadSet(({ repositoryPath: nextRepo }) => {
       if (!matches(nextRepo)) return;
       openFileCityTrailTab();
@@ -2656,6 +2665,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     );
 
     return () => {
+      cancelled = true;
       offIpc();
       offRenderer();
     };
