@@ -280,6 +280,61 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
             padding: '24px',
           }}
         >
+          {/* Plain-language intro — git's global config is the identity */}
+          {/* and defaults git uses on this machine across every repository. */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 12,
+              padding: '12px 14px',
+              marginBottom: 20,
+              borderRadius: 8,
+              backgroundColor: theme.colors.backgroundSecondary,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <Info
+              size={16}
+              color={theme.colors.primary}
+              style={{ flexShrink: 0, marginTop: 2 }}
+            />
+            <div
+              style={{
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textSecondary,
+                lineHeight: 1.5,
+              }}
+            >
+              Git&apos;s <strong style={{ color: theme.colors.text }}>global
+              configuration</strong> lives in{' '}
+              <code
+                style={{
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: '0.92em',
+                  color: theme.colors.text,
+                }}
+              >
+                ~/.gitconfig
+              </code>{' '}
+              and applies to every repository on this machine. Your{' '}
+              <strong style={{ color: theme.colors.text }}>name</strong> and{' '}
+              <strong style={{ color: theme.colors.text }}>email</strong> are
+              what git stamps on every commit you author — anyone reviewing the
+              history will see them. You can change them here at any time;
+              edits run{' '}
+              <code
+                style={{
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: '0.92em',
+                  color: theme.colors.text,
+                }}
+              >
+                git config --global
+              </code>{' '}
+              under the hood.
+            </div>
+          </div>
+
           {isLoading && (
             <div
               style={{

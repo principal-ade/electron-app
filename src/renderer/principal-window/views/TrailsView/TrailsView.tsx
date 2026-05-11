@@ -7,7 +7,19 @@ import React, {
   useState,
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitBranch, X, Folder } from 'lucide-react';
+import {
+  GitBranch,
+  X,
+  Folder,
+  PanelLeftOpen,
+  PanelLeftClose,
+  Trash2,
+  Footprints,
+  Lightbulb,
+  Copy,
+  Check,
+  ExternalLink,
+} from 'lucide-react';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import {
   TabbedTerminalPanel,
@@ -21,6 +33,42 @@ import {
   useTerminalActivity,
 } from '../../../contexts/TerminalContext';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import { GitService } from '../../../main-process-api/GitService';
+import { GithubService } from '../../../main-process-api/GithubService';
+import { SkillLockService } from '../../../main-process-api/SkillLockService';
+import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
+import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
+
+/** Constants for the file-city-trail skill bundled in principal-ai/skills. */
+const TRAIL_SKILL_NAME = 'file-city-trail';
+const TRAIL_SKILL_REPO_OWNER = 'principal-ai';
+const TRAIL_SKILL_REPO_NAME = 'skills';
+const TRAIL_SKILL_BRANCH = 'main';
+const TRAIL_SKILL_GITHUB_URL = `https://github.com/${TRAIL_SKILL_REPO_OWNER}/${TRAIL_SKILL_REPO_NAME}`;
+const TRAIL_SKILL_DOCS_URL = `${TRAIL_SKILL_GITHUB_URL}/blob/${TRAIL_SKILL_BRANCH}/${TRAIL_SKILL_NAME}/SKILL.md`;
+
+/**
+ * Starter prompts shown on the post-install "Trail Prompt Ideas" screen.
+ * Each is prefixed at render time with "Use the file-city-trail skill to …"
+ * so users can paste them straight into their agent's terminal.
+ */
+const TRAIL_PROMPT_IDEAS: Array<{ label: string; prompt: string }> = [
+  {
+    label: 'Explain something',
+    prompt:
+      'Use the file-city-trail skill to explain how <feature or system> works in this codebase.',
+  },
+  {
+    label: 'Request lifecycle',
+    prompt:
+      'Use the file-city-trail skill to map the lifecycle of a typical API request from entry point to response.',
+  },
+  {
+    label: 'Investigate a bug',
+    prompt:
+      'Use the file-city-trail skill to investigate where <bug or symptom> is coming from in this codebase.',
+  },
+];
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 /**
@@ -198,6 +246,230 @@ const TrailsViewInner: React.FC<{
   // Whether the search dropdown is visible (focused or hovered)
   const [searchOpen, setSearchOpen] = useState(false);
 
+  // Whether the left-side project registry panel is open
+  const [registryOpen, setRegistryOpen] = useState(false);
+
+  // Auto-close the registry panel when the list becomes empty (e.g. after
+  // Clear all) — nothing left to browse.
+  useEffect(() => {
+    if (!reposLoading && repositories.length === 0 && registryOpen) {
+      setRegistryOpen(false);
+    }
+  }, [reposLoading, repositories.length, registryOpen]);
+
+  // Path of the row currently hovered in the registry panel — used to
+  // reveal the per-row remove button only on the hovered row.
+  const [hoveredRowPath, setHoveredRowPath] = useState<string | null>(null);
+
+  // Project pending a remove-from-registry confirmation. Null when the
+  // confirm modal is closed.
+  const [removeConfirm, setRemoveConfirm] = useState<AlexandriaEntry | null>(
+    null,
+  );
+  const [removeBusy, setRemoveBusy] = useState(false);
+
+  // Clear-all-registry confirmation modal state.
+  const [clearAllConfirm, setClearAllConfirm] = useState(false);
+  const [clearAllBusy, setClearAllBusy] = useState(false);
+
+  const handleClearAll = useCallback(async () => {
+    setClearAllBusy(true);
+    try {
+      await AlexandriaService.clearAllData();
+      setRepositories([]);
+      onClearProject();
+      setClearAllConfirm(false);
+    } catch (error) {
+      console.error('[TrailsView] Failed to clear registry:', error);
+    } finally {
+      setClearAllBusy(false);
+    }
+  }, [onClearProject]);
+
+  // Global git user.name, used to personalize the welcome view heading.
+  // Null until loaded or if no global git identity is configured.
+  const [gitUserName, setGitUserName] = useState<string | null>(null);
+  const [gitConfigOpen, setGitConfigOpen] = useState(false);
+
+  const loadGitUserName = useCallback(async () => {
+    try {
+      const result = await GitService.execCommand(
+        process.env.HOME || '/',
+        ['config', '--global', 'user.name'],
+      );
+      setGitUserName(result.stdout.trim() || null);
+    } catch {
+      // No global git identity — leave gitUserName null and fall back.
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadGitUserName();
+  }, [loadGitUserName]);
+
+
+  // file-city-trail skill installation state.
+  // `null` while we're still loading the skill lock file.
+  const [skillInstalled, setSkillInstalled] = useState<boolean | null>(null);
+  const [installingSkill, setInstallingSkill] = useState(false);
+  const [skillInstallError, setSkillInstallError] = useState<string | null>(
+    null,
+  );
+
+  // Which trail-prompt-idea card was most recently copied (resets after a
+  // short delay so the check icon goes back to the copy icon).
+  const [copiedPromptIndex, setCopiedPromptIndex] = useState<number | null>(
+    null,
+  );
+
+  const handleCopyPrompt = useCallback(
+    async (prompt: string, index: number) => {
+      try {
+        await navigator.clipboard.writeText(prompt);
+        setCopiedPromptIndex(index);
+        window.setTimeout(
+          () =>
+            setCopiedPromptIndex((current) =>
+              current === index ? null : current,
+            ),
+          1500,
+        );
+      } catch (error) {
+        console.error('[TrailsView] Failed to copy prompt:', error);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const installed = await SkillLockService.isSkillInstalled(
+          TRAIL_SKILL_NAME,
+        );
+        if (!cancelled) setSkillInstalled(installed);
+      } catch (error) {
+        console.error('[TrailsView] Failed to load skill state:', error);
+        if (!cancelled) setSkillInstalled(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Keep skillInstalled state in sync with global install/uninstall events
+  // (e.g. user installs the skill from SkillBrowserView in another tab).
+  useEffect(() => {
+    const offInstalled = SkillLockService.onSkillInstalled((payload) => {
+      if (payload.skillName === TRAIL_SKILL_NAME) {
+        setSkillInstalled(true);
+      }
+    });
+    const offUninstalled = SkillLockService.onSkillUninstalled((payload) => {
+      if (payload.skillName === TRAIL_SKILL_NAME) {
+        setSkillInstalled(false);
+      }
+    });
+    return () => {
+      offInstalled();
+      offUninstalled();
+    };
+  }, []);
+
+  // Install file-city-trail into both the Claude-specific and universal
+  // (.agents) skill directories. Cursor/Windsurf/etc. now also read from
+  // .agents/skills, so installing to those two locations covers everyone.
+  const handleInstallSkill = useCallback(async () => {
+    setInstallingSkill(true);
+    setSkillInstallError(null);
+    try {
+      const treeResult = await GithubService.getTree(
+        TRAIL_SKILL_REPO_OWNER,
+        TRAIL_SKILL_REPO_NAME,
+        TRAIL_SKILL_BRANCH,
+      );
+      if (!treeResult?.success || !treeResult.data) {
+        throw new Error('Could not fetch skills repository tree.');
+      }
+
+      const tree = treeResult.data.tree;
+      const prefix = `${TRAIL_SKILL_NAME}/`;
+      const fileList = tree
+        .filter((item) => item.type === 'blob' && item.path.startsWith(prefix))
+        .map((item) => item.path);
+      if (fileList.length === 0) {
+        throw new Error(
+          `Skill folder "${TRAIL_SKILL_NAME}" not found in the repo.`,
+        );
+      }
+      const folderEntry = tree.find(
+        (item) => item.type === 'tree' && item.path === TRAIL_SKILL_NAME,
+      );
+
+      const destinations = [
+        DIRECTORY_ID_TO_DESTINATION['claude-specific'],
+        DIRECTORY_ID_TO_DESTINATION['agent-universal'],
+      ] as const;
+
+      const failures: string[] = [];
+      for (const destination of destinations) {
+        const result = await GithubService.installSkill({
+          githubUrl: TRAIL_SKILL_GITHUB_URL,
+          skillPath: TRAIL_SKILL_NAME,
+          destination,
+          skillName: TRAIL_SKILL_NAME,
+          fileList,
+          skillTreeSha: folderEntry?.sha,
+        });
+        if (!result.success) {
+          failures.push(`${destination}: ${result.error || 'failed'}`);
+        }
+      }
+
+      if (failures.length === destinations.length) {
+        throw new Error(failures.join('; '));
+      }
+      // At least one succeeded — advance the flow. The event subscription
+      // will also flip skillInstalled, but we set it here for immediacy.
+      setSkillInstalled(true);
+      if (failures.length > 0) {
+        setSkillInstallError(`Partial install: ${failures.join('; ')}`);
+      }
+    } catch (error) {
+      console.error('[TrailsView] Skill install failed:', error);
+      setSkillInstallError(
+        error instanceof Error ? error.message : 'Install failed.',
+      );
+    } finally {
+      setInstallingSkill(false);
+    }
+  }, []);
+
+  // Remove a project from the Alexandria registry without touching the
+  // folder on disk. If the removed project is currently selected, clear
+  // the selection.
+  const handleRemoveFromRegistry = useCallback(
+    async (entry: AlexandriaEntry) => {
+      const path = String(entry.path);
+      setRemoveBusy(true);
+      try {
+        await AlexandriaService.removeRepository(path, false);
+        setRepositories((prev) => prev.filter((r) => r.path !== entry.path));
+        if (selectedProject && selectedProject.path === entry.path) {
+          onClearProject();
+        }
+        setRemoveConfirm(null);
+      } catch (error) {
+        console.error('[TrailsView] Failed to remove from registry:', error);
+      } finally {
+        setRemoveBusy(false);
+      }
+    },
+    [selectedProject, onClearProject],
+  );
+
   // Load local Alexandria repositories
   useEffect(() => {
     let cancelled = false;
@@ -280,6 +552,19 @@ const TrailsViewInner: React.FC<{
 
   const showingRecents = query.trim().length === 0;
 
+  // Full registry list for the left side panel — sorted by most recently
+  // opened, then alphabetically by display name as a tiebreaker.
+  const allRepos = useMemo(() => {
+    const displayName = (r: AlexandriaEntry) =>
+      r.github ? `${r.github.owner}/${r.github.name}` : r.name;
+    return [...repositories].sort((a, b) => {
+      const aT = a.lastOpenedAt ? Date.parse(a.lastOpenedAt) : 0;
+      const bT = b.lastOpenedAt ? Date.parse(b.lastOpenedAt) : 0;
+      if (aT !== bT) return bT - aT;
+      return displayName(a).localeCompare(displayName(b));
+    });
+  }, [repositories]);
+
   // When user clicks an entry: open a terminal tab at the project path
   // (or focus the existing one), then dismiss the search overlay.
   const handleSelect = useCallback(
@@ -306,6 +591,79 @@ const TrailsViewInner: React.FC<{
   );
 
   const overlayBg = theme.colors.background;
+
+  // Shared welcome header rendered at the top of every onboarding step.
+  // "Welcome" sits above the git user.name (clickable to open the global git
+  // config modal). Falls back to "to Code Trails" when no identity is set.
+  const welcomeHeader = (
+    <div style={{ textAlign: 'center', maxWidth: 640 }}>
+      <div
+        style={{
+          color: theme.colors.text,
+          fontFamily: theme.fonts.heading ?? theme.fonts.body,
+          fontSize: 'clamp(40px, 6vw, 72px)',
+          fontWeight: theme.fontWeights.bold,
+          letterSpacing: '-0.02em',
+          lineHeight: 1.05,
+          marginBottom: 12,
+        }}
+      >
+        <div>
+          Welcome{' '}
+          <button
+            type="button"
+            onClick={() => setGitConfigOpen(true)}
+            title={
+              gitUserName
+                ? "This name comes from your global git config (user.name). Click to view or edit."
+                : "No global git identity is configured. Click to set one."
+            }
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              margin: 0,
+              color: theme.colors.primary,
+              font: 'inherit',
+              fontStyle: gitUserName ? 'normal' : 'italic',
+              letterSpacing: 'inherit',
+              lineHeight: 'inherit',
+              cursor: 'pointer',
+              transition: 'color 150ms ease, opacity 150ms ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.85';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.opacity = '0.85';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            {gitUserName ?? 'stranger'}
+          </button>
+        </div>
+        <div>to</div>
+        <div style={{ color: theme.colors.primary }}>
+          Code <span style={{ color: theme.colors.text }}>Trails</span>
+        </div>
+      </div>
+      <div
+        style={{
+          color: theme.colors.textSecondary,
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[2],
+          lineHeight: 1.4,
+        }}
+      >
+        A new way to collaborate on software
+      </div>
+    </div>
+  );
 
   return (
     <div
@@ -364,8 +722,275 @@ const TrailsViewInner: React.FC<{
         </button>
       )}
 
+      {/* Skill install step — shown before the project-add step when the */}
+      {/* file-city-trail skill isn't installed yet. */}
+      {!selectedProject && skillInstalled === false && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            backgroundColor: overlayBg,
+            padding: 32,
+            overflowY: 'auto',
+          }}
+        >
+          <div style={{ flex: '0 0 auto', marginTop: '14vh' }}>{welcomeHeader}</div>
+
+          <div
+            style={{
+              flex: '0 0 auto',
+              marginTop: 40,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 24,
+              width: '100%',
+            }}
+          >
+          <div
+            style={{
+              display: 'flex',
+              gap: 16,
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+            }}
+          >
+            <button
+              onClick={() => void handleInstallSkill()}
+              disabled={installingSkill}
+              title="Installs the file-city-trail skill to ~/.claude/skills and ~/.agents/skills. Cursor and Windsurf also read skills from ~/.agents/skills."
+              style={{
+                width: 360,
+                padding: 36,
+                borderRadius: 12,
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.backgroundSecondary,
+                color: theme.colors.text,
+                fontFamily: theme.fonts.body,
+                cursor: installingSkill ? 'default' : 'pointer',
+                opacity: installingSkill ? 0.7 : 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 10,
+                textAlign: 'center',
+                transition: 'border-color 150ms ease',
+              }}
+              onMouseEnter={(e) => {
+                if (installingSkill) return;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.border;
+              }}
+            >
+              <Footprints size={36} color={theme.colors.primary} />
+              <div
+                style={{
+                  fontSize: theme.fontSizes[3],
+                  fontWeight: theme.fontWeights.semibold,
+                }}
+              >
+                {installingSkill ? 'Installing…' : 'Install Trail Skill'}
+              </div>
+            </button>
+          </div>
+
+          {skillInstallError && (
+            <div
+              style={{
+                color: theme.colors.error ?? theme.colors.primary,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
+                maxWidth: 520,
+                textAlign: 'center',
+              }}
+            >
+              {skillInstallError}
+            </div>
+          )}
+          </div>
+        </div>
+      )}
+
+      {/* Trail prompt ideas — shown after the skill is installed when the */}
+      {/* registry is empty. Lets users grab a starter prompt to paste into */}
+      {/* their agent's terminal. */}
+      {!selectedProject &&
+        skillInstalled === true &&
+        !reposLoading &&
+        repositories.length === 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              backgroundColor: overlayBg,
+              padding: 32,
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ flex: '0 0 auto', marginTop: '14vh' }}>
+              {welcomeHeader}
+            </div>
+
+            <div
+              style={{
+                flex: '0 0 auto',
+                marginTop: 40,
+                width: '100%',
+                maxWidth: 960,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 16,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.heading ?? theme.fonts.body,
+                  fontSize: theme.fontSizes[3],
+                  fontWeight: theme.fontWeights.semibold,
+                }}
+              >
+                <Lightbulb size={20} color={theme.colors.primary} />
+                Trail Prompt Ideas
+              </div>
+              <div
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  lineHeight: 1.5,
+                  textAlign: 'center',
+                }}
+              >
+                Pick one of these starters and paste it into your agent's
+                terminal to map a trail.
+              </div>
+
+              <div
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                  justifyContent: 'center',
+                }}
+              >
+                {TRAIL_PROMPT_IDEAS.map((idea, i) => {
+                  const isCopied = copiedPromptIndex === i;
+                  return (
+                    <div
+                      key={idea.label}
+                      style={{
+                        position: 'relative',
+                        flex: '1 1 260px',
+                        minWidth: 220,
+                        maxWidth: 300,
+                        padding: '14px 16px 48px 16px',
+                        borderRadius: 10,
+                        border: `1px solid ${theme.colors.border}`,
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: theme.fonts.body,
+                          fontSize: theme.fontSizes[0],
+                          fontWeight: theme.fontWeights.semibold,
+                          color: theme.colors.textSecondary,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {idea.label}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: theme.fonts.monospace,
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.text,
+                          lineHeight: 1.5,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {idea.prompt}
+                      </div>
+                      <button
+                        onClick={() => void handleCopyPrompt(idea.prompt, i)}
+                        title={isCopied ? 'Copied' : 'Copy prompt'}
+                        style={{
+                          position: 'absolute',
+                          bottom: 10,
+                          right: 10,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 32,
+                          height: 32,
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: 6,
+                          background: theme.colors.background,
+                          color: isCopied
+                            ? theme.colors.primary
+                            : theme.colors.textSecondary,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <a
+                href={TRAIL_SKILL_DOCS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color: theme.colors.primary,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  textDecoration: 'none',
+                }}
+              >
+                Read the full SKILL.md
+                <ExternalLink size={14} />
+              </a>
+            </div>
+          </div>
+        )}
+
+
       {/* Search overlay (covers panel until a project is picked) */}
-      {!selectedProject && (
+      {!selectedProject &&
+        skillInstalled === true &&
+        !(!reposLoading && repositories.length === 0) && (
         <div
           style={{
             position: 'absolute',
@@ -696,6 +1321,464 @@ const TrailsViewInner: React.FC<{
             </div>
           </div>
         </div>
+      )}
+
+      {/* Left side panel: full project registry. Slides in from the left. */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: 0,
+          width: 320,
+          zIndex: 20,
+          backgroundColor: theme.colors.backgroundSecondary,
+          borderRight: `1px solid ${theme.colors.border}`,
+          boxShadow: registryOpen ? '4px 0 16px rgba(0,0,0,0.25)' : 'none',
+          transform: registryOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 220ms ease-out',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 16px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <div
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.fonts.heading ?? theme.fonts.body,
+              fontWeight: theme.fontWeights.semibold,
+              fontSize: theme.fontSizes[2],
+            }}
+          >
+            Projects
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              onClick={() => setClearAllConfirm(true)}
+              disabled={repositories.length === 0}
+              title="Clear all projects from this list (does not delete folders)"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 4,
+                border: 'none',
+                background: 'transparent',
+                color: theme.colors.textSecondary,
+                cursor: repositories.length === 0 ? 'default' : 'pointer',
+                opacity: repositories.length === 0 ? 0.4 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (repositories.length > 0) {
+                  e.currentTarget.style.color = theme.colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <Trash2 size={16} />
+            </button>
+            <button
+              onClick={() => setRegistryOpen(false)}
+              title="Close"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 4,
+                border: 'none',
+                background: 'transparent',
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+              }}
+            >
+              <PanelLeftClose size={18} />
+            </button>
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {reposLoading ? (
+            <div
+              style={{
+                padding: 16,
+                color: theme.colors.textSecondary,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
+              }}
+            >
+              Loading projects...
+            </div>
+          ) : allRepos.length === 0 ? (
+            <div
+              style={{
+                padding: 16,
+                color: theme.colors.textSecondary,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
+              }}
+            >
+              No projects in registry.
+            </div>
+          ) : (
+            allRepos.map((entry) => {
+              const isSelected =
+                selectedProject &&
+                selectedProject.path === entry.path &&
+                selectedProject.name === entry.name;
+              const rowKey = String(entry.path);
+              const isHovered = hoveredRowPath === rowKey;
+              return (
+                <div
+                  key={`${entry.name}-${entry.path}`}
+                  onMouseEnter={() => setHoveredRowPath(rowKey)}
+                  onMouseLeave={() =>
+                    setHoveredRowPath((p) => (p === rowKey ? null : p))
+                  }
+                  style={{
+                    position: 'relative',
+                    borderBottom: `1px solid ${theme.colors.border}`,
+                    background: isSelected
+                      ? (theme.colors.backgroundTertiary ?? theme.colors.border)
+                      : isHovered
+                      ? (theme.colors.backgroundTertiary ?? theme.colors.border)
+                      : 'transparent',
+                  }}
+                >
+                  <button
+                    onClick={() => handleSelect(entry)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      width: '100%',
+                      padding: '10px 40px 10px 14px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: theme.colors.text,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontFamily: theme.fonts.body,
+                    }}
+                  >
+                    <Folder
+                      size={16}
+                      color={theme.colors.textSecondary}
+                      style={{ flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          fontWeight: theme.fontWeights.semibold,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {entry.github
+                          ? `${entry.github.owner}/${entry.github.name}`
+                          : entry.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          color: theme.colors.textSecondary,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {String(entry.path)}
+                      </div>
+                    </div>
+                  </button>
+                  {isHovered && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRemoveConfirm(entry);
+                      }}
+                      title="Remove from registry (does not delete folder)"
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        right: 8,
+                        transform: 'translateY(-50%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 26,
+                        height: 26,
+                        border: 'none',
+                        borderRadius: 6,
+                        background: 'transparent',
+                        color: theme.colors.textSecondary,
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = theme.colors.text;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = theme.colors.textSecondary;
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Confirm modal for remove-from-registry */}
+      {removeConfirm && (
+        <div
+          onClick={() => {
+            if (!removeBusy) setRemoveConfirm(null);
+          }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 30,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(440px, 90%)',
+              padding: 20,
+              borderRadius: 12,
+              backgroundColor: theme.colors.backgroundSecondary,
+              border: `1px solid ${theme.colors.border}`,
+              boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+            }}
+          >
+            <div
+              style={{
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.semibold,
+                marginBottom: 8,
+              }}
+            >
+              Remove from list?
+            </div>
+            <div
+              style={{
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textSecondary,
+                lineHeight: 1.4,
+                marginBottom: 16,
+              }}
+            >
+              This does not delete the project — it just removes{' '}
+              <span style={{ color: theme.colors.text }}>
+                {removeConfirm.github
+                  ? `${removeConfirm.github.owner}/${removeConfirm.github.name}`
+                  : removeConfirm.name}
+              </span>{' '}
+              from this list.
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 8,
+              }}
+            >
+              <button
+                onClick={() => setRemoveConfirm(null)}
+                disabled={removeBusy}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  border: `1px solid ${theme.colors.border}`,
+                  background: 'transparent',
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  cursor: removeBusy ? 'default' : 'pointer',
+                  opacity: removeBusy ? 0.6 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleRemoveFromRegistry(removeConfirm)}
+                disabled={removeBusy}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: theme.colors.primary,
+                  color: theme.colors.background,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: theme.fontWeights.semibold,
+                  cursor: removeBusy ? 'default' : 'pointer',
+                  opacity: removeBusy ? 0.6 : 1,
+                }}
+              >
+                {removeBusy ? 'Removing…' : 'Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global git config modal — opened by clicking the welcome name. */}
+      <GitGlobalConfigModal
+        isOpen={gitConfigOpen}
+        onClose={() => {
+          setGitConfigOpen(false);
+          // Re-read user.name in case the user edited it in the modal.
+          void loadGitUserName();
+        }}
+      />
+
+      {/* Confirm modal for clear-all-registry */}
+      {clearAllConfirm && (
+        <div
+          onClick={() => {
+            if (!clearAllBusy) setClearAllConfirm(false);
+          }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 30,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(440px, 90%)',
+              padding: 20,
+              borderRadius: 12,
+              backgroundColor: theme.colors.backgroundSecondary,
+              border: `1px solid ${theme.colors.border}`,
+              boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+            }}
+          >
+            <div
+              style={{
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.semibold,
+                marginBottom: 8,
+              }}
+            >
+              Clear the project list?
+            </div>
+            <div
+              style={{
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textSecondary,
+                lineHeight: 1.4,
+                marginBottom: 16,
+              }}
+            >
+              Removes all{' '}
+              <span style={{ color: theme.colors.text }}>
+                {repositories.length}
+              </span>{' '}
+              project{repositories.length === 1 ? '' : 's'} and any saved
+              workspaces from the registry. Your folders on disk are not
+              deleted; recently-opened history will be lost.
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 8,
+              }}
+            >
+              <button
+                onClick={() => setClearAllConfirm(false)}
+                disabled={clearAllBusy}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  border: `1px solid ${theme.colors.border}`,
+                  background: 'transparent',
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  cursor: clearAllBusy ? 'default' : 'pointer',
+                  opacity: clearAllBusy ? 0.6 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleClearAll()}
+                disabled={clearAllBusy}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: theme.colors.primary,
+                  color: theme.colors.background,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: theme.fontWeights.semibold,
+                  cursor: clearAllBusy ? 'default' : 'pointer',
+                  opacity: clearAllBusy ? 0.6 : 1,
+                }}
+              >
+                {clearAllBusy ? 'Clearing…' : 'Clear list'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle button for the registry panel — sits on the left edge. */}
+      {/* Hidden when the registry is empty: nothing to browse, and the */}
+      {/* welcome view is already the right affordance. */}
+      {!registryOpen && repositories.length > 0 && (
+        <button
+          onClick={() => setRegistryOpen(true)}
+          title="Show projects"
+          style={{
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            zIndex: 21,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 32,
+            height: 32,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 8,
+            backgroundColor: theme.colors.backgroundSecondary,
+            color: theme.colors.text,
+            cursor: 'pointer',
+          }}
+        >
+          <PanelLeftOpen size={18} />
+        </button>
       )}
     </div>
   );
