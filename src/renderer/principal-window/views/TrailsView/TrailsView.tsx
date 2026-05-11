@@ -41,6 +41,8 @@ import { GithubService } from '../../../main-process-api/GithubService';
 import { SkillLockService } from '../../../main-process-api/SkillLockService';
 import { ShellService } from '../../../main-process-api/ShellService';
 import { WindowService } from '../../../main-process-api/WindowService';
+import { TrailLibraryService } from '../../../services/TrailLibraryService';
+import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 
@@ -75,6 +77,32 @@ const TRAIL_PROMPT_IDEAS: Array<{ label: string; prompt: string }> = [
   },
 ];
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+
+/** Last path segment of a repo path, used for the recent-trails feed. */
+const trailRepoLabel = (repositoryPath: string | undefined): string => {
+  if (!repositoryPath) return 'No repo';
+  const trimmed = repositoryPath.replace(/[\\/]+$/, '');
+  const idx = trimmed.search(/[\\/](?!.*[\\/])/);
+  return idx >= 0 ? trimmed.slice(idx + 1) : trimmed;
+};
+
+/** Short relative time ("just now", "2h ago", "3d ago") for trail rows. */
+const formatRelativeTime = (iso: string): string => {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return '';
+  const deltaSec = Math.max(0, (Date.now() - t) / 1000);
+  if (deltaSec < 60) return 'just now';
+  const min = Math.floor(deltaSec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day}d ago`;
+  const mo = Math.floor(day / 30);
+  if (mo < 12) return `${mo}mo ago`;
+  const yr = Math.floor(day / 365);
+  return `${yr}y ago`;
+};
 
 /**
  * Single footprint glyph — matches the SVG used on the web-ade home page.
@@ -253,6 +281,13 @@ const TrailsViewInner: React.FC<{
   // Whether the project-search overlay is shown. When projects exist, the
   // welcome view is the default; the user opts in via the Open Project button.
   const [showSearch, setShowSearch] = useState(false);
+
+  // Search mode for the overlay input. 'projects' filters Alexandria
+  // entries; 'trails' filters the local trail library. The toggle above
+  // the input is only shown when at least one trail exists.
+  const [searchMode, setSearchMode] = useState<'projects' | 'trails'>(
+    'projects',
+  );
 
   // Whether the left-side project registry panel is open
   const [registryOpen, setRegistryOpen] = useState(false);
@@ -556,6 +591,40 @@ const TrailsViewInner: React.FC<{
     };
   }, []);
 
+  // Recent trails feed (local only, across all repos). Drives the
+  // welcome-screen routing: with at least one trail, the search overlay +
+  // recent feed take over from the trail-prompt-ideas screen.
+  const [recentTrails, setRecentTrails] = useState<TrailIndexEntry[]>([]);
+  const [recentTrailsLoading, setRecentTrailsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const result = await TrailLibraryService.list();
+        if (cancelled) return;
+        const sorted = [...result.entries].sort(
+          (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt),
+        );
+        setRecentTrails(sorted);
+      } catch (error) {
+        console.error('[TrailsView] Failed to load recent trails:', error);
+      } finally {
+        if (!cancelled) setRecentTrailsLoading(false);
+      }
+    };
+    void load();
+    const off = TrailLibraryService.onLibraryChanged(() => {
+      void load();
+    });
+    return () => {
+      cancelled = true;
+      off();
+    };
+  }, []);
+
+  const hasRecentTrails = recentTrails.length > 0;
+
   // Convert terminal activities to workingStates record
   const workingStates = useMemo(() => {
     const states: Record<string, TerminalWorkingState> = {};
@@ -620,6 +689,20 @@ const TrailsViewInner: React.FC<{
 
   const showingRecents = query.trim().length === 0;
 
+  // Trail-mode filter mirrors the project-mode one: full-text match on
+  // title / summary / repo label when typing, otherwise the full recent
+  // list (already sorted by updatedAt at load time).
+  const visibleTrails = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return recentTrails;
+    return recentTrails.filter((t) => {
+      const title = (t.title ?? '').toLowerCase();
+      const summary = (t.summaryPreview ?? '').toLowerCase();
+      const repo = trailRepoLabel(t.repositoryPath).toLowerCase();
+      return title.includes(q) || summary.includes(q) || repo.includes(q);
+    });
+  }, [recentTrails, query]);
+
   // Full registry list for the left side panel — sorted by most recently
   // opened, then alphabetically by display name as a tiebreaker.
   const allRepos = useMemo(() => {
@@ -636,10 +719,13 @@ const TrailsViewInner: React.FC<{
   // When user clicks an entry: open the project in its own dev workspace
   // window. The search overlay closes itself via showSearch reset.
   const handleSelect = useCallback(
-    async (entry: AlexandriaEntry) => {
+    async (entry: AlexandriaEntry, openTrailId?: string) => {
       if (!entry?.path) return;
       try {
-        await WindowService.openDevWorkspace({ alexandriaEntry: entry });
+        await WindowService.openDevWorkspace({
+          alexandriaEntry: entry,
+          openTrailId,
+        });
         setShowSearch(false);
       } catch (error) {
         console.error('[TrailsView] Failed to open project window:', error);
@@ -648,11 +734,30 @@ const TrailsViewInner: React.FC<{
     [],
   );
 
+  // Click handler for the recent-trails feed: resolve repo path → entry,
+  // then open the dev workspace window with the trail preselected. Falls
+  // back to a no-op if we can't locate the owning project.
+  const handleOpenRecentTrail = useCallback(
+    async (trail: TrailIndexEntry) => {
+      if (!trail.repositoryPath) return;
+      const entry = repositories.find((r) => r.path === trail.repositoryPath);
+      if (!entry) {
+        console.warn(
+          '[TrailsView] Recent trail repo not in Alexandria registry:',
+          trail.repositoryPath,
+        );
+        return;
+      }
+      await handleSelect(entry, trail.id);
+    },
+    [repositories, handleSelect],
+  );
+
   const overlayBg = theme.colors.background;
 
   // Shared welcome header rendered at the top of every onboarding step.
   // "Welcome" sits above the git user.name (clickable to open the global git
-  // config modal). Falls back to "to Code Trails" when no identity is set.
+  // config modal). Falls back to "to Principal AI" when no identity is set.
   const welcomeHeader = (
     <div style={{ textAlign: 'center', maxWidth: 640 }}>
       <div
@@ -706,8 +811,8 @@ const TrailsViewInner: React.FC<{
           </button>
         </div>
         <div>to</div>
-        <div style={{ color: theme.colors.primary }}>
-          Code <span style={{ color: theme.colors.text }}>Trails</span>
+        <div style={{ color: theme.colors.text }}>
+          Principal <span style={{ color: theme.colors.primary }}>AI</span>
         </div>
       </div>
     </div>
@@ -892,11 +997,13 @@ const TrailsViewInner: React.FC<{
       )}
 
       {/* Trail prompt ideas — shown after the skill is installed when the */}
-      {/* registry is empty. Lets users grab a starter prompt to paste into */}
-      {/* their agent's terminal. */}
+      {/* user has never created a trail. Once any trail exists, the search */}
+      {/* overlay + recent feed take over (see below). */}
       {!selectedProject &&
         skillInstalled === true &&
         !reposLoading &&
+        !recentTrailsLoading &&
+        !hasRecentTrails &&
         !showSearch && (
           <div
             style={{
@@ -1194,10 +1301,13 @@ const TrailsViewInner: React.FC<{
         )}
 
 
-      {/* Search overlay (covers panel until a project is picked) */}
+      {/* Search overlay (covers panel until a project is picked). Becomes */}
+      {/* the default landing screen once the user has at least one local */}
+      {/* trail — alongside the recent-trails feed on the right. */}
       {!selectedProject &&
         skillInstalled === true &&
-        showSearch && (
+        !recentTrailsLoading &&
+        (showSearch || hasRecentTrails) && (
         <div
           style={{
             position: 'absolute',
@@ -1209,32 +1319,36 @@ const TrailsViewInner: React.FC<{
             overflow: 'hidden',
           }}
         >
-          {/* Back to welcome — returns to the Create-a-Trail screen. */}
-          <button
-            type="button"
-            onClick={() => setShowSearch(false)}
-            title="Back"
-            style={{
-              position: 'absolute',
-              top: 12,
-              right: 12,
-              zIndex: 22,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '6px 10px',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: 8,
-              backgroundColor: theme.colors.backgroundSecondary,
-              color: theme.colors.text,
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[1],
-              cursor: 'pointer',
-            }}
-          >
-            <ArrowLeft size={14} />
-            Back
-          </button>
+          {/* Back to welcome — returns to the Create-a-Trail screen. Only */}
+          {/* shown when the overlay was entered explicitly (showSearch). */}
+          {/* When recent trails drove us here, there's nothing behind it. */}
+          {showSearch && (
+            <button
+              type="button"
+              onClick={() => setShowSearch(false)}
+              title="Back"
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                zIndex: 22,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 10px',
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: 8,
+                backgroundColor: theme.colors.backgroundSecondary,
+                color: theme.colors.text,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
+                cursor: 'pointer',
+              }}
+            >
+              <ArrowLeft size={14} />
+              Back
+            </button>
+          )}
           {/* Footprint trails — span the entire overlay, behind all content. */}
           {/* When the user focuses the search input, the trails fade out and */}
           {/* their animations pause until the input is blurred. */}
@@ -1349,7 +1463,7 @@ const TrailsViewInner: React.FC<{
           >
             <div
               style={{
-                color: theme.colors.primary,
+                color: theme.colors.text,
                 fontFamily: theme.fonts.heading ?? theme.fonts.body,
                 fontSize: 'clamp(48px, 8vw, 96px)',
                 fontWeight: theme.fontWeights.bold,
@@ -1357,7 +1471,7 @@ const TrailsViewInner: React.FC<{
                 lineHeight: 1,
               }}
             >
-              Code Trails
+              Principal <span style={{ color: theme.colors.primary }}>AI</span>
             </div>
           </div>
 
@@ -1383,6 +1497,57 @@ const TrailsViewInner: React.FC<{
                 gap: 12,
               }}
             >
+              {/* Mode toggle — only shown when at least one trail exists. */}
+              {/* Swaps the input + dropdown between project search and */}
+              {/* trail search. Clearing the query on switch keeps the */}
+              {/* recents-vs-filter logic predictable in each mode. */}
+              {hasRecentTrails && (
+                <div
+                  style={{
+                    alignSelf: 'center',
+                    display: 'inline-flex',
+                    padding: 4,
+                    borderRadius: 999,
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                  }}
+                >
+                  {(['projects', 'trails'] as const).map((mode) => {
+                    const active = searchMode === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => {
+                          if (active) return;
+                          setSearchMode(mode);
+                          setQuery('');
+                        }}
+                        style={{
+                          padding: '6px 18px',
+                          borderRadius: 999,
+                          border: 'none',
+                          background: active
+                            ? theme.colors.primary
+                            : 'transparent',
+                          color: active
+                            ? theme.colors.background
+                            : theme.colors.textSecondary,
+                          fontFamily: theme.fonts.body,
+                          fontSize: theme.fontSizes[1],
+                          fontWeight: theme.fontWeights.semibold,
+                          cursor: active ? 'default' : 'pointer',
+                          transition:
+                            'background-color 120ms ease, color 120ms ease',
+                        }}
+                      >
+                        {mode === 'projects' ? 'Projects' : 'Trails'}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Search input */}
               <div
                 style={{
@@ -1396,7 +1561,14 @@ const TrailsViewInner: React.FC<{
                 }}
                 onClick={() => inputRef.current?.focus()}
               >
-                <GitBranch size={22} color={theme.colors.textSecondary} />
+                {searchMode === 'trails' ? (
+                  <Footprints
+                    size={22}
+                    color={theme.colors.textSecondary}
+                  />
+                ) : (
+                  <GitBranch size={22} color={theme.colors.textSecondary} />
+                )}
                 <style>{`
                   .trails-search-input::placeholder {
                     color: ${theme.colors.textSecondary};
@@ -1416,7 +1588,11 @@ const TrailsViewInner: React.FC<{
                     // Delay so click-on-result lands before close
                     setTimeout(() => setSearchOpen(false), 150);
                   }}
-                  placeholder="Pick a project to make a trail"
+                  placeholder={
+                    searchMode === 'trails'
+                      ? 'Search your trails'
+                      : 'Pick a project to make a trail'
+                  }
                   style={{
                     flex: 1,
                     border: 'none',
@@ -1431,7 +1607,13 @@ const TrailsViewInner: React.FC<{
 
               {/* Results dropdown — hide entirely when showing recents but there are none */}
               {(searchOpen || query.length > 0) &&
-                !(showingRecents && !reposLoading && visibleRepos.length === 0) && (
+                (searchMode === 'trails'
+                  ? !(showingRecents && visibleTrails.length === 0)
+                  : !(
+                      showingRecents &&
+                      !reposLoading &&
+                      visibleRepos.length === 0
+                    )) && (
               <div
                 style={{
                   position: 'absolute',
@@ -1448,111 +1630,242 @@ const TrailsViewInner: React.FC<{
                   zIndex: 11,
                 }}
               >
-                {showingRecents && (
-                  <div
-                    style={{
-                      padding: '8px 14px 6px',
-                      fontSize: theme.fontSizes[0],
-                      color: theme.colors.textSecondary,
-                      fontFamily: theme.fonts.body,
-                      fontWeight: theme.fontWeights.semibold,
-                      letterSpacing: '0.04em',
-                      textTransform: 'uppercase',
-                      borderBottom: `1px solid ${theme.colors.border}`,
-                    }}
-                  >
-                    Recent (last 24h)
-                  </div>
-                )}
-                {reposLoading ? (
-                  <div
-                    style={{
-                      padding: 16,
-                      color: theme.colors.textSecondary,
-                      fontFamily: theme.fonts.body,
-                      fontSize: theme.fontSizes[1],
-                    }}
-                  >
-                    Loading projects...
-                  </div>
-                ) : visibleRepos.length === 0 ? (
-                  <div
-                    style={{
-                      padding: 16,
-                      color: theme.colors.textSecondary,
-                      fontFamily: theme.fonts.body,
-                      fontSize: theme.fontSizes[1],
-                    }}
-                  >
-                    {showingRecents
-                      ? 'No projects opened in the last 24 hours.'
-                      : 'No matching projects.'}
-                  </div>
-                ) : (
-                  visibleRepos.map((entry) => (
-                  <button
-                    key={`${entry.name}-${entry.path}`}
-                    onClick={() => handleSelect(entry)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      width: '100%',
-                      padding: '10px 14px',
-                      border: 'none',
-                      borderBottom: `1px solid ${theme.colors.border}`,
-                      background: 'transparent',
-                      color: theme.colors.text,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontFamily: theme.fonts.body,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.backgroundTertiary ?? theme.colors.border;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <Folder
-                      size={16}
-                      color={theme.colors.textSecondary}
-                      style={{ flexShrink: 0 }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                {searchMode === 'trails' ? (
+                  <>
+                    {showingRecents && (
                       <div
                         style={{
-                          fontSize: theme.fontSizes[1],
-                          fontWeight: theme.fontWeights.semibold,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {entry.github
-                          ? `${entry.github.owner}/${entry.github.name}`
-                          : entry.name}
-                      </div>
-                      <div
-                        style={{
+                          padding: '8px 14px 6px',
                           fontSize: theme.fontSizes[0],
                           color: theme.colors.textSecondary,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          fontFamily: theme.fonts.body,
+                          fontWeight: theme.fontWeights.semibold,
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase',
+                          borderBottom: `1px solid ${theme.colors.border}`,
                         }}
                       >
-                        {String(entry.path)}
+                        Recent trails
                       </div>
-                    </div>
-                  </button>
-                ))
-              )}
+                    )}
+                    {visibleTrails.length === 0 && !showingRecents && (
+                      <div
+                        style={{
+                          padding: 16,
+                          color: theme.colors.textSecondary,
+                          fontFamily: theme.fonts.body,
+                          fontSize: theme.fontSizes[1],
+                        }}
+                      >
+                        No matching trails.
+                      </div>
+                    )}
+                    {visibleTrails.map((trail) => {
+                      const repoLabel = trailRepoLabel(trail.repositoryPath);
+                      const owned = !!(
+                        trail.repositoryPath &&
+                        repositories.some(
+                          (r) => r.path === trail.repositoryPath,
+                        )
+                      );
+                      return (
+                        <button
+                          key={trail.id}
+                          type="button"
+                          onClick={() => void handleOpenRecentTrail(trail)}
+                          disabled={!owned}
+                          title={
+                            owned
+                              ? `Open ${trail.title}`
+                              : 'This trail’s project isn’t in your registry.'
+                          }
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 10,
+                            width: '100%',
+                            padding: '10px 14px',
+                            border: 'none',
+                            borderBottom: `1px solid ${theme.colors.border}`,
+                            background: 'transparent',
+                            color: theme.colors.text,
+                            cursor: owned ? 'pointer' : 'not-allowed',
+                            opacity: owned ? 1 : 0.6,
+                            textAlign: 'left',
+                            fontFamily: theme.fonts.body,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!owned) return;
+                            e.currentTarget.style.backgroundColor =
+                              theme.colors.backgroundTertiary ??
+                              theme.colors.border;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              'transparent';
+                          }}
+                        >
+                          <Footprints
+                            size={16}
+                            color={theme.colors.textSecondary}
+                            style={{ flexShrink: 0, marginTop: 2 }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: theme.fontSizes[1],
+                                fontWeight: theme.fontWeights.semibold,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {trail.title || 'Untitled trail'}
+                            </div>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                fontSize: theme.fontSizes[0],
+                                color: theme.colors.textSecondary,
+                              }}
+                            >
+                              <Folder size={11} />
+                              <span
+                                style={{
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  minWidth: 0,
+                                }}
+                              >
+                                {repoLabel}
+                              </span>
+                              <span aria-hidden>·</span>
+                              <span>{trail.markerCount} steps</span>
+                              <span aria-hidden>·</span>
+                              <span>
+                                {formatRelativeTime(trail.updatedAt)}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <>
+                    {showingRecents && (
+                      <div
+                        style={{
+                          padding: '8px 14px 6px',
+                          fontSize: theme.fontSizes[0],
+                          color: theme.colors.textSecondary,
+                          fontFamily: theme.fonts.body,
+                          fontWeight: theme.fontWeights.semibold,
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase',
+                          borderBottom: `1px solid ${theme.colors.border}`,
+                        }}
+                      >
+                        Recent (last 24h)
+                      </div>
+                    )}
+                    {reposLoading ? (
+                      <div
+                        style={{
+                          padding: 16,
+                          color: theme.colors.textSecondary,
+                          fontFamily: theme.fonts.body,
+                          fontSize: theme.fontSizes[1],
+                        }}
+                      >
+                        Loading projects...
+                      </div>
+                    ) : visibleRepos.length === 0 ? (
+                      <div
+                        style={{
+                          padding: 16,
+                          color: theme.colors.textSecondary,
+                          fontFamily: theme.fonts.body,
+                          fontSize: theme.fontSizes[1],
+                        }}
+                      >
+                        {showingRecents
+                          ? 'No projects opened in the last 24 hours.'
+                          : 'No matching projects.'}
+                      </div>
+                    ) : (
+                      visibleRepos.map((entry) => (
+                        <button
+                          key={`${entry.name}-${entry.path}`}
+                          onClick={() => handleSelect(entry)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            width: '100%',
+                            padding: '10px 14px',
+                            border: 'none',
+                            borderBottom: `1px solid ${theme.colors.border}`,
+                            background: 'transparent',
+                            color: theme.colors.text,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            fontFamily: theme.fonts.body,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              theme.colors.backgroundTertiary ??
+                              theme.colors.border;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              'transparent';
+                          }}
+                        >
+                          <Folder
+                            size={16}
+                            color={theme.colors.textSecondary}
+                            style={{ flexShrink: 0 }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: theme.fontSizes[1],
+                                fontWeight: theme.fontWeights.semibold,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {entry.github
+                                ? `${entry.github.owner}/${entry.github.name}`
+                                : entry.name}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: theme.fontSizes[0],
+                                color: theme.colors.textSecondary,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {String(entry.path)}
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </>
+                )}
               </div>
               )}
             </div>
           </div>
+
         </div>
       )}
 

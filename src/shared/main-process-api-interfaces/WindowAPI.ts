@@ -21,6 +21,13 @@ export interface RepositoryWindowState {
 export interface DevWorkspaceOptions {
   /** Full Alexandria entry with repository metadata */
   alexandriaEntry: AlexandriaEntry;
+  /**
+   * Trail id to auto-open in the trail tab on mount. Forwarded to the
+   * renderer via the URL hash (`?openTrailId=`) so the first-render flow
+   * can open the tab without depending on persisted "active" state. Only
+   * meaningful for freshly-created windows.
+   */
+  openTrailId?: string;
 }
 
 /**
