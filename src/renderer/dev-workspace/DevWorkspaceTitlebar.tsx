@@ -24,7 +24,9 @@ import {
 import { useTheme } from '@principal-ade/industry-theme';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
 import { GitSyncStatusIndicator } from '../components/Titlebar/GitSyncStatusIndicator';
+import { StorybookHeaderButton } from '../components/Titlebar/StorybookHeaderButton';
 import { RepositoryAvatar } from '../components/repository-maps/RepositoryAvatar';
+import type { StorybookManager } from '../hooks/useStorybookManager';
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
@@ -183,6 +185,8 @@ export interface DevWorkspaceTitlebarProps {
   // Dev workspace config (titlebar button + sidebar icon visibility)
   config: DevWorkspaceConfig;
   onConfigChange: (next: DevWorkspaceConfig) => void;
+  // Storybook lifecycle manager (start/stop button in header)
+  storybook?: StorybookManager;
 }
 
 export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
@@ -214,6 +218,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   isSyncingWorkspace = false,
   config,
   onConfigChange,
+  storybook,
 }) => {
   const { theme } = useTheme();
   const [servicesExpanded, setServicesExpanded] = useState(false);
@@ -589,6 +594,43 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                   <span>{isSyncingWorkspace ? 'Syncing...' : 'Sync'}</span>
                 </button>
               )}
+
+              {/* Git Config Button */}
+              {config.titlebar.gitConfig && (
+                <button
+                  onClick={handleOpenGitConfig}
+                  title="Open Git Config"
+                  style={{
+                    // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                    WebkitAppRegion: 'no-drag',
+                    background:
+                      _currentLayout?.right === 'gitConfig'
+                        ? theme.colors.primary + '20'
+                        : theme.colors.backgroundTertiary,
+                    border: `1px solid ${
+                      _currentLayout?.right === 'gitConfig'
+                        ? theme.colors.primary
+                        : theme.colors.border
+                    }`,
+                    color:
+                      _currentLayout?.right === 'gitConfig'
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary,
+                    cursor: 'pointer',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontWeight: theme.fontWeights.medium,
+                  }}
+                >
+                  <GitBranch size={14} />
+                  <span>Git Config</span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -858,41 +900,13 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               </button>
             )}
 
-            {/* Git Config Button */}
-            {config.titlebar.gitConfig && onLayoutChange && (
-              <button
-                onClick={handleOpenGitConfig}
-                title="Open Git Config"
-                style={{
-                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                  WebkitAppRegion: 'no-drag',
-                  background:
-                    _currentLayout?.right === 'gitConfig'
-                      ? theme.colors.primary + '20'
-                      : theme.colors.backgroundTertiary,
-                  border: `1px solid ${
-                    _currentLayout?.right === 'gitConfig'
-                      ? theme.colors.primary
-                      : theme.colors.border
-                  }`,
-                  color:
-                    _currentLayout?.right === 'gitConfig'
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s',
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontWeight: theme.fontWeights.medium,
-                }}
-              >
-                <GitBranch size={14} />
-                <span>Git Config</span>
-              </button>
+            {/* Storybook Start/Stop Button */}
+            {storybook && config.titlebar.storybook && (
+              <StorybookHeaderButton
+                theme={theme}
+                storybook={storybook}
+                repositoryPath={repositoryPath}
+              />
             )}
 
             {/* Open Alexandria Workspace Button */}

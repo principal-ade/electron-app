@@ -45,6 +45,7 @@ import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnection
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
+import { useStorybookManager } from '../hooks/useStorybookManager';
 
 /**
  * Alexandria entry data passed from main process
@@ -1075,6 +1076,18 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     [],
   );
 
+  // Storybook lifecycle (start/stop in header, show/hide in right sidebar)
+  const storybook = useStorybookManager({
+    packages: _packages,
+    repositoryPath,
+    repositoryOwner: github?.owner,
+    repositoryName,
+    currentLayout: layout as { left: string; middle: string; right: string },
+    onLayoutChange: setLayout,
+    onPanelSizesChange: handlePanelSizesChange,
+    events,
+  });
+
   // Store panel control handle when ready
   const handlePanelControlReady = useCallback((control: PanelControlHandle) => {
     console.info('[DevWorkspaceApp] Panel control ready');
@@ -1135,6 +1148,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         isSyncingWorkspace={isSyncingWorkspace}
         config={devWorkspaceConfig}
         onConfigChange={handleDevWorkspaceConfigChange}
+        storybook={storybook}
       />
       <div className="flex-1 overflow-hidden">
         <ScopeManagerProvider repositoryPath={repositoryPath}>
@@ -1162,6 +1176,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           sidebarsHidden={sidebarsHidden}
           leftSidebarIconVisibility={devWorkspaceConfig.leftSidebarIcons}
           rightSidebarIconVisibility={devWorkspaceConfig.rightSidebarIcons}
+          storybook={storybook}
         />
         </AreaManagerProvider>
         </ScopeManagerProvider>

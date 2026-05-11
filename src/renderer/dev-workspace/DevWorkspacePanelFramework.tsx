@@ -135,6 +135,7 @@ import {
   LEFT_PANEL_ICONS,
 } from '../components/Sidebar/PanelIconSidebar';
 import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarButton';
+import type { StorybookManager } from '../hooks/useStorybookManager';
 import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
 import { TypeInformationSidebarButton } from '../components/Sidebar/TypeInformationSidebarButton';
 import { GitConfigPanel } from './git-config-panel';
@@ -419,6 +420,8 @@ export interface DevWorkspacePanelFrameworkProps {
   /** Visibility filter for left/right sidebar panel icons (id -> visible) */
   leftSidebarIconVisibility?: Record<string, boolean>;
   rightSidebarIconVisibility?: Record<string, boolean>;
+  /** Storybook lifecycle manager (start/stop in header, show/hide in sidebar) */
+  storybook?: StorybookManager;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -442,6 +445,7 @@ interface DevWorkspacePanelFrameworkInnerProps {
   sidebarsHidden?: boolean;
   leftSidebarIconVisibility?: Record<string, boolean>;
   rightSidebarIconVisibility?: Record<string, boolean>;
+  storybook?: StorybookManager;
 }
 
 /**
@@ -596,6 +600,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   sidebarsHidden,
   leftSidebarIconVisibility,
   rightSidebarIconVisibility,
+  storybook,
 }) => {
   const { theme } = useTheme();
 
@@ -4472,21 +4477,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           onOpenGitHubRepo={onOpenGitHubRepo}
           customButtons={
             <>
-              <StorybookSidebarButton
-                theme={theme}
-                packages={context.packages?.data?.packages}
-                repositoryPath={context.currentScope?.repository?.path}
-                repositoryOwner={
-                  context.currentScope?.repository?.owner as string | undefined
-                }
-                repositoryName={context.currentScope?.repository?.name}
-                currentLayout={
-                  layout as { left: string; middle: string; right: string }
-                }
-                onLayoutChange={onLayoutChange}
-                onPanelSizesChange={onPanelSizesChange}
-                events={events}
-              />
+              {storybook && (
+                <StorybookSidebarButton theme={theme} storybook={storybook} />
+              )}
               <NextjsSidebarButton
                 theme={theme}
                 packages={context.packages?.data?.packages}
@@ -4553,6 +4546,7 @@ export const DevWorkspacePanelFramework: React.FC<
   sidebarsHidden,
   leftSidebarIconVisibility,
   rightSidebarIconVisibility,
+  storybook,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -4608,6 +4602,7 @@ export const DevWorkspacePanelFramework: React.FC<
             sidebarsHidden={sidebarsHidden}
             leftSidebarIconVisibility={leftSidebarIconVisibility}
             rightSidebarIconVisibility={rightSidebarIconVisibility}
+            storybook={storybook}
           />
         </AgentHighlightProvider>
       </TerminalProvider>

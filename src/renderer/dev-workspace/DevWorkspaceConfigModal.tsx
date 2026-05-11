@@ -27,6 +27,7 @@ const TITLEBAR_BUTTON_LABELS: { key: keyof TitlebarConfig; label: string }[] = [
   { key: 'focus', label: 'Focus mode button' },
   { key: 'notes', label: 'Notes button' },
   { key: 'gitConfig', label: 'Git Config button' },
+  { key: 'storybook', label: 'Storybook button' },
 ];
 
 const LEFT_ICON_LABELS: { key: keyof LeftSidebarConfig; label: string }[] = [
@@ -429,6 +430,7 @@ export const DEFAULT_DEV_WORKSPACE_CONFIG: DevWorkspaceConfig = {
     focus: true,
     notes: false,
     gitConfig: true,
+    storybook: true,
   },
   leftSidebarIcons: {
     files: true,

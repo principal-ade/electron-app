@@ -159,6 +159,7 @@ export interface UserPreferences {
       focus?: boolean;
       notes?: boolean;
       gitConfig?: boolean;
+      storybook?: boolean;
     };
     leftSidebarIcons?: {
       files?: boolean;
