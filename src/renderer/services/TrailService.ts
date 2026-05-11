@@ -7,22 +7,24 @@
  * (note CRUD).
  */
 
-import type { TrailPayload } from '@industry-theme/file-city-panel';
-import type { TrailPayloadSetEnvelope } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
+import type {
+  TrailPayloadSetEnvelope,
+  TrailPayloadClearedEnvelope,
+} from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 
 const noop = () => {};
 
 export class TrailService {
-  /** Read the currently-active trail for a repository (or default slot). */
-  static async getCurrent(repositoryPath?: string): Promise<TrailPayload | null> {
-    const api = window.mainProcess?.fileCityTrail;
-    if (!api) return null;
-    try {
-      return await api.getCurrent(repositoryPath);
-    } catch (err) {
-      console.error('[TrailService] getCurrent failed', err);
-      return null;
-    }
+  /**
+   * Read the trail id this window was opened with, if any. Set by main
+   * when `openDevWorkspaceWindow` was called with `openTrailId`; encoded
+   * as `?openTrailId=<id>` on the URL hash. Used to bootstrap the trail
+   * tab + payload on first render, replacing the persisted "active"
+   * pointer that used to live in `_index.json`.
+   */
+  static getOpenTrailId(): string | null {
+    const match = window.location.hash.match(/[?&]openTrailId=([^&]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
   }
 
   /**
@@ -38,7 +40,7 @@ export class TrailService {
 
   /** Subscribe to PAYLOAD_CLEARED. Returns an unsubscribe function. */
   static onPayloadCleared(
-    callback: (info: { repositoryPath?: string }) => void,
+    callback: (envelope: TrailPayloadClearedEnvelope) => void,
   ): () => void {
     return (
       window.mainProcess?.fileCityTrail?.onPayloadCleared(callback) ?? noop

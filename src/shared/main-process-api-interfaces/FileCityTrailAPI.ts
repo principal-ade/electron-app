@@ -27,7 +27,6 @@ import type {
 export enum FileCityTrailEvent {
   PAYLOAD_SET = 'file-city:trail:set',
   PAYLOAD_CLEARED = 'file-city:trail:cleared',
-  GET_CURRENT = 'file-city:trail:get-current',
   LIBRARY_CHANGED = 'file-city:trail:library-changed',
   LIST = 'file-city:trail:list',
   LOAD = 'file-city:trail:load',
@@ -159,14 +158,18 @@ export interface TrailPayloadSetEnvelope {
   repositoryPath?: string;
 }
 
+/**
+ * Envelope broadcast on PAYLOAD_CLEARED. Emitted when a saved trail is
+ * deleted; renderers compare `id` against their currently-shown payload
+ * and self-clear when it matches.
+ */
+export interface TrailPayloadClearedEnvelope {
+  id: string;
+  repositoryPath?: string;
+}
+
 /** Renderer-facing API for the File City trail bus. */
 export interface FileCityTrailAPI {
-  /**
-   * Returns the latest trail for the given repo path (or the default slot
-   * if no path is supplied), or `null` if none has been set.
-   */
-  getCurrent: (repositoryPath?: string) => Promise<TrailPayload | null>;
-
   /**
    * Subscribe to "payload set" events. The envelope carries both the
    * portable trail payload and the host-private `repositoryPath` so
@@ -178,7 +181,7 @@ export interface FileCityTrailAPI {
 
   /** Subscribe to "payload cleared" events. Returns an unsubscribe function. */
   onPayloadCleared: (
-    callback: (info: { repositoryPath?: string }) => void,
+    callback: (envelope: TrailPayloadClearedEnvelope) => void,
   ) => () => void;
 
   /**
@@ -187,18 +190,16 @@ export interface FileCityTrailAPI {
    */
   list: (repositoryPath?: string) => Promise<{
     entries: TrailIndexEntry[];
-    activeId: string | null;
   }>;
 
   /** Read a saved trail by id without activating it. */
   load: (id: string) => Promise<TrailPayload | null>;
 
   /**
-   * Mark a saved trail active for its repository. Returns the activated
-   * payload + repositoryPath so the calling renderer can update its own
-   * state directly. Returns `null` if the id is unknown. Renderer-initiated
-   * activations do not emit `PAYLOAD_SET`; HTTP-initiated activations do
-   * (targeted to the repo's windows).
+   * Resolve a saved trail by id, returning the payload + repo path so the
+   * calling renderer can show it locally and emit an in-window renderer
+   * event. No persisted state is mutated; cross-window notification is
+   * the HTTP /activate route's job (it broadcasts PAYLOAD_SET).
    */
   activate: (
     id: string,
@@ -206,12 +207,11 @@ export interface FileCityTrailAPI {
 
   /**
    * Permanently delete a saved trail from disk + manifest. Returns whether
-   * the entry was found, whether it was the active one, and the repo path
-   * so the calling renderer can update local state directly.
+   * the entry was found and the repo path so the calling renderer can
+   * update local state directly.
    */
   delete: (id: string) => Promise<{
     found: boolean;
-    wasActive: boolean;
     repositoryPath?: string;
   }>;
 

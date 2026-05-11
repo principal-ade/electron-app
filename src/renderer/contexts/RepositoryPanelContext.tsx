@@ -52,7 +52,14 @@ import type {
   WorkspacesSlice,
 } from '@industry-theme/alexandria-panels';
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
-import type { FeedProjectSliceData, ActivityHeatmapSliceData, LineCountsSliceData } from '@industry-theme/file-city-panel';
+import type { FeedProjectSliceData, ActivityHeatmapSliceData, LineCountsSliceData, TrailPayload } from '@industry-theme/file-city-panel';
+import { TrailService } from '../services/TrailService';
+import { TrailLibraryService } from '../services/TrailLibraryService';
+import {
+  TRAIL_EVENT,
+  type TrailActivatedEvent,
+  type TrailClearedEvent,
+} from '../dev-workspace/trail-events';
 import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
 import type { BrunoRequest, BrunoResponse, BrunoEnvironment } from '@principal-ade/bruno-panels';
 import { BrunoService } from '../main-process-api/BrunoService';
@@ -226,6 +233,7 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   activityHeatmap: DataSlice<ActivityHeatmapSliceData | null>;
   lineCounts: DataSlice<LineCountsSliceData | null>;
   storyboardContext: DataSlice<StoryboardContextSliceData | null>;
+  trail: DataSlice<TrailPayload | null>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -297,6 +305,12 @@ export const RepositoryPanelProvider: React.FC<
   // Track line counts data (for File City 3D building heights)
   const [lineCountsData, setLineCountsData] = useState<LineCountsSliceData | null>(null);
   const [lineCountsLoading, setLineCountsLoading] = useState(false);
+
+  // Trail payload state — owned here (always mounted) so the trail tab,
+  // which only mounts when opened, receives the payload synchronously
+  // via context rather than racing the broadcast that triggered the
+  // tab-open.
+  const [trailData, setTrailData] = useState<TrailPayload | null>(null);
 
   // Track storyboard context (for File City 3D storyboard highlighting)
   const [storyboardContextData, setStoryboardContextData] = useState<StoryboardContextSliceData | null>(null);
@@ -939,6 +953,62 @@ export const RepositoryPanelProvider: React.FC<
 
     fetchLineCounts();
   }, [repositoryPath]);
+
+  // Subscribe to trail state for this repository. Updates flow from four
+  // sources:
+  //   1. `?openTrailId=` URL arg (fresh-window bootstrap) — load by id.
+  //   2. IPC `PAYLOAD_SET` — external POSTs to the trail route.
+  //   3. IPC `PAYLOAD_CLEARED` — trail deleted on disk; self-filter by id.
+  //   4. Renderer events on `events` — in-window sidebar activate/clear.
+  // Owning state here (always mounted) eliminates the race with the
+  // trail tab, which only mounts on demand.
+  useEffect(() => {
+    let cancelled = false;
+    const matches = (nextRepo: string | undefined | null): boolean =>
+      !nextRepo || nextRepo === repositoryPath;
+
+    const openId = TrailService.getOpenTrailId();
+    if (openId) {
+      TrailLibraryService.load(openId).then((loaded) => {
+        if (cancelled || !loaded) return;
+        setTrailData(loaded);
+      });
+    }
+
+    const offSet = TrailService.onPayloadSet(({ payload, repositoryPath: nextRepo }) => {
+      if (!matches(nextRepo)) return;
+      setTrailData(payload);
+    });
+
+    const offCleared = TrailService.onPayloadCleared(({ id, repositoryPath: nextRepo }) => {
+      if (!matches(nextRepo)) return;
+      setTrailData((prev) => (prev?.id === id ? null : prev));
+    });
+
+    const offActivated = events.on<TrailActivatedEvent>(
+      TRAIL_EVENT.activated,
+      (event) => {
+        if (!matches(event.payload.repositoryPath)) return;
+        setTrailData(event.payload.payload);
+      },
+    );
+
+    const offClearedLocal = events.on<TrailClearedEvent>(
+      TRAIL_EVENT.cleared,
+      (event) => {
+        if (!matches(event.payload.repositoryPath)) return;
+        setTrailData(null);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      offSet();
+      offCleared();
+      offActivated?.();
+      offClearedLocal?.();
+    };
+  }, [repositoryPath, events]);
 
   // Fetch all Alexandria repositories (for Local Projects panel) and subscribe to changes
   useEffect(() => {
@@ -3108,6 +3178,21 @@ export const RepositoryPanelProvider: React.FC<
     [activityHeatmapData, activityHeatmapLoading],
   );
 
+  // Trail payload slice — single in-flight trail per window. No refresh
+  // action: the source of truth is the broadcast stream + URL arg, not
+  // a pull. Reads come straight from the locally-held state.
+  const trailSlice = useMemo<DataSlice<TrailPayload | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'trail',
+      data: trailData,
+      loading: false,
+      error: null,
+      refresh: async () => {},
+    }),
+    [trailData],
+  );
+
   // Line counts slice (for CodeCityPanel building heights)
   const lineCountsSlice = useMemo<DataSlice<LineCountsSliceData | null>>(
     () => ({
@@ -3241,6 +3326,7 @@ export const RepositoryPanelProvider: React.FC<
       activityHeatmap: activityHeatmapSlice,
       lineCounts: lineCountsSlice,
       storyboardContext: storyboardContextSlice,
+      trail: trailSlice,
     }),
     [
       repositoryPath,
@@ -3276,6 +3362,7 @@ export const RepositoryPanelProvider: React.FC<
       activityHeatmapSlice,
       lineCountsSlice,
       storyboardContextSlice,
+      trailSlice,
     ],
   );
 

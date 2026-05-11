@@ -85,9 +85,10 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
 
   const handleRemoveLocal = useCallback(
     async (id: string) => {
+      const wasActive = library.activeId === id;
       const result = await library.remove(id);
       if (!events) return;
-      if (result.wasActive) {
+      if (result.found && wasActive) {
         events.emit<TrailClearedEvent>({
           type: TRAIL_EVENT.cleared,
           source: 'trails-panel',

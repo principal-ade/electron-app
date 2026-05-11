@@ -24,12 +24,6 @@ const unwrapShare = <T>(envelope: TrailShareEnvelope<T>): T => {
 };
 
 export const fileCityTrailAPI: FileCityTrailAPI = {
-  getCurrent: async (
-    repositoryPath?: string,
-  ): Promise<TrailPayload | null> => {
-    return ipcRenderer.invoke(FileCityTrailEvent.GET_CURRENT, repositoryPath);
-  },
-
   onPayloadSet: (callback) => {
     const handler = (
       _event: Electron.IpcRendererEvent,
@@ -44,8 +38,8 @@ export const fileCityTrailAPI: FileCityTrailAPI = {
   onPayloadCleared: (callback) => {
     const handler = (
       _event: Electron.IpcRendererEvent,
-      info: { repositoryPath?: string },
-    ) => callback(info);
+      envelope: { id: string; repositoryPath?: string },
+    ) => callback(envelope);
     ipcRenderer.on(FileCityTrailEvent.PAYLOAD_CLEARED, handler);
     return () => {
       ipcRenderer.removeListener(FileCityTrailEvent.PAYLOAD_CLEARED, handler);
@@ -56,7 +50,6 @@ export const fileCityTrailAPI: FileCityTrailAPI = {
     repositoryPath?: string,
   ): Promise<{
     entries: TrailIndexEntry[];
-    activeId: string | null;
   }> => {
     return ipcRenderer.invoke(FileCityTrailEvent.LIST, repositoryPath);
   },
@@ -75,7 +68,6 @@ export const fileCityTrailAPI: FileCityTrailAPI = {
     id: string,
   ): Promise<{
     found: boolean;
-    wasActive: boolean;
     repositoryPath?: string;
   }> => {
     return ipcRenderer.invoke(FileCityTrailEvent.DELETE, id);

@@ -10,7 +10,7 @@ export const fileCityTrailPanelDefinition: PanelDefinition = {
     version: '0.1.0',
     author: 'Principal ADE',
     icon: 'route',
-    slices: ['fileTree', 'lineCounts'],
+    slices: ['fileTree', 'lineCounts', 'trail'],
   },
   component: FileCityTrailPanel as PanelDefinition['component'],
 };
@@ -18,4 +18,3 @@ export const fileCityTrailPanelDefinition: PanelDefinition = {
 export const panels: PanelDefinition[] = [fileCityTrailPanelDefinition];
 
 export { FileCityTrailPanel } from './FileCityTrailPanel';
-export { useTrail } from './useTrail';

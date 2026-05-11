@@ -11,18 +11,17 @@ const noop = () => {};
 
 export interface TrailLibraryListing {
   entries: TrailIndexEntry[];
-  activeId: string | null;
 }
 
 export class TrailLibraryService {
   static async list(repositoryPath?: string): Promise<TrailLibraryListing> {
     const api = window.mainProcess?.fileCityTrail;
-    if (!api) return { entries: [], activeId: null };
+    if (!api) return { entries: [] };
     try {
       return await api.list(repositoryPath);
     } catch (err) {
       console.error('[TrailLibraryService] list failed', err);
-      return { entries: [], activeId: null };
+      return { entries: [] };
     }
   }
 
@@ -38,10 +37,10 @@ export class TrailLibraryService {
   }
 
   /**
-   * Returns the activated payload + repositoryPath, or `null` if the id
-   * was unknown / the bridge is unavailable. Renderer-initiated activations
-   * do not emit IPC `PAYLOAD_SET` — the caller updates state from this
-   * return value and emits a renderer event for in-window coordination.
+   * Resolve a saved trail by id and return the payload + its host-private
+   * `repositoryPath`. The caller updates its own state from the return
+   * value and emits a renderer event for in-window coordination. No
+   * persisted state is mutated and no IPC `PAYLOAD_SET` is emitted.
    */
   static async activate(
     id: string,
@@ -57,24 +56,22 @@ export class TrailLibraryService {
   }
 
   /**
-   * Returns the deletion outcome so the caller can clear local state when
-   * the deleted entry was the active one. Renderer-initiated deletes do
-   * not emit IPC `PAYLOAD_CLEARED`.
+   * Permanently delete a saved trail. Returns whether the entry was found
+   * and the repo path so the calling renderer can clear local state.
    */
   static async remove(id: string): Promise<{
     found: boolean;
-    wasActive: boolean;
     repositoryPath?: string;
   }> {
     const api = window.mainProcess?.fileCityTrail;
     if (!api) {
-      return { found: false, wasActive: false, repositoryPath: undefined };
+      return { found: false, repositoryPath: undefined };
     }
     try {
       return await api.delete(id);
     } catch (err) {
       console.error('[TrailLibraryService] remove failed', err);
-      return { found: false, wasActive: false, repositoryPath: undefined };
+      return { found: false, repositoryPath: undefined };
     }
   }
 

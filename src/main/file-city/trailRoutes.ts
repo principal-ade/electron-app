@@ -31,6 +31,7 @@ type WindowOpened = 'focused' | 'created' | 'none';
 
 async function ensureDevWorkspaceWindow(
   repositoryPath: string,
+  openTrailId: string,
 ): Promise<WindowOpened> {
   const registry = AlexandriaRegistryService.getInstance();
   let entry = await registry.getRepositoryByPath(repositoryPath);
@@ -55,7 +56,14 @@ async function ensureDevWorkspaceWindow(
     existingId !== undefined ? applicationWindows.get(existingId) : undefined;
   const aliveBefore = !!existingWindow && !existingWindow.window.isDestroyed();
 
-  const result = await openDevWorkspaceWindow({ alexandriaEntry: entry });
+  // `openTrailId` only matters on fresh windows — for already-open windows
+  // the renderer is already subscribed to PAYLOAD_SET and will flip its
+  // tab when the broadcast arrives. Forwarding the id either way is
+  // harmless; the existing window never reads it.
+  const result = await openDevWorkspaceWindow({
+    alexandriaEntry: entry,
+    openTrailId,
+  });
   if (!result) return 'none';
   return aliveBefore ? 'focused' : 'created';
 }
@@ -251,31 +259,26 @@ export function registerTrailRoutes(
       res.status(400).json({ success: false, error: result.error });
       return;
     }
-    const activate =
-      req.body && typeof req.body === 'object' && 'activate' in req.body
-        ? req.body.activate !== false
-        : true;
     try {
       const { payload, evictedIds } = await store.set(result.payload, {
-        activate,
         repositoryPath: result.repositoryPath,
       });
       let windowOpened: WindowOpened = 'none';
-      if (activate && result.repositoryPath) {
+      if (result.repositoryPath) {
         try {
-          windowOpened = await ensureDevWorkspaceWindow(result.repositoryPath);
+          windowOpened = await ensureDevWorkspaceWindow(
+            result.repositoryPath,
+            payload.id,
+          );
         } catch (err) {
           console.error('[trailRoutes] ensure window failed', err);
         }
       }
-      let broadcastTo = 0;
-      if (activate) {
-        broadcastTo = sendToRepoWindows(
-          FileCityTrailEvent.PAYLOAD_SET,
-          { payload, repositoryPath: result.repositoryPath },
-          result.repositoryPath,
-        );
-      }
+      const broadcastTo = sendToRepoWindows(
+        FileCityTrailEvent.PAYLOAD_SET,
+        { payload, repositoryPath: result.repositoryPath },
+        result.repositoryPath,
+      );
       sendToRepoWindows(
         FileCityTrailEvent.LIBRARY_CHANGED,
         { repositoryPath: result.repositoryPath },
@@ -324,22 +327,28 @@ export function registerTrailRoutes(
         return;
       }
       try {
-        const result = await store.activate(id);
+        const result = await store.loadByIdWithRepoPath(id);
         if (!result) {
           res.status(404).json({ success: false, error: 'unknown id' });
           return;
+        }
+        let windowOpened: WindowOpened = 'none';
+        if (result.repositoryPath) {
+          try {
+            windowOpened = await ensureDevWorkspaceWindow(
+              result.repositoryPath,
+              result.payload.id,
+            );
+          } catch (err) {
+            console.error('[trailRoutes] ensure window failed', err);
+          }
         }
         const broadcastTo = sendToRepoWindows(
           FileCityTrailEvent.PAYLOAD_SET,
           { payload: result.payload, repositoryPath: result.repositoryPath },
           result.repositoryPath,
         );
-        sendToRepoWindows(
-          FileCityTrailEvent.LIBRARY_CHANGED,
-          { repositoryPath: result.repositoryPath },
-          result.repositoryPath,
-        );
-        res.json({ success: true, broadcastTo });
+        res.json({ success: true, broadcastTo, windowOpened });
       } catch (err) {
         console.error('[trailRoutes] activate failed', err);
         res.status(500).json({ success: false, error: 'failed to activate' });
@@ -352,18 +361,16 @@ export function registerTrailRoutes(
     async (req: Request, res: Response) => {
       const id = String(req.params.id);
       try {
-        const { found, wasActive, repositoryPath } = await store.delete(id);
+        const { found, repositoryPath } = await store.delete(id);
         if (!found) {
           res.status(404).json({ success: false, error: 'unknown id' });
           return;
         }
-        if (wasActive) {
-          sendToRepoWindows(
-            FileCityTrailEvent.PAYLOAD_CLEARED,
-            { repositoryPath },
-            repositoryPath,
-          );
-        }
+        sendToRepoWindows(
+          FileCityTrailEvent.PAYLOAD_CLEARED,
+          { id, repositoryPath },
+          repositoryPath,
+        );
         sendToRepoWindows(
           FileCityTrailEvent.LIBRARY_CHANGED,
           { repositoryPath },
@@ -424,42 +431,4 @@ export function registerTrailRoutes(
     },
   );
 
-  app.delete('/api/file-city/trail', async (req: Request, res: Response) => {
-    const repositoryPath =
-      typeof req.query.repositoryPath === 'string'
-        ? req.query.repositoryPath
-        : undefined;
-    try {
-      await store.clear(repositoryPath);
-      const broadcastTo = sendToRepoWindows(
-        FileCityTrailEvent.PAYLOAD_CLEARED,
-        { repositoryPath },
-        repositoryPath,
-      );
-      sendToRepoWindows(
-        FileCityTrailEvent.LIBRARY_CHANGED,
-        { repositoryPath },
-        repositoryPath,
-      );
-      res.json({ success: true, broadcastTo });
-    } catch (err) {
-      console.error('[trailRoutes] clear failed', err);
-      res.status(500).json({ success: false, error: 'failed to clear' });
-    }
-  });
-
-  app.get('/api/file-city/trail', async (req: Request, res: Response) => {
-    try {
-      if (typeof req.query.repositoryPath === 'string') {
-        const payload = await store.get(req.query.repositoryPath);
-        res.json({ success: true, payload });
-        return;
-      }
-      const payloads = await store.getAll();
-      res.json({ success: true, payloads });
-    } catch (err) {
-      console.error('[trailRoutes] get failed', err);
-      res.status(500).json({ success: false, error: 'failed to read' });
-    }
-  });
 }

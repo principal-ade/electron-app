@@ -6,7 +6,7 @@
  * can read trails authored by the desktop app and vice-versa:
  *
  *   ~/.principal/trails/
- *     _index.json                          host-private manifest (entries[] + active{})
+ *     _index.json                          host-private manifest (entries[])
  *     <purl-ns>/<purl-name>/<id>.json      payload anchored by repos[0] Purl
  *     by-id/<id>.json                      fallback when no Purl can be derived
  *
@@ -16,6 +16,10 @@
  * index entry only, never in the payload. The manifest is rebuilt by
  * scanning the tree if missing or unparseable; on first run we also
  * migrate any trails left in the old `<userData>/file-city-trails/` layout.
+ *
+ * There is no "active trail" on disk. The trail a given dev-workspace
+ * window is showing is a per-window concept, plumbed via the `openTrailId`
+ * URL argument at window creation and broadcast updates via PAYLOAD_SET.
  */
 
 import { app } from 'electron';
@@ -36,8 +40,6 @@ const INDEX_FILENAME = '_index.json';
 const SUMMARY_PREVIEW_MAX = 200;
 const PER_REPO_CAP = 50;
 
-export const ACTIVE_DEFAULT_KEY = '__default__';
-
 interface IndexEntryV2 extends TrailIndexEntry {
   /** Path relative to ROOT (e.g. `github/owner/repo/abc.json`, `by-id/abc.json`). */
   cachePath: string;
@@ -46,17 +48,12 @@ interface IndexEntryV2 extends TrailIndexEntry {
 interface IndexFileV2 {
   version: 2;
   entries: IndexEntryV2[];
-  active: Record<string, string | null>;
 }
 
 const emptyIndex = (): IndexFileV2 => ({
   version: 2,
   entries: [],
-  active: {},
 });
-
-const activeKey = (repositoryPath?: string): string =>
-  repositoryPath ?? ACTIVE_DEFAULT_KEY;
 
 const summaryPreview = (summary?: string): string => {
   if (!summary) return '';
@@ -163,7 +160,6 @@ export class TrailPersistence {
 
   async listEntries(repositoryPath?: string): Promise<{
     entries: TrailIndexEntry[];
-    activeId: string | null;
   }> {
     const idx = await this.getIndex();
     const entries = repositoryPath
@@ -173,24 +169,7 @@ export class TrailPersistence {
         )
       : idx.entries.slice();
     entries.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
-    const activeId = idx.active[activeKey(repositoryPath)] ?? null;
-    return { entries: entries.map(stripCachePath), activeId };
-  }
-
-  async getActive(repositoryPath?: string): Promise<TrailPayload | null> {
-    const idx = await this.getIndex();
-    const id = idx.active[activeKey(repositoryPath)];
-    if (!id) return null;
-    return this.loadById(id);
-  }
-
-  async getActiveAll(): Promise<TrailPayload[]> {
-    const idx = await this.getIndex();
-    const ids = Object.values(idx.active).filter(
-      (v): v is string => typeof v === 'string',
-    );
-    const payloads = await Promise.all(ids.map((id) => this.loadById(id)));
-    return payloads.filter((p): p is TrailPayload => p != null);
+    return { entries: entries.map(stripCachePath) };
   }
 
   async loadById(id: string): Promise<TrailPayload | null> {
@@ -208,7 +187,7 @@ export class TrailPersistence {
 
   async save(
     incoming: TrailPayload,
-    options: { activate: boolean; repositoryPath?: string },
+    options: { repositoryPath?: string },
   ): Promise<{ payload: TrailPayload; evictedIds: string[] }> {
     const idx = await this.getIndex();
     const now = new Date().toISOString();
@@ -261,10 +240,6 @@ export class TrailPersistence {
 
     const evictedIds = await this.enforceCap(idx, repositoryPath);
 
-    if (options.activate) {
-      idx.active[activeKey(repositoryPath)] = id;
-    }
-
     await this.persistIndex();
     return { payload, evictedIds };
   }
@@ -311,41 +286,33 @@ export class TrailPersistence {
     return next;
   }
 
-  async setActive(id: string): Promise<TrailPayload | null> {
+  /**
+   * Load a payload by id and return it alongside its host-private
+   * `repositoryPath`. Used by route handlers that need to broadcast and
+   * open a window for a known id without callers having to chain two reads.
+   */
+  async loadByIdWithRepoPath(
+    id: string,
+  ): Promise<{ payload: TrailPayload; repositoryPath?: string } | null> {
     const idx = await this.getIndex();
     const entry = idx.entries.find((e) => e.id === id);
     if (!entry) return null;
-    const payload = await this.loadById(id);
+    const payload = await this.readPayload(entry.cachePath);
     if (!payload) return null;
-    idx.active[activeKey(entry.repositoryPath)] = id;
-    await this.persistIndex();
-    return payload;
-  }
-
-  async deactivate(repositoryPath?: string): Promise<void> {
-    const idx = await this.getIndex();
-    idx.active[activeKey(repositoryPath)] = null;
-    await this.persistIndex();
+    return { payload, repositoryPath: entry.repositoryPath };
   }
 
   async deleteById(
     id: string,
-  ): Promise<{ repositoryPath?: string; wasActive: boolean } | null> {
+  ): Promise<{ repositoryPath?: string } | null> {
     const idx = await this.getIndex();
     const entryIdx = idx.entries.findIndex((e) => e.id === id);
     if (entryIdx < 0) return null;
     const entry = idx.entries[entryIdx];
     idx.entries.splice(entryIdx, 1);
-
     await this.unlinkRelative(entry.cachePath);
-
-    const key = activeKey(entry.repositoryPath);
-    const wasActive = idx.active[key] === id;
-    if (wasActive) {
-      idx.active[key] = null;
-    }
     await this.persistIndex();
-    return { repositoryPath: entry.repositoryPath, wasActive };
+    return { repositoryPath: entry.repositoryPath };
   }
 
   private async readPayload(cachePath: string): Promise<TrailPayload | null> {
@@ -384,10 +351,6 @@ export class TrailPersistence {
     for (const entry of toEvict) {
       await this.unlinkRelative(entry.cachePath);
       evictedIds.push(entry.id);
-      const key = activeKey(entry.repositoryPath);
-      if (idx.active[key] === entry.id) {
-        idx.active[key] = null;
-      }
     }
     idx.entries = idx.entries.filter((e) => !evictedIds.includes(e.id));
     if (evictedIds.length > 0) {
@@ -401,12 +364,13 @@ export class TrailPersistence {
   private async loadIndex(): Promise<IndexFileV2> {
     try {
       const raw = await fs.readFile(this.indexPath, 'utf8');
+      // Older indexes carried an `active` field — read but ignore it; the
+      // concept moved into per-window state.
       const parsed = JSON.parse(raw) as Partial<IndexFileV2>;
       if (parsed?.version === 2 && Array.isArray(parsed.entries)) {
         return {
           version: 2,
           entries: parsed.entries as IndexEntryV2[],
-          active: parsed.active ?? {},
         };
       }
     } catch (err) {
@@ -495,10 +459,6 @@ export class TrailPersistence {
         ),
       );
       migrated++;
-    }
-
-    if (legacyIndex.active) {
-      idx.active = { ...legacyIndex.active };
     }
 
     if (migrated > 0) {

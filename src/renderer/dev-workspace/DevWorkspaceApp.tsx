@@ -62,7 +62,7 @@ interface AlexandriaEntryData {
 
 /**
  * Parse window initialization data from URL hash
- * Format: #init/{encodedJSON} where JSON is an AlexandriaEntry
+ * Format: #init/{encodedJSON}[?openTrailId=<id>] where JSON is an AlexandriaEntry
  */
 function useWindowData(): AlexandriaEntryData | null {
   const [data, setData] = useState<AlexandriaEntryData | null>(null);
@@ -71,7 +71,10 @@ function useWindowData(): AlexandriaEntryData | null {
     const hash = window.location.hash;
     if (hash.startsWith('#init/')) {
       try {
-        const encodedData = hash.slice(6); // Remove '#init/'
+        const afterPrefix = hash.slice(6); // Remove '#init/'
+        const qIdx = afterPrefix.indexOf('?');
+        const encodedData =
+          qIdx >= 0 ? afterPrefix.slice(0, qIdx) : afterPrefix;
         const parsed = JSON.parse(
           decodeURIComponent(encodedData),
         ) as AlexandriaEntryData;

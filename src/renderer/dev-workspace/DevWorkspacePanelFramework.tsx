@@ -2625,31 +2625,24 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return unsubscribe;
   }, [events, openFileCityTrailTab]);
 
-  // Auto-open the trail tab whenever a trail activation arrives for this
-  // window's repo. Two sources:
-  //   - IPC `PAYLOAD_SET` — pushed by HTTP route handlers via
-  //     `sendToRepoWindows` (e.g. an external `curl POST /api/file-city/trail`).
-  //   - Renderer event `file-city-trail:activated` — emitted in this window
-  //     when a user clicks a row in the Trails sidebar.
-  //
-  // Same filter shape on both paths: a targeted update with a repositoryPath
-  // only opens when it matches this window. Untargeted IPC pushes (no
-  // repositoryPath) used to fan out to every window — the targeted-send
-  // refactor in main no longer emits those, so this branch is effectively
-  // unreachable but kept defensively.
+  // Auto-open the trail tab when this window was opened with a trail
+  // id, and whenever a trail activation arrives for this window's repo
+  // after mount. Three sources:
+  //   - `?openTrailId=<id>` URL arg — set by main when this window was
+  //     opened from POST /trail or POST /trail/activate. Replaces the
+  //     old race fix that relied on a persisted "active" pointer.
+  //   - IPC `PAYLOAD_SET` — pushed by route handlers via
+  //     `sendToRepoWindows` to retarget an already-open window.
+  //   - Renderer event `file-city-trail:activated` — emitted when a user
+  //     clicks a row in the Trails sidebar in this same window.
   useEffect(() => {
     const myRepo = context.currentScope?.repository?.path ?? null;
     const matches = (nextRepo: string | undefined | null): boolean =>
       !nextRepo || nextRepo === myRepo;
 
-    // Catch the race where the route fired PAYLOAD_SET while opening this
-    // window — the IPC message arrived before this subscriber existed, so
-    // ask main for the active trail and open the tab if one is present.
-    let cancelled = false;
-    TrailService.getCurrent(myRepo ?? undefined).then((current) => {
-      if (cancelled || !current) return;
+    if (TrailService.getOpenTrailId()) {
       openFileCityTrailTab();
-    });
+    }
 
     const offIpc = TrailService.onPayloadSet(({ repositoryPath: nextRepo }) => {
       if (!matches(nextRepo)) return;
@@ -2665,7 +2658,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     );
 
     return () => {
-      cancelled = true;
       offIpc();
       offRenderer();
     };

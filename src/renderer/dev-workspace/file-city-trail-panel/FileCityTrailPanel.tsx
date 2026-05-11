@@ -26,11 +26,11 @@ import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstract
 import type { TrailPayload } from '@industry-theme/file-city-panel';
 
 import { TrailNotesService } from '../../services/TrailNotesService';
-import { useTrail } from './useTrail';
 
 interface FileCityTrailPanelContext extends PanelContextValue {
   fileTree?: DataSlice<RepoFileTree | null>;
   lineCounts?: DataSlice<LineCountsSliceData | null>;
+  trail?: DataSlice<TrailPayload | null>;
   repository?: {
     path?: string | null;
     name?: string | null;
@@ -90,8 +90,6 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
   const repoOwner = context.repository?.owner ?? null;
   const repoName = context.repository?.name ?? null;
 
-  const { payload } = useTrail(repositoryPath, events);
-
   // ---- repository identifier (trail panel-private) ------------------------
   const repository = React.useMemo<FileCityTrailExplorerRepository | null>(() => {
     if (!repositoryPath && !repoName) return null;
@@ -118,8 +116,8 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
   );
 
   const trailSlice = React.useMemo<DataSlice<TrailPayload | null>>(
-    () => emptySlice('repository', 'trail', payload),
-    [payload],
+    () => context.trail ?? emptySlice('repository', 'trail', null),
+    [context.trail],
   );
 
   // ---- actions ------------------------------------------------------------

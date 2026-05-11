@@ -38,8 +38,6 @@ import {
 import { applicationWindows } from '../window/types';
 
 export interface SetOptions {
-  /** Whether to mark the entry active in persistence. Default true. */
-  activate?: boolean;
   /**
    * Host-private filesystem path the trail belongs to. Persisted on the
    * index entry only; never written into the portable trail payload.
@@ -59,50 +57,32 @@ export class TrailStore {
     incoming: TrailPayload,
     options: SetOptions = {},
   ): Promise<SetResult> {
-    const activate = options.activate !== false;
     const { payload, evictedIds } = await this.persistence.save(incoming, {
-      activate,
       repositoryPath: options.repositoryPath,
     });
     return { payload, evictedIds };
   }
 
-  async clear(repositoryPath?: string): Promise<void> {
-    await this.persistence.deactivate(repositoryPath);
-  }
-
-  async activate(id: string): Promise<{
-    payload: TrailPayload;
-    repositoryPath: string | undefined;
-  } | null> {
-    const payload = await this.persistence.setActive(id);
-    if (!payload) return null;
-    const entry = await this.persistence.loadEntryById(id);
-    return { payload, repositoryPath: entry?.repositoryPath };
+  /**
+   * Load a payload + its host-private `repositoryPath` by id. Used by the
+   * activate route handler to broadcast and open a window without callers
+   * needing to chain two reads.
+   */
+  loadByIdWithRepoPath(
+    id: string,
+  ): Promise<{ payload: TrailPayload; repositoryPath?: string } | null> {
+    return this.persistence.loadByIdWithRepoPath(id);
   }
 
   async delete(id: string): Promise<{
     found: boolean;
-    wasActive: boolean;
     repositoryPath: string | undefined;
   }> {
     const result = await this.persistence.deleteById(id);
     if (!result) {
-      return { found: false, wasActive: false, repositoryPath: undefined };
+      return { found: false, repositoryPath: undefined };
     }
-    return {
-      found: true,
-      wasActive: result.wasActive,
-      repositoryPath: result.repositoryPath,
-    };
-  }
-
-  get(repositoryPath?: string): Promise<TrailPayload | null> {
-    return this.persistence.getActive(repositoryPath);
-  }
-
-  getAll(): Promise<TrailPayload[]> {
-    return this.persistence.getActiveAll();
+    return { found: true, repositoryPath: result.repositoryPath };
   }
 
   loadById(id: string): Promise<TrailPayload | null> {
@@ -111,7 +91,6 @@ export class TrailStore {
 
   list(repositoryPath?: string): Promise<{
     entries: TrailIndexEntry[];
-    activeId: string | null;
   }> {
     return this.persistence.listEntries(repositoryPath);
   }
@@ -276,18 +255,19 @@ export function getTrailStore(): TrailStore {
 export function registerTrailHandlers(): void {
   const store = getTrailStore();
   ipcMain.handle(
-    FileCityTrailEvent.GET_CURRENT,
-    (_event, repositoryPath?: string) => store.get(repositoryPath),
-  );
-  ipcMain.handle(
     FileCityTrailEvent.LIST,
     (_event, repositoryPath?: string) => store.list(repositoryPath),
   );
   ipcMain.handle(FileCityTrailEvent.LOAD, (_event, id: string) =>
     store.loadById(id),
   );
+  // ACTIVATE is now a "show this trail in the calling window" op — it
+  // resolves the payload + repo for the caller to update local state and
+  // emit an in-window renderer event. No persisted active pointer is
+  // touched; cross-window notification still goes via the HTTP /activate
+  // route, which broadcasts PAYLOAD_SET.
   ipcMain.handle(FileCityTrailEvent.ACTIVATE, (_event, id: string) =>
-    store.activate(id),
+    store.loadByIdWithRepoPath(id),
   );
   ipcMain.handle(FileCityTrailEvent.DELETE, (_event, id: string) =>
     store.delete(id),
