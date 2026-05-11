@@ -44,11 +44,34 @@ export interface FileCityTrailPanelProps {
   events: PanelEventEmitter;
 }
 
+const emptyRoot = {
+  path: '',
+  name: '',
+  children: [],
+  fileCount: 0,
+  totalSize: 0,
+  depth: 0,
+  relativePath: '',
+};
+
 const emptyFileTree: RepoFileTree = {
-  rootPath: '',
-  files: [],
-  metadata: { id: '__empty__' },
-} as unknown as RepoFileTree;
+  sha: '__empty__',
+  root: emptyRoot,
+  allFiles: [],
+  allDirectories: [emptyRoot],
+  stats: {
+    totalFiles: 0,
+    totalDirectories: 0,
+    totalSize: 0,
+    maxDepth: 0,
+  },
+  metadata: {
+    id: '__empty__',
+    timestamp: new Date(0),
+    sourceType: 'empty',
+    sourceInfo: {},
+  },
+};
 
 const emptySlice = <T,>(scope: 'repository', name: string, data: T): DataSlice<T> => ({
   scope,
