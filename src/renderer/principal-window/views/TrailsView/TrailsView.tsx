@@ -15,10 +15,12 @@ import {
   PanelLeftClose,
   Trash2,
   Footprints,
-  Lightbulb,
   Copy,
   Check,
   ExternalLink,
+  Search,
+  Loader2,
+  ArrowLeft,
 } from 'lucide-react';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import {
@@ -33,9 +35,12 @@ import {
   useTerminalActivity,
 } from '../../../contexts/TerminalContext';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { GitService } from '../../../main-process-api/GitService';
 import { GithubService } from '../../../main-process-api/GithubService';
 import { SkillLockService } from '../../../main-process-api/SkillLockService';
+import { ShellService } from '../../../main-process-api/ShellService';
+import { WindowService } from '../../../main-process-api/WindowService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 
@@ -220,9 +225,8 @@ const FootprintTrail: React.FC<{
  */
 const TrailsViewInner: React.FC<{
   selectedProject: AlexandriaEntry | null;
-  onSelectProject: (entry: AlexandriaEntry) => void;
   onClearProject: () => void;
-}> = ({ selectedProject, onSelectProject, onClearProject }) => {
+}> = ({ selectedProject, onClearProject }) => {
   const { theme } = useTheme();
 
   const events = useMemo(() => new PanelEventBus(), []);
@@ -241,10 +245,14 @@ const TrailsViewInner: React.FC<{
   // via their tab-id-keyed `terminalContext` so processes are preserved.
   const [tabs, setTabs] = useState<TerminalTab[]>([]);
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
-  const [remountKey, setRemountKey] = useState(0);
+  const [remountKey] = useState(0);
 
   // Whether the search dropdown is visible (focused or hovered)
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Whether the project-search overlay is shown. When projects exist, the
+  // welcome view is the default; the user opts in via the Open Project button.
+  const [showSearch, setShowSearch] = useState(false);
 
   // Whether the left-side project registry panel is open
   const [registryOpen, setRegistryOpen] = useState(false);
@@ -470,6 +478,66 @@ const TrailsViewInner: React.FC<{
     [selectedProject, onClearProject],
   );
 
+  // Prompt the user for a folder, register it as a project, then refresh.
+  const handleAddProject = useCallback(async () => {
+    const result = await FileSystemService.selectDirectory({
+      title: 'Add Project',
+      buttonLabel: 'Add',
+      properties: ['openDirectory'],
+    });
+    if (!result || ('canceled' in result && result.canceled)) return;
+    const path = (result as { filePaths?: string[] }).filePaths?.[0];
+    if (!path) return;
+    try {
+      await AlexandriaService.registerRepository(path);
+      const repos = await AlexandriaService.getRepositories();
+      setRepositories(repos);
+    } catch (error) {
+      console.error('[TrailsView] Failed to add project:', error);
+    }
+  }, []);
+
+  // Scan the user's home directory for git repos not yet in Alexandria, then
+  // auto-register them. The modal stays open so the user can see what was added.
+  type AddedRepo = { path: string; name: string; ok: boolean; error?: string };
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [scanningHome, setScanningHome] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [addedRepos, setAddedRepos] = useState<AddedRepo[]>([]);
+
+  const handleSearchHome = useCallback(async () => {
+    setSearchModalOpen(true);
+    setScanningHome(true);
+    setScanError(null);
+    setAddedRepos([]);
+    try {
+      const home = await FileSystemService.getHomePath();
+      const found = await GitService.getDiscoveredRepos(home, 3);
+      const results: AddedRepo[] = [];
+      for (const repo of found) {
+        try {
+          await AlexandriaService.registerRepository(repo.path);
+          results.push({ path: repo.path, name: repo.name, ok: true });
+        } catch (error) {
+          results.push({
+            path: repo.path,
+            name: repo.name,
+            ok: false,
+            error: error instanceof Error ? error.message : 'Register failed',
+          });
+        }
+        setAddedRepos([...results]);
+      }
+      const refreshed = await AlexandriaService.getRepositories();
+      setRepositories(refreshed);
+    } catch (error) {
+      console.error('[TrailsView] Home scan failed:', error);
+      setScanError(error instanceof Error ? error.message : 'Scan failed.');
+    } finally {
+      setScanningHome(false);
+    }
+  }, []);
+
   // Load local Alexandria repositories
   useEffect(() => {
     let cancelled = false;
@@ -565,29 +633,19 @@ const TrailsViewInner: React.FC<{
     });
   }, [repositories]);
 
-  // When user clicks an entry: open a terminal tab at the project path
-  // (or focus the existing one), then dismiss the search overlay.
+  // When user clicks an entry: open the project in its own dev workspace
+  // window. The search overlay closes itself via showSearch reset.
   const handleSelect = useCallback(
-    (entry: AlexandriaEntry) => {
-      const path = String(entry.path);
-      const existing = tabs.find((t) => t.directory === path);
-      if (existing) {
-        setFocusTabId(existing.id);
-      } else {
-        const newTab: TerminalTab = {
-          id: `trails-${Date.now()}`,
-          label: entry.name,
-          contentType: 'terminal',
-          directory: path,
-          closable: true,
-        };
-        setTabs((prev) => [...prev, newTab]);
-        setFocusTabId(newTab.id);
-        setRemountKey((k) => k + 1);
+    async (entry: AlexandriaEntry) => {
+      if (!entry?.path) return;
+      try {
+        await WindowService.openDevWorkspace({ alexandriaEntry: entry });
+        setShowSearch(false);
+      } catch (error) {
+        console.error('[TrailsView] Failed to open project window:', error);
       }
-      onSelectProject(entry);
     },
-    [tabs, onSelectProject],
+    [],
   );
 
   const overlayBg = theme.colors.background;
@@ -652,16 +710,6 @@ const TrailsViewInner: React.FC<{
           Code <span style={{ color: theme.colors.text }}>Trails</span>
         </div>
       </div>
-      <div
-        style={{
-          color: theme.colors.textSecondary,
-          fontFamily: theme.fonts.body,
-          fontSize: theme.fontSizes[2],
-          lineHeight: 1.4,
-        }}
-      >
-        A new way to collaborate on software
-      </div>
     </div>
   );
 
@@ -675,23 +723,27 @@ const TrailsViewInner: React.FC<{
         backgroundColor: theme.colors.background,
       }}
     >
-      {/* Tabbed terminal panel (underlay) */}
-      <div style={{ position: 'absolute', inset: 0 }}>
-        <TabbedTerminalPanel<TerminalTab>
-          key={remountKey}
-          context={terminalPanelContext}
-          actions={terminalActions as TerminalPanelActions}
-          events={events}
-          terminalContext={terminalCtx.terminalContext}
-          directory={selectedProject?.path ?? process.env.HOME ?? '/'}
-          defaultScrollLocked={false}
-          workingStates={workingStates}
-          initialTabs={tabs}
-          onTabsChange={setTabs}
-          requestFocusTabId={focusTabId}
-          onFocusTabHandled={() => setFocusTabId(null)}
-        />
-      </div>
+      {/* Tabbed terminal panel (underlay) — only rendered once a project is */}
+      {/* selected inside this window. Project clicks now open a dedicated */}
+      {/* dev-workspace window, so the trails view itself rarely hosts tabs. */}
+      {selectedProject && (
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <TabbedTerminalPanel<TerminalTab>
+            key={remountKey}
+            context={terminalPanelContext}
+            actions={terminalActions as TerminalPanelActions}
+            events={events}
+            terminalContext={terminalCtx.terminalContext}
+            directory={selectedProject?.path ?? process.env.HOME ?? '/'}
+            defaultScrollLocked={false}
+            workingStates={workingStates}
+            initialTabs={tabs}
+            onTabsChange={setTabs}
+            requestFocusTabId={focusTabId}
+            onFocusTabHandled={() => setFocusTabId(null)}
+          />
+        </div>
+      )}
 
       {/* Selected-project chip + reopen-search affordance (top-right) */}
       {selectedProject && (
@@ -739,12 +791,12 @@ const TrailsViewInner: React.FC<{
             overflowY: 'auto',
           }}
         >
-          <div style={{ flex: '0 0 auto', marginTop: '14vh' }}>{welcomeHeader}</div>
+          <div style={{ flex: '0 0 auto', marginTop: '9vh' }}>{welcomeHeader}</div>
 
           <div
             style={{
               flex: '0 0 auto',
-              marginTop: 40,
+              marginTop: 80,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -801,6 +853,27 @@ const TrailsViewInner: React.FC<{
             </button>
           </div>
 
+          <button
+            type="button"
+            onClick={() => void ShellService.openExternal(TRAIL_SKILL_DOCS_URL)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              color: theme.colors.primary,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              textDecoration: 'underline',
+            }}
+          >
+            Preview on GitHub
+            <ExternalLink size={12} />
+          </button>
+
           {skillInstallError && (
             <div
               style={{
@@ -824,7 +897,7 @@ const TrailsViewInner: React.FC<{
       {!selectedProject &&
         skillInstalled === true &&
         !reposLoading &&
-        repositories.length === 0 && (
+        !showSearch && (
           <div
             style={{
               position: 'absolute',
@@ -839,7 +912,7 @@ const TrailsViewInner: React.FC<{
               overflowY: 'auto',
             }}
           >
-            <div style={{ flex: '0 0 auto', marginTop: '14vh' }}>
+            <div style={{ flex: '0 0 auto', marginTop: '9vh' }}>
               {welcomeHeader}
             </div>
 
@@ -866,20 +939,7 @@ const TrailsViewInner: React.FC<{
                   fontWeight: theme.fontWeights.semibold,
                 }}
               >
-                <Lightbulb size={20} color={theme.colors.primary} />
-                Trail Prompt Ideas
-              </div>
-              <div
-                style={{
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[1],
-                  lineHeight: 1.5,
-                  textAlign: 'center',
-                }}
-              >
-                Pick one of these starters and paste it into your agent's
-                terminal to map a trail.
+                Create a Trail
               </div>
 
               <div
@@ -965,23 +1025,170 @@ const TrailsViewInner: React.FC<{
                 })}
               </div>
 
-              <a
-                href={TRAIL_SKILL_DOCS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+              <div
                 style={{
-                  display: 'inline-flex',
+                  display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
-                  color: theme.colors.primary,
+                  gap: 12,
+                  width: '100%',
+                  maxWidth: 360,
+                  color: theme.colors.textSecondary,
                   fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[1],
-                  textDecoration: 'none',
+                  fontSize: theme.fontSizes[0],
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  marginTop: 8,
                 }}
               >
-                Read the full SKILL.md
-                <ExternalLink size={14} />
-              </a>
+                <div style={{ flex: 1, height: 1, background: theme.colors.border }} />
+                or
+                <div style={{ flex: 1, height: 1, background: theme.colors.border }} />
+              </div>
+
+              <div
+                style={{
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.heading ?? theme.fonts.body,
+                  fontSize: theme.fontSizes[3],
+                  fontWeight: theme.fontWeights.semibold,
+                  textAlign: 'center',
+                }}
+              >
+                {repositories.length > 0 ? 'Open a Project' : 'Add a Project'}
+              </div>
+              {repositories.length === 0 && (
+                <div
+                  style={{
+                    color: theme.colors.textSecondary,
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[1],
+                    textAlign: 'center',
+                    maxWidth: 520,
+                    marginTop: -4,
+                  }}
+                >
+                  Pick a folder on your computer, or let us scan your home directory for git repos.
+                </div>
+              )}
+
+              {repositories.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowSearch(true)}
+                  style={{
+                    width: 360,
+                    padding: 24,
+                    borderRadius: 12,
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    color: theme.colors.text,
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[3],
+                    fontWeight: theme.fontWeights.semibold,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    transition: 'border-color 150ms ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                  }}
+                >
+                  <Folder size={20} color={theme.colors.primary} />
+                  Open Project
+                </button>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => void handleAddProject()}
+                      title="Pick a folder on your computer"
+                      style={{
+                        width: 240,
+                        padding: 20,
+                        borderRadius: 12,
+                        border: `1px solid ${theme.colors.border}`,
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        color: theme.colors.text,
+                        fontFamily: theme.fonts.body,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 8,
+                        transition: 'border-color 150ms ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = theme.colors.primary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = theme.colors.border;
+                      }}
+                    >
+                      <Folder size={28} color={theme.colors.primary} />
+                      <div style={{ fontSize: theme.fontSizes[2], fontWeight: theme.fontWeights.semibold }}>
+                        Find
+                      </div>
+                      <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>
+                        Pick a folder
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleSearchHome()}
+                      disabled={scanningHome}
+                      title="Scan your home directory for git repositories"
+                      style={{
+                        width: 240,
+                        padding: 20,
+                        borderRadius: 12,
+                        border: `1px solid ${theme.colors.border}`,
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        color: theme.colors.text,
+                        fontFamily: theme.fonts.body,
+                        cursor: scanningHome ? 'default' : 'pointer',
+                        opacity: scanningHome ? 0.7 : 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 8,
+                        transition: 'border-color 150ms ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (scanningHome) return;
+                        e.currentTarget.style.borderColor = theme.colors.primary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = theme.colors.border;
+                      }}
+                    >
+                      {scanningHome ? (
+                        <Loader2
+                          size={28}
+                          color={theme.colors.primary}
+                          style={{ animation: 'trails-spin 1s linear infinite' }}
+                        />
+                      ) : (
+                        <Search size={28} color={theme.colors.primary} />
+                      )}
+                      <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
+                      <div style={{ fontSize: theme.fontSizes[2], fontWeight: theme.fontWeights.semibold }}>
+                        {scanningHome ? 'Searching…' : 'Search'}
+                      </div>
+                      <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>
+                        Scan home folder
+                      </div>
+                    </button>
+                  </div>
+
+                </>
+              )}
             </div>
           </div>
         )}
@@ -990,7 +1197,7 @@ const TrailsViewInner: React.FC<{
       {/* Search overlay (covers panel until a project is picked) */}
       {!selectedProject &&
         skillInstalled === true &&
-        !(!reposLoading && repositories.length === 0) && (
+        showSearch && (
         <div
           style={{
             position: 'absolute',
@@ -1002,6 +1209,32 @@ const TrailsViewInner: React.FC<{
             overflow: 'hidden',
           }}
         >
+          {/* Back to welcome — returns to the Create-a-Trail screen. */}
+          <button
+            type="button"
+            onClick={() => setShowSearch(false)}
+            title="Back"
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              zIndex: 22,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 10px',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: 8,
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              cursor: 'pointer',
+            }}
+          >
+            <ArrowLeft size={14} />
+            Back
+          </button>
           {/* Footprint trails — span the entire overlay, behind all content. */}
           {/* When the user focuses the search input, the trails fade out and */}
           {/* their animations pause until the input is blurred. */}
@@ -1642,6 +1875,205 @@ const TrailsViewInner: React.FC<{
         </div>
       )}
 
+      {/* Home-scan results modal — opened by the Search button. */}
+      {searchModalOpen && (
+        <div
+          onClick={() => {
+            if (!scanningHome) setSearchModalOpen(false);
+          }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 30,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(560px, 100%)',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: 12,
+              border: `1px solid ${theme.colors.border}`,
+              background: theme.colors.background,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: `1px solid ${theme.colors.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.heading ?? theme.fonts.body,
+                  fontSize: theme.fontSizes[3],
+                  fontWeight: theme.fontWeights.semibold,
+                }}
+              >
+                {scanningHome ? (
+                  <Loader2
+                    size={18}
+                    color={theme.colors.primary}
+                    style={{ animation: 'trails-spin 1s linear infinite' }}
+                  />
+                ) : (
+                  <Search size={18} color={theme.colors.primary} />
+                )}
+                {scanningHome ? 'Searching your home folder…' : 'Search Results'}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSearchModalOpen(false)}
+                disabled={scanningHome}
+                title="Close"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: theme.colors.textSecondary,
+                  cursor: scanningHome ? 'default' : 'pointer',
+                  opacity: scanningHome ? 0.4 : 1,
+                  padding: 4,
+                  display: 'flex',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: '12px 20px', overflowY: 'auto' }}>
+              {scanError && (
+                <div
+                  style={{
+                    color: theme.colors.error ?? theme.colors.primary,
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[1],
+                    padding: '8px 0',
+                  }}
+                >
+                  {scanError}
+                </div>
+              )}
+              {!scanError && !scanningHome && addedRepos.length === 0 && (
+                <div
+                  style={{
+                    color: theme.colors.textSecondary,
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[1],
+                    padding: '8px 0',
+                    textAlign: 'center',
+                  }}
+                >
+                  No new repositories found in your home folder.
+                </div>
+              )}
+              {addedRepos.length > 0 && (
+                <>
+                  <div
+                    style={{
+                      color: theme.colors.textSecondary,
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[0],
+                      padding: '4px 0 8px',
+                    }}
+                  >
+                    {scanningHome
+                      ? `Adding ${addedRepos.length} so far…`
+                      : `Added ${addedRepos.filter((r) => r.ok).length} of ${addedRepos.length} repositor${addedRepos.length === 1 ? 'y' : 'ies'}.`}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {addedRepos.map((repo) => (
+                      <div
+                        key={repo.path}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '8px 10px',
+                          borderRadius: 8,
+                          border: `1px solid ${theme.colors.border}`,
+                          background: theme.colors.backgroundSecondary,
+                          fontFamily: theme.fonts.body,
+                          fontSize: theme.fontSizes[1],
+                        }}
+                      >
+                        {repo.ok ? (
+                          <Check size={14} color={theme.colors.primary} />
+                        ) : (
+                          <X size={14} color={theme.colors.error ?? theme.colors.primary} />
+                        )}
+                        <div style={{ flex: 1, overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              color: theme.colors.text,
+                              fontWeight: theme.fontWeights.semibold,
+                            }}
+                          >
+                            {repo.name}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: theme.fontSizes[0],
+                              color: theme.colors.textSecondary,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {repo.error ? repo.error : repo.path}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <div
+              style={{
+                padding: '12px 20px',
+                borderTop: `1px solid ${theme.colors.border}`,
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setSearchModalOpen(false)}
+                disabled={scanningHome}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 8,
+                  border: `1px solid ${theme.colors.border}`,
+                  background: theme.colors.backgroundSecondary,
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  cursor: scanningHome ? 'default' : 'pointer',
+                  opacity: scanningHome ? 0.5 : 1,
+                }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Global git config modal — opened by clicking the welcome name. */}
       <GitGlobalConfigModal
         isOpen={gitConfigOpen}
@@ -1796,7 +2228,6 @@ export const TrailsView: React.FC = () => {
     >
       <TrailsViewInner
         selectedProject={selectedProject}
-        onSelectProject={setSelectedProject}
         onClearProject={() => setSelectedProject(null)}
       />
     </TerminalProvider>
