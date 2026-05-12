@@ -289,6 +289,16 @@ const TrailsViewInner: React.FC<{
     'projects',
   );
 
+  // Top-level view mode for the welcome overlay. 'search' shows the
+  // existing input + dropdown (with Projects/Trails sub-toggle). 'recent'
+  // replaces it with a 7-column week grid of trail cards bucketed by
+  // updatedAt day. Only switchable when at least one trail exists.
+  const [viewMode, setViewMode] = useState<'search' | 'recent'>('search');
+
+  // Free-text filter applied inside Recent mode. Trails that don't match
+  // are dropped before bucketing, so empty columns surface naturally.
+  const [recentFilter, setRecentFilter] = useState('');
+
   // Whether the left-side project registry panel is open
   const [registryOpen, setRegistryOpen] = useState(false);
 
@@ -729,6 +739,57 @@ const TrailsViewInner: React.FC<{
       return title.includes(q) || summary.includes(q) || repo.includes(q);
     });
   }, [recentTrails, query]);
+
+  // Recent-view buckets: 7 day-columns from today (idx 0) back to 6
+  // days ago (idx 6). Trails older than that don't render — sparse weeks
+  // stay sparse on purpose. The recentFilter, when non-empty, filters
+  // trails before bucketing so unmatched columns go empty.
+  const trailsByDay = useMemo(() => {
+    const buckets: TrailIndexEntry[][] = Array.from({ length: 7 }, () => []);
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const startMs = startOfToday.getTime();
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+    const q = recentFilter.trim().toLowerCase();
+    for (const trail of recentTrails) {
+      if (q) {
+        const title = (trail.title ?? '').toLowerCase();
+        const summary = (trail.summaryPreview ?? '').toLowerCase();
+        const repo = trailRepoLabel(trail.repositoryPath).toLowerCase();
+        if (
+          !title.includes(q) &&
+          !summary.includes(q) &&
+          !repo.includes(q)
+        ) {
+          continue;
+        }
+      }
+      const t = Date.parse(trail.updatedAt);
+      if (!Number.isFinite(t)) continue;
+      const d = new Date(t);
+      d.setHours(0, 0, 0, 0);
+      const idx = Math.floor((startMs - d.getTime()) / MS_PER_DAY);
+      if (idx >= 0 && idx < 7) buckets[idx].push(trail);
+    }
+    return buckets;
+  }, [recentTrails, recentFilter]);
+
+  // Column header labels for the Recent week grid.
+  const dayHeading = useCallback((idx: number): string => {
+    if (idx === 0) return 'Today';
+    if (idx === 1) return 'Yesterday';
+    const d = new Date();
+    d.setDate(d.getDate() - idx);
+    return d.toLocaleDateString(undefined, { weekday: 'short' });
+  }, []);
+  const daySubheading = useCallback((idx: number): string => {
+    const d = new Date();
+    d.setDate(d.getDate() - idx);
+    return d.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+  }, []);
 
   // Full registry list for the left side panel — sorted by most recently
   // opened, then alphabetically by display name as a tiebreaker.
@@ -1475,7 +1536,9 @@ const TrailsViewInner: React.FC<{
             })()}
           </div>
 
-          {/* Marquee section */}
+          {/* Marquee section — hidden in Recent mode so the week grid */}
+          {/* gets the full vertical space. */}
+          {viewMode === 'search' && (
           <div
             style={{
               flex: '0 0 auto',
@@ -1501,6 +1564,7 @@ const TrailsViewInner: React.FC<{
               Principal <span style={{ color: theme.colors.primary }}>AI</span>
             </div>
           </div>
+          )}
 
           {/* Search section */}
           <div
@@ -1509,12 +1573,17 @@ const TrailsViewInner: React.FC<{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              paddingTop: 32,
+              paddingTop: viewMode === 'recent' ? 24 : 32,
+              paddingLeft: 24,
+              paddingRight: 24,
+              paddingBottom: 24,
               overflow: 'hidden',
               position: 'relative',
               zIndex: 1,
+              minHeight: 0,
             }}
           >
+            {viewMode === 'search' && (
             <div
               style={{
                 width: 'min(640px, 90%)',
@@ -1651,6 +1720,47 @@ const TrailsViewInner: React.FC<{
                   ⌘I
                 </kbd>
               </div>
+
+              {/* View Recent Trails — opens the 7-day week grid. Only */}
+              {/* shown when at least one local trail exists. */}
+              {hasRecentTrails && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode('recent');
+                    setQuery('');
+                    setSearchOpen(false);
+                  }}
+                  style={{
+                    alignSelf: 'center',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 16px',
+                    borderRadius: 999,
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    color: theme.colors.textSecondary,
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: theme.fontWeights.semibold,
+                    cursor: 'pointer',
+                    transition: 'color 120ms ease, border-color 120ms ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = theme.colors.text;
+                    e.currentTarget.style.borderColor =
+                      theme.colors.textSecondary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = theme.colors.textSecondary;
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                  }}
+                >
+                  <Footprints size={14} />
+                  View Recent Trails
+                </button>
+              )}
 
               {/* Results dropdown — hide entirely when showing recents but there are none */}
               {(searchOpen || query.length > 0) &&
@@ -1965,6 +2075,313 @@ const TrailsViewInner: React.FC<{
               </div>
               )}
             </div>
+            )}
+
+            {viewMode === 'recent' && (
+              <div
+                style={{
+                  flex: 1,
+                  alignSelf: 'stretch',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                  minHeight: 0,
+                  width: '100%',
+                  maxWidth: 1600,
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    flex: '0 0 auto',
+                  }}
+                >
+                  <div style={{ flex: 1, display: 'flex' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewMode('search');
+                        setRecentFilter('');
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '6px 10px',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: 8,
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        color: theme.colors.text,
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[1],
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <ArrowLeft size={14} />
+                      Back to search
+                    </button>
+                  </div>
+                  <div
+                    style={{
+                      flex: '0 0 auto',
+                      width: '100%',
+                      maxWidth: 300,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                    }}
+                  >
+                    <Search size={14} color={theme.colors.textSecondary} />
+                    <input
+                      value={recentFilter}
+                      onChange={(e) => setRecentFilter(e.target.value)}
+                      placeholder="Filter trails by title, summary, or project"
+                      className="trails-search-input"
+                      style={{
+                        flex: 1,
+                        border: 'none',
+                        outline: 'none',
+                        background: 'transparent',
+                        color: theme.colors.text,
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[1],
+                      }}
+                    />
+                    {recentFilter && (
+                      <button
+                        type="button"
+                        onClick={() => setRecentFilter('')}
+                        title="Clear filter"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 22,
+                          height: 22,
+                          border: 'none',
+                          borderRadius: 6,
+                          background: 'transparent',
+                          color: theme.colors.textSecondary,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }} aria-hidden />
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+                    gap: 10,
+                    minHeight: 0,
+                  }}
+                >
+                {trailsByDay.map((_, i) => {
+                  const idx = trailsByDay.length - 1 - i;
+                  const bucket = trailsByDay[idx];
+                  return (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: 0,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: 10,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: '10px 12px',
+                        borderBottom: `1px solid ${theme.colors.border}`,
+                        fontFamily: theme.fonts.body,
+                        flex: '0 0 auto',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          fontWeight: theme.fontWeights.semibold,
+                          color: theme.colors.text,
+                        }}
+                      >
+                        {dayHeading(idx)}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          color: theme.colors.textSecondary,
+                          marginTop: 2,
+                        }}
+                      >
+                        {daySubheading(idx)}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        padding: 8,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                        minHeight: 0,
+                      }}
+                    >
+                      {bucket.length === 0 ? (
+                        <div
+                          style={{
+                            padding: '24px 8px',
+                            textAlign: 'center',
+                            fontFamily: theme.fonts.body,
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textSecondary,
+                            opacity: 0.4,
+                          }}
+                        >
+                          —
+                        </div>
+                      ) : (
+                        bucket.map((trail) => {
+                          const repoLabel = trailRepoLabel(
+                            trail.repositoryPath,
+                          );
+                          const owned = !!(
+                            trail.repositoryPath &&
+                            repositories.some(
+                              (r) => r.path === trail.repositoryPath,
+                            )
+                          );
+                          return (
+                            <button
+                              key={trail.id}
+                              type="button"
+                              onClick={() =>
+                                void handleOpenRecentTrail(trail)
+                              }
+                              disabled={!owned}
+                              title={
+                                owned
+                                  ? `Open ${trail.title}`
+                                  : "This trail's project isn't in your registry."
+                              }
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 6,
+                                padding: 10,
+                                borderRadius: 8,
+                                border: `1px solid ${theme.colors.border}`,
+                                background: theme.colors.background,
+                                color: theme.colors.text,
+                                cursor: owned ? 'pointer' : 'not-allowed',
+                                opacity: owned ? 1 : 0.5,
+                                textAlign: 'left',
+                                fontFamily: theme.fonts.body,
+                                transition: 'background-color 120ms ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!owned) return;
+                                e.currentTarget.style.backgroundColor =
+                                  theme.colors.backgroundTertiary ??
+                                  theme.colors.border;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  theme.colors.background;
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'flex-start',
+                                  gap: 6,
+                                  minWidth: 0,
+                                }}
+                              >
+                                <Footprints
+                                  size={14}
+                                  color={theme.colors.textSecondary}
+                                  style={{ flexShrink: 0, marginTop: 2 }}
+                                />
+                                <div
+                                  style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    fontSize: theme.fontSizes[1],
+                                    fontWeight: theme.fontWeights.semibold,
+                                    overflow: 'hidden',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    wordBreak: 'break-word',
+                                  }}
+                                >
+                                  {trail.title || 'Untitled trail'}
+                                </div>
+                              </div>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  fontSize: theme.fontSizes[0],
+                                  color: theme.colors.textSecondary,
+                                  minWidth: 0,
+                                }}
+                              >
+                                <Folder size={11} style={{ flexShrink: 0 }} />
+                                <span
+                                  style={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    minWidth: 0,
+                                    flex: 1,
+                                  }}
+                                >
+                                  {repoLabel}
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  gap: 6,
+                                  fontSize: theme.fontSizes[0],
+                                  color: theme.colors.textSecondary,
+                                }}
+                              >
+                                <span>{trail.markerCount} steps</span>
+                                <span aria-hidden>·</span>
+                                <span>
+                                  {formatRelativeTime(trail.updatedAt)}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                  );
+                })}
+                </div>
+              </div>
+            )}
           </div>
 
         </div>
