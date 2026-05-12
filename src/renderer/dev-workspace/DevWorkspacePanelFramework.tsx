@@ -836,6 +836,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const [rightOverlayPanelId, setRightOverlayPanelId] = useState<string | null>(
     null,
   );
+  const leftOverlayRef = useRef<HTMLDivElement>(null);
+  const rightOverlayRef = useRef<HTMLDivElement>(null);
+  const leftSidebarRef = useRef<HTMLDivElement>(null);
+  const rightSidebarRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!leftOverlayPanelId && !rightOverlayPanelId) return;
     const onKey = (e: KeyboardEvent) => {
@@ -844,8 +848,22 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         setRightOverlayPanelId(null);
       }
     };
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (leftOverlayRef.current?.contains(target)) return;
+      if (rightOverlayRef.current?.contains(target)) return;
+      if (leftSidebarRef.current?.contains(target)) return;
+      if (rightSidebarRef.current?.contains(target)) return;
+      setLeftOverlayPanelId(null);
+      setRightOverlayPanelId(null);
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onMouseDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onMouseDown);
+    };
   }, [leftOverlayPanelId, rightOverlayPanelId]);
 
   // Get required props for tabbed terminal panels from TerminalContext
@@ -4306,22 +4324,26 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     >
       {/* Left Panel Icon Sidebar */}
       {!sidebarsHidden && (
-        <PanelIconSidebar
-          currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
-          onPanelChange={(panelId) =>
-            onLayoutChange({ ...layout, left: panelId })
-          }
-          onPanelOverlay={(panelId) =>
-            setLeftOverlayPanelId((prev) => (prev === panelId ? null : panelId))
-          }
-          overlayPanelId={leftOverlayPanelId}
-          theme={theme}
-          collapsed={isLeftCollapsed}
-          onExpand={handleLeftExpand}
-          onCollapse={handleLeftCollapse}
-          position="left"
-          panelIcons={leftPanelIcons}
-        />
+        <div ref={leftSidebarRef} style={{ display: 'contents' }}>
+          <PanelIconSidebar
+            currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
+            onPanelChange={(panelId) =>
+              onLayoutChange({ ...layout, left: panelId })
+            }
+            onPanelOverlay={(panelId) =>
+              setLeftOverlayPanelId((prev) =>
+                prev === panelId ? null : panelId,
+              )
+            }
+            overlayPanelId={leftOverlayPanelId}
+            theme={theme}
+            collapsed={isLeftCollapsed}
+            onExpand={handleLeftExpand}
+            onCollapse={handleLeftCollapse}
+            position="left"
+            panelIcons={leftPanelIcons}
+          />
+        </div>
       )}
 
       {/* Left Panel Overlay (right-click sidebar to toggle) */}
@@ -4334,6 +4356,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           if (!overlayPanel) return null;
           return (
             <div
+              ref={leftOverlayRef}
               style={{
                 position: 'absolute',
                 left: '80px',
@@ -4433,6 +4456,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           if (!overlayPanel) return null;
           return (
             <div
+              ref={rightOverlayRef}
               style={{
                 position: 'absolute',
                 right: '80px',
@@ -4455,59 +4479,63 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
       {/* Right Panel Icon Sidebar */}
       {!sidebarsHidden && (
-        <PanelIconSidebar
-          currentPanelId={typeof layout.right === 'string' ? layout.right : ''}
-          onPanelChange={(panelId) =>
-            onLayoutChange({ ...layout, right: panelId })
-          }
-          onPanelOverlay={(panelId) =>
-            setRightOverlayPanelId((prev) =>
-              prev === panelId ? null : panelId,
-            )
-          }
-          overlayPanelId={rightOverlayPanelId}
-          theme={theme}
-          collapsed={isRightCollapsed}
-          onExpand={handleRightExpand}
-          onCollapse={handleRightCollapse}
-          position="right"
-          panelIcons={rightPanelIcons}
-          onOpenInWebADE={onOpenInWebADE}
-          onOpenGitHubActions={onOpenGitHubActions}
-          onOpenGitHubRepo={onOpenGitHubRepo}
-          customButtons={
-            <>
-              {storybook && (
-                <StorybookSidebarButton theme={theme} storybook={storybook} />
-              )}
-              <NextjsSidebarButton
-                theme={theme}
-                packages={context.packages?.data?.packages}
-                repositoryPath={context.currentScope?.repository?.path}
-                repositoryOwner={
-                  context.currentScope?.repository?.owner as string | undefined
-                }
-                repositoryName={context.currentScope?.repository?.name}
-                currentLayout={
-                  layout as { left: string; middle: string; right: string }
-                }
-                onLayoutChange={onLayoutChange}
-                onPanelSizesChange={onPanelSizesChange}
-                events={events}
-              />
-              <TypeInformationSidebarButton
-                theme={theme}
-                packages={context.packages?.data?.packages}
-                repositoryPath={context.currentScope?.repository?.path}
-                currentLayout={
-                  layout as { left: string; middle: string; right: string }
-                }
-                onLayoutChange={onLayoutChange}
-                events={events}
-              />
-            </>
-          }
-        />
+        <div ref={rightSidebarRef} style={{ display: 'contents' }}>
+          <PanelIconSidebar
+            currentPanelId={typeof layout.right === 'string' ? layout.right : ''}
+            onPanelChange={(panelId) =>
+              onLayoutChange({ ...layout, right: panelId })
+            }
+            onPanelOverlay={(panelId) =>
+              setRightOverlayPanelId((prev) =>
+                prev === panelId ? null : panelId,
+              )
+            }
+            overlayPanelId={rightOverlayPanelId}
+            theme={theme}
+            collapsed={isRightCollapsed}
+            onExpand={handleRightExpand}
+            onCollapse={handleRightCollapse}
+            position="right"
+            panelIcons={rightPanelIcons}
+            onOpenInWebADE={onOpenInWebADE}
+            onOpenGitHubActions={onOpenGitHubActions}
+            onOpenGitHubRepo={onOpenGitHubRepo}
+            customButtons={
+              <>
+                {storybook && (
+                  <StorybookSidebarButton theme={theme} storybook={storybook} />
+                )}
+                <NextjsSidebarButton
+                  theme={theme}
+                  packages={context.packages?.data?.packages}
+                  repositoryPath={context.currentScope?.repository?.path}
+                  repositoryOwner={
+                    context.currentScope?.repository?.owner as
+                      | string
+                      | undefined
+                  }
+                  repositoryName={context.currentScope?.repository?.name}
+                  currentLayout={
+                    layout as { left: string; middle: string; right: string }
+                  }
+                  onLayoutChange={onLayoutChange}
+                  onPanelSizesChange={onPanelSizesChange}
+                  events={events}
+                />
+                <TypeInformationSidebarButton
+                  theme={theme}
+                  packages={context.packages?.data?.packages}
+                  repositoryPath={context.currentScope?.repository?.path}
+                  currentLayout={
+                    layout as { left: string; middle: string; right: string }
+                  }
+                  onLayoutChange={onLayoutChange}
+                  events={events}
+                />
+              </>
+            }
+          />
+        </div>
       )}
     </div>
   );
