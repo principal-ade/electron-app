@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
 import { PrincipalEventProvider } from './PrincipalEventContext';
+import { FeedTabsProvider } from './contexts/FeedTabsContext';
 import { IntegratedShell } from './components/IntegratedShell/IntegratedShell';
 import { KeychainConsentModal } from '../components/KeychainConsentModal';
 import {
@@ -38,7 +39,9 @@ export const PrincipalApp: React.FC = () => {
         <KeychainConsentWrapper>
           <MemoryRouter>
             <PrincipalEventProvider>
-              <IntegratedShell />
+              <FeedTabsProvider>
+                <IntegratedShell />
+              </FeedTabsProvider>
             </PrincipalEventProvider>
           </MemoryRouter>
         </KeychainConsentWrapper>

@@ -4,6 +4,7 @@ import { ExternalLink, Search, Star, User } from 'lucide-react';
 import { githubClient } from '../../../tipc/githubClient';
 import type { GitHubRepository, GitHubUser } from '../../../../shared/tipc/githubRouterTypes';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
+import { useFeedTabs } from '../../contexts/FeedTabsContext';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { findClonedGithubEntry } from '../../../utils/alexandriaIdentity';
 import {
@@ -39,6 +40,7 @@ const formatStars = (n?: number): string => {
 export const TitlebarGitHubSearch: React.FC = () => {
   const { theme } = useTheme();
   const { events } = usePrincipalEvents();
+  const { openProjectInfo, openUserProfile } = useFeedTabs();
   const [query, setQuery] = useState('');
   const [repoResults, setRepoResults] = useState<GitHubRepository[]>([]);
   const [userResults, setUserResults] = useState<GitHubUser[]>([]);
@@ -135,11 +137,11 @@ export const TitlebarGitHubSearch: React.FC = () => {
         timestamp: Date.now(),
         payload: { view: 'feed' },
       });
-      events.emit({
-        type: 'feed:repository-selected',
-        source: 'titlebar-search',
-        timestamp: Date.now(),
-        payload: payloadFromGithub({
+      // Call FeedTabsContext directly. Going through principalEvents would
+      // drop on the floor when FeedView is not yet mounted — the bridge in
+      // FeedPanelProvider isn't subscribed until after this tick.
+      openProjectInfo(
+        payloadFromGithub({
           owner: repo.owner.login,
           name: repo.name,
           description: repo.description ?? undefined,
@@ -148,10 +150,10 @@ export const TitlebarGitHubSearch: React.FC = () => {
           isPublic: !repo.private,
           defaultBranch: repo.default_branch,
         }),
-      });
+      );
       clearSearch();
     },
-    [events, clearSearch],
+    [events, openProjectInfo, clearSearch],
   );
 
   const handleSelectUser = useCallback(
@@ -162,15 +164,10 @@ export const TitlebarGitHubSearch: React.FC = () => {
         timestamp: Date.now(),
         payload: { view: 'feed' },
       });
-      events.emit({
-        type: 'user:profile-selected',
-        source: 'titlebar-search',
-        timestamp: Date.now(),
-        payload: { username: user.login },
-      });
+      openUserProfile(user.login);
       clearSearch();
     },
-    [events, clearSearch],
+    [events, openUserProfile, clearSearch],
   );
 
   const openUserByUsername = useCallback(
@@ -181,15 +178,10 @@ export const TitlebarGitHubSearch: React.FC = () => {
         timestamp: Date.now(),
         payload: { view: 'feed' },
       });
-      events.emit({
-        type: 'user:profile-selected',
-        source: 'titlebar-search',
-        timestamp: Date.now(),
-        payload: { username },
-      });
+      openUserProfile(username);
       clearSearch();
     },
-    [events, clearSearch],
+    [events, openUserProfile, clearSearch],
   );
 
   const openRepoByOwnerName = useCallback(
@@ -202,17 +194,14 @@ export const TitlebarGitHubSearch: React.FC = () => {
         timestamp: Date.now(),
         payload: { view: 'feed' },
       });
-      events.emit({
-        type: 'feed:repository-selected',
-        source: 'titlebar-search',
-        timestamp: Date.now(),
-        payload: existing
+      openProjectInfo(
+        existing
           ? payloadFromLocalEntry(existing)
           : payloadFromGithub({ owner, name: repoName }),
-      });
+      );
       clearSearch();
     },
-    [events, clearSearch],
+    [events, openProjectInfo, clearSearch],
   );
 
   const handlePaste = useCallback(

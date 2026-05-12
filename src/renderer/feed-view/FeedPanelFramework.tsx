@@ -78,6 +78,7 @@ import { watchedActivityPanelActions } from '../panels/watchedActivityPanelActio
 import { InProgressActivityPanel } from '../panels/InProgressActivityPanel';
 import { inProgressActivityPanelActions } from '../panels/inProgressActivityPanelActions';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
+import { useFeedTabs } from '../principal-window/contexts/FeedTabsContext';
 
 /**
  * User activity response from Principal ADE API
@@ -1069,18 +1070,17 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // Time filter state for heatmap selection
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
 
-  // Tab management - Initialize with activity feed tab.
-  // If any repo has uncommitted changes when the view mounts, a one-shot
-  // effect below swaps this for an in-progress tab so the user lands on
-  // their work-in-flight by default.
-  const [tabs, setTabs] = useState<FeedTab[]>([
-    {
-      id: 'activity-feed',
-      contentType: 'activity-feed',
-      label: 'Recent Activity',
-    } as ActivityFeedTab,
-  ]);
-  const [activeTabId, setActiveTabId] = useState<string | null>('activity-feed');
+  // Tab state lives in FeedTabsContext (above IntegratedShell's conditional
+  // FeedView mount) so tabs survive view switches and so producers outside
+  // FeedView (e.g. the titlebar repo picker) can mutate them directly.
+  const {
+    tabs,
+    setTabs,
+    activeTabId,
+    setActiveTabId,
+    openProjectInfo,
+    openUserProfile,
+  } = useFeedTabs();
   const didCheckInitialDirtyRef = useRef(false);
 
   useEffect(() => {
@@ -1267,35 +1267,16 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, tabs]);
 
-  // Listen for repository selection events to open project info tab
+  // In-feed clicks (RepoActivityCard etc.) still emit on the local bus.
+  // Both the local-bus path and the titlebar's direct call funnel through
+  // the same context actions so tab-creation logic lives in one place.
   useEffect(() => {
     const handleRepositorySelected = (event: {
       type: string;
       payload: FeedRepositorySelectedPayload;
     }) => {
       if (event.type === 'feed:repository-selected') {
-        const { purl, github, localEntry } = event.payload;
-        const tabId = `project-info-${purl}`;
-        const label = github ? `${github.owner}/${github.name}` : purl;
-
-        const existingTab = tabs.find(tab => tab.id === tabId);
-        if (existingTab) {
-          setActiveTabId(tabId);
-          return;
-        }
-
-        const newTab: ProjectInfoTab = {
-          id: tabId,
-          label,
-          contentType: 'project-info',
-          closable: true,
-          purl,
-          github,
-          localEntry,
-        };
-
-        setTabs(prevTabs => [...prevTabs, newTab]);
-        setActiveTabId(tabId);
+        openProjectInfo(event.payload);
       }
     };
 
@@ -1303,37 +1284,15 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     return () => {
       events.off('feed:repository-selected', handleRepositorySelected);
     };
-  }, [events, tabs]);
+  }, [events, openProjectInfo]);
 
-  // Listen for user profile selection events to open user profile tab
   useEffect(() => {
     const handleUserSelected = (event: {
       type: string;
       payload: { username: string; email?: string }
     }) => {
       if (event.type === 'user:profile-selected') {
-        const { username, email } = event.payload;
-        const tabId = `user-profile-${username}`;
-
-        // Check if tab already exists
-        const existingTab = tabs.find(tab => tab.id === tabId);
-        if (existingTab) {
-          setActiveTabId(tabId);
-          return;
-        }
-
-        // Create new user profile tab
-        const newTab: UserProfileTab = {
-          id: tabId,
-          label: `@${username}`,
-          contentType: 'user-profile',
-          closable: true,
-          username,
-          email,
-        };
-
-        setTabs(prevTabs => [...prevTabs, newTab]);
-        setActiveTabId(tabId);
+        openUserProfile(event.payload.username, event.payload.email);
       }
     };
 
@@ -1341,7 +1300,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     return () => {
       events.off('user:profile-selected', handleUserSelected);
     };
-  }, [events, tabs]);
+  }, [events, openUserProfile]);
 
   // Listen for owner selection events from repo cards (could be user or org)
   useEffect(() => {
