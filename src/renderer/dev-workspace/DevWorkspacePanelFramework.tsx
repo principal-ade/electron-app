@@ -849,12 +849,21 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }
     };
     const onMouseDown = (e: MouseEvent) => {
-      const target = e.target as Node | null;
+      const target = e.target as Element | null;
       if (!target) return;
       if (leftOverlayRef.current?.contains(target)) return;
       if (rightOverlayRef.current?.contains(target)) return;
       if (leftSidebarRef.current?.contains(target)) return;
       if (rightSidebarRef.current?.contains(target)) return;
+      // Portaled menus/dialogs render outside the overlay's DOM subtree, so
+      // a click on a menu item would otherwise unmount the overlay before
+      // the item's handler runs. Bail on standard ARIA portal roles.
+      if (
+        target.closest(
+          '[role="menu"],[role="menuitem"],[role="dialog"],[role="listbox"]',
+        )
+      )
+        return;
       setLeftOverlayPanelId(null);
       setRightOverlayPanelId(null);
     };
