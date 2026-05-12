@@ -43,6 +43,10 @@ import { ShellService } from '../../../main-process-api/ShellService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
+import {
+  TrailRequestIntroModal,
+  type TrailPayload,
+} from '@industry-theme/file-city-panel';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 
@@ -247,6 +251,118 @@ const FootprintTrail: React.FC<{
 };
 
 /**
+ * Right-side preview pane for the Recent view. Sits in the 3-track
+ * column to the right of the 4-day strip and renders the upstream
+ * `TrailRequestIntroModal` against the currently selected trail's full
+ * payload. Renders an idle hint when nothing is selected and a quiet
+ * loading state while the payload is in flight.
+ */
+const RecentTrailPreviewPane: React.FC<{
+  trail: TrailIndexEntry | null;
+  payload: TrailPayload | null;
+  loading: boolean;
+  onDismiss: () => void;
+  onBegin: () => void;
+}> = ({ trail, payload, loading, onDismiss, onBegin }) => {
+  const { theme } = useTheme();
+
+  const stops = useMemo(() => {
+    if (!payload) return undefined;
+    return payload.markers.map((m, i) => ({
+      id: m.id,
+      label: m.label || `Step ${i + 1}`,
+      sourcePath: m.sourcePath,
+      kind: m.kind,
+    }));
+  }, [payload]);
+
+  // Distinct file count across markers — same shape the modal renders
+  // in its SCOPE line.
+  const fileCount = useMemo(() => {
+    if (!payload) return undefined;
+    const paths = new Set<string>();
+    for (const m of payload.markers) {
+      if (m.sourcePath) paths.add(m.sourcePath);
+    }
+    return paths.size;
+  }, [payload]);
+
+  const repoCount = payload?.repos?.length ?? undefined;
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        minHeight: 0,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: 10,
+        backgroundColor: theme.colors.backgroundSecondary,
+        overflow: 'hidden',
+      }}
+    >
+      {!trail ? (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            textAlign: 'center',
+            color: theme.colors.textSecondary,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            opacity: 0.7,
+          }}
+        >
+          Select a trail to preview
+        </div>
+      ) : loading || !payload ? (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            color: theme.colors.textSecondary,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+          }}
+        >
+          <Loader2
+            size={16}
+            style={{ animation: 'trails-spin 1s linear infinite' }}
+          />
+          <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
+          Loading preview…
+        </div>
+      ) : (
+        <TrailRequestIntroModal
+          key={trail.id}
+          body={payload.summary ?? ''}
+          title={payload.title || trail.title || 'Untitled trail'}
+          request={payload.request}
+          author={payload.author}
+          createdAt={payload.createdAt}
+          repoCount={repoCount}
+          fileCount={fileCount}
+          stops={stops}
+          slideIdPrefix={`trails-preview-${trail.id}`}
+          signOffs={payload.signOffs}
+          isShared={!!payload.share}
+          purpose={payload.purpose}
+          onBegin={onBegin}
+          onDismiss={onDismiss}
+        />
+      )}
+    </div>
+  );
+};
+
+/**
  * Inner content — assumes TerminalProvider is mounted above it.
  * Renders a stubbed TabbedTerminalPanel with a search overlay on top
  * for picking a local Alexandria project.
@@ -291,13 +407,50 @@ const TrailsViewInner: React.FC<{
 
   // Top-level view mode for the welcome overlay. 'search' shows the
   // existing input + dropdown (with Projects/Trails sub-toggle). 'recent'
-  // replaces it with a 7-column week grid of trail cards bucketed by
-  // updatedAt day. Only switchable when at least one trail exists.
+  // replaces it with a 4-day week grid of trail cards bucketed by
+  // updatedAt day, plus a 3-track preview pane. Only switchable when
+  // at least one trail exists.
   const [viewMode, setViewMode] = useState<'search' | 'recent'>('search');
 
   // Free-text filter applied inside Recent mode. Trails that don't match
   // are dropped before bucketing, so empty columns surface naturally.
   const [recentFilter, setRecentFilter] = useState('');
+
+  // Trail card clicked in Recent view — its full payload renders in the
+  // right preview pane (TrailRequestIntroModal). Clicking Start on the
+  // modal opens the dev workspace; dismissing it clears the selection.
+  const [previewTrail, setPreviewTrail] = useState<TrailIndexEntry | null>(null);
+  const [previewPayload, setPreviewPayload] = useState<TrailPayload | null>(
+    null,
+  );
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!previewTrail) {
+      setPreviewPayload(null);
+      setPreviewLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewPayload(null);
+    void (async () => {
+      try {
+        const payload = await TrailLibraryService.load(previewTrail.id);
+        if (cancelled) return;
+        setPreviewPayload(payload);
+      } catch (error) {
+        if (!cancelled) {
+          console.error('[TrailsView] Failed to load preview payload:', error);
+        }
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [previewTrail]);
 
   // Whether the left-side project registry panel is open
   const [registryOpen, setRegistryOpen] = useState(false);
@@ -740,12 +893,14 @@ const TrailsViewInner: React.FC<{
     });
   }, [recentTrails, query]);
 
-  // Recent-view buckets: 7 day-columns from today (idx 0) back to 6
-  // days ago (idx 6). Trails older than that don't render — sparse weeks
-  // stay sparse on purpose. The recentFilter, when non-empty, filters
-  // trails before bucketing so unmatched columns go empty.
+  // Recent-view buckets: 4 day-columns from today (idx 0) back to 3
+  // days ago (idx 3). The 4-column day strip is anchored to the left of a
+  // 7-track grid so today (idx 0) lands at column 4 — the middle of the
+  // 7-track layout — leaving the right 3 tracks free for the trail
+  // preview panel. The recentFilter, when non-empty, filters trails
+  // before bucketing so unmatched columns go empty.
   const trailsByDay = useMemo(() => {
-    const buckets: TrailIndexEntry[][] = Array.from({ length: 7 }, () => []);
+    const buckets: TrailIndexEntry[][] = Array.from({ length: 4 }, () => []);
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const startMs = startOfToday.getTime();
@@ -769,7 +924,7 @@ const TrailsViewInner: React.FC<{
       const d = new Date(t);
       d.setHours(0, 0, 0, 0);
       const idx = Math.floor((startMs - d.getTime()) / MS_PER_DAY);
-      if (idx >= 0 && idx < 7) buckets[idx].push(trail);
+      if (idx >= 0 && idx < 4) buckets[idx].push(trail);
     }
     return buckets;
   }, [recentTrails, recentFilter]);
@@ -1721,7 +1876,7 @@ const TrailsViewInner: React.FC<{
                 </kbd>
               </div>
 
-              {/* View Recent Trails — opens the 7-day week grid. Only */}
+              {/* View Recent Trails — opens the 4-day week grid. Only */}
               {/* shown when at least one local trail exists. */}
               {hasRecentTrails && (
                 <button
@@ -2183,7 +2338,12 @@ const TrailsViewInner: React.FC<{
                   style={{
                     flex: 1,
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+                    // 4 day columns + a 3-track preview column. Today
+                    // (idx 0) sits in the 4th track — visually centered
+                    // in the 7-track row — and the preview occupies the
+                    // remaining 3 tracks on the right.
+                    gridTemplateColumns:
+                      'repeat(4, minmax(0, 1fr)) minmax(0, 3fr)',
                     gap: 10,
                     minHeight: 0,
                   }}
@@ -2266,17 +2426,15 @@ const TrailsViewInner: React.FC<{
                               (r) => r.path === trail.repositoryPath,
                             )
                           );
+                          const isSelected = previewTrail?.id === trail.id;
                           return (
                             <button
                               key={trail.id}
                               type="button"
-                              onClick={() =>
-                                void handleOpenRecentTrail(trail)
-                              }
-                              disabled={!owned}
+                              onClick={() => setPreviewTrail(trail)}
                               title={
                                 owned
-                                  ? `Open ${trail.title}`
+                                  ? `Preview ${trail.title}`
                                   : "This trail's project isn't in your registry."
                               }
                               style={{
@@ -2285,24 +2443,33 @@ const TrailsViewInner: React.FC<{
                                 gap: 6,
                                 padding: 10,
                                 borderRadius: 8,
-                                border: `1px solid ${theme.colors.border}`,
-                                background: theme.colors.background,
+                                border: `1px solid ${
+                                  isSelected
+                                    ? theme.colors.accent
+                                    : theme.colors.border
+                                }`,
+                                background: isSelected
+                                  ? `color-mix(in srgb, ${theme.colors.accent} 12%, ${theme.colors.background})`
+                                  : theme.colors.background,
                                 color: theme.colors.text,
-                                cursor: owned ? 'pointer' : 'not-allowed',
-                                opacity: owned ? 1 : 0.5,
+                                cursor: 'pointer',
+                                opacity: owned ? 1 : 0.6,
                                 textAlign: 'left',
                                 fontFamily: theme.fonts.body,
-                                transition: 'background-color 120ms ease',
+                                transition:
+                                  'background-color 120ms ease, border-color 120ms ease',
                               }}
                               onMouseEnter={(e) => {
-                                if (!owned) return;
+                                if (isSelected) return;
                                 e.currentTarget.style.backgroundColor =
                                   theme.colors.backgroundTertiary ??
                                   theme.colors.border;
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.backgroundColor =
-                                  theme.colors.background;
+                                  isSelected
+                                    ? `color-mix(in srgb, ${theme.colors.accent} 12%, ${theme.colors.background})`
+                                    : theme.colors.background;
                               }}
                             >
                               <div
@@ -2379,6 +2546,17 @@ const TrailsViewInner: React.FC<{
                   </div>
                   );
                 })}
+                  <RecentTrailPreviewPane
+                    trail={previewTrail}
+                    payload={previewPayload}
+                    loading={previewLoading}
+                    onDismiss={() => setPreviewTrail(null)}
+                    onBegin={() => {
+                      if (previewTrail) {
+                        void handleOpenRecentTrail(previewTrail);
+                      }
+                    }}
+                  />
                 </div>
               </div>
             )}
