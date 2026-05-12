@@ -303,6 +303,9 @@ const TrailsViewInner: React.FC<{
   // Path of the row currently hovered in the registry panel — used to
   // reveal the per-row remove button only on the hovered row.
   const [hoveredRowPath, setHoveredRowPath] = useState<string | null>(null);
+  const [hoveredResultPath, setHoveredResultPath] = useState<string | null>(
+    null,
+  );
 
   // Project pending a remove-from-registry confirmation. Null when the
   // confirm modal is closed.
@@ -624,6 +627,30 @@ const TrailsViewInner: React.FC<{
   }, []);
 
   const hasRecentTrails = recentTrails.length > 0;
+
+  // Cmd/Ctrl+I focuses the trails-view search input. Opens the search overlay
+  // first if a project isn't selected so the shortcut works from both the
+  // welcome screen and the overlay.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (selectedProject) return;
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key.toLowerCase() !== 'i') return;
+      if (e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setShowSearch(true);
+      requestAnimationFrame(() => {
+        const input = inputRef.current;
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      });
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [selectedProject]);
 
   // Convert terminal activities to workingStates record
   const workingStates = useMemo(() => {
@@ -1603,6 +1630,26 @@ const TrailsViewInner: React.FC<{
                     fontFamily: theme.fonts.body,
                   }}
                 />
+                <kbd
+                  title="Focus search"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: theme.colors.background,
+                    color: theme.colors.textSecondary,
+                    fontSize: theme.fontSizes[0] ?? 12,
+                    fontFamily: theme.fonts.body,
+                    lineHeight: 1,
+                    userSelect: 'none',
+                    opacity: 0.7,
+                  }}
+                >
+                  ⌘I
+                </kbd>
               </div>
 
               {/* Results dropdown — hide entirely when showing recents but there are none */}
@@ -1797,67 +1844,121 @@ const TrailsViewInner: React.FC<{
                           : 'No matching projects.'}
                       </div>
                     ) : (
-                      visibleRepos.map((entry) => (
-                        <button
-                          key={`${entry.name}-${entry.path}`}
-                          onClick={() => handleSelect(entry)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 10,
-                            width: '100%',
-                            padding: '10px 14px',
-                            border: 'none',
-                            borderBottom: `1px solid ${theme.colors.border}`,
-                            background: 'transparent',
-                            color: theme.colors.text,
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            fontFamily: theme.fonts.body,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor =
-                              theme.colors.backgroundTertiary ??
-                              theme.colors.border;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor =
-                              'transparent';
-                          }}
-                        >
-                          <Folder
-                            size={16}
-                            color={theme.colors.textSecondary}
-                            style={{ flexShrink: 0 }}
-                          />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div
+                      visibleRepos.map((entry) => {
+                        const resultKey = String(entry.path);
+                        const isResultHovered =
+                          hoveredResultPath === resultKey;
+                        return (
+                          <div
+                            key={`${entry.name}-${entry.path}`}
+                            onMouseEnter={() =>
+                              setHoveredResultPath(resultKey)
+                            }
+                            onMouseLeave={() =>
+                              setHoveredResultPath((p) =>
+                                p === resultKey ? null : p,
+                              )
+                            }
+                            style={{
+                              position: 'relative',
+                              borderBottom: `1px solid ${theme.colors.border}`,
+                              backgroundColor: isResultHovered
+                                ? theme.colors.backgroundTertiary ??
+                                  theme.colors.border
+                                : 'transparent',
+                            }}
+                          >
+                            <button
+                              onClick={() => handleSelect(entry)}
                               style={{
-                                fontSize: theme.fontSizes[1],
-                                fontWeight: theme.fontWeights.semibold,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 10,
+                                width: '100%',
+                                padding: '10px 40px 10px 14px',
+                                border: 'none',
+                                background: 'transparent',
+                                color: theme.colors.text,
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                fontFamily: theme.fonts.body,
                               }}
                             >
-                              {entry.github
-                                ? `${entry.github.owner}/${entry.github.name}`
-                                : entry.name}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: theme.fontSizes[0],
-                                color: theme.colors.textSecondary,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {String(entry.path)}
-                            </div>
+                              <Folder
+                                size={16}
+                                color={theme.colors.textSecondary}
+                                style={{ flexShrink: 0 }}
+                              />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontSize: theme.fontSizes[1],
+                                    fontWeight: theme.fontWeights.semibold,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {entry.github
+                                    ? `${entry.github.owner}/${entry.github.name}`
+                                    : entry.name}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: theme.fontSizes[0],
+                                    color: theme.colors.textSecondary,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {String(entry.path)}
+                                </div>
+                              </div>
+                            </button>
+                            {isResultHovered && (
+                              <button
+                                onMouseDown={(e) => {
+                                  // Prevent input blur from closing the dropdown
+                                  // before the click fires.
+                                  e.preventDefault();
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRemoveConfirm(entry);
+                                }}
+                                title="Remove from registry (does not delete folder)"
+                                style={{
+                                  position: 'absolute',
+                                  top: '50%',
+                                  right: 8,
+                                  transform: 'translateY(-50%)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 26,
+                                  height: 26,
+                                  border: 'none',
+                                  borderRadius: 6,
+                                  background: 'transparent',
+                                  color: theme.colors.textSecondary,
+                                  cursor: 'pointer',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color =
+                                    theme.colors.text;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color =
+                                    theme.colors.textSecondary;
+                                }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
                           </div>
-                        </button>
-                      ))
+                        );
+                      })
                     )}
                   </>
                 )}
