@@ -227,13 +227,45 @@ function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
   // callers. The store preserves existing notes from disk when replacing a
   // payload by id, so re-pushes don't drop them.
   const now = new Date().toISOString();
+  // `purpose` replaces the older free-form `kind` field (renamed in
+  // @industry-theme/file-city-panel 0.5.81). The schema now restricts
+  // it to a closed enum; we still accept the legacy `kind` value as a
+  // soft alias so older producers don't break, but only when it maps
+  // to a valid purpose. Unknown values are dropped (the default
+  // behavior described on `TrailPayload.purpose` is to treat undefined
+  // as 'investigation').
+  const purposeCandidate =
+    typeof b.purpose === 'string'
+      ? b.purpose
+      : typeof b.kind === 'string'
+        ? b.kind
+        : undefined;
+  const purpose: TrailPayload['purpose'] =
+    purposeCandidate === 'investigation' ||
+    purposeCandidate === 'changelog' ||
+    purposeCandidate === 'informative'
+      ? purposeCandidate
+      : undefined;
+  // `share` flags the trail as having an external audience and gates
+  // the panel's review chrome. We accept it from HTTP because trails
+  // can be authored as already-shared (e.g. agent publishes directly).
+  // The shape is minimal (id only) in v1.
+  const shareBody =
+    b.share && typeof b.share === 'object'
+      ? (b.share as Record<string, unknown>)
+      : null;
+  const share: TrailPayload['share'] =
+    shareBody && typeof shareBody.id === 'string' && shareBody.id.length > 0
+      ? { id: shareBody.id }
+      : undefined;
   const payload: TrailPayload = {
     id: b.id,
     title: b.title,
     markers,
     views: b.views as TrailView[],
     summary: typeof b.summary === 'string' ? b.summary : undefined,
-    kind: typeof b.kind === 'string' ? b.kind : undefined,
+    purpose,
+    share,
     repos: Array.isArray(b.repos) ? (b.repos as TrailPayload['repos']) : undefined,
     authoredAt:
       b.authoredAt && typeof b.authoredAt === 'object'

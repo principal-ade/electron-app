@@ -511,7 +511,7 @@ export const IntegratedShell: React.FC = () => {
             handleViewChange('settings');
           }}
           hideUpdateButton={activeView === 'settings'}
-          hideSearch
+          hideSearch={false}
         />
 
         {/* Main content area with rounded corners for Slack-style cutout */}
