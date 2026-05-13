@@ -7,12 +7,13 @@
 
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, Search } from 'lucide-react';
+import { FolderGit2, Search, Trash2 } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { payloadFromLocalEntry } from '../events/feedRepositorySelected';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
+import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { GithubService } from '../main-process-api/GithubService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { ProjectRepoCard } from './cards/ProjectRepoCard';
@@ -180,6 +181,39 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     },
     [events]
   );
+
+  // Remove-from-list confirmation state. This flow only unregisters the
+  // project from Alexandria; the clone on disk is untouched. To actually
+  // delete files, users open the project's profile tab.
+  const [removeConfirm, setRemoveConfirm] = useState<AlexandriaEntry | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
+  const [clearAllConfirm, setClearAllConfirm] = useState(false);
+  const [clearAllBusy, setClearAllBusy] = useState(false);
+
+  const handleConfirmRemove = useCallback(async () => {
+    if (!removeConfirm) return;
+    setRemoveBusy(true);
+    try {
+      await AlexandriaService.removeRepository(String(removeConfirm.path), false);
+      setRemoveConfirm(null);
+    } catch (error) {
+      console.error('[ProjectsList] Failed to remove from registry:', error);
+    } finally {
+      setRemoveBusy(false);
+    }
+  }, [removeConfirm]);
+
+  const handleConfirmClearAll = useCallback(async () => {
+    setClearAllBusy(true);
+    try {
+      await AlexandriaService.clearAllData();
+      setClearAllConfirm(false);
+    } catch (error) {
+      console.error('[ProjectsList] Failed to clear registry:', error);
+    } finally {
+      setClearAllBusy(false);
+    }
+  }, []);
 
   // Create a map of repo paths to github owner info
   const repoGithubMap = useMemo(() => {
@@ -431,9 +465,12 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             flexDirection: 'column',
           }}
         >
-          {/* Search bar */}
+          {/* Search bar + Remove all */}
           <div
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.xs,
               padding: `${spacing.xs}px ${spacing.md}px`,
               borderBottom: `1px solid ${theme.colors.border}`,
               flexShrink: 0,
@@ -441,6 +478,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           >
             <div
               style={{
+                flex: 1,
                 display: 'flex',
                 alignItems: 'center',
                 gap: spacing.xs,
@@ -467,6 +505,38 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                 }}
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setClearAllConfirm(true)}
+              disabled={repositories.length === 0}
+              title="Remove all from list (does not delete folders)"
+              aria-label="Remove all from list"
+              style={{
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                padding: 0,
+                border: 'none',
+                borderRadius: theme.radii?.[1] || 4,
+                background: 'transparent',
+                color: theme.colors.textSecondary,
+                cursor: repositories.length === 0 ? 'default' : 'pointer',
+                opacity: repositories.length === 0 ? 0.4 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (repositories.length > 0) {
+                  e.currentTarget.style.color = theme.colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <Trash2 size={14} />
+            </button>
           </div>
 
           <div
@@ -535,6 +605,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                           key={repo.name}
                           repo={{ name: repo.name, description: repo.github?.description }}
                           onClick={() => handleRepoClick(repo)}
+                          onRemove={() => setRemoveConfirm(repo)}
                         />
                       ))}
                     </div>
@@ -546,8 +617,168 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           </div>
         </div>
       )}
+
+      {/* Remove-from-list confirm. Does not touch files on disk — to actually
+          delete a clone, open its profile tab. */}
+      {removeConfirm && (
+        <RemoveConfirmModal
+          title="Remove from list?"
+          body={
+            <>
+              This does not delete the folder — it just removes{' '}
+              <span style={{ color: theme.colors.text }}>
+                {removeConfirm.github
+                  ? `${removeConfirm.github.owner}/${removeConfirm.github.name}`
+                  : removeConfirm.name}
+              </span>{' '}
+              from this list. To delete the clone on disk, open the project and
+              use the profile tab.
+            </>
+          }
+          confirmLabel="Remove"
+          busyLabel="Removing…"
+          busy={removeBusy}
+          onCancel={() => setRemoveConfirm(null)}
+          onConfirm={() => void handleConfirmRemove()}
+          theme={theme}
+        />
+      )}
+
+      {clearAllConfirm && (
+        <RemoveConfirmModal
+          title="Remove all from list?"
+          body={
+            <>
+              Removes all{' '}
+              <span style={{ color: theme.colors.text }}>
+                {repositories.length}
+              </span>{' '}
+              project{repositories.length === 1 ? '' : 's'} from this list. Your
+              folders on disk are not deleted. To delete clones on disk, open
+              each project and use its profile tab.
+            </>
+          }
+          confirmLabel="Remove all"
+          busyLabel="Removing…"
+          busy={clearAllBusy}
+          onCancel={() => setClearAllConfirm(false)}
+          onConfirm={() => void handleConfirmClearAll()}
+          theme={theme}
+        />
+      )}
     </div>
   );
 };
+
+interface RemoveConfirmModalProps {
+  title: string;
+  body: React.ReactNode;
+  confirmLabel: string;
+  busyLabel: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  theme: any;
+}
+
+const RemoveConfirmModal: React.FC<RemoveConfirmModalProps> = ({
+  title,
+  body,
+  confirmLabel,
+  busyLabel,
+  busy,
+  onCancel,
+  onConfirm,
+  theme,
+}) => (
+  <div
+    onClick={() => {
+      if (!busy) onCancel();
+    }}
+    style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 1000,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        width: 'min(440px, 90%)',
+        padding: 20,
+        borderRadius: 12,
+        backgroundColor: theme.colors.backgroundSecondary,
+        border: `1px solid ${theme.colors.border}`,
+        boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+        color: theme.colors.text,
+        fontFamily: theme.fonts.body,
+      }}
+    >
+      <div
+        style={{
+          fontSize: theme.fontSizes[2],
+          fontWeight: theme.fontWeights?.semibold ?? 600,
+          marginBottom: 8,
+        }}
+      >
+        {title}
+      </div>
+      <div
+        style={{
+          fontSize: theme.fontSizes[1],
+          color: theme.colors.textSecondary,
+          lineHeight: 1.4,
+          marginBottom: 16,
+        }}
+      >
+        {body}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={busy}
+          style={{
+            padding: '8px 14px',
+            borderRadius: 8,
+            border: `1px solid ${theme.colors.border}`,
+            background: 'transparent',
+            color: theme.colors.text,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            cursor: busy ? 'default' : 'pointer',
+            opacity: busy ? 0.6 : 1,
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={busy}
+          style={{
+            padding: '8px 14px',
+            borderRadius: 8,
+            border: 'none',
+            background: theme.colors.primary,
+            color: theme.colors.background,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            fontWeight: theme.fontWeights?.semibold ?? 600,
+            cursor: busy ? 'default' : 'pointer',
+            opacity: busy ? 0.6 : 1,
+          }}
+        >
+          {busy ? busyLabel : confirmLabel}
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 export default ProjectsList;
