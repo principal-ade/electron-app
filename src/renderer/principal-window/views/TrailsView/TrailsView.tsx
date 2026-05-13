@@ -28,7 +28,12 @@ import type {
   PromoteProgressEntry,
   PromoteTrailResult,
 } from '../../../../shared/main-process-api-interfaces/OpenCodePromoteAPI';
-import { PanelEventBus } from '@principal-ade/panel-framework-core';
+import {
+  PanelEventBus,
+  type DataSlice,
+  type PanelEventEmitter,
+} from '@principal-ade/panel-framework-core';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 import {
   TabbedTerminalPanel,
   type TerminalTab,
@@ -49,10 +54,9 @@ import { ShellService } from '../../../main-process-api/ShellService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
-import {
-  TrailBriefModal,
-  type TrailPayload,
-} from '@industry-theme/file-city-panel';
+import type { TrailPayload } from '@industry-theme/file-city-panel';
+import { FileCityTrailPanel } from '../../../dev-workspace/file-city-trail-panel';
+import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import { TrailProjectCityCard } from './TrailProjectCityCard';
@@ -259,49 +263,97 @@ const FootprintTrail: React.FC<{
 };
 
 /**
- * Right-side preview pane for the Recent view. Sits in the 3-track
- * column to the right of the 2-day strip and renders the upstream
- * `TrailBriefModal` against the currently selected trail's full
- * payload. Renders an idle hint when nothing is selected and a quiet
- * loading state while the payload is in flight.
+ * Right-side preview pane for the Recent view. Mounts the full
+ * `FileCityTrailPanel` (the same panel the dev workspace runs) so the
+ * preview surfaces the trail's markdown, 3D city, snippet pane, and
+ * sequence drawer rather than the compact `TrailBriefModal` brief.
+ *
+ * We hand-roll a minimal `PanelContextValue` instead of wrapping in the
+ * heavy `RepositoryPanelProvider`: the preview only needs `trail` (from
+ * the already-loaded payload) and `fileTree` (one cache-only IPC per
+ * selection). lineCounts is omitted — the panel wrapper supplies a
+ * null slice for it. A multi-tree provider will likely subsume this
+ * fetch once we want to share trees across previews.
  */
 const RecentTrailPreviewPane: React.FC<{
   trail: TrailIndexEntry | null;
   payload: TrailPayload | null;
   loading: boolean;
+  events: PanelEventEmitter;
   onDismiss: () => void;
   onBegin: () => void;
-}> = ({ trail, payload, loading, onDismiss, onBegin }) => {
+}> = ({ trail, payload, loading, events, onDismiss, onBegin }) => {
   const { theme } = useTheme();
 
-  const stops = useMemo(() => {
-    if (!payload) return undefined;
-    return payload.markers.map((m, i) => ({
-      id: m.id,
-      label: m.label || `Step ${i + 1}`,
-      sourcePath: m.sourcePath,
-      kind: m.kind,
-    }));
-  }, [payload]);
+  const repositoryPath = trail?.repositoryPath ?? null;
 
-  // Distinct file count across markers — same shape the modal renders
-  // in its SCOPE line.
-  const fileCount = useMemo(() => {
-    if (!payload) return undefined;
-    const paths = new Set<string>();
-    for (const m of payload.markers) {
-      if (m.sourcePath) paths.add(m.sourcePath);
+  // Cache-only fetch: if the repo has been opened anywhere in the app,
+  // the file tree is warm; otherwise the panel falls back to its empty
+  // tree. No background refresh, no cache-sync subscription — previews
+  // are snapshots.
+  const [fileTree, setFileTree] = useState<FileTree | null>(null);
+  useEffect(() => {
+    if (!repositoryPath) {
+      setFileTree(null);
+      return;
     }
-    return paths.size;
-  }, [payload]);
+    let cancelled = false;
+    setFileTree(null);
+    void RepositoryMonitoringService.getFileTree(repositoryPath).then(
+      (tree) => {
+        if (!cancelled) setFileTree(tree);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [repositoryPath]);
 
-  const repoCount = payload?.repos?.length ?? undefined;
+  const repoName = useMemo(() => {
+    if (!repositoryPath) return null;
+    return repositoryPath.split('/').filter(Boolean).pop() ?? null;
+  }, [repositoryPath]);
+
+  const panelContext = useMemo(
+    () => ({
+      currentScope: {
+        type: 'repository' as const,
+        ...(repositoryPath
+          ? { repository: { path: repositoryPath, name: repoName ?? '' } }
+          : {}),
+      },
+      refresh: async () => {},
+      adapters: {},
+      repository: repositoryPath
+        ? { path: repositoryPath, name: repoName, owner: null }
+        : null,
+      fileTree: {
+        scope: 'repository' as const,
+        name: 'fileTree',
+        data: fileTree,
+        loading: false,
+        error: null,
+        refresh: async () => {},
+      } as DataSlice<FileTree | null>,
+      trail: {
+        scope: 'repository' as const,
+        name: 'trail',
+        data: payload,
+        loading,
+        error: null,
+        refresh: async () => {},
+      } as DataSlice<TrailPayload | null>,
+    }),
+    [repositoryPath, repoName, fileTree, payload, loading],
+  );
 
   return (
     <div
       style={{
         position: 'relative',
         minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
         border: `1px solid ${theme.colors.border}`,
         borderRadius: 10,
         backgroundColor: theme.colors.backgroundSecondary,
@@ -326,45 +378,92 @@ const RecentTrailPreviewPane: React.FC<{
         >
           Select a trail to preview
         </div>
-      ) : loading || !payload ? (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            color: theme.colors.textSecondary,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[1],
-          }}
-        >
-          <Loader2
-            size={16}
-            style={{ animation: 'trails-spin 1s linear infinite' }}
-          />
-          <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
-          Loading preview…
-        </div>
       ) : (
-        <TrailBriefModal
-          key={trail.id}
-          body={payload.summary ?? ''}
-          title={payload.title || trail.title || 'Untitled trail'}
-          request={payload.request}
-          author={payload.author}
-          createdAt={payload.createdAt}
-          repoCount={repoCount}
-          fileCount={fileCount}
-          stops={stops}
-          slideIdPrefix={`trails-preview-${trail.id}`}
-          signOffs={payload.signOffs}
-          isShared={!!payload.share}
-          purpose={payload.purpose}
-          onBegin={onBegin}
-          onDismiss={onDismiss}
-        />
+        <>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: 6,
+              padding: '6px 8px',
+              borderBottom: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.backgroundSecondary,
+            }}
+          >
+            <button
+              type="button"
+              onClick={onBegin}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 10px',
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: 6,
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[0],
+                cursor: 'pointer',
+              }}
+            >
+              <Footprints size={12} />
+              Begin
+            </button>
+            <button
+              type="button"
+              onClick={onDismiss}
+              aria-label="Dismiss preview"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '4px 8px',
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: 6,
+                backgroundColor: theme.colors.background,
+                color: theme.colors.textSecondary,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[0],
+                cursor: 'pointer',
+              }}
+            >
+              <X size={12} />
+            </button>
+          </div>
+          <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+            {loading || !payload ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                }}
+              >
+                <Loader2
+                  size={16}
+                  style={{ animation: 'trails-spin 1s linear infinite' }}
+                />
+                <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
+                Loading preview…
+              </div>
+            ) : (
+              <FileCityTrailPanel
+                key={trail.id}
+                context={panelContext}
+                actions={{}}
+                events={events}
+              />
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -2860,6 +2959,7 @@ const TrailsViewInner: React.FC<{
                     trail={previewTrail}
                     payload={previewPayload}
                     loading={previewLoading}
+                    events={events}
                     onDismiss={() => setPreviewTrail(null)}
                     onBegin={() => {
                       if (previewTrail) {
