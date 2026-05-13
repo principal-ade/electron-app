@@ -61,6 +61,7 @@ import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import { TrailProjectCityCard } from './TrailProjectCityCard';
 import { SpikePromoteToolbar } from './SpikePromoteToolbar';
+import { AddProjectMenu } from './AddProjectMenu';
 
 /** Constants for the file-city-trail skill bundled in principal-ai/skills. */
 const TRAIL_SKILL_NAME = 'file-city-trail';
@@ -2308,44 +2309,60 @@ const TrailsViewInner: React.FC<{
               </div>
 
               {/* View Recent Trails — opens the 2-day grid. Only */}
-              {/* shown when at least one local trail exists. */}
+              {/* shown when at least one local trail exists. The Add */}
+              {/* Project button sits next to it so users can register */}
+              {/* repos without leaving the search overlay. */}
               {hasRecentTrails && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setViewMode('recent');
-                    setQuery('');
-                    setSearchOpen(false);
-                  }}
+                <div
                   style={{
                     alignSelf: 'center',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 8,
-                    padding: '8px 16px',
-                    borderRadius: 999,
-                    border: `1px solid ${theme.colors.border}`,
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    color: theme.colors.textSecondary,
-                    fontFamily: theme.fonts.body,
-                    fontSize: theme.fontSizes[1],
-                    fontWeight: theme.fontWeights.semibold,
-                    cursor: 'pointer',
-                    transition: 'color 120ms ease, border-color 120ms ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = theme.colors.text;
-                    e.currentTarget.style.borderColor =
-                      theme.colors.textSecondary;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = theme.colors.textSecondary;
-                    e.currentTarget.style.borderColor = theme.colors.border;
+                    position: 'relative',
                   }}
                 >
-                  <Footprints size={14} />
-                  View Recent Trails
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode('recent');
+                      setQuery('');
+                      setSearchOpen(false);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 16px',
+                      borderRadius: 999,
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      color: theme.colors.textSecondary,
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: theme.fontWeights.semibold,
+                      cursor: 'pointer',
+                      transition: 'color 120ms ease, border-color 120ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = theme.colors.text;
+                      e.currentTarget.style.borderColor =
+                        theme.colors.textSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                    }}
+                  >
+                    <Footprints size={14} />
+                    View Recent Trails
+                  </button>
+                  <AddProjectMenu
+                    onAddProject={() => void handleAddProject()}
+                    onSearchHome={() => void handleSearchHome()}
+                    scanningHome={scanningHome}
+                  />
+                </div>
               )}
 
               {/* Results dropdown — hide entirely when showing recents but there are none */}
