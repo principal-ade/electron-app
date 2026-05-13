@@ -11,8 +11,6 @@ import {
   GitBranch,
   X,
   Folder,
-  PanelLeftOpen,
-  PanelLeftClose,
   Trash2,
   Footprints,
   Copy,
@@ -21,6 +19,7 @@ import {
   Search,
   Loader2,
   ArrowLeft,
+  Plus,
 } from 'lucide-react';
 import type {
   OpenCodeDetectResult,
@@ -61,7 +60,6 @@ import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import { TrailProjectCityCard } from './TrailProjectCityCard';
 import { SpikePromoteToolbar } from './SpikePromoteToolbar';
-import { AddProjectMenu } from './AddProjectMenu';
 
 /** Constants for the file-city-trail skill bundled in principal-ai/skills. */
 const TRAIL_SKILL_NAME = 'file-city-trail';
@@ -678,20 +676,6 @@ const TrailsViewInner: React.FC<{
     }
   }, [previewTrail]);
 
-  // Whether the left-side project registry panel is open
-  const [registryOpen, setRegistryOpen] = useState(false);
-
-  // Auto-close the registry panel when the list becomes empty (e.g. after
-  // Clear all) — nothing left to browse.
-  useEffect(() => {
-    if (!reposLoading && repositories.length === 0 && registryOpen) {
-      setRegistryOpen(false);
-    }
-  }, [reposLoading, repositories.length, registryOpen]);
-
-  // Path of the row currently hovered in the registry panel — used to
-  // reveal the per-row remove button only on the hovered row.
-  const [hoveredRowPath, setHoveredRowPath] = useState<string | null>(null);
   const [hoveredResultPath, setHoveredResultPath] = useState<string | null>(
     null,
   );
@@ -702,24 +686,6 @@ const TrailsViewInner: React.FC<{
     null,
   );
   const [removeBusy, setRemoveBusy] = useState(false);
-
-  // Clear-all-registry confirmation modal state.
-  const [clearAllConfirm, setClearAllConfirm] = useState(false);
-  const [clearAllBusy, setClearAllBusy] = useState(false);
-
-  const handleClearAll = useCallback(async () => {
-    setClearAllBusy(true);
-    try {
-      await AlexandriaService.clearAllData();
-      setRepositories([]);
-      onClearProject();
-      setClearAllConfirm(false);
-    } catch (error) {
-      console.error('[TrailsView] Failed to clear registry:', error);
-    } finally {
-      setClearAllBusy(false);
-    }
-  }, [onClearProject]);
 
   // Global git user.name, used to personalize the welcome view heading.
   // Null until loaded or if no global git identity is configured.
@@ -905,65 +871,68 @@ const TrailsViewInner: React.FC<{
     [selectedProject, onClearProject],
   );
 
-  // Prompt the user for a folder, register it as a project, then refresh.
-  const handleAddProject = useCallback(async () => {
-    const result = await FileSystemService.selectDirectory({
-      title: 'Add Project',
-      buttonLabel: 'Add',
-      properties: ['openDirectory'],
-    });
-    if (!result || ('canceled' in result && result.canceled)) return;
-    const path = (result as { filePaths?: string[] }).filePaths?.[0];
-    if (!path) return;
-    try {
-      await AlexandriaService.registerRepository(path);
-      const repos = await AlexandriaService.getRepositories();
-      setRepositories(repos);
-    } catch (error) {
-      console.error('[TrailsView] Failed to add project:', error);
-    }
-  }, []);
-
-  // Scan the user's home directory for git repos not yet in Alexandria, then
-  // auto-register them. The modal stays open so the user can see what was added.
+  // Ask the user to pick a folder, scan it for git repos not yet in
+  // Alexandria (the folder itself counts if it's a repo), then auto-register
+  // them. The modal stays open so the user can see what was added.
   type AddedRepo = { path: string; name: string; ok: boolean; error?: string };
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [scanningHome, setScanningHome] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [addedRepos, setAddedRepos] = useState<AddedRepo[]>([]);
+  const [scannedFolder, setScannedFolder] = useState<string | null>(null);
+  const [totalFoundInFolder, setTotalFoundInFolder] = useState<number | null>(null);
 
-  const handleSearchHome = useCallback(async () => {
+  const handleAddProject = useCallback(async () => {
+    const picked = await FileSystemService.selectDirectory({
+      title: 'Add Project',
+      buttonLabel: 'Add',
+      properties: ['openDirectory'],
+    });
+    if (!picked || ('canceled' in picked && picked.canceled)) return;
+    const rootPath = (picked as { filePaths?: string[] }).filePaths?.[0];
+    if (!rootPath) return;
+    setScannedFolder(rootPath);
     setSearchModalOpen(true);
     setScanningHome(true);
     setScanError(null);
     setAddedRepos([]);
+    setTotalFoundInFolder(null);
     try {
-      const home = await FileSystemService.getHomePath();
-      const found = await GitService.getDiscoveredRepos(home, 3);
+      // Scan all repos in the folder (tracked + untracked). Re-registering
+      // tracked entries lets the main service backfill any missing remoteUrl
+      // — that's what was hiding bulk-added repos from Quick Open.
+      const allPaths = await GitService.scanFolderForRepos(rootPath, 3);
+      setTotalFoundInFolder(allPaths.length);
+      const existingPaths = new Set<string>(repositories.map((r) => String(r.path)));
       const results: AddedRepo[] = [];
-      for (const repo of found) {
+      for (const repoPath of allPaths) {
+        const isNew = !existingPaths.has(repoPath);
+        const name = repoPath.split('/').filter(Boolean).pop() ?? repoPath;
         try {
-          await AlexandriaService.registerRepository(repo.path);
-          results.push({ path: repo.path, name: repo.name, ok: true });
+          await AlexandriaService.registerRepository(repoPath);
+          if (isNew) {
+            results.push({ path: repoPath, name, ok: true });
+            setAddedRepos([...results]);
+          }
         } catch (error) {
           results.push({
-            path: repo.path,
-            name: repo.name,
+            path: repoPath,
+            name,
             ok: false,
             error: error instanceof Error ? error.message : 'Register failed',
           });
+          setAddedRepos([...results]);
         }
-        setAddedRepos([...results]);
       }
       const refreshed = await AlexandriaService.getRepositories();
       setRepositories(refreshed);
     } catch (error) {
-      console.error('[TrailsView] Home scan failed:', error);
+      console.error('[TrailsView] Folder scan failed:', error);
       setScanError(error instanceof Error ? error.message : 'Scan failed.');
     } finally {
       setScanningHome(false);
     }
-  }, []);
+  }, [repositories]);
 
   // Load local Alexandria repositories
   useEffect(() => {
@@ -1237,19 +1206,6 @@ const TrailsViewInner: React.FC<{
     });
     return groups;
   }, [recentTrails, recentFilter, repositories]);
-
-  // Full registry list for the left side panel — sorted by most recently
-  // opened, then alphabetically by display name as a tiebreaker.
-  const allRepos = useMemo(() => {
-    const displayName = (r: AlexandriaEntry) =>
-      r.github ? `${r.github.owner}/${r.github.name}` : r.name;
-    return [...repositories].sort((a, b) => {
-      const aT = a.lastOpenedAt ? Date.parse(a.lastOpenedAt) : 0;
-      const bT = b.lastOpenedAt ? Date.parse(b.lastOpenedAt) : 0;
-      if (aT !== bT) return bT - aT;
-      return displayName(a).localeCompare(displayName(b));
-    });
-  }, [repositories]);
 
   // When user clicks an entry: open the project in its own dev workspace
   // window. The search overlay closes itself via showSearch reset.
@@ -1849,7 +1805,7 @@ const TrailsViewInner: React.FC<{
                     marginTop: -4,
                   }}
                 >
-                  Pick a folder on your computer, or let us scan your home directory for git repos.
+                  Pick a folder — we'll add it if it's a git repo, or scan inside for repos and add them all.
                 </div>
               )}
 
@@ -1885,91 +1841,49 @@ const TrailsViewInner: React.FC<{
                   Open Project
                 </button>
               ) : (
-                <>
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={() => void handleAddProject()}
-                      title="Pick a folder on your computer"
-                      style={{
-                        width: 240,
-                        padding: 20,
-                        borderRadius: 12,
-                        border: `1px solid ${theme.colors.border}`,
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        color: theme.colors.text,
-                        fontFamily: theme.fonts.body,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 8,
-                        transition: 'border-color 150ms ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = theme.colors.primary;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = theme.colors.border;
-                      }}
-                    >
-                      <Folder size={28} color={theme.colors.primary} />
-                      <div style={{ fontSize: theme.fontSizes[2], fontWeight: theme.fontWeights.semibold }}>
-                        Find
-                      </div>
-                      <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>
-                        Pick a folder
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleSearchHome()}
-                      disabled={scanningHome}
-                      title="Scan your home directory for git repositories"
-                      style={{
-                        width: 240,
-                        padding: 20,
-                        borderRadius: 12,
-                        border: `1px solid ${theme.colors.border}`,
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        color: theme.colors.text,
-                        fontFamily: theme.fonts.body,
-                        cursor: scanningHome ? 'default' : 'pointer',
-                        opacity: scanningHome ? 0.7 : 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 8,
-                        transition: 'border-color 150ms ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (scanningHome) return;
-                        e.currentTarget.style.borderColor = theme.colors.primary;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = theme.colors.border;
-                      }}
-                    >
-                      {scanningHome ? (
-                        <Loader2
-                          size={28}
-                          color={theme.colors.primary}
-                          style={{ animation: 'trails-spin 1s linear infinite' }}
-                        />
-                      ) : (
-                        <Search size={28} color={theme.colors.primary} />
-                      )}
-                      <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
-                      <div style={{ fontSize: theme.fontSizes[2], fontWeight: theme.fontWeights.semibold }}>
-                        {scanningHome ? 'Searching…' : 'Search'}
-                      </div>
-                      <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>
-                        Scan home folder
-                      </div>
-                    </button>
-                  </div>
-
-                </>
+                <button
+                  type="button"
+                  onClick={() => void handleAddProject()}
+                  disabled={scanningHome}
+                  title="Pick a folder to add — we'll find any git repos inside"
+                  style={{
+                    width: 360,
+                    padding: 24,
+                    borderRadius: 12,
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    color: theme.colors.text,
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[3],
+                    fontWeight: theme.fontWeights.semibold,
+                    cursor: scanningHome ? 'default' : 'pointer',
+                    opacity: scanningHome ? 0.7 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    transition: 'border-color 150ms ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (scanningHome) return;
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                  }}
+                >
+                  {scanningHome ? (
+                    <Loader2
+                      size={20}
+                      color={theme.colors.primary}
+                      style={{ animation: 'trails-spin 1s linear infinite' }}
+                    />
+                  ) : (
+                    <Folder size={20} color={theme.colors.primary} />
+                  )}
+                  <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
+                  {scanningHome ? 'Scanning…' : 'Add Project'}
+                </button>
               )}
             </div>
           </div>
@@ -2357,11 +2271,41 @@ const TrailsViewInner: React.FC<{
                     <Footprints size={14} />
                     View Recent Trails
                   </button>
-                  <AddProjectMenu
-                    onAddProject={() => void handleAddProject()}
-                    onSearchHome={() => void handleSearchHome()}
-                    scanningHome={scanningHome}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleAddProject()}
+                    disabled={scanningHome}
+                    title="Pick a folder to add — we'll find any git repos inside"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '8px 14px',
+                      borderRadius: 999,
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      color: theme.colors.textSecondary,
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: theme.fontWeights.semibold,
+                      cursor: scanningHome ? 'default' : 'pointer',
+                      opacity: scanningHome ? 0.7 : 1,
+                      transition: 'color 120ms ease, border-color 120ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (scanningHome) return;
+                      e.currentTarget.style.color = theme.colors.text;
+                      e.currentTarget.style.borderColor =
+                        theme.colors.textSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                    }}
+                  >
+                    <Plus size={14} />
+                    {scanningHome ? 'Scanning…' : 'Add Project'}
+                  </button>
                 </div>
               )}
 
@@ -2992,223 +2936,6 @@ const TrailsViewInner: React.FC<{
         </div>
       )}
 
-      {/* Left side panel: full project registry. Slides in from the left. */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          bottom: 0,
-          left: 0,
-          width: 320,
-          zIndex: 20,
-          backgroundColor: theme.colors.backgroundSecondary,
-          borderRight: `1px solid ${theme.colors.border}`,
-          boxShadow: registryOpen ? '4px 0 16px rgba(0,0,0,0.25)' : 'none',
-          transform: registryOpen ? 'translateX(0)' : 'translateX(-100%)',
-          transition: 'transform 220ms ease-out',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 16px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          <div
-            style={{
-              color: theme.colors.text,
-              fontFamily: theme.fonts.heading ?? theme.fonts.body,
-              fontWeight: theme.fontWeights.semibold,
-              fontSize: theme.fontSizes[2],
-            }}
-          >
-            Projects
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <button
-              onClick={() => setClearAllConfirm(true)}
-              disabled={repositories.length === 0}
-              title="Clear all projects from this list (does not delete folders)"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 4,
-                border: 'none',
-                background: 'transparent',
-                color: theme.colors.textSecondary,
-                cursor: repositories.length === 0 ? 'default' : 'pointer',
-                opacity: repositories.length === 0 ? 0.4 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (repositories.length > 0) {
-                  e.currentTarget.style.color = theme.colors.text;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = theme.colors.textSecondary;
-              }}
-            >
-              <Trash2 size={16} />
-            </button>
-            <button
-              onClick={() => setRegistryOpen(false)}
-              title="Close"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 4,
-                border: 'none',
-                background: 'transparent',
-                color: theme.colors.textSecondary,
-                cursor: 'pointer',
-              }}
-            >
-              <PanelLeftClose size={18} />
-            </button>
-          </div>
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {reposLoading ? (
-            <div
-              style={{
-                padding: 16,
-                color: theme.colors.textSecondary,
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[1],
-              }}
-            >
-              Loading projects...
-            </div>
-          ) : allRepos.length === 0 ? (
-            <div
-              style={{
-                padding: 16,
-                color: theme.colors.textSecondary,
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[1],
-              }}
-            >
-              No projects in registry.
-            </div>
-          ) : (
-            allRepos.map((entry) => {
-              const isSelected =
-                selectedProject &&
-                selectedProject.path === entry.path &&
-                selectedProject.name === entry.name;
-              const rowKey = String(entry.path);
-              const isHovered = hoveredRowPath === rowKey;
-              return (
-                <div
-                  key={`${entry.name}-${entry.path}`}
-                  onMouseEnter={() => setHoveredRowPath(rowKey)}
-                  onMouseLeave={() =>
-                    setHoveredRowPath((p) => (p === rowKey ? null : p))
-                  }
-                  style={{
-                    position: 'relative',
-                    borderBottom: `1px solid ${theme.colors.border}`,
-                    background: isSelected
-                      ? (theme.colors.backgroundTertiary ?? theme.colors.border)
-                      : isHovered
-                      ? (theme.colors.backgroundTertiary ?? theme.colors.border)
-                      : 'transparent',
-                  }}
-                >
-                  <button
-                    onClick={() => handleSelect(entry)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      width: '100%',
-                      padding: '10px 40px 10px 14px',
-                      border: 'none',
-                      background: 'transparent',
-                      color: theme.colors.text,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontFamily: theme.fonts.body,
-                    }}
-                  >
-                    <Folder
-                      size={16}
-                      color={theme.colors.textSecondary}
-                      style={{ flexShrink: 0 }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[1],
-                          fontWeight: theme.fontWeights.semibold,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {entry.github
-                          ? `${entry.github.owner}/${entry.github.name}`
-                          : entry.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {String(entry.path)}
-                      </div>
-                    </div>
-                  </button>
-                  {isHovered && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setRemoveConfirm(entry);
-                      }}
-                      title="Remove from registry (does not delete folder)"
-                      style={{
-                        position: 'absolute',
-                        top: '50%',
-                        right: 8,
-                        transform: 'translateY(-50%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 26,
-                        height: 26,
-                        border: 'none',
-                        borderRadius: 6,
-                        background: 'transparent',
-                        color: theme.colors.textSecondary,
-                        cursor: 'pointer',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = theme.colors.text;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = theme.colors.textSecondary;
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
 
       {/* Confirm modal for remove-from-registry */}
       {removeConfirm && (
@@ -3371,7 +3098,11 @@ const TrailsViewInner: React.FC<{
                 ) : (
                   <Search size={18} color={theme.colors.primary} />
                 )}
-                {scanningHome ? 'Searching your home folder…' : 'Search Results'}
+                {(() => {
+                  const label = scannedFolder ? scannedFolder.split('/').filter(Boolean).pop() : null;
+                  if (scanningHome) return label ? `Searching ${label}…` : 'Searching…';
+                  return label ? `Results in ${label}` : 'Search Results';
+                })()}
               </div>
               <button
                 type="button"
@@ -3414,7 +3145,11 @@ const TrailsViewInner: React.FC<{
                     textAlign: 'center',
                   }}
                 >
-                  No new repositories found in your home folder.
+                  {totalFoundInFolder === 0
+                    ? 'No git repositories found in that folder.'
+                    : totalFoundInFolder !== null
+                      ? `Found ${totalFoundInFolder} git repositor${totalFoundInFolder === 1 ? 'y' : 'ies'} — all already in your list.`
+                      : 'No new repositories found in that folder.'}
                 </div>
               )}
               {addedRepos.length > 0 && (
@@ -3427,9 +3162,28 @@ const TrailsViewInner: React.FC<{
                       padding: '4px 0 8px',
                     }}
                   >
-                    {scanningHome
-                      ? `Adding ${addedRepos.length} so far…`
-                      : `Added ${addedRepos.filter((r) => r.ok).length} of ${addedRepos.length} repositor${addedRepos.length === 1 ? 'y' : 'ies'}.`}
+                    {(() => {
+                      const repoWord = (n: number) =>
+                        `repositor${n === 1 ? 'y' : 'ies'}`;
+                      const okCount = addedRepos.filter((r) => r.ok).length;
+                      const newCount = addedRepos.length;
+                      const totalPrefix =
+                        totalFoundInFolder !== null
+                          ? `Found ${totalFoundInFolder} ${repoWord(totalFoundInFolder)} in this folder. `
+                          : '';
+                      if (scanningHome) {
+                        return `${totalPrefix}Adding ${newCount} new…`;
+                      }
+                      const alreadyTracked =
+                        totalFoundInFolder !== null
+                          ? totalFoundInFolder - newCount
+                          : null;
+                      const tail =
+                        alreadyTracked !== null && alreadyTracked > 0
+                          ? ` (${alreadyTracked} already in your list)`
+                          : '';
+                      return `${totalPrefix}Added ${okCount} of ${newCount} new ${repoWord(newCount)}${tail}.`;
+                    })()}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {addedRepos.map((repo) => (
@@ -3520,134 +3274,6 @@ const TrailsViewInner: React.FC<{
         }}
       />
 
-      {/* Confirm modal for clear-all-registry */}
-      {clearAllConfirm && (
-        <div
-          onClick={() => {
-            if (!clearAllBusy) setClearAllConfirm(false);
-          }}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 30,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: 'min(440px, 90%)',
-              padding: 20,
-              borderRadius: 12,
-              backgroundColor: theme.colors.backgroundSecondary,
-              border: `1px solid ${theme.colors.border}`,
-              boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
-              color: theme.colors.text,
-              fontFamily: theme.fonts.body,
-            }}
-          >
-            <div
-              style={{
-                fontSize: theme.fontSizes[2],
-                fontWeight: theme.fontWeights.semibold,
-                marginBottom: 8,
-              }}
-            >
-              Clear the project list?
-            </div>
-            <div
-              style={{
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.textSecondary,
-                lineHeight: 1.4,
-                marginBottom: 16,
-              }}
-            >
-              Removes all{' '}
-              <span style={{ color: theme.colors.text }}>
-                {repositories.length}
-              </span>{' '}
-              project{repositories.length === 1 ? '' : 's'} and any saved
-              workspaces from the registry. Your folders on disk are not
-              deleted; recently-opened history will be lost.
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: 8,
-              }}
-            >
-              <button
-                onClick={() => setClearAllConfirm(false)}
-                disabled={clearAllBusy}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: 8,
-                  border: `1px solid ${theme.colors.border}`,
-                  background: 'transparent',
-                  color: theme.colors.text,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[1],
-                  cursor: clearAllBusy ? 'default' : 'pointer',
-                  opacity: clearAllBusy ? 0.6 : 1,
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => void handleClearAll()}
-                disabled={clearAllBusy}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: theme.colors.primary,
-                  color: theme.colors.background,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[1],
-                  fontWeight: theme.fontWeights.semibold,
-                  cursor: clearAllBusy ? 'default' : 'pointer',
-                  opacity: clearAllBusy ? 0.6 : 1,
-                }}
-              >
-                {clearAllBusy ? 'Clearing…' : 'Clear list'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toggle button for the registry panel — sits on the left edge. */}
-      {/* Hidden when the registry is empty: nothing to browse, and the */}
-      {/* welcome view is already the right affordance. */}
-      {!registryOpen && repositories.length > 0 && (
-        <button
-          onClick={() => setRegistryOpen(true)}
-          title="Show projects"
-          style={{
-            position: 'absolute',
-            top: 12,
-            left: 12,
-            zIndex: 21,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 32,
-            height: 32,
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: 8,
-            backgroundColor: theme.colors.backgroundSecondary,
-            color: theme.colors.text,
-            cursor: 'pointer',
-          }}
-        >
-          <PanelLeftOpen size={18} />
-        </button>
-      )}
     </div>
   );
 };

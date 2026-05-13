@@ -179,10 +179,27 @@ export class AlexandriaRegistryService {
       }
     }
 
-    const registered = await this.outpostManager.registerRepository(
+    let registered = await this.outpostManager.registerRepository(
       path,
       remoteUrl,
     );
+
+    // Backfill: if the entry already existed without a remoteUrl (or with a
+    // different one) and we successfully derived one this time, update it.
+    // ProjectRegistryStore.registerProject is a no-op for existing paths, so
+    // without this stale entries would never pick up a freshly-set origin.
+    if (remoteUrl && registered.remoteUrl !== remoteUrl) {
+      try {
+        registered = await this.outpostManager.updateRepository(path, {
+          remoteUrl,
+        });
+      } catch (error) {
+        console.error(
+          '[registerRepository] Failed to backfill remoteUrl:',
+          error,
+        );
+      }
+    }
 
     if (remoteUrl && remoteUrl.includes('github.com')) {
       const githubMetadata = await this.fetchGitHubMetadata(remoteUrl);
