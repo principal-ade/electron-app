@@ -533,6 +533,31 @@ const TrailsViewInner: React.FC<{
       setSpikeRunning(false);
     }
   }, []);
+  // "Share with Agent" — builds a short markdown brief that points an
+  // agent at the local Principal MCP Bridge endpoint so it can fetch the
+  // full trail payload itself. Returns null when no trail is selected.
+  const buildSpikeAgentBrief = useCallback((): string | null => {
+    if (!previewTrail) return null;
+    const title =
+      previewPayload?.title || previewTrail.title || 'Untitled trail';
+    const purpose = previewPayload?.purpose ?? 'investigation';
+    const repo = trailRepoLabel(previewTrail.repositoryPath);
+    return [
+      'I want help with a trail from my local File City library.',
+      '',
+      `**Trail id:** ${previewTrail.id}`,
+      `**Title:** ${title}`,
+      `**Purpose:** ${purpose}`,
+      `**Repo:** ${repo}`,
+      '',
+      'Fetch the full payload (markers, snippets, views, notes) from the',
+      'local Principal MCP Bridge — the electron app must be running:',
+      '',
+      `    curl -s http://localhost:3044/api/file-city/trail/${previewTrail.id}`,
+      '',
+    ].join('\n');
+  }, [previewTrail, previewPayload]);
+
   const onSpikePromoteClick = useCallback(async () => {
     if (!previewTrail) return;
     setSpikePromoting(true);
@@ -2691,6 +2716,7 @@ const TrailsViewInner: React.FC<{
                         onDetect={onSpikeDetectClick}
                         onRun={onSpikeRunClick}
                         onPromote={onSpikePromoteClick}
+                        buildAgentBrief={buildSpikeAgentBrief}
                       />
                     )}
                     <button

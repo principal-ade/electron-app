@@ -9,9 +9,9 @@
  * toolbar stays a dumb view.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Check, Loader2, Share2, Sparkles } from 'lucide-react';
 import type {
   OpenCodeDetectResult,
   OpenCodeRunPromptResult,
@@ -30,6 +30,12 @@ export interface SpikePromoteToolbarProps {
   onDetect: () => void;
   onRun: () => void;
   onPromote: () => void;
+  /**
+   * Build a markdown brief telling an agent how to fetch the selected
+   * trail from the local Principal MCP Bridge. Returns `null` when the
+   * preview payload isn't ready yet (button stays disabled).
+   */
+  buildAgentBrief: () => string | null;
 }
 
 export const SpikePromoteToolbar: React.FC<SpikePromoteToolbarProps> = ({
@@ -43,8 +49,21 @@ export const SpikePromoteToolbar: React.FC<SpikePromoteToolbarProps> = ({
   onDetect,
   onRun,
   onPromote,
+  buildAgentBrief,
 }) => {
   const { theme } = useTheme();
+  const [shareCopied, setShareCopied] = useState(false);
+  const onShareClick = async () => {
+    const brief = buildAgentBrief();
+    if (!brief) return;
+    try {
+      await navigator.clipboard.writeText(brief);
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 1500);
+    } catch (err) {
+      console.error('[SpikePromoteToolbar] clipboard write failed:', err);
+    }
+  };
   return (
     <div
       style={{
@@ -112,6 +131,26 @@ export const SpikePromoteToolbar: React.FC<SpikePromoteToolbarProps> = ({
             <Sparkles size={14} />
           )}
           {running ? 'Running…' : 'Ping'}
+        </button>
+        <button
+          type="button"
+          onClick={onShareClick}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 10px',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 8,
+            backgroundColor: theme.colors.backgroundSecondary,
+            color: theme.colors.text,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            cursor: 'pointer',
+          }}
+        >
+          {shareCopied ? <Check size={14} /> : <Share2 size={14} />}
+          {shareCopied ? 'Copied' : 'Share with Agent'}
         </button>
         <button
           type="button"
