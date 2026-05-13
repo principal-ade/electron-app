@@ -83,6 +83,7 @@ import { registerFileCityImageHandlers } from './stores/FileCityImageService';
 import { registerBrunoHandlers } from './bruno/brunoHandlers';
 import { registerTrailHandlers } from './file-city/trailStore';
 import { registerDocumentNotesHandlers } from './document-notes/documentNotesHandlers';
+import { registerOpenCodePromoteHandlers } from './opencode/openCodePromoteHandlers';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
@@ -196,6 +197,7 @@ const registerAllIpcHandlers = async () => {
   registerFileCityImageHandlers(); // Register File City image generation handlers
   registerTrailHandlers(); // Register File City trail IPC handlers
   registerDocumentNotesHandlers(); // Register document-notes IPC handlers
+  registerOpenCodePromoteHandlers(); // Register OpenCode promote (detect/run) IPC handlers
   registerOtelCollectorHandlers(); // Register OTEL collector handlers
   registerCLIBridgeHandlers(); // Register CLI Bridge diagnostics handlers
   registerSecretHandlers();

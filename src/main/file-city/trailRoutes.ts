@@ -329,6 +329,133 @@ export function registerTrailRoutes(
     }
   });
 
+  // Fork an existing investigation into a new informative trail.
+  // Body: { sourceId, payload, repositoryPath? }
+  // The source must exist locally; the new payload's purpose is forced to
+  // 'informative'; any kind:'subject' marker annotations are stripped (the
+  // subject concept is investigation-only); the new id must differ from
+  // the source. The host index records derivedFrom=sourceId so renderers
+  // can show the link back.
+  app.post(
+    '/api/file-city/trail/fork-informative',
+    async (req: Request, res: Response) => {
+      const body =
+        req.body && typeof req.body === 'object'
+          ? (req.body as Record<string, unknown>)
+          : null;
+      if (!body) {
+        res
+          .status(400)
+          .json({ success: false, error: 'request body must be a JSON object' });
+        return;
+      }
+      const sourceId = typeof body.sourceId === 'string' ? body.sourceId : '';
+      if (!sourceId) {
+        res
+          .status(400)
+          .json({ success: false, error: 'sourceId (string) is required' });
+        return;
+      }
+      const source = await store.loadById(sourceId);
+      if (!source) {
+        res.status(404).json({
+          success: false,
+          error: `source trail "${sourceId}" not found`,
+        });
+        return;
+      }
+      // Treat the nested payload as the same body shape validatePayload
+      // already understands. Top-level repositoryPath wins over an
+      // inner-payload one (unlikely to be set there, but be explicit).
+      const innerPayload =
+        body.payload && typeof body.payload === 'object'
+          ? (body.payload as Record<string, unknown>)
+          : null;
+      if (!innerPayload) {
+        res.status(400).json({
+          success: false,
+          error: 'payload (object) is required',
+        });
+        return;
+      }
+      const validation = validatePayload(innerPayload);
+      if (!validation.ok) {
+        res.status(400).json({ success: false, error: validation.error });
+        return;
+      }
+      if (validation.payload.id === sourceId) {
+        res.status(400).json({
+          success: false,
+          error: 'fork must use a new id distinct from sourceId',
+        });
+        return;
+      }
+      // Strip any kind:'subject' annotations — that field is
+      // investigation-specific per the schema.
+      const informativeMarkers = validation.payload.markers.map((m) => {
+        if (m && (m as { kind?: unknown }).kind === 'subject') {
+          const { kind: _drop, ...rest } = m as TrailMarker & {
+            kind?: string;
+          };
+          return rest as TrailMarker;
+        }
+        return m;
+      });
+      const informativePayload: TrailPayload = {
+        ...validation.payload,
+        purpose: 'informative',
+        markers: informativeMarkers,
+      };
+      const repositoryPath =
+        typeof body.repositoryPath === 'string'
+          ? body.repositoryPath
+          : validation.repositoryPath;
+      try {
+        const { payload, evictedIds } = await store.set(informativePayload, {
+          repositoryPath,
+          derivedFrom: sourceId,
+        });
+        let windowOpened: WindowOpened = 'none';
+        if (repositoryPath) {
+          try {
+            windowOpened = await ensureDevWorkspaceWindow(
+              repositoryPath,
+              payload.id,
+            );
+          } catch (err) {
+            console.error(
+              '[trailRoutes] ensure window failed (fork)',
+              err,
+            );
+          }
+        }
+        const broadcastTo = sendToRepoWindows(
+          FileCityTrailEvent.PAYLOAD_SET,
+          { payload, repositoryPath },
+          repositoryPath,
+        );
+        sendToRepoWindows(
+          FileCityTrailEvent.LIBRARY_CHANGED,
+          { repositoryPath },
+          repositoryPath,
+        );
+        res.json({
+          success: true,
+          id: payload.id,
+          derivedFrom: sourceId,
+          broadcastTo,
+          evictedIds,
+          windowOpened,
+        });
+      } catch (err) {
+        console.error('[trailRoutes] fork-informative failed', err);
+        res
+          .status(500)
+          .json({ success: false, error: 'failed to persist fork' });
+      }
+    },
+  );
+
   // Library list — must come before `/:id` so it isn't treated as an id.
   app.get(
     '/api/file-city/trail/library',

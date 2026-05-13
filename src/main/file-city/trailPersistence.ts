@@ -115,6 +115,7 @@ const buildEntry = (
   repositoryPath: string | undefined,
   sizeBytes: number,
   cachePath: string,
+  derivedFrom: string | undefined,
 ): IndexEntryV2 => ({
   id: payload.id,
   title: payload.title || 'Untitled trail',
@@ -126,6 +127,7 @@ const buildEntry = (
   updatedAt: payload.updatedAt,
   sizeBytes,
   repositoryPath,
+  derivedFrom,
   cachePath,
 });
 
@@ -187,7 +189,7 @@ export class TrailPersistence {
 
   async save(
     incoming: TrailPayload,
-    options: { repositoryPath?: string },
+    options: { repositoryPath?: string; derivedFrom?: string },
   ): Promise<{ payload: TrailPayload; evictedIds: string[] }> {
     const idx = await this.getIndex();
     const now = new Date().toISOString();
@@ -215,6 +217,9 @@ export class TrailPersistence {
     };
 
     const repositoryPath = options.repositoryPath ?? existing?.repositoryPath;
+    // derivedFrom is stamped at fork time. Preserve the existing entry's
+    // value on re-POST so the link doesn't get cleared by a vanilla update.
+    const derivedFrom = options.derivedFrom ?? existing?.derivedFrom;
     const { cachePath } = chooseBucket(payload, repositoryPath);
     const file = path.join(this.baseDir, cachePath);
     await fs.mkdir(path.dirname(file), { recursive: true });
@@ -231,6 +236,7 @@ export class TrailPersistence {
       repositoryPath,
       Buffer.byteLength(serialized, 'utf8'),
       cachePath,
+      derivedFrom,
     );
     if (existingIdx >= 0) {
       idx.entries[existingIdx] = entry;
@@ -281,6 +287,7 @@ export class TrailPersistence {
       existing.repositoryPath,
       Buffer.byteLength(serialized, 'utf8'),
       cachePath,
+      existing.derivedFrom,
     );
     await this.persistIndex();
     return next;
@@ -456,6 +463,7 @@ export class TrailPersistence {
           legacyEntry.repositoryPath,
           Buffer.byteLength(serialized, 'utf8'),
           cachePath,
+          legacyEntry.derivedFrom,
         ),
       );
       migrated++;
@@ -526,7 +534,13 @@ export class TrailPersistence {
         title: parsed.title || 'Untitled trail',
       };
       idx.entries.push(
-        buildEntry(stamped, undefined, Buffer.byteLength(raw, 'utf8'), rel),
+        buildEntry(
+          stamped,
+          undefined,
+          Buffer.byteLength(raw, 'utf8'),
+          rel,
+          undefined,
+        ),
       );
     }
   }

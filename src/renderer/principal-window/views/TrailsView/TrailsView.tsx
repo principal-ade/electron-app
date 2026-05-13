@@ -21,11 +21,11 @@ import {
   Search,
   Loader2,
   ArrowLeft,
-  Sparkles,
 } from 'lucide-react';
 import type {
   OpenCodeDetectResult,
   OpenCodeRunPromptResult,
+  PromoteProgressEntry,
   PromoteTrailResult,
 } from '../../../../shared/main-process-api-interfaces/OpenCodePromoteAPI';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
@@ -56,6 +56,7 @@ import {
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import { TrailProjectCityCard } from './TrailProjectCityCard';
+import { SpikePromoteToolbar } from './SpikePromoteToolbar';
 
 /** Constants for the file-city-trail skill bundled in principal-ai/skills. */
 const TRAIL_SKILL_NAME = 'file-city-trail';
@@ -480,6 +481,24 @@ const TrailsViewInner: React.FC<{
   const [spikePromoteResult, setSpikePromoteResult] =
     useState<PromoteTrailResult | null>(null);
   const [spikePromoting, setSpikePromoting] = useState(false);
+  const [spikeProgress, setSpikeProgress] = useState<PromoteProgressEntry[]>(
+    [],
+  );
+
+  // Subscribe to streamed progress while the spike toolbar is mounted.
+  // The renderer keeps the last ~50 entries in memory; older ones drop.
+  useEffect(() => {
+    const unsubscribe = window.mainProcess.openCodePromote.onProgress(
+      (entry) => {
+        setSpikeProgress((prev) => {
+          const next = [...prev, entry];
+          if (next.length > 50) next.splice(0, next.length - 50);
+          return next;
+        });
+      },
+    );
+    return unsubscribe;
+  }, []);
   const onSpikeDetectClick = useCallback(async () => {
     setSpikeDetecting(true);
     try {
@@ -518,6 +537,7 @@ const TrailsViewInner: React.FC<{
     if (!previewTrail) return;
     setSpikePromoting(true);
     setSpikePromoteResult(null);
+    setSpikeProgress([]);
     try {
       setSpikePromoteResult(
         await window.mainProcess.openCodePromote.promoteTrail(previewTrail.id),
@@ -2660,204 +2680,18 @@ const TrailsViewInner: React.FC<{
                     }}
                   >
                     {previewTrail && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'flex-end',
-                          gap: 6,
-                        }}
-                      >
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button
-                            type="button"
-                            onClick={onSpikeDetectClick}
-                            disabled={spikeDetecting}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 6,
-                              padding: '6px 10px',
-                              border: `1px solid ${theme.colors.border}`,
-                              borderRadius: 8,
-                              backgroundColor: theme.colors.backgroundSecondary,
-                              color: theme.colors.text,
-                              fontFamily: theme.fonts.body,
-                              fontSize: theme.fontSizes[1],
-                              cursor: spikeDetecting ? 'wait' : 'pointer',
-                              opacity: spikeDetecting ? 0.7 : 1,
-                            }}
-                          >
-                            {spikeDetecting ? (
-                              <Loader2
-                                size={14}
-                                style={{
-                                  animation: 'trails-spin 1s linear infinite',
-                                }}
-                              />
-                            ) : (
-                              <Sparkles size={14} />
-                            )}
-                            {spikeDetecting ? 'Detecting…' : 'Detect'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={onSpikeRunClick}
-                            disabled={spikeRunning}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 6,
-                              padding: '6px 10px',
-                              border: `1px solid ${theme.colors.border}`,
-                              borderRadius: 8,
-                              backgroundColor: theme.colors.backgroundSecondary,
-                              color: theme.colors.text,
-                              fontFamily: theme.fonts.body,
-                              fontSize: theme.fontSizes[1],
-                              cursor: spikeRunning ? 'wait' : 'pointer',
-                              opacity: spikeRunning ? 0.7 : 1,
-                            }}
-                          >
-                            {spikeRunning ? (
-                              <Loader2
-                                size={14}
-                                style={{
-                                  animation: 'trails-spin 1s linear infinite',
-                                }}
-                              />
-                            ) : (
-                              <Sparkles size={14} />
-                            )}
-                            {spikeRunning ? 'Running…' : 'Ping'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={onSpikePromoteClick}
-                            disabled={spikePromoting}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 6,
-                              padding: '6px 10px',
-                              border: `1px solid ${theme.colors.accent}`,
-                              borderRadius: 8,
-                              backgroundColor: theme.colors.accent,
-                              color: theme.colors.background,
-                              fontFamily: theme.fonts.body,
-                              fontSize: theme.fontSizes[1],
-                              cursor: spikePromoting ? 'wait' : 'pointer',
-                              opacity: spikePromoting ? 0.7 : 1,
-                            }}
-                          >
-                            {spikePromoting ? (
-                              <Loader2
-                                size={14}
-                                style={{
-                                  animation: 'trails-spin 1s linear infinite',
-                                }}
-                              />
-                            ) : (
-                              <Sparkles size={14} />
-                            )}
-                            {spikePromoting ? 'Promoting…' : 'Promote'}
-                          </button>
-                        </div>
-                        {(spikeDetectResult ||
-                          spikeRunResult ||
-                          spikePromoteResult) && (
-                          <div
-                            style={{
-                              maxWidth: 380,
-                              padding: '6px 10px',
-                              borderRadius: 8,
-                              border: `1px solid ${theme.colors.border}`,
-                              backgroundColor: theme.colors.backgroundSecondary,
-                              color: theme.colors.textSecondary,
-                              fontFamily: theme.fonts.body,
-                              fontSize: theme.fontSizes[0],
-                              lineHeight: 1.35,
-                              textAlign: 'right',
-                              wordBreak: 'break-word',
-                            }}
-                          >
-                            {spikePromoteResult ? (
-                              spikePromoteResult.ok &&
-                              spikePromoteResult.proposal ? (
-                                <>
-                                  <div>
-                                    <strong>Subject:</strong>{' '}
-                                    {spikePromoteResult.proposal.subjectMarkerId}
-                                  </div>
-                                  <div style={{ marginTop: 4 }}>
-                                    {spikePromoteResult.proposal.reasoning}
-                                  </div>
-                                  {spikePromoteResult.proposal
-                                    .titleSuggestion && (
-                                    <div style={{ marginTop: 4 }}>
-                                      <em>Title:</em>{' '}
-                                      {
-                                        spikePromoteResult.proposal
-                                          .titleSuggestion
-                                      }
-                                    </div>
-                                  )}
-                                  {spikePromoteResult.proposal
-                                    .summarySuggestion && (
-                                    <div style={{ marginTop: 4 }}>
-                                      <em>Summary:</em>{' '}
-                                      {
-                                        spikePromoteResult.proposal
-                                          .summarySuggestion
-                                      }
-                                    </div>
-                                  )}
-                                  <div
-                                    style={{ marginTop: 4, opacity: 0.6 }}
-                                  >
-                                    {Math.round(
-                                      spikePromoteResult.durationMs / 100,
-                                    ) / 10}
-                                    s
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  Promote error: {spikePromoteResult.error} ·{' '}
-                                  {Math.round(
-                                    spikePromoteResult.durationMs / 100,
-                                  ) / 10}
-                                  s
-                                </>
-                              )
-                            ) : spikeRunResult ? (
-                              <>
-                                {spikeRunResult.ok
-                                  ? `Agent: ${spikeRunResult.text || '(empty)'}`
-                                  : `Run error: ${spikeRunResult.error}`}
-                                {' · '}
-                                {Math.round(spikeRunResult.durationMs / 100) /
-                                  10}
-                                s
-                              </>
-                            ) : spikeDetectResult ? (
-                              <>
-                                {spikeDetectResult.installed
-                                  ? spikeDetectResult.authed
-                                    ? `OpenCode ready (${spikeDetectResult.providers?.join(', ') || 'authed'})`
-                                    : 'OpenCode installed — not authed'
-                                  : 'OpenCode not installed'}
-                                {spikeDetectResult.version
-                                  ? ` · v${spikeDetectResult.version}`
-                                  : ''}
-                                {spikeDetectResult.error
-                                  ? ` · ${spikeDetectResult.error}`
-                                  : ''}
-                              </>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
+                      <SpikePromoteToolbar
+                        detecting={spikeDetecting}
+                        running={spikeRunning}
+                        promoting={spikePromoting}
+                        detectResult={spikeDetectResult}
+                        runResult={spikeRunResult}
+                        promoteResult={spikePromoteResult}
+                        progress={spikeProgress}
+                        onDetect={onSpikeDetectClick}
+                        onRun={onSpikeRunClick}
+                        onPromote={onSpikePromoteClick}
+                      />
                     )}
                     <button
                       type="button"

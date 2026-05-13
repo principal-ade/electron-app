@@ -13,7 +13,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Footprints, FolderGit2, Loader2 } from 'lucide-react';
+import { File, Footprints, FolderGit2, Loader2 } from 'lucide-react';
 import {
   ArchitectureMapHighlightLayers,
   MultiVersionCityBuilder,
@@ -64,10 +64,13 @@ export const TrailProjectCityCard: React.FC<TrailProjectCityCardProps> = ({
   const [cityData, setCityData] = useState<CityData | null>(null);
   const [cityLoading, setCityLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
-  // Repo-relative file paths touched by any trail in this group. Loaded
+  // Repo-relative file paths touched per trail in this group. Loaded
   // lazily from each trail's full payload because the index entry only
-  // carries metadata, not markers.
-  const [touchedPaths, setTouchedPaths] = useState<string[]>([]);
+  // carries metadata, not markers. Stored per-trail so the highlight
+  // layer can narrow to just the selected trail's files.
+  const [pathsByTrail, setPathsByTrail] = useState<Record<string, string[]>>(
+    {},
+  );
 
   // Square-based-on-width: measure the card's own width and set the city
   // panel's height to match. `aspect-ratio` / padding-bottom tricks are
@@ -131,24 +134,26 @@ export const TrailProjectCityCard: React.FC<TrailProjectCityCardProps> = ({
     let cancelled = false;
     const trailIds = trails.map((t) => t.id);
     if (trailIds.length === 0) {
-      setTouchedPaths([]);
+      setPathsByTrail({});
       return () => {
         cancelled = true;
       };
     }
     void (async () => {
-      const paths = new Set<string>();
       const payloads = await Promise.all(
         trailIds.map((id) => TrailLibraryService.load(id)),
       );
       if (cancelled) return;
-      for (const payload of payloads) {
-        if (!payload) continue;
-        for (const marker of payload.markers ?? []) {
+      const next: Record<string, string[]> = {};
+      payloads.forEach((payload, i) => {
+        const id = trailIds[i];
+        const paths = new Set<string>();
+        for (const marker of payload?.markers ?? []) {
           if (marker.sourcePath) paths.add(marker.sourcePath);
         }
-      }
-      if (!cancelled) setTouchedPaths(Array.from(paths));
+        next[id] = Array.from(paths);
+      });
+      if (!cancelled) setPathsByTrail(next);
     })();
     return () => {
       cancelled = true;
@@ -156,22 +161,40 @@ export const TrailProjectCityCard: React.FC<TrailProjectCityCardProps> = ({
   }, [trails]);
 
   const highlightLayers = useMemo<HighlightLayer[]>(() => {
-    if (touchedPaths.length === 0) return [];
+    // When a trail in this card is selected, highlight only its files.
+    // Otherwise show the union of every trail in the group.
+    const selectedPaths =
+      selectedTrailId && pathsByTrail[selectedTrailId]
+        ? pathsByTrail[selectedTrailId]
+        : null;
+    let paths: string[];
+    if (selectedPaths) {
+      paths = selectedPaths;
+    } else {
+      const union = new Set<string>();
+      for (const list of Object.values(pathsByTrail)) {
+        for (const p of list) union.add(p);
+      }
+      paths = Array.from(union);
+    }
+    if (paths.length === 0) return [];
     return [
       {
-        id: 'trail-touched-files',
-        name: 'Trail-touched files',
+        id: selectedPaths
+          ? `trail-selected-${selectedTrailId}`
+          : 'trail-touched-files',
+        name: selectedPaths ? 'Selected trail files' : 'Trail-touched files',
         enabled: true,
         color: theme.colors.primary,
         opacity: 0.85,
         priority: 1,
-        items: touchedPaths.map((path) => ({
+        items: paths.map((path) => ({
           path,
           type: 'file' as const,
         })),
       },
     ];
-  }, [touchedPaths, theme.colors.primary]);
+  }, [pathsByTrail, selectedTrailId, theme.colors.primary]);
 
   return (
     <div
@@ -428,30 +451,17 @@ export const TrailProjectCityCard: React.FC<TrailProjectCityCardProps> = ({
                     color: theme.colors.textSecondary,
                   }}
                 >
-                  {trail.markerCount > 0 && (
+                  {(pathsByTrail[trail.id]?.length ?? 0) > 0 && (
                     <span
-                      aria-label={`${trail.markerCount} steps`}
-                      style={{ display: 'inline-flex', gap: 3 }}
+                      aria-label={`${pathsByTrail[trail.id].length} files`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
                     >
-                      {Array.from({
-                        length: Math.min(trail.markerCount, 24),
-                      }).map((_, i) => (
-                        <span
-                          key={i}
-                          style={{
-                            width: 4,
-                            height: 4,
-                            borderRadius: '50%',
-                            backgroundColor: theme.colors.textSecondary,
-                            opacity: 0.6,
-                          }}
-                        />
-                      ))}
-                      {trail.markerCount > 24 ? (
-                        <span style={{ marginLeft: 4 }}>
-                          +{trail.markerCount - 24}
-                        </span>
-                      ) : null}
+                      <File size={11} />
+                      {pathsByTrail[trail.id].length}
                     </span>
                   )}
                   <span>{formatRelativeTime(trail.updatedAt)}</span>

@@ -43,6 +43,12 @@ export interface SetOptions {
    * index entry only; never written into the portable trail payload.
    */
   repositoryPath?: string;
+  /**
+   * Source trail id this entry was forked from (e.g. an investigation
+   * promoted to an informative trail). Stamped on the index entry only.
+   * Preserved across re-POSTs; pass undefined on regular updates.
+   */
+  derivedFrom?: string;
 }
 
 export interface SetResult {
@@ -59,6 +65,7 @@ export class TrailStore {
   ): Promise<SetResult> {
     const { payload, evictedIds } = await this.persistence.save(incoming, {
       repositoryPath: options.repositoryPath,
+      derivedFrom: options.derivedFrom,
     });
     return { payload, evictedIds };
   }

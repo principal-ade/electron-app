@@ -1,0 +1,270 @@
+/**
+ * Spike toolbar for the Recent → preview pane that drives the OpenCode
+ * promote pipeline: detect (is opencode installed/authed) → ping (run a
+ * trivial prompt) → promote (fork the selected investigation trail into
+ * an informative trail). Streams progress entries while promoting.
+ *
+ * Lifted out of TrailsView purely to keep that file under the
+ * max-lines lint cap — all state still lives in TrailsView so the
+ * toolbar stays a dumb view.
+ */
+
+import React from 'react';
+import { useTheme } from '@principal-ade/industry-theme';
+import { Loader2, Sparkles } from 'lucide-react';
+import type {
+  OpenCodeDetectResult,
+  OpenCodeRunPromptResult,
+  PromoteProgressEntry,
+  PromoteTrailResult,
+} from '../../../../shared/main-process-api-interfaces/OpenCodePromoteAPI';
+
+export interface SpikePromoteToolbarProps {
+  detecting: boolean;
+  running: boolean;
+  promoting: boolean;
+  detectResult: OpenCodeDetectResult | null;
+  runResult: OpenCodeRunPromptResult | null;
+  promoteResult: PromoteTrailResult | null;
+  progress: PromoteProgressEntry[];
+  onDetect: () => void;
+  onRun: () => void;
+  onPromote: () => void;
+}
+
+export const SpikePromoteToolbar: React.FC<SpikePromoteToolbarProps> = ({
+  detecting,
+  running,
+  promoting,
+  detectResult,
+  runResult,
+  promoteResult,
+  progress,
+  onDetect,
+  onRun,
+  onPromote,
+}) => {
+  const { theme } = useTheme();
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: 6,
+      }}
+    >
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button
+          type="button"
+          onClick={onDetect}
+          disabled={detecting}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 10px',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 8,
+            backgroundColor: theme.colors.backgroundSecondary,
+            color: theme.colors.text,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            cursor: detecting ? 'wait' : 'pointer',
+            opacity: detecting ? 0.7 : 1,
+          }}
+        >
+          {detecting ? (
+            <Loader2
+              size={14}
+              style={{ animation: 'trails-spin 1s linear infinite' }}
+            />
+          ) : (
+            <Sparkles size={14} />
+          )}
+          {detecting ? 'Detecting…' : 'Detect'}
+        </button>
+        <button
+          type="button"
+          onClick={onRun}
+          disabled={running}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 10px',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 8,
+            backgroundColor: theme.colors.backgroundSecondary,
+            color: theme.colors.text,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            cursor: running ? 'wait' : 'pointer',
+            opacity: running ? 0.7 : 1,
+          }}
+        >
+          {running ? (
+            <Loader2
+              size={14}
+              style={{ animation: 'trails-spin 1s linear infinite' }}
+            />
+          ) : (
+            <Sparkles size={14} />
+          )}
+          {running ? 'Running…' : 'Ping'}
+        </button>
+        <button
+          type="button"
+          onClick={onPromote}
+          disabled={promoting}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 10px',
+            border: `1px solid ${theme.colors.accent}`,
+            borderRadius: 8,
+            backgroundColor: theme.colors.accent,
+            color: theme.colors.background,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            cursor: promoting ? 'wait' : 'pointer',
+            opacity: promoting ? 0.7 : 1,
+          }}
+        >
+          {promoting ? (
+            <Loader2
+              size={14}
+              style={{ animation: 'trails-spin 1s linear infinite' }}
+            />
+          ) : (
+            <Sparkles size={14} />
+          )}
+          {promoting ? 'Promoting…' : 'Promote'}
+        </button>
+      </div>
+      {(detectResult || runResult || promoteResult) && (
+        <div
+          style={{
+            maxWidth: 380,
+            padding: '6px 10px',
+            borderRadius: 8,
+            border: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.backgroundSecondary,
+            color: theme.colors.textSecondary,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[0],
+            lineHeight: 1.35,
+            textAlign: 'right',
+            wordBreak: 'break-word',
+          }}
+        >
+          {promoteResult ? (
+            promoteResult.ok && promoteResult.newTrailId ? (
+              <>
+                <div>
+                  <strong>Forked to informative:</strong>{' '}
+                  {promoteResult.newTrailId}
+                </div>
+                {promoteResult.derivedFrom && (
+                  <div style={{ marginTop: 4, opacity: 0.7 }}>
+                    derivedFrom: {promoteResult.derivedFrom}
+                  </div>
+                )}
+                <div style={{ marginTop: 4, opacity: 0.6 }}>
+                  {Math.round(promoteResult.durationMs / 100) / 10}s
+                </div>
+              </>
+            ) : (
+              <>
+                Promote error: {promoteResult.error} ·{' '}
+                {Math.round(promoteResult.durationMs / 100) / 10}s
+              </>
+            )
+          ) : runResult ? (
+            <>
+              {runResult.ok
+                ? `Agent: ${runResult.text || '(empty)'}`
+                : `Run error: ${runResult.error}`}
+              {' · '}
+              {Math.round(runResult.durationMs / 100) / 10}s
+            </>
+          ) : detectResult ? (
+            <>
+              {detectResult.installed
+                ? detectResult.authed
+                  ? `OpenCode ready (${detectResult.providers?.join(', ') || 'authed'})`
+                  : 'OpenCode installed — not authed'
+                : 'OpenCode not installed'}
+              {detectResult.version ? ` · v${detectResult.version}` : ''}
+              {detectResult.error ? ` · ${detectResult.error}` : ''}
+            </>
+          ) : null}
+        </div>
+      )}
+      {progress.length > 0 && (
+        <div
+          style={{
+            width: 380,
+            maxHeight: 220,
+            overflowY: 'auto',
+            padding: '6px 10px',
+            borderRadius: 8,
+            border: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.backgroundSecondary,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[0],
+            lineHeight: 1.35,
+          }}
+        >
+          {progress.slice(-20).map((entry, i) => (
+            <div
+              key={`${entry.time}-${i}`}
+              style={{
+                display: 'flex',
+                gap: 8,
+                color:
+                  entry.kind === 'error'
+                    ? theme.colors.error
+                    : entry.kind === 'info'
+                      ? theme.colors.textSecondary
+                      : theme.colors.text,
+                borderBottom:
+                  i < Math.min(20, progress.length) - 1
+                    ? `1px solid ${theme.colors.border}`
+                    : 'none',
+                padding: '3px 0',
+              }}
+            >
+              <span
+                style={{
+                  opacity: 0.6,
+                  minWidth: 36,
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {new Date(entry.time).toISOString().slice(14, 19)}
+              </span>
+              <span style={{ flex: 1 }}>
+                <span style={{ fontWeight: 600 }}>{entry.label}</span>
+                {entry.detail && (
+                  <span
+                    style={{
+                      marginLeft: 6,
+                      opacity: 0.7,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {entry.detail}
+                  </span>
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SpikePromoteToolbar;
