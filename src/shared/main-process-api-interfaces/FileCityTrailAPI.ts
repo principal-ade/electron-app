@@ -98,6 +98,7 @@ export type TrailShareErrorCode =
   | 'NO_REPO_ACCESS'
   | 'SHARE_NOT_FOUND'
   | 'SNIPPET_NOT_BAKED'
+  | 'INVALID_PAYLOAD'
   | 'NETWORK_ERROR'
   | 'WEB_ADE_ERROR';
 

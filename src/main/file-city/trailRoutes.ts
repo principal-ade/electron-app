@@ -246,6 +246,26 @@ function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
     purposeCandidate === 'informative'
       ? purposeCandidate
       : undefined;
+
+  // Subject-marker invariant. Mirrors web-ade's POST /api/trails rule
+  // so producers fail fast in-app instead of round-tripping for the
+  // 400. Investigation (the implicit default) needs exactly one marker
+  // with kind:'subject'; other purposes must carry none.
+  const effectivePurpose = purpose ?? 'investigation';
+  const subjectMarkers = markers.filter((m) => m.kind === 'subject');
+  if (effectivePurpose === 'investigation') {
+    if (subjectMarkers.length !== 1) {
+      return {
+        ok: false,
+        error: `investigation trails must have exactly one marker with kind:'subject' (found ${subjectMarkers.length})`,
+      };
+    }
+  } else if (subjectMarkers.length > 0) {
+    return {
+      ok: false,
+      error: `${effectivePurpose} trails must not have subject markers (found ${subjectMarkers.length})`,
+    };
+  }
   // `share` flags the trail as having an external audience and gates
   // the panel's review chrome. We accept it from HTTP because trails
   // can be authored as already-shared (e.g. agent publishes directly).

@@ -64,6 +64,7 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
   onShared,
 }) => {
   const { theme } = useTheme();
+  const openedWithUrl = !!initialUrl;
   const [state, setState] = useState<ModalState>(
     initialUrl ? { kind: 'success', url: initialUrl } : { kind: 'idle' },
   );
@@ -258,6 +259,7 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
             url={state.url}
             agentCommand={buildAgentCommand(trail.id)}
             copiedKind={copiedKind}
+            freshPublish={!openedWithUrl}
             onCopyUrl={() => handleCopy(state.url, 'url')}
             onCopyAgent={() =>
               handleCopy(buildAgentCommand(trail.id), 'agent')
@@ -421,6 +423,7 @@ const SuccessBody: React.FC<{
   url: string;
   agentCommand: string;
   copiedKind: CopiedKind;
+  freshPublish: boolean;
   onCopyUrl: () => void;
   onCopyAgent: () => void;
   onOpenExternal: () => void;
@@ -430,6 +433,7 @@ const SuccessBody: React.FC<{
   url,
   agentCommand,
   copiedKind,
+  freshPublish,
   onCopyUrl,
   onCopyAgent,
   onOpenExternal,
@@ -454,7 +458,9 @@ const SuccessBody: React.FC<{
         }}
       >
         <Check size={16} />
-        Trail shared. Anyone with GitHub read access to the repo can view it.
+        {freshPublish
+          ? 'Trail published. Local draft removed — the trail now lives at the link below.'
+          : 'Trail shared. Anyone with GitHub read access to the repo can view it.'}
       </div>
 
       <FieldLabel theme={theme}>Link</FieldLabel>

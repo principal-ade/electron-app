@@ -239,6 +239,15 @@ function shareErrorFromResponse(
   if (body.code === 'PAYLOAD_TOO_LARGE') {
     return new TrailShareError('PAYLOAD_TOO_LARGE', message);
   }
+  // Schema-level rejection from web-ade (e.g. investigations missing
+  // their kind:'subject' marker). Surface the server's specific message
+  // so the authoring UI can show what the producer got wrong.
+  if (body.code === 'INVALID_PAYLOAD') {
+    return new TrailShareError(
+      'INVALID_PAYLOAD',
+      `Trail rejected by registry: ${message}`,
+    );
+  }
   return new TrailShareError('WEB_ADE_ERROR', message, {
     status: res.status,
     code: body.code,
