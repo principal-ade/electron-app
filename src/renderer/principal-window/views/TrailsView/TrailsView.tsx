@@ -301,7 +301,8 @@ const RecentTrailPreviewPane: React.FC<{
 const TrailsViewInner: React.FC<{
   selectedProject: AlexandriaEntry | null;
   onClearProject: () => void;
-}> = ({ selectedProject, onClearProject }) => {
+  bootstrapTrailId: string | null;
+}> = ({ selectedProject, onClearProject, bootstrapTrailId }) => {
   const { theme } = useTheme();
 
   const events = useMemo(() => new PanelEventBus(), []);
@@ -323,9 +324,22 @@ const TrailsViewInner: React.FC<{
   // Top-level view for the trails landing. 'landing' shows the trail-prompt
   // ideas + Add Project + View Recent Trails buttons. 'recent' replaces it
   // with a 2-day grid of trail cards bucketed by updatedAt day, plus a
-  // 3-track preview pane. Only switchable to 'recent' when at least one
-  // trail exists.
-  const [viewMode, setViewMode] = useState<'landing' | 'recent'>('landing');
+  // 3-track preview pane. Starts on 'recent' when IntegratedShell handed us
+  // a `bootstrapTrailId` (cold-start URL hash or warm-start SHOW_IN_PRINCIPAL
+  // IPC) so the activated trail lands in the grid instead of behind the
+  // landing screen.
+  const [viewMode, setViewMode] = useState<'landing' | 'recent'>(() =>
+    bootstrapTrailId ? 'recent' : 'landing',
+  );
+
+  // If `bootstrapTrailId` changes while we're mounted (e.g. user switched
+  // away from TrailsView, then a warm-start SHOW_IN_PRINCIPAL arrived and
+  // brought us back), flip to Recent again.
+  useEffect(() => {
+    if (bootstrapTrailId) {
+      setViewMode('recent');
+    }
+  }, [bootstrapTrailId]);
 
   // Free-text filter applied inside Recent mode. Trails that don't match
   // are dropped before bucketing, so empty columns surface naturally.
@@ -832,6 +846,23 @@ const TrailsViewInner: React.FC<{
 
   const hasRecentTrails = recentTrails.length > 0;
 
+  // When the window was opened/routed with a bootstrap trail id, steer the
+  // project filter to that trail's repo so its card is visible. Preview
+  // selection is handled by the project-change effect below, which also
+  // restores the bootstrap pick after clearing — colocating both halves
+  // avoids racing against its setPreviewTrail(null).
+  useEffect(() => {
+    if (!bootstrapTrailId || recentTrails.length === 0) return;
+    const entry = recentTrails.find((t) => t.id === bootstrapTrailId);
+    if (!entry?.repositoryPath) return;
+    if (entry.repositoryPath !== selectedProjectPath) {
+      setSelectedProjectPath(entry.repositoryPath);
+    }
+    // selectedProjectPath intentionally omitted — we only steer it when the
+    // bootstrap fires, not on every user-driven project change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bootstrapTrailId, recentTrails]);
+
   // Distinct projects across the Recent feed, ordered by their newest
   // trail's updatedAt. Trails without a `repositoryPath` are skipped —
   // they can't be filtered to a single project and currently have no
@@ -867,10 +898,21 @@ const TrailsViewInner: React.FC<{
   }, [recentProjects, selectedProjectPath]);
 
   // Clear the preview when the project changes so we don't show a trail
-  // from a different repo in the right pane.
+  // from a different repo in the right pane. When a bootstrap trail belongs
+  // to the new project, restore it as the preview selection instead of
+  // clearing — this is how the bridge-routed activate lands selected.
   useEffect(() => {
+    if (bootstrapTrailId) {
+      const entry = recentTrails.find((t) => t.id === bootstrapTrailId);
+      if (entry && entry.repositoryPath === selectedProjectPath) {
+        setPreviewTrail((current) =>
+          current?.id === entry.id ? current : entry,
+        );
+        return;
+      }
+    }
     setPreviewTrail(null);
-  }, [selectedProjectPath]);
+  }, [selectedProjectPath, bootstrapTrailId, recentTrails]);
 
   // Convert terminal activities to workingStates record
   const workingStates = useMemo(() => {
@@ -2404,7 +2446,17 @@ const TrailsViewInner: React.FC<{
   );
 };
 
-export const TrailsView: React.FC = () => {
+export interface TrailsViewProps {
+  /**
+   * Trail id the principal window was opened with (or routed to). Sourced
+   * from `TrailService.getOpenTrailId()` on cold start and SHOW_IN_PRINCIPAL
+   * on warm start; flows down from IntegratedShell so TrailsView starts on
+   * the Recent grid instead of the landing screen.
+   */
+  bootstrapTrailId?: string | null;
+}
+
+export const TrailsView: React.FC<TrailsViewProps> = ({ bootstrapTrailId }) => {
   const [selectedProject, setSelectedProject] =
     useState<AlexandriaEntry | null>(null);
 
@@ -2417,6 +2469,7 @@ export const TrailsView: React.FC = () => {
       <TrailsViewInner
         selectedProject={selectedProject}
         onClearProject={() => setSelectedProject(null)}
+        bootstrapTrailId={bootstrapTrailId ?? null}
       />
     </TerminalProvider>
   );

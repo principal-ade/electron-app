@@ -11,6 +11,7 @@ import {
   type TrailPayloadSetEnvelope,
   type TrailShareEnvelope,
   type TrailShareOptions,
+  type TrailShowInPrincipalEnvelope,
 } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import type {
   TrailPayload,
@@ -81,6 +82,20 @@ export const fileCityTrailAPI: FileCityTrailAPI = {
     ipcRenderer.on(FileCityTrailEvent.LIBRARY_CHANGED, handler);
     return () => {
       ipcRenderer.removeListener(FileCityTrailEvent.LIBRARY_CHANGED, handler);
+    };
+  },
+
+  onShowInPrincipal: (callback) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      envelope: TrailShowInPrincipalEnvelope,
+    ) => callback(envelope);
+    ipcRenderer.on(FileCityTrailEvent.SHOW_IN_PRINCIPAL, handler);
+    return () => {
+      ipcRenderer.removeListener(
+        FileCityTrailEvent.SHOW_IN_PRINCIPAL,
+        handler,
+      );
     };
   },
 

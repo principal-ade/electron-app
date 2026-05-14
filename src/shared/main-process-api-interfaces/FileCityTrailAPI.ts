@@ -46,6 +46,14 @@ export enum FileCityTrailEvent {
   LIST_SHARED = 'file-city:trail:list-shared',
   FETCH_SHARED = 'file-city:trail:fetch-shared',
   SET_TRANSIENT = 'file-city:trail:set-transient',
+  SHOW_IN_PRINCIPAL = 'file-city:trail:show-in-principal',
+}
+
+/** Envelope for `SHOW_IN_PRINCIPAL` IPC — tells the principal window to
+ *  surface the given trail (switch to TrailsView). Cold starts use the
+ *  `#openTrailId=` URL hash instead; this event is for warm-start handoff. */
+export interface TrailShowInPrincipalEnvelope {
+  trailId: string;
 }
 
 /**
@@ -252,6 +260,16 @@ export interface FileCityTrailAPI {
   /** Subscribe to library changes (set / delete / activate). */
   onLibraryChanged: (
     callback: (info: { repositoryPath?: string }) => void,
+  ) => () => void;
+
+  /**
+   * Subscribe to "show this trail in the principal window" events. Fires
+   * when the bridge routes a trail to the principal window on warm start
+   * (the dev-workspace for the repo isn't open). The principal window
+   * should switch to TrailsView. Returns an unsubscribe function.
+   */
+  onShowInPrincipal: (
+    callback: (envelope: TrailShowInPrincipalEnvelope) => void,
   ) => () => void;
 
   /**

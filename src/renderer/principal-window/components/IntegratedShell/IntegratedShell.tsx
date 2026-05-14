@@ -15,6 +15,7 @@ import { UserPreferencesService } from '../../../main-process-api/UserPreference
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { SecureAuthService } from '../../../services/SecureAuthService';
+import { TrailService } from '../../../services/TrailService';
 import type { InteractiveShellNavigationView } from '../../../../shared/types/userPreferences.types';
 import type { QuickCommand } from '@principal-ade/panel-layouts';
 import {
@@ -104,6 +105,15 @@ const getViewDefaults = (
 
 export const IntegratedShell: React.FC = () => {
   const [activeView, setActiveView] = useState<NavigationView>('trails');
+  // Trail id this window was opened with (cold-start URL hash) or routed
+  // to (warm-start SHOW_IN_PRINCIPAL IPC). Flows down to TrailsView so it
+  // boots on the Recent grid with the activated trail surfaced. Lifted
+  // here because TrailsView is conditionally mounted — subscribing to the
+  // IPC inside TrailsView would miss the warm-start fire that races
+  // ahead of mount.
+  const [bootstrapTrailId, setBootstrapTrailId] = useState<string | null>(
+    () => TrailService.getOpenTrailId(),
+  );
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | undefined>(undefined);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
@@ -131,12 +141,18 @@ export const IntegratedShell: React.FC = () => {
 
   // Load saved navigation view and panel states on mount
   useEffect(() => {
+    // Cold-start handoff from main: if this window was opened via
+    // focusOrCreateMainWindow({ openTrailId }) the trail id sits on the URL
+    // hash. Force the Trails view so the trail surfaces in Recents; the
+    // saved pref doesn't get to override the explicit bootstrap.
+    const bootstrapTrailId = TrailService.getOpenTrailId();
     const loadPreferences = async () => {
       try {
         const prefs = await UserPreferencesService.getPreferences();
 
-        // Load active view (migrate legacy views to 'feed')
-        if (prefs.interactiveShell?.activeNavigationView) {
+        if (bootstrapTrailId) {
+          setActiveView('trails');
+        } else if (prefs.interactiveShell?.activeNavigationView) {
           // Cast to string to handle legacy values from storage
           const savedView = prefs.interactiveShell.activeNavigationView as string;
           // Migrate removed views to 'feed' (removed 2026-04-19 in commit b742f44b2)
@@ -176,6 +192,18 @@ export const IntegratedShell: React.FC = () => {
     };
     loadPreferences();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Warm-start handoff from the bridge: trailRoutes sends SHOW_IN_PRINCIPAL
+  // after focusOrCreateMainWindow when the principal window was already
+  // open (cold starts ride the URL hash above instead). Force the Trails
+  // view and stash the trail id so TrailsView boots on the Recent grid.
+  useEffect(() => {
+    const unsubscribe = TrailService.onShowInPrincipal(({ trailId }) => {
+      setActiveView('trails');
+      setBootstrapTrailId(trailId);
+    });
+    return unsubscribe;
+  }, []);
 
   // Listen for navigate to updates events from other windows
   useEffect(() => {
@@ -552,7 +580,9 @@ export const IntegratedShell: React.FC = () => {
             }}
           >
             {/* Views will be rendered here based on activeView */}
-            {activeView === 'trails' && <TrailsView />}
+            {activeView === 'trails' && (
+              <TrailsView bootstrapTrailId={bootstrapTrailId} />
+            )}
             {activeView === 'feed' && <FeedView />}
             {activeView === 'onboarding' && (
               <OnboardingView onComplete={() => handleViewChange('feed')} />

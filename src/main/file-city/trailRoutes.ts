@@ -17,7 +17,12 @@ import type {
   TrailView,
   SequenceMarkerRef,
 } from '@industry-theme/file-city-panel';
-import { TrailStore, sendToRepoWindows } from './trailStore';
+import {
+  TrailStore,
+  sendToPrincipalWindow,
+  sendToRepoWindows,
+} from './trailStore';
+import type { TrailShowInPrincipalEnvelope } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { fetchSharedTrail } from './trailShare';
 import {
   FileCityTrailEvent,
@@ -25,9 +30,13 @@ import {
 } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { openDevWorkspaceWindow } from '../window/devWorkspaceWindowHandlers';
-import { applicationWindows, specialWindows } from '../window/modernWindowManager';
+import {
+  applicationWindows,
+  focusOrCreateMainWindow,
+  specialWindows,
+} from '../window/modernWindowManager';
 
-type WindowOpened = 'focused' | 'created' | 'none';
+type WindowOpened = 'focused' | 'created' | 'routed-to-principal' | 'none';
 
 async function ensureDevWorkspaceWindow(
   repositoryPath: string,
@@ -38,9 +47,15 @@ async function ensureDevWorkspaceWindow(
   if (!entry) {
     try {
       const stat = await fs.stat(path.join(repositoryPath, '.git'));
-      if (!stat.isDirectory() && !stat.isFile()) return 'none';
+      if (!stat.isDirectory() && !stat.isFile()) {
+        // No registered repo and no .git on disk — surface the trail in the
+        // principal window instead of silently dropping it.
+        const principal = await focusOrCreateMainWindow({ openTrailId });
+        return principal ? 'routed-to-principal' : 'none';
+      }
     } catch {
-      return 'none';
+      const principal = await focusOrCreateMainWindow({ openTrailId });
+      return principal ? 'routed-to-principal' : 'none';
     }
     try {
       entry = await registry.registerRepository(repositoryPath);
@@ -56,16 +71,31 @@ async function ensureDevWorkspaceWindow(
     existingId !== undefined ? applicationWindows.get(existingId) : undefined;
   const aliveBefore = !!existingWindow && !existingWindow.window.isDestroyed();
 
-  // `openTrailId` only matters on fresh windows — for already-open windows
-  // the renderer is already subscribed to PAYLOAD_SET and will flip its
-  // tab when the broadcast arrives. Forwarding the id either way is
-  // harmless; the existing window never reads it.
-  const result = await openDevWorkspaceWindow({
-    alexandriaEntry: entry,
-    openTrailId,
-  });
-  if (!result) return 'none';
-  return aliveBefore ? 'focused' : 'created';
+  // Warm dev-workspace wins: focus it and let the broadcast (PAYLOAD_SET)
+  // deliver the new trail. Cold dev-workspace yields to the principal
+  // window — the user finds the trail at the top of TrailsView Recents
+  // instead of getting a new dev-workspace spawned out from under them.
+  if (aliveBefore) {
+    const result = await openDevWorkspaceWindow({
+      alexandriaEntry: entry,
+      openTrailId,
+    });
+    return result ? 'focused' : 'none';
+  }
+
+  const principal = await focusOrCreateMainWindow({ openTrailId });
+  if (principal) {
+    // Warm-start handoff: cold starts pick the trail up from the URL hash
+    // at mount, but a warm principal window never re-mounts, so push an
+    // IPC asking it to switch to TrailsView. Cold starts also receive
+    // this (harmlessly — the listener just re-sets activeView='trails').
+    const envelope: TrailShowInPrincipalEnvelope = { trailId: openTrailId };
+    sendToPrincipalWindow(
+      FileCityTrailEvent.SHOW_IN_PRINCIPAL,
+      envelope,
+    );
+  }
+  return principal ? 'routed-to-principal' : 'none';
 }
 
 interface ValidationFailure {
@@ -336,6 +366,9 @@ export function registerTrailRoutes(
         { repositoryPath: result.repositoryPath },
         result.repositoryPath,
       );
+      sendToPrincipalWindow(FileCityTrailEvent.LIBRARY_CHANGED, {
+        repositoryPath: result.repositoryPath,
+      });
       res.json({
         success: true,
         id: payload.id,
@@ -459,6 +492,9 @@ export function registerTrailRoutes(
           { repositoryPath },
           repositoryPath,
         );
+        sendToPrincipalWindow(FileCityTrailEvent.LIBRARY_CHANGED, {
+          repositoryPath,
+        });
         res.json({
           success: true,
           id: payload.id,
@@ -555,6 +591,9 @@ export function registerTrailRoutes(
           { repositoryPath },
           repositoryPath,
         );
+        sendToPrincipalWindow(FileCityTrailEvent.LIBRARY_CHANGED, {
+          repositoryPath,
+        });
         res.json({ success: true });
       } catch (err) {
         console.error('[trailRoutes] delete by id failed', err);

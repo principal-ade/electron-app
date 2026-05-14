@@ -35,7 +35,7 @@ import {
   listSharedTrails,
   shareTrail,
 } from './trailShare';
-import { applicationWindows } from '../window/types';
+import { applicationWindows, getMainWindowId } from '../window/types';
 
 export interface SetOptions {
   /**
@@ -248,6 +248,25 @@ export function sendToRepoWindows(
     delivered += 1;
   }
   return delivered;
+}
+
+/**
+ * Push an IPC event to the principal window. The principal window doesn't
+ * carry a repo `localPath`, so `sendToRepoWindows` skips it — but it hosts
+ * the cross-repo `TrailsView` Recents listener and needs `LIBRARY_CHANGED`
+ * to refresh when a trail is created via the bridge with no live
+ * dev-workspace for that repo. Returns 1 if delivered, 0 otherwise.
+ */
+export function sendToPrincipalWindow(
+  eventName: FileCityTrailEvent,
+  payload: unknown,
+): number {
+  const mainId = getMainWindowId();
+  if (mainId === null) return 0;
+  const appWindow = applicationWindows.get(mainId);
+  if (!appWindow || appWindow.window.isDestroyed()) return 0;
+  appWindow.window.webContents.send(eventName, payload);
+  return 1;
 }
 
 let singleton: TrailStore | null = null;
