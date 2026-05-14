@@ -1,8 +1,8 @@
 /**
  * Spike toolbar for the Recent → preview pane that drives the OpenCode
- * promote pipeline: detect (is opencode installed/authed) → ping (run a
- * trivial prompt) → promote (fork the selected investigation trail into
- * an informative trail). Streams progress entries while promoting.
+ * convert pipeline: detect (is opencode installed/authed) → ping (run a
+ * trivial prompt) → convert (fork the selected investigation trail into
+ * an informative trail). Streams progress entries while converting.
  *
  * Lifted out of TrailsView purely to keep that file under the
  * max-lines lint cap — all state still lives in TrailsView so the
@@ -13,23 +13,23 @@ import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Check, Loader2, Share2, Sparkles } from 'lucide-react';
 import type {
+  ConvertProgressEntry,
+  ConvertTrailResult,
   OpenCodeDetectResult,
   OpenCodeRunPromptResult,
-  PromoteProgressEntry,
-  PromoteTrailResult,
-} from '../../../../shared/main-process-api-interfaces/OpenCodePromoteAPI';
+} from '../../../../shared/main-process-api-interfaces/OpenCodeConvertAPI';
 
-export interface SpikePromoteToolbarProps {
+export interface SpikeConvertToolbarProps {
   detecting: boolean;
   running: boolean;
-  promoting: boolean;
+  converting: boolean;
   detectResult: OpenCodeDetectResult | null;
   runResult: OpenCodeRunPromptResult | null;
-  promoteResult: PromoteTrailResult | null;
-  progress: PromoteProgressEntry[];
+  convertResult: ConvertTrailResult | null;
+  progress: ConvertProgressEntry[];
   onDetect: () => void;
   onRun: () => void;
-  onPromote: () => void;
+  onConvert: () => void;
   /**
    * Build a markdown brief telling an agent how to fetch the selected
    * trail from the local Principal MCP Bridge. Returns `null` when the
@@ -38,17 +38,17 @@ export interface SpikePromoteToolbarProps {
   buildAgentBrief: () => string | null;
 }
 
-export const SpikePromoteToolbar: React.FC<SpikePromoteToolbarProps> = ({
+export const SpikeConvertToolbar: React.FC<SpikeConvertToolbarProps> = ({
   detecting,
   running,
-  promoting,
+  converting,
   detectResult,
   runResult,
-  promoteResult,
+  convertResult,
   progress,
   onDetect,
   onRun,
-  onPromote,
+  onConvert,
   buildAgentBrief,
 }) => {
   const { theme } = useTheme();
@@ -61,7 +61,7 @@ export const SpikePromoteToolbar: React.FC<SpikePromoteToolbarProps> = ({
       setShareCopied(true);
       window.setTimeout(() => setShareCopied(false), 1500);
     } catch (err) {
-      console.error('[SpikePromoteToolbar] clipboard write failed:', err);
+      console.error('[SpikeConvertToolbar] clipboard write failed:', err);
     }
   };
   return (
@@ -154,8 +154,8 @@ export const SpikePromoteToolbar: React.FC<SpikePromoteToolbarProps> = ({
         </button>
         <button
           type="button"
-          onClick={onPromote}
-          disabled={promoting}
+          onClick={onConvert}
+          disabled={converting}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -167,11 +167,11 @@ export const SpikePromoteToolbar: React.FC<SpikePromoteToolbarProps> = ({
             color: theme.colors.background,
             fontFamily: theme.fonts.body,
             fontSize: theme.fontSizes[1],
-            cursor: promoting ? 'wait' : 'pointer',
-            opacity: promoting ? 0.7 : 1,
+            cursor: converting ? 'wait' : 'pointer',
+            opacity: converting ? 0.7 : 1,
           }}
         >
-          {promoting ? (
+          {converting ? (
             <Loader2
               size={14}
               style={{ animation: 'trails-spin 1s linear infinite' }}
@@ -179,10 +179,10 @@ export const SpikePromoteToolbar: React.FC<SpikePromoteToolbarProps> = ({
           ) : (
             <Sparkles size={14} />
           )}
-          {promoting ? 'Promoting…' : 'Promote'}
+          {converting ? 'Converting…' : 'Convert'}
         </button>
       </div>
-      {(detectResult || runResult || promoteResult) && (
+      {(detectResult || runResult || convertResult) && (
         <div
           style={{
             maxWidth: 380,
@@ -198,26 +198,26 @@ export const SpikePromoteToolbar: React.FC<SpikePromoteToolbarProps> = ({
             wordBreak: 'break-word',
           }}
         >
-          {promoteResult ? (
-            promoteResult.ok && promoteResult.newTrailId ? (
+          {convertResult ? (
+            convertResult.ok && convertResult.newTrailId ? (
               <>
                 <div>
                   <strong>Forked to informative:</strong>{' '}
-                  {promoteResult.newTrailId}
+                  {convertResult.newTrailId}
                 </div>
-                {promoteResult.derivedFrom && (
+                {convertResult.derivedFrom && (
                   <div style={{ marginTop: 4, opacity: 0.7 }}>
-                    derivedFrom: {promoteResult.derivedFrom}
+                    derivedFrom: {convertResult.derivedFrom}
                   </div>
                 )}
                 <div style={{ marginTop: 4, opacity: 0.6 }}>
-                  {Math.round(promoteResult.durationMs / 100) / 10}s
+                  {Math.round(convertResult.durationMs / 100) / 10}s
                 </div>
               </>
             ) : (
               <>
-                Promote error: {promoteResult.error} ·{' '}
-                {Math.round(promoteResult.durationMs / 100) / 10}s
+                Convert error: {convertResult.error} ·{' '}
+                {Math.round(convertResult.durationMs / 100) / 10}s
               </>
             )
           ) : runResult ? (
@@ -306,4 +306,4 @@ export const SpikePromoteToolbar: React.FC<SpikePromoteToolbarProps> = ({
   );
 };
 
-export default SpikePromoteToolbar;
+export default SpikeConvertToolbar;

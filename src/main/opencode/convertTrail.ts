@@ -1,14 +1,14 @@
 import { promises as fs } from 'fs';
-import type { PromoteProgressEntry } from '../../shared/main-process-api-interfaces/OpenCodePromoteAPI';
+import type { ConvertProgressEntry } from '../../shared/main-process-api-interfaces/OpenCodeConvertAPI';
 import { getTrailStore } from '../file-city/trailStore';
 import { getPrincipalMCPBridge } from '../principal-mcp/PrincipalMCPBridge';
 import { runOpenCodePrompt } from './openCodeRunner';
 
-export interface PromoteTrailOpts {
-  onProgress?: (entry: PromoteProgressEntry) => void;
+export interface ConvertTrailOpts {
+  onProgress?: (entry: ConvertProgressEntry) => void;
 }
 
-export interface PromoteTrailResult {
+export interface ConvertTrailResult {
   ok: boolean;
   newTrailId?: string;
   derivedFrom?: string;
@@ -19,7 +19,7 @@ export interface PromoteTrailResult {
 }
 
 const SKILL_PATH =
-  '/Users/griever/Developer/skills/promote-investigation/SKILL.md';
+  '/Users/griever/Developer/skills/convert-investigation/SKILL.md';
 
 async function loadSkillContent(): Promise<string> {
   try {
@@ -41,10 +41,10 @@ function parseAgentResult(
   return null;
 }
 
-export async function promoteTrail(
+export async function convertTrail(
   trailId: string,
-  opts: PromoteTrailOpts = {},
-): Promise<PromoteTrailResult> {
+  opts: ConvertTrailOpts = {},
+): Promise<ConvertTrailResult> {
   const started = Date.now();
 
   const store = getTrailStore();
@@ -80,7 +80,7 @@ export async function promoteTrail(
   const bridgeUrl = `http://localhost:${bridgePort}`;
 
   const systemPrompt = `${skillContent}${AGENT_DIRECTIVE}`;
-  const userPrompt = `Promote investigation trail with sourceId: ${trailId}.\nrepositoryPath: ${repositoryPath ?? '(unset)'}.\nThe Principal MCP Bridge is running at ${bridgeUrl} — use this base URL for ALL HTTP calls (overrides whatever default URL the skill documents). Follow the skill above.`;
+  const userPrompt = `Convert investigation trail with sourceId: ${trailId}.\nrepositoryPath: ${repositoryPath ?? '(unset)'}.\nThe Principal MCP Bridge is running at ${bridgeUrl} — use this base URL for ALL HTTP calls (overrides whatever default URL the skill documents). Follow the skill above.`;
 
   const runResult = await runOpenCodePrompt({
     prompt: userPrompt,

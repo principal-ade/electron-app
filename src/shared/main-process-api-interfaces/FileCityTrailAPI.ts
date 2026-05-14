@@ -56,7 +56,7 @@ export interface TrailIndexEntry extends BaseTrailIndexEntry {
   repositoryPath?: string;
   /**
    * Trail id this entry was forked from (typically an investigation that
-   * was promoted to an informative trail). Host-private — the portable
+   * was converted to an informative trail). Host-private — the portable
    * payload doesn't carry it. The fork-informative route stamps this.
    */
   derivedFrom?: string;

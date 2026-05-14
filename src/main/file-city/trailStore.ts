@@ -45,7 +45,7 @@ export interface SetOptions {
   repositoryPath?: string;
   /**
    * Source trail id this entry was forked from (e.g. an investigation
-   * promoted to an informative trail). Stamped on the index entry only.
+   * converted to an informative trail). Stamped on the index entry only.
    * Preserved across re-POSTs; pass undefined on regular updates.
    */
   derivedFrom?: string;

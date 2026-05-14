@@ -24,11 +24,11 @@ import {
   Share2,
 } from 'lucide-react';
 import type {
+  ConvertProgressEntry,
+  ConvertTrailResult,
   OpenCodeDetectResult,
   OpenCodeRunPromptResult,
-  PromoteProgressEntry,
-  PromoteTrailResult,
-} from '../../../../shared/main-process-api-interfaces/OpenCodePromoteAPI';
+} from '../../../../shared/main-process-api-interfaces/OpenCodeConvertAPI';
 import {
   PanelEventBus,
   type DataSlice,
@@ -61,7 +61,7 @@ import { RepositoryMonitoringService } from '../../../main-process-api/Repositor
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import { TrailProjectCityCard } from './TrailProjectCityCard';
-import { SpikePromoteToolbar } from './SpikePromoteToolbar';
+import { SpikeConvertToolbar } from './SpikeConvertToolbar';
 
 /** Constants for the trail skills bundled in principal-ai/skills. */
 const TRAIL_SKILL_REPO_OWNER = 'principal-ai';
@@ -71,7 +71,7 @@ const TRAIL_SKILL_GITHUB_URL = `https://github.com/${TRAIL_SKILL_REPO_OWNER}/${T
 
 /** All skill folders the Trails install button writes to disk. */
 const TRAIL_INSTALL_SKILL_NAMES = [
-  'promote-investigation',
+  'convert-investigation',
   'author-investigation-trail',
   'author-informative-trail',
 ] as const;
@@ -105,11 +105,11 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
     Icon: BookOpen,
   },
   {
-    name: 'promote-investigation',
-    title: 'Promote Investigation',
+    name: 'convert-investigation',
+    title: 'Convert Investigation',
     description:
-      'Turn a raw investigation trail into a polished, shareable spec — cleans up the trail and forwards it through the promote pipeline.',
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/promote-investigation`,
+      'Turn a raw investigation trail into a polished, shareable spec — cleans up the trail and forwards it through the convert pipeline.',
+    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/convert-investigation`,
     Icon: Share2,
   },
 ];
@@ -611,7 +611,7 @@ const TrailsViewInner: React.FC<{
     };
   }, [previewTrail]);
 
-  // SPIKE: OpenCode promote toolbar — only renders when a preview trail
+  // SPIKE: OpenCode convert toolbar — only renders when a preview trail
   // is selected. State lifted here so the buttons can sit in the Recent
   // toolbar (next to Back to search) rather than over the preview pane.
   const [spikeDetectResult, setSpikeDetectResult] =
@@ -620,17 +620,17 @@ const TrailsViewInner: React.FC<{
   const [spikeRunResult, setSpikeRunResult] =
     useState<OpenCodeRunPromptResult | null>(null);
   const [spikeRunning, setSpikeRunning] = useState(false);
-  const [spikePromoteResult, setSpikePromoteResult] =
-    useState<PromoteTrailResult | null>(null);
-  const [spikePromoting, setSpikePromoting] = useState(false);
-  const [spikeProgress, setSpikeProgress] = useState<PromoteProgressEntry[]>(
+  const [spikeConvertResult, setSpikeConvertResult] =
+    useState<ConvertTrailResult | null>(null);
+  const [spikeConverting, setSpikeConverting] = useState(false);
+  const [spikeProgress, setSpikeProgress] = useState<ConvertProgressEntry[]>(
     [],
   );
 
   // Subscribe to streamed progress while the spike toolbar is mounted.
   // The renderer keeps the last ~50 entries in memory; older ones drop.
   useEffect(() => {
-    const unsubscribe = window.mainProcess.openCodePromote.onProgress(
+    const unsubscribe = window.mainProcess.openCodeConvert.onProgress(
       (entry) => {
         setSpikeProgress((prev) => {
           const next = [...prev, entry];
@@ -645,7 +645,7 @@ const TrailsViewInner: React.FC<{
     setSpikeDetecting(true);
     try {
       setSpikeDetectResult(
-        await window.mainProcess.openCodePromote.detect(),
+        await window.mainProcess.openCodeConvert.detect(),
       );
     } catch (err) {
       setSpikeDetectResult({
@@ -661,7 +661,7 @@ const TrailsViewInner: React.FC<{
     setSpikeRunning(true);
     try {
       setSpikeRunResult(
-        await window.mainProcess.openCodePromote.runPrompt({
+        await window.mainProcess.openCodeConvert.runPrompt({
           prompt: 'Reply with the single word: pong.',
         }),
       );
@@ -700,23 +700,23 @@ const TrailsViewInner: React.FC<{
     ].join('\n');
   }, [previewTrail, previewPayload]);
 
-  const onSpikePromoteClick = useCallback(async () => {
+  const onSpikeConvertClick = useCallback(async () => {
     if (!previewTrail) return;
-    setSpikePromoting(true);
-    setSpikePromoteResult(null);
+    setSpikeConverting(true);
+    setSpikeConvertResult(null);
     setSpikeProgress([]);
     try {
-      setSpikePromoteResult(
-        await window.mainProcess.openCodePromote.promoteTrail(previewTrail.id),
+      setSpikeConvertResult(
+        await window.mainProcess.openCodeConvert.convertTrail(previewTrail.id),
       );
     } catch (err) {
-      setSpikePromoteResult({
+      setSpikeConvertResult({
         ok: false,
         durationMs: 0,
         error: err instanceof Error ? err.message : String(err),
       });
     } finally {
-      setSpikePromoting(false);
+      setSpikeConverting(false);
     }
   }, [previewTrail]);
 
@@ -841,7 +841,7 @@ const TrailsViewInner: React.FC<{
     };
   }, []);
 
-  // Install the trail skills (promote-investigation and the author-*-trail
+  // Install the trail skills (convert-investigation and the author-*-trail
   // skills) into both the Claude-specific and universal (.agents) skill
   // directories. Cursor/Windsurf/etc. now also read from .agents/skills, so
   // installing to those two locations covers everyone.
@@ -1636,7 +1636,7 @@ const TrailsViewInner: React.FC<{
             <button
               onClick={() => void handleInstallSkill()}
               disabled={installingSkill}
-              title="Installs the trail skills (promote-investigation, author-investigation-trail, author-informative-trail) to ~/.claude/skills and ~/.agents/skills. Cursor and Windsurf also read skills from ~/.agents/skills."
+              title="Installs the trail skills (convert-investigation, author-investigation-trail, author-informative-trail) to ~/.claude/skills and ~/.agents/skills. Cursor and Windsurf also read skills from ~/.agents/skills."
               style={{
                 width: 360,
                 padding: 36,
@@ -2931,17 +2931,17 @@ const TrailsViewInner: React.FC<{
                     }}
                   >
                     {previewTrail && (
-                      <SpikePromoteToolbar
+                      <SpikeConvertToolbar
                         detecting={spikeDetecting}
                         running={spikeRunning}
-                        promoting={spikePromoting}
+                        converting={spikeConverting}
                         detectResult={spikeDetectResult}
                         runResult={spikeRunResult}
-                        promoteResult={spikePromoteResult}
+                        convertResult={spikeConvertResult}
                         progress={spikeProgress}
                         onDetect={onSpikeDetectClick}
                         onRun={onSpikeRunClick}
-                        onPromote={onSpikePromoteClick}
+                        onConvert={onSpikeConvertClick}
                         buildAgentBrief={buildSpikeAgentBrief}
                       />
                     )}

@@ -3,7 +3,7 @@ import {
   createOpencodeClient,
   createOpencodeServer,
 } from '@opencode-ai/sdk';
-import type { PromoteProgressEntry } from '../../shared/main-process-api-interfaces/OpenCodePromoteAPI';
+import type { ConvertProgressEntry } from '../../shared/main-process-api-interfaces/OpenCodeConvertAPI';
 import { detectOpenCode } from './openCodeDetect';
 
 export interface RunPromptOpts {
@@ -17,7 +17,7 @@ export interface RunPromptOpts {
   /** Hard cap on total run time. Defaults to 120s. */
   timeoutMs?: number;
   /** Called with progress entries as the agent runs. */
-  onProgress?: (entry: PromoteProgressEntry) => void;
+  onProgress?: (entry: ConvertProgressEntry) => void;
 }
 
 function truncate(text: string, max = 200): string {
@@ -28,7 +28,7 @@ function truncate(text: string, max = 200): string {
 function normalizeEvent(
   event: { type?: string; properties?: Record<string, unknown> } | undefined,
   sessionId: string,
-): PromoteProgressEntry | null {
+): ConvertProgressEntry | null {
   if (!event || typeof event !== 'object') return null;
   const type = event.type;
   const props = (event.properties as Record<string, unknown>) ?? {};
@@ -116,7 +116,7 @@ export interface RunPromptResult {
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 
-// Default to a free OpenRouter model so the promote flow never silently
+// Default to a free OpenRouter model so the convert flow never silently
 // consumes a paid Claude Pro / API-key quota. Caller can override via
 // opts.model. Requires `opencode auth login` against `openrouter`. The
 // model id must exist in opencode's models.dev catalog (run `opencode

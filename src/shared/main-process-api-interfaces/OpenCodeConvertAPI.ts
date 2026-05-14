@@ -1,11 +1,11 @@
-export enum OpenCodePromoteAPIEvent {
-  DETECT = 'open-code-promote:detect',
-  RUN_PROMPT = 'open-code-promote:run-prompt',
-  PROMOTE_TRAIL = 'open-code-promote:promote-trail',
-  PROGRESS = 'open-code-promote:progress',
+export enum OpenCodeConvertAPIEvent {
+  DETECT = 'open-code-convert:detect',
+  RUN_PROMPT = 'open-code-convert:run-prompt',
+  CONVERT_TRAIL = 'open-code-convert:convert-trail',
+  PROGRESS = 'open-code-convert:progress',
 }
 
-export interface PromoteProgressEntry {
+export interface ConvertProgressEntry {
   /** Monotonic timestamp (ms since epoch). */
   time: number;
   /** Coarse category for styling / filtering. */
@@ -39,7 +39,7 @@ export interface OpenCodeRunPromptResult {
   error?: string;
 }
 
-export interface PromoteTrailResult {
+export interface ConvertTrailResult {
   ok: boolean;
   /** Id of the new informative trail the agent forked from the source. */
   newTrailId?: string;
@@ -52,13 +52,13 @@ export interface PromoteTrailResult {
   error?: string;
 }
 
-export interface OpenCodePromoteAPI {
+export interface OpenCodeConvertAPI {
   detect: () => Promise<OpenCodeDetectResult>;
   runPrompt: (args: OpenCodeRunPromptArgs) => Promise<OpenCodeRunPromptResult>;
-  promoteTrail: (trailId: string) => Promise<PromoteTrailResult>;
+  convertTrail: (trailId: string) => Promise<ConvertTrailResult>;
   /**
-   * Subscribe to progress entries emitted while a promote run is active.
+   * Subscribe to progress entries emitted while a convert run is active.
    * Returns an unsubscribe function. Multiple subscribers are supported.
    */
-  onProgress: (handler: (entry: PromoteProgressEntry) => void) => () => void;
+  onProgress: (handler: (entry: ConvertProgressEntry) => void) => () => void;
 }
