@@ -172,7 +172,7 @@ export const RecentTrailsCard: React.FC<RecentTrailsCardProps> = ({
           style={{
             position: 'absolute',
             top: 0,
-            left: 'calc(100% + 8px)',
+            right: 'calc(100% + 8px)',
             width: 440,
             maxHeight: 360,
             overflowY: 'auto',
