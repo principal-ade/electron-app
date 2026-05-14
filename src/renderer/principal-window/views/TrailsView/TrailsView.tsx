@@ -3099,6 +3099,60 @@ const TrailsViewInner: React.FC<{
             )}
           </div>
 
+          {/* Installed-skill pills — visual confirmation that the trail */}
+          {/* skills are on disk. Clicking a pill opens that skill on GitHub. */}
+          {/* We only render this overlay when skillInstalled === true, so */}
+          {/* every pill is in its "installed" state. */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 12,
+              right: 12,
+              zIndex: 21,
+              display: 'flex',
+              gap: 8,
+              flexWrap: 'wrap',
+              justifyContent: 'flex-end',
+              maxWidth: 'calc(100% - 24px)',
+              pointerEvents: 'none',
+            }}
+          >
+            {TRAIL_SKILL_DETAILS.map((skill) => (
+              <button
+                key={skill.name}
+                type="button"
+                onClick={() => void ShellService.openExternal(skill.url)}
+                title={`${skill.name} installed — open on GitHub`}
+                style={{
+                  pointerEvents: 'auto',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  borderRadius: 999,
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[0],
+                  cursor: 'pointer',
+                  transition: 'border-color 150ms ease, color 150ms ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = theme.colors.border;
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }}
+              >
+                <Check size={12} color={theme.colors.primary} />
+                {skill.name}
+              </button>
+            ))}
+          </div>
+
         </div>
       )}
 
