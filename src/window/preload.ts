@@ -230,6 +230,7 @@ try {
     selectQuickOpenItem: (item: unknown) =>
       ipcRenderer.send('quick-open:select', item),
     closeQuickOpen: () => ipcRenderer.send('quick-open:close'),
+    showQuickOpen: () => ipcRenderer.send('quick-open:show'),
   });
   console.info('[Preload] ✅ Window Switcher & Quick Open API exposed');
 } catch (error) {

@@ -456,6 +456,12 @@ export function setupQuickOpenHandlers(): void {
     quickOpen.hide();
   });
 
+  // Handle show request from renderer (e.g. clicked from the TrailsView)
+  ipcMain.on('quick-open:show', () => {
+    log.info('[Quick Open] Show requested from renderer');
+    void quickOpen.show();
+  });
+
   // Check if user is authenticated with GitHub
   ipcMain.handle('quick-open:is-authenticated', async () => {
     try {

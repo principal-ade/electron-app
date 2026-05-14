@@ -68,6 +68,7 @@ declare global {
       requestQuickOpenItems?: () => void;
       selectQuickOpenItem?: (item: QuickOpenItem) => void;
       closeQuickOpen?: () => void;
+      showQuickOpen?: () => void;
       copyToClipboard?: (text: string) => void;
       // GitHub search and clone APIs
       searchGitHub?: (query: string) => Promise<GitHubSearchResult[]>;
