@@ -20,6 +20,8 @@ import {
   Loader2,
   ArrowLeft,
   Plus,
+  BookOpen,
+  Share2,
 } from 'lucide-react';
 import type {
   OpenCodeDetectResult,
@@ -61,34 +63,76 @@ import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToo
 import { TrailProjectCityCard } from './TrailProjectCityCard';
 import { SpikePromoteToolbar } from './SpikePromoteToolbar';
 
-/** Constants for the file-city-trail skill bundled in principal-ai/skills. */
-const TRAIL_SKILL_NAME = 'file-city-trail';
+/** Constants for the trail skills bundled in principal-ai/skills. */
 const TRAIL_SKILL_REPO_OWNER = 'principal-ai';
 const TRAIL_SKILL_REPO_NAME = 'skills';
 const TRAIL_SKILL_BRANCH = 'main';
 const TRAIL_SKILL_GITHUB_URL = `https://github.com/${TRAIL_SKILL_REPO_OWNER}/${TRAIL_SKILL_REPO_NAME}`;
-const TRAIL_SKILL_DOCS_URL = `${TRAIL_SKILL_GITHUB_URL}/blob/${TRAIL_SKILL_BRANCH}/${TRAIL_SKILL_NAME}/SKILL.md`;
+
+/** All skill folders the Trails install button writes to disk. */
+const TRAIL_INSTALL_SKILL_NAMES = [
+  'promote-investigation',
+  'author-investigation-trail',
+  'author-informative-trail',
+] as const;
+
+/**
+ * Display metadata for the "What skills" expander shown above the install
+ * button. Order here drives the card order in the row. Each card links to
+ * the skill's folder on GitHub.
+ */
+const TRAIL_SKILL_DETAILS: ReadonlyArray<{
+  name: (typeof TRAIL_INSTALL_SKILL_NAMES)[number];
+  title: string;
+  description: string;
+  url: string;
+  Icon: React.ComponentType<{ size?: number; color?: string }>;
+}> = [
+  {
+    name: 'author-investigation-trail',
+    title: 'Author Investigation Trail',
+    description:
+      'Capture an investigation as you debug — records the files, calls, and findings you walked through so the chain of reasoning is preserved.',
+    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/author-investigation-trail`,
+    Icon: Search,
+  },
+  {
+    name: 'author-informative-trail',
+    title: 'Author Informative Trail',
+    description:
+      'Lay a guided tour through the code to explain how a feature or system works, so a teammate can follow the path without reverse-engineering it.',
+    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/author-informative-trail`,
+    Icon: BookOpen,
+  },
+  {
+    name: 'promote-investigation',
+    title: 'Promote Investigation',
+    description:
+      'Turn a raw investigation trail into a polished, shareable spec — cleans up the trail and forwards it through the promote pipeline.',
+    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/promote-investigation`,
+    Icon: Share2,
+  },
+];
 
 /**
  * Starter prompts shown on the post-install "Trail Prompt Ideas" screen.
- * Each is prefixed at render time with "Use the file-city-trail skill to …"
- * so users can paste them straight into their agent's terminal.
+ * Users can paste them straight into their agent's terminal.
  */
 const TRAIL_PROMPT_IDEAS: Array<{ label: string; prompt: string }> = [
   {
     label: 'Explain something',
     prompt:
-      'Use the file-city-trail skill to explain how <feature or system> works in this codebase.',
+      'Use the author-informative-trail skill to explain how <feature or system> works in this codebase.',
   },
   {
     label: 'Request lifecycle',
     prompt:
-      'Use the file-city-trail skill to map the lifecycle of a typical API request from entry point to response.',
+      'Use the author-informative-trail skill to map the lifecycle of a typical API request from entry point to response.',
   },
   {
     label: 'Investigate a bug',
     prompt:
-      'Use the file-city-trail skill to investigate where <bug or symptom> is coming from in this codebase.',
+      'Use the author-investigation-trail skill to investigate where <bug or symptom> is coming from in this codebase.',
   },
 ];
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -709,13 +753,15 @@ const TrailsViewInner: React.FC<{
   }, [loadGitUserName]);
 
 
-  // file-city-trail skill installation state.
+  // Trail skill installation state.
   // `null` while we're still loading the skill lock file.
   const [skillInstalled, setSkillInstalled] = useState<boolean | null>(null);
   const [installingSkill, setInstallingSkill] = useState(false);
   const [skillInstallError, setSkillInstallError] = useState<string | null>(
     null,
   );
+  // Toggle for the "What skills" expander on the install screen.
+  const [showSkillDetails, setShowSkillDetails] = useState(false);
 
   // Which trail-prompt-idea card was most recently copied (resets after a
   // short delay so the check icon goes back to the copy icon).
@@ -742,14 +788,19 @@ const TrailsViewInner: React.FC<{
     [],
   );
 
+  // Considered "installed" only when every trail skill is present. If any
+  // are missing the install button stays available so the user can install
+  // the rest.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const installed = await SkillLockService.isSkillInstalled(
-          TRAIL_SKILL_NAME,
+        const checks = await Promise.all(
+          TRAIL_INSTALL_SKILL_NAMES.map((name) =>
+            SkillLockService.isSkillInstalled(name),
+          ),
         );
-        if (!cancelled) setSkillInstalled(installed);
+        if (!cancelled) setSkillInstalled(checks.every(Boolean));
       } catch (error) {
         console.error('[TrailsView] Failed to load skill state:', error);
         if (!cancelled) setSkillInstalled(false);
@@ -762,16 +813,27 @@ const TrailsViewInner: React.FC<{
 
   // Keep skillInstalled state in sync with global install/uninstall events
   // (e.g. user installs the skill from SkillBrowserView in another tab).
+  // Any change to a trail skill triggers a full re-check rather than a flip,
+  // since "installed" means *all* trail skills are present.
   useEffect(() => {
-    const offInstalled = SkillLockService.onSkillInstalled((payload) => {
-      if (payload.skillName === TRAIL_SKILL_NAME) {
-        setSkillInstalled(true);
+    const tracked = new Set<string>(TRAIL_INSTALL_SKILL_NAMES);
+    const recheck = async () => {
+      try {
+        const checks = await Promise.all(
+          TRAIL_INSTALL_SKILL_NAMES.map((name) =>
+            SkillLockService.isSkillInstalled(name),
+          ),
+        );
+        setSkillInstalled(checks.every(Boolean));
+      } catch (error) {
+        console.error('[TrailsView] Failed to refresh skill state:', error);
       }
+    };
+    const offInstalled = SkillLockService.onSkillInstalled((payload) => {
+      if (tracked.has(payload.skillName)) void recheck();
     });
     const offUninstalled = SkillLockService.onSkillUninstalled((payload) => {
-      if (payload.skillName === TRAIL_SKILL_NAME) {
-        setSkillInstalled(false);
-      }
+      if (tracked.has(payload.skillName)) void recheck();
     });
     return () => {
       offInstalled();
@@ -779,9 +841,10 @@ const TrailsViewInner: React.FC<{
     };
   }, []);
 
-  // Install file-city-trail into both the Claude-specific and universal
-  // (.agents) skill directories. Cursor/Windsurf/etc. now also read from
-  // .agents/skills, so installing to those two locations covers everyone.
+  // Install the trail skills (promote-investigation and the author-*-trail
+  // skills) into both the Claude-specific and universal (.agents) skill
+  // directories. Cursor/Windsurf/etc. now also read from .agents/skills, so
+  // installing to those two locations covers everyone.
   const handleInstallSkill = useCallback(async () => {
     setInstallingSkill(true);
     setSkillInstallError(null);
@@ -796,45 +859,67 @@ const TrailsViewInner: React.FC<{
       }
 
       const tree = treeResult.data.tree;
-      const prefix = `${TRAIL_SKILL_NAME}/`;
-      const fileList = tree
-        .filter((item) => item.type === 'blob' && item.path.startsWith(prefix))
-        .map((item) => item.path);
-      if (fileList.length === 0) {
-        throw new Error(
-          `Skill folder "${TRAIL_SKILL_NAME}" not found in the repo.`,
-        );
-      }
-      const folderEntry = tree.find(
-        (item) => item.type === 'tree' && item.path === TRAIL_SKILL_NAME,
-      );
-
       const destinations = [
         DIRECTORY_ID_TO_DESTINATION['claude-specific'],
         DIRECTORY_ID_TO_DESTINATION['agent-universal'],
       ] as const;
 
       const failures: string[] = [];
-      for (const destination of destinations) {
-        const result = await GithubService.installSkill({
-          githubUrl: TRAIL_SKILL_GITHUB_URL,
-          skillPath: TRAIL_SKILL_NAME,
-          destination,
-          skillName: TRAIL_SKILL_NAME,
-          fileList,
-          skillTreeSha: folderEntry?.sha,
-        });
-        if (!result.success) {
-          failures.push(`${destination}: ${result.error || 'failed'}`);
+      const fullyInstalled = new Set<string>();
+
+      for (const skillName of TRAIL_INSTALL_SKILL_NAMES) {
+        const prefix = `${skillName}/`;
+        const fileList = tree
+          .filter(
+            (item) => item.type === 'blob' && item.path.startsWith(prefix),
+          )
+          .map((item) => item.path);
+        if (fileList.length === 0) {
+          failures.push(`${skillName}: not found in repo`);
+          continue;
+        }
+        const folderEntry = tree.find(
+          (item) => item.type === 'tree' && item.path === skillName,
+        );
+
+        let skillSucceededOnce = false;
+        for (const destination of destinations) {
+          const result = await GithubService.installSkill({
+            githubUrl: TRAIL_SKILL_GITHUB_URL,
+            skillPath: skillName,
+            destination,
+            skillName,
+            fileList,
+            skillTreeSha: folderEntry?.sha,
+          });
+          if (result.success) {
+            skillSucceededOnce = true;
+          } else {
+            failures.push(
+              `${skillName} → ${destination}: ${result.error || 'failed'}`,
+            );
+          }
+        }
+        if (skillSucceededOnce) {
+          fullyInstalled.add(skillName);
         }
       }
 
-      if (failures.length === destinations.length) {
-        throw new Error(failures.join('; '));
+      if (fullyInstalled.size === 0) {
+        throw new Error(
+          failures.length > 0
+            ? failures.join('; ')
+            : 'Failed to install trail skills.',
+        );
       }
-      // At least one succeeded — advance the flow. The event subscription
-      // will also flip skillInstalled, but we set it here for immediacy.
-      setSkillInstalled(true);
+      // Only consider the trail "installed" when every skill landed
+      // somewhere. Otherwise leave the install button available so the user
+      // can retry the missing ones — the event subscription will also
+      // re-check, but we set this here for immediacy.
+      const allInstalled = TRAIL_INSTALL_SKILL_NAMES.every((name) =>
+        fullyInstalled.has(name),
+      );
+      setSkillInstalled(allInstalled);
       if (failures.length > 0) {
         setSkillInstallError(`Partial install: ${failures.join('; ')}`);
       }
@@ -1510,8 +1595,8 @@ const TrailsViewInner: React.FC<{
         </button>
       )}
 
-      {/* Skill install step — shown before the project-add step when the */}
-      {/* file-city-trail skill isn't installed yet. */}
+      {/* Skill install step — shown before the project-add step when any */}
+      {/* trail skill isn't installed yet. */}
       {!selectedProject && skillInstalled === false && (
         <div
           style={{
@@ -1532,11 +1617,11 @@ const TrailsViewInner: React.FC<{
           <div
             style={{
               flex: '0 0 auto',
-              marginTop: 80,
+              marginTop: 40,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 24,
+              gap: 16,
               width: '100%',
             }}
           >
@@ -1551,7 +1636,7 @@ const TrailsViewInner: React.FC<{
             <button
               onClick={() => void handleInstallSkill()}
               disabled={installingSkill}
-              title="Installs the file-city-trail skill to ~/.claude/skills and ~/.agents/skills. Cursor and Windsurf also read skills from ~/.agents/skills."
+              title="Installs the trail skills (promote-investigation, author-investigation-trail, author-informative-trail) to ~/.claude/skills and ~/.agents/skills. Cursor and Windsurf also read skills from ~/.agents/skills."
               style={{
                 width: 360,
                 padding: 36,
@@ -1584,14 +1669,15 @@ const TrailsViewInner: React.FC<{
                   fontWeight: theme.fontWeights.semibold,
                 }}
               >
-                {installingSkill ? 'Installing…' : 'Install Trail Skill'}
+                {installingSkill ? 'Installing…' : 'Install Trail Skills'}
               </div>
             </button>
           </div>
 
           <button
             type="button"
-            onClick={() => void ShellService.openExternal(TRAIL_SKILL_DOCS_URL)}
+            onClick={() => setShowSkillDetails((prev) => !prev)}
+            aria-expanded={showSkillDetails}
             style={{
               background: 'transparent',
               border: 'none',
@@ -1606,9 +1692,89 @@ const TrailsViewInner: React.FC<{
               textDecoration: 'underline',
             }}
           >
-            Preview on GitHub
-            <ExternalLink size={12} />
+            What skills
           </button>
+
+          {/* Skill detail cards — revealed by the "What skills" toggle. */}
+          {/* Sits directly below the "What skills" link. Clicking a card */}
+          {/* opens that skill's folder on GitHub. */}
+          {showSkillDetails && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 16,
+                flexWrap: 'wrap',
+                width: '100%',
+                maxWidth: 1080,
+              }}
+            >
+              {TRAIL_SKILL_DETAILS.map((skill) => {
+                const SkillIcon = skill.Icon;
+                return (
+                  <button
+                    key={skill.name}
+                    type="button"
+                    onClick={() => void ShellService.openExternal(skill.url)}
+                    title={`Open ${skill.name} on GitHub`}
+                    style={{
+                      flex: '1 1 240px',
+                      maxWidth: 320,
+                      minWidth: 220,
+                      padding: 20,
+                      borderRadius: 12,
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      color: theme.colors.text,
+                      fontFamily: theme.fonts.body,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      textAlign: 'left',
+                      transition: 'border-color 150ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%',
+                      }}
+                    >
+                      <SkillIcon size={20} color={theme.colors.primary} />
+                      <ExternalLink size={12} color={theme.colors.textSecondary} />
+                    </div>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[2],
+                        fontWeight: theme.fontWeights.semibold,
+                      }}
+                    >
+                      {skill.title}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[1],
+                        color: theme.colors.textSecondary,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {skill.description}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {skillInstallError && (
             <div
