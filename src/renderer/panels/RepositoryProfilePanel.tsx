@@ -46,7 +46,6 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import { DocumentView } from 'themed-markdown';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { payloadFromGithub } from '../events/feedRepositorySelected';
-import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import type { LocalClone } from '../../shared/types/repository.types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import * as LucideIcons from 'lucide-react';
@@ -124,9 +123,10 @@ export interface RepositoryProfilePanelActions extends PanelActions {
   getReadmeContent?: (owner: string, name: string) => Promise<string | null>;
 
   /**
-   * Open repository in dev workspace
+   * Open repository in dev workspace. The action is responsible for resolving
+   * the local path to an Alexandria entry (registering it if necessary).
    */
-  openRepository: (entry: AlexandriaEntry) => Promise<void>;
+  openRepository: (path: string, remoteUrl?: string) => Promise<void>;
 
   /**
    * Check if repository is watched
@@ -1105,12 +1105,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     setBouncingButton(clonePath);
     setTimeout(() => setBouncingButton(null), 2000);
 
-    const existing = await AlexandriaService.getRepositoryByPath(clonePath);
-    const entry = existing ?? await AlexandriaService.registerRepository(
-      clonePath,
-      repositoryData.htmlUrl || undefined,
-    );
-    await actions.openRepository(entry);
+    await actions.openRepository(clonePath, repositoryData.htmlUrl || undefined);
   };
 
   // Handle delete clone

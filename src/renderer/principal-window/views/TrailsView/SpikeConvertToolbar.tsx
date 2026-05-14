@@ -20,6 +20,14 @@ import type {
 } from '../../../../shared/main-process-api-interfaces/OpenCodeConvertAPI';
 
 export interface SpikeConvertToolbarProps {
+  /**
+   * When false, render only the "Share with Agent" button. The Detect /
+   * Ping / Convert pipeline (buttons, status line, progress feed) is
+   * suppressed but its props and handlers remain accepted so callers
+   * don't have to branch.
+   * @default true
+   */
+  showConvertPipeline?: boolean;
   detecting: boolean;
   running: boolean;
   converting: boolean;
@@ -39,6 +47,7 @@ export interface SpikeConvertToolbarProps {
 }
 
 export const SpikeConvertToolbar: React.FC<SpikeConvertToolbarProps> = ({
+  showConvertPipeline = true,
   detecting,
   running,
   converting,
@@ -74,64 +83,68 @@ export const SpikeConvertToolbar: React.FC<SpikeConvertToolbarProps> = ({
       }}
     >
       <div style={{ display: 'flex', gap: 6 }}>
-        <button
-          type="button"
-          onClick={onDetect}
-          disabled={detecting}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 10px',
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: 8,
-            backgroundColor: theme.colors.backgroundSecondary,
-            color: theme.colors.text,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[1],
-            cursor: detecting ? 'wait' : 'pointer',
-            opacity: detecting ? 0.7 : 1,
-          }}
-        >
-          {detecting ? (
-            <Loader2
-              size={14}
-              style={{ animation: 'trails-spin 1s linear infinite' }}
-            />
-          ) : (
-            <Sparkles size={14} />
-          )}
-          {detecting ? 'Detecting…' : 'Detect'}
-        </button>
-        <button
-          type="button"
-          onClick={onRun}
-          disabled={running}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 10px',
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: 8,
-            backgroundColor: theme.colors.backgroundSecondary,
-            color: theme.colors.text,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[1],
-            cursor: running ? 'wait' : 'pointer',
-            opacity: running ? 0.7 : 1,
-          }}
-        >
-          {running ? (
-            <Loader2
-              size={14}
-              style={{ animation: 'trails-spin 1s linear infinite' }}
-            />
-          ) : (
-            <Sparkles size={14} />
-          )}
-          {running ? 'Running…' : 'Ping'}
-        </button>
+        {showConvertPipeline && (
+          <button
+            type="button"
+            onClick={onDetect}
+            disabled={detecting}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 10px',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: 8,
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              cursor: detecting ? 'wait' : 'pointer',
+              opacity: detecting ? 0.7 : 1,
+            }}
+          >
+            {detecting ? (
+              <Loader2
+                size={14}
+                style={{ animation: 'trails-spin 1s linear infinite' }}
+              />
+            ) : (
+              <Sparkles size={14} />
+            )}
+            {detecting ? 'Detecting…' : 'Detect'}
+          </button>
+        )}
+        {showConvertPipeline && (
+          <button
+            type="button"
+            onClick={onRun}
+            disabled={running}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 10px',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: 8,
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              cursor: running ? 'wait' : 'pointer',
+              opacity: running ? 0.7 : 1,
+            }}
+          >
+            {running ? (
+              <Loader2
+                size={14}
+                style={{ animation: 'trails-spin 1s linear infinite' }}
+              />
+            ) : (
+              <Sparkles size={14} />
+            )}
+            {running ? 'Running…' : 'Ping'}
+          </button>
+        )}
         <button
           type="button"
           onClick={onShareClick}
@@ -152,37 +165,39 @@ export const SpikeConvertToolbar: React.FC<SpikeConvertToolbarProps> = ({
           {shareCopied ? <Check size={14} /> : <Share2 size={14} />}
           {shareCopied ? 'Copied' : 'Share with Agent'}
         </button>
-        <button
-          type="button"
-          onClick={onConvert}
-          disabled={converting}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 10px',
-            border: `1px solid ${theme.colors.accent}`,
-            borderRadius: 8,
-            backgroundColor: theme.colors.accent,
-            color: theme.colors.background,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[1],
-            cursor: converting ? 'wait' : 'pointer',
-            opacity: converting ? 0.7 : 1,
-          }}
-        >
-          {converting ? (
-            <Loader2
-              size={14}
-              style={{ animation: 'trails-spin 1s linear infinite' }}
-            />
-          ) : (
-            <Sparkles size={14} />
-          )}
-          {converting ? 'Converting…' : 'Convert'}
-        </button>
+        {showConvertPipeline && (
+          <button
+            type="button"
+            onClick={onConvert}
+            disabled={converting}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 10px',
+              border: `1px solid ${theme.colors.accent}`,
+              borderRadius: 8,
+              backgroundColor: theme.colors.accent,
+              color: theme.colors.background,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              cursor: converting ? 'wait' : 'pointer',
+              opacity: converting ? 0.7 : 1,
+            }}
+          >
+            {converting ? (
+              <Loader2
+                size={14}
+                style={{ animation: 'trails-spin 1s linear infinite' }}
+              />
+            ) : (
+              <Sparkles size={14} />
+            )}
+            {converting ? 'Converting…' : 'Convert'}
+          </button>
+        )}
       </div>
-      {(detectResult || runResult || convertResult) && (
+      {showConvertPipeline && (detectResult || runResult || convertResult) && (
         <div
           style={{
             maxWidth: 380,
@@ -241,7 +256,7 @@ export const SpikeConvertToolbar: React.FC<SpikeConvertToolbarProps> = ({
           ) : null}
         </div>
       )}
-      {progress.length > 0 && (
+      {showConvertPipeline && progress.length > 0 && (
         <div
           style={{
             width: 380,

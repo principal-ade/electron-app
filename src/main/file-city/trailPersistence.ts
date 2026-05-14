@@ -68,6 +68,14 @@ const hasDiffSnippets = (payload: TrailPayload): boolean =>
 const repoNamesOf = (payload: TrailPayload): string[] =>
   (payload.repos ?? []).map((r) => r.name).filter(Boolean);
 
+const distinctFileCount = (payload: TrailPayload): number => {
+  const paths = new Set<string>();
+  for (const m of payload.markers) {
+    if (m.sourcePath) paths.add(m.sourcePath);
+  }
+  return paths.size;
+};
+
 const sanitizeSegment = (value: string): string =>
   value.replace(/[^A-Za-z0-9._-]/g, '_');
 
@@ -121,6 +129,9 @@ const buildEntry = (
   title: payload.title || 'Untitled trail',
   summaryPreview: summaryPreview(payload.summary),
   markerCount: payload.markers.length,
+  fileCount: distinctFileCount(payload),
+  purpose: payload.purpose,
+  signOffCount: payload.signOffs?.length ?? 0,
   repoNames: repoNamesOf(payload),
   hasDiffSnippets: hasDiffSnippets(payload),
   createdAt: payload.createdAt,
@@ -156,8 +167,45 @@ export class TrailPersistence {
     if (!this.index) {
       await fs.mkdir(this.baseDir, { recursive: true });
       this.index = await this.loadIndex();
+      await this.backfillDerivedFields(this.index);
     }
     return this.index;
+  }
+
+  /**
+   * Stamp derived fields (`purpose`, `fileCount`, `signOffCount`) onto
+   * entries that were indexed before those fields existed. Reads each
+   * affected entry's payload once, mutates the entry in place, and
+   * persists the index if anything changed. Runs once per process —
+   * `getIndex` caches the result.
+   */
+  private async backfillDerivedFields(idx: IndexFileV2): Promise<void> {
+    const stale = idx.entries.filter(
+      (e) =>
+        e.purpose === undefined ||
+        e.fileCount === undefined ||
+        e.signOffCount === undefined,
+    );
+    if (stale.length === 0) return;
+    let changed = 0;
+    for (const entry of stale) {
+      const payload = await this.readPayload(entry.cachePath);
+      if (!payload) continue;
+      if (entry.purpose === undefined) entry.purpose = payload.purpose;
+      if (entry.fileCount === undefined) {
+        entry.fileCount = distinctFileCount(payload);
+      }
+      if (entry.signOffCount === undefined) {
+        entry.signOffCount = payload.signOffs?.length ?? 0;
+      }
+      changed++;
+    }
+    if (changed > 0) {
+      console.info(
+        `[TrailPersistence] Backfilled derived fields on ${changed} entr${changed === 1 ? 'y' : 'ies'}`,
+      );
+      await this.persistIndex();
+    }
   }
 
   async listEntries(repositoryPath?: string): Promise<{

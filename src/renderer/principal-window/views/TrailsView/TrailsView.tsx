@@ -8,14 +8,15 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   X,
   Folder,
+  FolderGit2,
   FolderPlus,
   Footprints,
+  Plus,
   Copy,
   Check,
   ExternalLink,
   Search,
   Loader2,
-  ArrowLeft,
   BookOpen,
   Compass,
   Share2,
@@ -49,7 +50,6 @@ import { GitService } from '../../../main-process-api/GitService';
 import { GithubService } from '../../../main-process-api/GithubService';
 import { SkillLockService } from '../../../main-process-api/SkillLockService';
 import { ShellService } from '../../../main-process-api/ShellService';
-import { WindowService } from '../../../main-process-api/WindowService';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
@@ -57,7 +57,7 @@ import { FileCityTrailPanel } from '../../../dev-workspace/file-city-trail-panel
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
-import { TrailProjectCityCard } from './TrailProjectCityCard';
+import { TrailsRecentList } from './TrailsRecentList';
 import { SpikeConvertToolbar } from './SpikeConvertToolbar';
 
 /** Constants for the trail skills bundled in principal-ai/skills. */
@@ -150,23 +150,6 @@ const trailRepoLabel = (repositoryPath: string | undefined): string => {
   return idx >= 0 ? trimmed.slice(idx + 1) : trimmed;
 };
 
-/** Short relative time ("just now", "2h ago", "3d ago") for trail rows. */
-const formatRelativeTime = (iso: string): string => {
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return '';
-  const deltaSec = Math.max(0, (Date.now() - t) / 1000);
-  if (deltaSec < 60) return 'just now';
-  const min = Math.floor(deltaSec / 60);
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day}d ago`;
-  const mo = Math.floor(day / 30);
-  if (mo < 12) return `${mo}mo ago`;
-  const yr = Math.floor(day / 365);
-  return `${yr}y ago`;
-};
 
 /**
  * Right-side preview pane for the Recent view. Mounts the full
@@ -182,16 +165,24 @@ const formatRelativeTime = (iso: string): string => {
  * fetch once we want to share trees across previews.
  */
 const RecentTrailPreviewPane: React.FC<{
+  /**
+   * Project the explorer renders. Drives the file tree fetch and the
+   * panel context's repository identity. Independent of `trail` — when
+   * no trail is selected we still mount the explorer for this project.
+   */
+  repositoryPath: string | null;
   trail: TrailIndexEntry | null;
   payload: TrailPayload | null;
   loading: boolean;
   events: PanelEventEmitter;
-  onDismiss: () => void;
-  onBegin: () => void;
-}> = ({ trail, payload, loading, events, onDismiss, onBegin }) => {
+  /**
+   * Forwarded to the panel as `FileCityTrailExplorerPanelActions.closeTrail`
+   * so the explorer's built-in close button can ask the host to deselect
+   * the trail. No standalone header — the panel owns the chrome.
+   */
+  onCloseTrail: () => void;
+}> = ({ repositoryPath, trail, payload, loading, events, onCloseTrail }) => {
   const { theme } = useTheme();
-
-  const repositoryPath = trail?.repositoryPath ?? null;
 
   // Cache-only fetch: if the repo has been opened anywhere in the app,
   // the file tree is warm; otherwise the panel falls back to its empty
@@ -266,111 +257,38 @@ const RecentTrailPreviewPane: React.FC<{
         overflow: 'hidden',
       }}
     >
-      {!trail ? (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24,
-            textAlign: 'center',
-            color: theme.colors.textSecondary,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[1],
-            opacity: 0.7,
-          }}
-        >
-          Select a trail to preview
-        </div>
-      ) : (
-        <>
+      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+        {trail && (loading || !payload) ? (
           <div
             style={{
+              position: 'absolute',
+              inset: 0,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: 6,
-              padding: '6px 8px',
-              borderBottom: `1px solid ${theme.colors.border}`,
-              backgroundColor: theme.colors.backgroundSecondary,
+              justifyContent: 'center',
+              gap: 8,
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
             }}
           >
-            <button
-              type="button"
-              onClick={onBegin}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '4px 10px',
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: 6,
-                backgroundColor: theme.colors.background,
-                color: theme.colors.text,
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[0],
-                cursor: 'pointer',
-              }}
-            >
-              <Footprints size={12} />
-              Begin
-            </button>
-            <button
-              type="button"
-              onClick={onDismiss}
-              aria-label="Dismiss preview"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '4px 8px',
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: 6,
-                backgroundColor: theme.colors.background,
-                color: theme.colors.textSecondary,
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[0],
-                cursor: 'pointer',
-              }}
-            >
-              <X size={12} />
-            </button>
+            <Loader2
+              size={16}
+              style={{ animation: 'trails-spin 1s linear infinite' }}
+            />
+            <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
+            Loading preview…
           </div>
-          <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-            {loading || !payload ? (
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[1],
-                }}
-              >
-                <Loader2
-                  size={16}
-                  style={{ animation: 'trails-spin 1s linear infinite' }}
-                />
-                <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
-                Loading preview…
-              </div>
-            ) : (
-              <FileCityTrailPanel
-                key={trail.id}
-                context={panelContext}
-                actions={{}}
-                events={events}
-              />
-            )}
-          </div>
-        </>
-      )}
+        ) : (
+          <FileCityTrailPanel
+            key={trail?.id ?? `explorer:${repositoryPath ?? 'none'}`}
+            context={panelContext}
+            actions={{}}
+            events={events}
+            onCloseTrail={onCloseTrail}
+          />
+        )}
+      </div>
     </div>
   );
 };
@@ -413,14 +331,14 @@ const TrailsViewInner: React.FC<{
   // are dropped before bucketing, so empty columns surface naturally.
   const [recentFilter, setRecentFilter] = useState('');
 
-  // Recent-view grouping orientation. `date` buckets cards by updated-day;
-  // `project` buckets them by repositoryPath and the cards substitute a
-  // relative-time row for the repo row since the section header carries
-  // that identity already.
-  const [recentGrouping, setRecentGrouping] = useState<'date' | 'project'>(
-    'date',
+  // Project filter — Recent view only ever shows trails for one project at
+  // a time. The right pane uses this project to drive the file tree the
+  // explorer renders when no trail is selected. `null` means "no project
+  // available yet" (e.g. no trails loaded); the auto-select effect below
+  // promotes the most-recent trail's repo to selected once we have data.
+  const [selectedProjectPath, setSelectedProjectPath] = useState<string | null>(
+    null,
   );
-
 
   // Trail card clicked in Recent view — its full payload renders in the
   // right preview pane (TrailBriefModal). Clicking Start on the
@@ -914,6 +832,46 @@ const TrailsViewInner: React.FC<{
 
   const hasRecentTrails = recentTrails.length > 0;
 
+  // Distinct projects across the Recent feed, ordered by their newest
+  // trail's updatedAt. Trails without a `repositoryPath` are skipped —
+  // they can't be filtered to a single project and currently have no
+  // file tree to feed the explorer.
+  const recentProjects = useMemo(() => {
+    const seen = new Map<string, { path: string; label: string; ownerLogin?: string }>();
+    for (const trail of recentTrails) {
+      if (!trail.repositoryPath || seen.has(trail.repositoryPath)) continue;
+      const entry = repositories.find((r) => r.path === trail.repositoryPath);
+      seen.set(trail.repositoryPath, {
+        path: trail.repositoryPath,
+        label: trailRepoLabel(trail.repositoryPath),
+        ownerLogin: entry?.github?.owner,
+      });
+    }
+    return Array.from(seen.values());
+  }, [recentTrails, repositories]);
+
+  // Auto-pick the most-recent project once trails load, and re-pick when
+  // the current selection disappears (e.g. last trail in that project
+  // was deleted). Honors a user's manual pick otherwise.
+  useEffect(() => {
+    if (recentProjects.length === 0) {
+      if (selectedProjectPath !== null) setSelectedProjectPath(null);
+      return;
+    }
+    const stillExists = recentProjects.some(
+      (p) => p.path === selectedProjectPath,
+    );
+    if (!stillExists) {
+      setSelectedProjectPath(recentProjects[0].path);
+    }
+  }, [recentProjects, selectedProjectPath]);
+
+  // Clear the preview when the project changes so we don't show a trail
+  // from a different repo in the right pane.
+  useEffect(() => {
+    setPreviewTrail(null);
+  }, [selectedProjectPath]);
+
   // Convert terminal activities to workingStates record
   const workingStates = useMemo(() => {
     const states: Record<string, TerminalWorkingState> = {};
@@ -968,6 +926,11 @@ const TrailsViewInner: React.FC<{
       { date: Date; trails: TrailIndexEntry[] }
     >();
     for (const trail of recentTrails) {
+      // Project filter: only show trails for the active project. When no
+      // project is selected (no trails yet), the loop produces no groups.
+      if (!selectedProjectPath || trail.repositoryPath !== selectedProjectPath) {
+        continue;
+      }
       if (q) {
         const title = (trail.title ?? '').toLowerCase();
         const summary = (trail.summaryPreview ?? '').toLowerCase();
@@ -1013,100 +976,7 @@ const TrailsViewInner: React.FC<{
     });
     groups.sort((a, b) => b.date.getTime() - a.date.getTime());
     return groups;
-  }, [recentTrails, recentFilter]);
-
-  // Recent-view groups bucketed by repositoryPath. Each group's
-  // most-recent trail drives the group's sort position. Trails with no
-  // `repositoryPath` collapse into a single "Unknown project" group.
-  const trailProjectGroups = useMemo(() => {
-    const q = recentFilter.trim().toLowerCase();
-    const byKey = new Map<
-      string,
-      {
-        repoLabel: string;
-        repositoryPath?: string;
-        ownerLogin?: string;
-        avatarUrl: string | null;
-        trails: TrailIndexEntry[];
-      }
-    >();
-    for (const trail of recentTrails) {
-      if (q) {
-        const title = (trail.title ?? '').toLowerCase();
-        const summary = (trail.summaryPreview ?? '').toLowerCase();
-        const repo = trailRepoLabel(trail.repositoryPath).toLowerCase();
-        if (
-          !title.includes(q) &&
-          !summary.includes(q) &&
-          !repo.includes(q)
-        ) {
-          continue;
-        }
-      }
-      const key = trail.repositoryPath ?? '__unknown__';
-      const existing = byKey.get(key);
-      if (existing) {
-        existing.trails.push(trail);
-      } else {
-        const entry = trail.repositoryPath
-          ? repositories.find((r) => r.path === trail.repositoryPath)
-          : undefined;
-        const ownerLogin = entry?.github?.owner;
-        byKey.set(key, {
-          repoLabel: trailRepoLabel(trail.repositoryPath),
-          repositoryPath: trail.repositoryPath,
-          ownerLogin,
-          avatarUrl: ownerLogin
-            ? `https://github.com/${ownerLogin}.png?size=48`
-            : null,
-          trails: [trail],
-        });
-      }
-    }
-    const groups = Array.from(byKey.values());
-    groups.sort((a, b) => {
-      const aTime = Date.parse(a.trails[0]?.updatedAt ?? '') || 0;
-      const bTime = Date.parse(b.trails[0]?.updatedAt ?? '') || 0;
-      return bTime - aTime;
-    });
-    return groups;
-  }, [recentTrails, recentFilter, repositories]);
-
-  // When user clicks an entry: open the project in its own dev workspace
-  // window.
-  const handleSelect = useCallback(
-    async (entry: AlexandriaEntry, openTrailId?: string) => {
-      if (!entry?.path) return;
-      try {
-        await WindowService.openDevWorkspace({
-          alexandriaEntry: entry,
-          openTrailId,
-        });
-      } catch (error) {
-        console.error('[TrailsView] Failed to open project window:', error);
-      }
-    },
-    [],
-  );
-
-  // Click handler for the recent-trails feed: resolve repo path → entry,
-  // then open the dev workspace window with the trail preselected. Falls
-  // back to a no-op if we can't locate the owning project.
-  const handleOpenRecentTrail = useCallback(
-    async (trail: TrailIndexEntry) => {
-      if (!trail.repositoryPath) return;
-      const entry = repositories.find((r) => r.path === trail.repositoryPath);
-      if (!entry) {
-        console.warn(
-          '[TrailsView] Recent trail repo not in Alexandria registry:',
-          trail.repositoryPath,
-        );
-        return;
-      }
-      await handleSelect(entry, trail.id);
-    },
-    [repositories, handleSelect],
-  );
+  }, [recentTrails, recentFilter, selectedProjectPath]);
 
   const overlayBg = theme.colors.background;
 
@@ -1172,146 +1042,6 @@ const TrailsViewInner: React.FC<{
       </div>
     </div>
   );
-
-  // Trail card renderer shared by the date-grouped and project-grouped
-  // feeds. `metaMode` swaps the bottom metadata line: 'repo' shows the
-  // owner avatar + repo label (used in date grouping where the section
-  // header carries the date); 'date' shows a relative time (used in
-  // project grouping where the section header carries the repo).
-  const renderTrailCard = (
-    trail: TrailIndexEntry,
-    metaMode: 'repo' | 'date',
-  ): React.ReactNode => {
-    const repoLabel = trailRepoLabel(trail.repositoryPath);
-    const entry = trail.repositoryPath
-      ? repositories.find((r) => r.path === trail.repositoryPath)
-      : undefined;
-    const owned = !!entry;
-    const ownerLogin = entry?.github?.owner;
-    const avatarUrl = ownerLogin
-      ? `https://github.com/${ownerLogin}.png?size=32`
-      : null;
-    const isSelected = previewTrail?.id === trail.id;
-    return (
-      <button
-        key={trail.id}
-        type="button"
-        onClick={() => setPreviewTrail(isSelected ? null : trail)}
-        title={
-          owned
-            ? `Preview ${trail.title}`
-            : "This trail's project isn't in your registry."
-        }
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          padding: 16,
-          borderRadius: 8,
-          border: `1px solid ${
-            isSelected ? theme.colors.accent : theme.colors.border
-          }`,
-          background: isSelected
-            ? `color-mix(in srgb, ${theme.colors.accent} 12%, ${theme.colors.background})`
-            : theme.colors.background,
-          color: theme.colors.text,
-          cursor: 'pointer',
-          opacity: owned ? 1 : 0.6,
-          textAlign: 'left',
-          fontFamily: theme.fonts.body,
-          transition:
-            'background-color 120ms ease, border-color 120ms ease',
-        }}
-        onMouseEnter={(e) => {
-          if (isSelected) return;
-          e.currentTarget.style.backgroundColor =
-            theme.colors.backgroundTertiary ?? theme.colors.border;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = isSelected
-            ? `color-mix(in srgb, ${theme.colors.accent} 12%, ${theme.colors.background})`
-            : theme.colors.background;
-        }}
-      >
-        <div
-          style={{
-            minWidth: 0,
-            fontSize: theme.fontSizes[1],
-            fontWeight: theme.fontWeights.semibold,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {trail.title || 'Untitled trail'}
-        </div>
-        {trail.markerCount > 0 && (
-          <div
-            aria-label={`${trail.markerCount} steps`}
-            style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}
-          >
-            {Array.from({ length: trail.markerCount }).map((_, i) => (
-              <span
-                key={i}
-                style={{
-                  width: 4,
-                  height: 4,
-                  borderRadius: '50%',
-                  backgroundColor: theme.colors.textSecondary,
-                  opacity: 0.6,
-                }}
-              />
-            ))}
-          </div>
-        )}
-        {metaMode === 'repo' ? (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-              minWidth: 0,
-            }}
-          >
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt=""
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: '50%',
-                  flexShrink: 0,
-                }}
-              />
-            ) : null}
-            <span
-              style={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                minWidth: 0,
-                flex: 1,
-              }}
-            >
-              {repoLabel}
-            </span>
-          </div>
-        ) : (
-          <div
-            style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-            }}
-          >
-            {formatRelativeTime(trail.updatedAt)}
-          </div>
-        )}
-      </button>
-    );
-  };
 
   return (
     <div
@@ -2053,60 +1783,54 @@ const TrailsViewInner: React.FC<{
                 >
                   <div
                     style={{
-                      flex: 1,
+                      flex: '0 0 auto',
                       display: 'flex',
-                      justifyContent: 'flex-start',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      maxWidth: 280,
                     }}
                   >
-                    <div
-                      role="tablist"
+                    <FolderGit2
+                      size={14}
+                      color={theme.colors.textSecondary}
+                    />
+                    <select
+                      value={selectedProjectPath ?? ''}
+                      onChange={(e) =>
+                        setSelectedProjectPath(e.target.value || null)
+                      }
+                      disabled={recentProjects.length === 0}
                       style={{
-                        display: 'inline-flex',
-                        padding: 2,
-                        gap: 2,
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: 8,
-                        backgroundColor: theme.colors.backgroundSecondary,
+                        flex: 1,
+                        border: 'none',
+                        outline: 'none',
+                        background: 'transparent',
+                        color: theme.colors.text,
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[1],
+                        cursor:
+                          recentProjects.length === 0
+                            ? 'default'
+                            : 'pointer',
+                        minWidth: 0,
                       }}
                     >
-                      {(
-                        [
-                          { id: 'date', label: 'By date' },
-                          { id: 'project', label: 'By project' },
-                        ] as const
-                      ).map((opt) => {
-                        const active = recentGrouping === opt.id;
-                        return (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            role="tab"
-                            aria-selected={active}
-                            onClick={() => setRecentGrouping(opt.id)}
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: 6,
-                              border: 'none',
-                              backgroundColor: active
-                                ? theme.colors.background
-                                : 'transparent',
-                              color: active
-                                ? theme.colors.text
-                                : theme.colors.textSecondary,
-                              fontFamily: theme.fonts.body,
-                              fontSize: theme.fontSizes[1],
-                              fontWeight: active
-                                ? theme.fontWeights.semibold
-                                : theme.fontWeights.body,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {opt.label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                      {recentProjects.length === 0 ? (
+                        <option value="">No projects with trails</option>
+                      ) : (
+                        recentProjects.map((p) => (
+                          <option key={p.path} value={p.path}>
+                            {p.label}
+                          </option>
+                        ))
+                      )}
+                    </select>
                   </div>
+                  <div style={{ flex: 1 }} />
                   <div
                     style={{
                       flex: '0 0 auto',
@@ -2169,6 +1893,7 @@ const TrailsViewInner: React.FC<{
                   >
                     {previewTrail && (
                       <SpikeConvertToolbar
+                        showConvertPipeline={false}
                         detecting={spikeDetecting}
                         running={spikeRunning}
                         converting={spikeConverting}
@@ -2202,8 +1927,8 @@ const TrailsViewInner: React.FC<{
                         cursor: 'pointer',
                       }}
                     >
-                      <ArrowLeft size={14} />
-                      Back
+                      <Plus size={14} />
+                      Create new trail
                     </button>
                   </div>
                 </div>
@@ -2239,97 +1964,41 @@ const TrailsViewInner: React.FC<{
                         minHeight: 0,
                       }}
                     >
-                      {(
-                        recentGrouping === 'date'
-                          ? trailDayGroups.length === 0
-                          : trailProjectGroups.length === 0
-                      ) ? (
-                        <div
-                          style={{
-                            padding: '32px 8px',
-                            textAlign: 'center',
-                            fontFamily: theme.fonts.body,
-                            fontSize: theme.fontSizes[0],
-                            color: theme.colors.textSecondary,
-                            opacity: 0.5,
-                          }}
-                        >
-                          No matching trails.
-                        </div>
-                      ) : recentGrouping === 'date' ? (
-                        trailDayGroups.map((group) => (
-                          <div
-                            key={group.date.getTime()}
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 8,
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'baseline',
-                                gap: 8,
-                                padding: '0 4px',
-                                fontFamily: theme.fonts.body,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontSize: theme.fontSizes[1],
-                                  fontWeight: theme.fontWeights.semibold,
-                                  color: theme.colors.text,
-                                }}
-                              >
-                                {group.label}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: theme.fontSizes[0],
-                                  color: theme.colors.textSecondary,
-                                }}
-                              >
-                                {group.subLabel}
-                              </span>
-                            </div>
-                            {group.trails.map((trail) =>
-                              renderTrailCard(trail, 'repo'),
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        trailProjectGroups.map((group) => (
-                          <TrailProjectCityCard
-                            key={group.repositoryPath ?? '__unknown__'}
-                            repoLabel={group.repoLabel}
-                            repositoryPath={group.repositoryPath}
-                            ownerAvatarUrl={group.avatarUrl}
-                            trails={group.trails}
-                            selectedTrailId={previewTrail?.id ?? null}
-                            onSelectTrail={(trail) =>
-                              setPreviewTrail(
-                                previewTrail?.id === trail.id
-                                  ? null
-                                  : trail,
+                      <TrailsRecentList
+                        groups={trailDayGroups.map((group) => ({
+                          key: String(group.date.getTime()),
+                          label: group.label,
+                          subLabel: group.subLabel,
+                          trails: group.trails,
+                        }))}
+                        resolveRepo={(trail) => {
+                          const entry = trail.repositoryPath
+                            ? repositories.find(
+                                (r) => r.path === trail.repositoryPath,
                               )
-                            }
-                          />
-                        ))
-                      )}
+                            : undefined;
+                          return {
+                            repoLabel: trailRepoLabel(trail.repositoryPath),
+                            ownerLogin: entry?.github?.owner,
+                            owned: !!entry,
+                          };
+                        }}
+                        selectedTrailId={previewTrail?.id ?? null}
+                        onSelectTrail={(trail) =>
+                          setPreviewTrail(
+                            previewTrail?.id === trail.id ? null : trail,
+                          )
+                        }
+                      />
                     </div>
                   </div>
                   <RecentTrailPreviewPane
+                    repositoryPath={selectedProjectPath}
                     trail={previewTrail}
                     payload={previewPayload}
                     loading={previewLoading}
                     events={events}
-                    onDismiss={() => setPreviewTrail(null)}
-                    onBegin={() => {
-                      if (previewTrail) {
-                        void handleOpenRecentTrail(previewTrail);
-                      }
-                    }}
+                    onCloseTrail={() => setPreviewTrail(null)}
                   />
                 </div>
               </div>

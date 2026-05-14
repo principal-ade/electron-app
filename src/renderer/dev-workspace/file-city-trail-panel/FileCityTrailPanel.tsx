@@ -42,6 +42,13 @@ export interface FileCityTrailPanelProps {
   context: FileCityTrailPanelContext;
   actions: PanelActions;
   events: PanelEventEmitter;
+  /**
+   * Wire the upstream `FileCityTrailExplorerPanelActions.closeTrail` to a
+   * host-side "deselect the active trail" handler. When provided, the
+   * trail footer renders a close button that calls this; the host is
+   * expected to flip `context.trail.data` to `null` in response.
+   */
+  onCloseTrail?: () => void;
 }
 
 const emptyRoot = {
@@ -85,6 +92,7 @@ const emptySlice = <T,>(scope: 'repository', name: string, data: T): DataSlice<T
 export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
   context,
   events,
+  onCloseTrail,
 }) => {
   const repositoryPath = context.repository?.path ?? null;
   const repoOwner = context.repository?.owner ?? null;
@@ -177,8 +185,9 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
       // animates optimistically but the stamp won't persist across reloads.
       createTrailSignOff: async () => null,
       deleteTrailSignOff: async () => {},
+      closeTrail: onCloseTrail,
     }),
-    [repositoryPath, events],
+    [repositoryPath, events, onCloseTrail],
   );
 
   return (

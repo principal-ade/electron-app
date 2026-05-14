@@ -23,6 +23,13 @@ import type {
   BaseTrailIndexEntry,
 } from '@industry-theme/file-city-panel';
 
+/**
+ * Mirror of upstream `TrailPurpose` (defined in `@industry-theme/file-city-panel`'s
+ * `Trail.d.ts` but not re-exported from its package index). Kept in sync by
+ * convention — the union is stable per the upstream docs.
+ */
+export type TrailPurpose = 'investigation' | 'changelog' | 'informative';
+
 /** IPC event names for File City trail operations. */
 export enum FileCityTrailEvent {
   PAYLOAD_SET = 'file-city:trail:set',
@@ -60,6 +67,26 @@ export interface TrailIndexEntry extends BaseTrailIndexEntry {
    * payload doesn't carry it. The fork-informative route stamps this.
    */
   derivedFrom?: string;
+  /**
+   * Number of distinct files the trail touches — counted by deduping
+   * `marker.sourcePath` across the payload at index time. Optional so
+   * legacy index entries written before this field existed still parse;
+   * they'll be backfilled on next save.
+   */
+  fileCount?: number;
+  /**
+   * Mirrors `payload.purpose` so list views can color cards by kind
+   * without reading the payload. `undefined` means the payload had no
+   * declared purpose — per the upstream schema, consumers treat that as
+   * `'investigation'`.
+   */
+  purpose?: TrailPurpose;
+  /**
+   * Number of sign-offs (`payload.signOffs.length`). Lets list views show
+   * an informative trail's verified-vs-unverified state without reading
+   * the payload. `undefined` on legacy entries; treat as 0 (unverified).
+   */
+  signOffCount?: number;
 }
 
 /**

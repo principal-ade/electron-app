@@ -501,12 +501,13 @@ const RepositoryProfileTabContent: React.FC<{
 
   const projectActions = React.useMemo(() => ({
     openFile: async () => {},
-    openRepository: async (entry: AlexandriaEntry) => {
-      if (entry && entry.path) {
-        await WindowService.openDevWorkspace({
-          alexandriaEntry: entry,
-        });
-      }
+    openRepository: async (path: string, remoteUrl?: string) => {
+      if (!path) return;
+      const existing = await AlexandriaService.getRepositoryByPath(path);
+      const entry = existing ?? await AlexandriaService.registerRepository(path, remoteUrl);
+      await WindowService.openDevWorkspace({
+        alexandriaEntry: entry,
+      });
     },
     getLocalFileTree: (repoPath: string) => {
       return RepositoryMonitoringService.getFileTree(repoPath);
