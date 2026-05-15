@@ -55,6 +55,7 @@ import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
 import { FileCityTrailPanel } from '../../../dev-workspace/file-city-trail-panel';
+import { TrailShareModal } from '../../../dev-workspace/trails-panel/TrailShareModal';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
@@ -188,6 +189,12 @@ const RecentTrailPreviewPane: React.FC<{
    * the trail. No standalone header — the panel owns the chrome.
    */
   onCloseTrail: () => void;
+  /**
+   * Forwarded to the panel as `FileCityTrailExplorerPanelActions.shareTrail`
+   * so the brief card's Share button can open the host's share modal.
+   * Returning a promise lets the card animate in-flight + result state.
+   */
+  onShareTrail?: () => void | Promise<void>;
 }> = ({
   repositoryPath,
   fileTree,
@@ -197,6 +204,7 @@ const RecentTrailPreviewPane: React.FC<{
   loading,
   events,
   onCloseTrail,
+  onShareTrail,
 }) => {
   const { theme } = useTheme();
 
@@ -303,6 +311,7 @@ const RecentTrailPreviewPane: React.FC<{
             actions={{}}
             events={events}
             onCloseTrail={onCloseTrail}
+            onShareTrail={onShareTrail}
           />
         )}
       </div>
@@ -383,6 +392,16 @@ const TrailsViewInner: React.FC<{
   // right preview pane (TrailBriefModal). Clicking Start on the
   // modal opens the dev workspace; dismissing it clears the selection.
   const [previewTrail, setPreviewTrail] = useState<TrailIndexEntry | null>(null);
+
+  // Share-modal state. Opened from the explorer brief card's Share button —
+  // the modal owns the actual API call (TrailShareService.share) and the
+  // sharing → success (copy link / open in browser) UX.
+  const [shareModalTrail, setShareModalTrail] =
+    useState<TrailIndexEntry | null>(null);
+  const handleShareActiveTrail = useCallback(() => {
+    if (!previewTrail) return;
+    setShareModalTrail(previewTrail);
+  }, [previewTrail]);
   const [previewPayload, setPreviewPayload] = useState<TrailPayload | null>(
     null,
   );
@@ -2256,6 +2275,7 @@ const TrailsViewInner: React.FC<{
                     loading={previewLoading}
                     events={events}
                     onCloseTrail={() => setPreviewTrail(null)}
+                    onShareTrail={handleShareActiveTrail}
                   />
                 </div>
               </div>
@@ -2265,6 +2285,17 @@ const TrailsViewInner: React.FC<{
         </div>
       )}
 
+
+      {/* Share-trail modal — opened from the explorer brief card. Owns the
+          TrailShareService.share call + sharing → success (copy / open in
+          browser) UX. */}
+      {shareModalTrail && (
+        <TrailShareModal
+          trail={shareModalTrail}
+          repositoryPath={shareModalTrail.repositoryPath ?? undefined}
+          onClose={() => setShareModalTrail(null)}
+        />
+      )}
 
       {/* Confirm modal for remove-from-registry */}
       {removeConfirm && (

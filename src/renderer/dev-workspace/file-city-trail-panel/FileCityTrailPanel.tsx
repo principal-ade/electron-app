@@ -51,6 +51,13 @@ export interface FileCityTrailPanelProps {
    * expected to flip `context.trail.data` to `null` in response.
    */
   onCloseTrail?: () => void;
+  /**
+   * Wire the upstream `FileCityTrailExplorerPanelActions.shareTrail`. When
+   * provided, the brief card grows a Share button in its footer; the host
+   * runs the actual share flow (modal, API call, etc.). The returned
+   * promise drives the button's in-flight + result animation.
+   */
+  onShareTrail?: () => void | Promise<void>;
 }
 
 const emptyRoot = {
@@ -95,6 +102,7 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
   context,
   events,
   onCloseTrail,
+  onShareTrail,
 }) => {
   const repositoryPath = context.repository?.path ?? null;
   const repoOwner = context.repository?.owner ?? null;
@@ -208,8 +216,9 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
       createTrailSignOff: async () => null,
       deleteTrailSignOff: async () => {},
       closeTrail: onCloseTrail,
+      shareTrail: onShareTrail,
     }),
-    [repositoryPath, events, onCloseTrail],
+    [repositoryPath, events, onCloseTrail, onShareTrail],
   );
 
   return (
