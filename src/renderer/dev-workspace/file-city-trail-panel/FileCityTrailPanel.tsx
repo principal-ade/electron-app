@@ -24,6 +24,7 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
+import type { HighlightLayer } from '@principal-ai/file-city-react';
 
 import { TrailNotesService } from '../../services/TrailNotesService';
 
@@ -31,6 +32,7 @@ interface FileCityTrailPanelContext extends PanelContextValue {
   fileTree?: DataSlice<RepoFileTree | null>;
   lineCounts?: DataSlice<LineCountsSliceData | null>;
   trail?: DataSlice<TrailPayload | null>;
+  highlightLayers?: DataSlice<HighlightLayer[] | null>;
   repository?: {
     path?: string | null;
     name?: string | null;
@@ -128,6 +130,18 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
     [context.trail],
   );
 
+  // Host-supplied idle-state highlight layers. Only honored by the
+  // upstream panel when `trail.data` is null — once a trail is active
+  // the panel derives its own marker-based layers and ignores this.
+  const highlightLayersSlice = React.useMemo<
+    DataSlice<HighlightLayer[] | null>
+  >(
+    () =>
+      context.highlightLayers ??
+      emptySlice('repository', 'highlightLayers', null),
+    [context.highlightLayers],
+  );
+
   // ---- actions ------------------------------------------------------------
   // The upstream panel expects a `PanelContextValue<FileCityTrailExplorerPanelContext>`
   // — the host's `currentScope` + `refresh` plus the typed slices. We spread
@@ -139,9 +153,17 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
       fileTree: fileTreeSlice,
       lineCounts: lineCountsSlice,
       trail: trailSlice,
+      highlightLayers: highlightLayersSlice,
       repository,
     }) as PanelContextValue & FileCityTrailExplorerPanelContext,
-    [context, fileTreeSlice, lineCountsSlice, trailSlice, repository],
+    [
+      context,
+      fileTreeSlice,
+      lineCountsSlice,
+      trailSlice,
+      highlightLayersSlice,
+      repository,
+    ],
   );
 
   const trailActions = React.useMemo<FileCityTrailExplorerPanelActions>(

@@ -33,6 +33,7 @@ import {
   type PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import type { HighlightLayer } from '@principal-ai/file-city-react';
 import {
   TabbedTerminalPanel,
   type TerminalTab,
@@ -159,11 +160,24 @@ const trailRepoLabel = (repositoryPath: string | undefined): string => {
  */
 const RecentTrailPreviewPane: React.FC<{
   /**
-   * Project the explorer renders. Drives the file tree fetch and the
-   * panel context's repository identity. Independent of `trail` — when
-   * no trail is selected we still mount the explorer for this project.
+   * Project the explorer renders. Drives the panel context's repository
+   * identity. Independent of `trail` — when no trail is selected we
+   * still mount the explorer for this project.
    */
   repositoryPath: string | null;
+  /**
+   * File tree for `repositoryPath`. Lifted to the parent so the same
+   * tree drives both the explorer city and the aggregate-coverage stat
+   * rendered in the toolbar.
+   */
+  fileTree: FileTree | null;
+  /**
+   * Aggregate highlight layers the parent computed from every trail in
+   * the active project — one per purpose (investigation, informative).
+   * Only consumed when no trail is selected — once a trail loads the
+   * panel derives its own marker-based layers and ignores this slice.
+   */
+  aggregateHighlightLayers: HighlightLayer[] | null;
   trail: TrailIndexEntry | null;
   payload: TrailPayload | null;
   loading: boolean;
@@ -174,30 +188,17 @@ const RecentTrailPreviewPane: React.FC<{
    * the trail. No standalone header — the panel owns the chrome.
    */
   onCloseTrail: () => void;
-}> = ({ repositoryPath, trail, payload, loading, events, onCloseTrail }) => {
+}> = ({
+  repositoryPath,
+  fileTree,
+  aggregateHighlightLayers,
+  trail,
+  payload,
+  loading,
+  events,
+  onCloseTrail,
+}) => {
   const { theme } = useTheme();
-
-  // Cache-only fetch: if the repo has been opened anywhere in the app,
-  // the file tree is warm; otherwise the panel falls back to its empty
-  // tree. No background refresh, no cache-sync subscription — previews
-  // are snapshots.
-  const [fileTree, setFileTree] = useState<FileTree | null>(null);
-  useEffect(() => {
-    if (!repositoryPath) {
-      setFileTree(null);
-      return;
-    }
-    let cancelled = false;
-    setFileTree(null);
-    void RepositoryMonitoringService.getFileTree(repositoryPath).then(
-      (tree) => {
-        if (!cancelled) setFileTree(tree);
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [repositoryPath]);
 
   const repoName = useMemo(() => {
     if (!repositoryPath) return null;
@@ -233,8 +234,26 @@ const RecentTrailPreviewPane: React.FC<{
         error: null,
         refresh: async () => {},
       } as DataSlice<TrailPayload | null>,
+      // Idle-state aggregate layers. The upstream panel only honors
+      // this when `trail.data` is null; once a trail is active the panel
+      // builds its own marker-derived layers from the payload.
+      highlightLayers: {
+        scope: 'repository' as const,
+        name: 'highlightLayers',
+        data: aggregateHighlightLayers,
+        loading: false,
+        error: null,
+        refresh: async () => {},
+      } as DataSlice<HighlightLayer[] | null>,
     }),
-    [repositoryPath, repoName, fileTree, payload, loading],
+    [
+      repositoryPath,
+      repoName,
+      fileTree,
+      payload,
+      loading,
+      aggregateHighlightLayers,
+    ],
   );
 
   return (
@@ -274,7 +293,12 @@ const RecentTrailPreviewPane: React.FC<{
           </div>
         ) : (
           <FileCityTrailPanel
-            key={trail?.id ?? `explorer:${repositoryPath ?? 'none'}`}
+            // Key only on repo identity, not on selected trail. Trail-
+            // to-trail clicks update in place; repo switches force a
+            // clean remount so the upstream explorer's internal scene
+            // (camera, hover, selected marker) can't carry highlights
+            // from the previous repo's city into the new one.
+            key={`explorer:${repositoryPath ?? 'none'}`}
             context={panelContext}
             actions={{}}
             events={events}
@@ -337,6 +361,14 @@ const TrailsViewInner: React.FC<{
   // Free-text filter applied inside Recent mode. Trails that don't match
   // are dropped before bucketing, so empty columns surface naturally.
   const [recentFilter, setRecentFilter] = useState('');
+
+  // Purpose filter — narrows the Recent feed and the aggregate coverage
+  // layer to one trail purpose. Only the two purposes the app actually
+  // produces are exposed (investigation, informative); changelog exists
+  // in the upstream schema but isn't authored from this host.
+  const [purposeFilter, setPurposeFilter] = useState<
+    'investigation' | 'informative'
+  >('informative');
 
   // Project filter — Recent view only ever shows trails for one project at
   // a time. The right pane uses this project to drive the file tree the
@@ -899,6 +931,200 @@ const TrailsViewInner: React.FC<{
     }
   }, [recentProjects, selectedProjectPath]);
 
+  // File tree for the active project, paired with its repo path. Cache-
+  // only fetch — if the repo has been opened anywhere in the app, the
+  // tree is warm. Lifted out of the preview pane so the aggregate-
+  // coverage stat in the toolbar can share the same fetch.
+  //
+  // The path is held alongside the tree so derivations (coverage
+  // path set, highlight layer, coverage badge) can guard against the
+  // window where `selectedProjectPath` has flipped to the new repo but
+  // the matching tree hasn't resolved yet. Without the guard we'd
+  // briefly render the new repo's marker paths against the old repo's
+  // tree, lighting up an unrelated subset of buildings.
+  const [projectFileTreeState, setProjectFileTreeState] = useState<{
+    path: string;
+    tree: FileTree;
+  } | null>(null);
+  useEffect(() => {
+    if (!selectedProjectPath) {
+      setProjectFileTreeState(null);
+      return;
+    }
+    let cancelled = false;
+    void RepositoryMonitoringService.getFileTree(selectedProjectPath).then(
+      (tree) => {
+        if (cancelled) return;
+        if (tree) {
+          setProjectFileTreeState({ path: selectedProjectPath, tree });
+        } else {
+          setProjectFileTreeState(null);
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProjectPath]);
+
+  // Tree shown to the explorer + used by every coverage derivation. Only
+  // exposes the tree when its paired path matches the active project.
+  const projectFileTree =
+    projectFileTreeState?.path === selectedProjectPath
+      ? projectFileTreeState.tree
+      : null;
+
+  // Lazy-loaded payloads for every trail in the active project. Drives the
+  // idle-state aggregate highlight layer (every sourcePath across every
+  // saved trail) and the "N files · P% of repo" coverage badge.
+  const [aggregatePayloads, setAggregatePayloads] = useState<
+    Map<string, TrailPayload>
+  >(() => new Map());
+  useEffect(() => {
+    if (!selectedProjectPath) return;
+    const targetIds = recentTrails
+      .filter((t) => t.repositoryPath === selectedProjectPath)
+      .map((t) => t.id);
+    const missing = targetIds.filter((id) => !aggregatePayloads.has(id));
+    if (missing.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      const results = await Promise.all(
+        missing.map(
+          async (id) => [id, await TrailLibraryService.load(id)] as const,
+        ),
+      );
+      if (cancelled) return;
+      setAggregatePayloads((prev) => {
+        const next = new Map(prev);
+        for (const [id, payload] of results) {
+          if (payload) next.set(id, payload);
+        }
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [recentTrails, selectedProjectPath, aggregatePayloads]);
+
+  // Distinct sourcePaths covered by every loaded payload in the active
+  // project, split by purpose. Trails whose payload hasn't loaded yet
+  // contribute nothing — the sets grow as IPC resolves. Returns empty
+  // until the paired tree matches the active project so a stale repo's
+  // paths can't feed the layers during a switch.
+  //
+  // Split so the city can render two layers (one per purpose) with
+  // informative taking precedence when a file appears in both.
+  const coverageByPurpose = useMemo(() => {
+    if (!projectFileTree || !selectedProjectPath) {
+      return {
+        informative: new Set<string>(),
+        investigation: new Set<string>(),
+      };
+    }
+    const informative = new Set<string>();
+    const investigation = new Set<string>();
+    for (const trail of recentTrails) {
+      if (trail.repositoryPath !== selectedProjectPath) continue;
+      const effective = trail.purpose ?? 'investigation';
+      const target =
+        effective === 'informative'
+          ? informative
+          : effective === 'investigation'
+            ? investigation
+            : null;
+      if (!target) continue;
+      const payload = aggregatePayloads.get(trail.id);
+      if (!payload) continue;
+      for (const marker of payload.markers) {
+        if (marker.sourcePath) target.add(marker.sourcePath);
+      }
+    }
+    return { informative, investigation };
+  }, [recentTrails, selectedProjectPath, aggregatePayloads, projectFileTree]);
+
+  // Union of both purposes — drives the coverage badge ("N files / M
+  // total"). Counts a file once even if it's in both an informative and
+  // an investigation trail.
+  const coveragePathSet = useMemo(() => {
+    const set = new Set<string>(coverageByPurpose.informative);
+    for (const p of coverageByPurpose.investigation) set.add(p);
+    return set;
+  }, [coverageByPurpose]);
+
+  // Coverage stats for the toolbar badge. Filters covered paths against
+  // the file tree so stale marker paths from a renamed file don't inflate
+  // the count. `null` until the paired tree resolves for the active
+  // project — keeps the badge from flashing the wrong repo's count.
+  const coverageStats = useMemo(() => {
+    if (!projectFileTree) return null;
+    const total = projectFileTree.stats.totalFiles;
+    const treePaths = new Set(
+      projectFileTree.allFiles.map((f) => f.relativePath),
+    );
+    let covered = 0;
+    for (const p of coveragePathSet) {
+      if (treePaths.has(p)) covered += 1;
+    }
+    const pct = total > 0 ? (covered / total) * 100 : 0;
+    return { covered, total, pct };
+  }, [projectFileTree, coveragePathSet]);
+
+  // Two highlight layers fed to the explorer when no trail is selected.
+  // Investigation paints first (lower priority); informative paints on
+  // top so files covered by both show up as informative. Colors match
+  // the per-purpose accents used by `TrailCard`.
+  const aggregateHighlightLayers = useMemo<HighlightLayer[] | null>(() => {
+    if (!projectFileTree) return null;
+    const treePaths = new Set(
+      projectFileTree.allFiles.map((f) => f.relativePath),
+    );
+    const informativePaths: string[] = [];
+    for (const path of coverageByPurpose.informative) {
+      if (treePaths.has(path)) informativePaths.push(path);
+    }
+    const investigationOnlyPaths: string[] = [];
+    const informativeSet = coverageByPurpose.informative;
+    for (const path of coverageByPurpose.investigation) {
+      if (!treePaths.has(path)) continue;
+      if (informativeSet.has(path)) continue;
+      investigationOnlyPaths.push(path);
+    }
+    const layers: HighlightLayer[] = [];
+    if (investigationOnlyPaths.length > 0) {
+      layers.push({
+        id: 'trails-aggregate-investigation',
+        name: 'Files covered by investigation trails',
+        enabled: true,
+        color: '#a855f7',
+        opacity: 0.45,
+        priority: 10,
+        items: investigationOnlyPaths.map((path) => ({
+          path,
+          type: 'file',
+          renderStrategy: 'fill',
+        })),
+      });
+    }
+    if (informativePaths.length > 0) {
+      layers.push({
+        id: 'trails-aggregate-informative',
+        name: 'Files covered by informative trails',
+        enabled: true,
+        color: theme.colors.success ?? '#10b981',
+        opacity: 0.55,
+        priority: 20,
+        items: informativePaths.map((path) => ({
+          path,
+          type: 'file',
+          renderStrategy: 'fill',
+        })),
+      });
+    }
+    return layers.length > 0 ? layers : null;
+  }, [coverageByPurpose, projectFileTree, theme.colors.success]);
+
   // Clear the preview when the project changes so we don't show a trail
   // from a different repo in the right pane. When a bootstrap trail belongs
   // to the new project, restore it as the preview selection instead of
@@ -975,6 +1201,13 @@ const TrailsViewInner: React.FC<{
       if (!selectedProjectPath || trail.repositoryPath !== selectedProjectPath) {
         continue;
       }
+      // Purpose filter. Per upstream schema, `undefined` purpose is
+      // treated as `'investigation'` — match that here so legacy entries
+      // still surface under the investigation filter.
+      {
+        const effective = trail.purpose ?? 'investigation';
+        if (effective !== purposeFilter) continue;
+      }
       if (q) {
         const title = (trail.title ?? '').toLowerCase();
         const summary = (trail.summaryPreview ?? '').toLowerCase();
@@ -1020,7 +1253,7 @@ const TrailsViewInner: React.FC<{
     });
     groups.sort((a, b) => b.date.getTime() - a.date.getTime());
     return groups;
-  }, [recentTrails, recentFilter, selectedProjectPath]);
+  }, [recentTrails, recentFilter, selectedProjectPath, purposeFilter]);
 
   const overlayBg = theme.colors.background;
 
@@ -1705,50 +1938,120 @@ const TrailsViewInner: React.FC<{
                       )}
                     </select>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (scanningHome) return;
-                      void handleAddProject();
-                    }}
-                    disabled={scanningHome}
-                    title="Pick a folder to add — we'll find any git repos inside"
+                  <div
+                    role="tablist"
+                    aria-label="Trail purpose"
                     style={{
                       flex: '0 0 auto',
                       display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '8px 12px',
+                      alignItems: 'stretch',
+                      padding: 2,
                       borderRadius: 8,
                       border: `1px solid ${theme.colors.border}`,
                       backgroundColor: theme.colors.backgroundSecondary,
-                      color: theme.colors.text,
-                      fontFamily: theme.fonts.body,
-                      fontSize: theme.fontSizes[1],
-                      cursor: scanningHome ? 'default' : 'pointer',
-                      opacity: scanningHome ? 0.6 : 1,
+                      gap: 2,
                     }}
                   >
-                    {scanningHome ? (
-                      <Loader2
-                        size={14}
-                        color={theme.colors.textSecondary}
-                        style={{ animation: 'trails-spin 1s linear infinite' }}
-                      />
-                    ) : (
-                      <FolderPlus
-                        size={14}
-                        color={theme.colors.textSecondary}
-                      />
-                    )}
-                    <span>{scanningHome ? 'Scanning…' : 'Add a project'}</span>
-                  </button>
+                    {(
+                      [
+                        {
+                          value: 'informative',
+                          label: 'Informative',
+                          // Matches the informative aggregate highlight
+                          // layer color in the city.
+                          color: theme.colors.success ?? '#10b981',
+                        },
+                        {
+                          value: 'investigation',
+                          label: 'Investigations',
+                          // Matches the investigation aggregate highlight
+                          // layer color in the city.
+                          color: '#a855f7',
+                        },
+                      ] as const
+                    ).map((option) => {
+                      const active = purposeFilter === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => setPurposeFilter(option.value)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '6px 10px',
+                            borderRadius: 6,
+                            border: 'none',
+                            backgroundColor: active
+                              ? `color-mix(in srgb, ${option.color} 18%, ${theme.colors.background})`
+                              : 'transparent',
+                            color: active
+                              ? theme.colors.text
+                              : theme.colors.textSecondary,
+                            fontFamily: theme.fonts.body,
+                            fontSize: theme.fontSizes[1],
+                            fontWeight: active
+                              ? theme.fontWeights.semibold
+                              : theme.fontWeights.body,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <span
+                            aria-hidden
+                            style={{
+                              display: 'inline-block',
+                              width: 10,
+                              height: 10,
+                              borderRadius: '50%',
+                              backgroundColor: option.color,
+                              opacity: active ? 1 : 0.6,
+                            }}
+                          />
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {coverageStats && (
+                    <div
+                      title={`${coverageStats.covered} of ${coverageStats.total} files in this project are touched by at least one saved trail`}
+                      style={{
+                        flex: '0 0 auto',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        border: `1px solid ${theme.colors.border}`,
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        color: theme.colors.textSecondary,
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[1],
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <span style={{ color: theme.colors.text }}>
+                        {coverageStats.covered}
+                      </span>
+                      <span>/ {coverageStats.total} files</span>
+                      <span
+                        style={{
+                          color: theme.colors.primary,
+                          fontWeight: theme.fontWeights.semibold,
+                        }}
+                      >
+                        · {coverageStats.pct.toFixed(2)}%
+                      </span>
+                    </div>
+                  )}
                   <div style={{ flex: 1 }} />
                   <div
                     style={{
-                      flex: '0 0 auto',
-                      width: '100%',
-                      maxWidth: 300,
+                      flex: '0 1 300px',
+                      minWidth: 160,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 8,
@@ -1797,10 +2100,10 @@ const TrailsViewInner: React.FC<{
                   </div>
                   <div
                     style={{
-                      flex: 1,
+                      flex: '0 0 auto',
                       display: 'flex',
                       justifyContent: 'flex-end',
-                      alignItems: 'flex-start',
+                      alignItems: 'center',
                       gap: 8,
                     }}
                   >
@@ -1823,14 +2126,53 @@ const TrailsViewInner: React.FC<{
                     <button
                       type="button"
                       onClick={() => {
+                        if (scanningHome) return;
+                        void handleAddProject();
+                      }}
+                      disabled={scanningHome}
+                      title="Pick a folder to add — we'll find any git repos inside"
+                      style={{
+                        flex: '0 0 auto',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        border: `1px solid ${theme.colors.border}`,
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        color: theme.colors.text,
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[1],
+                        cursor: scanningHome ? 'default' : 'pointer',
+                        opacity: scanningHome ? 0.6 : 1,
+                      }}
+                    >
+                      {scanningHome ? (
+                        <Loader2
+                          size={14}
+                          color={theme.colors.textSecondary}
+                          style={{ animation: 'trails-spin 1s linear infinite' }}
+                        />
+                      ) : (
+                        <FolderPlus
+                          size={14}
+                          color={theme.colors.textSecondary}
+                        />
+                      )}
+                      <span>{scanningHome ? 'Scanning…' : 'Add a project'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         setViewMode('landing');
                         setRecentFilter('');
                       }}
                       style={{
+                        flex: '0 0 auto',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 6,
-                        padding: '6px 10px',
+                        padding: '8px 12px',
                         border: `1px solid ${theme.colors.border}`,
                         borderRadius: 8,
                         backgroundColor: theme.colors.backgroundSecondary,
@@ -1907,6 +2249,8 @@ const TrailsViewInner: React.FC<{
                   </div>
                   <RecentTrailPreviewPane
                     repositoryPath={selectedProjectPath}
+                    fileTree={projectFileTree}
+                    aggregateHighlightLayers={aggregateHighlightLayers}
                     trail={previewTrail}
                     payload={previewPayload}
                     loading={previewLoading}
