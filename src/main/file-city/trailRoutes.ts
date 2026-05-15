@@ -378,7 +378,10 @@ export function registerTrailRoutes(
       });
     } catch (err) {
       console.error('[trailRoutes] set failed', err);
-      res.status(500).json({ success: false, error: 'failed to persist' });
+      res.status(500).json({
+        success: false,
+        error: `failed to persist: ${err instanceof Error ? err.message : String(err)}`,
+      });
     }
   });
 
@@ -505,9 +508,10 @@ export function registerTrailRoutes(
         });
       } catch (err) {
         console.error('[trailRoutes] fork-informative failed', err);
-        res
-          .status(500)
-          .json({ success: false, error: 'failed to persist fork' });
+        res.status(500).json({
+          success: false,
+          error: `failed to persist fork: ${err instanceof Error ? err.message : String(err)}`,
+        });
       }
     },
   );
