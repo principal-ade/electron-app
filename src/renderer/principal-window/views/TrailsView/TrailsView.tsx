@@ -135,13 +135,6 @@ const TRAIL_PROMPT_IDEAS: Array<{
 ];
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
-/** Platform-aware label for the Cmd+O / Ctrl+O Quick Open shortcut. */
-const quickOpenShortcut =
-  typeof navigator !== 'undefined' &&
-  navigator.platform.toUpperCase().indexOf('MAC') >= 0
-    ? '⌘O'
-    : 'Ctrl+O';
-
 /** Last path segment of a repo path, used for the recent-trails feed. */
 const trailRepoLabel = (repositoryPath: string | undefined): string => {
   if (!repositoryPath) return 'No repo';
@@ -1409,42 +1402,6 @@ const TrailsViewInner: React.FC<{
                   }}
                 >
                   Create a Trail
-                  {hasRecentTrails && (
-                    <>
-                      <span
-                        style={{
-                          color: theme.colors.textSecondary,
-                          fontFamily: theme.fonts.body,
-                          fontSize: theme.fontSizes[0],
-                          fontWeight: theme.fontWeights.body,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.08em',
-                        }}
-                      >
-                        or
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setViewMode('recent')}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          padding: 0,
-                          margin: 0,
-                          color: theme.colors.primary,
-                          fontFamily: theme.fonts.heading ?? theme.fonts.body,
-                          fontSize: theme.fontSizes[3],
-                          fontWeight: theme.fontWeights.semibold,
-                          cursor: 'pointer',
-                          textDecoration: 'underline',
-                          textUnderlineOffset: 4,
-                          textDecorationThickness: 1,
-                        }}
-                      >
-                        View Recent
-                      </button>
-                    </>
-                  )}
                 </div>
 
                 <div
@@ -1568,198 +1525,110 @@ const TrailsViewInner: React.FC<{
                 </div>
               </div>
 
-              {/* Vertical "or" divider between the two columns. */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 8,
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[0],
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                <div style={{ flex: 1, width: 1, background: theme.colors.border, minHeight: 24 }} />
-                or
-                <div style={{ flex: 1, width: 1, background: theme.colors.border, minHeight: 24 }} />
-              </div>
-
-              {/* Right column — Add a Project + View Recent Trails */}
-              <div
-                style={{
-                  flex: '1 1 360px',
-                  minWidth: 280,
-                  maxWidth: 460,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 16,
-                }}
-              >
-                <div
-                  style={{
-                    color: theme.colors.text,
-                    fontFamily: theme.fonts.heading ?? theme.fonts.body,
-                    fontSize: theme.fontSizes[3],
-                    fontWeight: theme.fontWeights.semibold,
-                    textAlign: 'center',
-                  }}
-                >
-                  View Project Comprehension
-                </div>
-
-                <div
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 16,
-                  }}
-                >
-                  <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
-
-                  {/* Open existing project — surfaces the Cmd/Ctrl+O picker. */}
+              {hasRecentTrails && (
+                <>
+                  {/* Vertical "or" divider between the two columns. */}
                   <div
-                    role="button"
-                    tabIndex={0}
-                    title={`Open a registered project (${quickOpenShortcut})`}
-                    className="trail-idea-card"
-                    onClick={() => {
-                      window.electronAPI?.showQuickOpen?.();
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        window.electronAPI?.showQuickOpen?.();
-                      }
-                    }}
                     style={{
-                      position: 'relative',
-                      width: '100%',
-                      maxWidth: 300,
-                      aspectRatio: '4 / 3',
-                      padding: '20px 22px',
-                      borderRadius: 10,
-                      border: `1px solid ${theme.colors.border}`,
-                      backgroundColor: theme.colors.backgroundSecondary,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      gap: 12,
-                      cursor: 'pointer',
+                      gap: 8,
+                      color: theme.colors.textSecondary,
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[0],
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
                     }}
                   >
-                    <Folder size={32} color={theme.colors.primary} />
-                    <div
-                      style={{
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[0],
-                        fontWeight: theme.fontWeights.semibold,
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                      }}
-                    >
-                      Open a project
-                    </div>
-                    <kbd
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '3px 8px',
-                        borderRadius: 6,
-                        border: `1px solid ${theme.colors.border}`,
-                        backgroundColor: theme.colors.background,
-                        color: theme.colors.textSecondary,
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[0],
-                        lineHeight: 1,
-                        userSelect: 'none',
-                      }}
-                    >
-                      {quickOpenShortcut}
-                    </kbd>
+                    <div style={{ flex: 1, width: 1, background: theme.colors.border, minHeight: 24 }} />
+                    or
+                    <div style={{ flex: 1, width: 1, background: theme.colors.border, minHeight: 24 }} />
                   </div>
 
-                  {/* Add a new project from the local filesystem. */}
+                  {/* Right column — View Recent Trails */}
                   <div
-                    role="button"
-                    tabIndex={scanningHome ? -1 : 0}
-                    aria-disabled={scanningHome}
-                    title="Pick a folder to add — we'll find any git repos inside"
-                    className="trail-idea-card"
-                    onClick={() => {
-                      if (scanningHome) return;
-                      void handleAddProject();
-                    }}
-                    onKeyDown={(e) => {
-                      if (scanningHome) return;
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        void handleAddProject();
-                      }
-                    }}
                     style={{
-                      position: 'relative',
-                      width: '100%',
-                      maxWidth: 300,
-                      aspectRatio: '4 / 3',
-                      padding: '20px 22px',
-                      borderRadius: 10,
-                      border: `1px solid ${theme.colors.border}`,
-                      backgroundColor: theme.colors.backgroundSecondary,
+                      flex: '1 1 360px',
+                      minWidth: 280,
+                      maxWidth: 460,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      gap: 12,
-                      cursor: scanningHome ? 'default' : 'pointer',
-                      opacity: scanningHome ? 0.7 : 1,
+                      gap: 16,
                     }}
                   >
-                    {scanningHome ? (
-                      <Loader2
-                        size={32}
-                        color={theme.colors.primary}
-                        style={{ animation: 'trails-spin 1s linear infinite' }}
-                      />
-                    ) : (
-                      <FolderPlus size={32} color={theme.colors.primary} />
-                    )}
                     <div
                       style={{
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.text,
+                        fontFamily: theme.fonts.heading ?? theme.fonts.body,
+                        fontSize: theme.fontSizes[3],
                         fontWeight: theme.fontWeights.semibold,
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
+                        textAlign: 'center',
                       }}
                     >
-                      {scanningHome ? 'Scanning…' : 'Add a project'}
+                      View Recent Trails
                     </div>
-                    {repositories.length === 0 && !scanningHome && (
+
+                    <div
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 16,
+                      }}
+                    >
+                      <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
+
                       <div
+                        role="button"
+                        tabIndex={0}
+                        title="Browse trails you've recently laid"
+                        className="trail-idea-card"
+                        onClick={() => setViewMode('recent')}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setViewMode('recent');
+                          }
+                        }}
                         style={{
-                          fontFamily: theme.fonts.body,
-                          fontSize: theme.fontSizes[1],
-                          color: theme.colors.text,
-                          lineHeight: 1.4,
+                          position: 'relative',
+                          width: '100%',
+                          maxWidth: 300,
+                          aspectRatio: '4 / 3',
+                          padding: '20px 22px',
+                          borderRadius: 10,
+                          border: `1px solid ${theme.colors.border}`,
+                          backgroundColor: theme.colors.backgroundSecondary,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          textAlign: 'center',
+                          gap: 12,
+                          cursor: 'pointer',
                         }}
                       >
-                        Pick a folder — we'll add it if it's a git repo, or scan inside for repos.
+                        <Footprints size={32} color={theme.colors.primary} />
+                        <div
+                          style={{
+                            fontFamily: theme.fonts.body,
+                            fontSize: theme.fontSizes[0],
+                            fontWeight: theme.fontWeights.semibold,
+                            color: theme.colors.textSecondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                          }}
+                        >
+                          Recent Trails
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-              </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -1872,6 +1741,44 @@ const TrailsViewInner: React.FC<{
                       )}
                     </select>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (scanningHome) return;
+                      void handleAddProject();
+                    }}
+                    disabled={scanningHome}
+                    title="Pick a folder to add — we'll find any git repos inside"
+                    style={{
+                      flex: '0 0 auto',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      color: theme.colors.text,
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[1],
+                      cursor: scanningHome ? 'default' : 'pointer',
+                      opacity: scanningHome ? 0.6 : 1,
+                    }}
+                  >
+                    {scanningHome ? (
+                      <Loader2
+                        size={14}
+                        color={theme.colors.textSecondary}
+                        style={{ animation: 'trails-spin 1s linear infinite' }}
+                      />
+                    ) : (
+                      <FolderPlus
+                        size={14}
+                        color={theme.colors.textSecondary}
+                      />
+                    )}
+                    <span>{scanningHome ? 'Scanning…' : 'Add a project'}</span>
+                  </button>
                   <div style={{ flex: 1 }} />
                   <div
                     style={{
