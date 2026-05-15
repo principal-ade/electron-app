@@ -729,6 +729,15 @@ const TrailsViewInner: React.FC<{
   // them. The modal stays open so the user can see what was added.
   type AddedRepo = { path: string; name: string; ok: boolean; error?: string };
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [createTrailModalOpen, setCreateTrailModalOpen] = useState(false);
+  const [createTrailModalClosing, setCreateTrailModalClosing] = useState(false);
+  const closeCreateTrailModal = useCallback(() => {
+    setCreateTrailModalClosing(true);
+    window.setTimeout(() => {
+      setCreateTrailModalOpen(false);
+      setCreateTrailModalClosing(false);
+    }, 180);
+  }, []);
   const [scanningHome, setScanningHome] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [addedRepos, setAddedRepos] = useState<AddedRepo[]>([]);
@@ -1376,258 +1385,213 @@ const TrailsViewInner: React.FC<{
                 gap: 24,
               }}
             >
-              {/* Left column — Create a Trail (prompt-idea cards) */}
-              <div
-                style={{
-                  flex: '1 1 360px',
-                  minWidth: 280,
-                  maxWidth: 460,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 16,
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    flexWrap: 'wrap',
-                    justifyContent: 'center',
-                    gap: 8,
-                    color: theme.colors.text,
-                    fontFamily: theme.fonts.heading ?? theme.fonts.body,
-                    fontSize: theme.fontSizes[3],
-                    fontWeight: theme.fontWeights.semibold,
-                  }}
-                >
-                  Create a Trail
-                </div>
+              <style>{`
+                .trail-idea-card {
+                  border-color: transparent !important;
+                  transition: border-color 150ms ease;
+                }
+                .trail-idea-card:hover {
+                  border-color: ${theme.colors.primary} !important;
+                }
+                .trail-idea-copy {
+                  opacity: 0;
+                  transition: opacity 150ms ease;
+                }
+                .trail-idea-card:hover .trail-idea-copy,
+                .trail-idea-copy.is-copied {
+                  opacity: 1;
+                }
+                @keyframes trails-spin { to { transform: rotate(360deg); } }
+              `}</style>
 
-                <div
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 16,
-                  }}
-                >
-                  <style>{`
-                    .trail-idea-card {
-                      border-color: transparent !important;
-                      transition: border-color 150ms ease;
-                    }
-                    .trail-idea-card:hover {
-                      border-color: ${theme.colors.primary} !important;
-                    }
-                    .trail-idea-copy {
-                      opacity: 0;
-                      transition: opacity 150ms ease;
-                    }
-                    .trail-idea-card:hover .trail-idea-copy,
-                    .trail-idea-copy.is-copied {
-                      opacity: 1;
-                    }
-                  `}</style>
-                  {TRAIL_PROMPT_IDEAS.map((idea, i) => {
-                    const isCopied = copiedPromptIndex === i;
-                    return (
-                      <div
-                        key={idea.label}
-                        className="trail-idea-card"
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => void handleCopyPrompt(idea.prompt, i)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            void handleCopyPrompt(idea.prompt, i);
-                          }
-                        }}
-                        style={{
-                          position: 'relative',
-                          width: '100%',
-                          maxWidth: 300,
-                          aspectRatio: '4 / 3',
-                          padding: '20px 22px',
-                          borderRadius: 10,
-                          border: `1px solid ${theme.colors.border}`,
-                          backgroundColor: theme.colors.backgroundSecondary,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          textAlign: 'center',
-                          gap: 12,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <idea.Icon size={32} color={theme.colors.primary} />
-                        <div
-                          style={{
-                            fontFamily: theme.fonts.body,
-                            fontSize: theme.fontSizes[0],
-                            fontWeight: theme.fontWeights.semibold,
-                            color: theme.colors.textSecondary,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                          }}
-                        >
-                          {idea.label}
-                        </div>
-                        <div
-                          style={{
-                            fontFamily: theme.fonts.monospace,
-                            fontSize: theme.fontSizes[1],
-                            color: theme.colors.text,
-                            lineHeight: 1.5,
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-word',
-                          }}
-                        >
-                          {idea.prompt}
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void handleCopyPrompt(idea.prompt, i);
-                          }}
-                          title={isCopied ? 'Copied' : 'Copy prompt'}
-                          className={
-                            isCopied
-                              ? 'trail-idea-copy is-copied'
-                              : 'trail-idea-copy'
-                          }
-                          style={{
-                            position: 'absolute',
-                            top: 10,
-                            right: 10,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 32,
-                            height: 32,
-                            border: `1px solid ${theme.colors.border}`,
-                            borderRadius: 6,
-                            background: theme.colors.background,
-                            color: isCopied
-                              ? theme.colors.primary
-                              : theme.colors.textSecondary,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {isCopied ? <Check size={14} /> : <Copy size={14} />}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {hasRecentTrails && (
+              {hasRecentTrails ? (
                 <>
-                  {/* Vertical "or" divider between the two columns. */}
                   <div
+                    role="button"
+                    tabIndex={0}
+                    title="Pick a starting point for a new trail"
+                    className="trail-idea-card"
+                    onClick={() => setCreateTrailModalOpen(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setCreateTrailModalOpen(true);
+                      }
+                    }}
                     style={{
+                      position: 'relative',
+                      flex: '0 1 300px',
+                      width: '100%',
+                      maxWidth: 300,
+                      aspectRatio: '4 / 3',
+                      padding: '20px 22px',
+                      borderRadius: 10,
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: 8,
-                      color: theme.colors.textSecondary,
-                      fontFamily: theme.fonts.body,
-                      fontSize: theme.fontSizes[0],
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      gap: 12,
+                      cursor: 'pointer',
                     }}
                   >
-                    <div style={{ flex: 1, width: 1, background: theme.colors.border, minHeight: 24 }} />
-                    or
-                    <div style={{ flex: 1, width: 1, background: theme.colors.border, minHeight: 24 }} />
+                    <Plus size={56} color={theme.colors.primary} />
+                    <div
+                      style={{
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[2],
+                        fontWeight: theme.fontWeights.semibold,
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      Create a Trail
+                    </div>
                   </div>
 
-                  {/* Right column — View Recent Trails */}
                   <div
+                    role="button"
+                    tabIndex={0}
+                    title="Browse trails you've recently laid"
+                    className="trail-idea-card"
+                    onClick={() => setViewMode('recent')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setViewMode('recent');
+                      }
+                    }}
                     style={{
-                      flex: '1 1 360px',
-                      minWidth: 280,
-                      maxWidth: 460,
+                      position: 'relative',
+                      flex: '0 1 300px',
+                      width: '100%',
+                      maxWidth: 300,
+                      aspectRatio: '4 / 3',
+                      padding: '20px 22px',
+                      borderRadius: 10,
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: 16,
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      gap: 12,
+                      cursor: 'pointer',
                     }}
                   >
+                    <Footprints size={56} color={theme.colors.primary} />
                     <div
                       style={{
-                        color: theme.colors.text,
-                        fontFamily: theme.fonts.heading ?? theme.fonts.body,
-                        fontSize: theme.fontSizes[3],
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[2],
                         fontWeight: theme.fontWeights.semibold,
-                        textAlign: 'center',
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
                       }}
                     >
-                      View Recent Trails
-                    </div>
-
-                    <div
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 16,
-                      }}
-                    >
-                      <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
-
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        title="Browse trails you've recently laid"
-                        className="trail-idea-card"
-                        onClick={() => setViewMode('recent')}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            setViewMode('recent');
-                          }
-                        }}
-                        style={{
-                          position: 'relative',
-                          width: '100%',
-                          maxWidth: 300,
-                          aspectRatio: '4 / 3',
-                          padding: '20px 22px',
-                          borderRadius: 10,
-                          border: `1px solid ${theme.colors.border}`,
-                          backgroundColor: theme.colors.backgroundSecondary,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          textAlign: 'center',
-                          gap: 12,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Footprints size={32} color={theme.colors.primary} />
-                        <div
-                          style={{
-                            fontFamily: theme.fonts.body,
-                            fontSize: theme.fontSizes[0],
-                            fontWeight: theme.fontWeights.semibold,
-                            color: theme.colors.textSecondary,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                          }}
-                        >
-                          Recent Trails
-                        </div>
-                      </div>
+                      Recent Trails
                     </div>
                   </div>
                 </>
+              ) : (
+                TRAIL_PROMPT_IDEAS.map((idea, i) => {
+                  const isCopied = copiedPromptIndex === i;
+                  return (
+                    <div
+                      key={idea.label}
+                      className="trail-idea-card"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => void handleCopyPrompt(idea.prompt, i)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          void handleCopyPrompt(idea.prompt, i);
+                        }
+                      }}
+                      style={{
+                        position: 'relative',
+                        flex: '0 1 300px',
+                        width: '100%',
+                        maxWidth: 300,
+                        aspectRatio: '4 / 3',
+                        padding: '20px 22px',
+                        borderRadius: 10,
+                        border: `1px solid ${theme.colors.border}`,
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        gap: 12,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <idea.Icon size={32} color={theme.colors.primary} />
+                      <div
+                        style={{
+                          fontFamily: theme.fonts.body,
+                          fontSize: theme.fontSizes[0],
+                          fontWeight: theme.fontWeights.semibold,
+                          color: theme.colors.textSecondary,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {idea.label}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: theme.fonts.monospace,
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.text,
+                          lineHeight: 1.5,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {idea.prompt}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleCopyPrompt(idea.prompt, i);
+                        }}
+                        title={isCopied ? 'Copied' : 'Copy prompt'}
+                        className={
+                          isCopied
+                            ? 'trail-idea-copy is-copied'
+                            : 'trail-idea-copy'
+                        }
+                        style={{
+                          position: 'absolute',
+                          top: 10,
+                          right: 10,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 32,
+                          height: 32,
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: 6,
+                          background: theme.colors.background,
+                          color: isCopied
+                            ? theme.colors.primary
+                            : theme.colors.textSecondary,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
@@ -1954,60 +1918,6 @@ const TrailsViewInner: React.FC<{
             )}
           </div>
 
-          {/* Installed-skill pills — visual confirmation that the trail */}
-          {/* skills are on disk. Clicking a pill opens that skill on GitHub. */}
-          {/* We only render this overlay when skillInstalled === true, so */}
-          {/* every pill is in its "installed" state. */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 12,
-              right: 12,
-              zIndex: 21,
-              display: 'flex',
-              gap: 8,
-              flexWrap: 'wrap',
-              justifyContent: 'flex-end',
-              maxWidth: 'calc(100% - 24px)',
-              pointerEvents: 'none',
-            }}
-          >
-            {TRAIL_SKILL_DETAILS.map((skill) => (
-              <button
-                key={skill.name}
-                type="button"
-                onClick={() => void ShellService.openExternal(skill.url)}
-                title={`${skill.name} installed — open on GitHub`}
-                style={{
-                  pointerEvents: 'auto',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  border: `1px solid ${theme.colors.border}`,
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[0],
-                  cursor: 'pointer',
-                  transition: 'border-color 150ms ease, color 150ms ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.color = theme.colors.text;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                }}
-              >
-                <Check size={12} color={theme.colors.primary} />
-                {skill.name}
-              </button>
-            ))}
-          </div>
-
         </div>
       )}
 
@@ -2108,6 +2018,213 @@ const TrailsViewInner: React.FC<{
               >
                 {removeBusy ? 'Removing…' : 'Remove'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create-a-trail modal — surfaces the prompt-idea options. */}
+      {createTrailModalOpen && (
+        <div
+          onClick={closeCreateTrailModal}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 30,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            animation: createTrailModalClosing
+              ? 'ct-modal-backdrop-out 180ms ease-in forwards'
+              : 'ct-modal-backdrop 160ms ease-out',
+          }}
+        >
+          <style>{`
+            @keyframes ct-modal-backdrop {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes ct-modal-backdrop-out {
+              from { opacity: 1; }
+              to { opacity: 0; }
+            }
+            @keyframes ct-modal-pop {
+              from { opacity: 0; transform: scale(0.96) translateY(8px); }
+              to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+            @keyframes ct-modal-pop-out {
+              from { opacity: 1; transform: scale(1) translateY(0); }
+              to { opacity: 0; transform: scale(0.96) translateY(8px); }
+            }
+          `}</style>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(720px, 100%)',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: 12,
+              border: `1px solid ${theme.colors.border}`,
+              background: theme.colors.background,
+              overflow: 'hidden',
+              animation: createTrailModalClosing
+                ? 'ct-modal-pop-out 180ms ease-in forwards'
+                : 'ct-modal-pop 220ms cubic-bezier(0.16, 1, 0.3, 1)',
+              transformOrigin: 'center',
+            }}
+          >
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: `1px solid ${theme.colors.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.heading ?? theme.fonts.body,
+                  fontSize: theme.fontSizes[3],
+                  fontWeight: theme.fontWeights.semibold,
+                }}
+              >
+                <Copy size={18} color={theme.colors.primary} />
+                Copy Prompt and Give To Agent
+              </div>
+              <button
+                type="button"
+                onClick={closeCreateTrailModal}
+                title="Close"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  padding: 4,
+                  display: 'flex',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div
+              style={{
+                padding: 20,
+                display: 'flex',
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 16,
+                justifyContent: 'center',
+                overflowY: 'auto',
+              }}
+            >
+              {TRAIL_PROMPT_IDEAS.map((idea, i) => {
+                const isCopied = copiedPromptIndex === i;
+                return (
+                  <div
+                    key={idea.label}
+                    className="trail-idea-card"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      void handleCopyPrompt(idea.prompt, i);
+                      window.setTimeout(closeCreateTrailModal, 800);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        void handleCopyPrompt(idea.prompt, i);
+                        window.setTimeout(closeCreateTrailModal, 800);
+                      }
+                    }}
+                    style={{
+                      position: 'relative',
+                      flex: '0 1 300px',
+                      width: '100%',
+                      maxWidth: 300,
+                      aspectRatio: '4 / 3',
+                      padding: '20px 22px',
+                      borderRadius: 10,
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      gap: 12,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <idea.Icon size={32} color={theme.colors.primary} />
+                    <div
+                      style={{
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[0],
+                        fontWeight: theme.fontWeights.semibold,
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      {idea.label}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: theme.fonts.monospace,
+                        fontSize: theme.fontSizes[1],
+                        color: theme.colors.text,
+                        lineHeight: 1.5,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {idea.prompt}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleCopyPrompt(idea.prompt, i);
+                        window.setTimeout(closeCreateTrailModal, 800);
+                      }}
+                      title={isCopied ? 'Copied' : 'Copy prompt'}
+                      className={
+                        isCopied
+                          ? 'trail-idea-copy is-copied'
+                          : 'trail-idea-copy'
+                      }
+                      style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: 6,
+                        background: theme.colors.background,
+                        color: isCopied
+                          ? theme.colors.primary
+                          : theme.colors.textSecondary,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
