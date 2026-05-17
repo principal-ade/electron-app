@@ -16,6 +16,11 @@ import {
   type FileCityTrailExplorerRepository,
   type LineCountsSliceData,
 } from '@industry-theme/file-city-panel';
+
+// Mirror of the upstream `TrailBriefLayout` union — defined in
+// `@industry-theme/file-city-panel`'s panel-typings but not re-exported
+// from its package root. Kept in sync by hand for now.
+export type TrailBriefLayout = 'centered' | 'split' | 'three-zone';
 import type {
   PanelActions,
   PanelContextValue,
@@ -58,6 +63,15 @@ export interface FileCityTrailPanelProps {
    * promise drives the button's in-flight + result animation.
    */
   onShareTrail?: () => void | Promise<void>;
+  /**
+   * Layout for the brief modal alongside the city. Forwarded to the upstream
+   * `FileCityTrailExplorerPanel`'s `briefLayout` prop. Despite the upstream
+   * d.ts describing the defaults block as one-shot useState seeds, this
+   * particular value is consumed inline on every render — flipping it from
+   * the host swaps layouts smoothly without a remount. Defaults to the
+   * upstream default (`'three-zone'`) when omitted.
+   */
+  briefLayout?: TrailBriefLayout;
 }
 
 const emptyRoot = {
@@ -103,6 +117,7 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
   events,
   onCloseTrail,
   onShareTrail,
+  briefLayout,
 }) => {
   const repositoryPath = context.repository?.path ?? null;
   const repoOwner = context.repository?.owner ?? null;
@@ -226,6 +241,7 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
       context={trailContext}
       actions={trailActions}
       events={events}
+      briefLayout={briefLayout}
     />
   );
 };

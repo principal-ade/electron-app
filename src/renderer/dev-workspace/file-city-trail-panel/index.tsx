@@ -18,3 +18,4 @@ export const fileCityTrailPanelDefinition: PanelDefinition = {
 export const panels: PanelDefinition[] = [fileCityTrailPanelDefinition];
 
 export { FileCityTrailPanel } from './FileCityTrailPanel';
+export type { TrailBriefLayout } from './FileCityTrailPanel';

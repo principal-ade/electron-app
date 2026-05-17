@@ -20,6 +20,8 @@ import {
   BookOpen,
   Compass,
   Share2,
+  Columns2,
+  LayoutPanelTop,
 } from 'lucide-react';
 import type {
   ConvertProgressEntry,
@@ -54,7 +56,10 @@ import { ShellService } from '../../../main-process-api/ShellService';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
-import { FileCityTrailPanel } from '../../../dev-workspace/file-city-trail-panel';
+import {
+  FileCityTrailPanel,
+  type TrailBriefLayout,
+} from '../../../dev-workspace/file-city-trail-panel';
 import { TrailShareModal } from '../../../dev-workspace/trails-panel/TrailShareModal';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
@@ -222,6 +227,12 @@ const RecentTrailPreviewPane: React.FC<{
    * Returning a promise lets the card animate in-flight + result state.
    */
   onShareTrail?: () => void | Promise<void>;
+  /**
+   * Brief layout the host wants the panel to render. Flips live — the
+   * upstream panel reads this on every render, so the toggle button in the
+   * preview-header toolbar swaps layouts in place without remount.
+   */
+  briefLayout: TrailBriefLayout;
 }> = ({
   repositoryPath,
   fileTree,
@@ -232,6 +243,7 @@ const RecentTrailPreviewPane: React.FC<{
   events,
   onCloseTrail,
   onShareTrail,
+  briefLayout,
 }) => {
   const { theme } = useTheme();
 
@@ -322,6 +334,7 @@ const RecentTrailPreviewPane: React.FC<{
           events={events}
           onCloseTrail={onCloseTrail}
           onShareTrail={onShareTrail}
+          briefLayout={briefLayout}
         />
         {trail && (loading || !payload) && (
           <div
@@ -471,6 +484,12 @@ const TrailsViewInner: React.FC<{
     null,
   );
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Brief layout for the preview-pane explorer. The upstream panel reads
+  // `briefLayout` inline on every render (no internal useState for it),
+  // so toggling here re-lays-out the brief without remounting the city.
+  const [previewBriefLayout, setPreviewBriefLayout] =
+    useState<TrailBriefLayout>('three-zone');
 
   useEffect(() => {
     if (!previewTrail) {
@@ -2562,6 +2581,39 @@ const TrailsViewInner: React.FC<{
                       gap: 8,
                     }}
                   >
+                    {previewTrail && (() => {
+                      const nextLayout: TrailBriefLayout =
+                        previewBriefLayout === 'three-zone' ? 'split' : 'three-zone';
+                      const Icon =
+                        previewBriefLayout === 'three-zone' ? Columns2 : LayoutPanelTop;
+                      const label =
+                        previewBriefLayout === 'three-zone'
+                          ? 'Switch to brief-left / city-right'
+                          : 'Switch to top brief + bottom sequence';
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewBriefLayout(nextLayout)}
+                          title={label}
+                          aria-label={label}
+                          style={{
+                            flex: '0 0 auto',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 32,
+                            height: 32,
+                            borderRadius: 8,
+                            border: `1px solid ${theme.colors.border}`,
+                            backgroundColor: theme.colors.backgroundSecondary,
+                            color: theme.colors.textSecondary,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Icon size={14} />
+                        </button>
+                      );
+                    })()}
                     {previewTrail && (
                       <SpikeConvertToolbar
                         showConvertPipeline={false}
@@ -2801,6 +2853,7 @@ const TrailsViewInner: React.FC<{
                     events={events}
                     onCloseTrail={() => setPreviewTrail(null)}
                     onShareTrail={handleShareActiveTrail}
+                    briefLayout={previewBriefLayout}
                   />
                 </div>
               </div>
