@@ -60,6 +60,10 @@ import { RepositoryMonitoringService } from '../../../main-process-api/Repositor
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import { TrailsRecentList } from './TrailsRecentList';
+import {
+  TrailsRecentHeaders,
+  type TrailHeaderRow,
+} from './TrailsRecentHeaders';
 import { SpikeConvertToolbar } from './SpikeConvertToolbar';
 
 /** Constants for the trail skills bundled in principal-ai/skills. */
@@ -143,6 +147,29 @@ const trailRepoLabel = (repositoryPath: string | undefined): string => {
   const trimmed = repositoryPath.replace(/[\\/]+$/, '');
   const idx = trimmed.search(/[\\/](?!.*[\\/])/);
   return idx >= 0 ? trimmed.slice(idx + 1) : trimmed;
+};
+
+/**
+ * Longest directory prefix shared by every repo-relative `sourcePath` in the
+ * set. Returns `''` when paths span multiple top-level folders (no
+ * meaningful common parent) or the input is empty. The result is a
+ * directory path with no leading or trailing slash — caller appends a
+ * trailing `/` for display.
+ */
+const longestCommonDirPrefix = (paths: Iterable<string>): string => {
+  let common: string[] | null = null;
+  for (const path of paths) {
+    const segs = path.split('/').slice(0, -1); // drop filename
+    if (common === null) {
+      common = segs;
+      continue;
+    }
+    let i = 0;
+    while (i < common.length && i < segs.length && common[i] === segs[i]) i++;
+    common = common.slice(0, i);
+    if (common.length === 0) break;
+  }
+  return common && common.length > 0 ? common.join('/') : '';
 };
 
 
@@ -278,7 +305,25 @@ const RecentTrailPreviewPane: React.FC<{
       }}
     >
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-        {trail && (loading || !payload) ? (
+        {/* Keep the panel mounted across trail clicks so the city doesn't
+            rebuild every time. Repo switches still force a clean remount via
+            the keyed identity below; trail-to-trail clicks just stream a
+            new context in, and the loading overlay floats on top while the
+            payload IPC resolves. */}
+        <FileCityTrailPanel
+          // Key only on repo identity, not on selected trail. Trail-to-trail
+          // clicks update in place; repo switches force a clean remount so
+          // the upstream explorer's internal scene (camera, hover, selected
+          // marker) can't carry highlights from the previous repo's city
+          // into the new one.
+          key={`explorer:${repositoryPath ?? 'none'}`}
+          context={panelContext}
+          actions={{}}
+          events={events}
+          onCloseTrail={onCloseTrail}
+          onShareTrail={onShareTrail}
+        />
+        {trail && (loading || !payload) && (
           <div
             style={{
               position: 'absolute',
@@ -290,6 +335,11 @@ const RecentTrailPreviewPane: React.FC<{
               color: theme.colors.textSecondary,
               fontFamily: theme.fonts.body,
               fontSize: theme.fontSizes[1],
+              // Translucent veil so the still-mounted city shows through
+              // and the user can see the panel is the same instance, just
+              // waiting on the new trail's payload.
+              backgroundColor: `color-mix(in srgb, ${theme.colors.background} 70%, transparent)`,
+              pointerEvents: 'none',
             }}
           >
             <Loader2
@@ -299,20 +349,6 @@ const RecentTrailPreviewPane: React.FC<{
             <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
             Loading preview…
           </div>
-        ) : (
-          <FileCityTrailPanel
-            // Key only on repo identity, not on selected trail. Trail-
-            // to-trail clicks update in place; repo switches force a
-            // clean remount so the upstream explorer's internal scene
-            // (camera, hover, selected marker) can't carry highlights
-            // from the previous repo's city into the new one.
-            key={`explorer:${repositoryPath ?? 'none'}`}
-            context={panelContext}
-            actions={{}}
-            events={events}
-            onCloseTrail={onCloseTrail}
-            onShareTrail={onShareTrail}
-          />
         )}
       </div>
     </div>
@@ -371,13 +407,42 @@ const TrailsViewInner: React.FC<{
   // are dropped before bucketing, so empty columns surface naturally.
   const [recentFilter, setRecentFilter] = useState('');
 
-  // Purpose filter — narrows the Recent feed and the aggregate coverage
-  // layer to one trail purpose. Only the two purposes the app actually
+  // Purpose filter — narrows the Recent feed to one trail purpose. `'all'`
+  // (the default) shows both. Only the two purposes the app actually
   // produces are exposed (investigation, informative); changelog exists
   // in the upstream schema but isn't authored from this host.
   const [purposeFilter, setPurposeFilter] = useState<
-    'investigation' | 'informative'
-  >('informative');
+    'all' | 'investigation' | 'informative'
+  >('all');
+
+  // Recent-feed display mode. `'cards'` is the existing per-trail list; `'headers'`
+  // pivots the same filtered set into an aggregate of top-level sequence-diagram
+  // lane namespaces (one row per unique header) so the user can spot overlap
+  // and candidate groupings across trails.
+  const [recentDisplayMode, setRecentDisplayMode] = useState<
+    'cards' | 'headers'
+  >('cards');
+
+  // Area selection inside the headers view. When set, the city's highlight
+  // layer narrows to just the files referenced by markers whose top-level
+  // lane matches this header. Mutually exclusive with `previewTrail` — area
+  // scoping is for cross-trail aggregate exploration, single-trail preview
+  // is for one specific trail.
+  const [selectedAreaHeader, setSelectedAreaHeader] = useState<string | null>(
+    null,
+  );
+
+  // Pointer-hovered area card. Drives a transient folder-border layer on
+  // the city outlining the hovered area's common parent so the user can
+  // see "this part of the repo" without committing to a click.
+  const [hoveredAreaHeader, setHoveredAreaHeader] = useState<string | null>(
+    null,
+  );
+
+  // Pointer-hovered trail row (inside an expanded area card). Drives a
+  // transient per-trail fill layer on the city showing just that trail's
+  // marker source paths — preview-without-click.
+  const [hoveredTrailId, setHoveredTrailId] = useState<string | null>(null);
 
   // Project filter — Recent view only ever shows trails for one project at
   // a time. The right pane uses this project to drive the file tree the
@@ -1222,8 +1287,9 @@ const TrailsViewInner: React.FC<{
       }
       // Purpose filter. Per upstream schema, `undefined` purpose is
       // treated as `'investigation'` — match that here so legacy entries
-      // still surface under the investigation filter.
-      {
+      // still surface under the investigation filter. `'all'` skips the
+      // check entirely.
+      if (purposeFilter !== 'all') {
         const effective = trail.purpose ?? 'investigation';
         if (effective !== purposeFilter) continue;
       }
@@ -1273,6 +1339,396 @@ const TrailsViewInner: React.FC<{
     groups.sort((a, b) => b.date.getTime() - a.date.getTime());
     return groups;
   }, [recentTrails, recentFilter, selectedProjectPath, purposeFilter]);
+
+  // Flattened, date-ordered list of trails currently visible in Recent. The
+  // headers view aggregates over this same set so toggling Cards↔Headers
+  // doesn't change what's "in scope" — only how it's grouped.
+  const filteredRecentTrails = useMemo(() => {
+    const flat: TrailIndexEntry[] = [];
+    for (const g of trailDayGroups) flat.push(...g.trails);
+    return flat;
+  }, [trailDayGroups]);
+
+  // Aggregate top-level sequence-diagram lane namespaces across the filtered
+  // trails. Walks each trail's sequence views once and, for every marker that
+  // resolves to an area, records (a) the contributing trail and (b) the
+  // marker's `sourcePath`. The same pass feeds the cards' file-count + common-
+  // parent subtitle, the selected-area fill layer, and the hover-area border
+  // layer — keeping marker iteration single-pass.
+  //
+  // Each marker contributes one header — its `participant` override when set,
+  // otherwise the first dotted segment of `name`. First-class `actors[]`
+  // entries also count (they may have no markers and thus no files, but they
+  // still show up as a row with `fileCount: 0`). Rows are sorted by trail-
+  // count desc so the most-shared headers (the candidates for grouping) float
+  // to the top.
+  const { recentHeaderRows, areaFilesByHeader } = useMemo<{
+    recentHeaderRows: TrailHeaderRow[];
+    areaFilesByHeader: Map<string, Set<string>>;
+  }>(() => {
+    if (recentDisplayMode !== 'headers') {
+      return { recentHeaderRows: [], areaFilesByHeader: new Map() };
+    }
+    const headerToTrails = new Map<string, TrailIndexEntry[]>();
+    // header → path → trailId → { trail; steps }. The step set captures the
+    // marker names (e.g. `auth.validation.started`) that point at this
+    // path inside the trail, so when a path goes stale we can surface
+    // exactly which sequence steps need repointing.
+    type TrailRefAtPath = { trail: TrailIndexEntry; steps: Set<string> };
+    const headerToPathTrails = new Map<
+      string,
+      Map<string, Map<string, TrailRefAtPath>>
+    >();
+    const ensureHeader = (header: string) => {
+      if (!headerToPathTrails.has(header))
+        headerToPathTrails.set(header, new Map());
+    };
+    for (const trail of filteredRecentTrails) {
+      const payload = aggregatePayloads.get(trail.id);
+      if (!payload) continue;
+      const markerById = new Map<string, string | undefined>();
+      for (const m of payload.markers) markerById.set(m.id, m.sourcePath);
+      const seenThisTrail = new Set<string>();
+      for (const view of payload.views ?? []) {
+        if (view.kind !== 'sequence') continue;
+        for (const marker of view.markers) {
+          const laneId = marker.participant || marker.name;
+          if (!laneId) continue;
+          const top = laneId.split('.')[0];
+          if (!top) continue;
+          seenThisTrail.add(top);
+          ensureHeader(top);
+          const sourcePath = markerById.get(marker.markerId);
+          if (sourcePath) {
+            const byPath = headerToPathTrails.get(top)!;
+            let trailMap = byPath.get(sourcePath);
+            if (!trailMap) {
+              trailMap = new Map();
+              byPath.set(sourcePath, trailMap);
+            }
+            let ref = trailMap.get(trail.id);
+            if (!ref) {
+              ref = { trail, steps: new Set() };
+              trailMap.set(trail.id, ref);
+            }
+            // Step label is the marker's namespaced name when available,
+            // falling back to the participant override. Either is unique
+            // enough to locate the marker in the sequence diagram.
+            const step = marker.name || marker.participant;
+            if (step) ref.steps.add(step);
+          }
+        }
+        for (const actor of view.actors ?? []) {
+          const top = actor.name.split('.')[0];
+          if (!top) continue;
+          seenThisTrail.add(top);
+          ensureHeader(top);
+        }
+      }
+      for (const header of seenThisTrail) {
+        const list = headerToTrails.get(header);
+        if (list) list.push(trail);
+        else headerToTrails.set(header, [trail]);
+      }
+    }
+    // Split each area's referenced paths into live (present in the project's
+    // file tree) and stale (renamed/deleted). When the tree hasn't resolved
+    // yet we treat everything as live so the badge doesn't flash a false
+    // positive during initial load.
+    const treePaths = projectFileTree
+      ? new Set(projectFileTree.allFiles.map((f) => f.relativePath))
+      : null;
+    const filesByHeader = new Map<string, Set<string>>();
+    const rows: TrailHeaderRow[] = Array.from(headerToTrails.entries()).map(
+      ([header, trails]) => {
+        const byPath = headerToPathTrails.get(header);
+        const live = new Set<string>();
+        // Pivot the path-centric stale entries into trail-centric ones so
+        // the chip list can render each offending trail with its specific
+        // missing (path, step) pairs.
+        const stalePerTrail = new Map<
+          string,
+          {
+            trail: TrailIndexEntry;
+            missing: Array<{ path: string; steps: string[] }>;
+          }
+        >();
+        let staleCount = 0;
+        if (byPath) {
+          for (const [path, trailMap] of byPath) {
+            const isLive = !treePaths || treePaths.has(path);
+            if (isLive) {
+              live.add(path);
+              continue;
+            }
+            staleCount++;
+            for (const ref of trailMap.values()) {
+              let bucket = stalePerTrail.get(ref.trail.id);
+              if (!bucket) {
+                bucket = { trail: ref.trail, missing: [] };
+                stalePerTrail.set(ref.trail.id, bucket);
+              }
+              bucket.missing.push({
+                path,
+                steps: Array.from(ref.steps).sort(),
+              });
+            }
+          }
+        }
+        const staleByTrail = Array.from(stalePerTrail.values());
+        for (const entry of staleByTrail) {
+          entry.missing.sort((a, b) => a.path.localeCompare(b.path));
+        }
+        // Trails with the most broken pointers go first — that's the
+        // workset that needs the most attention.
+        staleByTrail.sort((a, b) => {
+          if (b.missing.length !== a.missing.length)
+            return b.missing.length - a.missing.length;
+          return (a.trail.title ?? '').localeCompare(b.trail.title ?? '');
+        });
+        filesByHeader.set(header, live);
+        return {
+          header,
+          trails,
+          commonParent: longestCommonDirPrefix(live),
+          fileCount: live.size,
+          staleFileCount: staleCount,
+          staleByTrail,
+        };
+      },
+    );
+    rows.sort((a, b) => {
+      if (b.trails.length !== a.trails.length)
+        return b.trails.length - a.trails.length;
+      return a.header.localeCompare(b.header);
+    });
+    return { recentHeaderRows: rows, areaFilesByHeader: filesByHeader };
+  }, [
+    filteredRecentTrails,
+    aggregatePayloads,
+    recentDisplayMode,
+    projectFileTree,
+  ]);
+
+  // Files referenced by markers in the selected area. Reads the cached set
+  // `areaFilesByHeader` produced by the headers memo above so we don't walk
+  // payloads twice. Returns null when no area is selected (panel falls back
+  // to the cross-purpose aggregate).
+  const selectedAreaHighlightLayers = useMemo<HighlightLayer[] | null>(() => {
+    if (!selectedAreaHeader) return null;
+    const paths = areaFilesByHeader.get(selectedAreaHeader);
+    if (!paths || paths.size === 0) return null;
+    // Color follows the active purpose so the visual continues to read as
+    // "trails of this purpose, narrowed to one area" rather than a new
+    // unrelated layer. In `'all'` mode we fall back to the theme accent so
+    // the layer reads as "area scope" without claiming a purpose.
+    const color =
+      purposeFilter === 'informative'
+        ? theme.colors.success ?? '#10b981'
+        : purposeFilter === 'investigation'
+          ? '#a855f7'
+          : theme.colors.primary ?? '#3b82f6';
+    return [
+      {
+        id: `trails-area-${selectedAreaHeader}`,
+        name: `Files in area "${selectedAreaHeader}"`,
+        enabled: true,
+        color,
+        opacity: 0.55,
+        priority: 30,
+        items: Array.from(paths).map((path) => ({
+          path,
+          type: 'file',
+          renderStrategy: 'fill',
+        })),
+      },
+    ];
+  }, [
+    selectedAreaHeader,
+    areaFilesByHeader,
+    purposeFilter,
+    theme.colors.success,
+    theme.colors.primary,
+  ]);
+
+  // Transient fill layer for the hovered trail row. Reads the trail's
+  // payload from the same `aggregatePayloads` cache the headers memo uses,
+  // collects every marker `sourcePath` filtered against the project's file
+  // tree, and emits a single fill layer in the trail's purpose color. The
+  // upstream panel ignores aggregate layers once a trail preview is active,
+  // so this layer never fights the panel's own per-trail layers — it only
+  // shows when no trail is previewed yet.
+  const hoveredTrailHighlightLayer = useMemo<HighlightLayer | null>(() => {
+    if (recentDisplayMode !== 'headers') return null;
+    if (!hoveredTrailId || !projectFileTree) return null;
+    const payload = aggregatePayloads.get(hoveredTrailId);
+    if (!payload) return null;
+    const trail = recentTrails.find((t) => t.id === hoveredTrailId);
+    if (!trail) return null;
+    const treePaths = new Set(
+      projectFileTree.allFiles.map((f) => f.relativePath),
+    );
+    const paths = new Set<string>();
+    for (const marker of payload.markers) {
+      const p = marker.sourcePath;
+      if (p && treePaths.has(p)) paths.add(p);
+    }
+    if (paths.size === 0) return null;
+    // Match the trail row's purpose chip color so the city visual reads
+    // as "this exact trail." Mirrors `purposeChipColor` in
+    // TrailsRecentHeaders to avoid a cross-package import.
+    const effective = trail.purpose ?? 'investigation';
+    const color =
+      effective === 'informative'
+        ? (trail.signOffCount ?? 0) > 0
+          ? theme.colors.success ?? '#10b981'
+          : theme.colors.textTertiary
+        : effective === 'changelog'
+          ? '#f97316'
+          : '#a855f7';
+    return {
+      id: `trails-trail-hover-${hoveredTrailId}`,
+      name: `Hovered trail "${trail.title ?? hoveredTrailId}"`,
+      enabled: true,
+      color,
+      opacity: 0.6,
+      // Slightly above the area-fill (priority 30) so the hovered trail
+      // visually sits on top of the area scope it lives within.
+      priority: 35,
+      dynamic: true,
+      items: Array.from(paths).map((path) => ({
+        path,
+        type: 'file',
+        renderStrategy: 'fill',
+      })),
+    };
+  }, [
+    recentDisplayMode,
+    hoveredTrailId,
+    aggregatePayloads,
+    recentTrails,
+    projectFileTree,
+    theme.colors.success,
+    theme.colors.textTertiary,
+  ]);
+
+  // Transient folder-border layer for the hovered area card. Pulled from
+  // the cached headers memo's common-parent map; renders a single
+  // `type: 'directory'` item with `renderStrategy: 'border'` so the city
+  // outlines that part of the repo for as long as the pointer sits on the
+  // card. Suppressed when the hovered area has no meaningful common parent
+  // (files span multiple top-level folders) since a root-level border
+  // wouldn't tell the user anything new.
+  const hoveredAreaBorderLayer = useMemo<HighlightLayer | null>(() => {
+    if (recentDisplayMode !== 'headers') return null;
+    if (!hoveredAreaHeader) return null;
+    const row = recentHeaderRows.find((r) => r.header === hoveredAreaHeader);
+    if (!row || !row.commonParent) return null;
+    const accent = theme.colors.primary ?? '#3b82f6';
+    return {
+      id: `trails-area-hover-${hoveredAreaHeader}`,
+      name: `Hovered area "${hoveredAreaHeader}" common parent`,
+      enabled: true,
+      color: accent,
+      // High priority so the border draws above the aggregate / selected
+      // fills. `borderWidth` is a hint to the renderer (falls back if not
+      // honored on the current strategy).
+      priority: 40,
+      borderWidth: 2,
+      // Hovered layers change every pointer event — flag as dynamic so the
+      // renderer can skip layout caches built for the steady-state layers.
+      dynamic: true,
+      items: [
+        {
+          path: row.commonParent,
+          type: 'directory',
+          renderStrategy: 'border',
+        },
+      ],
+    };
+  }, [
+    recentDisplayMode,
+    hoveredAreaHeader,
+    recentHeaderRows,
+    theme.colors.primary,
+  ]);
+
+  // What the preview pane actually consumes: area-scoped layer when an area
+  // is selected, otherwise the cross-purpose aggregate. Note the branch on
+  // `selectedAreaHeader` (not `selectedAreaHighlightLayers`): an area that
+  // resolves to zero files must still suppress the aggregate, otherwise an
+  // empty area would visually look like "no selection" and show every
+  // highlight. The hovered-area border layer composes on top of either base.
+  // The panel still ignores both once a trail is previewed (it builds its
+  // own per-trail layers from the payload).
+  const effectiveHighlightLayers = useMemo<HighlightLayer[] | null>(() => {
+    const base = selectedAreaHeader
+      ? selectedAreaHighlightLayers
+      : aggregateHighlightLayers;
+    const extras: HighlightLayer[] = [];
+    if (hoveredTrailHighlightLayer) extras.push(hoveredTrailHighlightLayer);
+    if (hoveredAreaBorderLayer) extras.push(hoveredAreaBorderLayer);
+    if (extras.length === 0) return base;
+    return [...(base ?? []), ...extras];
+  }, [
+    selectedAreaHeader,
+    selectedAreaHighlightLayers,
+    aggregateHighlightLayers,
+    hoveredTrailHighlightLayer,
+    hoveredAreaBorderLayer,
+  ]);
+
+  // Clear the area scope when the headers view goes away or the selected
+  // header drops out of the current row set (e.g. user changed project,
+  // purpose, or text filter). Without this the city would keep highlighting
+  // an area the user can no longer see in the list.
+  useEffect(() => {
+    if (!selectedAreaHeader) return;
+    if (recentDisplayMode !== 'headers') {
+      setSelectedAreaHeader(null);
+      return;
+    }
+    const stillVisible = recentHeaderRows.some(
+      (row) => row.header === selectedAreaHeader,
+    );
+    if (!stillVisible) setSelectedAreaHeader(null);
+  }, [recentDisplayMode, recentHeaderRows, selectedAreaHeader]);
+
+  // Clear pointer-hover state on the same boundary conditions — leaving
+  // headers mode unmounts the cards and the row's `onMouseLeave` never
+  // fires, so the hover-border layer would stick.
+  useEffect(() => {
+    if (!hoveredAreaHeader) return;
+    if (recentDisplayMode !== 'headers') {
+      setHoveredAreaHeader(null);
+      return;
+    }
+    const stillVisible = recentHeaderRows.some(
+      (row) => row.header === hoveredAreaHeader,
+    );
+    if (!stillVisible) setHoveredAreaHeader(null);
+  }, [recentDisplayMode, recentHeaderRows, hoveredAreaHeader]);
+
+  // Same cleanup for hovered-trail state — trail rows live inside expanded
+  // area cards, so when the user collapses an area or leaves headers mode
+  // the row unmounts mid-hover and `onMouseLeave` never fires.
+  useEffect(() => {
+    if (!hoveredTrailId) return;
+    if (recentDisplayMode !== 'headers') {
+      setHoveredTrailId(null);
+    }
+  }, [recentDisplayMode, hoveredTrailId]);
+
+  // How many filtered trails still need a payload load. Surfaces under the
+  // headers list so users know rows may still reshuffle as IPC resolves.
+  const recentHeaderPendingCount = useMemo(() => {
+    if (recentDisplayMode !== 'headers') return 0;
+    let pending = 0;
+    for (const trail of filteredRecentTrails) {
+      if (!aggregatePayloads.has(trail.id)) pending++;
+    }
+    return pending;
+  }, [filteredRecentTrails, aggregatePayloads, recentDisplayMode]);
 
   const overlayBg = theme.colors.background;
 
@@ -1957,82 +2413,62 @@ const TrailsViewInner: React.FC<{
                       )}
                     </select>
                   </div>
+                  {/* Purpose dropdown. `All` (the default) shows every trail
+                      regardless of purpose; the two specific options narrow
+                      the feed and recolor the area-highlight layer to match
+                      the chosen purpose. */}
                   <div
-                    role="tablist"
-                    aria-label="Trail purpose"
                     style={{
                       flex: '0 0 auto',
-                      display: 'inline-flex',
-                      alignItems: 'stretch',
-                      padding: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
                       borderRadius: 8,
                       border: `1px solid ${theme.colors.border}`,
                       backgroundColor: theme.colors.backgroundSecondary,
-                      gap: 2,
                     }}
                   >
-                    {(
-                      [
-                        {
-                          value: 'informative',
-                          label: 'Informative',
-                          // Matches the informative aggregate highlight
-                          // layer color in the city.
-                          color: theme.colors.success ?? '#10b981',
-                        },
-                        {
-                          value: 'investigation',
-                          label: 'Investigations',
-                          // Matches the investigation aggregate highlight
-                          // layer color in the city.
-                          color: '#a855f7',
-                        },
-                      ] as const
-                    ).map((option) => {
-                      const active = purposeFilter === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          role="tab"
-                          aria-selected={active}
-                          onClick={() => setPurposeFilter(option.value)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            padding: '6px 10px',
-                            borderRadius: 6,
-                            border: 'none',
-                            backgroundColor: active
-                              ? `color-mix(in srgb, ${option.color} 18%, ${theme.colors.background})`
-                              : 'transparent',
-                            color: active
-                              ? theme.colors.text
-                              : theme.colors.textSecondary,
-                            fontFamily: theme.fonts.body,
-                            fontSize: theme.fontSizes[1],
-                            fontWeight: active
-                              ? theme.fontWeights.semibold
-                              : theme.fontWeights.body,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <span
-                            aria-hidden
-                            style={{
-                              display: 'inline-block',
-                              width: 10,
-                              height: 10,
-                              borderRadius: '50%',
-                              backgroundColor: option.color,
-                              opacity: active ? 1 : 0.6,
-                            }}
-                          />
-                          {option.label}
-                        </button>
-                      );
-                    })}
+                    <span
+                      aria-hidden
+                      style={{
+                        display: 'inline-block',
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        backgroundColor:
+                          purposeFilter === 'informative'
+                            ? theme.colors.success ?? '#10b981'
+                            : purposeFilter === 'investigation'
+                              ? '#a855f7'
+                              : theme.colors.textTertiary,
+                      }}
+                    />
+                    <select
+                      aria-label="Trail purpose"
+                      value={purposeFilter}
+                      onChange={(e) =>
+                        setPurposeFilter(
+                          e.target.value as
+                            | 'all'
+                            | 'investigation'
+                            | 'informative',
+                        )
+                      }
+                      style={{
+                        border: 'none',
+                        outline: 'none',
+                        background: 'transparent',
+                        color: theme.colors.text,
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[1],
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="all">All</option>
+                      <option value="informative">Informative</option>
+                      <option value="investigation">Investigations</option>
+                    </select>
                   </div>
                   {coverageStats && (
                     <div
@@ -2227,6 +2663,66 @@ const TrailsViewInner: React.FC<{
                       overflow: 'hidden',
                     }}
                   >
+                    {/* Sticky list header — Areas ↔ Trails toggle. Same
+                        filtered set; only the grouping changes. Areas pivots
+                        the feed into an aggregate of top-level sequence-
+                        diagram lanes so the user can spot overlap across
+                        trails. */}
+                    <div
+                      role="tablist"
+                      aria-label="Recent feed layout"
+                      style={{
+                        flex: '0 0 auto',
+                        display: 'flex',
+                        gap: 4,
+                        padding: 8,
+                        borderBottom: `1px solid ${theme.colors.border}`,
+                        backgroundColor: theme.colors.background,
+                      }}
+                    >
+                      {(
+                        [
+                          { value: 'headers', label: 'Areas' },
+                          { value: 'cards', label: 'Trails' },
+                        ] as const
+                      ).map((option) => {
+                        const active = recentDisplayMode === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => setRecentDisplayMode(option.value)}
+                            title={
+                              option.value === 'headers'
+                                ? 'Aggregate top-level sequence-diagram areas across the filtered trails'
+                                : 'Show one card per trail, grouped by day'
+                            }
+                            style={{
+                              flex: 1,
+                              padding: '6px 10px',
+                              borderRadius: 6,
+                              border: 'none',
+                              backgroundColor: active
+                                ? theme.colors.backgroundSecondary
+                                : 'transparent',
+                              color: active
+                                ? theme.colors.text
+                                : theme.colors.textSecondary,
+                              fontFamily: theme.fonts.body,
+                              fontSize: theme.fontSizes[1],
+                              fontWeight: active
+                                ? theme.fontWeights.semibold
+                                : theme.fontWeights.body,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                     <div
                       style={{
                         flex: 1,
@@ -2238,38 +2734,67 @@ const TrailsViewInner: React.FC<{
                         minHeight: 0,
                       }}
                     >
-                      <TrailsRecentList
-                        groups={trailDayGroups.map((group) => ({
-                          key: String(group.date.getTime()),
-                          label: group.label,
-                          subLabel: group.subLabel,
-                          trails: group.trails,
-                        }))}
-                        resolveRepo={(trail) => {
-                          const entry = trail.repositoryPath
-                            ? repositories.find(
-                                (r) => r.path === trail.repositoryPath,
-                              )
-                            : undefined;
-                          return {
-                            repoLabel: trailRepoLabel(trail.repositoryPath),
-                            ownerLogin: entry?.github?.owner,
-                            owned: !!entry,
-                          };
-                        }}
-                        selectedTrailId={previewTrail?.id ?? null}
-                        onSelectTrail={(trail) =>
-                          setPreviewTrail(
-                            previewTrail?.id === trail.id ? null : trail,
-                          )
-                        }
-                      />
+                      {recentDisplayMode === 'cards' ? (
+                        <TrailsRecentList
+                          groups={trailDayGroups.map((group) => ({
+                            key: String(group.date.getTime()),
+                            label: group.label,
+                            subLabel: group.subLabel,
+                            trails: group.trails,
+                          }))}
+                          resolveRepo={(trail) => {
+                            const entry = trail.repositoryPath
+                              ? repositories.find(
+                                  (r) => r.path === trail.repositoryPath,
+                                )
+                              : undefined;
+                            return {
+                              repoLabel: trailRepoLabel(trail.repositoryPath),
+                              ownerLogin: entry?.github?.owner,
+                              owned: !!entry,
+                            };
+                          }}
+                          selectedTrailId={previewTrail?.id ?? null}
+                          onSelectTrail={(trail) =>
+                            setPreviewTrail(
+                              previewTrail?.id === trail.id ? null : trail,
+                            )
+                          }
+                        />
+                      ) : (
+                        <TrailsRecentHeaders
+                          rows={recentHeaderRows}
+                          selectedTrailId={previewTrail?.id ?? null}
+                          onSelectTrail={(trail) => {
+                            // Keep the area selected (= card expanded) when
+                            // a trail is picked. The panel ignores aggregate
+                            // / area layers while a trail is active anyway,
+                            // and the area highlight returns automatically
+                            // when the user closes the trail preview.
+                            setPreviewTrail(
+                              previewTrail?.id === trail.id ? null : trail,
+                            );
+                          }}
+                          selectedHeader={selectedAreaHeader}
+                          onSelectHeader={(header) => {
+                            // Area scope wins — clear any single-trail
+                            // preview so the city renders the area layer.
+                            setPreviewTrail(null);
+                            setSelectedAreaHeader(
+                              selectedAreaHeader === header ? null : header,
+                            );
+                          }}
+                          onHoverHeader={setHoveredAreaHeader}
+                          onHoverTrail={setHoveredTrailId}
+                          pendingCount={recentHeaderPendingCount}
+                        />
+                      )}
                     </div>
                   </div>
                   <RecentTrailPreviewPane
                     repositoryPath={selectedProjectPath}
                     fileTree={projectFileTree}
-                    aggregateHighlightLayers={aggregateHighlightLayers}
+                    aggregateHighlightLayers={effectiveHighlightLayers}
                     trail={previewTrail}
                     payload={previewPayload}
                     loading={previewLoading}
