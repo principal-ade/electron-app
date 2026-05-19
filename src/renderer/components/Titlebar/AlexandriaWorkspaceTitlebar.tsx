@@ -11,7 +11,7 @@ import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddReposi
 import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
 import { CloneFromGitHubModal } from '../../panels/components/CloneFromGitHubModal';
 import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
-import { TitlebarUpdateButton } from './TitlebarUpdateButton';
+import { TitlebarUpdateInlineButton } from './TitlebarUpdateInlineButton';
 import {
   PanelSelectorDropdown,
   type PanelOption,
@@ -45,8 +45,6 @@ export interface AlexandriaWorkspaceTitlebarProps {
   // Layout controls
   layout?: PanelLayout;
   onLayoutChange?: (layout: PanelLayout) => void;
-  // Update button
-  onUpdateClick?: () => void;
   // Thread indicator
   isEphemeralThread?: boolean;
 }
@@ -67,7 +65,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   onCollapsedChange,
   layout,
   onLayoutChange,
-  onUpdateClick,
   isEphemeralThread = false,
 }) => {
   const { theme } = useTheme();
@@ -130,9 +127,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         WebkitAppRegion: 'drag',
       }}
     >
-      {/* Update button - positioned below macOS traffic lights */}
-      <TitlebarUpdateButton onClick={onUpdateClick} />
-
       {/* Left section: traffic lights spacer + left panel dropdown */}
       <div
         style={{
@@ -292,6 +286,9 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
+        {/* Update — visible only when an update is pending; downloads in place. */}
+        <TitlebarUpdateInlineButton />
+
         {/* Hover-reveal buttons: Theme, Create, Add */}
         <div
           style={{

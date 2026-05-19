@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ThemeDropdown } from './ThemeDropdown';
 import { ThemeCustomizationButton } from '../../../components/Titlebar/ThemeCustomizationButton';
-import { TitlebarUpdateButton } from '../../../components/Titlebar/TitlebarUpdateButton';
+import { TitlebarUpdateInlineButton } from '../../../components/Titlebar/TitlebarUpdateInlineButton';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
 import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -31,8 +31,6 @@ interface IntegratedTitlebarProps {
   rightSidebarCollapsed?: boolean;
   onToggleRightSidebar?: () => void;
   showRightSidebarControl?: boolean;
-  onUpdateClick?: () => void;
-  hideUpdateButton?: boolean;
   onShowOnboardingWizard?: () => void;
   hideSearch?: boolean;
   onAddProject?: () => void;
@@ -45,8 +43,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   rightSidebarCollapsed = false,
   onToggleRightSidebar,
   showRightSidebarControl = false,
-  onUpdateClick,
-  hideUpdateButton = false,
   onShowOnboardingWizard,
   hideSearch = false,
   onAddProject,
@@ -123,9 +119,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         zIndex: 100,
       }}
     >
-      {/* Update button - positioned below macOS traffic lights */}
-      <TitlebarUpdateButton onClick={onUpdateClick} hidden={hideUpdateButton} />
-
       {/* Centered GitHub Search Bar */}
       {!hideSearch && (
         <div
@@ -186,6 +179,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             Onboarding Wizard
           </button>
         )}
+        {/* Update — visible only when an update is pending; downloads in place. */}
+        <TitlebarUpdateInlineButton />
         {/* Add a project — only rendered when the host view wires it up
             (currently TrailsView via a window-event bridge). */}
         {onAddProject && (

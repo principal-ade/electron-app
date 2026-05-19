@@ -534,11 +534,6 @@ export const IntegratedShell: React.FC = () => {
           showRightSidebarControl={false}
           rightSidebarCollapsed={rightSidebarCollapsed}
           onToggleRightSidebar={handleToggleRightSidebar}
-          onUpdateClick={() => {
-            setSettingsCategory('updates');
-            handleViewChange('settings');
-          }}
-          hideUpdateButton={activeView === 'settings'}
           hideSearch={false}
           onAddProject={
             activeView === 'trails'
