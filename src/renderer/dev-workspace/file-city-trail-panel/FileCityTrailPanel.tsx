@@ -15,12 +15,11 @@ import {
   type FileCityTrailExplorerPanelContext,
   type FileCityTrailExplorerRepository,
   type LineCountsSliceData,
+  type TrailBriefLayout,
 } from '@industry-theme/file-city-panel';
 
-// Mirror of the upstream `TrailBriefLayout` union — defined in
-// `@industry-theme/file-city-panel`'s panel-typings but not re-exported
-// from its package root. Kept in sync by hand for now.
-export type TrailBriefLayout = 'split' | 'diagram';
+export type { TrailBriefLayout };
+
 import type {
   PanelActions,
   PanelContextValue,
