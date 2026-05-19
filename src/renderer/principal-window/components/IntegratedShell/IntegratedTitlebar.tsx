@@ -7,7 +7,7 @@ import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls'
 import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
-import { Layers } from 'lucide-react';
+import { Layers, FolderPlus } from 'lucide-react';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 
@@ -35,6 +35,7 @@ interface IntegratedTitlebarProps {
   hideUpdateButton?: boolean;
   onShowOnboardingWizard?: () => void;
   hideSearch?: boolean;
+  onAddProject?: () => void;
 }
 
 export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
@@ -48,6 +49,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   hideUpdateButton = false,
   onShowOnboardingWizard,
   hideSearch = false,
+  onAddProject,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showThemeButton, setShowThemeButton] = useState(false);
@@ -182,6 +184,42 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             title="Test Onboarding Wizard"
           >
             Onboarding Wizard
+          </button>
+        )}
+        {/* Add a project — only rendered when the host view wires it up
+            (currently TrailsView via a window-event bridge). */}
+        {onAddProject && (
+          <button
+            onClick={onAddProject}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              cursor: 'pointer',
+              fontSize: theme.fontSizes[1],
+              fontWeight: 500,
+              fontFamily: theme.fonts.body,
+              transition: 'all 0.2s',
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
+            }}
+            title="Pick a folder to add — we'll find any git repos inside"
+          >
+            <FolderPlus size={14} />
+            Add a project
           </button>
         )}
         {/* Open Thread button */}

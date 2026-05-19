@@ -9,7 +9,6 @@ import {
   X,
   Folder,
   FolderGit2,
-  FolderPlus,
   Footprints,
   Plus,
   Copy,
@@ -48,6 +47,7 @@ import {
   useTerminalActivity,
 } from '../../../contexts/TerminalContext';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import { WindowService } from '../../../main-process-api/WindowService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { GitService } from '../../../main-process-api/GitService';
 import { GithubService } from '../../../main-process-api/GithubService';
@@ -930,6 +930,18 @@ const TrailsViewInner: React.FC<{
       setScanningHome(false);
     }
   }, [repositories]);
+
+  // Titlebar bridge: the "Add a project" button now lives in the titlebar
+  // (IntegratedTitlebar). It fires a window-level event because TrailsView
+  // owns the scan-progress modal and `handleAddProject`'s state.
+  useEffect(() => {
+    const onTrigger = () => {
+      if (scanningHome) return;
+      void handleAddProject();
+    };
+    window.addEventListener('trails:add-project', onTrigger);
+    return () => window.removeEventListener('trails:add-project', onTrigger);
+  }, [handleAddProject, scanningHome]);
 
   // Load local Alexandria repositories
   useEffect(() => {
@@ -2489,89 +2501,7 @@ const TrailsViewInner: React.FC<{
                       <option value="investigation">Investigations</option>
                     </select>
                   </div>
-                  {coverageStats && (
-                    <div
-                      title={`${coverageStats.covered} of ${coverageStats.total} files in this project are touched by at least one saved trail`}
-                      style={{
-                        flex: '0 0 auto',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '8px 12px',
-                        borderRadius: 8,
-                        border: `1px solid ${theme.colors.border}`,
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        color: theme.colors.textSecondary,
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[1],
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <span style={{ color: theme.colors.text }}>
-                        {coverageStats.covered}
-                      </span>
-                      <span>/ {coverageStats.total} files</span>
-                      <span
-                        style={{
-                          color: theme.colors.primary,
-                          fontWeight: theme.fontWeights.semibold,
-                        }}
-                      >
-                        · {coverageStats.pct.toFixed(2)}%
-                      </span>
-                    </div>
-                  )}
                   <div style={{ flex: 1 }} />
-                  <div
-                    style={{
-                      flex: '0 1 300px',
-                      minWidth: 160,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      border: `1px solid ${theme.colors.border}`,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                    }}
-                  >
-                    <Search size={14} color={theme.colors.textSecondary} />
-                    <input
-                      value={recentFilter}
-                      onChange={(e) => setRecentFilter(e.target.value)}
-                      placeholder="Filter trails by title, summary, or project"
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        outline: 'none',
-                        background: 'transparent',
-                        color: theme.colors.text,
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[1],
-                      }}
-                    />
-                    {recentFilter && (
-                      <button
-                        type="button"
-                        onClick={() => setRecentFilter('')}
-                        title="Clear filter"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 22,
-                          height: 22,
-                          border: 'none',
-                          borderRadius: 6,
-                          background: 'transparent',
-                          color: theme.colors.textSecondary,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
-                  </div>
                   <div
                     style={{
                       flex: '0 0 auto',
@@ -2630,19 +2560,71 @@ const TrailsViewInner: React.FC<{
                         buildAgentBrief={buildSpikeAgentBrief}
                       />
                     )}
+                    {coverageStats && (
+                      <div
+                        title={`${coverageStats.covered} of ${coverageStats.total} files in this project are touched by at least one saved trail`}
+                        style={{
+                          flex: '0 0 auto',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          border: `1px solid ${theme.colors.border}`,
+                          backgroundColor: theme.colors.backgroundSecondary,
+                          color: theme.colors.textSecondary,
+                          fontFamily: theme.fonts.body,
+                          fontSize: theme.fontSizes[1],
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <span style={{ color: theme.colors.text }}>
+                          {coverageStats.covered}
+                        </span>
+                        <span>/ {coverageStats.total} files</span>
+                        <span
+                          style={{
+                            color: theme.colors.primary,
+                            fontWeight: theme.fontWeights.semibold,
+                          }}
+                        >
+                          · {coverageStats.pct.toFixed(2)}%
+                        </span>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
-                        if (scanningHome) return;
-                        void handleAddProject();
+                        if (!selectedProjectPath) return;
+                        void (async () => {
+                          try {
+                            const existing =
+                              await AlexandriaService.getRepositoryByPath(
+                                selectedProjectPath,
+                              );
+                            const entry =
+                              existing ??
+                              (await AlexandriaService.registerRepository(
+                                selectedProjectPath,
+                              ));
+                            await WindowService.openDevWorkspace({
+                              alexandriaEntry: entry,
+                            });
+                          } catch (err) {
+                            console.error(
+                              '[TrailsView] Failed to open dev workspace for project',
+                              selectedProjectPath,
+                              err,
+                            );
+                          }
+                        })();
                       }}
-                      disabled={scanningHome}
-                      title="Pick a folder to add — we'll find any git repos inside"
+                      disabled={!selectedProjectPath}
+                      title="Open the selected project in the dev workspace window"
                       style={{
                         flex: '0 0 auto',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: 6,
                         padding: '8px 12px',
                         borderRadius: 8,
                         border: `1px solid ${theme.colors.border}`,
@@ -2650,23 +2632,11 @@ const TrailsViewInner: React.FC<{
                         color: theme.colors.text,
                         fontFamily: theme.fonts.body,
                         fontSize: theme.fontSizes[1],
-                        cursor: scanningHome ? 'default' : 'pointer',
-                        opacity: scanningHome ? 0.6 : 1,
+                        cursor: selectedProjectPath ? 'pointer' : 'default',
+                        opacity: selectedProjectPath ? 1 : 0.6,
                       }}
                     >
-                      {scanningHome ? (
-                        <Loader2
-                          size={14}
-                          color={theme.colors.textSecondary}
-                          style={{ animation: 'trails-spin 1s linear infinite' }}
-                        />
-                      ) : (
-                        <FolderPlus
-                          size={14}
-                          color={theme.colors.textSecondary}
-                        />
-                      )}
-                      <span>{scanningHome ? 'Scanning…' : 'Add a project'}</span>
+                      Open Project
                     </button>
                     <button
                       type="button"

@@ -540,6 +540,12 @@ export const IntegratedShell: React.FC = () => {
           }}
           hideUpdateButton={activeView === 'settings'}
           hideSearch={false}
+          onAddProject={
+            activeView === 'trails'
+              ? () =>
+                  window.dispatchEvent(new CustomEvent('trails:add-project'))
+              : undefined
+          }
         />
 
         {/* Main content area with rounded corners for Slack-style cutout */}
