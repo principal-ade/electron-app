@@ -73,6 +73,105 @@ export class PrincipalMCPBridge extends EventEmitter {
   }
 
   private setupRoutes() {
+    // Route catalog for agent discovery. Scoped to File City trail routes
+    // for now; expand as other route groups are documented.
+    this.app.get('/routes', (_req: Request, res: Response) => {
+      res.json({
+        service: 'Principal MCP Bridge',
+        port: this.port,
+        note: 'Catalog currently covers File City trail routes only. Other route groups (theme, bruno, document-notes, dependencies) are mounted but not yet documented here.',
+        groups: [
+          {
+            name: 'file-city-trails',
+            description:
+              'Push, list, activate, fetch, fork, and delete File City trail payloads. Trails are pinned to file+line markers and render in the Trails view of the principal or dev-workspace window.',
+            routes: [
+              {
+                method: 'POST',
+                path: '/api/file-city/trail',
+                summary:
+                  'Upsert a trail payload by id. Replacing an existing id preserves its on-disk notes.',
+                body: {
+                  id: 'string (required, non-empty)',
+                  title: 'string (required, non-empty)',
+                  markers:
+                    'TrailMarker[] (required, non-empty). Each marker needs a string id; investigation trails need exactly one marker with kind:"subject", other purposes must have none.',
+                  views: 'TrailView[] (required, non-empty)',
+                  summary: 'string (optional)',
+                  purpose:
+                    '"investigation" | "changelog" | "informative" (optional, defaults to "investigation"). Legacy alias: "kind".',
+                  share: '{ id: string } (optional) — flags external audience',
+                  repos: 'TrailRepo[] (optional)',
+                  repositoryPath:
+                    'string (optional) — top-level field used to bucket the trail by host repo; not persisted into the payload itself.',
+                  createdAt: 'ISO string (optional, defaults to now)',
+                  updatedAt: 'ISO string (optional, defaults to now)',
+                  authoredAt: 'object (optional)',
+                },
+                response:
+                  '{ success, id, broadcastTo, evictedIds, windowOpened }',
+              },
+              {
+                method: 'POST',
+                path: '/api/file-city/trail/fork-informative',
+                summary:
+                  'Fork an existing investigation into a new informative trail. Strips subject markers and forces purpose="informative". The host index records derivedFrom=sourceId.',
+                body: {
+                  sourceId:
+                    'string (required) — id of the source trail; must exist locally',
+                  payload:
+                    'object (required) — same shape as POST /api/file-city/trail body, with a new id distinct from sourceId',
+                  repositoryPath:
+                    'string (optional) — overrides any repositoryPath inside payload',
+                },
+                response:
+                  '{ success, id, derivedFrom, broadcastTo, evictedIds, windowOpened }',
+              },
+              {
+                method: 'GET',
+                path: '/api/file-city/trail/library',
+                summary:
+                  'List all stored trails, optionally filtered to a single host repository.',
+                query: {
+                  repositoryPath:
+                    'string (optional) — absolute path of a host repo to filter by',
+                },
+                response: '{ success, entries, ... }',
+              },
+              {
+                method: 'POST',
+                path: '/api/file-city/trail/activate',
+                summary:
+                  'Make a stored trail the active one in its host repo window (opening/focusing the window as needed).',
+                body: { id: 'string (required)' },
+                response: '{ success, broadcastTo, windowOpened }',
+              },
+              {
+                method: 'GET',
+                path: '/api/file-city/trail/:id',
+                summary: 'Fetch a stored trail payload by id.',
+                response: '{ success, payload } | 404 { success: false, error }',
+              },
+              {
+                method: 'DELETE',
+                path: '/api/file-city/trail/:id',
+                summary: 'Delete a stored trail by id.',
+                response: '{ success } | 404 { success: false, error }',
+              },
+              {
+                method: 'GET',
+                path: '/api/file-city/trail/share/:owner/:repo/:id',
+                summary:
+                  'Hydrate a private web-ade share by (owner, repo, id) using the main-process GitHub token. Use this instead of calling web-ade directly when the share is private.',
+                response:
+                  '{ success, payload } | 404/502 { success: false, error, code }',
+              },
+            ],
+          },
+        ],
+      });
+    });
+
     // Health check
     this.app.get('/health', (_req: Request, res: Response) => {
       const span = tracer.startSpan('principal_mcp.health_check');
