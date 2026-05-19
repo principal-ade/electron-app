@@ -20,7 +20,7 @@ import {
 // Mirror of the upstream `TrailBriefLayout` union — defined in
 // `@industry-theme/file-city-panel`'s panel-typings but not re-exported
 // from its package root. Kept in sync by hand for now.
-export type TrailBriefLayout = 'centered' | 'split' | 'three-zone';
+export type TrailBriefLayout = 'split' | 'diagram';
 import type {
   PanelActions,
   PanelContextValue,
