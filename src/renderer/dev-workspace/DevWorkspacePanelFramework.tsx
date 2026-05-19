@@ -80,6 +80,7 @@ import type { FileInfo } from '@principal-ai/repository-abstraction';
 import {
   CodeCityPanel,
   type CodeCityPanelPropsTyped,
+  type BaseTrailIndexEntry,
 } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as localhostBrowserPanels } from '@industry-theme/localhost-panels';
@@ -139,8 +140,13 @@ import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
 import { TypeInformationSidebarButton } from '../components/Sidebar/TypeInformationSidebarButton';
 import { GitConfigPanel } from './git-config-panel';
 import { TrailsPanel } from './trails-panel';
+import { TrailShareModal } from './trails-panel/TrailShareModal';
 import { TrailService } from '../services/TrailService';
-import { TRAIL_EVENT, type TrailActivatedEvent } from './trail-events';
+import {
+  TRAIL_EVENT,
+  type TrailActivatedEvent,
+  type TrailClearedEvent,
+} from './trail-events';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -490,6 +496,43 @@ const FileCity3DTabContent: React.FC = () => {
  */
 const FileCityTrailTabContent: React.FC = () => {
   const { context, actions, events } = useRepositoryPanelProvider();
+  const repositoryPath = context.currentScope?.repository?.path ?? null;
+  const trailPayload = context.trail?.data ?? null;
+  const [shareModalTrail, setShareModalTrail] =
+    useState<BaseTrailIndexEntry | null>(null);
+
+  // Deselect the active trail. RepositoryPanelContext listens for this
+  // event and flips its `trail` slice to null, so the explorer re-enters
+  // its idle state (aggregate highlight layers) without an IPC round trip.
+  const handleCloseTrail = useCallback(() => {
+    events.emit<TrailClearedEvent>({
+      type: TRAIL_EVENT.cleared,
+      source: 'file-city-trail-tab',
+      timestamp: Date.now(),
+      payload: { repositoryPath: repositoryPath ?? undefined },
+    });
+  }, [events, repositoryPath]);
+
+  // Synthesize a manifest entry from the live payload so the share modal
+  // (which only reads id/title/markerCount/hasDiffSnippets) can render
+  // without an extra `TrailLibraryService.list` round trip.
+  const handleShareTrail = useCallback(() => {
+    if (!trailPayload) return;
+    const entry: BaseTrailIndexEntry = {
+      id: trailPayload.id,
+      title: trailPayload.title || 'Untitled trail',
+      summaryPreview: (trailPayload.summary ?? '').slice(0, 200),
+      markerCount: trailPayload.markers?.length ?? 0,
+      repoNames: trailPayload.repos?.map((r) => r.name) ?? [],
+      hasDiffSnippets:
+        trailPayload.markers?.some((m) => m.snippet?.kind === 'diff') ?? false,
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString(),
+      sizeBytes: 0,
+    };
+    setShareModalTrail(entry);
+  }, [trailPayload]);
+
   return (
     <div
       style={{
@@ -501,7 +544,20 @@ const FileCityTrailTabContent: React.FC = () => {
         flexDirection: 'column',
       }}
     >
-      <FileCityTrailPanel context={context} actions={actions} events={events} />
+      <FileCityTrailPanel
+        context={context}
+        actions={actions}
+        events={events}
+        onCloseTrail={handleCloseTrail}
+        onShareTrail={handleShareTrail}
+      />
+      {shareModalTrail && repositoryPath && (
+        <TrailShareModal
+          trail={shareModalTrail}
+          repositoryPath={repositoryPath}
+          onClose={() => setShareModalTrail(null)}
+        />
+      )}
     </div>
   );
 };
@@ -934,16 +990,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   }, [events, activityActions]);
 
   // Tab state for TabbedTerminalPanel (skills only - terminals are managed by
-  // the panel from context). Seeded with the File City 3D tab so it's open by
-  // default when the dev-workspace window first mounts.
-  const [tabs, setTabs] = useState<DevWorkspaceTab[]>(() => [
-    {
-      id: 'file-city-3d',
-      label: 'File City 3D',
-      contentType: 'file-city-3d',
-      closable: true,
-    } as FileCity3DTab,
-  ]);
+  // the panel from context).
+  const [tabs, setTabs] = useState<DevWorkspaceTab[]>(() => []);
 
   // Sync tabs to parent whenever they change (for RepositoryPanelProvider)
   useEffect(() => {
@@ -1020,7 +1068,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   );
 
   // Focus tab state - when set, TabbedTerminalPanel will activate the tab and call onFocusTabHandled
-  const [focusTabId, setFocusTabId] = useState<string | null>('file-city-3d');
+  const [focusTabId, setFocusTabId] = useState<string | null>(null);
   const handleFocusTabHandled = useCallback(() => setFocusTabId(null), []);
 
   // Show all terminals state - when true, shows terminals from other windows
