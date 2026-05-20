@@ -1311,7 +1311,9 @@ const TrailsViewInner: React.FC<{
         return;
       }
     }
-    setPreviewTrail(null);
+    setPreviewTrail((current) =>
+      current && current.repositoryPath === selectedProjectPath ? current : null,
+    );
   }, [selectedProjectPath, bootstrapTrailId, recentTrails]);
 
   // Convert terminal activities to workingStates record
