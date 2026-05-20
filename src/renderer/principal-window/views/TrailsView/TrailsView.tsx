@@ -131,18 +131,18 @@ const TRAIL_PROMPT_IDEAS: Array<{
   Icon: React.ComponentType<{ size?: number; color?: string }>;
 }> = [
   {
-    label: 'Informative',
-    Icon: BookOpen,
-    purpose: 'informative',
-    prompt:
-      'Use the author-informative-trail skill in this codebase to lay a canonical trail through <feature or system>.',
-  },
-  {
     label: 'Investigation',
     Icon: Compass,
     purpose: 'investigation',
     prompt:
       'Use the author-investigation-trail skill in this codebase to investigate <question or symptom>.',
+  },
+  {
+    label: 'Informative',
+    Icon: BookOpen,
+    purpose: 'informative',
+    prompt:
+      'Use the author-informative-trail skill in this codebase to lay a canonical trail through <feature or system>.',
   },
 ];
 
