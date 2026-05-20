@@ -11,7 +11,6 @@ import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddReposi
 import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
 import { CloneFromGitHubModal } from '../../panels/components/CloneFromGitHubModal';
 import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
-import { TitlebarUpdateInlineButton } from './TitlebarUpdateInlineButton';
 import {
   PanelSelectorDropdown,
   type PanelOption,
@@ -286,9 +285,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Update — visible only when an update is pending; downloads in place. */}
-        <TitlebarUpdateInlineButton />
-
         {/* Hover-reveal buttons: Theme, Create, Add */}
         <div
           style={{

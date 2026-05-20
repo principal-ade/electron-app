@@ -3,7 +3,6 @@ import { useTheme } from '@principal-ade/industry-theme';
 import './Titlebar.css';
 import { ThemeDropdown } from './ThemeDropdown';
 import { ThemeCustomizationButton } from './ThemeCustomizationButton';
-import { TitlebarUpdateInlineButton } from './TitlebarUpdateInlineButton';
 
 declare global {
   interface Window {
@@ -150,12 +149,10 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
           marginLeft: 'auto',
           marginRight: showWindowControls && !isMac ? '0' : '20px',
         }}
       >
-        <TitlebarUpdateInlineButton />
         {React.Children.toArray(children).filter((child) => {
           if (!React.isValidElement(child)) return false;
           const props = child.props as { position?: string };
