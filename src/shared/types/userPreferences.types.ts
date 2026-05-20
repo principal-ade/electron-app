@@ -223,6 +223,20 @@ export interface UserPreferences {
     activeNavigationView?: InteractiveShellNavigationView;
   };
 
+  // Trails view preferences
+  trails?: {
+    // Brief-layout switch state — workspace-global so the reader's
+    // layout / hide-map choice persists across trail clicks, repo
+    // switches, and app restarts. `layout` mirrors the upstream
+    // panel's `TrailBriefLayout` ('split' | 'diagram'); we don't
+    // import the type here to keep this shared types file free of
+    // renderer-side panel-package deps.
+    briefLayout?: {
+      layout: 'split' | 'diagram';
+      hideMap: boolean;
+    };
+  };
+
   // Onboarding state and completion tracking
   onboarding?: OnboardingState;
 

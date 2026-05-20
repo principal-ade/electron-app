@@ -54,9 +54,13 @@ import { ShellService } from '../../../main-process-api/ShellService';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
-import { FileCityTrailPanel } from '../../../dev-workspace/file-city-trail-panel';
+import {
+  FileCityTrailPanel,
+  type TrailBriefLayoutState,
+} from '../../../dev-workspace/file-city-trail-panel';
 import { TrailShareModal } from '../../../dev-workspace/trails-panel/TrailShareModal';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
+import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import { formatRelativeTime } from './TrailCard';
@@ -174,6 +178,32 @@ const purposeIcon = (
 };
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
+/**
+ * Workspace-global default for the brief-layout switch — applied when
+ * the user has no stored preference yet. Matches the upstream panel's
+ * own defaults so first-mount behavior is unchanged.
+ */
+const DEFAULT_BRIEF_LAYOUT_STATE: TrailBriefLayoutState = {
+  layout: 'diagram',
+  hideMap: false,
+};
+
+/** Light validator: coerce an unknown prefs payload back to the panel's shape. */
+const coerceBriefLayoutState = (
+  raw: { layout?: unknown; hideMap?: unknown } | undefined,
+): TrailBriefLayoutState => {
+  if (!raw) return DEFAULT_BRIEF_LAYOUT_STATE;
+  const layout =
+    raw.layout === 'split' || raw.layout === 'diagram'
+      ? raw.layout
+      : DEFAULT_BRIEF_LAYOUT_STATE.layout;
+  const hideMap =
+    typeof raw.hideMap === 'boolean'
+      ? raw.hideMap
+      : DEFAULT_BRIEF_LAYOUT_STATE.hideMap;
+  return { layout, hideMap };
+};
+
 /** Last path segment of a repo path, used for the recent-trails feed. */
 const trailRepoLabel = (repositoryPath: string | undefined): string => {
   if (!repositoryPath) return 'No repo';
@@ -268,6 +298,46 @@ const RecentTrailPreviewPane: React.FC<{
 }) => {
   const { theme } = useTheme();
 
+  // Workspace-global brief-layout preference. Persisted via
+  // UserPreferencesService so the reader's hide-map / layout choice
+  // survives trail clicks, repo switches, and app restarts. Lifted
+  // into the host (rather than letting the panel manage it) so the
+  // persistence scope is ours to change later — per-repo or per-trail
+  // without touching the upstream panel package.
+  const [briefLayoutState, setBriefLayoutState] =
+    useState<TrailBriefLayoutState>(DEFAULT_BRIEF_LAYOUT_STATE);
+  useEffect(() => {
+    let cancelled = false;
+    UserPreferencesService.getPreferences()
+      .then((prefs) => {
+        if (cancelled) return;
+        setBriefLayoutState(coerceBriefLayoutState(prefs.trails?.briefLayout));
+      })
+      .catch(() => {
+        // Service failure leaves us on the in-memory default; no toast.
+      });
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
+      setBriefLayoutState(coerceBriefLayoutState(prefs.trails?.briefLayout));
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+  const handleBriefLayoutChange = useCallback(
+    (next: TrailBriefLayoutState) => {
+      // Optimistic local update so the panel reflects the toggle before
+      // the IPC round-trip lands. The 'user-preferences-updated' event
+      // will re-apply the persisted value, but it matches what we just
+      // set, so there's no visible flip.
+      setBriefLayoutState(next);
+      void UserPreferencesService.updatePreferences({
+        trails: { briefLayout: next },
+      });
+    },
+    [],
+  );
+
   const repoName = useMemo(() => {
     if (!repositoryPath) return null;
     return repositoryPath.split('/').filter(Boolean).pop() ?? null;
@@ -355,6 +425,9 @@ const RecentTrailPreviewPane: React.FC<{
           events={events}
           onCloseTrail={onCloseTrail}
           onShareTrail={onShareTrail}
+          briefLayout={briefLayoutState.layout}
+          defaultHideMap={briefLayoutState.hideMap}
+          onBriefLayoutChange={handleBriefLayoutChange}
         />
         {trail && (loading || !payload) && (
           <div
@@ -513,7 +586,15 @@ const TrailsViewInner: React.FC<{
     }
     let cancelled = false;
     setPreviewLoading(true);
-    setPreviewPayload(null);
+    // Intentionally don't clear `previewPayload` here. Nulling it
+    // sends the panel into idle mode for the duration of the fetch
+    // (trail.data null → isIdle → brief + sequence drawer unmount
+    // and the city renders in idle layout). With hideMap persisted,
+    // that flash of the idle city under the translucent "Loading
+    // preview…" veil is jarring. Keeping the previous payload mounted
+    // means the brief stays open in whatever layout the reader chose,
+    // the sequence drawer stays mounted, and the veil sits over a
+    // stable scene until the new payload swaps in.
     void (async () => {
       try {
         const payload = await TrailLibraryService.load(previewTrail.id);

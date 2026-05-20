@@ -16,9 +16,10 @@ import {
   type FileCityTrailExplorerRepository,
   type LineCountsSliceData,
   type TrailBriefLayout,
+  type TrailBriefLayoutState,
 } from '@industry-theme/file-city-panel';
 
-export type { TrailBriefLayout };
+export type { TrailBriefLayout, TrailBriefLayoutState };
 
 import type {
   PanelActions,
@@ -71,6 +72,20 @@ export interface FileCityTrailPanelProps {
    * upstream default (`'three-zone'`) when omitted.
    */
   briefLayout?: TrailBriefLayout;
+  /**
+   * Initial value for the hide-map toggle on the brief-layout switch.
+   * Forwarded to the upstream panel's `defaultHideMap` prop. Like
+   * `briefLayout`, hosts that persist reader preferences feed the
+   * remembered value back here on mount.
+   */
+  defaultHideMap?: boolean;
+  /**
+   * Fires when the reader toggles either the layout or the hide-map
+   * switch inside the brief. The payload is the combined new state —
+   * persist it however you like (per-trail, per-repo, workspace-
+   * global) and feed it back via `briefLayout` / `defaultHideMap`.
+   */
+  onBriefLayoutChange?: (state: TrailBriefLayoutState) => void;
 }
 
 const emptyRoot = {
@@ -117,6 +132,8 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
   onCloseTrail,
   onShareTrail,
   briefLayout,
+  defaultHideMap,
+  onBriefLayoutChange,
 }) => {
   const repositoryPath = context.repository?.path ?? null;
   const repoOwner = context.repository?.owner ?? null;
@@ -241,6 +258,8 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
       actions={trailActions}
       events={events}
       briefLayout={briefLayout}
+      defaultHideMap={defaultHideMap}
+      onBriefLayoutChange={onBriefLayoutChange}
     />
   );
 };
