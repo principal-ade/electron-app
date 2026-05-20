@@ -30,6 +30,19 @@ const config: StorybookConfig = {
         'X-Frame-Options': 'ALLOWALL',
       },
     };
+
+    // Some renderer code transitively imports `src/telemetry/config.ts`, which
+    // does a runtime `require('electron')` (no-op'd in the renderer). Webpack
+    // still resolves the require statically and chokes on electron's own
+    // node-only deps (`fs`, `path`). Alias the package + its deps to empty
+    // modules so storybook can bundle renderer code that touches telemetry.
+    config.resolve = config.resolve ?? {};
+    config.resolve.fallback = {
+      ...(config.resolve.fallback as Record<string, string | false> | undefined),
+      electron: false,
+      fs: false,
+      path: false,
+    };
     return config;
   },
 };

@@ -3,7 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 
 /** Short relative time ("just now", "2h ago", "3d ago") for trail rows. */
-const formatRelativeTime = (iso: string): string => {
+export const formatRelativeTime = (iso: string): string => {
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return '';
   const deltaSec = Math.max(0, (Date.now() - t) / 1000);

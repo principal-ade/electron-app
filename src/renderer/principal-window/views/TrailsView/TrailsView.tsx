@@ -59,6 +59,7 @@ import { TrailShareModal } from '../../../dev-workspace/trails-panel/TrailShareM
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
+import { formatRelativeTime } from './TrailCard';
 import { TrailsRecentList } from './TrailsRecentList';
 import {
   TrailsRecentHeaders,
@@ -121,24 +122,56 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
  * Starter prompts shown on the post-install "Trail Prompt Ideas" screen.
  * Users can paste them straight into their agent's terminal.
  */
+type PromptIdeaPurpose = 'informative' | 'investigation';
+
 const TRAIL_PROMPT_IDEAS: Array<{
   label: string;
   prompt: string;
+  purpose: PromptIdeaPurpose;
   Icon: React.ComponentType<{ size?: number; color?: string }>;
 }> = [
   {
-    label: 'Informative trail',
+    label: 'Informative',
     Icon: BookOpen,
+    purpose: 'informative',
     prompt:
       'Use the author-informative-trail skill in this codebase to lay a canonical trail through <feature or system>.',
   },
   {
-    label: 'Investigation trail',
+    label: 'Investigation',
     Icon: Compass,
+    purpose: 'investigation',
     prompt:
       'Use the author-investigation-trail skill in this codebase to investigate <question or symptom>.',
   },
 ];
+
+/**
+ * Accent color for a trail purpose. Matches the city's highlight palette
+ * (green = informative, purple = investigation) so a card's color reads
+ * as the same identity as the city's per-purpose layer. Per the upstream
+ * schema, `undefined` purpose is treated as investigation, so unknown /
+ * legacy entries fall back to the investigation color rather than the
+ * theme primary.
+ */
+const purposeAccent = (
+  purpose: string | undefined,
+  theme: {
+    colors: { success?: string };
+  },
+): string => {
+  if (purpose === 'informative') return theme.colors.success ?? '#10b981';
+  return '#a855f7';
+};
+
+/** Lucide icon component for a given trail purpose. */
+const purposeIcon = (
+  purpose: string | undefined,
+): React.ComponentType<{ size?: number; color?: string }> => {
+  if (purpose === 'informative') return BookOpen;
+  // Per upstream schema, undefined purpose is treated as investigation.
+  return Compass;
+};
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 /** Last path segment of a repo path, used for the recent-trails feed. */
@@ -845,15 +878,6 @@ const TrailsViewInner: React.FC<{
   // them. The modal stays open so the user can see what was added.
   type AddedRepo = { path: string; name: string; ok: boolean; error?: string };
   const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [createTrailModalOpen, setCreateTrailModalOpen] = useState(false);
-  const [createTrailModalClosing, setCreateTrailModalClosing] = useState(false);
-  const closeCreateTrailModal = useCallback(() => {
-    setCreateTrailModalClosing(true);
-    window.setTimeout(() => {
-      setCreateTrailModalOpen(false);
-      setCreateTrailModalClosing(false);
-    }, 180);
-  }, []);
   const [scanningHome, setScanningHome] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [addedRepos, setAddedRepos] = useState<AddedRepo[]>([]);
@@ -1010,6 +1034,58 @@ const TrailsViewInner: React.FC<{
     }
     return Array.from(seen.values());
   }, [recentTrails, repositories]);
+
+  // Landing-screen repo cards. One entry per distinct repo in the Recent
+  // feed, carrying the repo identity + that repo's newest trail. Since
+  // `recentTrails` is sorted newest-first, the first occurrence of a
+  // `repositoryPath` is also that repo's most recent trail. Capped at
+  // three so the landing stays scannable — the full Recent view is the
+  // canonical browser for everything else.
+  const REPO_CARD_LIMIT = 3;
+  const repoCardEntries = useMemo<
+    Array<{
+      repo: { path: string; label: string; ownerLogin?: string };
+      trail: TrailIndexEntry;
+    }>
+  >(() => {
+    const byRepo = new Map<
+      string,
+      {
+        repo: { path: string; label: string; ownerLogin?: string };
+        trail: TrailIndexEntry;
+      }
+    >();
+    for (const trail of recentTrails) {
+      if (!trail.repositoryPath || byRepo.has(trail.repositoryPath)) continue;
+      const entry = repositories.find((r) => r.path === trail.repositoryPath);
+      byRepo.set(trail.repositoryPath, {
+        repo: {
+          path: trail.repositoryPath,
+          label: trailRepoLabel(trail.repositoryPath),
+          ownerLogin: entry?.github?.owner,
+        },
+        trail,
+      });
+      if (byRepo.size >= REPO_CARD_LIMIT) break;
+    }
+    return Array.from(byRepo.values());
+  }, [recentTrails, repositories]);
+
+  // Click handler for the landing repo cards. Pre-selects the repo's
+  // project filter and the specific trail before flipping into Recent,
+  // so the user lands on a populated grid with the trail already open
+  // in the preview pane.
+  const openTrailFromRepoCard = useCallback(
+    (entry: {
+      repo: { path: string };
+      trail: TrailIndexEntry;
+    }) => {
+      setSelectedProjectPath(entry.repo.path);
+      setPreviewTrail(entry.trail);
+      setViewMode('recent');
+    },
+    [],
+  );
 
   // Auto-pick the most-recent project once trails load, and re-pick when
   // the current selection disappears (e.g. last trail in that project
@@ -1807,6 +1883,27 @@ const TrailsViewInner: React.FC<{
     </div>
   );
 
+  // Header used in place of `welcomeHeader` when the landing is showing
+  // the repo cards (i.e. the user already has trails) — the page is no
+  // longer a welcome, it's a create surface.
+  const createTrailHeader = (
+    <div style={{ textAlign: 'center', maxWidth: 640 }}>
+      <div
+        style={{
+          color: theme.colors.text,
+          fontFamily: theme.fonts.heading ?? theme.fonts.body,
+          fontSize: 'clamp(40px, 6vw, 72px)',
+          fontWeight: theme.fontWeights.bold,
+          letterSpacing: '-0.02em',
+          lineHeight: 1.05,
+          marginBottom: 12,
+        }}
+      >
+        Create a <span style={{ color: theme.colors.primary }}>Trail</span>
+      </div>
+    </div>
+  );
+
   return (
     <div
       style={{
@@ -2088,7 +2185,7 @@ const TrailsViewInner: React.FC<{
             }}
           >
             <div style={{ flex: '0 0 auto', marginTop: '9vh' }}>
-              {welcomeHeader}
+              {createTrailHeader}
             </div>
 
             <div
@@ -2124,18 +2221,22 @@ const TrailsViewInner: React.FC<{
                 @keyframes trails-spin { to { transform: rotate(360deg); } }
               `}</style>
 
-              {hasRecentTrails ? (
-                <>
+              {/* Prompt-idea cards: always rendered. These replace the
+                  former modal — the "Create a Trail" entry point. */}
+              {TRAIL_PROMPT_IDEAS.map((idea, i) => {
+                const isCopied = copiedPromptIndex === i;
+                const accent = purposeAccent(idea.purpose, theme);
+                return (
                   <div
+                    key={idea.label}
+                    className="trail-idea-card"
                     role="button"
                     tabIndex={0}
-                    title="Pick a starting point for a new trail"
-                    className="trail-idea-card"
-                    onClick={() => setCreateTrailModalOpen(true)}
+                    onClick={() => void handleCopyPrompt(idea.prompt, i)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        setCreateTrailModalOpen(true);
+                        void handleCopyPrompt(idea.prompt, i);
                       }
                     }}
                     style={{
@@ -2143,7 +2244,7 @@ const TrailsViewInner: React.FC<{
                       flex: '0 1 300px',
                       width: '100%',
                       maxWidth: 300,
-                      aspectRatio: '4 / 3',
+                      aspectRatio: '16 / 9',
                       padding: '20px 22px',
                       borderRadius: 10,
                       border: `1px solid ${theme.colors.border}`,
@@ -2157,81 +2258,121 @@ const TrailsViewInner: React.FC<{
                       cursor: 'pointer',
                     }}
                   >
-                    <Plus size={56} color={theme.colors.primary} />
+                    <idea.Icon size={32} color={accent} />
                     <div
                       style={{
                         fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[2],
+                        fontSize: theme.fontSizes[0],
                         fontWeight: theme.fontWeights.semibold,
-                        color: theme.colors.textSecondary,
+                        color: accent,
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                       }}
                     >
-                      Create a Trail
+                      {idea.label}
                     </div>
+                    <div
+                      style={{
+                        fontFamily: theme.fonts.monospace,
+                        fontSize: theme.fontSizes[1],
+                        color: theme.colors.text,
+                        lineHeight: 1.5,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {idea.prompt}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleCopyPrompt(idea.prompt, i);
+                      }}
+                      title={isCopied ? 'Copied' : 'Copy prompt'}
+                      className={
+                        isCopied
+                          ? 'trail-idea-copy is-copied'
+                          : 'trail-idea-copy'
+                      }
+                      style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: 6,
+                        background: theme.colors.background,
+                        color: isCopied
+                          ? theme.colors.primary
+                          : theme.colors.textSecondary,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                    </button>
                   </div>
+                );
+              })}
+            </div>
 
+            {/* Repo cards — one per distinct repo in the Recent feed,
+                showing the repo identity and its newest trail. Only
+                rendered once the user has at least one saved trail. */}
+            {hasRecentTrails && (
+              <div
+                style={{
+                  flex: '0 0 auto',
+                  marginTop: 64,
+                  width: '100%',
+                  maxWidth: 960,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 24,
+                }}
+              >
+                <div style={{ textAlign: 'center', maxWidth: 640, alignSelf: 'center' }}>
                   <div
-                    role="button"
-                    tabIndex={0}
-                    title="Browse trails you've recently laid"
-                    className="trail-idea-card"
-                    onClick={() => setViewMode('recent')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setViewMode('recent');
-                      }
-                    }}
                     style={{
-                      position: 'relative',
-                      flex: '0 1 300px',
-                      width: '100%',
-                      maxWidth: 300,
-                      aspectRatio: '4 / 3',
-                      padding: '20px 22px',
-                      borderRadius: 10,
-                      border: `1px solid ${theme.colors.border}`,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      gap: 12,
-                      cursor: 'pointer',
+                      color: theme.colors.text,
+                      fontFamily: theme.fonts.heading ?? theme.fonts.body,
+                      fontSize: 'clamp(40px, 6vw, 72px)',
+                      fontWeight: theme.fontWeights.bold,
+                      letterSpacing: '-0.02em',
+                      lineHeight: 1.05,
+                      marginBottom: 12,
                     }}
                   >
-                    <Footprints size={56} color={theme.colors.primary} />
-                    <div
-                      style={{
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[2],
-                        fontWeight: theme.fontWeights.semibold,
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                      }}
-                    >
-                      Recent Trails
-                    </div>
+                    Recent <span style={{ color: theme.colors.primary }}>Trails</span>
                   </div>
-                </>
-              ) : (
-                TRAIL_PROMPT_IDEAS.map((idea, i) => {
-                  const isCopied = copiedPromptIndex === i;
-                  return (
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: 24,
+                    justifyContent: 'center',
+                  }}
+                >
+                  {repoCardEntries.map((entry) => {
+                    const trailAccent = purposeAccent(entry.trail.purpose, theme);
+                    const TrailIcon = purposeIcon(entry.trail.purpose);
+                    return (
                     <div
-                      key={idea.label}
-                      className="trail-idea-card"
+                      key={entry.repo.path}
                       role="button"
                       tabIndex={0}
-                      onClick={() => void handleCopyPrompt(idea.prompt, i)}
+                      className="trail-idea-card"
+                      title={`Open the most recent trail in ${entry.repo.label}`}
+                      onClick={() => openTrailFromRepoCard(entry)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
-                          void handleCopyPrompt(idea.prompt, i);
+                          openTrailFromRepoCard(entry);
                         }
                       }}
                       style={{
@@ -2239,81 +2380,122 @@ const TrailsViewInner: React.FC<{
                         flex: '0 1 300px',
                         width: '100%',
                         maxWidth: 300,
-                        aspectRatio: '4 / 3',
-                        padding: '20px 22px',
+                        padding: '24px 26px',
                         borderRadius: 10,
                         border: `1px solid ${theme.colors.border}`,
                         backgroundColor: theme.colors.backgroundSecondary,
                         display: 'flex',
                         flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center',
                         gap: 12,
                         cursor: 'pointer',
                       }}
                     >
-                      <idea.Icon size={32} color={theme.colors.primary} />
                       <div
                         style={{
-                          fontFamily: theme.fonts.body,
-                          fontSize: theme.fontSizes[0],
-                          fontWeight: theme.fontWeights.semibold,
-                          color: theme.colors.textSecondary,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
-                        }}
-                      >
-                        {idea.label}
-                      </div>
-                      <div
-                        style={{
-                          fontFamily: theme.fonts.monospace,
-                          fontSize: theme.fontSizes[1],
-                          color: theme.colors.text,
-                          lineHeight: 1.5,
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        {idea.prompt}
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleCopyPrompt(idea.prompt, i);
-                        }}
-                        title={isCopied ? 'Copied' : 'Copy prompt'}
-                        className={
-                          isCopied
-                            ? 'trail-idea-copy is-copied'
-                            : 'trail-idea-copy'
-                        }
-                        style={{
-                          position: 'absolute',
-                          top: 10,
-                          right: 10,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 32,
-                          height: 32,
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: 6,
-                          background: theme.colors.background,
-                          color: isCopied
-                            ? theme.colors.primary
-                            : theme.colors.textSecondary,
-                          cursor: 'pointer',
+                          gap: 12,
                         }}
                       >
-                        {isCopied ? <Check size={14} /> : <Copy size={14} />}
-                      </button>
+                        {entry.repo.ownerLogin ? (
+                          <img
+                            src={`https://github.com/${entry.repo.ownerLogin}.png?size=96`}
+                            alt={entry.repo.ownerLogin}
+                            width={44}
+                            height={44}
+                            style={{
+                              borderRadius: '50%',
+                              flex: '0 0 auto',
+                              border: `1px solid ${theme.colors.border}`,
+                            }}
+                          />
+                        ) : (
+                          <FolderGit2 size={36} color={theme.colors.primary} />
+                        )}
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 2,
+                            minWidth: 0,
+                          }}
+                        >
+                          <div
+                            style={{
+                              color: theme.colors.text,
+                              fontFamily: theme.fonts.body,
+                              fontSize: theme.fontSizes[2],
+                              fontWeight: theme.fontWeights.semibold,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {entry.repo.label}
+                          </div>
+                          {entry.repo.ownerLogin && (
+                            <div
+                              style={{
+                                fontFamily: theme.fonts.monospace,
+                                fontSize: theme.fontSizes[0],
+                                color: theme.colors.textTertiary,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {entry.repo.ownerLogin}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          paddingTop: 12,
+                          borderTop: `1px solid ${theme.colors.border}`,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            color: theme.colors.textTertiary,
+                            fontFamily: theme.fonts.body,
+                            fontSize: theme.fontSizes[0],
+                          }}
+                        >
+                          <TrailIcon size={14} color={trailAccent} />
+                          <span>
+                            {entry.trail.markerCount} markers ·{' '}
+                            {entry.trail.fileCount ?? 0} files ·{' '}
+                            {formatRelativeTime(entry.trail.updatedAt)}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            color: trailAccent,
+                            fontFamily: theme.fonts.body,
+                            fontSize: theme.fontSizes[1],
+                            lineHeight: 1.35,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {entry.trail.title || 'Untitled trail'}
+                        </div>
+                      </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -2888,213 +3070,6 @@ const TrailsViewInner: React.FC<{
               >
                 {removeBusy ? 'Removing…' : 'Remove'}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Create-a-trail modal — surfaces the prompt-idea options. */}
-      {createTrailModalOpen && (
-        <div
-          onClick={closeCreateTrailModal}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 30,
-            background: 'rgba(0,0,0,0.55)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24,
-            animation: createTrailModalClosing
-              ? 'ct-modal-backdrop-out 180ms ease-in forwards'
-              : 'ct-modal-backdrop 160ms ease-out',
-          }}
-        >
-          <style>{`
-            @keyframes ct-modal-backdrop {
-              from { opacity: 0; }
-              to { opacity: 1; }
-            }
-            @keyframes ct-modal-backdrop-out {
-              from { opacity: 1; }
-              to { opacity: 0; }
-            }
-            @keyframes ct-modal-pop {
-              from { opacity: 0; transform: scale(0.96) translateY(8px); }
-              to { opacity: 1; transform: scale(1) translateY(0); }
-            }
-            @keyframes ct-modal-pop-out {
-              from { opacity: 1; transform: scale(1) translateY(0); }
-              to { opacity: 0; transform: scale(0.96) translateY(8px); }
-            }
-          `}</style>
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: 'min(720px, 100%)',
-              maxHeight: '80vh',
-              display: 'flex',
-              flexDirection: 'column',
-              borderRadius: 12,
-              border: `1px solid ${theme.colors.border}`,
-              background: theme.colors.background,
-              overflow: 'hidden',
-              animation: createTrailModalClosing
-                ? 'ct-modal-pop-out 180ms ease-in forwards'
-                : 'ct-modal-pop 220ms cubic-bezier(0.16, 1, 0.3, 1)',
-              transformOrigin: 'center',
-            }}
-          >
-            <div
-              style={{
-                padding: '16px 20px',
-                borderBottom: `1px solid ${theme.colors.border}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  color: theme.colors.text,
-                  fontFamily: theme.fonts.heading ?? theme.fonts.body,
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights.semibold,
-                }}
-              >
-                <Copy size={18} color={theme.colors.primary} />
-                Copy Prompt and Give To Agent
-              </div>
-              <button
-                type="button"
-                onClick={closeCreateTrailModal}
-                title="Close"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  padding: 4,
-                  display: 'flex',
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div
-              style={{
-                padding: 20,
-                display: 'flex',
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                gap: 16,
-                justifyContent: 'center',
-                overflowY: 'auto',
-              }}
-            >
-              {TRAIL_PROMPT_IDEAS.map((idea, i) => {
-                const isCopied = copiedPromptIndex === i;
-                return (
-                  <div
-                    key={idea.label}
-                    className="trail-idea-card"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      void handleCopyPrompt(idea.prompt, i);
-                      window.setTimeout(closeCreateTrailModal, 800);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        void handleCopyPrompt(idea.prompt, i);
-                        window.setTimeout(closeCreateTrailModal, 800);
-                      }
-                    }}
-                    style={{
-                      position: 'relative',
-                      flex: '0 1 300px',
-                      width: '100%',
-                      maxWidth: 300,
-                      aspectRatio: '4 / 3',
-                      padding: '20px 22px',
-                      borderRadius: 10,
-                      border: `1px solid ${theme.colors.border}`,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      gap: 12,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <idea.Icon size={32} color={theme.colors.primary} />
-                    <div
-                      style={{
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[0],
-                        fontWeight: theme.fontWeights.semibold,
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                      }}
-                    >
-                      {idea.label}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: theme.fonts.monospace,
-                        fontSize: theme.fontSizes[1],
-                        color: theme.colors.text,
-                        lineHeight: 1.5,
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {idea.prompt}
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleCopyPrompt(idea.prompt, i);
-                        window.setTimeout(closeCreateTrailModal, 800);
-                      }}
-                      title={isCopied ? 'Copied' : 'Copy prompt'}
-                      className={
-                        isCopied
-                          ? 'trail-idea-copy is-copied'
-                          : 'trail-idea-copy'
-                      }
-                      style={{
-                        position: 'absolute',
-                        top: 10,
-                        right: 10,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 32,
-                        height: 32,
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: 6,
-                        background: theme.colors.background,
-                        color: isCopied
-                          ? theme.colors.primary
-                          : theme.colors.textSecondary,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {isCopied ? <Check size={14} /> : <Copy size={14} />}
-                    </button>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </div>

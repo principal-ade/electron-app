@@ -5,6 +5,25 @@ if (typeof window !== 'undefined') {
   // Mock window.electron
   if (!window.electron) {
     (window as any).electron = {
+      // TIPC clients (alexandriaClient, terminalClient, githubClient, …) all
+      // go through window.electron.ipcRenderer.invoke. In Storybook there's
+      // no preload, so resolve every channel to undefined and treat `on`
+      // subscriptions as no-ops returning an unsubscribe function.
+      ipcRenderer: {
+        invoke: (..._args: unknown[]) => Promise.resolve(undefined),
+        on: (..._args: unknown[]) => () => {},
+        off: (..._args: unknown[]) => {},
+        send: (..._args: unknown[]) => {},
+        removeListener: (..._args: unknown[]) => {},
+        removeAllListeners: (..._args: unknown[]) => {},
+      },
+      // Terminal helpers consumed directly off window.electron by
+      // terminalClient — keep them as no-op subscriptions/Promises.
+      onTerminalData: () => () => {},
+      onOwnershipLost: () => () => {},
+      onPortReady: () => () => {},
+      writeToTerminalPort: () => Promise.resolve(),
+      hasTerminalPort: () => Promise.resolve(false),
       repositoryMonitoring: {
         onGitStatusChanged: () => ({ unsubscribe: () => {} }),
         onFileSystemChanged: () => ({ unsubscribe: () => {} }),
@@ -116,6 +135,105 @@ console.log(example);
         addRepository: (repo: any) => Promise.resolve({ success: true }),
         removeRepository: (repoPath: string) => Promise.resolve({ success: true }),
         updateRepository: (repo: any) => Promise.resolve({ success: true }),
+        // AlexandriaService.getRepositories() goes through tipc, so it lands
+        // on ipcRenderer.invoke above and doesn't need an entry here. Listed
+        // for completeness in case anything calls it directly.
+        getRepositories: () => Promise.resolve([]),
+        registerRepository: (_repoPath: string) =>
+          Promise.resolve({ path: _repoPath, name: 'mock' }),
+        getRepositoryByPath: (_repoPath: string) => Promise.resolve(null),
+      },
+      // TrailsView reads the saved-trail library through this surface
+      // (TrailLibraryService). Empty list / null payload by default; stories
+      // monkey-patch TrailLibraryService directly for fixture data.
+      fileCityTrail: {
+        list: (_repoPath?: string) => Promise.resolve({ entries: [] }),
+        load: (_id: string) => Promise.resolve(null),
+        activate: (_id: string) => Promise.resolve(null),
+        delete: (_id: string) =>
+          Promise.resolve({ found: false, repositoryPath: undefined }),
+        onLibraryChanged: (_cb: any) => () => {},
+      },
+      // OpenCode convert spike. TrailsView subscribes to onProgress on mount
+      // (unconditionally), so this must return a real unsubscribe.
+      openCodeConvert: {
+        onProgress: (_cb: any) => () => {},
+        detect: () =>
+          Promise.resolve({ installed: false, authed: false }),
+        runPrompt: (_input: any) =>
+          Promise.resolve({ ok: false, durationMs: 0 }),
+        convertTrail: (_id: string) =>
+          Promise.resolve({ ok: false, durationMs: 0 }),
+      },
+      // Skill lock surface — TrailsView reads the lock file to gate the
+      // install screen vs the post-install landing.
+      skillLock: {
+        getSkillLock: () => Promise.resolve(null),
+        onSkillInstalled: (_cb: any) => () => {},
+        onSkillUninstalled: (_cb: any) => () => {},
+        onSkillUpdated: (_cb: any) => () => {},
+      },
+      // Github + git + shell — only invoked from user-driven actions
+      // (Install Skills, Add Project, prompt-idea card). Provide enough so
+      // the buttons don't blow up if a story driver clicks them.
+      github: {
+        getTree: () =>
+          Promise.resolve({ success: false, data: null, error: 'storybook' }),
+        installSkill: () =>
+          Promise.resolve({ success: false, error: 'storybook' }),
+      },
+      git: {
+        execCommand: () => Promise.resolve({ stdout: '', stderr: '', code: 0 }),
+        scanFolderForRepos: () => Promise.resolve([]),
+      },
+      fileSystem: {
+        // FileSystemService.selectDirectory call — return a cancelled pick so
+        // the Add Project handler short-circuits.
+        selectDirectory: () =>
+          Promise.resolve({ canceled: true, filePaths: [] }),
+        readFile: (path: string) =>
+          Promise.resolve({ content: `Mock content for ${path}` }),
+        writeFile: () => Promise.resolve({ success: true }),
+        readDirectory: () => Promise.resolve([]),
+        getFileStats: () =>
+          Promise.resolve({
+            isFile: true,
+            isDirectory: false,
+            size: 0,
+            modified: new Date().toISOString(),
+          }),
+        deleteFile: () => Promise.resolve({ success: true }),
+        watchFile: () => Promise.resolve({ unsubscribe: () => {} }),
+        onFileChange: () => ({ unsubscribe: () => {} }),
+      },
+      // ShellService.openExternal — quietly succeed in storybook.
+      shell: {
+        openExternal: () => Promise.resolve({ success: true }),
+      },
+      // Catch-all stub for the terminal IPC namespace TerminalService talks to.
+      // Returns shapes minimal enough that TerminalProvider's effects can
+      // run their early-returns without throwing.
+      terminal: {
+        list: () => Promise.resolve([]),
+        onExit: () => () => {},
+        onDataForSession: () => () => {},
+        write: () => {},
+        resize: () => {},
+        destroy: () => Promise.resolve(),
+        createWithCommand: () => Promise.resolve('mock-session'),
+        getOrCreate: () => Promise.resolve('mock-session'),
+        checkOwnership: () => Promise.resolve({ owned: false }),
+        claimOwnership: () => Promise.resolve({ success: false }),
+        releaseOwnership: () => Promise.resolve(),
+        onOwnershipLost: () => () => {},
+        refresh: () => Promise.resolve(),
+        requestDataPort: () => Promise.resolve(),
+        onPortReady: () => () => {},
+      },
+      // WindowService.openDevWorkspace — invoked when the user starts a trail
+      // from the brief. No-op in storybook.
+      window: {
+        openDevWorkspace: () => Promise.resolve({ success: true }),
       },
       markdown: {
         getMarkdownFiles: (repoPath: string) => Promise.resolve([]),
