@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.676",
+  "version": "0.0.677",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -174,7 +174,7 @@
     "@industry-theme/alexandria-docs-panel": "^0.5.3",
     "@industry-theme/alexandria-panels": "^0.3.4",
     "@industry-theme/backlogmd-kanban-panel": "^1.2.16",
-    "@industry-theme/file-city-panel": "^0.5.104",
+    "@industry-theme/file-city-panel": "^0.5.105",
     "@industry-theme/file-editing-panels": "^0.4.2",
     "@industry-theme/ghostty-terminal-panel": "^0.1.18",
     "@industry-theme/git-sync-panels": "^0.3.0",
@@ -226,7 +226,7 @@
     "@principal-ai/principal-view-react": "^0.15.9",
     "@principal-ai/repository-abstraction": "^0.5.7",
     "@principal-ai/repository-monitoring": "^0.1.10",
-    "@principal-ai/repository-monitoring-server": "^2.2.10",
+    "@principal-ai/repository-monitoring-server": "^2.2.11",
     "@radix-ui/react-tabs": "^1.1.13",
     "@react-spring/three": "^9.7.5",
     "@react-three/drei": "^10.0.0",
