@@ -19,6 +19,7 @@ import {
   BookOpen,
   Compass,
   Share2,
+  ArrowRight,
 } from 'lucide-react';
 import type {
   ConvertProgressEntry,
@@ -186,11 +187,20 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 const DEFAULT_BRIEF_LAYOUT_STATE: TrailBriefLayoutState = {
   layout: 'diagram',
   hideMap: false,
+  splitPct: 50,
+  drawerHeightPct: 30,
 };
 
 /** Light validator: coerce an unknown prefs payload back to the panel's shape. */
 const coerceBriefLayoutState = (
-  raw: { layout?: unknown; hideMap?: unknown } | undefined,
+  raw:
+    | {
+        layout?: unknown;
+        hideMap?: unknown;
+        splitPct?: unknown;
+        drawerHeightPct?: unknown;
+      }
+    | undefined,
 ): TrailBriefLayoutState => {
   if (!raw) return DEFAULT_BRIEF_LAYOUT_STATE;
   const layout =
@@ -201,7 +211,16 @@ const coerceBriefLayoutState = (
     typeof raw.hideMap === 'boolean'
       ? raw.hideMap
       : DEFAULT_BRIEF_LAYOUT_STATE.hideMap;
-  return { layout, hideMap };
+  const splitPct =
+    typeof raw.splitPct === 'number' && Number.isFinite(raw.splitPct)
+      ? raw.splitPct
+      : DEFAULT_BRIEF_LAYOUT_STATE.splitPct;
+  const drawerHeightPct =
+    typeof raw.drawerHeightPct === 'number' &&
+    Number.isFinite(raw.drawerHeightPct)
+      ? raw.drawerHeightPct
+      : DEFAULT_BRIEF_LAYOUT_STATE.drawerHeightPct;
+  return { layout, hideMap, splitPct, drawerHeightPct };
 };
 
 /** Last path segment of a repo path, used for the recent-trails feed. */
@@ -2577,6 +2596,43 @@ const TrailsViewInner: React.FC<{
                     );
                   })}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('recent')}
+                  className="trails-view-all-btn"
+                  style={{
+                    alignSelf: 'center',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '14px 28px',
+                    background: 'transparent',
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: 10,
+                    color: theme.colors.primary,
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[3],
+                    fontWeight: theme.fontWeights.semibold,
+                    cursor: 'pointer',
+                    transition:
+                      'background-color 120ms ease, border-color 120ms ease, transform 120ms ease',
+                  }}
+                >
+                  View all
+                  <ArrowRight size={18} className="trails-view-all-arrow" />
+                </button>
+                <style>{`
+                  .trails-view-all-btn:hover {
+                    background-color: ${theme.colors.backgroundSecondary};
+                    border-color: ${theme.colors.primary};
+                  }
+                  .trails-view-all-btn:hover .trails-view-all-arrow {
+                    transform: translateX(3px);
+                  }
+                  .trails-view-all-arrow {
+                    transition: transform 120ms ease;
+                  }
+                `}</style>
               </div>
             )}
           </div>
