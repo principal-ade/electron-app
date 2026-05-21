@@ -265,8 +265,14 @@ const RepositoryProfileTabContent: React.FC<{
   const [repositoryData, setRepositoryData] = React.useState<RepositoryProfileData | undefined>(undefined);
   const [loading, setLoading] = React.useState(true);
   const [refreshTrigger, setRefreshTrigger] = React.useState(0);
+  // Tracks the AlexandriaEntry we should render from. Seeded by the prop, but
+  // upgraded in-place when an ADDED/UPDATED event arrives for this purl — so
+  // a clone started from a not-yet-local profile can flip `isLocal` true
+  // without the parent re-mounting us with a new prop.
+  const [resolvedEntry, setResolvedEntry] = React.useState<AlexandriaEntry | undefined>(localEntry);
+  React.useEffect(() => { setResolvedEntry(localEntry); }, [localEntry]);
 
-  const heatMapData = useCommitHeatMap(localEntry?.path ?? null);
+  const heatMapData = useCommitHeatMap(resolvedEntry?.path ?? null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -276,10 +282,10 @@ const RepositoryProfileTabContent: React.FC<{
 
       try {
         // Re-fetch on refresh to pick up updated localClones (e.g. after cloning).
-        let entry: AlexandriaEntry | undefined = localEntry;
+        let entry: AlexandriaEntry | undefined = resolvedEntry;
         let gh: GithubRepository | undefined = github;
-        if (refreshTrigger > 0 && localEntry) {
-          const freshEntry = await AlexandriaService.getRepositoryByPath(localEntry.path);
+        if (refreshTrigger > 0 && resolvedEntry?.path) {
+          const freshEntry = await AlexandriaService.getRepositoryByPath(resolvedEntry.path);
           if (freshEntry) {
             entry = freshEntry;
             gh = freshEntry.github ?? gh;
@@ -425,7 +431,7 @@ const RepositoryProfileTabContent: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [heatMapData.commits, purl, github, localEntry, refreshTrigger]);
+  }, [heatMapData.commits, purl, github, resolvedEntry, refreshTrigger]);
 
   // Subscribe to Alexandria repository changes to update profile in real-time
   React.useEffect(() => {
@@ -445,6 +451,7 @@ const RepositoryProfileTabContent: React.FC<{
 
       if (eventPurl === purl) {
         console.info('[RepositoryProfileTab] Repository updated, refreshing profile data:', eventEntry.name);
+        setResolvedEntry(eventEntry);
         setRefreshTrigger(prev => prev + 1);
       }
     });
@@ -466,8 +473,8 @@ const RepositoryProfileTabContent: React.FC<{
   // Synchronous placeholder so projectContext.repository is never undefined
   // before the async fetch in the effect above completes.
   const placeholderProfileData = React.useMemo<RepositoryProfileData>(() => ({
-    name: localEntry?.name ?? github?.name ?? purl,
-    fullName: github ? `${github.owner}/${github.name}` : (localEntry?.name ?? purl),
+    name: resolvedEntry?.name ?? github?.name ?? purl,
+    fullName: github ? `${github.owner}/${github.name}` : (resolvedEntry?.name ?? purl),
     owner: github?.owner ?? 'local',
     ownerAvatarUrl: github?.owner ? `https://github.com/${github.owner}.png` : undefined,
     description: github?.description || undefined,
@@ -479,13 +486,13 @@ const RepositoryProfileTabContent: React.FC<{
     activityData: new Map(),
     totalCommits: 0,
     defaultBranch: github?.defaultBranch || 'main',
-    createdAt: localEntry?.registeredAt || new Date().toISOString(),
-    updatedAt: localEntry?.lastOpenedAt || new Date().toISOString(),
+    createdAt: resolvedEntry?.registeredAt || new Date().toISOString(),
+    updatedAt: resolvedEntry?.lastOpenedAt || new Date().toISOString(),
     htmlUrl: github ? `https://github.com/${github.owner}/${github.name}` : undefined,
-    isLocal: !!localEntry?.path,
-    localClones: extractLocalClones(localEntry),
+    isLocal: !!resolvedEntry?.path,
+    localClones: extractLocalClones(resolvedEntry),
     github,
-  }), [purl, github, localEntry]);
+  }), [purl, github, resolvedEntry]);
 
   const projectContext = React.useMemo(() => ({
     currentScope: {
