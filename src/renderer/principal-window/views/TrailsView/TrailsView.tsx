@@ -65,7 +65,12 @@ import { UserPreferencesService } from '../../../main-process-api/UserPreference
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import { formatRelativeTime } from './TrailCard';
+import {
+  TrailsDashboard,
+  type TrailsDashboardRepoEntry,
+} from './TrailsDashboard';
 import { TrailsRecentList } from './TrailsRecentList';
+import { useAuth } from '../../../hooks/useAuthState';
 import {
   TrailsRecentHeaders,
   type TrailHeaderRow,
@@ -1170,6 +1175,47 @@ const TrailsViewInner: React.FC<{
     }
     return Array.from(byRepo.values());
   }, [recentTrails, repositories]);
+
+  // Once the user has a meaningful library of trails, swap the prompt-idea
+  // landing for a denser repo+topics dashboard. Threshold is conservative —
+  // brand-new users still see the cards that explain how to create a trail.
+  const DASHBOARD_TRAIL_THRESHOLD = 3;
+  const showDashboard = recentTrails.length > DASHBOARD_TRAIL_THRESHOLD;
+
+  // Per-repo rollup for the dashboard. Mirrors `repoCardEntries` but
+  // aggregates the total trail count per repo and doesn't truncate at
+  // `REPO_CARD_LIMIT` — the dashboard does its own clipping.
+  const dashboardRepoEntries = useMemo<TrailsDashboardRepoEntry[]>(() => {
+    const byRepo = new Map<
+      string,
+      { entry: TrailsDashboardRepoEntry; count: number }
+    >();
+    for (const trail of recentTrails) {
+      if (!trail.repositoryPath) continue;
+      const existing = byRepo.get(trail.repositoryPath);
+      if (existing) {
+        existing.count += 1;
+        continue;
+      }
+      const repo = repositories.find((r) => r.path === trail.repositoryPath);
+      byRepo.set(trail.repositoryPath, {
+        count: 1,
+        entry: {
+          key: trail.repositoryPath,
+          label: trailRepoLabel(trail.repositoryPath),
+          ownerLogin: repo?.github?.owner,
+          trailCount: 1,
+          latestTrail: trail,
+        },
+      });
+    }
+    return Array.from(byRepo.values()).map(({ entry, count }) => ({
+      ...entry,
+      trailCount: count,
+    }));
+  }, [recentTrails, repositories]);
+
+  const { isAuthenticated } = useAuth();
 
   // Click handler for the landing repo cards. Pre-selects the repo's
   // project filter and the specific trail before flipping into Recent,
@@ -2286,6 +2332,22 @@ const TrailsViewInner: React.FC<{
               overflowY: 'auto',
             }}
           >
+            {showDashboard ? (
+              <TrailsDashboard
+                repoEntries={dashboardRepoEntries}
+                topicEntries={[]}
+                onSelectRepo={(entry) => {
+                  setSelectedProjectPath(entry.key);
+                  setViewMode('recent');
+                }}
+                onSelectTopic={() => {
+                  /* topics not yet wired on the desktop */
+                }}
+                onViewAllTrails={() => setViewMode('recent')}
+                isSignedIn={isAuthenticated}
+              />
+            ) : (
+            <>
             <div style={{ flex: '0 0 auto', marginTop: '9vh' }}>
               {createTrailHeader}
             </div>
@@ -2634,6 +2696,8 @@ const TrailsViewInner: React.FC<{
                   }
                 `}</style>
               </div>
+            )}
+            </>
             )}
           </div>
         )}
