@@ -48,6 +48,12 @@ export interface WindowMetadata {
   localPath?: string;
   // For workspaces
   workspaceId?: string;
+  /**
+   * Topics this window hosts (workspace windows). Mirrored from the
+   * backing `Workspace.topicIds` at open time so trail routes can target
+   * windows by topic without re-resolving the workspace each time.
+   */
+  topicIds?: string[];
   // Original purpose string for backward compatibility
   purpose?: string;
   // Full AlexandriaEntry for rich display in window switcher

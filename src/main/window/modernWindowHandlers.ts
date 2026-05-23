@@ -100,6 +100,7 @@ export function registerModernWindowHandlers(): void {
       // Determine window name and display name
       let windowName: string;
       let workspaceName: string;
+      let topicIds: string[] | undefined;
 
       if (workspaceId) {
         // Standard workspace mode
@@ -115,6 +116,9 @@ export function registerModernWindowHandlers(): void {
           const workspace = await service.getWorkspace(workspaceId);
           if (workspace?.name) {
             workspaceName = workspace.name;
+          }
+          if (workspace?.topicIds && workspace.topicIds.length > 0) {
+            topicIds = [...workspace.topicIds];
           }
         } catch (error) {
           console.error(
@@ -164,6 +168,7 @@ export function registerModernWindowHandlers(): void {
         primaryType: PrimaryWindowType.WORKSPACE,
         displayName: workspaceName,
         workspaceId: workspaceId || undefined,
+        topicIds,
         purpose: windowName,
         // Thread-specific metadata
         isThread,

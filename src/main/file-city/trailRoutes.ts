@@ -21,6 +21,7 @@ import {
   TrailStore,
   sendToPrincipalWindow,
   sendToRepoWindows,
+  sendToTopicWindows,
 } from './trailStore';
 import type { TrailShowInPrincipalEnvelope } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { fetchSharedTrail } from './trailShare';
@@ -29,6 +30,7 @@ import {
   TrailShareError,
 } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { TopicRegistryService } from '../stores/TopicRegistryService';
 import { openDevWorkspaceWindow } from '../window/devWorkspaceWindowHandlers';
 import {
   applicationWindows,
@@ -98,6 +100,26 @@ async function ensureDevWorkspaceWindow(
   return principal ? 'routed-to-principal' : 'none';
 }
 
+/**
+ * Bring all open windows hosting `topicId` to the front. Topic windows
+ * stamp `metadata.topicIds` from the backing `Workspace.topicIds` at open
+ * time. Cold case (no warm window) returns 'none' so the caller can fall
+ * back to repo/principal routing.
+ */
+async function ensureTopicWindow(topicId: string): Promise<WindowOpened> {
+  let focused = false;
+  for (const appWindow of applicationWindows.values()) {
+    if (!appWindow.metadata?.topicIds?.includes(topicId)) continue;
+    if (appWindow.window.isDestroyed()) continue;
+    if (appWindow.window.isMinimized()) appWindow.window.restore();
+    appWindow.window.show();
+    appWindow.window.focus();
+    appWindow.window.moveTop();
+    focused = true;
+  }
+  return focused ? 'focused' : 'none';
+}
+
 interface ValidationFailure {
   ok: false;
   error: string;
@@ -106,6 +128,7 @@ interface ValidationSuccess {
   ok: true;
   payload: TrailPayload;
   repositoryPath?: string;
+  topicId?: string;
 }
 
 const isPosInt = (v: unknown): v is number =>
@@ -327,8 +350,12 @@ function validatePayload(body: unknown): ValidationFailure | ValidationSuccess {
 
   const repositoryPath =
     typeof b.repositoryPath === 'string' ? b.repositoryPath : undefined;
+  const topicId =
+    typeof b.topicId === 'string' && b.topicId.length > 0
+      ? b.topicId
+      : undefined;
 
-  return { ok: true, payload, repositoryPath };
+  return { ok: true, payload, repositoryPath, topicId };
 }
 
 export function registerTrailRoutes(
@@ -345,8 +372,29 @@ export function registerTrailRoutes(
       const { payload, evictedIds } = await store.set(result.payload, {
         repositoryPath: result.repositoryPath,
       });
+      // Persist the topic association first so listeners on the upcoming
+      // PAYLOAD_SET/LIBRARY_CHANGED broadcasts see a consistent state.
+      if (result.topicId) {
+        try {
+          await TopicRegistryService.getInstance().addTrailToTopic(
+            result.topicId,
+            payload.id,
+          );
+        } catch (err) {
+          console.error('[trailRoutes] addTrailToTopic failed', err);
+        }
+      }
+      // Topic routing wins when a warm topic window is available; only
+      // fall back to the repo/principal path if no topic window is open.
       let windowOpened: WindowOpened = 'none';
-      if (result.repositoryPath) {
+      if (result.topicId) {
+        try {
+          windowOpened = await ensureTopicWindow(result.topicId);
+        } catch (err) {
+          console.error('[trailRoutes] ensure topic window failed', err);
+        }
+      }
+      if (windowOpened === 'none' && result.repositoryPath) {
         try {
           windowOpened = await ensureDevWorkspaceWindow(
             result.repositoryPath,
@@ -356,15 +404,26 @@ export function registerTrailRoutes(
           console.error('[trailRoutes] ensure window failed', err);
         }
       }
-      const broadcastTo = sendToRepoWindows(
-        FileCityTrailEvent.PAYLOAD_SET,
-        { payload, repositoryPath: result.repositoryPath },
-        result.repositoryPath,
-      );
+      const broadcastTo =
+        sendToRepoWindows(
+          FileCityTrailEvent.PAYLOAD_SET,
+          { payload, repositoryPath: result.repositoryPath },
+          result.repositoryPath,
+        ) +
+        sendToTopicWindows(
+          FileCityTrailEvent.PAYLOAD_SET,
+          { payload, repositoryPath: result.repositoryPath },
+          result.topicId,
+        );
       sendToRepoWindows(
         FileCityTrailEvent.LIBRARY_CHANGED,
         { repositoryPath: result.repositoryPath },
         result.repositoryPath,
+      );
+      sendToTopicWindows(
+        FileCityTrailEvent.LIBRARY_CHANGED,
+        { repositoryPath: result.repositoryPath },
+        result.topicId,
       );
       sendToPrincipalWindow(FileCityTrailEvent.LIBRARY_CHANGED, {
         repositoryPath: result.repositoryPath,
@@ -466,13 +525,40 @@ export function registerTrailRoutes(
         typeof body.repositoryPath === 'string'
           ? body.repositoryPath
           : validation.repositoryPath;
+      const topicId =
+        typeof body.topicId === 'string' && body.topicId.length > 0
+          ? body.topicId
+          : validation.topicId;
       try {
         const { payload, evictedIds } = await store.set(informativePayload, {
           repositoryPath,
           derivedFrom: sourceId,
         });
+        if (topicId) {
+          try {
+            await TopicRegistryService.getInstance().addTrailToTopic(
+              topicId,
+              payload.id,
+            );
+          } catch (err) {
+            console.error(
+              '[trailRoutes] addTrailToTopic failed (fork)',
+              err,
+            );
+          }
+        }
         let windowOpened: WindowOpened = 'none';
-        if (repositoryPath) {
+        if (topicId) {
+          try {
+            windowOpened = await ensureTopicWindow(topicId);
+          } catch (err) {
+            console.error(
+              '[trailRoutes] ensure topic window failed (fork)',
+              err,
+            );
+          }
+        }
+        if (windowOpened === 'none' && repositoryPath) {
           try {
             windowOpened = await ensureDevWorkspaceWindow(
               repositoryPath,
@@ -485,15 +571,26 @@ export function registerTrailRoutes(
             );
           }
         }
-        const broadcastTo = sendToRepoWindows(
-          FileCityTrailEvent.PAYLOAD_SET,
-          { payload, repositoryPath },
-          repositoryPath,
-        );
+        const broadcastTo =
+          sendToRepoWindows(
+            FileCityTrailEvent.PAYLOAD_SET,
+            { payload, repositoryPath },
+            repositoryPath,
+          ) +
+          sendToTopicWindows(
+            FileCityTrailEvent.PAYLOAD_SET,
+            { payload, repositoryPath },
+            topicId,
+          );
         sendToRepoWindows(
           FileCityTrailEvent.LIBRARY_CHANGED,
           { repositoryPath },
           repositoryPath,
+        );
+        sendToTopicWindows(
+          FileCityTrailEvent.LIBRARY_CHANGED,
+          { repositoryPath },
+          topicId,
         );
         sendToPrincipalWindow(FileCityTrailEvent.LIBRARY_CHANGED, {
           repositoryPath,

@@ -251,6 +251,29 @@ export function sendToRepoWindows(
 }
 
 /**
+ * Push an IPC event to renderer windows hosting a specific topic.
+ * Workspace windows stamp `metadata.topicIds` at open time from the
+ * backing `Workspace.topicIds`; this helper fans out to any window whose
+ * metadata lists `topicId`. Returns the number of windows the event was
+ * delivered to. Sends nothing (and returns 0) for an undefined topicId.
+ */
+export function sendToTopicWindows(
+  eventName: FileCityTrailEvent,
+  payload: unknown,
+  topicId: string | undefined,
+): number {
+  if (!topicId) return 0;
+  let delivered = 0;
+  for (const appWindow of applicationWindows.values()) {
+    if (!appWindow.metadata?.topicIds?.includes(topicId)) continue;
+    if (appWindow.window.isDestroyed()) continue;
+    appWindow.window.webContents.send(eventName, payload);
+    delivered += 1;
+  }
+  return delivered;
+}
+
+/**
  * Push an IPC event to the principal window. The principal window doesn't
  * carry a repo `localPath`, so `sendToRepoWindows` skips it — but it hosts
  * the cross-repo `TrailsView` Recents listener and needs `LIBRARY_CHANGED`
