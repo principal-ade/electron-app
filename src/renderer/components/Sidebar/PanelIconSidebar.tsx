@@ -163,14 +163,12 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
         return (
           <button
             key={id}
-            onClick={
-              onPanelOverlay
-                ? () => onPanelOverlay(id)
-                : () => handlePanelClick(id)
-            }
+            onClick={() => handlePanelClick(id)}
             onContextMenu={(e) => {
               e.preventDefault();
-              handlePanelClick(id);
+              if (onPanelOverlay) {
+                onPanelOverlay(id);
+              }
             }}
             title={label}
             aria-label={label}

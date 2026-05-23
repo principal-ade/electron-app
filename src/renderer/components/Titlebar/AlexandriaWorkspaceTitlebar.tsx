@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   PanelCollapseButton,
-  PanelSwitchButton,
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
@@ -38,14 +37,10 @@ export interface AlexandriaWorkspaceTitlebarProps {
   collapsed?: { left: boolean; right: boolean };
   onToggleLeftSidebar?: () => void;
   onToggleRightSidebar?: () => void;
-  onSwitchLeftMiddlePanels?: () => void;
-  onSwitchRightMiddlePanels?: () => void;
   onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
   // Layout controls
   layout?: PanelLayout;
   onLayoutChange?: (layout: PanelLayout) => void;
-  // Thread indicator
-  isEphemeralThread?: boolean;
 }
 
 export const AlexandriaWorkspaceTitlebar: React.FC<
@@ -59,12 +54,9 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   collapsed,
   onToggleLeftSidebar,
   onToggleRightSidebar,
-  onSwitchLeftMiddlePanels,
-  onSwitchRightMiddlePanels,
   onCollapsedChange,
   layout,
   onLayoutChange,
-  isEphemeralThread = false,
 }) => {
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -169,22 +161,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           />
         )}
 
-        {/* Left-Middle Switch Button */}
-        {onSwitchLeftMiddlePanels && (
-          <PanelSwitchButton
-            onSwitch={onSwitchLeftMiddlePanels}
-            variant="left-middle"
-            iconSize={16}
-            style={{
-              background: theme.colors.backgroundTertiary,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '6px',
-              padding: '6px 8px',
-              minHeight: '34px',
-              boxSizing: 'border-box',
-            }}
-          />
-        )}
       </div>
 
       {/* Center: Workspace name and selected repository */}
@@ -201,44 +177,17 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Workspace name with thread badge */}
-        <div
+        {/* Workspace name */}
+        <span
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
+            fontSize: `${theme.fontSizes[2]}px`,
+            fontWeight: theme.fontWeights.semibold,
+            color: theme.colors.text,
+            fontFamily: theme.fonts.body,
           }}
         >
-          <span
-            style={{
-              fontSize: `${theme.fontSizes[2]}px`,
-              fontWeight: theme.fontWeights.semibold,
-              color: theme.colors.text,
-              fontFamily: theme.fonts.body,
-            }}
-          >
-            {workspace.name}
-          </span>
-          {isEphemeralThread && (
-            <span
-              style={{
-                fontSize: `${theme.fontSizes[0]}px`,
-                fontWeight: theme.fontWeights.medium,
-                color: theme.colors.warning || '#f59e0b',
-                fontFamily: theme.fonts.body,
-                padding: '2px 8px',
-                backgroundColor: `${theme.colors.warning || '#f59e0b'}20`,
-                border: `1px solid ${theme.colors.warning || '#f59e0b'}40`,
-                borderRadius: '4px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}
-              title="Ephemeral thread - will be lost on close unless saved"
-            >
-              Thread
-            </span>
-          )}
-        </div>
+          {workspace.name}
+        </span>
 
         {/* Selected repository or description */}
         {selectedRepository ? (
@@ -456,23 +405,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             Add
           </button>
         </div>
-
-        {/* Right-Middle Switch Button */}
-        {onSwitchRightMiddlePanels && (
-          <PanelSwitchButton
-            onSwitch={onSwitchRightMiddlePanels}
-            variant="right-middle"
-            iconSize={16}
-            style={{
-              background: theme.colors.backgroundTertiary,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '6px',
-              padding: '6px 8px',
-              minHeight: '34px',
-              boxSizing: 'border-box',
-            }}
-          />
-        )}
 
         {/* Right Panel Selector */}
         {layout && onLayoutChange && typeof layout.right === 'string' && (

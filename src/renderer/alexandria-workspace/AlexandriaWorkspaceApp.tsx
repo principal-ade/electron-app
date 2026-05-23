@@ -10,7 +10,7 @@ import {
 const PANEL_IDS = [
   'workspace-repos',
   'terminal',
-  'file-city',
+  'markdown-viewer',
   'code-quality',
   'package-composition',
 ];
@@ -65,7 +65,9 @@ import type {
   AlexandriaEntry,
 } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
+import { TopicService } from '../main-process-api/TopicService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import type { Topic } from '@principal-ai/alexandria-core-library/types';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { AlexandriaWorkspaceTitlebar } from '../components/Titlebar';
 import { AlexandriaWorkspaceLayout, type PanelControlHandle } from './AlexandriaWorkspaceLayout';
@@ -75,7 +77,6 @@ import {
   AlexandriaWorkspaceEventProvider,
   useAlexandriaWorkspaceEvents,
 } from './AlexandriaWorkspaceEventContext';
-import { SaveThreadModal } from '../components/SaveThreadModal';
 
 /**
  * Alexandria Workspace Window Content
@@ -95,6 +96,12 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   const { theme } = useTheme();
   const { events } = useAlexandriaWorkspaceEvents();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  /**
+   * The first topic for the current workspace (v1 single-topic). When set,
+   * its title displaces `workspace.name` in the titlebar so live renames of
+   * the topic flow through without touching the workspace record.
+   */
+  const [topic, setTopic] = useState<Topic | null>(null);
   const [workspaceRepositories, setWorkspaceRepositories] = useState<
     AlexandriaEntry[]
   >([]);
@@ -106,15 +113,8 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'workspace-repos',
     middle: 'terminal',
-    right: 'file-city',
+    right: 'markdown-viewer',
   });
-  const [showSaveThreadModal, setShowSaveThreadModal] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-
-  // Check if this is an ephemeral thread (not a persistent workspace)
-  const isEphemeralThread =
-    workspace?.id.startsWith('temp-') || workspace?.id.startsWith('thread-');
-
   // Track the currently selected repository
   const [selectedRepository, setSelectedRepository] = useState<
     | {
@@ -131,23 +131,6 @@ const AlexandriaWorkspaceContent: React.FC = () => {
 
   // Ref for panel control handle
   const panelControlRef = useRef<PanelControlHandle | null>(null);
-
-  // Switch handlers for panel swapping
-  const handleSwitchLeftMiddle = useCallback(() => {
-    setLayout((prev) => ({
-      ...prev,
-      left: prev.middle,
-      middle: prev.left,
-    }));
-  }, []);
-
-  const handleSwitchRightMiddle = useCallback(() => {
-    setLayout((prev) => ({
-      ...prev,
-      right: prev.middle,
-      middle: prev.right,
-    }));
-  }, []);
 
   // Quick command handler for Agent Command Palette
   const handleQuickCommand = useCallback(
@@ -222,7 +205,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         setLayout({
           left: 'workspace-repos',
           middle: 'terminal',
-          right: 'file-city',
+          right: 'markdown-viewer',
         });
         setCollapsed({ left: false, right: false });
       }),
@@ -274,6 +257,22 @@ const AlexandriaWorkspaceContent: React.FC = () => {
             setError('Workspace not found');
           } else {
             setWorkspace(foundWorkspace);
+
+            // Load the workspace's first topic (v1 single-topic). The
+            // titlebar reads from `topic.title` when present so renames
+            // don't require touching `workspace.name`.
+            const firstTopicId = foundWorkspace.topicIds?.[0];
+            if (firstTopicId) {
+              try {
+                const loaded = await TopicService.getTopic(firstTopicId);
+                setTopic(loaded);
+              } catch (topicErr) {
+                console.error(
+                  '[AlexandriaWorkspaceApp] Failed to load topic:',
+                  topicErr,
+                );
+              }
+            }
 
             // Load workspace repositories
             try {
@@ -442,9 +441,23 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       },
     );
 
+    // Live-update the topic title when it changes from anywhere.
+    const unsubscribeTopic = TopicService.onTopicChange((event) => {
+      if (event.type === 'updated' && event.topic) {
+        setTopic((current) =>
+          current && current.id === event.topic!.id ? event.topic! : current,
+        );
+      } else if (event.type === 'removed' && event.id) {
+        setTopic((current) =>
+          current && current.id === event.id ? null : current,
+        );
+      }
+    });
+
     return () => {
       unsubscribeWorkspace();
       unsubscribeAlexandria();
+      unsubscribeTopic();
     };
   }, []);
 
@@ -551,72 +564,6 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     return () => unsubscribe();
   }, [workspaceRepositories]);
 
-  // Handle window close for ephemeral threads
-  useEffect(() => {
-    if (!isEphemeralThread || workspaceRepositories.length === 0) return;
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Only prevent close if we're not already in the process of closing/saving
-      if (!isClosing) {
-        e.preventDefault();
-        e.returnValue = ''; // Chrome requires returnValue to be set
-        setShowSaveThreadModal(true);
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isEphemeralThread, workspaceRepositories.length, isClosing]);
-
-  // Convert thread to persistent workspace
-  const handleSaveThread = useCallback(
-    async (workspaceName: string, description?: string) => {
-      try {
-        // Create new workspace
-        const newWorkspace = await WorkspaceService.createWorkspace({
-          name: workspaceName,
-          description,
-        });
-
-        // Add all repositories to the new workspace
-        for (const repo of workspaceRepositories) {
-          await WorkspaceService.addRepositoryToWorkspace(
-            repo,
-            newWorkspace.id,
-          );
-        }
-
-        console.info(
-          '[AlexandriaWorkspaceApp] Thread saved as workspace:',
-          newWorkspace.id,
-        );
-
-        // Mark as closing so beforeunload doesn't interfere
-        setIsClosing(true);
-        setShowSaveThreadModal(false);
-
-        // Close the window
-        window.close();
-      } catch (err) {
-        console.error('[AlexandriaWorkspaceApp] Failed to save thread:', err);
-        throw err;
-      }
-    },
-    [workspaceRepositories],
-  );
-
-  // Discard thread and close
-  const handleDiscardThread = useCallback(() => {
-    setIsClosing(true);
-    setShowSaveThreadModal(false);
-    window.close();
-  }, []);
-
-  // Cancel close operation
-  const handleCancelClose = useCallback(() => {
-    setShowSaveThreadModal(false);
-  }, []);
-
   if (loading) {
     return (
       <div
@@ -684,6 +631,13 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     );
   }
 
+  // Prefer the topic's title for display so renaming the topic shows up
+  // immediately. Falls back to workspace.name when no topic is loaded
+  // (e.g. legacy workspaces with empty topicIds, or temp modes).
+  const displayWorkspace: Workspace = topic
+    ? { ...workspace, name: topic.title }
+    : workspace;
+
   return (
     <div
       style={{
@@ -697,7 +651,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     >
       {/* Custom Titlebar */}
       <AlexandriaWorkspaceTitlebar
-        workspace={workspace}
+        workspace={displayWorkspace}
         workspaceRepositoryIds={workspaceRepositories
           .map((entry) => entry.github?.id)
           .filter((id): id is string => id != null)}
@@ -724,16 +678,13 @@ const AlexandriaWorkspaceContent: React.FC = () => {
           }
         }}
         onCollapsedChange={setCollapsed}
-        onSwitchLeftMiddlePanels={handleSwitchLeftMiddle}
-        onSwitchRightMiddlePanels={handleSwitchRightMiddle}
         layout={layout}
         onLayoutChange={setLayout}
-        isEphemeralThread={isEphemeralThread}
       />
 
       {/* Main Content - Panel Layout */}
       <AlexandriaWorkspaceLayout
-        workspace={workspace}
+        workspace={displayWorkspace}
         enableKeyboardShortcuts={enableKeyboardShortcuts}
         collapsed={collapsed}
         onCollapsedChange={setCollapsed}
@@ -754,14 +705,6 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         }}
       />
 
-      {/* Save Thread Modal */}
-      <SaveThreadModal
-        isOpen={showSaveThreadModal}
-        repositories={workspaceRepositories}
-        onSave={handleSaveThread}
-        onDiscard={handleDiscardThread}
-        onCancel={handleCancelClose}
-      />
     </div>
   );
 };

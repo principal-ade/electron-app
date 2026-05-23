@@ -46,6 +46,8 @@ import {
   useTerminalActivity,
 } from '../../../contexts/TerminalContext';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import { TopicService } from '../../../main-process-api/TopicService';
+import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { GitService } from '../../../main-process-api/GitService';
@@ -63,14 +65,15 @@ import { TrailShareModal } from '../../../dev-workspace/trails-panel/TrailShareM
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
+import { NewTopicModal } from '../../../components/NewTopicModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import { formatRelativeTime } from './TrailCard';
 import {
   TrailsDashboard,
   type TrailsDashboardRepoEntry,
+  type TrailsDashboardTopicEntry,
 } from './TrailsDashboard';
 import { TrailsRecentList } from './TrailsRecentList';
-import { useAuth } from '../../../hooks/useAuthState';
 import {
   TrailsRecentHeaders,
   type TrailHeaderRow,
@@ -182,7 +185,10 @@ const purposeIcon = (
   // Per upstream schema, undefined purpose is treated as investigation.
   return Compass;
 };
-import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type {
+  AlexandriaEntry,
+  Topic,
+} from '@principal-ai/alexandria-core-library/types';
 
 /**
  * Workspace-global default for the brief-layout switch — applied when
@@ -504,6 +510,46 @@ const TrailsViewInner: React.FC<{
   // Local Alexandria entries
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
   const [reposLoading, setReposLoading] = useState(true);
+
+  // Open the "New topic" modal from the dashboard's Topics action.
+  const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
+
+  // Locally persisted topics, surfaced as cards in the dashboard's Topics
+  // section. Loaded once on mount and kept fresh via the change-event bus.
+  const [topics, setTopics] = useState<Topic[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    TopicService.getTopics()
+      .then((list) => {
+        if (!cancelled) setTopics(list);
+      })
+      .catch((err) => {
+        console.error('[TrailsView] Failed to load topics:', err);
+      });
+
+    const unsubscribe = TopicService.onTopicChange((event) => {
+      if (event.type === 'added' && event.topic) {
+        const topic = event.topic;
+        setTopics((prev) =>
+          prev.some((t) => t.id === topic.id) ? prev : [...prev, topic],
+        );
+      } else if (event.type === 'updated' && event.topic) {
+        const topic = event.topic;
+        setTopics((prev) =>
+          prev.map((t) => (t.id === topic.id ? topic : t)),
+        );
+      } else if (event.type === 'removed' && event.id) {
+        const id = event.id;
+        setTopics((prev) => prev.filter((t) => t.id !== id));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
 
   // Tab state for the TabbedTerminalPanel — one tab per opened project.
   // The panel only reads `initialTabs` on mount, so we bump `remountKey` to
@@ -1215,7 +1261,22 @@ const TrailsViewInner: React.FC<{
     }));
   }, [recentTrails, repositories]);
 
-  const { isAuthenticated } = useAuth();
+  // Map local Topic records into the dashboard's row shape. Sorted most-
+  // recently-updated first so a freshly created topic lands at the top.
+  const dashboardTopicEntries = useMemo<TrailsDashboardTopicEntry[]>(() => {
+    const sorted = [...topics].sort((a, b) =>
+      b.updatedAt.localeCompare(a.updatedAt),
+    );
+    return sorted.map((t) => ({
+      key: t.id,
+      title: t.title,
+      descriptionPreview: t.description
+        ? t.description.slice(0, 140)
+        : undefined,
+      trailCount: t.trailIds.length,
+      updatedAt: t.updatedAt,
+    }));
+  }, [topics]);
 
   // Click handler for the landing repo cards. Pre-selects the repo's
   // project filter and the specific trail before flipping into Recent,
@@ -2335,16 +2396,40 @@ const TrailsViewInner: React.FC<{
             {showDashboard ? (
               <TrailsDashboard
                 repoEntries={dashboardRepoEntries}
-                topicEntries={[]}
+                topicEntries={dashboardTopicEntries}
                 onSelectRepo={(entry) => {
                   setSelectedProjectPath(entry.key);
                   setViewMode('recent');
                 }}
-                onSelectTopic={() => {
-                  /* topics not yet wired on the desktop */
+                onSelectTopic={(entry) => {
+                  // Open the workspace whose topicIds include this topic.
+                  // v1 single-topic flow always has exactly one match;
+                  // multi-topic later picks the first by convention.
+                  WorkspaceService.getWorkspaces()
+                    .then((workspaces) => {
+                      const target = workspaces.find((w) =>
+                        w.topicIds?.includes(entry.key),
+                      );
+                      if (!target) {
+                        console.warn(
+                          '[TrailsView] No workspace found for topic:',
+                          entry.key,
+                        );
+                        return;
+                      }
+                      return WindowService.openAlexandriaWorkspace({
+                        workspaceId: target.id,
+                      });
+                    })
+                    .catch((err) => {
+                      console.error(
+                        '[TrailsView] Failed to open topic workspace:',
+                        err,
+                      );
+                    });
                 }}
+                onCreateTopic={() => setIsNewTopicOpen(true)}
                 onViewAllTrails={() => setViewMode('recent')}
-                isSignedIn={isAuthenticated}
               />
             ) : (
             <>
@@ -3512,6 +3597,12 @@ const TrailsViewInner: React.FC<{
           // Re-read user.name in case the user edited it in the modal.
           void loadGitUserName();
         }}
+      />
+
+      {/* New topic modal — opened from the dashboard's Topics action. */}
+      <NewTopicModal
+        isOpen={isNewTopicOpen}
+        onClose={() => setIsNewTopicOpen(false)}
       />
 
     </div>

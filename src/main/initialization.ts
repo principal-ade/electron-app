@@ -9,6 +9,7 @@ import { githubRouter } from './github/tipc';
 import { webAdeRouter } from './web-ade/tipc/webAdeRouter';
 import { appVersionRouter } from './app-version/tipc';
 import { alexandriaRouter } from './alexandria/tipc';
+import { topicRouter } from './topics/tipc';
 import { geminiRouter } from './gemini/tipc';
 // import { AgentSessionEventsHttpBridge } from './agent-session-events/AgentSessionEventsHttpBridge';
 import {
@@ -324,6 +325,8 @@ export const initializeServices = async () => {
   console.log('[Main Process] TIPC appVersion router registered');
   registerIpcMain(alexandriaRouter);
   console.log('[Main Process] TIPC alexandria router registered');
+  registerIpcMain(topicRouter);
+  console.log('[Main Process] TIPC topic router registered');
   registerIpcMain(geminiRouter);
   console.log('[Main Process] TIPC gemini router registered');
 

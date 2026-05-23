@@ -151,8 +151,6 @@ export const Populated: Story = {
       onSelectTopic={logSelect('onSelectTopic')}
       onCreateTopic={noop}
       onViewAllTrails={noop}
-      isSignedIn
-      onSignIn={noop}
     />
   ),
 };
@@ -167,8 +165,6 @@ export const ReposNoTopics: Story = {
       onSelectTopic={logSelect('onSelectTopic')}
       onCreateTopic={noop}
       onViewAllTrails={noop}
-      isSignedIn
-      onSignIn={noop}
     />
   ),
 };
@@ -183,8 +179,6 @@ export const Minimal: Story = {
       onSelectTopic={logSelect('onSelectTopic')}
       onCreateTopic={noop}
       onViewAllTrails={noop}
-      isSignedIn
-      onSignIn={noop}
     />
   ),
 };
@@ -203,44 +197,6 @@ export const Empty: Story = {
       onSelectTopic={logSelect('onSelectTopic')}
       onCreateTopic={noop}
       onViewAllTrails={noop}
-      isSignedIn
-      onSignIn={noop}
-    />
-  ),
-};
-
-/**
- * Signed-out user with trails. Topics section collapses to a sign-in CTA.
- * The repos section is unaffected — trails live on disk and don't need auth.
- */
-export const SignedOut: Story = {
-  render: () => (
-    <TrailsDashboard
-      repoEntries={repos}
-      topicEntries={[]}
-      onSelectRepo={logSelect('onSelectRepo')}
-      onSelectTopic={logSelect('onSelectTopic')}
-      onViewAllTrails={noop}
-      isSignedIn={false}
-      onSignIn={logSelect('onSignIn')}
-    />
-  ),
-};
-
-/**
- * Signed-out user with no trails. The whole landing is essentially empty —
- * this is the "what would a brand-new offline user see" check.
- */
-export const SignedOutEmpty: Story = {
-  render: () => (
-    <TrailsDashboard
-      repoEntries={[]}
-      topicEntries={[]}
-      onSelectRepo={logSelect('onSelectRepo')}
-      onSelectTopic={logSelect('onSelectTopic')}
-      onViewAllTrails={noop}
-      isSignedIn={false}
-      onSignIn={logSelect('onSignIn')}
     />
   ),
 };
@@ -273,8 +229,6 @@ export const ManyRepos: Story = {
         onSelectTopic={logSelect('onSelectTopic')}
         onCreateTopic={noop}
         onViewAllTrails={noop}
-        isSignedIn
-        onSignIn={noop}
         repoLimit={9}
       />
     );

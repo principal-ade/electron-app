@@ -14,16 +14,12 @@ import {
   TerminalProvider,
   useTerminalProvider,
 } from '../contexts/TerminalContext';
-import {
-  AgentHighlightProvider,
-  useAgentHighlightProvider,
-} from '../contexts/AgentHighlightContext';
+import { AgentHighlightProvider } from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import {
   LocalProjectsPanel,
 } from '@industry-theme/alexandria-panels';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
-import { CodeCityPanel } from '@industry-theme/file-city-panel';
 import { localhostProcessesPanels, RecentRepositoriesPanel } from '../panels';
 import { EventBusPanel, AgentToolsPanel } from '@industry-theme/agent-driven-ui-panels';
 import { MarkdownPanel } from '../panels/markdown-panel';
@@ -132,8 +128,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
   const { context: terminalCtx, actions: terminalActions } = useTerminalProvider();
-  const { context: highlightCtx } = useAgentHighlightProvider();
-
   const [showAllTerminals, setShowAllTerminals] = useState(false);
 
   // Ref for imperative panel layout control
@@ -213,55 +207,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     [context, terminalCtx.terminalSessions, terminalCtx.terminalContext],
   );
 
-  // Create merged context for File City panel (includes agent highlight layers)
-  const fileCityPanelContext = useMemo(
-    () => ({
-      ...context,
-      agentHighlightLayers: {
-        scope: 'repository' as const,
-        name: 'agentHighlightLayers',
-        data: highlightCtx.highlightLayers,
-        loading: false,
-        error: null,
-        refresh: async () => {
-          // Agent highlight layers are updated reactively from events
-        },
-      },
-      // Explicit properties for typed panel contexts (CodeCityPanelContext)
-      // Note: PanelProvider doesn't have all repository-specific slices,
-      // so we provide defaults for CodeCityPanel compatibility
-      fileTree: context.fileTree,
-      fileCityColorModes: {
-        scope: 'repository' as const,
-        name: 'fileCityColorModes',
-        data: { selectedColorMode: 'fileTypes' as const },
-        loading: false,
-        error: null,
-        refresh: async () => {},
-      },
-      gitStatusWithFiles: context.gitStatusWithFiles,
-      packages: context.packages,
-      activityHeatmap: {
-        scope: 'repository' as const,
-        name: 'activityHeatmap',
-        data: null,
-        loading: false,
-        error: null,
-        refresh: async () => {},
-      },
-      lineCounts: {
-        scope: 'repository' as const,
-        name: 'lineCounts',
-        data: null,
-        loading: false,
-        error: null,
-        refresh: async () => {},
-      },
-    }),
-    [context, highlightCtx.highlightLayers],
-  );
-
-  // State for remove from workspace modal
+// State for remove from workspace modal
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [entryToRemove, setEntryToRemove] = useState<AlexandriaEntry | null>(
     null,
@@ -437,8 +383,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           );
           onRepositorySelected(selectedRepo);
 
-          // Open File City in right panel
-          onLayoutChange({ ...layout, right: 'file-city' });
+          // Switch the right panel to markdown-viewer when a repo is selected
+          onLayoutChange({ ...layout, right: 'markdown-viewer' });
           // Expand right panel if collapsed using imperative method
           if (collapsed.right && panelLayoutRef.current) {
             panelLayoutRef.current.expandPanel('right');
@@ -560,7 +506,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   const WorkspacePanelComponent = RecentRepositoriesPanel;
   const LocalProjectsPanelComponent = LocalProjectsPanel;
   const DocsPanelComponent = docsPanels[0]?.component; // Cannot convert - component not exported
-  const FileCityPanelComponent = CodeCityPanel;
   const LocalhostPanelComponent = localhostProcessesPanels[0]?.component; // Cannot convert - local panel
   const EventBusPanelComponent = EventBusPanel;
   const AgentToolsPanelComponent = AgentToolsPanel;
@@ -712,52 +657,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             )}
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Alexandria Docs panel not available
-            </p>
-          </div>
-        ),
-      },
-      {
-        id: 'file-city',
-        label: 'File City',
-        content: FileCityPanelComponent ? (
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              position: 'relative',
-            }}
-          >
-            {enableKeyboardShortcuts && (
-              <FocusIndicator isFocused={isFocused('right')} />
-            )}
-            <FileCityPanelComponent
-              context={fileCityPanelContext}
-              actions={actions}
-              events={events}
-            />
-          </div>
-        ) : (
-          <div
-            style={{
-              padding: '16px',
-              backgroundColor: theme.colors.background,
-              color: theme.colors.text,
-              height: '100%',
-              overflow: 'auto',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-            }}
-          >
-            {enableKeyboardShortcuts && (
-              <FocusIndicator isFocused={isFocused('right')} />
-            )}
-            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
-              Code City panel not available
             </p>
           </div>
         ),
@@ -1647,7 +1546,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       WorkspacePanelComponent,
       LocalProjectsPanelComponent,
       DocsPanelComponent,
-      FileCityPanelComponent,
       LocalhostPanelComponent,
       EventBusPanelComponent,
       AgentToolsPanelComponent,
@@ -1672,7 +1570,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       terminalDirectory,
       terminalPanelContext,
       terminalActions,
-      fileCityPanelContext,
       showAllTerminals,
     ],
   );
@@ -1744,7 +1641,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
 const DEFAULT_LAYOUT: PanelLayout = {
   left: 'workspace-repos',
   middle: 'terminal',
-  right: 'file-city',
+  right: 'markdown-viewer',
 };
 
 export const AlexandriaWorkspaceLayout: React.FC<
@@ -1809,21 +1706,30 @@ export const AlexandriaWorkspaceLayout: React.FC<
   const terminalContext = `alexandria-workspace-${workspace.id}`;
   const workspacePath = workspace.suggestedClonePath || '/workspace';
 
+  // PanelProvider re-keys its entire context value off `workspace` by reference.
+  // Without this memo, every render rebuilds the literal → context value churns →
+  // every consumer re-renders → downstream effects can cascade into an infinite
+  // render loop (the localhost-detection 5s tick re-primes it on a timer).
+  const panelWorkspace = useMemo(
+    () => ({
+      id: workspace.id,
+      name: workspace.name,
+      path: workspacePath,
+      suggestedClonePath: workspace.suggestedClonePath,
+      description: workspace.description,
+      theme: workspace.theme,
+      icon: workspace.icon,
+      isDefault: workspace.isDefault,
+      createdAt: workspace.createdAt,
+      updatedAt: workspace.updatedAt,
+      metadata: workspace.metadata,
+    }),
+    [workspace, workspacePath],
+  );
+
   return (
     <PanelProvider
-      workspace={{
-        id: workspace.id,
-        name: workspace.name,
-        path: workspacePath,
-        suggestedClonePath: workspace.suggestedClonePath,
-        description: workspace.description,
-        theme: workspace.theme,
-        icon: workspace.icon,
-        isDefault: workspace.isDefault,
-        createdAt: workspace.createdAt,
-        updatedAt: workspace.updatedAt,
-        metadata: workspace.metadata,
-      }}
+      workspace={panelWorkspace}
       repository={selectedRepository}
       theme={theme}
       terminalContext={terminalContext}

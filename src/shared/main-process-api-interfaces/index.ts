@@ -1,6 +1,7 @@
 import type { AgentConfigAPI } from './AgentConfigAPI';
 import type { AlexandriaAPI } from './AlexandriaAPI';
 import type { AlexandriaDocsAPI } from './AlexandriaDocsAPI';
+import type { TopicAPI } from './TopicAPI';
 import type { WorkspaceAPI } from './WorkspaceAPI';
 import type { AgentInstallationAPI } from './AgentInstallationAPI';
 import type { AgentSessionAPI } from './AgentSessionAPI';
@@ -88,6 +89,7 @@ export interface MainProcessAPI {
   agentConfig: AgentConfigAPI;
   alexandria: AlexandriaAPI;
   alexandriaDocs: AlexandriaDocsAPI;
+  topics: TopicAPI;
   workspace: WorkspaceAPI;
   agentInstallation: AgentInstallationAPI;
   agentSession: AgentSessionAPI;

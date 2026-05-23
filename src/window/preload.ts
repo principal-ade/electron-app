@@ -25,6 +25,7 @@ import { githubAPI } from './main-process-api-implementations/githubApi';
 import { storeAPI } from './main-process-api-implementations/storeApi';
 import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi';
 import { alexandriaDocsAPI } from './main-process-api-implementations/alexandriaDocsApi';
+import { topicAPI } from './main-process-api-implementations/topicApi';
 import { workspaceApi } from './main-process-api-implementations/workspaceApi';
 import { shellAPI } from './main-process-api-implementations/shellApi';
 import { systemAPI } from './main-process-api-implementations/systemApi';
@@ -97,6 +98,7 @@ const mainProcessExposure: MainProcessAPI = {
   agentConfig: agentConfigAPI,
   alexandria: alexandriaAPI,
   alexandriaDocs: alexandriaDocsAPI,
+  topics: topicAPI,
   workspace: workspaceApi,
   agentSession: agentSessionApi,
   agentSessionSDK: agentSessionSDKApi,

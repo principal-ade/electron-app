@@ -593,19 +593,19 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
           'window.id': windowId,
         },
       });
+
+      // Maximize before show so the window doesn't briefly render at its
+      // constructed bounds and then animate outward from the top-left.
+      if (this.features.maximizeOnShow && !process.env.START_MINIMIZED) {
+        this.window.maximize();
+      }
+
       this.window.show();
       showSpan.end();
 
       // Close splash screen when main window is ready
       if (splashScreen.isShowing()) {
         splashScreen.close();
-      }
-
-      // Maximize window if feature is enabled
-      if (this.features.maximizeOnShow) {
-        if (!process.env.START_MINIMIZED) {
-          this.window.maximize();
-        }
       }
     });
 

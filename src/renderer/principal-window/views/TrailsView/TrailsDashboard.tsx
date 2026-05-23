@@ -5,7 +5,6 @@ import {
   FolderGit2,
   Footprints,
   Library,
-  LogIn,
   Plus,
 } from 'lucide-react';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
@@ -55,14 +54,6 @@ export interface TrailsDashboardProps {
   onCreateTopic?: () => void;
   /** "View all trails" → opens the full recent grid. */
   onViewAllTrails: () => void;
-  /**
-   * Whether the user is signed in. When false, the topics section renders
-   * a sign-in CTA instead of the topic list — topics live server-side and
-   * aren't available offline.
-   */
-  isSignedIn: boolean;
-  /** Fired when the user clicks the sign-in CTA. Required if `isSignedIn` is false. */
-  onSignIn?: () => void;
   /** Max repo cards to render before clipping. Default 6. */
   repoLimit?: number;
   /** Max topic rows to render before clipping. Default 6. */
@@ -81,8 +72,6 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
   onSelectTopic,
   onCreateTopic,
   onViewAllTrails,
-  isSignedIn,
-  onSignIn,
   repoLimit = 6,
   topicLimit = 6,
 }) => {
@@ -146,14 +135,12 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
         eyebrow="Topics"
         title="Your topics"
         subtitle={
-          !isSignedIn
-            ? 'Sign in to bundle related trails together.'
-            : topicEntries.length === 0
-              ? 'Curated sets of trails on a shared subject.'
-              : `${topicEntries.length} ${topicEntries.length === 1 ? 'topic' : 'topics'}`
+          topicEntries.length === 0
+            ? 'Curated sets of trails on a shared subject.'
+            : `${topicEntries.length} ${topicEntries.length === 1 ? 'topic' : 'topics'}`
         }
         action={
-          isSignedIn && onCreateTopic ? (
+          onCreateTopic ? (
             <PillButton
               theme={theme}
               onClick={onCreateTopic}
@@ -166,9 +153,7 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
           ) : null
         }
       >
-        {!isSignedIn ? (
-          <SignInCallout theme={theme} onSignIn={onSignIn} />
-        ) : visibleTopics.length === 0 ? (
+        {visibleTopics.length === 0 ? (
           <EmptyHint
             theme={theme}
             text="No topics yet. Bundle related trails together so they're easy to share."
@@ -510,80 +495,6 @@ function TopicList({
         </li>
       ))}
     </ul>
-  );
-}
-
-function SignInCallout({
-  theme,
-  onSignIn,
-}: {
-  theme: ThemeShape;
-  onSignIn?: () => void;
-}) {
-  return (
-    <div
-      style={{
-        padding: '24px 20px',
-        background: theme.colors.backgroundSecondary,
-        border: `1px dashed ${theme.colors.border}`,
-        borderRadius: 12,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 16,
-        flexWrap: 'wrap',
-      }}
-    >
-      <div
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 10,
-          background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
-          color: theme.colors.primary,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flex: '0 0 auto',
-        }}
-      >
-        <Library size={20} />
-      </div>
-      <div style={{ flex: 1, minWidth: 220 }}>
-        <div
-          style={{
-            color: theme.colors.text,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[2],
-            fontWeight: theme.fontWeights.semibold,
-            marginBottom: 2,
-          }}
-        >
-          Topics are a signed-in feature
-        </div>
-        <div
-          style={{
-            color: theme.colors.textTertiary,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[1],
-            lineHeight: 1.4,
-          }}
-        >
-          Sign in to curate sets of trails on a shared subject, share them
-          with teammates, and pick up where you left off across machines.
-        </div>
-      </div>
-      {onSignIn && (
-        <PillButton
-          theme={theme}
-          onClick={onSignIn}
-          accent
-          icon={<LogIn size={14} />}
-          iconPosition="start"
-        >
-          Sign in
-        </PillButton>
-      )}
-    </div>
   );
 }
 

@@ -1,0 +1,89 @@
+/**
+ * TIPC Client for Topic operations.
+ *
+ * Type-safe RPC for topic management, replacing legacy ipcRenderer.invoke
+ * via TopicService. Method names are prefixed with `topic_` to avoid
+ * collisions with other routers.
+ */
+
+import { createClient } from '@egoist/tipc/renderer';
+import type {
+  AddTrailInput,
+  CreateTopicInput,
+  DeleteTopicInput,
+  GetTopicInput,
+  GetTopicsForTrailInput,
+  LocalTopicRecord,
+  RemoveTrailInput,
+  ReorderTrailsInput,
+  Topic,
+  TopicRouterType,
+  UpdateTopicInputArgs,
+} from '../../shared/tipc/topicRouterTypes';
+
+export interface TopicClient {
+  getTopics: () => Promise<Topic[]>;
+  getTopic: (input: GetTopicInput) => Promise<Topic | null>;
+  createTopic: (input: CreateTopicInput) => Promise<Topic>;
+  updateTopic: (input: UpdateTopicInputArgs) => Promise<Topic>;
+  deleteTopic: (input: DeleteTopicInput) => Promise<boolean>;
+  addTrailToTopic: (input: AddTrailInput) => Promise<Topic>;
+  removeTrailFromTopic: (input: RemoveTrailInput) => Promise<Topic>;
+  reorderTopicTrails: (input: ReorderTrailsInput) => Promise<Topic>;
+  getTopicsForTrail: (input: GetTopicsForTrailInput) => Promise<Topic[]>;
+  getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
+  getRecords: () => Promise<LocalTopicRecord[]>;
+}
+
+interface TipcTopicClient {
+  topic_getTopics: () => Promise<Topic[]>;
+  topic_getTopic: (input: GetTopicInput) => Promise<Topic | null>;
+  topic_createTopic: (input: CreateTopicInput) => Promise<Topic>;
+  topic_updateTopic: (input: UpdateTopicInputArgs) => Promise<Topic>;
+  topic_deleteTopic: (input: DeleteTopicInput) => Promise<boolean>;
+  topic_addTrailToTopic: (input: AddTrailInput) => Promise<Topic>;
+  topic_removeTrailFromTopic: (input: RemoveTrailInput) => Promise<Topic>;
+  topic_reorderTopicTrails: (input: ReorderTrailsInput) => Promise<Topic>;
+  topic_getTopicsForTrail: (input: GetTopicsForTrailInput) => Promise<Topic[]>;
+  topic_getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
+  topic_getRecords: () => Promise<LocalTopicRecord[]>;
+}
+
+let _tipcClient: TipcTopicClient | null = null;
+
+function getTipcClient(): TipcTopicClient {
+  if (!_tipcClient) {
+    if (!window.electron?.ipcRenderer?.invoke) {
+      throw new Error(
+        'Topic client not available - window.electron not initialized',
+      );
+    }
+    _tipcClient = createClient<TopicRouterType>({
+      ipcInvoke: window.electron.ipcRenderer.invoke,
+    }) as unknown as TipcTopicClient;
+  }
+  return _tipcClient;
+}
+
+export const topicClient: TopicClient = {
+  getTopics: () => getTipcClient().topic_getTopics(),
+  getTopic: (input) => getTipcClient().topic_getTopic(input),
+  createTopic: (input) => getTipcClient().topic_createTopic(input),
+  updateTopic: (input) => getTipcClient().topic_updateTopic(input),
+  deleteTopic: (input) => getTipcClient().topic_deleteTopic(input),
+  addTrailToTopic: (input) => getTipcClient().topic_addTrailToTopic(input),
+  removeTrailFromTopic: (input) =>
+    getTipcClient().topic_removeTrailFromTopic(input),
+  reorderTopicTrails: (input) =>
+    getTipcClient().topic_reorderTopicTrails(input),
+  getTopicsForTrail: (input) => getTipcClient().topic_getTopicsForTrail(input),
+  getRecord: (input) => getTipcClient().topic_getRecord(input),
+  getRecords: () => getTipcClient().topic_getRecords(),
+};
+
+export type {
+  CreateTopicInput,
+  UpdateTopicInputArgs,
+  LocalTopicRecord,
+  Topic,
+};
