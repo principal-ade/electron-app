@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Folder, Search, X } from 'lucide-react';
+import { Folder, Search, TerminalSquare, X } from 'lucide-react';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   PanelContextValue,
@@ -8,6 +8,7 @@ import type {
   PanelEventEmitter,
   DataSlice,
 } from '@principal-ade/panel-framework-core';
+import { useTerminalProvider } from '../../contexts/TerminalContext';
 
 // Panel event prefix
 const PANEL_ID = 'electron-app.recent-repositories';
@@ -25,12 +26,14 @@ const createPanelEvent = <T,>(type: string, payload: T) => ({
  */
 interface RepositoryCardProps {
   repository: AlexandriaEntry;
+  hasActiveTerminal: boolean;
   onSelect: (repo: AlexandriaEntry) => void;
   onOpen: (repo: AlexandriaEntry) => void;
 }
 
 const RepositoryCard: React.FC<RepositoryCardProps> = ({
   repository,
+  hasActiveTerminal,
   onSelect,
   onOpen,
 }) => {
@@ -46,7 +49,9 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
       style={{
         padding: '12px',
         borderRadius: '6px',
-        border: `1px solid ${theme.colors.border}`,
+        border: `1px solid ${
+          hasActiveTerminal ? theme.colors.primary : theme.colors.border
+        }`,
         backgroundColor: isHovered
           ? theme.colors.background
           : theme.colors.backgroundSecondary,
@@ -65,6 +70,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
         <Folder size={16} color={theme.colors.primary} />
         <span
           style={{
+            flex: 1,
             fontSize: `${theme.fontSizes[1]}px`,
             fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
@@ -72,10 +78,18 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
+            minWidth: 0,
           }}
         >
           {repository.name}
         </span>
+        {hasActiveTerminal && (
+          <TerminalSquare
+            size={14}
+            color={theme.colors.primary}
+            aria-label="Terminal open"
+          />
+        )}
       </div>
       <div
         style={{
@@ -134,6 +148,21 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
 }) => {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const { context: terminalCtx } = useTerminalProvider();
+
+  // Repos that currently have a `repo:<path>`-keyed terminal session
+  // within this workspace. Sessions outside this context (other workspaces,
+  // foreign tabs) are ignored.
+  const activeRepoPaths = useMemo(() => {
+    const prefix = `${terminalCtx.terminalContext}:repo:`;
+    const paths = new Set<string>();
+    for (const session of terminalCtx.terminalSessions ?? []) {
+      if (session.context?.startsWith(prefix)) {
+        paths.add(session.context.slice(prefix.length));
+      }
+    }
+    return paths;
+  }, [terminalCtx.terminalContext, terminalCtx.terminalSessions]);
 
   // Get repositories from context
   // Try multiple possible slice names for flexibility
@@ -182,11 +211,14 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
       });
     }
 
-    // Sort by name
-    return [...filtered].sort((a: AlexandriaEntry, b: AlexandriaEntry) =>
-      a.name.localeCompare(b.name)
-    );
-  }, [repositories, searchQuery]);
+    // Active terminals first, then alphabetical within each group.
+    return [...filtered].sort((a: AlexandriaEntry, b: AlexandriaEntry) => {
+      const aActive = activeRepoPaths.has(a.path);
+      const bActive = activeRepoPaths.has(b.path);
+      if (aActive !== bActive) return aActive ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [repositories, searchQuery, activeRepoPaths]);
 
   // Event handlers
   const handleSelectRepository = useCallback(
@@ -431,6 +463,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
           <RepositoryCard
             key={repository.path}
             repository={repository}
+            hasActiveTerminal={activeRepoPaths.has(repository.path)}
             onSelect={handleSelectRepository}
             onOpen={handleOpenRepository}
           />

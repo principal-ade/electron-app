@@ -30,6 +30,7 @@ import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/githu
 import { GitChangesPanel, PackageCompositionPanel } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { TerminalService } from '../main-process-api/TerminalService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { WindowService } from '../main-process-api/WindowService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
@@ -130,6 +131,11 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   const { context, actions, events } = usePanelProvider();
   const { context: terminalCtx, actions: terminalActions } = useTerminalProvider();
   const [showAllTerminals, setShowAllTerminals] = useState(false);
+
+  // Imperative focus request for the TabbedTerminalPanel — set when we want
+  // a specific tab brought to front (e.g. clicking a repo card opens/focuses
+  // a terminal for that repo). The panel clears it via onFocusTabHandled.
+  const [focusTabId, setFocusTabId] = useState<string | null>(null);
 
   // Ref for imperative panel layout control
   const panelLayoutRef = useRef<ConfigurablePanelLayoutHandle>(null);
@@ -384,6 +390,39 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           );
           onRepositorySelected(selectedRepo);
 
+          // Open a terminal tab pinned to this repo, or focus the existing
+          // one if its session is already alive. The renderer-side
+          // `createTerminalSession` does NOT de-dupe by context (and the
+          // main-side `createSession` always spawns a fresh pty), so we
+          // check the live session list ourselves and only create when no
+          // session matches `${terminalContext}:repo:${repoPath}`.
+          const fullSessionContext = `${terminalContext}:repo:${repoPath}`;
+          try {
+            const sessions = await TerminalService.list();
+            const existing = sessions.find(
+              (s) => s.context === fullSessionContext,
+            );
+            if (existing) {
+              setFocusTabId(`tab-restored-${existing.id}`);
+            } else {
+              const sessionId = await terminalActions.createTerminalSession({
+                cwd: repoPath,
+                context: `repo:${repoPath}`,
+              });
+              window.dispatchEvent(
+                new CustomEvent('terminal-session-created', {
+                  detail: { sessionId, context: fullSessionContext },
+                }),
+              );
+              setFocusTabId(`tab-restored-${sessionId}`);
+            }
+          } catch (err) {
+            console.error(
+              '[AlexandriaWorkspaceLayout] Failed to open terminal for repo:',
+              err,
+            );
+          }
+
           // Switch the right panel to markdown-viewer when a repo is selected
           onLayoutChange({ ...layout, right: 'markdown-viewer' });
           // Expand right panel if collapsed using imperative method
@@ -397,7 +436,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     });
 
     return unsubscribe;
-  }, [events, onRepositorySelected, selectedRepository, layout, onLayoutChange, collapsed, onCollapsedChange]);
+  }, [events, onRepositorySelected, selectedRepository, layout, onLayoutChange, collapsed, onCollapsedChange, terminalActions, terminalContext]);
 
   // Listen for repository:opened events (for explicitly opening windows)
   useEffect(() => {
@@ -612,6 +651,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               directory={terminalDirectory}
               showAllTerminals={showAllTerminals}
               onShowAllTerminalsChange={setShowAllTerminals}
+              requestFocusTabId={focusTabId}
+              onFocusTabHandled={() => setFocusTabId(null)}
             />
           </div>
         ),

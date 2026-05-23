@@ -21,10 +21,8 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'principal-view', label: 'Architecture' },
   { id: 'alexandria-docs', label: 'Documentation' },
   { id: 'file-city', label: 'File City' },
-  { id: 'local-projects', label: 'Local Projects' },
   { id: 'localhost-browser', label: 'Localhost Browser' },
   { id: 'workspace-repos', label: 'Repositories' },
-  { id: 'terminal', label: 'Terminal' },
 ];
 
 export interface AlexandriaWorkspaceTitlebarProps {
