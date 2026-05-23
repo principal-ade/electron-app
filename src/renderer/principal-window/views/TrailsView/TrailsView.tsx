@@ -188,6 +188,7 @@ const purposeIcon = (
 import type {
   AlexandriaEntry,
   Topic,
+  Workspace,
 } from '@principal-ai/alexandria-core-library/types';
 
 /**
@@ -545,6 +546,30 @@ const TrailsViewInner: React.FC<{
       }
     });
 
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  // Workspaces, kept in sync via the same change-event bus. Used to look
+  // up each topic's `suggestedClonePath` so the dashboard can show the
+  // folder where the topic lives.
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      WorkspaceService.getWorkspaces()
+        .then((list) => {
+          if (!cancelled) setWorkspaces(list);
+        })
+        .catch((err) => {
+          console.error('[TrailsView] Failed to load workspaces:', err);
+        });
+    };
+    refresh();
+    const unsubscribe = WorkspaceService.onWorkspaceChange(refresh);
     return () => {
       cancelled = true;
       unsubscribe();
@@ -1267,16 +1292,20 @@ const TrailsViewInner: React.FC<{
     const sorted = [...topics].sort((a, b) =>
       b.updatedAt.localeCompare(a.updatedAt),
     );
-    return sorted.map((t) => ({
-      key: t.id,
-      title: t.title,
-      descriptionPreview: t.description
-        ? t.description.slice(0, 140)
-        : undefined,
-      trailCount: t.trailIds.length,
-      updatedAt: t.updatedAt,
-    }));
-  }, [topics]);
+    return sorted.map((t) => {
+      const workspace = workspaces.find((w) => w.topicIds?.includes(t.id));
+      return {
+        key: t.id,
+        title: t.title,
+        descriptionPreview: t.description
+          ? t.description.slice(0, 140)
+          : undefined,
+        trailCount: t.trailIds.length,
+        updatedAt: t.updatedAt,
+        folderPath: workspace?.suggestedClonePath,
+      };
+    });
+  }, [topics, workspaces]);
 
   // Click handler for the landing repo cards. Pre-selects the repo's
   // project filter and the specific trail before flipping into Recent,

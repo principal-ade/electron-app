@@ -30,6 +30,7 @@ import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/githu
 import { GitChangesPanel, PackageCompositionPanel } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { WindowService } from '../main-process-api/WindowService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { RemoveFromWorkspaceModal } from '../panels/components/RemoveFromWorkspaceModal';
@@ -1704,7 +1705,28 @@ export const AlexandriaWorkspaceLayout: React.FC<
   }, [selectedRepository]);
 
   const terminalContext = `alexandria-workspace-${workspace.id}`;
-  const workspacePath = workspace.suggestedClonePath || '/workspace';
+
+  // Fallback for workspaces without a `suggestedClonePath` set — usually
+  // legacy records from before the field was wired into creation flows.
+  // Tracks user preferences live so a freshly configured base directory
+  // immediately becomes the default for terminal cwd.
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string>('');
+  useEffect(() => {
+    let cancelled = false;
+    UserPreferencesService.getPreferences().then((prefs) => {
+      if (!cancelled) setBaseDefaultDirectory(prefs.baseDefaultDirectory || '');
+    });
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
+      setBaseDefaultDirectory(prefs.baseDefaultDirectory || '');
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  const workspacePath =
+    workspace.suggestedClonePath || baseDefaultDirectory || '';
 
   // PanelProvider re-keys its entire context value off `workspace` by reference.
   // Without this memo, every render rebuilds the literal → context value churns →

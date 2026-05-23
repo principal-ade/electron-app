@@ -2,6 +2,7 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   ArrowRight,
+  Folder,
   FolderGit2,
   Footprints,
   Library,
@@ -36,6 +37,8 @@ export interface TrailsDashboardTopicEntry {
   trailCount: number;
   /** ISO 8601 — drives the "updated Xd ago" hint. */
   updatedAt: string;
+  /** Filesystem folder the topic's workspace lives in, if set. */
+  folderPath?: string;
 }
 
 export interface TrailsDashboardProps {
@@ -465,6 +468,35 @@ function TopicList({
                 {t.title}
               </div>
             </div>
+            {t.folderPath && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color: theme.colors.textTertiary,
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: theme.fontSizes[0],
+                  minWidth: 0,
+                }}
+                title={t.folderPath}
+              >
+                <Folder size={12} />
+                <span
+                  style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    minWidth: 0,
+                  }}
+                  // rtl so the leaf folder stays visible and the long
+                  // home prefix gets the ellipsis when truncated.
+                  dir="rtl"
+                >
+                  {t.folderPath}
+                </span>
+              </div>
+            )}
             <div
               style={{
                 color: theme.colors.textTertiary,
