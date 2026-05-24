@@ -353,51 +353,13 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
     );
   }
 
+  const searchPlaceholder =
+    repositories.length > 0
+      ? `Search ${repositories.length} project${repositories.length === 1 ? '' : 's'}…`
+      : 'Search projects…';
+
   return (
     <div style={baseContainerStyle}>
-      {/* Header */}
-      <div
-        style={{
-          height: '40px',
-          minHeight: '40px',
-          padding: '0 16px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-        }}
-      >
-        <Folder size={18} color={theme.colors.primary} />
-        <span
-          style={{
-            fontSize: `${theme.fontSizes[2]}px`,
-            fontWeight: theme.fontWeights.medium,
-            color: theme.colors.text,
-            fontFamily: theme.fonts.body,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Repositories
-        </span>
-        {repositories.length > 0 && (
-          <span
-            style={{
-              fontSize: `${theme.fontSizes[1]}px`,
-              color: theme.colors.textSecondary,
-              padding: '2px 8px',
-              borderRadius: '12px',
-              backgroundColor: theme.colors.background,
-              flexShrink: 0,
-            }}
-          >
-            {filteredRepositories.length}
-            {searchQuery ? ` / ${repositories.length}` : ''}
-          </span>
-        )}
-      </div>
-
       {/* Search bar */}
       <div
         style={{
@@ -423,7 +385,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
           />
           <input
             type="text"
-            placeholder="Search repositories..."
+            placeholder={searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{

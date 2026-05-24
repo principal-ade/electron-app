@@ -5,7 +5,7 @@ import {
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { Plus, Keyboard, FilePlus2, Github } from 'lucide-react';
+import { Plus, Keyboard, FilePlus2, Github, FolderGit2, Route } from 'lucide-react';
 import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddRepositoryToWorkspaceModal';
 import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
 import { CloneFromGitHubModal } from '../../panels/components/CloneFromGitHubModal';
@@ -22,8 +22,18 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'alexandria-docs', label: 'Documentation' },
   { id: 'file-city', label: 'File City' },
   { id: 'localhost-browser', label: 'Localhost Browser' },
-  { id: 'workspace-repos', label: 'Repositories' },
+  { id: 'workspace-repos', label: 'Projects' },
 ];
+
+/**
+ * Left-panel segments. The left side is restricted to two views — the
+ * workspace's repositories and its trails — so we render a two-segment
+ * switch instead of the generic panel dropdown.
+ */
+const LEFT_PANEL_SEGMENTS = [
+  { id: 'workspace-repos', label: 'Projects', Icon: FolderGit2 },
+  { id: 'trails', label: 'Trails', Icon: Route },
+] as const;
 
 export interface AlexandriaWorkspaceTitlebarProps {
   workspace: Workspace;
@@ -148,15 +158,60 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           />
         )}
 
-        {/* Left Panel Selector */}
+        {/* Left Panel Switch — Projects ↔ Trails */}
         {layout && onLayoutChange && typeof layout.left === 'string' && (
-          <PanelSelectorDropdown
-            side="left"
-            currentPanelId={layout.left}
-            availablePanels={AVAILABLE_PANELS}
-            onPanelChange={handleLeftPanelChange}
-            onExpand={handleExpandLeftPanel}
-          />
+          <div
+            style={{
+              display: 'flex',
+              padding: '2px',
+              borderRadius: '6px',
+              background: theme.colors.backgroundTertiary,
+              border: `1px solid ${theme.colors.border}`,
+              // @ts-ignore - WebkitAppRegion is not in CSSProperties
+              WebkitAppRegion: 'no-drag',
+            }}
+          >
+            {LEFT_PANEL_SEGMENTS.map(({ id, label, Icon }) => {
+              const isActive = layout.left === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => {
+                    handleLeftPanelChange(id);
+                    handleExpandLeftPanel();
+                  }}
+                  title={label}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    background: isActive
+                      ? theme.colors.background
+                      : 'transparent',
+                    color: isActive
+                      ? theme.colors.text
+                      : theme.colors.textSecondary,
+                    cursor: 'pointer',
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontWeight: isActive
+                      ? theme.fontWeights.semibold
+                      : theme.fontWeights.medium,
+                    fontFamily: theme.fonts.body,
+                    transition: 'all 0.15s',
+                    boxShadow: isActive
+                      ? '0 1px 2px rgba(0, 0, 0, 0.15)'
+                      : 'none',
+                  }}
+                >
+                  <Icon size={14} strokeWidth={1.75} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
         )}
 
       </div>

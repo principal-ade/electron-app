@@ -36,6 +36,10 @@ import { WindowService } from '../main-process-api/WindowService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { RemoveFromWorkspaceModal } from '../panels/components/RemoveFromWorkspaceModal';
 import { PanelIconSidebar } from '../components/Sidebar/PanelIconSidebar';
+import { WorkspaceTrailsPanel } from './workspace-trails-panel/WorkspaceTrailsPanel';
+import { FileCityTrailTabContent } from './file-city-trail-tab/FileCityTrailTabContent';
+import type { AlexandriaTab, FileCityTrailTab } from './tab-types';
+import type { TrailPayload } from '@industry-theme/file-city-panel';
 
 type PanelDefinition = {
   id: string;
@@ -98,6 +102,7 @@ interface AlexandriaWorkspaceLayoutProps {
 }
 
 interface AlexandriaWorkspaceLayoutContentProps {
+  workspace: Workspace;
   selectedRepository?: { name: string; path: string };
   onRepositorySelected: (
     repository: { name: string; path: string } | undefined,
@@ -117,6 +122,7 @@ interface AlexandriaWorkspaceLayoutContentProps {
 const AlexandriaWorkspaceLayoutContent: React.FC<
   AlexandriaWorkspaceLayoutContentProps
 > = ({
+  workspace,
   selectedRepository,
   onRepositorySelected,
   enableKeyboardShortcuts,
@@ -136,6 +142,20 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   // a specific tab brought to front (e.g. clicking a repo card opens/focuses
   // a terminal for that repo). The panel clears it via onFocusTabHandled.
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
+
+  // Non-terminal tabs hosted alongside terminals in the middle slot. Mirrors
+  // dev-workspace: terminal tabs are managed inside TabbedTerminalPanel; we
+  // only own custom tabs (currently just the singleton 'file-city-trail').
+  const [tabs, setTabs] = useState<AlexandriaTab[]>([]);
+
+  // Payload of the trail currently shown in the file-city-trail tab. Held
+  // at the layout level so re-renders of the tab content (singleton) swap
+  // payloads cleanly when a different trail is activated.
+  const [activeTrailPayload, setActiveTrailPayload] =
+    useState<TrailPayload | null>(null);
+  const [activeTrailRepoPath, setActiveTrailRepoPath] = useState<
+    string | undefined
+  >(undefined);
 
   // Ref for imperative panel layout control
   const panelLayoutRef = useRef<ConfigurablePanelLayoutHandle>(null);
@@ -199,6 +219,67 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       onPanelControlReady(control);
     }
   }, [onPanelControlReady]);
+
+  // Open (or focus) the singleton file-city-trail tab and load the given
+  // payload into it. Mirrors dev-workspace's `openFileCityTrailTab` — one
+  // tab id, payload swaps on subsequent activations.
+  const handleTrailActivate = useCallback(
+    (payload: TrailPayload, repositoryPath?: string) => {
+      setActiveTrailPayload(payload);
+      setActiveTrailRepoPath(repositoryPath);
+      setTabs((prev) => {
+        if (prev.some((t) => t.contentType === 'file-city-trail')) return prev;
+        const newTab: FileCityTrailTab = {
+          id: 'file-city-trail',
+          label: 'Trail',
+          contentType: 'file-city-trail',
+          closable: true,
+        };
+        return [...prev, newTab];
+      });
+      setFocusTabId('file-city-trail');
+    },
+    [],
+  );
+
+  // Sync from the TabbedTerminalPanel. Terminal tabs are managed inside the
+  // panel — we only persist non-terminal entries so closing the trail tab
+  // (via its X) actually removes it from our state.
+  const handleTabsChange = useCallback((next: AlexandriaTab[]) => {
+    setTabs((prev) => {
+      const nextCustom = next.filter((t) => t.contentType !== 'terminal');
+      const prevCustom = prev.filter((t) => t.contentType !== 'terminal');
+      const sameLength = nextCustom.length === prevCustom.length;
+      const sameIds =
+        sameLength &&
+        nextCustom.every((t) =>
+          prevCustom.some((p) => p.id === t.id),
+        );
+      if (sameIds) return prev;
+      return nextCustom;
+    });
+  }, []);
+
+  const renderTabContent = useCallback(
+    (tab: AlexandriaTab) => {
+      if (tab.contentType === 'file-city-trail') {
+        return (
+          <FileCityTrailTabContent
+            trailPayload={activeTrailPayload}
+            repositoryPath={activeTrailRepoPath}
+            events={events}
+            onCloseTrail={() => {
+              setActiveTrailPayload(null);
+              setActiveTrailRepoPath(undefined);
+            }}
+          />
+        );
+      }
+      // Terminal tabs: return null → TabbedTerminalPanel renders its default.
+      return null;
+    },
+    [activeTrailPayload, activeTrailRepoPath, events],
+  );
 
   // Get terminal context and directory from TerminalProvider
   const terminalContext = terminalCtx.terminalContext || 'terminal:default';
@@ -582,7 +663,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     () => [
       {
         id: 'workspace-repos',
-        label: 'Repositories',
+        label: 'Projects',
         content: WorkspacePanelComponent ? (
           <div
             style={{
@@ -643,12 +724,15 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             {enableKeyboardShortcuts && (
               <FocusIndicator isFocused={isFocused('middle')} />
             )}
-            <TabbedTerminalPanel
+            <TabbedTerminalPanel<AlexandriaTab>
               context={terminalPanelContext}
               actions={terminalActions}
               events={events}
               terminalContext={terminalContext}
               directory={terminalDirectory}
+              initialTabs={tabs as AlexandriaTab[]}
+              onTabsChange={handleTabsChange}
+              renderTabContent={(tab) => renderTabContent(tab as AlexandriaTab)}
               showAllTerminals={showAllTerminals}
               onShowAllTerminalsChange={setShowAllTerminals}
               requestFocusTabId={focusTabId}
@@ -884,6 +968,30 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Local Projects panel not available
             </p>
+          </div>
+        ),
+      },
+      {
+        id: 'trails',
+        label: 'Trails',
+        content: (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <WorkspaceTrailsPanel
+              workspace={workspace}
+              onTrailActivate={handleTrailActivate}
+            />
           </div>
         ),
       },
@@ -1582,6 +1690,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     ],
     [
       theme,
+      workspace,
       context,
       actions,
       events,
@@ -1613,6 +1722,11 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       terminalPanelContext,
       terminalActions,
       showAllTerminals,
+      tabs,
+      handleTabsChange,
+      renderTabContent,
+      handleTrailActivate,
+      focusTabId,
     ],
   );
 
@@ -1806,6 +1920,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
           repositoryPath={selectedRepository?.path || ''}
         >
           <AlexandriaWorkspaceLayoutContent
+            workspace={workspace}
             selectedRepository={selectedRepository}
             onRepositorySelected={handleRepositorySelected}
             enableKeyboardShortcuts={enableKeyboardShortcuts}

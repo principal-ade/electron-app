@@ -1,0 +1,273 @@
+/**
+ * Alexandria-side mount of the trail explorer panel.
+ *
+ * Receives a `trailPayload` + `repositoryPath` from the layout, fetches the
+ * fileTree + lineCounts for that repo, and hands the upstream
+ * `FileCityTrailExplorerPanel` everything it needs. Designed for the
+ * singleton 'file-city-trail' tab: when the user clicks a different trail,
+ * the same tab re-renders with the new payload and re-fetches slices.
+ *
+ * Diverges from the dev-workspace wrapper (`FileCityTrailPanel`) by not
+ * depending on `RepositoryPanelProvider` — Alexandria isn't repo-scoped,
+ * so slices are fetched here per active trail.
+ */
+
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  FileCityTrailExplorerPanel,
+  type FileCityTrailExplorerPanelActions,
+  type FileCityTrailExplorerPanelContext,
+  type FileCityTrailExplorerRepository,
+  type LineCountsSliceData,
+  type TrailPayload,
+} from '@industry-theme/file-city-panel';
+import type {
+  DataSlice,
+  PanelContextValue,
+  PanelEventEmitter,
+} from '@principal-ade/panel-framework-core';
+import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
+
+import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
+import { TrailNotesService } from '../../services/TrailNotesService';
+
+interface FileCityTrailTabContentProps {
+  trailPayload: TrailPayload | null;
+  repositoryPath?: string;
+  /** Renderer event bus from PanelProvider — used for `file:open` emits. */
+  events: PanelEventEmitter;
+  /**
+   * Called when the user clicks "close trail" inside the explorer's brief.
+   * The layout flips `trailPayload` to null so the tab re-enters its idle
+   * state (the upstream panel falls back to host-supplied highlight layers,
+   * none of which we provide — so the panel shows its empty/idle UI).
+   */
+  onCloseTrail?: () => void;
+}
+
+const EMPTY_FILE_TREE_ROOT = {
+  path: '',
+  name: '',
+  children: [],
+  fileCount: 0,
+  totalSize: 0,
+  depth: 0,
+  relativePath: '',
+};
+
+const EMPTY_FILE_TREE: RepoFileTree = {
+  sha: '__empty__',
+  root: EMPTY_FILE_TREE_ROOT,
+  allFiles: [],
+  allDirectories: [EMPTY_FILE_TREE_ROOT],
+  stats: {
+    totalFiles: 0,
+    totalDirectories: 0,
+    totalSize: 0,
+    maxDepth: 0,
+  },
+  metadata: {
+    id: '__empty__',
+    timestamp: new Date(0),
+    sourceType: 'empty',
+    sourceInfo: {},
+  },
+};
+
+const makeSlice = <T,>(name: string, data: T, loading = false): DataSlice<T> => ({
+  scope: 'repository',
+  name,
+  data,
+  loading,
+  error: null,
+  refresh: async () => {},
+});
+
+export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = ({
+  trailPayload,
+  repositoryPath,
+  events,
+  onCloseTrail,
+}) => {
+  const [fileTree, setFileTree] = useState<RepoFileTree | null>(null);
+  const [fileTreeLoading, setFileTreeLoading] = useState(false);
+  const [lineCounts, setLineCounts] = useState<LineCountsSliceData | null>(null);
+  const [lineCountsLoading, setLineCountsLoading] = useState(false);
+
+  // Re-fetch fileTree + lineCounts when the active trail's repo changes.
+  // Repo-agnostic trails (no repositoryPath) skip the fetch and render with
+  // empty slices — the explorer still shows the brief + markers, just
+  // without file-tree navigation context.
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!repositoryPath) {
+      setFileTree(null);
+      setLineCounts(null);
+      return;
+    }
+
+    setFileTreeLoading(true);
+    RepositoryMonitoringService.getFileTree(repositoryPath)
+      .then((tree) => {
+        if (cancelled) return;
+        setFileTree(tree ?? null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error(
+          '[FileCityTrailTabContent] getFileTree failed',
+          err,
+        );
+        setFileTree(null);
+      })
+      .finally(() => {
+        if (!cancelled) setFileTreeLoading(false);
+      });
+
+    setLineCountsLoading(true);
+    const fileCityApi = window.mainProcess?.fileCityImage;
+    const lineCountsPromise = fileCityApi
+      ? fileCityApi.countLines(repositoryPath)
+      : Promise.resolve(null);
+    lineCountsPromise
+      .then((raw) => {
+        if (cancelled) return;
+        if (!raw) {
+          setLineCounts(null);
+          return;
+        }
+        // Mirror RepositoryPanelContext: strip the repo-name prefix so paths
+        // are relative to the repo root (the panel keys file metrics by
+        // relative path).
+        const repoName = repositoryPath.split('/').pop() || '';
+        const normalized: Record<string, number> = {};
+        for (const [filePath, count] of Object.entries(raw)) {
+          if (typeof count !== 'number' || count < 0) continue;
+          if (filePath.startsWith(`${repoName}/`)) {
+            normalized[filePath.slice(repoName.length + 1)] = count;
+          } else {
+            normalized[filePath] = count;
+          }
+        }
+        setLineCounts({ lineCounts: normalized, status: 'available' });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error(
+          '[FileCityTrailTabContent] countLines failed',
+          err,
+        );
+        setLineCounts(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLineCountsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repositoryPath]);
+
+  const repository = useMemo<FileCityTrailExplorerRepository | null>(() => {
+    if (!repositoryPath) return null;
+    const name = repositoryPath.split('/').pop() || repositoryPath;
+    return {
+      id: name,
+      path: repositoryPath,
+      owner: null,
+      name,
+    };
+  }, [repositoryPath]);
+
+  const trailContext = useMemo(() => {
+    const repoMeta = repositoryPath
+      ? { name: repositoryPath.split('/').pop() || repositoryPath, path: repositoryPath }
+      : undefined;
+    const base: PanelContextValue = {
+      currentScope: repoMeta
+        ? { type: 'repository', repository: repoMeta }
+        : { type: 'workspace' },
+      refresh: async () => {},
+    };
+    return {
+      ...base,
+      fileTree: makeSlice('fileTree', fileTree ?? EMPTY_FILE_TREE, fileTreeLoading),
+      lineCounts: makeSlice('lineCounts', lineCounts, lineCountsLoading),
+      trail: makeSlice('trail', trailPayload),
+      highlightLayers: makeSlice('highlightLayers', null),
+      repository,
+    } as PanelContextValue & FileCityTrailExplorerPanelContext;
+  }, [
+    fileTree,
+    fileTreeLoading,
+    lineCounts,
+    lineCountsLoading,
+    trailPayload,
+    repository,
+    repositoryPath,
+  ]);
+
+  const trailActions = useMemo<FileCityTrailExplorerPanelActions>(
+    () => ({
+      openFile: (filePath, line) => {
+        const absolute = filePath.startsWith('/')
+          ? filePath
+          : repositoryPath
+            ? `${repositoryPath}/${filePath}`
+            : filePath;
+        events.emit({
+          type: 'file:open',
+          source: 'alexandria-file-city-trail-tab',
+          timestamp: Date.now(),
+          payload: { path: absolute, line },
+        });
+      },
+      readFile: async (path: string): Promise<string> => {
+        const absolute = path.startsWith('/')
+          ? path
+          : repositoryPath
+            ? `${repositoryPath}/${path}`
+            : path;
+        const api = window.mainProcess?.fileSystem;
+        if (!api) throw new Error('FileSystem API unavailable');
+        const result = await api.readFile(absolute);
+        if (!result) throw new Error(`File not found: ${path}`);
+        return result.content;
+      },
+      createTrailNote: (payloadId, draft) =>
+        TrailNotesService.create(payloadId, draft),
+      updateTrailNote: (payloadId, noteId, body) =>
+        TrailNotesService.update(payloadId, noteId, body),
+      deleteTrailNote: async (payloadId, noteId) => {
+        await TrailNotesService.remove(payloadId, noteId);
+      },
+      // Sign-off persistence isn't wired in the Electron host (matches the
+      // dev-workspace wrapper). The LGTM button animates optimistically but
+      // the stamp won't round-trip.
+      createTrailSignOff: async () => null,
+      deleteTrailSignOff: async () => {},
+      closeTrail: onCloseTrail,
+    }),
+    [repositoryPath, events, onCloseTrail],
+  );
+
+  return (
+    <div
+      style={{
+        height: '100%',
+        width: '100%',
+        overflow: 'hidden',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <FileCityTrailExplorerPanel
+        context={trailContext}
+        actions={trailActions}
+        events={events}
+      />
+    </div>
+  );
+};

@@ -4,6 +4,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { X, Check, FolderOpen } from 'lucide-react';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
+import { TopicService } from '../main-process-api/TopicService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { predefinedThemes } from '../themes/predefinedThemes';
 
@@ -137,12 +138,18 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
     setIsSubmitting(true);
 
     try {
+      // Every workspace owns a topic. v1 is single-topic — auto-create one
+      // with the workspace's name so trails can be attached without an
+      // extra step.
+      const topic = await TopicService.createTopic({ title: formName.trim() });
+
       await WorkspaceService.createWorkspace({
         name: formName,
         description: formDescription || undefined,
         theme: formTheme,
         suggestedClonePath: formPath || undefined,
         icon: undefined,
+        topicIds: [topic.id],
       });
 
       // Reset form
