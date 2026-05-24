@@ -40,7 +40,6 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
-import { WindowService } from '../main-process-api/WindowService';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
@@ -230,7 +229,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     'xterm' | 'ghostty'
   >('xterm');
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
-  const [showWorkspaceButton, setShowWorkspaceButton] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: true, right: true });
   const [sidebarsHidden, setSidebarsHidden] = useState(false);
   // Store collapsed state before entering focus mode so we can restore it
@@ -837,8 +835,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         }
         // Load the toggle visibility preference (default: false)
         setShowTerminalToggle(prefs.showTerminalImplementationToggle ?? false);
-        // Load workspace button visibility preference (default: true)
-        setShowWorkspaceButton(prefs.titlebarButtons?.workspace ?? false);
         // Load dev-workspace config (titlebar/sidebar visibility)
         setDevWorkspaceConfig(mergeDevWorkspaceConfig(prefs.devWorkspace));
       } catch (error) {
@@ -860,9 +856,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       }
       if (prefs.showTerminalImplementationToggle !== undefined) {
         setShowTerminalToggle(prefs.showTerminalImplementationToggle);
-      }
-      if (prefs.titlebarButtons?.workspace !== undefined) {
-        setShowWorkspaceButton(prefs.titlebarButtons.workspace);
       }
       if (prefs.devWorkspace !== undefined) {
         setDevWorkspaceConfig(mergeDevWorkspaceConfig(prefs.devWorkspace));
@@ -955,28 +948,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       );
     }
   }, [githubInfo]);
-
-  // Open Alexandria Workspace for this repository
-  const handleOpenAlexandriaWorkspace = useCallback(async () => {
-    if (!repositoryPath) return;
-
-    try {
-      // Get repository ID (PURL format if available)
-      const repositoryId = githubInfo
-        ? `pkg:github/${githubInfo.owner}/${githubInfo.repo}`
-        : undefined;
-
-      await WindowService.openAlexandriaWorkspaceFromRepository(
-        repositoryPath,
-        repositoryId,
-      );
-    } catch (error) {
-      console.error(
-        '[DevWorkspaceApp] Failed to open Alexandria Workspace:',
-        error,
-      );
-    }
-  }, [repositoryPath, githubInfo]);
 
   // Sync workspace to otel-events-manager
   const handleSyncWorkspace = useCallback(async () => {
@@ -1131,8 +1102,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         isRightCollapsed={collapsed.right}
         onToggleLeftPanel={handleToggleLeftPanel}
         onToggleRightPanel={handleToggleRightPanel}
-        onOpenAlexandriaWorkspace={handleOpenAlexandriaWorkspace}
-        showWorkspaceButton={showWorkspaceButton}
         currentLayout={
           layout as { left: string; middle: string; right: string }
         }

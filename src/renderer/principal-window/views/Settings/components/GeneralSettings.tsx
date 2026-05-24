@@ -1,19 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Palette, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import { Logo } from '@principal-ai/logo-component';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
-import { ThemeService } from '../../../../services/ThemeService';
 import type { EditorId } from '../../../../../shared/types/editor.types';
 import { EDITOR_LABELS } from '../../../../../shared/types/editor.types';
 import type { UserPreferences } from '../../../../../shared/types/userPreferences.types';
 import { USER_PREFERENCE_DEFAULTS } from '../../../../../shared/types/userPreferences.types';
-import {
-  predefinedThemes,
-  getThemeNames,
-} from '../../../../themes/predefinedThemes';
 
 export const GeneralSettings: React.FC = () => {
   const { theme } = useTheme();
@@ -23,18 +18,9 @@ export const GeneralSettings: React.FC = () => {
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
   const [enableGitWatchingOnStartup, setEnableGitWatchingOnStartup] =
     useState<boolean>(false);
-  const [selectedTheme, setSelectedTheme] = useState<string>('default');
-  const [pendingTheme, setPendingTheme] = useState<string | null>(null);
-  const [isApplyingTheme, setIsApplyingTheme] = useState(false);
   const [showThemeButton, setShowThemeButton] = useState(false);
   const [showCustomizeButton, setShowCustomizeButton] = useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
-  const [showOpenInIDE, setShowOpenInIDE] = useState(false);
-  const [showWorkspaceButton, setShowWorkspaceButton] = useState(false);
-  const [showGitSyncPanel, setShowGitSyncPanel] = useState(false);
-  const [showTerminalDebugButton, setShowTerminalDebugButton] = useState(false);
-  const [showTerminalShowAllButton, setShowTerminalShowAllButton] =
-    useState(true);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
   const [showProcessesButton, setShowProcessesButton] = useState(false);
@@ -66,11 +52,6 @@ export const GeneralSettings: React.FC = () => {
       setShowThemeButton(prefs.titlebarButtons?.theme ?? false);
       setShowCustomizeButton(prefs.titlebarButtons?.customize ?? false);
       setShowPullMailbox(prefs.titlebarButtons?.pullMailbox ?? false);
-      setShowOpenInIDE(prefs.titlebarButtons?.openInIDE ?? false);
-      setShowWorkspaceButton(prefs.titlebarButtons?.workspace ?? false);
-      setShowGitSyncPanel(prefs.showGitSyncPanel ?? false);
-      setShowTerminalDebugButton(prefs.showTerminalDebugButton ?? false);
-      setShowTerminalShowAllButton(prefs.showTerminalShowAllButton ?? true);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
       setShowProcessesButton(prefs.showProcessesButton ?? false);
@@ -98,10 +79,6 @@ export const GeneralSettings: React.FC = () => {
       'user-preferences-updated',
       handlePreferencesUpdated as EventListener,
     );
-
-    const currentTheme = ThemeService.getCurrentThemeName();
-    setSelectedTheme(currentTheme);
-    setPendingTheme(null);
 
     return () => {
       isMounted = false;
@@ -405,8 +382,6 @@ export const GeneralSettings: React.FC = () => {
                     titlebarButtons: {
                       theme: enabled,
                       customize: showCustomizeButton,
-                      openInIDE: showOpenInIDE,
-                      workspace: showWorkspaceButton,
                       pullMailbox: showPullMailbox,
                     },
                   });
@@ -435,68 +410,6 @@ export const GeneralSettings: React.FC = () => {
                     titlebarButtons: {
                       theme: showThemeButton,
                       customize: enabled,
-                      openInIDE: showOpenInIDE,
-                      workspace: showWorkspaceButton,
-                      pullMailbox: showPullMailbox,
-                    },
-                  });
-                }}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-            </label>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '16px',
-                fontSize: '14px',
-                color: theme.colors.text,
-              }}
-            >
-              <span>Show "Open in IDE" button (repo manager)</span>
-              <input
-                type="checkbox"
-                checked={showOpenInIDE}
-                onChange={async (e) => {
-                  const enabled = e.target.checked;
-                  setShowOpenInIDE(enabled);
-                  await UserPreferencesService.updatePreferences({
-                    titlebarButtons: {
-                      theme: showThemeButton,
-                      customize: showCustomizeButton,
-                      openInIDE: enabled,
-                      workspace: showWorkspaceButton,
-                      pullMailbox: showPullMailbox,
-                    },
-                  });
-                }}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-            </label>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '16px',
-                fontSize: '14px',
-                color: theme.colors.text,
-              }}
-            >
-              <span>Show workspace button (dev workspace)</span>
-              <input
-                type="checkbox"
-                checked={showWorkspaceButton}
-                onChange={async (e) => {
-                  const enabled = e.target.checked;
-                  setShowWorkspaceButton(enabled);
-                  await UserPreferencesService.updatePreferences({
-                    titlebarButtons: {
-                      theme: showThemeButton,
-                      customize: showCustomizeButton,
-                      openInIDE: showOpenInIDE,
-                      workspace: enabled,
                       pullMailbox: showPullMailbox,
                     },
                   });
@@ -525,8 +438,6 @@ export const GeneralSettings: React.FC = () => {
                     titlebarButtons: {
                       theme: showThemeButton,
                       customize: showCustomizeButton,
-                      openInIDE: showOpenInIDE,
-                      workspace: showWorkspaceButton,
                       pullMailbox: enabled,
                     },
                   });
@@ -558,98 +469,6 @@ export const GeneralSettings: React.FC = () => {
             border: `1px solid ${theme.colors.border}`,
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="showGitSyncPanel"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show Git Sync Panel
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled, the Git Sync diagnostic panel will be visible in
-                the Feed view. When disabled (default), the panel is hidden to
-                reduce clutter.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showGitSyncPanel"
-                type="checkbox"
-                checked={showGitSyncPanel}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowGitSyncPanel(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showGitSyncPanel: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showGitSyncPanel
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showGitSyncPanel ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-
           {/* Presence Auto-Connect */}
           <div
             style={{
@@ -657,9 +476,6 @@ export const GeneralSettings: React.FC = () => {
               justifyContent: 'space-between',
               alignItems: 'flex-start',
               gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
             }}
           >
             <div style={{ flex: 1 }}>
@@ -736,194 +552,6 @@ export const GeneralSettings: React.FC = () => {
                     height: '18px',
                     width: '18px',
                     left: presenceAutoConnect ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="showTerminalDebugButton"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show Terminal Debug Button
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled, a debug button will appear in the terminal panel
-                header for troubleshooting terminal sessions. When disabled
-                (default), the button is hidden to reduce clutter.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showTerminalDebugButton"
-                type="checkbox"
-                checked={showTerminalDebugButton}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowTerminalDebugButton(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showTerminalDebugButton: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showTerminalDebugButton
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showTerminalDebugButton ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="showTerminalShowAllButton"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show "All Terminals" Toggle Button
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled (default), a button will appear in the terminal
-                panel header to toggle between showing all repository terminals
-                or just the current repository's terminals.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showTerminalShowAllButton"
-                type="checkbox"
-                checked={showTerminalShowAllButton}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowTerminalShowAllButton(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showTerminalShowAllButton: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showTerminalShowAllButton
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showTerminalShowAllButton ? '27px' : '3px',
                     bottom: '3px',
                     backgroundColor: theme.colors.background,
                     transition: '0.3s',
@@ -1421,147 +1049,6 @@ export const GeneralSettings: React.FC = () => {
                 />
               </span>
             </label>
-          </div>
-        </div>
-      </div>
-
-      {/* Theme Selection */}
-      <div style={{ marginBottom: '32px' }}>
-        <h4
-          style={{
-            fontSize: '16px',
-            fontWeight: 600,
-            marginBottom: '16px',
-            color: theme.colors.text,
-          }}
-        >
-          Interface Theme
-        </h4>
-        <div
-          style={{
-            backgroundColor: theme.colors.backgroundSecondary,
-            borderRadius: '12px',
-            padding: '20px',
-            border: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          <p
-            style={{
-              fontSize: '14px',
-              color: theme.colors.textSecondary,
-              marginBottom: '12px',
-            }}
-          >
-            Choose your preferred color theme for the application
-          </p>
-          <div
-            style={{
-              display: 'flex',
-              gap: '12px',
-              alignItems: 'center',
-            }}
-          >
-            <select
-              value={pendingTheme || selectedTheme}
-              onChange={(e) => {
-                const value = e.target.value;
-                setPendingTheme(value);
-              }}
-              style={{
-                padding: '10px 14px',
-                borderRadius: '8px',
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.background,
-                color: theme.colors.text,
-                cursor: 'pointer',
-                fontSize: '14px',
-                minWidth: '200px',
-                flex: 1,
-              }}
-            >
-              {getThemeNames().map((name) => {
-                const themeInfo = predefinedThemes[name];
-                return (
-                  <option key={name} value={name}>
-                    {themeInfo.name}
-                  </option>
-                );
-              })}
-            </select>
-
-            {pendingTheme && pendingTheme !== selectedTheme && (
-              <button
-                onClick={async () => {
-                  setIsApplyingTheme(true);
-                  try {
-                    await ThemeService.applyTheme(pendingTheme, true);
-                    setSelectedTheme(pendingTheme);
-                    setPendingTheme(null);
-                    setTimeout(() => {
-                      setIsApplyingTheme(false);
-                    }, 500);
-                  } catch (error) {
-                    console.error('Failed to apply theme:', error);
-                    setIsApplyingTheme(false);
-                  }
-                }}
-                disabled={isApplyingTheme}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: theme.colors.primary,
-                  color: theme.colors.background,
-                  cursor: isApplyingTheme ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  opacity: isApplyingTheme ? 0.6 : 1,
-                  transition: 'all 0.2s',
-                }}
-              >
-                {isApplyingTheme ? (
-                  <>
-                    <RefreshCw
-                      size={14}
-                      style={{
-                        animation: 'spin 1s linear infinite',
-                      }}
-                    />
-                    Applying...
-                  </>
-                ) : (
-                  <>
-                    <Palette size={14} />
-                    Apply Theme
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-          <div
-            style={{
-              marginTop: '12px',
-              padding: '12px',
-              backgroundColor: theme.colors.backgroundLight,
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <Palette size={16} color={theme.colors.primary} />
-            <span
-              style={{
-                fontSize: '13px',
-                color: theme.colors.textSecondary,
-              }}
-            >
-              {predefinedThemes[pendingTheme || selectedTheme]?.description ||
-                'Standard theme'}
-            </span>
           </div>
         </div>
       </div>

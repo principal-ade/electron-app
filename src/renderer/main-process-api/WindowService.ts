@@ -41,22 +41,6 @@ export class WindowService {
   }
 
   /**
-   * Open Alexandria Workspace window from a repository
-   * Creates a temporary single-repository workspace
-   * @param repositoryPath - Path to the repository
-   * @param repositoryId - Repository identifier (PURL or github.id)
-   */
-  static async openAlexandriaWorkspaceFromRepository(
-    repositoryPath: string,
-    repositoryId?: string,
-  ): Promise<void> {
-    return this.openAlexandriaWorkspace({
-      repositoryPath,
-      repositoryId,
-    });
-  }
-
-  /**
    * Get the current window's ID
    * @returns The Electron BrowserWindow ID
    */

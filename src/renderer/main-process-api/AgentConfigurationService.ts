@@ -4,31 +4,26 @@ import { AgentSetupStatus } from '../../shared/main-process-api-interfaces/Agent
 import type { AgentSettings } from '../../shared/types/agent-settings.types';
 
 export type AgentInstallationStatus = {
-  [key in SupportedAgent]: AgentSetupStatus;
+  claude: AgentSetupStatus;
+};
+
+const EMPTY_STATUS: AgentSetupStatus = {
+  isInstalled: false,
+  hasHooks: false,
+  hookCount: 0,
+  configPath: '',
 };
 
 export class AgentConfigurationService {
   static async checkAgentInstallations(): Promise<AgentInstallationStatus> {
     try {
-      // Get status for each agent using the new API
-      const statusPromises = Object.values(SupportedAgent).map(
-        async (agentType) => {
-          const result =
-            await window.mainProcess.agentConfig.getAgentSetupStatus(agentType);
-          const status = result.status || {
-            isInstalled: false,
-            hasHooks: false,
-            hookCount: 0,
-            configPath: '',
-          };
-          return { [agentType]: status };
-        },
+      const result = await window.mainProcess.agentConfig.getAgentSetupStatus(
+        SupportedAgent.CLAUDE,
       );
-      const statuses = await Promise.all(statusPromises);
-      return Object.assign({}, ...statuses);
+      return { claude: result.status || EMPTY_STATUS };
     } catch (error) {
       console.error('Failed to check agent installations:', error);
-      return {} as AgentInstallationStatus;
+      return { claude: EMPTY_STATUS };
     }
   }
 

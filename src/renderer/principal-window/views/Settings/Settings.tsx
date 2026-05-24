@@ -17,6 +17,10 @@ import { SecuritySettings } from './components/SecuritySettings';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
+// Hidden while the AI commit-summary feature is parked. Flip to true to
+// re-expose the Gemini settings page in the sidebar.
+const SHOW_GEMINI_SETTINGS = false;
+
 export type SettingsCategory =
   | 'general'
   | 'security'
@@ -231,45 +235,47 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
               AI Assistants
             </button>
 
-            <button
-              onClick={() => setActiveCategory('gemini')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor:
-                  activeCategory === 'gemini'
-                    ? theme.colors.primary + '20'
-                    : 'transparent',
-                color:
-                  activeCategory === 'gemini'
-                    ? theme.colors.primary
-                    : theme.colors.text,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontSize: '14px',
-                fontWeight: activeCategory === 'gemini' ? 600 : 500,
-                textAlign: 'left',
-                width: '100%',
-              }}
-              onMouseEnter={(e) => {
-                if (activeCategory !== 'gemini') {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (activeCategory !== 'gemini') {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }
-              }}
-            >
-              <Sparkles size={18} />
-              Gemini AI
-            </button>
+            {SHOW_GEMINI_SETTINGS && (
+              <button
+                onClick={() => setActiveCategory('gemini')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor:
+                    activeCategory === 'gemini'
+                      ? theme.colors.primary + '20'
+                      : 'transparent',
+                  color:
+                    activeCategory === 'gemini'
+                      ? theme.colors.primary
+                      : theme.colors.text,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontSize: '14px',
+                  fontWeight: activeCategory === 'gemini' ? 600 : 500,
+                  textAlign: 'left',
+                  width: '100%',
+                }}
+                onMouseEnter={(e) => {
+                  if (activeCategory !== 'gemini') {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeCategory !== 'gemini') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <Sparkles size={18} />
+                Gemini AI
+              </button>
+            )}
 
             <button
               onClick={() => setActiveCategory('updates')}
@@ -392,7 +398,9 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
           {activeCategory === 'general' && <GeneralSettings />}
           {activeCategory === 'security' && <SecuritySettings />}
           {activeCategory === 'ai-assistants' && <AIAssistantsSettings />}
-          {activeCategory === 'gemini' && <GeminiSettings />}
+          {SHOW_GEMINI_SETTINGS && activeCategory === 'gemini' && (
+            <GeminiSettings />
+          )}
           {activeCategory === 'updates' && <UpdatesSettings />}
         </div>
       </div>

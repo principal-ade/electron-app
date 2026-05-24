@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Layers,
   Cloud,
   CloudOff,
   Terminal,
@@ -158,9 +157,6 @@ export interface DevWorkspaceTitlebarProps {
   isRightCollapsed?: boolean;
   onToggleLeftPanel?: () => void;
   onToggleRightPanel?: () => void;
-  // Alexandria Workspace
-  onOpenAlexandriaWorkspace?: () => void;
-  showWorkspaceButton?: boolean;
   // Panel configuration
   currentLayout?: { left: string; middle: string; right: string };
   onLayoutChange?: (layout: {
@@ -203,8 +199,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   isRightCollapsed = false,
   onToggleLeftPanel,
   onToggleRightPanel,
-  onOpenAlexandriaWorkspace,
-  showWorkspaceButton = false,
   currentLayout: _currentLayout,
   onLayoutChange,
   repositoryPath,
@@ -907,45 +901,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 storybook={storybook}
                 repositoryPath={repositoryPath}
               />
-            )}
-
-            {/* Open Alexandria Workspace Button */}
-            {onOpenAlexandriaWorkspace && showWorkspaceButton && (
-              <button
-                onClick={onOpenAlexandriaWorkspace}
-                title="Open in Alexandria Workspace"
-                style={{
-                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                  WebkitAppRegion: 'no-drag',
-                  background: theme.colors.backgroundTertiary,
-                  border: `1px solid ${theme.colors.border}`,
-                  color: theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s',
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontWeight: theme.fontWeights.medium,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.color = theme.colors.text;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                }}
-              >
-                <Layers size={14} />
-                <span>Workspace</span>
-              </button>
             )}
 
             {/* Terminal Implementation Toggle */}

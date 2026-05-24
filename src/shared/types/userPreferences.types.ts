@@ -130,10 +130,7 @@ export interface UserPreferences {
   showConnectionsButton?: boolean; // Show/hide the connections button in side nav (default: false)
   showProcessesButton?: boolean; // Show/hide the processes button in side nav (default: false)
   showOnboardingButton?: boolean; // Show/hide the onboarding/tutorials button in side nav (default: false)
-  showGitSyncPanel?: boolean; // Show/hide the git sync panel (default: false)
   showExtensionsButton?: boolean; // Show/hide the extensions button in settings (default: false)
-  showTerminalDebugButton?: boolean; // Show/hide the debug button in terminal panels (default: false)
-  showTerminalShowAllButton?: boolean; // Show/hide the show all terminals button in terminal panels (default: true)
 
   // Presence preferences
   presenceAutoConnect?: boolean; // Automatically connect to presence server on startup (default: false)
@@ -142,8 +139,6 @@ export interface UserPreferences {
   titlebarButtons?: {
     theme?: boolean; // Show/hide theme dropdown in titlebar (default: false)
     customize?: boolean; // Show/hide theme customization button in titlebar (default: false)
-    openInIDE?: boolean;
-    workspace?: boolean; // Show/hide the workspace button in dev-workspace titlebar (default: false)
     pullMailbox?: boolean; // Show/hide the pull mailbox in titlebar (default: false)
     openThread?: boolean; // Show/hide the open thread button in titlebar (default: false)
   };
