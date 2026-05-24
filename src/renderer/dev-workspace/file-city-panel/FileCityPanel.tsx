@@ -15,6 +15,7 @@ import {
   stripRootPath,
 } from './buildCityDataFromContext';
 import { FileOverlay } from './FileOverlay';
+import { pushCheckpoint } from './loadCheckpoints';
 
 const MEDIA_RE = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i;
 const isOverlayable = (path: string): boolean => {
@@ -65,9 +66,17 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
     }
     let cancelled = false;
     setIsBuilding(true);
+    pushCheckpoint(repositoryPath, 'build_city.start', {
+      fileCount: tree?.allFiles?.length ?? null,
+      sha: tree?.sha ?? null,
+    });
     buildCityDataFromContext({ fileTree: tree, repositoryPath })
       .then((next) => {
         if (!cancelled) setCityData(next);
+        pushCheckpoint(repositoryPath, 'build_city.end', {
+          buildings: next?.buildings?.length ?? null,
+          cancelled,
+        });
       })
       .finally(() => {
         if (!cancelled) setIsBuilding(false);
@@ -76,6 +85,17 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
       cancelled = true;
     };
   }, [tree, repositoryPath]);
+
+  // One-shot "panel rendered city" marker — fires the first time cityData
+  // transitions from null to non-null for the current repo.
+  const firstRenderLoggedFor = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!cityData) return;
+    const key = repositoryPath ?? '';
+    if (firstRenderLoggedFor.current === key) return;
+    firstRenderLoggedFor.current = key;
+    pushCheckpoint(repositoryPath, 'panel.first_render');
+  }, [cityData, repositoryPath]);
 
   const rootPath = tree?.metadata?.id ?? '';
 

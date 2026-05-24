@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, GitCompareArrows, Route } from 'lucide-react';
+import { Gauge, GitCommit, GitCompareArrows, Route } from 'lucide-react';
 import {
   FileTree,
   useFileTree,
@@ -30,6 +30,7 @@ import type {
 } from '../../../services/scope-manager/types';
 import { AddToAreaModal } from './AddToAreaModal';
 import { AddToScopeModal } from './AddToScopeModal';
+import { LoadCheckpointsModal } from './LoadCheckpointsModal';
 import { CommitFileOverlay } from './CommitFileOverlay';
 import { RecentCommitCard } from './RecentCommitCard';
 import { RecentTrailsCard } from './RecentTrailsCard';
@@ -185,6 +186,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   // user opts in via the toolbar buttons.
   const [showLatestCommit, setShowLatestCommit] = React.useState(false);
   const [showWorkingTree, setShowWorkingTree] = React.useState(false);
+  const [showLoadDebug, setShowLoadDebug] = React.useState(false);
   const toggleWorkingTreeCard = React.useCallback(() => {
     setShowWorkingTree((v) => !v);
   }, []);
@@ -1791,6 +1793,24 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               <Route size={14} />
             </button>
           )}
+          <button
+            onClick={() => setShowLoadDebug(true)}
+            title="Show load-time checkpoints"
+            style={{
+              background: 'transparent',
+              color: theme.colors.textMuted,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radii[2],
+              padding: '4px 6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              lineHeight: 0,
+              flexShrink: 0,
+            }}
+          >
+            <Gauge size={14} />
+          </button>
           {focusDirectory && (
             <button
               onClick={() => setFocusPinned(p => !p)}
@@ -2331,6 +2351,14 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
             setShowAddAreaModal(false);
             setAreaModalTargetPath(null);
           }}
+        />
+      )}
+
+      {showLoadDebug && (
+        <LoadCheckpointsModal
+          repoPath={repositoryPath ?? null}
+          repoLabel={repoLabel ?? null}
+          onClose={() => setShowLoadDebug(false)}
         />
       )}
     </div>

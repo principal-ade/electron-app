@@ -37,6 +37,10 @@ import type { PackagesSliceData } from '@principal-ai/codebase-composition';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
+import {
+  pushCheckpoint as pushFileCityCheckpoint,
+  clearCheckpointsForRepo as clearFileCityCheckpoints,
+} from '../dev-workspace/file-city-panel/loadCheckpoints';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import { getTracer } from '../telemetry';
@@ -606,10 +610,20 @@ export const RepositoryPanelProvider: React.FC<
         return;
       }
 
+      // Reset the File City debug timeline for this repo, then mark t0.
+      clearFileCityCheckpoints(repositoryPath);
+      pushFileCityCheckpoint(repositoryPath, 'repo.path.set');
+
       setFileTreeLoading(true);
       try {
         // FAST PATH: Get cached data immediately for instant display
+        pushFileCityCheckpoint(repositoryPath, 'ipc.cache_get.start');
         const cachedTree = await RepositoryMonitoringService.getFileTree(repositoryPath);
+        pushFileCityCheckpoint(repositoryPath, 'ipc.cache_get.end', {
+          hit: !!cachedTree,
+          fileCount: cachedTree?.allFiles?.length ?? null,
+          sha: cachedTree?.sha ?? null,
+        });
         if (cachedTree) {
           setFileTreeData(cachedTree);
           setFileTreeLoading(false); // Stop loading spinner immediately
@@ -621,12 +635,17 @@ export const RepositoryPanelProvider: React.FC<
         }
 
         // BACKGROUND REFRESH: Trigger fresh data fetch (will arrive via CACHE_SYNC)
+        pushFileCityCheckpoint(repositoryPath, 'ipc.refresh.start');
         await RepositoryMonitoringService.refreshRepository(repositoryPath);
+        pushFileCityCheckpoint(repositoryPath, 'ipc.refresh.end');
         console.info(
           '[RepositoryPanelProvider] Triggered background refresh for:',
           repositoryPath,
         );
       } catch (error) {
+        pushFileCityCheckpoint(repositoryPath, 'ipc.refresh.end', {
+          error: error instanceof Error ? error.message : String(error),
+        });
         console.error(
           '[RepositoryPanelProvider] Failed to fetch file tree:',
           error,
@@ -643,6 +662,10 @@ export const RepositoryPanelProvider: React.FC<
       if (event.repoPath === repositoryPath && event.slice === 'fileTree') {
         if (event.entry.data) {
           const tree = event.entry.data as FileTree;
+          pushFileCityCheckpoint(repositoryPath, 'cache_sync.fresh_received', {
+            fileCount: tree?.allFiles?.length ?? null,
+            sha: tree?.sha ?? null,
+          });
           console.info(
             '[RepositoryPanelProvider] FileTree cache sync received:',
             repositoryPath,

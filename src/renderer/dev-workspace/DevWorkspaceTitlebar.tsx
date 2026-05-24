@@ -14,12 +14,14 @@ import {
   Settings,
   StickyNote,
   GitBranch,
+  Gauge,
 } from 'lucide-react';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import {
   DevWorkspaceConfigModal,
   type DevWorkspaceConfig,
 } from './DevWorkspaceConfigModal';
+import { LoadCheckpointsModal } from './file-city-panel/FileCityExplorer/LoadCheckpointsModal';
 import { useTheme } from '@principal-ade/industry-theme';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
 import { GitSyncStatusIndicator } from '../components/Titlebar/GitSyncStatusIndicator';
@@ -217,6 +219,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   const { theme } = useTheme();
   const [servicesExpanded, setServicesExpanded] = useState(false);
   const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [loadDebugOpen, setLoadDebugOpen] = useState(false);
 
   // Open Notes panel (creates .principal/notes.md if missing)
   const handleOpenNotes = async () => {
@@ -1041,6 +1044,38 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               </button>
             )}
 
+            {/* File City load checkpoints — debug modal (always visible) */}
+            <button
+              onClick={() => setLoadDebugOpen(true)}
+              title="Show File City load checkpoints"
+              aria-label="Show File City load checkpoints"
+              style={{
+                // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                WebkitAppRegion: 'no-drag',
+                background: 'transparent',
+                border: 'none',
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+                e.currentTarget.style.color = theme.colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <Gauge size={18} />
+            </button>
+
             {/* Configuration gear button (always visible) */}
             <button
               onClick={() => setConfigModalOpen(true)}
@@ -1084,6 +1119,17 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
         repositoryPath={repositoryPath}
         onOpenInFinder={onOpenInFinder}
       />
+      {loadDebugOpen && (
+        <LoadCheckpointsModal
+          repoPath={repositoryPath ?? null}
+          repoLabel={
+            displayOwner && displayName
+              ? `${displayOwner}/${displayName}`
+              : displayName
+          }
+          onClose={() => setLoadDebugOpen(false)}
+        />
+      )}
     </div>
   );
 };
