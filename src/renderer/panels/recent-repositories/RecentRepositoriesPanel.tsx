@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Folder, Search, TerminalSquare, X } from 'lucide-react';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -9,6 +9,14 @@ import type {
   DataSlice,
 } from '@principal-ade/panel-framework-core';
 import { useTerminalProvider } from '../../contexts/TerminalContext';
+import { FileSystemService } from '../../main-process-api/FileSystemService';
+
+function displayPath(path: string, home: string | null): string {
+  if (!home) return path;
+  if (path === home) return '~';
+  if (path.startsWith(home + '/')) return '~' + path.slice(home.length);
+  return path;
+}
 
 // Panel event prefix
 const PANEL_ID = 'electron-app.recent-repositories';
@@ -34,6 +42,7 @@ function shellQuote(s: string): string {
 interface RepositoryCardProps {
   repository: AlexandriaEntry;
   hasActiveTerminal: boolean;
+  homePath: string | null;
   onSelect: (repo: AlexandriaEntry) => void;
   onOpen: (repo: AlexandriaEntry) => void;
 }
@@ -41,11 +50,18 @@ interface RepositoryCardProps {
 const RepositoryCard: React.FC<RepositoryCardProps> = ({
   repository,
   hasActiveTerminal,
+  homePath,
   onSelect,
   onOpen,
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+
+  const owner = repository.github?.owner;
+  const avatarUrl = owner
+    ? `https://github.com/${encodeURIComponent(owner)}.png?size=48`
+    : null;
 
   return (
     <div
@@ -79,11 +95,28 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
           marginBottom: '4px',
         }}
       >
-        <Folder size={16} color={theme.colors.primary} />
+        {avatarUrl && !avatarFailed ? (
+          <img
+            src={avatarUrl}
+            alt={owner ?? ''}
+            width={20}
+            height={20}
+            onError={() => setAvatarFailed(true)}
+            style={{
+              width: '20px',
+              height: '20px',
+              borderRadius: '4px',
+              objectFit: 'cover',
+              flexShrink: 0,
+            }}
+          />
+        ) : (
+          <Folder size={20} color={theme.colors.primary} />
+        )}
         <span
           style={{
             flex: 1,
-            fontSize: `${theme.fontSizes[1]}px`,
+            fontSize: `${theme.fontSizes[2]}px`,
             fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
             fontFamily: theme.fonts.body,
@@ -105,7 +138,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
       </div>
       <div
         style={{
-          fontSize: `${theme.fontSizes[0]}px`,
+          fontSize: `${theme.fontSizes[1]}px`,
           color: theme.colors.textSecondary,
           fontFamily: theme.fonts.monospace,
           overflow: 'hidden',
@@ -113,13 +146,13 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
           whiteSpace: 'nowrap',
         }}
       >
-        {repository.path}
+        {displayPath(repository.path, homePath)}
       </div>
       {'description' in repository && typeof (repository as { description?: string }).description === 'string' && (
         <div
           style={{
             marginTop: '4px',
-            fontSize: `${theme.fontSizes[0]}px`,
+            fontSize: `${theme.fontSizes[1]}px`,
             color: theme.colors.textSecondary,
             fontFamily: theme.fonts.body,
             overflow: 'hidden',
@@ -160,7 +193,22 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
 }) => {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const [homePath, setHomePath] = useState<string | null>(null);
   const { context: terminalCtx } = useTerminalProvider();
+
+  useEffect(() => {
+    let cancelled = false;
+    FileSystemService.getHomePath()
+      .then((home) => {
+        if (!cancelled) setHomePath(home);
+      })
+      .catch(() => {
+        // Leave homePath null — paths will render unchanged.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Repos that currently have a `repo:<path>`-keyed terminal session
   // within this workspace. Sessions outside this context (other workspaces,
@@ -476,6 +524,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
             key={repository.path}
             repository={repository}
             hasActiveTerminal={activeRepoPaths.has(repository.path)}
+            homePath={homePath}
             onSelect={handleSelectRepository}
             onOpen={handleOpenRepository}
           />
