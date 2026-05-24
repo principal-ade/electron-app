@@ -21,6 +21,13 @@ const createPanelEvent = <T,>(type: string, payload: T) => ({
   payload,
 });
 
+// Matches the files-panel convention so dropping onto an xterm pastes a
+// safely-quoted path.
+function shellQuote(s: string): string {
+  if (/^[\w@%+=:,./-]+$/.test(s)) return s;
+  return `'${s.replace(/'/g, `'\\''`)}'`;
+}
+
 /**
  * Repository card component
  */
@@ -42,6 +49,11 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
 
   return (
     <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('text/plain', shellQuote(repository.path));
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => onSelect(repository)}
