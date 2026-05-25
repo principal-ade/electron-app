@@ -66,6 +66,7 @@ import { RepositoryMonitoringService } from '../../../main-process-api/Repositor
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { NewTopicModal } from '../../../components/NewTopicModal';
+import { DeleteTopicConfirmDialog } from '../../../components/DeleteTopicConfirmDialog';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import { formatRelativeTime } from './TrailCard';
 import {
@@ -515,6 +516,12 @@ const TrailsViewInner: React.FC<{
   // Open the "New topic" modal from the dashboard's Topics action.
   const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
 
+  // Confirmation dialog state for the trash icon on a topic card.
+  // Deletes both the topic and any workspace that links to it.
+  const [pendingDeleteTopic, setPendingDeleteTopic] =
+    useState<TrailsDashboardTopicEntry | null>(null);
+  const [deletingTopic, setDeletingTopic] = useState(false);
+
   // Locally persisted topics, surfaced as cards in the dashboard's Topics
   // section. Loaded once on mount and kept fresh via the change-event bus.
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -556,6 +563,30 @@ const TrailsViewInner: React.FC<{
   // up each topic's `suggestedClonePath` so the dashboard can show the
   // folder where the topic lives.
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+
+  // User's default clone/workspace base directory. Used as the displayed
+  // folder for topic cards whose workspace hasn't picked a custom path.
+  const [defaultBaseDirectory, setDefaultBaseDirectory] = useState<
+    string | null
+  >(null);
+  useEffect(() => {
+    let cancelled = false;
+    UserPreferencesService.getPreferences()
+      .then((prefs) => {
+        if (!cancelled)
+          setDefaultBaseDirectory(prefs.baseDefaultDirectory || null);
+      })
+      .catch(() => {
+        // Service failure leaves the fallback null; cards just omit folder.
+      });
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
+      setDefaultBaseDirectory(prefs.baseDefaultDirectory || null);
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -1302,10 +1333,11 @@ const TrailsViewInner: React.FC<{
           : undefined,
         trailCount: t.trailIds.length,
         updatedAt: t.updatedAt,
-        folderPath: workspace?.suggestedClonePath,
+        folderPath:
+          workspace?.suggestedClonePath ?? defaultBaseDirectory ?? undefined,
       };
     });
-  }, [topics, workspaces]);
+  }, [topics, workspaces, defaultBaseDirectory]);
 
   // Click handler for the landing repo cards. Pre-selects the repo's
   // project filter and the specific trail before flipping into Recent,
@@ -2458,6 +2490,7 @@ const TrailsViewInner: React.FC<{
                     });
                 }}
                 onCreateTopic={() => setIsNewTopicOpen(true)}
+                onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
                 onViewAllTrails={() => setViewMode('recent')}
               />
             ) : (
@@ -3633,6 +3666,48 @@ const TrailsViewInner: React.FC<{
         isOpen={isNewTopicOpen}
         onClose={() => setIsNewTopicOpen(false)}
       />
+
+      {/* Confirm + execute topic deletion (also drops the linked workspace). */}
+      {pendingDeleteTopic && (
+        <DeleteTopicConfirmDialog
+          topicTitle={pendingDeleteTopic.title}
+          workspaceFolderPath={pendingDeleteTopic.folderPath}
+          busy={deletingTopic}
+          onCancel={() => {
+            if (deletingTopic) return;
+            setPendingDeleteTopic(null);
+          }}
+          onConfirm={() => {
+            const target = pendingDeleteTopic;
+            if (!target) return;
+            setDeletingTopic(true);
+            void (async () => {
+              try {
+                const linked = workspaces.filter((w) =>
+                  w.topicIds?.includes(target.key),
+                );
+                await Promise.all(
+                  linked.map((w) =>
+                    WorkspaceService.deleteWorkspace(w.id).catch((err) => {
+                      console.error(
+                        '[TrailsView] Failed to delete workspace for topic:',
+                        target.key,
+                        err,
+                      );
+                    }),
+                  ),
+                );
+                await TopicService.deleteTopic(target.key);
+              } catch (err) {
+                console.error('[TrailsView] Failed to delete topic:', err);
+              } finally {
+                setDeletingTopic(false);
+                setPendingDeleteTopic(null);
+              }
+            })();
+          }}
+        />
+      )}
 
     </div>
   );
