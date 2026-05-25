@@ -74,13 +74,19 @@ const EMPTY_FILE_TREE: RepoFileTree = {
   },
 };
 
+// Stable noop so every slice's `refresh` shares one function identity across
+// renders. Without this, each call to makeSlice minted a fresh closure and any
+// upstream effect keyed on slice identity (or on `slice.refresh`) re-ran on
+// every fetch tick.
+const noopRefresh = async () => {};
+
 const makeSlice = <T,>(name: string, data: T, loading = false): DataSlice<T> => ({
   scope: 'repository',
   name,
   data,
   loading,
   error: null,
-  refresh: async () => {},
+  refresh: noopRefresh,
 });
 
 export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = ({
@@ -180,33 +186,58 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
     };
   }, [repositoryPath]);
 
-  const trailContext = useMemo(() => {
+  // Per-slice memos so unrelated state changes don't churn every slice's
+  // identity. The dev-workspace wrapper (FileCityTrailPanel.tsx) is structured
+  // this way for the same reason — co-mingling all slices inside one memo was
+  // causing the snippet drawer to remount whenever fileTree/lineCounts loaded.
+  const fileTreeSlice = useMemo(
+    () => makeSlice('fileTree', fileTree ?? EMPTY_FILE_TREE, fileTreeLoading),
+    [fileTree, fileTreeLoading],
+  );
+  const lineCountsSlice = useMemo(
+    () => makeSlice('lineCounts', lineCounts, lineCountsLoading),
+    [lineCounts, lineCountsLoading],
+  );
+  const trailSlice = useMemo(
+    () => makeSlice('trail', trailPayload),
+    [trailPayload],
+  );
+  const highlightLayersSlice = useMemo(
+    () => makeSlice('highlightLayers', null),
+    [],
+  );
+
+  const baseContext = useMemo<PanelContextValue>(() => {
     const repoMeta = repositoryPath
       ? { name: repositoryPath.split('/').pop() || repositoryPath, path: repositoryPath }
       : undefined;
-    const base: PanelContextValue = {
+    return {
       currentScope: repoMeta
         ? { type: 'repository', repository: repoMeta }
         : { type: 'workspace' },
-      refresh: async () => {},
+      refresh: noopRefresh,
     };
-    return {
-      ...base,
-      fileTree: makeSlice('fileTree', fileTree ?? EMPTY_FILE_TREE, fileTreeLoading),
-      lineCounts: makeSlice('lineCounts', lineCounts, lineCountsLoading),
-      trail: makeSlice('trail', trailPayload),
-      highlightLayers: makeSlice('highlightLayers', null),
+  }, [repositoryPath]);
+
+  const trailContext = useMemo(
+    () =>
+      ({
+        ...baseContext,
+        fileTree: fileTreeSlice,
+        lineCounts: lineCountsSlice,
+        trail: trailSlice,
+        highlightLayers: highlightLayersSlice,
+        repository,
+      }) as PanelContextValue & FileCityTrailExplorerPanelContext,
+    [
+      baseContext,
+      fileTreeSlice,
+      lineCountsSlice,
+      trailSlice,
+      highlightLayersSlice,
       repository,
-    } as PanelContextValue & FileCityTrailExplorerPanelContext;
-  }, [
-    fileTree,
-    fileTreeLoading,
-    lineCounts,
-    lineCountsLoading,
-    trailPayload,
-    repository,
-    repositoryPath,
-  ]);
+    ],
+  );
 
   const trailActions = useMemo<FileCityTrailExplorerPanelActions>(
     () => ({
