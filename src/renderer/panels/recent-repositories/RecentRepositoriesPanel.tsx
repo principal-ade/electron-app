@@ -310,7 +310,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: theme.colors.background,
   };
 
   // Loading state
@@ -363,72 +363,49 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
       {/* Search bar */}
       <div
         style={{
-          padding: '12px 16px',
+          padding: '10px 16px',
           borderBottom: `1px solid ${theme.colors.border}`,
         }}
       >
         <div
           style={{
-            position: 'relative',
             display: 'flex',
             alignItems: 'center',
+            gap: '8px',
+            padding: '6px 10px',
+            borderRadius: '6px',
+            border: `1px solid ${theme.colors.border}`,
+            background: theme.colors.backgroundSecondary,
           }}
         >
-          <Search
-            size={16}
-            style={{
-              position: 'absolute',
-              left: '10px',
-              color: theme.colors.textSecondary,
-              pointerEvents: 'none',
-            }}
-          />
+          <Search size={14} color={theme.colors.textSecondary} />
           <input
             type="text"
-            placeholder={searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={searchPlaceholder}
             style={{
-              width: '100%',
-              padding: '8px 32px 8px 36px',
-              fontSize: `${theme.fontSizes[1]}px`,
-              fontFamily: theme.fonts.body,
+              flex: 1,
+              border: 'none',
+              background: 'transparent',
               color: theme.colors.text,
-              backgroundColor: theme.colors.background,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '6px',
+              fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
               outline: 'none',
-              transition: 'border-color 0.15s ease',
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.primary;
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.border;
             }}
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
               style={{
-                position: 'absolute',
-                right: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '4px',
-                border: 'none',
+                display: 'inline-flex',
                 background: 'transparent',
+                border: 'none',
                 color: theme.colors.textSecondary,
                 cursor: 'pointer',
-                borderRadius: '4px',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.border;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
+                padding: 0,
               }}
             >
               <X size={14} />
@@ -444,8 +421,8 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: '4px',
-          padding: '8px 16px',
+          gap: '8px',
+          padding: '12px 16px',
         }}
       >
         {/* Empty state */}

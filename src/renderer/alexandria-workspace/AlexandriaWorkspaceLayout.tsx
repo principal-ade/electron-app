@@ -1756,7 +1756,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             theme={theme}
             panels={panels}
             layout={layout}
-            defaultSizes={{ left: 25, middle: 50, right: 25 }}
+            defaultSizes={{ left: 23, middle: 52, right: 25 }}
             collapsed={collapsed}
             collapsiblePanels={{ left: true, right: true }}
             showCollapseButtons={false}

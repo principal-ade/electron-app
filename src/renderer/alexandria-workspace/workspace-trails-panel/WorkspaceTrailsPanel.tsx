@@ -1,18 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import {
-  AlertCircle,
-  Check,
-  Plus,
-  RefreshCw,
-  Route,
-  Search,
-  X,
-} from 'lucide-react';
+import { AlertCircle, Check, Plus, Search, X } from 'lucide-react';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
 import { TrailLibraryService } from '../../services/TrailLibraryService';
 import { TopicService } from '../../main-process-api/TopicService';
+import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import type { TrailIndexEntry } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { formatRelativeTime } from '../../principal-window/views/TrailsView/TrailCard';
 
@@ -35,6 +28,8 @@ const repoBasename = (repositoryPath?: string): string | null => {
   return idx >= 0 ? trimmed.slice(idx + 1) : trimmed;
 };
 
+const REPO_AGNOSTIC_KEY = '__repo_agnostic__';
+
 export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
   workspace,
   onTrailActivate,
@@ -51,6 +46,11 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [busyTrailId, setBusyTrailId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // path → github owner login, used to render the section's repo avatar.
+  // Repos that aren't registered in alexandria simply don't get an avatar.
+  const [ownerByPath, setOwnerByPath] = useState<Map<string, string>>(
+    new Map(),
+  );
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -85,7 +85,31 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
     };
   }, [refresh, topicId]);
 
-  const { inWorkspace, available } = useMemo(() => {
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const repos = await AlexandriaService.getRepositories();
+        if (cancelled) return;
+        const map = new Map<string, string>();
+        for (const repo of repos) {
+          const owner = repo.github?.owner;
+          if (owner) map.set(repo.path, owner);
+        }
+        setOwnerByPath(map);
+      } catch (err) {
+        console.error('[WorkspaceTrailsPanel] owner lookup failed', err);
+      }
+    };
+    load();
+    const off = AlexandriaService.onRepositoryChange(() => load());
+    return () => {
+      cancelled = true;
+      off();
+    };
+  }, []);
+
+  const groupedByRepo = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const matches = (e: TrailIndexEntry): boolean => {
       if (!q) return true;
@@ -95,15 +119,50 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
           e.repositoryPath?.toLowerCase().includes(q),
       );
     };
-    const inWs: TrailIndexEntry[] = [];
-    const avail: TrailIndexEntry[] = [];
+    const groups = new Map<
+      string,
+      {
+        label: string;
+        repositoryPath?: string;
+        entries: TrailIndexEntry[];
+      }
+    >();
     for (const entry of entries) {
       if (!matches(entry)) continue;
-      if (topicTrailIds.has(entry.id)) inWs.push(entry);
-      else avail.push(entry);
+      const label = repoBasename(entry.repositoryPath);
+      const key = entry.repositoryPath ?? REPO_AGNOSTIC_KEY;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.entries.push(entry);
+      } else {
+        groups.set(key, {
+          label: label ?? 'Repo-agnostic',
+          repositoryPath: entry.repositoryPath,
+          entries: [entry],
+        });
+      }
     }
-    return { inWorkspace: inWs, available: avail };
+    // Sort: named repos alphabetically by label, repo-agnostic last. Within a
+    // group, workspace members first (so a glance shows what's attached).
+    return Array.from(groups.entries())
+      .sort(([a, ga], [b, gb]) => {
+        if (a === REPO_AGNOSTIC_KEY) return 1;
+        if (b === REPO_AGNOSTIC_KEY) return -1;
+        return ga.label.localeCompare(gb.label);
+      })
+      .map(([key, group]) => ({
+        key,
+        label: group.label,
+        repositoryPath: group.repositoryPath,
+        entries: group.entries.sort((x, y) => {
+          const xIn = topicTrailIds.has(x.id) ? 0 : 1;
+          const yIn = topicTrailIds.has(y.id) ? 0 : 1;
+          if (xIn !== yIn) return xIn - yIn;
+          return (x.title ?? x.id).localeCompare(y.title ?? y.id);
+        }),
+      }));
   }, [entries, topicTrailIds, searchQuery]);
+  const totalMatched = groupedByRepo.reduce((n, g) => n + g.entries.length, 0);
 
   const handleAdd = useCallback(
     async (trailId: string) => {
@@ -168,62 +227,6 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
         background: theme.colors.background,
       }}
     >
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '14px 16px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-        }}
-      >
-        <Route size={18} strokeWidth={1.5} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: theme.fontSizes[2],
-              fontWeight: theme.fontWeights.semibold,
-              lineHeight: 1.2,
-            }}
-          >
-            Trails
-          </h2>
-          <div
-            style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-            title={workspace.name}
-          >
-            {workspace.name}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={refresh}
-          title="Refresh"
-          aria-label="Refresh"
-          disabled={loading}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '6px',
-            borderRadius: '6px',
-            border: `1px solid ${theme.colors.border}`,
-            background: 'transparent',
-            color: theme.colors.textSecondary,
-            cursor: loading ? 'not-allowed' : 'pointer',
-          }}
-        >
-          <RefreshCw size={12} />
-        </button>
-      </header>
-
       <div
         style={{
           padding: '10px 16px',
@@ -295,63 +298,53 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
         )}
         {error && <ErrorRow theme={theme} message={error} />}
 
-        <Section theme={theme} title="In this workspace">
-          {loading && <Loading theme={theme} />}
-          {!loading && inWorkspace.length === 0 && (
-            <EmptyHint
+        {loading && <Loading theme={theme} />}
+        {!loading && totalMatched === 0 && (
+          <EmptyHint
+            theme={theme}
+            message={
+              searchQuery
+                ? 'No trails match your search.'
+                : entries.length === 0
+                  ? 'No saved trails on this machine yet.'
+                  : 'No trails to show.'
+            }
+          />
+        )}
+        {!loading &&
+          groupedByRepo.map((group) => {
+            const owner = group.repositoryPath
+              ? ownerByPath.get(group.repositoryPath)
+              : undefined;
+            return (
+            <Section
+              key={group.key}
               theme={theme}
-              message={
-                topicId
-                  ? 'No trails in this workspace yet. Add one from below.'
-                  : 'No topic attached to this workspace.'
-              }
-            />
-          )}
-          {!loading &&
-            inWorkspace.map((entry) => (
-              <TrailRow
-                key={entry.id}
-                entry={entry}
-                inWorkspace
-                busy={busyTrailId === entry.id}
-                onAction={() => handleRemove(entry.id)}
-                onActivate={
-                  onTrailActivate ? () => handleActivate(entry.id) : undefined
-                }
-                disabled={!topicId}
-              />
-            ))}
-        </Section>
-
-        <Section theme={theme} title="All trails">
-          {loading && <Loading theme={theme} />}
-          {!loading && available.length === 0 && (
-            <EmptyHint
-              theme={theme}
-              message={
-                searchQuery
-                  ? 'No trails match your search.'
-                  : entries.length === 0
-                    ? 'No saved trails on this machine yet.'
-                    : 'All saved trails are already in this workspace.'
-              }
-            />
-          )}
-          {!loading &&
-            available.map((entry) => (
-              <TrailRow
-                key={entry.id}
-                entry={entry}
-                inWorkspace={false}
-                busy={busyTrailId === entry.id}
-                onAction={() => handleAdd(entry.id)}
-                onActivate={
-                  onTrailActivate ? () => handleActivate(entry.id) : undefined
-                }
-                disabled={!topicId}
-              />
-            ))}
-        </Section>
+              title={group.label}
+              count={group.entries.length}
+              owner={owner}
+            >
+              {group.entries.map((entry) => {
+                const inWs = topicTrailIds.has(entry.id);
+                return (
+                  <TrailRow
+                    key={entry.id}
+                    entry={entry}
+                    inWorkspace={inWs}
+                    busy={busyTrailId === entry.id}
+                    onAction={() =>
+                      inWs ? handleRemove(entry.id) : handleAdd(entry.id)
+                    }
+                    onActivate={
+                      onTrailActivate ? () => handleActivate(entry.id) : undefined
+                    }
+                    disabled={!topicId}
+                  />
+                );
+              })}
+            </Section>
+            );
+          })}
       </div>
     </div>
   );
@@ -380,7 +373,7 @@ const TrailRow: React.FC<TrailRowProps> = ({
   onActivate,
 }) => {
   const { theme } = useTheme();
-  const repoLabel = repoBasename(entry.repositoryPath);
+  const [isHovered, setIsHovered] = useState(false);
   const ActionIcon = inWorkspace ? Check : Plus;
   const actionLabel = inWorkspace ? 'Remove from workspace' : 'Add to workspace';
 
@@ -389,6 +382,8 @@ const TrailRow: React.FC<TrailRowProps> = ({
       role={onActivate ? 'button' : undefined}
       tabIndex={onActivate ? 0 : undefined}
       onClick={onActivate}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onKeyDown={
         onActivate
           ? (e) => {
@@ -406,19 +401,20 @@ const TrailRow: React.FC<TrailRowProps> = ({
         padding: '10px 12px',
         borderRadius: '8px',
         border: `1px solid ${theme.colors.border}`,
-        background: theme.colors.backgroundSecondary,
+        background: isHovered
+          ? theme.colors.background
+          : theme.colors.backgroundSecondary,
         cursor: onActivate ? 'pointer' : 'default',
+        transition: 'all 0.15s ease',
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: theme.fontSizes[1],
+            fontSize: theme.fontSizes[2],
             fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            wordBreak: 'break-word',
           }}
           title={entry.title}
         >
@@ -426,27 +422,18 @@ const TrailRow: React.FC<TrailRowProps> = ({
         </div>
         <div
           style={{
-            fontSize: theme.fontSizes[0],
+            fontSize: theme.fontSizes[1],
             color: theme.colors.textSecondary,
             display: 'flex',
             gap: '8px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            flexWrap: 'wrap',
           }}
           title={entry.repositoryPath}
         >
-          {entry.purpose && <span>{entry.purpose}</span>}
-          {entry.purpose && repoLabel && <span>·</span>}
-          {repoLabel && <span>{repoLabel}</span>}
-          {!entry.purpose && !repoLabel && <span>repo-agnostic</span>}
           {entry.updatedAt && (
-            <>
-              <span>·</span>
-              <span title={new Date(entry.updatedAt).toLocaleString()}>
-                {formatRelativeTime(entry.updatedAt)}
-              </span>
-            </>
+            <span title={new Date(entry.updatedAt).toLocaleString()}>
+              {formatRelativeTime(entry.updatedAt)}
+            </span>
           )}
         </div>
       </div>
@@ -480,11 +467,34 @@ const TrailRow: React.FC<TrailRowProps> = ({
   );
 };
 
+const SectionAvatar: React.FC<{ owner: string }> = ({ owner }) => {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <img
+      src={`https://github.com/${encodeURIComponent(owner)}.png?size=48`}
+      alt={owner}
+      width={20}
+      height={20}
+      onError={() => setFailed(true)}
+      style={{
+        width: '20px',
+        height: '20px',
+        borderRadius: '4px',
+        objectFit: 'cover',
+        flexShrink: 0,
+      }}
+    />
+  );
+};
+
 const Section: React.FC<{
   theme: ReturnType<typeof useTheme>['theme'];
   title: string;
+  count?: number;
+  owner?: string;
   children: React.ReactNode;
-}> = ({ theme, title, children }) => (
+}> = ({ theme, title, count, owner, children }) => (
   <section
     style={{
       display: 'flex',
@@ -494,15 +504,37 @@ const Section: React.FC<{
   >
     <div
       style={{
-        fontSize: theme.fontSizes[0],
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontSize: theme.fontSizes[2],
         fontWeight: theme.fontWeights.semibold,
-        letterSpacing: '0.04em',
-        textTransform: 'uppercase',
-        color: theme.colors.textSecondary,
+        color: theme.colors.text,
         paddingBottom: '4px',
       }}
     >
-      {title}
+      {owner && <SectionAvatar owner={owner} />}
+      <span
+        style={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+        title={title}
+      >
+        {title}
+      </span>
+      {typeof count === 'number' && (
+        <span
+          style={{
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textSecondary,
+            opacity: 0.7,
+          }}
+        >
+          {count}
+        </span>
+      )}
     </div>
     {children}
   </section>

@@ -298,6 +298,7 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
         context={trailContext}
         actions={trailActions}
         events={events}
+        briefLayout="split"
       />
     </div>
   );
