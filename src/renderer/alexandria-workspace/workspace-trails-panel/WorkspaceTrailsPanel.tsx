@@ -143,7 +143,7 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
       }
     }
     // Sort: named repos alphabetically by label, repo-agnostic last. Within a
-    // group, workspace members first (so a glance shows what's attached).
+    // group, most recently updated first (title as tiebreaker).
     return Array.from(groups.entries())
       .sort(([a, ga], [b, gb]) => {
         if (a === REPO_AGNOSTIC_KEY) return 1;
@@ -155,9 +155,9 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
         label: group.label,
         repositoryPath: group.repositoryPath,
         entries: group.entries.sort((x, y) => {
-          const xIn = topicTrailIds.has(x.id) ? 0 : 1;
-          const yIn = topicTrailIds.has(y.id) ? 0 : 1;
-          if (xIn !== yIn) return xIn - yIn;
+          const xT = x.updatedAt ? Date.parse(x.updatedAt) : 0;
+          const yT = y.updatedAt ? Date.parse(y.updatedAt) : 0;
+          if (xT !== yT) return yT - xT;
           return (x.title ?? x.id).localeCompare(y.title ?? y.id);
         }),
       }));
@@ -423,7 +423,7 @@ const TrailRow: React.FC<TrailRowProps> = ({
         <div
           style={{
             fontSize: theme.fontSizes[1],
-            color: theme.colors.textSecondary,
+            color: theme.colors.textMuted,
             display: 'flex',
             gap: '8px',
             flexWrap: 'wrap',

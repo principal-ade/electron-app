@@ -652,9 +652,6 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       {/* Custom Titlebar */}
       <AlexandriaWorkspaceTitlebar
         workspace={displayWorkspace}
-        workspaceRepositoryIds={workspaceRepositories
-          .map((entry) => entry.github?.id)
-          .filter((id): id is string => id != null)}
         selectedRepository={selectedRepository}
         enableKeyboardShortcuts={enableKeyboardShortcuts}
         onToggleKeyboardShortcuts={() =>

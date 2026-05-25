@@ -139,7 +139,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
       <div
         style={{
           fontSize: `${theme.fontSizes[1]}px`,
-          color: theme.colors.textSecondary,
+          color: theme.colors.textMuted,
           fontFamily: theme.fonts.monospace,
           overflow: 'hidden',
           textOverflow: 'ellipsis',

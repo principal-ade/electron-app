@@ -1,12 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   PanelCollapseButton,
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { Plus, Keyboard, FilePlus2, Github, FolderGit2, Route } from 'lucide-react';
-import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddRepositoryToWorkspaceModal';
+import { Keyboard, FilePlus2, Github, FolderGit2, Route } from 'lucide-react';
 import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
 import { CloneFromGitHubModal } from '../../panels/components/CloneFromGitHubModal';
 import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
@@ -22,7 +21,6 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'alexandria-docs', label: 'Documentation' },
   { id: 'file-city', label: 'File City' },
   { id: 'localhost-browser', label: 'Localhost Browser' },
-  { id: 'workspace-repos', label: 'Projects' },
 ];
 
 /**
@@ -37,7 +35,6 @@ const LEFT_PANEL_SEGMENTS = [
 
 export interface AlexandriaWorkspaceTitlebarProps {
   workspace: Workspace;
-  workspaceRepositoryIds?: string[];
   selectedRepository?: { name: string; path: string };
   enableKeyboardShortcuts?: boolean;
   onToggleKeyboardShortcuts?: () => void;
@@ -55,7 +52,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   AlexandriaWorkspaceTitlebarProps
 > = ({
   workspace,
-  workspaceRepositoryIds = [],
   selectedRepository,
   enableKeyboardShortcuts = false,
   onToggleKeyboardShortcuts,
@@ -67,7 +63,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   onLayoutChange,
 }) => {
   const { theme } = useTheme();
-  const [showAddModal, setShowAddModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [isTitlebarHovered, setIsTitlebarHovered] = useState(false);
@@ -75,11 +70,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
 
   // Show buttons if titlebar is hovered OR if dropdown is open
   const showHoverButtons = isTitlebarHovered || isDropdownOpen;
-
-  // Memoize the repository IDs for the modal
-  const currentRepositoryIds = useMemo(() => {
-    return workspaceRepositoryIds.filter((id): id is string => id != null);
-  }, [workspaceRepositoryIds]);
 
   // Handler for changing the left panel
   const handleLeftPanelChange = (panelId: string) => {
@@ -424,39 +414,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             </button>
           )}
 
-          {/* Add Repository Button */}
-          <button
-            onClick={() => setShowAddModal(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              backgroundColor: 'transparent',
-              border: `1px solid ${theme.colors.border}`,
-              color: theme.colors.textSecondary,
-              cursor: 'pointer',
-              fontSize: `${theme.fontSizes[0]}px`,
-              fontWeight: theme.fontWeights.medium,
-              fontFamily: theme.fonts.body,
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.primary;
-              e.currentTarget.style.borderColor = theme.colors.primary;
-              e.currentTarget.style.color = theme.colors.background;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = theme.colors.border;
-              e.currentTarget.style.color = theme.colors.textSecondary;
-            }}
-            title="Add existing repository to workspace"
-          >
-            <Plus size={14} />
-            Add
-          </button>
         </div>
 
         {/* Right Panel Selector */}
@@ -488,14 +445,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           />
         )}
       </div>
-
-      {/* Add Repository Modal */}
-      <AddRepositoryToWorkspaceModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        workspace={workspace}
-        currentRepositoryIds={currentRepositoryIds}
-      />
 
       {/* Create Repository Modal */}
       <CreateRepositoryInWorkspaceModal

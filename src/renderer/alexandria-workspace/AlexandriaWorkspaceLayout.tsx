@@ -471,6 +471,28 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           );
           onRepositorySelected(selectedRepo);
 
+          // Auto-add this repo to the current workspace if it's not already
+          // a member. Clicking a project in the panel is now the canonical
+          // way to add it — there's no longer a separate "Add" button.
+          try {
+            const alreadyMember = await WorkspaceService.isRepositoryInWorkspace(
+              repository,
+              workspace.id,
+            );
+            if (!alreadyMember) {
+              await WorkspaceService.addRepositoryToWorkspace(
+                repository,
+                workspace.id,
+              );
+              context.refresh('workspace', 'workspaceRepositories');
+            }
+          } catch (err) {
+            console.error(
+              '[AlexandriaWorkspaceLayout] Failed to add repo to workspace:',
+              err,
+            );
+          }
+
           // Open a terminal tab pinned to this repo, or focus the existing
           // one if its session is already alive. The renderer-side
           // `createTerminalSession` does NOT de-dupe by context (and the
@@ -517,7 +539,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     });
 
     return unsubscribe;
-  }, [events, onRepositorySelected, selectedRepository, layout, onLayoutChange, collapsed, onCollapsedChange, terminalActions, terminalContext]);
+  }, [events, onRepositorySelected, selectedRepository, layout, onLayoutChange, collapsed, onCollapsedChange, terminalActions, terminalContext, workspace.id, context]);
 
   // Listen for repository:opened events (for explicitly opening windows)
   useEffect(() => {
