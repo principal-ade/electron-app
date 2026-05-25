@@ -18,6 +18,22 @@ function displayPath(path: string, home: string | null): string {
   return path;
 }
 
+function formatRelativeTime(timestamp: string | undefined): string {
+  if (!timestamp) return '';
+  const diffMs = Date.now() - new Date(timestamp).getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  if (diffMinutes < 1) return 'just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+  return `${Math.floor(diffDays / 365)}y ago`;
+}
+
 // Panel event prefix
 const PANEL_ID = 'electron-app.recent-repositories';
 
@@ -132,6 +148,20 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
         >
           {repository.name}
         </span>
+        {repository.lastOpenedAt && (
+          <span
+            title={new Date(repository.lastOpenedAt).toLocaleString()}
+            style={{
+              fontSize: `${theme.fontSizes[1]}px`,
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.body,
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            {formatRelativeTime(repository.lastOpenedAt)}
+          </span>
+        )}
         {hasActiveTerminal && (
           <TerminalSquare
             size={14}
@@ -336,11 +366,20 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
         })
       : source;
 
-    // Active terminals first, then alphabetical within each group.
+    // Active terminals first; within each group, most-recently-opened first,
+    // with never-opened repos falling to the bottom alphabetically.
     return [...filtered].sort((a: AlexandriaEntry, b: AlexandriaEntry) => {
       const aActive = activeRepoPaths.has(a.path);
       const bActive = activeRepoPaths.has(b.path);
       if (aActive !== bActive) return aActive ? -1 : 1;
+
+      if (a.lastOpenedAt && !b.lastOpenedAt) return -1;
+      if (!a.lastOpenedAt && b.lastOpenedAt) return 1;
+      if (a.lastOpenedAt && b.lastOpenedAt) {
+        const aTime = new Date(a.lastOpenedAt).getTime();
+        const bTime = new Date(b.lastOpenedAt).getTime();
+        if (aTime !== bTime) return bTime - aTime;
+      }
       return a.name.localeCompare(b.name);
     });
   }, [repositories, searchPool, searchQuery, activeRepoPaths]);
