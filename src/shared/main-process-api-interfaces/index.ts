@@ -21,6 +21,15 @@ export interface ExtendedRepositoryMonitoringAPI extends RepositoryMonitoringAPI
     registeredScopes?: string[];
     error?: string;
   }>;
+  /**
+   * Switch the worker's filesystem watcher implementation at runtime. Persists
+   * the choice to UserPreferences and restarts the worker so the new adapter
+   * is picked up. Returns { success, changed } where `changed` is true only
+   * when the impl actually differed from what was already set.
+   */
+  setWatcherImpl: (
+    impl: 'parcel' | 'chokidar',
+  ) => Promise<{ success: boolean; changed?: boolean; error?: string }>;
 }
 import type { SecretsAPI } from './SecretsAPI';
 import type { LinksAPI } from './LinksAPI';

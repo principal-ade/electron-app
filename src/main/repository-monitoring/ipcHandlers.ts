@@ -11,7 +11,11 @@ import {
   type ToolExecutionRequest,
   type WorkspaceChangeEventPayload,
   type RepositoryCacheSyncEvent,
+  type LifecycleEvent,
+  type LogTailRequest,
+  type FileWatcherImpl,
 } from '@principal-ai/repository-monitoring-server';
+import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 import type { SharedGitStatus } from '@principal-ai/control-tower-core';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 import { applicationWindows, PrimaryWindowType } from '../window/types';
@@ -266,15 +270,21 @@ async function broadcastToRelevantWindows<T extends { repoPath: string }>(
 }
 
 /**
- * Get or create the repository monitoring manager instance
+ * Get or create the repository monitoring manager instance. Pass `seedConfig`
+ * on the *first* call to inject startup-only settings (e.g. watcherImpl)
+ * sourced from user preferences. Later calls receive the cached instance and
+ * ignore the seed.
  */
-export function getManager(): RepositoryMonitoringManager {
+export function getManager(
+  seedConfig: { watcherImpl?: FileWatcherImpl } = {},
+): RepositoryMonitoringManager {
   if (!repositoryMonitoringManager) {
     repositoryMonitoringManager = new RepositoryMonitoringManager({
       autoStart: true,
       restartOnCrash: true,
       maxRestartAttempts: 3,
       logLevel: 'info',
+      watcherImpl: seedConfig.watcherImpl ?? 'parcel',
     });
   }
   return repositoryMonitoringManager;
@@ -283,10 +293,26 @@ export function getManager(): RepositoryMonitoringManager {
 /**
  * Register IPC handlers for repository monitoring
  */
-export function registerRepositoryMonitoringHandlers(): void {
+export async function registerRepositoryMonitoringHandlers(): Promise<void> {
   console.log('[RepositoryMonitoring] Registering IPC handlers');
 
-  const manager = getManager();
+  // Read the watcher impl preference before constructing the manager so the
+  // first worker spawns with the right adapter. If reading the pref fails
+  // (e.g. first run before the store is initialized) we default to 'parcel'.
+  let watcherImpl: FileWatcherImpl = 'parcel';
+  try {
+    const prefs = await UserPreferencesHandler.getInstance().getUserPreferences();
+    if (prefs.repositoryMonitoringWatcherImpl === 'chokidar') {
+      watcherImpl = 'chokidar';
+    }
+  } catch (error) {
+    console.warn(
+      '[RepositoryMonitoring] Could not read watcherImpl preference, using default:',
+      error,
+    );
+  }
+
+  const manager = getManager({ watcherImpl });
   const qualityLensService = QualityLensService.getInstance();
 
   // Get FileTree for a repository
@@ -486,6 +512,98 @@ export function registerRepositoryMonitoringHandlers(): void {
       };
     }
   });
+
+  // Get rich diagnostics snapshot (phase, PID, lifecycle history, log buffers)
+  ipcMain.handle(
+    RepositoryMonitoringAPIEvent.GET_DIAGNOSTICS,
+    async () => {
+      try {
+        return manager.getDiagnostics();
+      } catch (error) {
+        console.error(
+          '[RepositoryMonitoring] Error getting diagnostics:',
+          error,
+        );
+        // Return an inert diagnostic snapshot on error so the UI can render
+        // "no data" rather than crashing.
+        return {
+          phase: 'idle' as const,
+          running: false,
+          ready: false,
+          workerPid: null,
+          startedAt: null,
+          lastReadyAt: null,
+          phaseEnteredAt: Date.now(),
+          restartAttempts: 0,
+          maxRestartAttempts: 0,
+          shutdownRequested: false,
+          lastError: {
+            message: error instanceof Error ? error.message : String(error),
+          },
+          lastExit: null,
+          watcherImpl: null,
+          requestedWatcherImpl: 'parcel' as const,
+          lifecycleHistory: [],
+          stdoutTail: [],
+          stderrTail: [],
+        };
+      }
+    },
+  );
+
+  // Get tail of the main + worker log files
+  ipcMain.handle(
+    RepositoryMonitoringAPIEvent.GET_LOG_TAIL,
+    async (_event, request?: LogTailRequest) => {
+      try {
+        return await manager.getLogTail(request);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('[RepositoryMonitoring] Error reading log tail:', error);
+        return {
+          mainLog: { path: '', content: '', error: message },
+          workerLog: { path: '', content: '', error: message },
+        };
+      }
+    },
+  );
+
+  // Switch the worker's filesystem watcher implementation at runtime. The
+  // request is persisted to UserPreferences so it survives app restarts, and
+  // the worker is restarted in-place so the change is immediately visible.
+  ipcMain.handle(
+    'repository-monitoring:set-watcher-impl',
+    async (_event, impl: FileWatcherImpl) => {
+      if (impl !== 'parcel' && impl !== 'chokidar') {
+        return { success: false, error: `Invalid watcher impl: ${String(impl)}` };
+      }
+      try {
+        const changed = manager.setWatcherImpl(impl);
+        // Always persist, even when unchanged, so the preference is normalized.
+        await UserPreferencesHandler.getInstance().updateUserPreferences({
+          repositoryMonitoringWatcherImpl: impl,
+        });
+        if (changed) {
+          // stop() is sync; the auto-restart machinery would then bring a new
+          // worker up. We do an explicit start() here so the UI sees the
+          // 'stopping -> spawning' transitions immediately rather than going
+          // through the crash-recovery path.
+          manager.stop();
+          await manager.start();
+        }
+        return { success: true, changed };
+      } catch (error) {
+        console.error(
+          '[RepositoryMonitoring] Failed to switch watcher impl:',
+          error,
+        );
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   // Start monitoring
   ipcMain.handle(RepositoryMonitoringAPIEvent.START_MONITORING, async () => {
@@ -734,6 +852,21 @@ export function registerRepositoryMonitoringHandlers(): void {
         RepositoryMonitoringAPIEvent.METRICS_UPDATED,
         data,
       );
+    });
+  });
+
+  // Forward worker lifecycle transitions (spawning -> ready -> running
+  // -> stopping/crashed -> restarting -> stopped/fatal) so the renderer
+  // can show "why is the server in this state".
+  manager.on('lifecycle', (event: LifecycleEvent) => {
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach((window) => {
+      if (!window.isDestroyed()) {
+        window.webContents.send(
+          RepositoryMonitoringAPIEvent.LIFECYCLE_EVENT,
+          event,
+        );
+      }
     });
   });
 

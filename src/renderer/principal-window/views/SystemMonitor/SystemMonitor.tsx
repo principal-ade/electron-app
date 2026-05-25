@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   Activity,
@@ -40,12 +40,22 @@ import type { TerminalSessionInfo } from '../../../../shared/tipc/terminalRouter
 import type {
   MonitoringStatus,
   GitStatus,
+  ServerDiagnostics,
+  LifecycleEvent,
+  LifecyclePhase,
 } from '@principal-ai/repository-monitoring-server';
 import type { OtelCollectorStatus } from '../../../main-process-api/OtelCollectorService';
+import {
+  RepositoryMonitoringDiagnostics,
+  phaseLabel,
+  phaseAccentColor,
+  phaseTooltip,
+} from './RepositoryMonitoringDiagnostics';
 
 interface SystemMonitorProps {
   sidebarCollapsed?: boolean;
 }
+
 
 export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   sidebarCollapsed,
@@ -55,6 +65,16 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [loading, setLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
+  // Rich diagnostics for the repository monitoring worker. Driven by lifecycle
+  // events (pushed from main) plus a periodic getDiagnostics() poll for tail
+  // log lines + initial state.
+  const [diagnostics, setDiagnostics] = useState<ServerDiagnostics | null>(
+    null,
+  );
+  // Used to derive an "elapsed in current phase" string that updates every
+  // second without re-fetching diagnostics.
+  const [nowTick, setNowTick] = useState<number>(Date.now());
+  const toggleRequestedAtRef = useRef<number | null>(null);
   const [showAddRepo, setShowAddRepo] = useState(false);
   const [availableRepos, setAvailableRepos] = useState<
     Array<{ name: string; path: string }>
@@ -138,6 +158,118 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
     };
     loadAvailableRepos();
   }, []);
+
+  // --- Repository monitoring diagnostics (lifecycle stream + polling) ---
+  //
+  // The lifecycle event stream is the source of truth for transitional state
+  // (spawning, restarting, crashed, fatal). We still poll getDiagnostics()
+  // periodically to refresh the captured stdout/stderr tail and to recover
+  // the initial snapshot on mount / tab switch.
+  useEffect(() => {
+    let cancelled = false;
+    let interval: NodeJS.Timeout | null = null;
+
+    const fetchDiagnostics = async () => {
+      try {
+        const snapshot = await RepositoryMonitoringService.getDiagnostics();
+        if (!cancelled) {
+          setDiagnostics(snapshot);
+        }
+      } catch (error) {
+        console.error('Failed to fetch monitoring diagnostics:', error);
+      }
+    };
+
+    // Initial snapshot to populate UI immediately.
+    fetchDiagnostics();
+    // Poll every 2s while the repository tab is mounted so log tails refresh.
+    if (activeTab === 'repository') {
+      interval = setInterval(fetchDiagnostics, 2000);
+    }
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
+    const unsubscribe = RepositoryMonitoringService.onLifecycleEvent(
+      (event: LifecycleEvent) => {
+        setDiagnostics((prev) => {
+          if (!prev) return prev;
+          // Apply the transition to the local copy so the UI updates
+          // immediately, without waiting for the next poll.
+          const nextHistory = [...prev.lifecycleHistory, event].slice(-100);
+          const nextRunning =
+            event.phase === 'ready' ||
+            event.phase === 'running' ||
+            event.phase === 'spawning' ||
+            event.phase === 'restarting';
+          const nextReady =
+            event.phase === 'ready' || event.phase === 'running';
+          return {
+            ...prev,
+            phase: event.phase,
+            phaseEnteredAt: event.ts,
+            running: nextRunning,
+            ready: nextReady,
+            workerPid: event.workerPid ?? prev.workerPid,
+            lastReadyAt:
+              event.phase === 'ready' ? event.ts : prev.lastReadyAt,
+            lastError: event.error ?? prev.lastError,
+            lastExit:
+              event.phase === 'stopped' ||
+              event.phase === 'crashed' ||
+              event.phase === 'fatal'
+                ? {
+                    code: event.exitCode ?? null,
+                    signal: event.exitSignal ?? null,
+                    at: event.ts,
+                  }
+                : prev.lastExit,
+            lifecycleHistory: nextHistory,
+            restartAttempts:
+              typeof event.attempt === 'number'
+                ? event.attempt
+                : prev.restartAttempts,
+          };
+        });
+
+        // Mirror the run/transition state onto the legacy isRunning flag the
+        // existing UI sections use for sparkline coloring etc.
+        if (event.phase === 'ready' || event.phase === 'running') {
+          setIsRunning(true);
+        } else if (
+          event.phase === 'stopped' ||
+          event.phase === 'fatal' ||
+          event.phase === 'idle'
+        ) {
+          setIsRunning(false);
+        }
+
+        // Clear the toggle spinner once the worker has reached a terminal
+        // phase (or once 'ready' arrives after a user-initiated start).
+        const terminal =
+          event.phase === 'ready' ||
+          event.phase === 'running' ||
+          event.phase === 'stopped' ||
+          event.phase === 'fatal';
+        if (terminal && toggleRequestedAtRef.current) {
+          toggleRequestedAtRef.current = null;
+          setIsToggling(false);
+        }
+      },
+    );
+    return unsubscribe;
+  }, []);
+
+  // Tick a "now" value every second so phase-elapsed strings stay live.
+  useEffect(() => {
+    if (activeTab !== 'repository') return;
+    const id = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [activeTab]);
 
   // Poll OTEL Collector status
   useEffect(() => {
@@ -497,23 +629,21 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   };
 
   const handleToggleMonitoring = async () => {
+    // We mark the toggle request time so the lifecycle event subscription
+    // knows it's responsible for clearing isToggling once a terminal phase
+    // arrives (ready/stopped/fatal). The IPC promise resolving is NOT a
+    // signal of success — the worker may spawn, crash on init, and the
+    // manager may auto-restart, all between the IPC resolution and the
+    // next status poll. The lifecycle stream catches all of that.
+    toggleRequestedAtRef.current = Date.now();
     setIsToggling(true);
+    const startingFromRunning = isRunning;
     try {
-      if (isRunning) {
-        // Stop monitoring
+      if (startingFromRunning) {
         await RepositoryMonitoringService.stopMonitoring();
-        setIsRunning(false);
-        setStatus({
-          repositories: [],
-          currentMemory: 0,
-          currentCpu: 0,
-          history: [],
-        });
       } else {
-        // Start monitoring
         await RepositoryMonitoringService.startMonitoring();
-        setIsRunning(true);
-        // Fetch status immediately after starting
+        // Refresh resource snapshot a beat after the worker is asked to start.
         setTimeout(async () => {
           const data = await RepositoryMonitoringService.getMonitoringStatus();
           setStatus(data);
@@ -521,8 +651,16 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
       }
     } catch (error) {
       console.error('Failed to toggle monitoring:', error);
-    } finally {
-      setIsToggling(false);
+      // The lifecycle event will clear isToggling on the next transition; in
+      // the rare case the IPC itself rejected without any transition (e.g.
+      // the handler threw before the manager moved), make sure we don't get
+      // stuck in the spinner.
+      setTimeout(() => {
+        if (toggleRequestedAtRef.current) {
+          toggleRequestedAtRef.current = null;
+          setIsToggling(false);
+        }
+      }, 5000);
     }
   };
 
@@ -790,37 +928,58 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
           >
             {activeTab === 'repository' ? (
               <>
-                {/* Repository Monitoring Status */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: isRunning
-                      ? `${theme.colors.success}15`
-                      : `${theme.colors.textSecondary}15`,
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    color: isRunning
-                      ? theme.colors.success
-                      : theme.colors.textSecondary,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: isRunning
-                        ? theme.colors.success
-                        : theme.colors.textSecondary,
-                      animation: isRunning ? 'pulse 2s infinite' : 'none',
-                    }}
-                  />
-                  {isRunning ? 'Running' : 'Stopped'}
-                </div>
+                {/* Repository Monitoring Status (phase-aware). */}
+                {(() => {
+                  const phase: LifecyclePhase =
+                    diagnostics?.phase ?? (isRunning ? 'running' : 'idle');
+                  const color = phaseAccentColor(phase, theme);
+                  const isTransitional =
+                    phase === 'spawning' ||
+                    phase === 'stopping' ||
+                    phase === 'restarting';
+                  return (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        backgroundColor: `${color}15`,
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color,
+                      }}
+                      title={phaseTooltip(phase, diagnostics)}
+                    >
+                      <div
+                        style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: color,
+                          animation:
+                            phase === 'ready' || phase === 'running'
+                              ? 'pulse 2s infinite'
+                              : isTransitional
+                                ? 'pulse 1s infinite'
+                                : 'none',
+                        }}
+                      />
+                      {phaseLabel(phase)}
+                      {diagnostics &&
+                        diagnostics.restartAttempts > 0 &&
+                        (phase === 'restarting' ||
+                          phase === 'crashed' ||
+                          phase === 'fatal') && (
+                          <span style={{ opacity: 0.8, fontSize: '11px' }}>
+                            ({diagnostics.restartAttempts}/
+                            {diagnostics.maxRestartAttempts})
+                          </span>
+                        )}
+                    </div>
+                  );
+                })()}
 
                 {/* Repository Power button */}
                 <button
@@ -1104,6 +1263,8 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             Showing last {status.history.length} data points (1 minute history)
           </div>
         </section>
+
+        <RepositoryMonitoringDiagnostics diagnostics={diagnostics} nowTick={nowTick} />
           </>
         )}
 

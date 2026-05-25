@@ -117,6 +117,13 @@ export interface UserPreferences {
   baseDefaultDirectory?: string;
   /** Enable git watching for all repositories on startup (default: false) */
   enableGitWatchingOnStartup?: boolean;
+  /**
+   * Filesystem watcher implementation used by the repository monitoring
+   * worker. 'parcel' (default) uses native fsevents via @parcel/watcher;
+   * 'chokidar' is the older fallback. Changing this triggers a worker
+   * restart so the new adapter is picked up.
+   */
+  repositoryMonitoringWatcherImpl?: 'parcel' | 'chokidar';
 
   // Agent session preferences
   /** Automatically commit changes when stopping agent sessions */

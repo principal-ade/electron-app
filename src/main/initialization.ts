@@ -194,7 +194,7 @@ const registerAllIpcHandlers = async () => {
   setupSplashScreenHandlers(); // Register splash screen handlers
   //registerStorageHandlers();
   registerStoreHandlers();
-  registerRepositoryMonitoringHandlers(); // Register repository monitoring handlers
+  await registerRepositoryMonitoringHandlers(); // Register repository monitoring handlers
   registerFileCityImageHandlers(); // Register File City image generation handlers
   registerTrailHandlers(); // Register File City trail IPC handlers
   registerDocumentNotesHandlers(); // Register document-notes IPC handlers

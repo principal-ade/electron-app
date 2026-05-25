@@ -18,6 +18,10 @@ import type {
   RepositoryCacheSnapshot,
   RepositoryCacheSyncEvent,
   WorkspaceChangeEventPayload,
+  ServerDiagnostics,
+  LifecycleEvent,
+  LogTailRequest,
+  LogTailResponse,
 } from '@principal-ai/repository-monitoring-server';
 
 export class RepositoryMonitoringService {
@@ -405,6 +409,92 @@ export class RepositoryMonitoringService {
     } catch (error) {
       console.error('[RepositoryMonitoring] Error executing tool:', error);
       return null;
+    }
+  }
+
+  /**
+   * Get a rich diagnostic snapshot of the monitoring worker:
+   * current phase, PID, restart attempts, last error, last exit,
+   * recent lifecycle history, and tail of worker stdout/stderr.
+   */
+  static async getDiagnostics(): Promise<ServerDiagnostics> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.getDiagnostics();
+    } catch (error) {
+      console.error(
+        '[RepositoryMonitoring] Error getting diagnostics:',
+        error,
+      );
+      return {
+        phase: 'idle',
+        running: false,
+        ready: false,
+        workerPid: null,
+        startedAt: null,
+        lastReadyAt: null,
+        phaseEnteredAt: Date.now(),
+        restartAttempts: 0,
+        maxRestartAttempts: 0,
+        shutdownRequested: false,
+        lastError: {
+          message: error instanceof Error ? error.message : String(error),
+        },
+        lastExit: null,
+        watcherImpl: null,
+        requestedWatcherImpl: 'parcel',
+        lifecycleHistory: [],
+        stdoutTail: [],
+        stderrTail: [],
+      };
+    }
+  }
+
+  /**
+   * Read the tail of the main + worker log files.
+   */
+  static async getLogTail(
+    request?: LogTailRequest,
+  ): Promise<LogTailResponse> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.getLogTail(request);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[RepositoryMonitoring] Error reading log tail:', error);
+      return {
+        mainLog: { path: '', content: '', error: message },
+        workerLog: { path: '', content: '', error: message },
+      };
+    }
+  }
+
+  /**
+   * Subscribe to worker lifecycle transitions (spawning, ready, running,
+   * stopping, stopped, crashed, restarting, fatal).
+   */
+  static onLifecycleEvent(
+    callback: (event: LifecycleEvent) => void,
+  ): () => void {
+    return window.mainProcess.repositoryMonitoring.onLifecycleEvent(callback);
+  }
+
+  /**
+   * Switch the monitoring worker's filesystem watcher implementation.
+   * Persists the choice and triggers a worker restart.
+   */
+  static async setWatcherImpl(
+    impl: 'parcel' | 'chokidar',
+  ): Promise<{ success: boolean; changed?: boolean; error?: string }> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.setWatcherImpl(impl);
+    } catch (error) {
+      console.error(
+        '[RepositoryMonitoring] Error setting watcher impl:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 

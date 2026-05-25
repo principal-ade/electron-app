@@ -6,6 +6,8 @@ import {
   type ToolExecutionRequest,
   type RepositoryCacheSyncEvent,
   type BuildArtifactsDetectedPayload,
+  type LifecycleEvent,
+  type LogTailRequest,
 } from '@principal-ai/repository-monitoring-server';
 import type { ExtendedRepositoryMonitoringAPI } from '../../shared/main-process-api-interfaces';
 
@@ -214,6 +216,37 @@ export const repositoryMonitoringAPI: ExtendedRepositoryMonitoringAPI = {
       RepositoryMonitoringAPIEvent.EXECUTE_TOOL,
       request,
     );
+  },
+
+  getDiagnostics: async () => {
+    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_DIAGNOSTICS);
+  },
+
+  getLogTail: async (request?: LogTailRequest) => {
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.GET_LOG_TAIL,
+      request,
+    );
+  },
+
+  onLifecycleEvent: (
+    callback: (event: LifecycleEvent) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: LifecycleEvent,
+    ) => callback(payload);
+    ipcRenderer.on(RepositoryMonitoringAPIEvent.LIFECYCLE_EVENT, handler);
+    return () => {
+      ipcRenderer.removeListener(
+        RepositoryMonitoringAPIEvent.LIFECYCLE_EVENT,
+        handler,
+      );
+    };
+  },
+
+  setWatcherImpl: async (impl: 'parcel' | 'chokidar') => {
+    return ipcRenderer.invoke('repository-monitoring:set-watcher-impl', impl);
   },
 
   // Manually trigger workspace sync to otel-events-manager
