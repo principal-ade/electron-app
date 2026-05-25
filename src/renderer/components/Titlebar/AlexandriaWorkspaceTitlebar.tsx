@@ -5,9 +5,8 @@ import {
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { Keyboard, FilePlus2, Github, FolderGit2, Route } from 'lucide-react';
+import { FilePlus2, FolderGit2, Route } from 'lucide-react';
 import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
-import { CloneFromGitHubModal } from '../../panels/components/CloneFromGitHubModal';
 import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
 import {
   PanelSelectorDropdown,
@@ -36,8 +35,6 @@ const LEFT_PANEL_SEGMENTS = [
 export interface AlexandriaWorkspaceTitlebarProps {
   workspace: Workspace;
   selectedRepository?: { name: string; path: string };
-  enableKeyboardShortcuts?: boolean;
-  onToggleKeyboardShortcuts?: () => void;
   // Panel controls
   collapsed?: { left: boolean; right: boolean };
   onToggleLeftSidebar?: () => void;
@@ -53,8 +50,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
 > = ({
   workspace,
   selectedRepository,
-  enableKeyboardShortcuts = false,
-  onToggleKeyboardShortcuts,
   collapsed,
   onToggleLeftSidebar,
   onToggleRightSidebar,
@@ -64,7 +59,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
 }) => {
   const { theme } = useTheme();
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showCloneModal, setShowCloneModal] = useState(false);
   const [isTitlebarHovered, setIsTitlebarHovered] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -295,53 +289,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             onOpenChange={setIsDropdownOpen}
           />
 
-          {/* Keyboard Shortcuts Toggle */}
-          {onToggleKeyboardShortcuts && (
-            <button
-              onClick={onToggleKeyboardShortcuts}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                backgroundColor: enableKeyboardShortcuts
-                  ? theme.colors.primary
-                  : 'transparent',
-                border: `1px solid ${enableKeyboardShortcuts ? theme.colors.primary : theme.colors.border}`,
-                color: enableKeyboardShortcuts
-                  ? theme.colors.background
-                  : theme.colors.textSecondary,
-                cursor: 'pointer',
-                fontSize: `${theme.fontSizes[0]}px`,
-                fontWeight: theme.fontWeights.medium,
-                fontFamily: theme.fonts.body,
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                if (!enableKeyboardShortcuts) {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!enableKeyboardShortcuts) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                }
-              }}
-              title={
-                enableKeyboardShortcuts
-                  ? 'Disable keyboard shortcuts (Alt+1/2/3)'
-                  : 'Enable keyboard shortcuts (Alt+1/2/3)'
-              }
-            >
-              <Keyboard size={14} />
-              {enableKeyboardShortcuts ? 'On' : 'Off'}
-            </button>
-          )}
-
           {/* Create Repository Button - only show if workspace has a clone path */}
           {workspace.suggestedClonePath && (
             <button
@@ -375,42 +322,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             >
               <FilePlus2 size={14} />
               Create
-            </button>
-          )}
-
-          {/* Clone from GitHub Button - only show if workspace has a clone path */}
-          {workspace.suggestedClonePath && (
-            <button
-              onClick={() => setShowCloneModal(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                backgroundColor: 'transparent',
-                border: `1px solid ${theme.colors.border}`,
-                color: theme.colors.textSecondary,
-                cursor: 'pointer',
-                fontSize: `${theme.fontSizes[0]}px`,
-                fontWeight: theme.fontWeights.medium,
-                fontFamily: theme.fonts.body,
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.primary;
-                e.currentTarget.style.borderColor = theme.colors.primary;
-                e.currentTarget.style.color = theme.colors.background;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.borderColor = theme.colors.border;
-                e.currentTarget.style.color = theme.colors.textSecondary;
-              }}
-              title="Clone repository from GitHub"
-            >
-              <Github size={14} />
-              Clone
             </button>
           )}
 
@@ -450,13 +361,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
       <CreateRepositoryInWorkspaceModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        workspace={workspace}
-      />
-
-      {/* Clone from GitHub Modal */}
-      <CloneFromGitHubModal
-        isOpen={showCloneModal}
-        onClose={() => setShowCloneModal(false)}
         workspace={workspace}
       />
     </div>

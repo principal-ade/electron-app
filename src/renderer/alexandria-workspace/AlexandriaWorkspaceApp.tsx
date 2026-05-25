@@ -107,7 +107,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [enableKeyboardShortcuts, setEnableKeyboardShortcuts] = useState(false);
+  const enableKeyboardShortcuts = false;
   const [collapsed, setCollapsed] = useState({ left: false, right: true });
   const [showPanelSidebar] = useState(false);
   const [layout, setLayout] = useState<PanelLayout>({
@@ -653,10 +653,6 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       <AlexandriaWorkspaceTitlebar
         workspace={displayWorkspace}
         selectedRepository={selectedRepository}
-        enableKeyboardShortcuts={enableKeyboardShortcuts}
-        onToggleKeyboardShortcuts={() =>
-          setEnableKeyboardShortcuts(!enableKeyboardShortcuts)
-        }
         collapsed={collapsed}
         onToggleLeftSidebar={() => {
           if (!panelControlRef.current) return;

@@ -42,17 +42,21 @@ function shellQuote(s: string): string {
 interface RepositoryCardProps {
   repository: AlexandriaEntry;
   hasActiveTerminal: boolean;
+  isMember: boolean;
   homePath: string | null;
   onSelect: (repo: AlexandriaEntry) => void;
   onOpen: (repo: AlexandriaEntry) => void;
+  onRemove?: (repo: AlexandriaEntry) => void;
 }
 
 const RepositoryCard: React.FC<RepositoryCardProps> = ({
   repository,
   hasActiveTerminal,
+  isMember,
   homePath,
   onSelect,
   onOpen,
+  onRemove,
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
@@ -135,6 +139,40 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
             aria-label="Terminal open"
           />
         )}
+        {isMember && isHovered && onRemove && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(repository);
+            }}
+            title="Remove from workspace"
+            aria-label="Remove from workspace"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2px',
+              border: 'none',
+              background: 'transparent',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = theme.colors.text;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = theme.colors.textSecondary;
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
       <div
         style={{
@@ -210,6 +248,17 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
     };
   }, []);
 
+  // Paths of repos that are members of the current workspace. Drives the
+  // hover-X affordance on the card.
+  const memberPaths = useMemo(() => {
+    const paths = new Set<string>();
+    const repos = context.workspaceRepositories?.data?.repositories;
+    if (repos) {
+      for (const repo of repos) paths.add(repo.path);
+    }
+    return paths;
+  }, [context.workspaceRepositories?.data?.repositories]);
+
   // Repos that currently have a `repo:<path>`-keyed terminal session
   // within this workspace. Sessions outside this context (other workspaces,
   // foreign tabs) are ignored.
@@ -224,22 +273,39 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
     return paths;
   }, [terminalCtx.terminalContext, terminalCtx.terminalSessions]);
 
-  // Get repositories from context
-  // Try multiple possible slice names for flexibility
+  // Default list shown when no search query is active: prefer the recent
+  // slice, then workspace, then the full alexandria set.
   const repositories = useMemo(() => {
-    // Try recentRepositories slice first
     const recentRepos = context.recentRepositories?.data?.repositories;
     if (recentRepos && recentRepos.length > 0) return recentRepos;
 
-    // Try workspaceRepositories (only if not empty)
     const workspaceRepos = context.workspaceRepositories?.data?.repositories;
     if (workspaceRepos && workspaceRepos.length > 0) return workspaceRepos;
 
-    // Fallback to all alexandriaRepositories
     const allRepos = context.alexandriaRepositories?.data?.repositories;
     if (allRepos && allRepos.length > 0) return allRepos;
 
     return [];
+  }, [context]);
+
+  // When the user types in the search box, widen the search pool to every
+  // known repo (alexandria + workspace + recent, de-duped by path) so a query
+  // can surface projects that aren't yet in the default list.
+  const searchPool = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: AlexandriaEntry[] = [];
+    const push = (repos?: AlexandriaEntry[]) => {
+      if (!repos) return;
+      for (const repo of repos) {
+        if (seen.has(repo.path)) continue;
+        seen.add(repo.path);
+        merged.push(repo);
+      }
+    };
+    push(context.alexandriaRepositories?.data?.repositories);
+    push(context.workspaceRepositories?.data?.repositories);
+    push(context.recentRepositories?.data?.repositories);
+    return merged;
   }, [context]);
 
   const isLoading = useMemo(() => {
@@ -253,23 +319,22 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
 
   // Filter and sort repositories based on search query
   const filteredRepositories = useMemo(() => {
-    let filtered = repositories;
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = repositories.filter((repo: AlexandriaEntry) => {
-        const name = repo.name.toLowerCase();
-        const path = repo.path.toLowerCase();
-        // Description may exist on some entries but not in the type definition
-        const description = ('description' in repo && typeof (repo as { description?: string }).description === 'string')
-          ? (repo as { description: string }).description.toLowerCase()
-          : '';
-        return (
-          name.includes(query) || path.includes(query) || description.includes(query)
-        );
-      });
-    }
+    const query = searchQuery.trim().toLowerCase();
+    // With a query active, widen the source to every known repo; otherwise
+    // stick to the default (recent/workspace) list.
+    const source = query ? searchPool : repositories;
+    const filtered = query
+      ? source.filter((repo: AlexandriaEntry) => {
+          const name = repo.name.toLowerCase();
+          const path = repo.path.toLowerCase();
+          const description = ('description' in repo && typeof (repo as { description?: string }).description === 'string')
+            ? (repo as { description: string }).description.toLowerCase()
+            : '';
+          return (
+            name.includes(query) || path.includes(query) || description.includes(query)
+          );
+        })
+      : source;
 
     // Active terminals first, then alphabetical within each group.
     return [...filtered].sort((a: AlexandriaEntry, b: AlexandriaEntry) => {
@@ -278,11 +343,12 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
       if (aActive !== bActive) return aActive ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
-  }, [repositories, searchQuery, activeRepoPaths]);
+  }, [repositories, searchPool, searchQuery, activeRepoPaths]);
 
   // Event handlers
   const handleSelectRepository = useCallback(
     (repository: AlexandriaEntry) => {
+      setSearchQuery('');
       events.emit(
         createPanelEvent('repository:selected', {
           repositoryId: repository.name,
@@ -296,10 +362,26 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
 
   const handleOpenRepository = useCallback(
     (repository: AlexandriaEntry) => {
+      setSearchQuery('');
       events.emit(
         createPanelEvent('repository:opened', {
           repositoryId: repository.name,
           repository,
+        })
+      );
+    },
+    [events]
+  );
+
+  // X-button click — ask the layout to remove the repo from the workspace
+  // and tear down its repo-pinned terminal tabs.
+  const handleRemoveRepository = useCallback(
+    (repository: AlexandriaEntry) => {
+      events.emit(
+        createPanelEvent('repository:removeFromWorkspace', {
+          repositoryId: repository.name,
+          repository,
+          repositoryPath: repository.path,
         })
       );
     },
@@ -354,8 +436,8 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
   }
 
   const searchPlaceholder =
-    repositories.length > 0
-      ? `Search ${repositories.length} project${repositories.length === 1 ? '' : 's'}…`
+    searchPool.length > 0
+      ? `Search ${searchPool.length} project${searchPool.length === 1 ? '' : 's'}…`
       : 'Search projects…';
 
   return (
@@ -463,9 +545,11 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
             key={repository.path}
             repository={repository}
             hasActiveTerminal={activeRepoPaths.has(repository.path)}
+            isMember={memberPaths.has(repository.path)}
             homePath={homePath}
             onSelect={handleSelectRepository}
             onOpen={handleOpenRepository}
+            onRemove={handleRemoveRepository}
           />
         ))}
       </div>

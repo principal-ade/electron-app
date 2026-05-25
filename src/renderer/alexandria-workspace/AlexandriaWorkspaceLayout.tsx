@@ -148,6 +148,13 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   // only own custom tabs (currently just the singleton 'file-city-trail').
   const [tabs, setTabs] = useState<AlexandriaTab[]>([]);
 
+  // Bump to force-remount the TabbedTerminalPanel. The panel manages terminal
+  // tabs internally and won't drop them when a session is destroyed from
+  // outside (e.g. when we tear down a repo's sessions on workspace removal).
+  // Remounting triggers its `restoreOwnedSessions`, which rebuilds tabs from
+  // the current live-session list — orphans disappear.
+  const [terminalRemountKey, setTerminalRemountKey] = useState(0);
+
   // Payload of the trail currently shown in the file-city-trail tab. Held
   // at the layout level so re-renders of the tab content (singleton) swap
   // payloads cleanly when a different trail is activated.
@@ -576,6 +583,79 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     return unsubscribe;
   }, [events]);
 
+  // Listen for repository:removeFromWorkspace — the hover-X on the projects
+  // card. Removes membership, tears down any repo-pinned terminal sessions in
+  // this workspace's context, and deselects the repo if it was active.
+  useEffect(() => {
+    const unsubscribe = events.on(
+      'repository:removeFromWorkspace',
+      async (event) => {
+        const { repository, repositoryPath } = event.payload as {
+          repositoryId: string;
+          repository: AlexandriaEntry;
+          repositoryPath: string;
+        };
+        if (!repository) return;
+        const repoPath = repositoryPath || repository.path;
+
+        try {
+          await WorkspaceService.removeRepositoryFromWorkspace(
+            repository,
+            workspace.id,
+          );
+          context.refresh('workspace', 'workspaceRepositories');
+        } catch (err) {
+          console.error(
+            '[AlexandriaWorkspaceLayout] Failed to remove repo from workspace:',
+            err,
+          );
+          return;
+        }
+
+        // Tear down terminal sessions pinned to this repo within this
+        // workspace's context. Sessions in other workspaces are untouched.
+        let destroyed = 0;
+        try {
+          const fullSessionContext = `${terminalContext}:repo:${repoPath}`;
+          const sessions = await TerminalService.list();
+          const targets = sessions.filter(
+            (s) => s.context === fullSessionContext,
+          );
+          await Promise.all(
+            targets.map((s) => terminalActions.destroyTerminalSession(s.id)),
+          );
+          destroyed = targets.length;
+        } catch (err) {
+          console.error(
+            '[AlexandriaWorkspaceLayout] Failed to close terminal tabs for removed repo:',
+            err,
+          );
+        }
+
+        // Force the TabbedTerminalPanel to re-derive its tabs from the live
+        // session list, so the destroyed sessions' tab chrome disappears.
+        if (destroyed > 0) {
+          setTerminalRemountKey((k) => k + 1);
+        }
+
+        // Deselect if the removed repo was the active selection.
+        if (selectedRepository?.path === repoPath) {
+          onRepositorySelected(undefined);
+        }
+      },
+    );
+
+    return unsubscribe;
+  }, [
+    events,
+    workspace.id,
+    context,
+    terminalContext,
+    terminalActions,
+    selectedRepository,
+    onRepositorySelected,
+  ]);
+
   // Listen for file:opened events (from Alexandria docs panel)
   // TODO: Implement tabbed view for markdown files
   useEffect(() => {
@@ -747,6 +827,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               <FocusIndicator isFocused={isFocused('middle')} />
             )}
             <TabbedTerminalPanel<AlexandriaTab>
+              key={terminalRemountKey}
               context={terminalPanelContext}
               actions={terminalActions}
               events={events}
@@ -1749,6 +1830,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       renderTabContent,
       handleTrailActivate,
       focusTabId,
+      terminalRemountKey,
     ],
   );
 

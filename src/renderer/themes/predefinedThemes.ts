@@ -236,9 +236,10 @@ export const predefinedThemes: Record<
   },
 };
 
-// Get list of available theme names
+// Get list of available theme names. Excludes `transparent`, which is only
+// used as a loading-state theme and shouldn't appear in user pickers.
 export const getThemeNames = (): string[] => {
-  return Object.keys(predefinedThemes);
+  return Object.keys(predefinedThemes).filter((name) => name !== 'transparent');
 };
 
 // Get theme by name
