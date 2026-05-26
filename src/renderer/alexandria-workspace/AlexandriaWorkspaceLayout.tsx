@@ -43,6 +43,7 @@ import { WorkspaceTrailsPanel } from './workspace-trails-panel/WorkspaceTrailsPa
 import { SessionsPanel } from './sessions-panel/SessionsPanel';
 import { HookDebugPanel } from './hook-debug-panel/HookDebugPanel';
 import {
+  BRIEF_AGENT_CLICK_EVENT,
   BRIEF_AGENT_MIME,
   buildBriefingText,
   type BriefAgentDragPayload,
@@ -153,6 +154,22 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   // a specific tab brought to front (e.g. clicking a repo card opens/focuses
   // a terminal for that repo). The panel clears it via onFocusTabHandled.
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
+
+  // Which terminal tab is currently visible. Tracked so the Brief Agent drop
+  // handler can target the tab the user actually sees, instead of falling back
+  // to the first session in the list. TabbedTerminalPanel doesn't expose its
+  // internal tabId→sessionId map, so we capture it ourselves from
+  // `renderTabContent` (which is called with sessionId for terminal tabs).
+  const [activeTerminalTabId, setActiveTerminalTabId] = useState<string | null>(
+    null,
+  );
+  const tabSessionMapRef = useRef<Map<string, string>>(new Map());
+  // Wrapper around the TabbedTerminalPanel. Used as the search root for the
+  // visible xterm textarea when we want to refocus the terminal after writing
+  // a briefing — both the drag-drop and click paths need it. Storing it in a
+  // ref means the click handler (driven by a window event from a sibling tree)
+  // can find the same element the drop handler uses.
+  const terminalPanelWrapperRef = useRef<HTMLDivElement | null>(null);
 
   // Non-terminal tabs hosted alongside terminals in the middle slot. Mirrors
   // dev-workspace: terminal tabs are managed inside TabbedTerminalPanel; we
@@ -348,7 +365,18 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   }, []);
 
   const renderTabContent = useCallback(
-    (tab: AlexandriaTab) => {
+    (
+      tab: AlexandriaTab,
+      _isActive?: boolean,
+      sessionId?: string | null,
+    ) => {
+      if (tab.contentType === 'terminal') {
+        if (sessionId) {
+          tabSessionMapRef.current.set(tab.id, sessionId);
+        } else {
+          tabSessionMapRef.current.delete(tab.id);
+        }
+      }
       if (tab.contentType === 'file-city-trail') {
         return (
           <FileCityTrailTabContent
@@ -417,32 +445,31 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     [],
   );
 
-  const handleTerminalDrop = useCallback(
-    async (e: React.DragEvent<HTMLDivElement>) => {
-      const raw = e.dataTransfer.getData(BRIEF_AGENT_MIME);
-      if (!raw) return;
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Capture the wrapper before the await — React nulls out
-      // `e.currentTarget` once the handler returns control.
-      const dropWrapper = e.currentTarget;
-
-      let payload: BriefAgentDragPayload;
-      try {
-        payload = JSON.parse(raw) as BriefAgentDragPayload;
-      } catch (err) {
-        console.error('[BriefAgent] invalid drag payload', err);
-        return;
-      }
-
+  // Shared briefing executor — used by both the drag-drop and the click paths.
+  // Picks the visible terminal, writes the briefing prompt, and refocuses the
+  // terminal's xterm input so the user can hit Enter without re-clicking.
+  const briefAgent = useCallback(
+    async (payload: BriefAgentDragPayload) => {
       const sessions = terminalCtx.terminalSessions;
-      let target = sessions[0];
-      if (selectedRepository) {
-        const repoContext = `${terminalContext}:repo:${selectedRepository.path}`;
-        target =
-          sessions.find((s) => s.context === repoContext) ?? sessions[0];
+      // Prefer the terminal tab the user is actually looking at. For drops,
+      // it landed inside its body; for clicks, it's the only one the user
+      // can see right now. Fall back to repo-context match, then first
+      // session, for the edge case where the active-tab signal isn't
+      // available yet (e.g. mount race) or its session has been destroyed.
+      let target = undefined as (typeof sessions)[number] | undefined;
+      if (activeTerminalTabId) {
+        const activeSessionId = tabSessionMapRef.current.get(
+          activeTerminalTabId,
+        );
+        if (activeSessionId) {
+          target = sessions.find((s) => s.id === activeSessionId);
+        }
       }
+      if (!target && selectedRepository) {
+        const repoContext = `${terminalContext}:repo:${selectedRepository.path}`;
+        target = sessions.find((s) => s.context === repoContext);
+      }
+      if (!target) target = sessions[0];
       if (!target) return;
 
       try {
@@ -450,22 +477,36 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           sessionId: target.id,
           data: buildBriefingText(payload),
         });
-        // Bring the right tab forward in case the drop target is a tab
-        // that isn't currently visible.
-        setFocusTabId(target.id);
+        // If for some reason we fell back to a non-active tab, bring it
+        // forward. requestFocusTabId takes a tab ID, not a session ID — look
+        // up the tab ID via our captured map.
+        let targetTabId: string | null = null;
+        for (const [tabId, sid] of tabSessionMapRef.current.entries()) {
+          if (sid === target.id) {
+            targetTabId = tabId;
+            break;
+          }
+        }
+        if (targetTabId && targetTabId !== activeTerminalTabId) {
+          setFocusTabId(targetTabId);
+        }
         // Focus the xterm input directly. TabbedTerminalPanel's
-        // requestFocusTabId only activates the tab — when the dropped-on
-        // tab is already active (the common case) it short-circuits and
-        // never calls terminal.focus(). Without this the next keystroke
-        // goes nowhere. Defer one frame so any tab swap has flushed.
+        // requestFocusTabId only activates the tab — when the briefed tab
+        // is already active (the common case) it short-circuits and never
+        // calls terminal.focus(). Without this the next keystroke goes
+        // nowhere. Defer one frame so any tab swap has flushed.
         requestAnimationFrame(() => {
-          const textareas = dropWrapper.querySelectorAll<HTMLTextAreaElement>(
+          const root = terminalPanelWrapperRef.current;
+          if (!root) return;
+          const textareas = root.querySelectorAll<HTMLTextAreaElement>(
             '.xterm-helper-textarea',
           );
           for (const ta of Array.from(textareas)) {
-            // offsetParent is null for elements inside display:none ancestors,
-            // which is how the panel hides inactive tabs.
-            if (ta.offsetParent !== null) {
+            // Inactive tabs stay mounted with opacity:0 + the `inert`
+            // attribute (not display:none), so offsetParent stays non-null
+            // for all of them. Filter by the inert ancestor instead — only
+            // the visible tab lacks one.
+            if (!ta.closest('[inert]')) {
               ta.focus();
               break;
             }
@@ -475,8 +516,48 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         console.error('[BriefAgent] writeToSession failed', err);
       }
     },
-    [terminalCtx.terminalSessions, terminalContext, selectedRepository],
+    [
+      terminalCtx.terminalSessions,
+      terminalContext,
+      selectedRepository,
+      activeTerminalTabId,
+    ],
   );
+
+  const handleTerminalDrop = useCallback(
+    async (e: React.DragEvent<HTMLDivElement>) => {
+      const raw = e.dataTransfer.getData(BRIEF_AGENT_MIME);
+      if (!raw) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      let payload: BriefAgentDragPayload;
+      try {
+        payload = JSON.parse(raw) as BriefAgentDragPayload;
+      } catch (err) {
+        console.error('[BriefAgent] invalid drag payload', err);
+        return;
+      }
+
+      await briefAgent(payload);
+    },
+    [briefAgent],
+  );
+
+  // Click path: BriefAgentButton lives in the titlebar (a sibling React tree),
+  // so it tells us to brief by dispatching a window CustomEvent carrying the
+  // same payload shape the drag path uses.
+  useEffect(() => {
+    const onBriefAgentClick = (e: Event) => {
+      const payload = (e as CustomEvent<BriefAgentDragPayload>).detail;
+      if (!payload || !payload.topicId) return;
+      void briefAgent(payload);
+    };
+    window.addEventListener(BRIEF_AGENT_CLICK_EVENT, onBriefAgentClick);
+    return () => {
+      window.removeEventListener(BRIEF_AGENT_CLICK_EVENT, onBriefAgentClick);
+    };
+  }, [briefAgent]);
 
   // Handle removal confirmation
   const handleConfirmRemove = useCallback(
@@ -960,6 +1041,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         label: 'Terminal',
         content: (
           <div
+            ref={terminalPanelWrapperRef}
             onDragEnterCapture={handleTerminalDragOver}
             onDragOverCapture={handleTerminalDragOver}
             onDropCapture={handleTerminalDrop}
@@ -984,11 +1066,14 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               directory={terminalDirectory}
               initialTabs={tabs as AlexandriaTab[]}
               onTabsChange={handleTabsChange}
-              renderTabContent={(tab) => renderTabContent(tab as AlexandriaTab)}
+              renderTabContent={(tab, isActive, sessionId) =>
+                renderTabContent(tab as AlexandriaTab, isActive, sessionId)
+              }
               showAllTerminals={showAllTerminals}
               onShowAllTerminalsChange={setShowAllTerminals}
               requestFocusTabId={focusTabId}
               onFocusTabHandled={() => setFocusTabId(null)}
+              onActiveTabChange={setActiveTerminalTabId}
             />
           </div>
         ),

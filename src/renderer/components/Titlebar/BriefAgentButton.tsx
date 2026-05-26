@@ -11,6 +11,14 @@ import { TopicService } from '../../main-process-api/TopicService';
  */
 export const BRIEF_AGENT_MIME = 'application/x-alexandria-topic-briefing';
 
+/**
+ * Window CustomEvent name used by the click path. The button lives in the
+ * titlebar (a sibling React tree from the workspace), so click-to-brief
+ * crosses tree boundaries via this event. `detail` carries the same
+ * BriefAgentDragPayload shape the drag path uses.
+ */
+export const BRIEF_AGENT_CLICK_EVENT = 'alexandria:brief-agent-click';
+
 export interface BriefAgentDragPayload {
   topicId: string;
   topicTitle: string;
@@ -91,12 +99,32 @@ export const BriefAgentButton: React.FC<BriefAgentButtonProps> = ({
     setIsHovered(false);
   };
 
+  const handleClick = () => {
+    if (!topic) return;
+    const payload: BriefAgentDragPayload = {
+      topicId: topic.id,
+      topicTitle: topic.title,
+    };
+    window.dispatchEvent(
+      new CustomEvent<BriefAgentDragPayload>(BRIEF_AGENT_CLICK_EVENT, {
+        detail: payload,
+      }),
+    );
+  };
+
+  // Prevent mousedown from shifting focus to this control. The button is a
+  // div (not <button>), so it doesn't auto-focus on mousedown the way a real
+  // <button> would; but the click path explicitly refocuses the terminal
+  // afterward, and we don't want any intermediate focus flicker.
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
   const label = 'Brief Agent';
 
-  // Rendered as a <div role="button"> rather than <button>: this is a
-  // drag-only control with no click/keyboard activation, and <button>'s
-  // default focus-on-mousedown behavior was stealing focus from the
-  // terminal we dropped into. Project cards in the workspace use the same
+  // Rendered as a <div role="button"> rather than <button>: clicking a real
+  // <button> focuses it on mousedown, stealing focus from the terminal we're
+  // about to write into. Project cards in the workspace use the same
   // <div draggable> pattern for the same reason.
   return (
     <div
@@ -105,11 +133,13 @@ export const BriefAgentButton: React.FC<BriefAgentButtonProps> = ({
       draggable={armed}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onClick={armed ? handleClick : undefined}
+      onMouseDown={handleMouseDown}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       title={
         armed
-          ? `Drag onto a terminal to brief its agent about "${topic!.title}"`
+          ? `Click to brief the active terminal, or drag onto a specific one — topic "${topic!.title}"`
           : 'Create a topic to enable briefing'
       }
       style={{
@@ -131,7 +161,7 @@ export const BriefAgentButton: React.FC<BriefAgentButtonProps> = ({
           armed && isHovered
             ? theme.colors.background
             : theme.colors.textSecondary,
-        cursor: armed ? 'grab' : 'not-allowed',
+        cursor: armed ? 'pointer' : 'not-allowed',
         opacity: armed ? 1 : 0.5,
         fontSize: `${theme.fontSizes[1]}px`,
         fontWeight: theme.fontWeights.medium,
