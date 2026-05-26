@@ -31,6 +31,10 @@ import {
 import { OtelCollectorService } from '../services/OtelCollectorService';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
 import { AgentSessionSDKAPIEvents } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
+import {
+  TopicAPIEvent,
+  type SessionLinkedEvent,
+} from '../../shared/main-process-api-interfaces/TopicAPI';
 
 /**
  * Configuration for EventServerManager
@@ -420,11 +424,25 @@ export class EventServerManager extends EventEmitter {
    */
   private handleLinkSessionToTopic(msg: LinkSessionToTopicMessage): void {
     try {
-      TopicRegistryService.getInstance().linkSession(msg.topicId, msg.sessionId);
+      const changed = TopicRegistryService.getInstance().linkSession(
+        msg.topicId,
+        msg.sessionId,
+      );
+      if (!changed) return;
       this.log(
         'debug',
         `Linked agent session ${msg.sessionId} → topic ${msg.topicId}`,
       );
+      // Notify renderers so SessionsPanel and friends re-fetch without a
+      // manual refresh. Skipped on idempotent re-links — `changed` gates this.
+      const payload: SessionLinkedEvent = {
+        sessionId: msg.sessionId,
+        topicId: msg.topicId,
+      };
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (window.isDestroyed()) continue;
+        window.webContents.send(TopicAPIEvent.SESSION_LINKED, payload);
+      }
     } catch (error) {
       this.log('error', `Failed to link session to topic: ${error}`);
     }

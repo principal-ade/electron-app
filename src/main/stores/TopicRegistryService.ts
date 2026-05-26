@@ -171,15 +171,17 @@ export class TopicRegistryService {
   /**
    * Link an agent session id to a topic. Idempotent — re-linking the same
    * session overwrites the previous topic (a session works on one topic
-   * at a time).
+   * at a time). Returns true when the map actually changed, false on a
+   * no-op re-link, so callers can gate downstream broadcasts.
    */
-  linkSession(topicId: string, sessionId: string): void {
+  linkSession(topicId: string, sessionId: string): boolean {
     const file = this.readSyncFile();
     const links = file.sessionLinks ?? {};
-    if (links[sessionId] === topicId) return;
+    if (links[sessionId] === topicId) return false;
     links[sessionId] = topicId;
     file.sessionLinks = links;
     this.writeSyncFile(file);
+    return true;
   }
 
   /** Read the full session→topic junction map. */
@@ -221,9 +223,13 @@ export class TopicRegistryService {
       const content = readFileSync(this.syncFilePath, 'utf-8');
       const parsed = JSON.parse(content) as TopicsSyncFile;
       // Defensive: tolerate older shapes by coercing missing `records` to {}.
+      // `sessionLinks` must be threaded through — dropping it makes every
+      // subsequent linkSession clobber existing links, and makes the
+      // SessionsPanel render empty even when links exist on disk.
       return {
         version: parsed.version ?? SYNC_FILE_VERSION,
         records: parsed.records ?? {},
+        sessionLinks: parsed.sessionLinks,
       };
     } catch (err) {
       console.error(

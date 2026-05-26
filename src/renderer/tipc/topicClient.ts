@@ -20,6 +20,10 @@ import type {
   TopicRouterType,
   UpdateTopicInputArgs,
 } from '../../shared/tipc/topicRouterTypes';
+import {
+  TopicAPIEvent,
+  type SessionLinkedEvent,
+} from '../../shared/main-process-api-interfaces/TopicAPI';
 
 export interface TopicClient {
   getTopics: () => Promise<Topic[]>;
@@ -34,6 +38,15 @@ export interface TopicClient {
   getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
   getRecords: () => Promise<LocalTopicRecord[]>;
   getSessionLinks: () => Promise<Record<string, string>>;
+  /**
+   * Subscribe to session-link broadcasts. Fires after a new
+   * `{sessionId → topicId}` row is written to disk by the hook pipeline
+   * (idempotent re-links are filtered out in main).
+   * @returns Unsubscribe function.
+   */
+  onSessionLinked: (
+    callback: (event: SessionLinkedEvent) => void,
+  ) => () => void;
 }
 
 interface TipcTopicClient {
@@ -82,6 +95,16 @@ export const topicClient: TopicClient = {
   getRecord: (input) => getTipcClient().topic_getRecord(input),
   getRecords: () => getTipcClient().topic_getRecords(),
   getSessionLinks: () => getTipcClient().topic_getSessionLinks(),
+  onSessionLinked: (callback) => {
+    return window.electron.ipcRenderer.on(
+      TopicAPIEvent.SESSION_LINKED,
+      (...args: unknown[]) => {
+        const event = args[0] as SessionLinkedEvent | undefined;
+        if (!event) return;
+        callback(event);
+      },
+    );
+  },
 };
 
 export type {

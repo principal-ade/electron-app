@@ -1272,7 +1272,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             {enableKeyboardShortcuts && (
               <FocusIndicator isFocused={isFocused('left')} />
             )}
-            <SessionsPanel />
+            <SessionsPanel topicId={workspace.topicIds?.[0]} />
           </div>
         ),
       },

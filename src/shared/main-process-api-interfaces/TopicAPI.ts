@@ -61,6 +61,14 @@ export enum TopicAPIEvent {
   TOPIC_ADDED = 'topic:topic-added',
   TOPIC_UPDATED = 'topic:topic-updated',
   TOPIC_REMOVED = 'topic:topic-removed',
+  /** Fired after a sessionId → topicId entry is written to disk. */
+  SESSION_LINKED = 'topic:session-linked',
+}
+
+/** Payload broadcast on {@link TopicAPIEvent.SESSION_LINKED}. */
+export interface SessionLinkedEvent {
+  sessionId: string;
+  topicId: string;
 }
 
 /** Input to {@link TopicAPI.createTopic} — id/timestamps generated when omitted. */
