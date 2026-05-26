@@ -409,8 +409,11 @@
     "copyright": "Copyright © 2025 Principal ADE",
     "asar": true,
     "asarUnpack": [
-      "**\\\\*.{node,dll}",
+      "**/*.{node,dll}",
       "**/node_modules/node-pty/**",
+      "**/node_modules/@parcel/watcher/**",
+      "**/node_modules/@parcel/watcher-*/**",
+      "**/node_modules/fsevents/**",
       "**/dist/main/pty-daemon.cjs",
       "**/dist/main/pty-daemon.cjs.map"
     ],
