@@ -285,24 +285,6 @@ app.on('browser-window-created', (_, window) => {
       event.preventDefault();
     }
 
-    // Command+; (or Ctrl+;) - Cycle mode
-    if (
-      input.type === 'keyDown' &&
-      input.code === 'Semicolon' &&
-      ((process.platform === 'darwin' &&
-        input.meta &&
-        !input.control &&
-        !input.shift) ||
-        (process.platform !== 'darwin' &&
-          input.control &&
-          !input.meta &&
-          !input.shift))
-    ) {
-      log.info('[Window Switcher] Cycle shortcut triggered (Command+;)');
-      windowSwitcher.showAndCycle();
-      event.preventDefault();
-    }
-
     // Command+O (or Ctrl+O) - Quick Open (repos/workspaces)
     if (
       input.type === 'keyDown' &&

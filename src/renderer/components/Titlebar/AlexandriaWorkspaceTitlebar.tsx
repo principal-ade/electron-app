@@ -300,6 +300,49 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           </div>
         )}
 
+        {/* Cmd-held hint: shortcut to focus the terminal. Appears inline
+            next to the left-panel segment switch only while the modifier
+            is held, matching the J/K/L badges above. */}
+        {modPressed && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              background: theme.colors.backgroundTertiary,
+              border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.body,
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: theme.fontWeights.medium,
+              pointerEvents: 'none',
+            }}
+          >
+            <kbd
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 18,
+                height: 18,
+                padding: '0 5px',
+                borderRadius: 4,
+                background: theme.colors.primary,
+                color: theme.colors.background,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[0],
+                fontWeight: theme.fontWeights.semibold,
+                lineHeight: 1,
+              }}
+            >
+              ;
+            </kbd>
+            <span>Terminal</span>
+          </div>
+        )}
+
       </div>
 
       {/* Center: Workspace name and selected repository — click to open
