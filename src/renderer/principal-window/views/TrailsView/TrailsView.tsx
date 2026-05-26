@@ -20,6 +20,7 @@ import {
   Compass,
   Share2,
   ArrowRight,
+  Network,
 } from 'lucide-react';
 import type {
   ConvertProgressEntry,
@@ -56,7 +57,12 @@ import { SkillLockService } from '../../../main-process-api/SkillLockService';
 import { ShellService } from '../../../main-process-api/ShellService';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
-import type { TrailPayload } from '@industry-theme/file-city-panel';
+import {
+  TrailTopologyGraph,
+  type TrailPayload,
+  type TrailSequenceView,
+  type TopologyTrailEntry,
+} from '@industry-theme/file-city-panel';
 import {
   FileCityTrailPanel,
   type TrailBriefLayoutState,
@@ -317,6 +323,19 @@ const RecentTrailPreviewPane: React.FC<{
    * Returning a promise lets the card animate in-flight + result state.
    */
   onShareTrail?: () => void | Promise<void>;
+  /**
+   * Every TrailPayload the parent has lazy-loaded for this project. Drives
+   * the topology overlay — the merged emergent-architecture graph
+   * aggregates components/edges across every payload here. The pane
+   * doesn't fetch these itself; it just renders what the parent has.
+   */
+  aggregatePayloads: Map<string, TrailPayload>;
+  /**
+   * Called when the reader clicks a trail title inside the topology
+   * overlay's info panel. The parent looks the id up against its trail
+   * index and routes to the preview pane the way a list click would.
+   */
+  onOpenTrailFromTopology?: (trailId: string) => void;
 }> = ({
   repositoryPath,
   fileTree,
@@ -327,6 +346,8 @@ const RecentTrailPreviewPane: React.FC<{
   events,
   onCloseTrail,
   onShareTrail,
+  aggregatePayloads,
+  onOpenTrailFromTopology,
 }) => {
   const { theme } = useTheme();
 
@@ -368,6 +389,49 @@ const RecentTrailPreviewPane: React.FC<{
       });
     },
     [],
+  );
+
+  // Topology overlay state. Local to the pane — purely a view-mode
+  // toggle, no persistence yet. Rendered as a full-bleed overlay over
+  // the trail explorer so the existing panel doesn't have to know about
+  // it. Selected node and the click history live here too so toggling
+  // the overlay off and back on lands clean.
+  const [showTopology, setShowTopology] = useState(false);
+  const [topologySelectedNodeId, setTopologySelectedNodeId] = useState<
+    string | null
+  >(null);
+  // Threshold for how many trails a component must appear in before
+  // its bubble renders. Default 1 = no filter; raising it surfaces the
+  // consensus topology once the trail set has enough one-offs to
+  // clutter the graph. Capped to the actual trail count so the reader
+  // can't crank it past "no nodes survive."
+  const [topologyMinTrails, setTopologyMinTrails] = useState(1);
+
+  // Map the parent-owned aggregate payload cache into the (trail, view)
+  // pairs the topology aggregator expects. Each TrailPayload that ships
+  // a sequence view becomes one entry; trails without one (or with only
+  // future view kinds) are silently dropped — the topology graph only
+  // knows how to read sequence views in v1.
+  const topologyEntries = useMemo<TopologyTrailEntry[]>(() => {
+    const out: TopologyTrailEntry[] = [];
+    for (const trail of aggregatePayloads.values()) {
+      const view = trail.views.find(
+        (v): v is TrailSequenceView => v.kind === 'sequence',
+      );
+      if (view) out.push({ trail, view });
+    }
+    return out;
+  }, [aggregatePayloads]);
+
+  const handleOpenTopologyTrail = useCallback(
+    (trailId: string) => {
+      // Clicking a trail title in the topology info panel routes back
+      // through the parent's list-click handler. The overlay stays open
+      // so the reader can keep exploring; they dismiss it explicitly
+      // via the toolbar toggle.
+      onOpenTrailFromTopology?.(trailId);
+    },
+    [onOpenTrailFromTopology],
   );
 
   const repoName = useMemo(() => {
@@ -487,6 +551,156 @@ const RecentTrailPreviewPane: React.FC<{
             <style>{`@keyframes trails-spin { to { transform: rotate(360deg); } }`}</style>
             Loading preview…
           </div>
+        )}
+
+        {/* Topology overlay — full-bleed cover over the trail explorer
+            when toggled on. Kept conditional (vs. always-mounted hidden)
+            so the force layout only runs when the reader actually opens
+            it, and so the SVG isn't sitting in the DOM behind the city
+            sucking up reflows on every panel render. */}
+        {showTopology && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: theme.colors.background,
+              zIndex: 2,
+            }}
+          >
+            <TrailTopologyGraph
+              trails={topologyEntries}
+              selectedNodeId={topologySelectedNodeId}
+              onSelectNode={setTopologySelectedNodeId}
+              onOpenTrail={handleOpenTopologyTrail}
+              minTrailsPerNode={topologyMinTrails}
+            />
+            {/* Min-trails stepper. Only mounted with the overlay so it
+                doesn't clutter the explorer chrome when topology is off.
+                Decrement disabled at 1 (no filter); increment disabled
+                when the threshold already exceeds the loaded trail
+                count, since one more would render nothing. */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 8,
+                left: 8,
+                zIndex: 4,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 8px',
+                borderRadius: 6,
+                border: `1px solid ${theme.colors.border}`,
+                background: theme.colors.backgroundSecondary,
+                color: theme.colors.text,
+                fontFamily: theme.fonts.monospace,
+                fontSize: 11,
+                letterSpacing: '0.04em',
+              }}
+            >
+              <span style={{ opacity: 0.7, textTransform: 'uppercase' }}>
+                Min trails
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setTopologyMinTrails((n) => Math.max(1, n - 1))
+                }
+                disabled={topologyMinTrails <= 1}
+                style={{
+                  all: 'unset',
+                  cursor: topologyMinTrails <= 1 ? 'default' : 'pointer',
+                  opacity: topologyMinTrails <= 1 ? 0.35 : 1,
+                  width: 18,
+                  height: 18,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 4,
+                  border: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                −
+              </button>
+              <span style={{ minWidth: 16, textAlign: 'center' }}>
+                {topologyMinTrails}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setTopologyMinTrails((n) =>
+                    Math.min(topologyEntries.length, n + 1),
+                  )
+                }
+                disabled={topologyMinTrails >= topologyEntries.length}
+                style={{
+                  all: 'unset',
+                  cursor:
+                    topologyMinTrails >= topologyEntries.length
+                      ? 'default'
+                      : 'pointer',
+                  opacity:
+                    topologyMinTrails >= topologyEntries.length ? 0.35 : 1,
+                  width: 18,
+                  height: 18,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 4,
+                  border: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Topology toggle — small floating button in the top-right
+            corner. Lives above the overlay's z-index so the reader can
+            dismiss without dragging through the info panel. Hidden
+            when the project has no loaded payloads yet (nothing to
+            aggregate). */}
+        {topologyEntries.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowTopology((s) => !s)}
+            title={
+              showTopology
+                ? 'Hide topology graph'
+                : `Topology graph (${topologyEntries.length} trails merged)`
+            }
+            style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              zIndex: 3,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 10px',
+              borderRadius: 6,
+              border: `1px solid ${
+                showTopology
+                  ? theme.colors.accent ?? theme.colors.primary
+                  : theme.colors.border
+              }`,
+              background: showTopology
+                ? theme.colors.accent ?? theme.colors.primary
+                : theme.colors.backgroundSecondary,
+              color: showTopology
+                ? theme.colors.background
+                : theme.colors.text,
+              fontFamily: theme.fonts.monospace,
+              fontSize: 11,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+            }}
+          >
+            <Network size={12} />
+            {showTopology ? 'Explorer' : 'Topology'}
+          </button>
         )}
       </div>
     </div>
@@ -1446,6 +1660,23 @@ const TrailsViewInner: React.FC<{
     return () => {
       cancelled = true;
     };
+  }, [recentTrails, selectedProjectPath, aggregatePayloads]);
+
+  // Project-scoped subset of the aggregate payload cache. `aggregatePayloads`
+  // accumulates across project switches (the fetch effect above only adds
+  // missing IDs and never prunes), so consumers that want "trails for the
+  // active project only" — like the topology overlay — have to filter
+  // against the current `recentTrails` slice. Returns an empty Map when
+  // no project is selected so nothing leaks through during a switch.
+  const projectAggregatePayloads = useMemo(() => {
+    const out = new Map<string, TrailPayload>();
+    if (!selectedProjectPath) return out;
+    for (const trail of recentTrails) {
+      if (trail.repositoryPath !== selectedProjectPath) continue;
+      const payload = aggregatePayloads.get(trail.id);
+      if (payload) out.set(trail.id, payload);
+    }
+    return out;
   }, [recentTrails, selectedProjectPath, aggregatePayloads]);
 
   // Distinct sourcePaths covered by every loaded payload in the active
@@ -3303,6 +3534,17 @@ const TrailsViewInner: React.FC<{
                     events={events}
                     onCloseTrail={() => setPreviewTrail(null)}
                     onShareTrail={handleShareActiveTrail}
+                    aggregatePayloads={projectAggregatePayloads}
+                    onOpenTrailFromTopology={(trailId) => {
+                      // Route a topology-overlay trail click through the
+                      // same path a recent-list card click takes: look
+                      // the id up against the in-memory index and set
+                      // it as the preview. Falls back to a no-op when
+                      // the id can't be matched (e.g. the trail was
+                      // deleted between layout and click).
+                      const entry = recentTrails.find((t) => t.id === trailId);
+                      if (entry) setPreviewTrail(entry);
+                    }}
                   />
                 </div>
               </div>
