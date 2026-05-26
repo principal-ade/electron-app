@@ -883,6 +883,44 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     onRepositorySelected,
   ]);
 
+  // Listen for repository:addToWorkspace — the hover-+ on a non-member
+  // project card. Adds membership without selecting the repo or opening a
+  // terminal tab; the user can click the card afterward to do those.
+  useEffect(() => {
+    const unsubscribe = events.on(
+      'repository:addToWorkspace',
+      async (event) => {
+        const { repository } = event.payload as {
+          repositoryId: string;
+          repository: AlexandriaEntry;
+          repositoryPath: string;
+        };
+        if (!repository) return;
+
+        try {
+          const alreadyMember = await WorkspaceService.isRepositoryInWorkspace(
+            repository,
+            workspace.id,
+          );
+          if (!alreadyMember) {
+            await WorkspaceService.addRepositoryToWorkspace(
+              repository,
+              workspace.id,
+            );
+            context.refresh('workspace', 'workspaceRepositories');
+          }
+        } catch (err) {
+          console.error(
+            '[AlexandriaWorkspaceLayout] Failed to add repo to workspace:',
+            err,
+          );
+        }
+      },
+    );
+
+    return unsubscribe;
+  }, [events, workspace.id, context]);
+
   // Listen for file:opened events (from Alexandria docs panel)
   // TODO: Implement tabbed view for markdown files
   useEffect(() => {

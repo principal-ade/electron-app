@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Folder, Search, TerminalSquare, X } from 'lucide-react';
+import { Folder, Plus, Search, TerminalSquare, X } from 'lucide-react';
 import { PANEL_FOCUS_SEARCH_EVENT } from '../../components/Sidebar/PanelIconSidebar';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
@@ -17,22 +17,6 @@ function displayPath(path: string, home: string | null): string {
   if (path === home) return '~';
   if (path.startsWith(home + '/')) return '~' + path.slice(home.length);
   return path;
-}
-
-function formatRelativeTime(timestamp: string | undefined): string {
-  if (!timestamp) return '';
-  const diffMs = Date.now() - new Date(timestamp).getTime();
-  const diffMinutes = Math.floor(diffMs / 60000);
-  if (diffMinutes < 1) return 'just now';
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return 'yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
-  return `${Math.floor(diffDays / 365)}y ago`;
 }
 
 // Panel event prefix
@@ -64,6 +48,7 @@ interface RepositoryCardProps {
   onSelect: (repo: AlexandriaEntry) => void;
   onOpen: (repo: AlexandriaEntry) => void;
   onRemove?: (repo: AlexandriaEntry) => void;
+  onAdd?: (repo: AlexandriaEntry) => void;
 }
 
 const RepositoryCard: React.FC<RepositoryCardProps> = ({
@@ -74,6 +59,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
   onSelect,
   onOpen,
   onRemove,
+  onAdd,
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
@@ -139,7 +125,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
             flex: 1,
             fontSize: `${theme.fontSizes[2]}px`,
             fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.text,
+            color: isMember ? theme.colors.primary : theme.colors.text,
             fontFamily: theme.fonts.body,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -149,20 +135,6 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
         >
           {repository.name}
         </span>
-        {repository.lastOpenedAt && (
-          <span
-            title={new Date(repository.lastOpenedAt).toLocaleString()}
-            style={{
-              fontSize: `${theme.fontSizes[1]}px`,
-              color: theme.colors.textSecondary,
-              fontFamily: theme.fonts.body,
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}
-          >
-            {formatRelativeTime(repository.lastOpenedAt)}
-          </span>
-        )}
         {hasActiveTerminal && (
           <TerminalSquare
             size={14}
@@ -202,6 +174,40 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
             }}
           >
             <X size={14} />
+          </button>
+        )}
+        {!isMember && isHovered && onAdd && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdd(repository);
+            }}
+            title="Add to workspace"
+            aria-label="Add to workspace"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2px',
+              border: 'none',
+              background: 'transparent',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = theme.colors.text;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = theme.colors.textSecondary;
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <Plus size={14} />
           </button>
         )}
       </div>
@@ -443,6 +449,21 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
     [events]
   );
 
+  // Plus-button click — ask the layout to add the repo to the workspace
+  // without selecting it or opening a terminal tab.
+  const handleAddRepository = useCallback(
+    (repository: AlexandriaEntry) => {
+      events.emit(
+        createPanelEvent('repository:addToWorkspace', {
+          repositoryId: repository.name,
+          repository,
+          repositoryPath: repository.path,
+        })
+      );
+    },
+    [events]
+  );
+
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -606,6 +627,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
             onSelect={handleSelectRepository}
             onOpen={handleOpenRepository}
             onRemove={handleRemoveRepository}
+            onAdd={handleAddRepository}
           />
         ))}
       </div>
