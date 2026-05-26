@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
@@ -56,15 +56,22 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
   // configured).
   const ownerSubdirActive = useOwnerSubdir && !!baseDefaultDirectory;
 
-  const initialStep: ModalStep = workspace || ownerSubdirActive
-    ? 'select-org'
-    : 'select-destination';
-  const initialDestination: { type: 'workspace' | 'base'; value: Workspace | string } | null =
-    workspace
-      ? { type: 'workspace', value: workspace }
-      : ownerSubdirActive
-        ? { type: 'base', value: baseDefaultDirectory as string }
-        : null;
+  // Memoized so the reset effect's deps don't change on every render —
+  // `initialDestination` is otherwise a fresh object literal each pass,
+  // which would re-fire the effect → setState → render loop.
+  const initialStep: ModalStep = useMemo(
+    () => (workspace || ownerSubdirActive ? 'select-org' : 'select-destination'),
+    [workspace, ownerSubdirActive],
+  );
+  const initialDestination = useMemo<
+    { type: 'workspace' | 'base'; value: Workspace | string } | null
+  >(() => {
+    if (workspace) return { type: 'workspace', value: workspace };
+    if (ownerSubdirActive) {
+      return { type: 'base', value: baseDefaultDirectory as string };
+    }
+    return null;
+  }, [workspace, ownerSubdirActive, baseDefaultDirectory]);
 
   // Step state
   const [step, setStep] = useState<ModalStep>(initialStep);
