@@ -38,6 +38,7 @@ import { RemoveFromWorkspaceModal } from '../panels/components/RemoveFromWorkspa
 import { PanelIconSidebar } from '../components/Sidebar/PanelIconSidebar';
 import { WorkspaceTrailsPanel } from './workspace-trails-panel/WorkspaceTrailsPanel';
 import { SessionsPanel } from './sessions-panel/SessionsPanel';
+import { HookDebugPanel } from './hook-debug-panel/HookDebugPanel';
 import {
   BRIEF_AGENT_MIME,
   buildBriefingText,
@@ -256,6 +257,36 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     [],
   );
 
+  // Right-click on a trail row: swap the same active payload into the right
+  // panel's trail-explorer slot. Shares `activeTrailPayload` with the middle
+  // tab so both surfaces stay in sync when the user activates a new trail.
+  // Always force-expand + resize to a usable width — the right panel may be
+  // collapsed, sized to <20%, or out of sync with `collapsed.right`.
+  const handleTrailOpenInRightPanel = useCallback(
+    (payload: TrailPayload, repositoryPath?: string) => {
+      setActiveTrailPayload(payload);
+      setActiveTrailRepoPath(repositoryPath);
+      onLayoutChange({ ...layout, right: 'trail-explorer' });
+      if (panelLayoutRef.current) {
+        panelLayoutRef.current.expandPanel('right');
+        const currentLayout = panelLayoutRef.current.getLayout();
+        if (!currentLayout || currentLayout.right < 20) {
+          panelLayoutRef.current.setLayout({
+            left: currentLayout?.left ?? 23,
+            middle: 50,
+            right: 30,
+          });
+        }
+      }
+      collapsedStateRef.current = {
+        ...collapsedStateRef.current,
+        right: false,
+      };
+      onCollapsedChangeRef.current(collapsedStateRef.current);
+    },
+    [layout, onLayoutChange],
+  );
+
   // Sync from the TabbedTerminalPanel. Terminal tabs are managed inside the
   // panel — we only persist non-terminal entries so closing the trail tab
   // (via its X) actually removes it from our state.
@@ -355,6 +386,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       e.preventDefault();
       e.stopPropagation();
 
+      // Capture the wrapper before the await — React nulls out
+      // `e.currentTarget` once the handler returns control.
+      const dropWrapper = e.currentTarget;
+
       let payload: BriefAgentDragPayload;
       try {
         payload = JSON.parse(raw) as BriefAgentDragPayload;
@@ -376,6 +411,27 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         await terminalClient.writeToSession({
           sessionId: target.id,
           data: buildBriefingText(payload),
+        });
+        // Bring the right tab forward in case the drop target is a tab
+        // that isn't currently visible.
+        setFocusTabId(target.id);
+        // Focus the xterm input directly. TabbedTerminalPanel's
+        // requestFocusTabId only activates the tab — when the dropped-on
+        // tab is already active (the common case) it short-circuits and
+        // never calls terminal.focus(). Without this the next keystroke
+        // goes nowhere. Defer one frame so any tab swap has flushed.
+        requestAnimationFrame(() => {
+          const textareas = dropWrapper.querySelectorAll<HTMLTextAreaElement>(
+            '.xterm-helper-textarea',
+          );
+          for (const ta of Array.from(textareas)) {
+            // offsetParent is null for elements inside display:none ancestors,
+            // which is how the panel hides inactive tabs.
+            if (ta.offsetParent !== null) {
+              ta.focus();
+              break;
+            }
+          }
         });
       } catch (err) {
         console.error('[BriefAgent] writeToSession failed', err);
@@ -1158,6 +1214,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             <WorkspaceTrailsPanel
               workspace={workspace}
               onTrailActivate={handleTrailActivate}
+              onTrailOpenInRightPanel={handleTrailOpenInRightPanel}
             />
           </div>
         ),
@@ -1180,6 +1237,56 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               <FocusIndicator isFocused={isFocused('left')} />
             )}
             <SessionsPanel />
+          </div>
+        ),
+      },
+      {
+        id: 'hook-debug',
+        label: 'Hook Debug',
+        content: (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <HookDebugPanel />
+          </div>
+        ),
+      },
+      {
+        id: 'trail-explorer',
+        label: 'Trail Explorer',
+        content: (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
+            <FileCityTrailTabContent
+              trailPayload={activeTrailPayload}
+              repositoryPath={activeTrailRepoPath}
+              events={events}
+              onCloseTrail={() => {
+                setActiveTrailPayload(null);
+                setActiveTrailRepoPath(undefined);
+              }}
+            />
           </div>
         ),
       },
@@ -1914,6 +2021,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       handleTabsChange,
       renderTabContent,
       handleTrailActivate,
+      handleTrailOpenInRightPanel,
+      activeTrailPayload,
+      activeTrailRepoPath,
       focusTabId,
       terminalRemountKey,
     ],

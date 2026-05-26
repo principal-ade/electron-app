@@ -36,7 +36,12 @@ import {
   PortRegistration,
   isGetTracesResponseMessage,
   isGetRegistrationsResponseMessage,
+  createWindowBroadcastMessage,
 } from './types';
+import {
+  HOOK_DEBUG_CHANNEL,
+  type HookDebugEvent,
+} from '../shared/ipc-events/HookDebugEvents';
 
 /**
  * Server-side implementation of PathNormalizationAdapter
@@ -672,6 +677,22 @@ export class HttpEventServer extends EventEmitter {
       // Validate raw data
       if (!rawData || typeof rawData !== 'object') {
         throw new Error('Invalid raw data: expected object');
+      }
+
+      // Fan out a copy to renderer windows for the hook-debug panel. Fire
+      // before the pipeline runs so the panel reflects what arrived, not
+      // what the pipeline accepted.
+      try {
+        const debugEvent: HookDebugEvent = {
+          provider,
+          receivedAt: Date.now(),
+          raw: rawData,
+        };
+        this.sendToMain(
+          createWindowBroadcastMessage(HOOK_DEBUG_CHANNEL, debugEvent),
+        );
+      } catch (err) {
+        this.log('warn', `Hook debug broadcast failed: ${err}`);
       }
 
       // Process through pipeline

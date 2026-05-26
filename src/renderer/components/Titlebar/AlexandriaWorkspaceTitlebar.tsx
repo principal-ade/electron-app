@@ -5,7 +5,7 @@ import {
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { Bot, FilePlus2, FolderGit2, Route } from 'lucide-react';
+import { Bot, Bug, FilePlus2, FolderGit2, Route } from 'lucide-react';
 import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
 import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
 import {
@@ -32,6 +32,7 @@ const LEFT_PANEL_SEGMENTS = [
   { id: 'workspace-repos', label: 'Projects', Icon: FolderGit2 },
   { id: 'trails', label: 'Trails', Icon: Route },
   { id: 'sessions', label: 'Sessions', Icon: Bot },
+  { id: 'hook-debug', label: 'Hook Debug', Icon: Bug },
 ] as const;
 
 export interface AlexandriaWorkspaceTitlebarProps {
@@ -331,7 +332,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
 
         {/* Brief Agent — always visible. Draggable; drop on a terminal to
             link its Claude session to the current topic. */}
-        <BriefAgentButton />
+        <BriefAgentButton topicId={workspace.topicIds?.[0]} />
 
         {/* Right Panel Selector */}
         {layout && onLayoutChange && typeof layout.right === 'string' && (
