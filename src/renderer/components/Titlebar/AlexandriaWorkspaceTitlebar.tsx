@@ -5,13 +5,14 @@ import {
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { FilePlus2, FolderGit2, Route } from 'lucide-react';
+import { Bot, FilePlus2, FolderGit2, Route } from 'lucide-react';
 import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
 import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
 import {
   PanelSelectorDropdown,
   type PanelOption,
 } from './PanelSelectorDropdown';
+import { BriefAgentButton } from './BriefAgentButton';
 
 // Available panels for Alexandria workspace
 // Ordered to match dev workspace panel options
@@ -30,6 +31,7 @@ const AVAILABLE_PANELS: PanelOption[] = [
 const LEFT_PANEL_SEGMENTS = [
   { id: 'workspace-repos', label: 'Projects', Icon: FolderGit2 },
   { id: 'trails', label: 'Trails', Icon: Route },
+  { id: 'sessions', label: 'Sessions', Icon: Bot },
 ] as const;
 
 export interface AlexandriaWorkspaceTitlebarProps {
@@ -326,6 +328,10 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           )}
 
         </div>
+
+        {/* Brief Agent — always visible. Draggable; drop on a terminal to
+            link its Claude session to the current topic. */}
+        <BriefAgentButton />
 
         {/* Right Panel Selector */}
         {layout && onLayoutChange && typeof layout.right === 'string' && (

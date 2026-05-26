@@ -33,6 +33,7 @@ export interface TopicClient {
   getTopicsForTrail: (input: GetTopicsForTrailInput) => Promise<Topic[]>;
   getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
   getRecords: () => Promise<LocalTopicRecord[]>;
+  getSessionLinks: () => Promise<Record<string, string>>;
 }
 
 interface TipcTopicClient {
@@ -47,6 +48,7 @@ interface TipcTopicClient {
   topic_getTopicsForTrail: (input: GetTopicsForTrailInput) => Promise<Topic[]>;
   topic_getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
   topic_getRecords: () => Promise<LocalTopicRecord[]>;
+  topic_getSessionLinks: () => Promise<Record<string, string>>;
 }
 
 let _tipcClient: TipcTopicClient | null = null;
@@ -79,6 +81,7 @@ export const topicClient: TopicClient = {
   getTopicsForTrail: (input) => getTipcClient().topic_getTopicsForTrail(input),
   getRecord: (input) => getTipcClient().topic_getRecord(input),
   getRecords: () => getTipcClient().topic_getRecords(),
+  getSessionLinks: () => getTipcClient().topic_getSessionLinks(),
 };
 
 export type {

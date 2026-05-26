@@ -37,6 +37,12 @@ interface TopicsSyncFile {
   version: string;
   /** Map of topicId → sync metadata. */
   records: Record<string, LocalTopicSync>;
+  /**
+   * Map of agent session id → topic id. Populated when an agent fetches a
+   * topic via GET /api/topics/:id; the URL parse in the event server signals
+   * intent so the session shows up as "working on this topic".
+   */
+  sessionLinks?: Record<string, string>;
 }
 
 const SYNC_FILE_VERSION = '1.0.0';
@@ -158,6 +164,27 @@ export class TopicRegistryService {
 
   async getTopicsForTrail(trailId: string): Promise<Topic[]> {
     return this.outpostManager.topics.getTopicsForTrail(trailId);
+  }
+
+  // ===== Agent session links =====
+
+  /**
+   * Link an agent session id to a topic. Idempotent — re-linking the same
+   * session overwrites the previous topic (a session works on one topic
+   * at a time).
+   */
+  linkSession(topicId: string, sessionId: string): void {
+    const file = this.readSyncFile();
+    const links = file.sessionLinks ?? {};
+    if (links[sessionId] === topicId) return;
+    links[sessionId] = topicId;
+    file.sessionLinks = links;
+    this.writeSyncFile(file);
+  }
+
+  /** Read the full session→topic junction map. */
+  getSessionLinks(): Record<string, string> {
+    return { ...(this.readSyncFile().sessionLinks ?? {}) };
   }
 
   // ===== Record accessors (canonical + sync) =====

@@ -188,6 +188,12 @@ export type TerminalRouterType = Record<
       input: RefreshTerminalInput;
     }) => Promise<RefreshResult>;
   };
+  writeToSession: {
+    action: (args: {
+      context: ActionContext;
+      input: { sessionId: string; data: string };
+    }) => Promise<{ success: boolean }>;
+  };
   checkTerminalOwnership: {
     action: (args: {
       context: ActionContext;

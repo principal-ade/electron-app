@@ -99,6 +99,17 @@ export interface ServerErrorMessage extends BaseServerMessage {
   context?: unknown;
 }
 
+/**
+ * Fire-and-forget request to link an agent session to a topic. Emitted when
+ * the event server parses a `GET /api/topics/<id>` URL out of an agent's
+ * Bash tool input — the fetch is the link signal.
+ */
+export interface LinkSessionToTopicMessage extends BaseServerMessage {
+  type: 'LINK_SESSION_TO_TOPIC';
+  sessionId: string;
+  topicId: string;
+}
+
 export interface GetTracesRequestMessage extends BaseServerMessage {
   type: 'GET_TRACES_REQUEST';
   limit?: number;
@@ -118,7 +129,8 @@ export type ServerToMainMessage =
   | ServerStatsMessage
   | ServerErrorMessage
   | GetTracesRequestMessage
-  | GetRegistrationsRequestMessage;
+  | GetRegistrationsRequestMessage
+  | LinkSessionToTopicMessage;
 
 /**
  * Messages sent from main to server process
@@ -314,4 +326,10 @@ export function isGetRegistrationsResponseMessage(
   msg: MainToServerMessage,
 ): msg is GetRegistrationsResponseMessage {
   return msg.type === 'GET_REGISTRATIONS_RESPONSE';
+}
+
+export function isLinkSessionToTopicMessage(
+  msg: ServerToMainMessage,
+): msg is LinkSessionToTopicMessage {
+  return msg.type === 'LINK_SESSION_TO_TOPIC';
 }

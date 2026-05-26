@@ -23,10 +23,13 @@ import {
   isWindowBroadcastMessage,
   isGetTracesRequestMessage,
   isGetRegistrationsRequestMessage,
+  isLinkSessionToTopicMessage,
   GetTracesRequestMessage,
   GetRegistrationsRequestMessage,
+  LinkSessionToTopicMessage,
 } from '../../event-processing-server/types';
 import { OtelCollectorService } from '../services/OtelCollectorService';
+import { TopicRegistryService } from '../stores/TopicRegistryService';
 import { AgentSessionSDKAPIEvents } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
 
 /**
@@ -398,6 +401,8 @@ export class EventServerManager extends EventEmitter {
         this.handleGetTracesRequest(msg);
       } else if (isGetRegistrationsRequestMessage(msg)) {
         this.handleGetRegistrationsRequest(msg);
+      } else if (isLinkSessionToTopicMessage(msg)) {
+        this.handleLinkSessionToTopic(msg);
       } else if (msg.type === 'SERVER_ERROR') {
         this.log('error', `Server error: ${msg.error}`);
         this.emit('server-error', new Error(msg.error));
@@ -406,6 +411,22 @@ export class EventServerManager extends EventEmitter {
       }
     } catch (error) {
       this.log('error', `Error handling worker message: ${error}`);
+    }
+  }
+
+  /**
+   * Handle a session→topic link request from the event server. Fire-and-forget;
+   * the server doesn't wait for an ack.
+   */
+  private handleLinkSessionToTopic(msg: LinkSessionToTopicMessage): void {
+    try {
+      TopicRegistryService.getInstance().linkSession(msg.topicId, msg.sessionId);
+      this.log(
+        'debug',
+        `Linked agent session ${msg.sessionId} → topic ${msg.topicId}`,
+      );
+    } catch (error) {
+      this.log('error', `Failed to link session to topic: ${error}`);
     }
   }
 

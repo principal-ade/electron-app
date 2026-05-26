@@ -71,6 +71,10 @@ export interface TerminalClient {
   listTerminalSessions: () => Promise<TerminalSessionInfo[]>;
   resizeTerminal: (input: ResizeTerminalInput) => Promise<void>;
   refreshTerminal: (input: RefreshTerminalInput) => Promise<RefreshResult>;
+  writeToSession: (input: {
+    sessionId: string;
+    data: string;
+  }) => Promise<{ success: boolean }>;
   checkTerminalOwnership: (input: { sessionId: string }) => Promise<{
     exists: boolean;
     ownedByWindowId: number | null;

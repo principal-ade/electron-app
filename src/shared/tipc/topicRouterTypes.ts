@@ -139,4 +139,10 @@ export type TopicRouterType = Record<
       input?: void;
     }) => Promise<LocalTopicRecord[]>;
   };
+  topic_getSessionLinks: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<Record<string, string>>;
+  };
 };

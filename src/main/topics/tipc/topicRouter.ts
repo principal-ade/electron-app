@@ -69,6 +69,10 @@ export const topicRouter = {
     return registryService.getRecords();
   }),
 
+  topic_getSessionLinks: t.procedure.action(async () => {
+    return registryService.getSessionLinks();
+  }),
+
   // ===========================================================================
   // Mutations
   // ===========================================================================

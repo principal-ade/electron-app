@@ -16,6 +16,8 @@ import { registerTrailRoutes } from '../file-city/trailRoutes';
 import { getTrailStore } from '../file-city/trailStore';
 import { registerDocumentNotesRoutes } from '../document-notes/documentNotesRoutes';
 import { getDocumentNotesPersistence } from '../document-notes/documentNotesPersistence';
+import { registerTopicRoutes } from '../topics/topicRoutes';
+import { TopicRegistryService } from '../stores/TopicRegistryService';
 
 // Tracer for Principal MCP Bridge instrumentation
 const tracer = getTracer('principal-ade-main');
@@ -1105,6 +1107,11 @@ export class PrincipalMCPBridge extends EventEmitter {
     // DOCUMENT NOTES ROUTES
     // ============================================
     registerDocumentNotesRoutes(this.app, getDocumentNotesPersistence());
+
+    // ============================================
+    // TOPIC ROUTES
+    // ============================================
+    registerTopicRoutes(this.app, TopicRegistryService.getInstance());
   }
 
   public async start(): Promise<number> {

@@ -613,6 +613,51 @@ export class HttpEventServer extends EventEmitter {
   }
 
   /**
+   * Match `/api/topics/<id>` anywhere in a Bash command string. Topic ids
+   * are url-safe slugs (UUIDs, nanoids, kebab-case) so the character class
+   * stays conservative.
+   */
+  private static readonly TOPIC_URL_RE = /\/api\/topics\/([A-Za-z0-9_-]+)\b/;
+
+  /**
+   * If a PreToolUse/PostToolUse Bash event carries a curl that hits
+   * `/api/topics/:id`, emit a LINK_SESSION_TO_TOPIC message so main can
+   * persist the {sessionId → topicId} junction.
+   *
+   * Pipeline-normalized `sessionId` is preferred; falls back to the raw
+   * `session_id` field on the hook payload.
+   */
+  private maybeLinkSessionToTopic(
+    rawData: unknown,
+    normalizedSessionId: string | undefined,
+  ): void {
+    if (!rawData || typeof rawData !== 'object') return;
+    const raw = rawData as Record<string, unknown>;
+    if (raw.tool_name !== 'Bash') return;
+
+    const toolInput = raw.tool_input;
+    if (!toolInput || typeof toolInput !== 'object') return;
+    const command = (toolInput as Record<string, unknown>).command;
+    if (typeof command !== 'string') return;
+
+    const match = command.match(HttpEventServer.TOPIC_URL_RE);
+    if (!match) return;
+    const topicId = match[1];
+
+    const rawSessionId = typeof raw.session_id === 'string' ? raw.session_id : undefined;
+    const sessionId = normalizedSessionId || rawSessionId;
+    if (!sessionId) return;
+
+    this.sendToMain({
+      type: 'LINK_SESSION_TO_TOPIC',
+      id: `link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: Date.now(),
+      sessionId,
+      topicId,
+    });
+  }
+
+  /**
    * Process an agent event through the pipeline
    */
   private async processAgentEvent(
@@ -644,6 +689,15 @@ export class HttpEventServer extends EventEmitter {
         'event.type': repoNormalizedEvent.eventType?.toString() || '',
         'duration_ms': duration,
       });
+
+      // Sidecar: if the agent ran a Bash curl that fetches GET /api/topics/<id>,
+      // treat that as the link signal and tell main to record {sessionId → topicId}.
+      // Fail-soft — never throw out of this block; the main pipeline must continue.
+      try {
+        this.maybeLinkSessionToTopic(rawData, repoNormalizedEvent.sessionId);
+      } catch (err) {
+        this.log('warn', `Topic link sidecar failed: ${err}`);
+      }
 
       // Event: Repository info resolved for event path (if applicable)
       if (repoNormalizedEvent.repository) {

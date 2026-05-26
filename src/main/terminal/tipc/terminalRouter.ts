@@ -270,6 +270,13 @@ export const terminalRouter = {
       return { success: true };
     }),
 
+  writeToSession: t.procedure
+    .input<{ sessionId: string; data: string }>()
+    .action(async ({ input }) => {
+      sessionManager.writeToSession(input.sessionId, input.data);
+      return { success: true };
+    }),
+
   // ============================================
   // Terminal Ownership Management
   // ============================================

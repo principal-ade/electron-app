@@ -37,6 +37,13 @@ import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { RemoveFromWorkspaceModal } from '../panels/components/RemoveFromWorkspaceModal';
 import { PanelIconSidebar } from '../components/Sidebar/PanelIconSidebar';
 import { WorkspaceTrailsPanel } from './workspace-trails-panel/WorkspaceTrailsPanel';
+import { SessionsPanel } from './sessions-panel/SessionsPanel';
+import {
+  BRIEF_AGENT_MIME,
+  buildBriefingText,
+  type BriefAgentDragPayload,
+} from '../components/Titlebar/BriefAgentButton';
+import { terminalClient } from '../tipc/terminalClient';
 import { FileCityTrailTabContent } from './file-city-trail-tab/FileCityTrailTabContent';
 import type { AlexandriaTab, FileCityTrailTab } from './tab-types';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
@@ -322,6 +329,60 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     setEntryToRemove(null);
     setWorkspaceForRemoval(null);
   }, []);
+
+  // Brief Agent: handle a topic-briefing drop on the terminal panel. Picks a
+  // target session by matching the selected repo's context, falling back to
+  // the first available terminal session.
+  //
+  // Capture phase: the inner TabbedTerminalPanel (and xterm canvas) install
+  // their own drag handlers that stopPropagation, so bubble-phase listeners
+  // on the wrapper never fire for drops inside the terminal body.
+  const handleTerminalDragOver = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (e.dataTransfer.types.includes(BRIEF_AGENT_MIME)) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    },
+    [],
+  );
+
+  const handleTerminalDrop = useCallback(
+    async (e: React.DragEvent<HTMLDivElement>) => {
+      const raw = e.dataTransfer.getData(BRIEF_AGENT_MIME);
+      if (!raw) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      let payload: BriefAgentDragPayload;
+      try {
+        payload = JSON.parse(raw) as BriefAgentDragPayload;
+      } catch (err) {
+        console.error('[BriefAgent] invalid drag payload', err);
+        return;
+      }
+
+      const sessions = terminalCtx.terminalSessions;
+      let target = sessions[0];
+      if (selectedRepository) {
+        const repoContext = `${terminalContext}:repo:${selectedRepository.path}`;
+        target =
+          sessions.find((s) => s.context === repoContext) ?? sessions[0];
+      }
+      if (!target) return;
+
+      try {
+        await terminalClient.writeToSession({
+          sessionId: target.id,
+          data: buildBriefingText(payload),
+        });
+      } catch (err) {
+        console.error('[BriefAgent] writeToSession failed', err);
+      }
+    },
+    [terminalCtx.terminalSessions, terminalContext, selectedRepository],
+  );
 
   // Handle removal confirmation
   const handleConfirmRemove = useCallback(
@@ -814,6 +875,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         label: 'Terminal',
         content: (
           <div
+            onDragEnterCapture={handleTerminalDragOver}
+            onDragOverCapture={handleTerminalDragOver}
+            onDropCapture={handleTerminalDrop}
             style={{
               width: '100%',
               height: '100%',
@@ -1095,6 +1159,27 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               workspace={workspace}
               onTrailActivate={handleTrailActivate}
             />
+          </div>
+        ),
+      },
+      {
+        id: 'sessions',
+        label: 'Sessions',
+        content: (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <SessionsPanel />
           </div>
         ),
       },
