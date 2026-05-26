@@ -21,6 +21,7 @@ export const GeneralSettings: React.FC = () => {
   const [showThemeButton, setShowThemeButton] = useState(false);
   const [showCustomizeButton, setShowCustomizeButton] = useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
+  const [showCreateRepoButton, setShowCreateRepoButton] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
   const [showProcessesButton, setShowProcessesButton] = useState(false);
@@ -52,6 +53,9 @@ export const GeneralSettings: React.FC = () => {
       setShowThemeButton(prefs.titlebarButtons?.theme ?? false);
       setShowCustomizeButton(prefs.titlebarButtons?.customize ?? false);
       setShowPullMailbox(prefs.titlebarButtons?.pullMailbox ?? false);
+      setShowCreateRepoButton(
+        prefs.titlebarButtons?.createRepository ?? false,
+      );
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
       setShowProcessesButton(prefs.showProcessesButton ?? false);
@@ -439,6 +443,32 @@ export const GeneralSettings: React.FC = () => {
                       theme: showThemeButton,
                       customize: showCustomizeButton,
                       pullMailbox: enabled,
+                    },
+                  });
+                }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+            </label>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                fontSize: '14px',
+                color: theme.colors.text,
+              }}
+            >
+              <span>Show create-repository button</span>
+              <input
+                type="checkbox"
+                checked={showCreateRepoButton}
+                onChange={async (e) => {
+                  const enabled = e.target.checked;
+                  setShowCreateRepoButton(enabled);
+                  await UserPreferencesService.updatePreferences({
+                    titlebarButtons: {
+                      createRepository: enabled,
                     },
                   });
                 }}

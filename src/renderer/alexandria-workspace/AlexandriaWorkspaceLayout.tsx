@@ -35,7 +35,10 @@ import { UserPreferencesService } from '../main-process-api/UserPreferencesServi
 import { WindowService } from '../main-process-api/WindowService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { RemoveFromWorkspaceModal } from '../panels/components/RemoveFromWorkspaceModal';
-import { PanelIconSidebar } from '../components/Sidebar/PanelIconSidebar';
+import {
+  PanelIconSidebar,
+  ALEXANDRIA_LEFT_PANEL_ICONS,
+} from '../components/Sidebar/PanelIconSidebar';
 import { WorkspaceTrailsPanel } from './workspace-trails-panel/WorkspaceTrailsPanel';
 import { SessionsPanel } from './sessions-panel/SessionsPanel';
 import { HookDebugPanel } from './hook-debug-panel/HookDebugPanel';
@@ -684,21 +687,12 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               err,
             );
           }
-
-          // Switch the right panel to markdown-viewer when a repo is selected
-          onLayoutChange({ ...layout, right: 'markdown-viewer' });
-          // Expand right panel if collapsed using imperative method
-          if (collapsed.right && panelLayoutRef.current) {
-            panelLayoutRef.current.expandPanel('right');
-            collapsedStateRef.current = { ...collapsedStateRef.current, right: false };
-            onCollapsedChangeRef.current(collapsedStateRef.current);
-          }
         }
       }
     });
 
     return unsubscribe;
-  }, [events, onRepositorySelected, selectedRepository, layout, onLayoutChange, collapsed, onCollapsedChange, terminalActions, terminalContext, workspace.id, context]);
+  }, [events, onRepositorySelected, selectedRepository, terminalActions, terminalContext, workspace.id, context]);
 
   // Listen for repository:opened events (for explicitly opening windows)
   useEffect(() => {
@@ -2105,6 +2099,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             onExpand={handleLeftExpand}
             onCollapse={handleLeftCollapse}
             position="right"
+            panelIcons={ALEXANDRIA_LEFT_PANEL_ICONS}
           />
         )}
       </div>

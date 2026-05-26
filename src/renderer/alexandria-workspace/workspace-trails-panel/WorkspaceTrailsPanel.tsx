@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { AlertCircle, Check, Plus, Search, X } from 'lucide-react';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
@@ -8,6 +8,7 @@ import { TopicService } from '../../main-process-api/TopicService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import type { TrailIndexEntry } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { formatRelativeTime } from '../../principal-window/views/TrailsView/TrailCard';
+import { PANEL_FOCUS_SEARCH_EVENT } from '../../components/Sidebar/PanelIconSidebar';
 
 export interface WorkspaceTrailsPanelProps {
   workspace: Workspace;
@@ -59,6 +60,21 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
   const [topicTrailIds, setTopicTrailIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onFocus = (e: Event) => {
+      const detail = (e as CustomEvent<{ panelId?: string }>).detail;
+      if (detail?.panelId === 'trails') {
+        requestAnimationFrame(() => {
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+        });
+      }
+    };
+    window.addEventListener(PANEL_FOCUS_SEARCH_EVENT, onFocus);
+    return () => window.removeEventListener(PANEL_FOCUS_SEARCH_EVENT, onFocus);
+  }, []);
   const [busyTrailId, setBusyTrailId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // path → github owner login, used to render the section's repo avatar.
@@ -271,6 +287,7 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
         >
           <Search size={14} color={theme.colors.textSecondary} />
           <input
+            ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

@@ -1,6 +1,7 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Folder, Search, TerminalSquare, X } from 'lucide-react';
+import { PANEL_FOCUS_SEARCH_EVENT } from '../../components/Sidebar/PanelIconSidebar';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   PanelContextValue,
@@ -263,6 +264,21 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
   const [searchQuery, setSearchQuery] = useState('');
   const [homePath, setHomePath] = useState<string | null>(null);
   const { context: terminalCtx } = useTerminalProvider();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onFocus = (e: Event) => {
+      const detail = (e as CustomEvent<{ panelId?: string }>).detail;
+      if (detail?.panelId === 'workspace-repos') {
+        requestAnimationFrame(() => {
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+        });
+      }
+    };
+    window.addEventListener(PANEL_FOCUS_SEARCH_EVENT, onFocus);
+    return () => window.removeEventListener(PANEL_FOCUS_SEARCH_EVENT, onFocus);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -501,6 +517,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
         >
           <Search size={14} color={theme.colors.textSecondary} />
           <input
+            ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

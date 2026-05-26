@@ -148,6 +148,7 @@ export interface UserPreferences {
     customize?: boolean; // Show/hide theme customization button in titlebar (default: false)
     pullMailbox?: boolean; // Show/hide the pull mailbox in titlebar (default: false)
     openThread?: boolean; // Show/hide the open thread button in titlebar (default: false)
+    createRepository?: boolean; // Show/hide the create-repository button in the Principal titlebar (default: false)
   };
 
   // Dev Workspace window: visibility of titlebar buttons and panel icon sidebars.

@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   PanelCollapseButton,
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { Bot, Bug, FilePlus2, FolderGit2, Route } from 'lucide-react';
-import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
-import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
+import { Bot, FolderGit2, Route } from 'lucide-react';
+import { WorkspaceInfoModal } from './WorkspaceInfoModal';
 import {
   PanelSelectorDropdown,
   type PanelOption,
 } from './PanelSelectorDropdown';
 import { BriefAgentButton } from './BriefAgentButton';
+import { PANEL_FOCUS_SEARCH_EVENT } from '../Sidebar/PanelIconSidebar';
 
 // Available panels for Alexandria workspace
 // Ordered to match dev workspace panel options
@@ -29,10 +29,9 @@ const AVAILABLE_PANELS: PanelOption[] = [
  * switch instead of the generic panel dropdown.
  */
 const LEFT_PANEL_SEGMENTS = [
-  { id: 'workspace-repos', label: 'Projects', Icon: FolderGit2 },
-  { id: 'trails', label: 'Trails', Icon: Route },
-  { id: 'sessions', label: 'Sessions', Icon: Bot },
-  { id: 'hook-debug', label: 'Hook Debug', Icon: Bug },
+  { id: 'workspace-repos', label: 'Projects', Icon: FolderGit2, shortcut: 'j' },
+  { id: 'trails', label: 'Trails', Icon: Route, shortcut: 'k' },
+  { id: 'sessions', label: 'Sessions', Icon: Bot, shortcut: 'l' },
 ] as const;
 
 export interface AlexandriaWorkspaceTitlebarProps {
@@ -61,12 +60,10 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   onLayoutChange,
 }) => {
   const { theme } = useTheme();
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isTitlebarHovered, setIsTitlebarHovered] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  // Show buttons if titlebar is hovered OR if dropdown is open
-  const showHoverButtons = isTitlebarHovered || isDropdownOpen;
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  // True while Cmd (macOS) or Ctrl (Win/Linux) is held — reveals the
+  // numeric shortcut badges on the left-panel segment buttons.
+  const [modPressed, setModPressed] = useState(false);
 
   // Handler for changing the left panel
   const handleLeftPanelChange = (panelId: string) => {
@@ -96,10 +93,82 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
     }
   };
 
+  // Pump a left-panel activation through the same path mouse clicks take:
+  // switch the layout, ensure the panel is expanded, and broadcast a focus
+  // event. The dispatch is deferred two frames because the target panel
+  // may be freshly mounting — its `useEffect` window listener doesn't
+  // register until after React commits, so a synchronous dispatch would
+  // arrive before anyone is listening.
+  const activateLeftPanel = (panelId: string) => {
+    handleLeftPanelChange(panelId);
+    handleExpandLeftPanel();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(
+          new CustomEvent(PANEL_FOCUS_SEARCH_EVENT, { detail: { panelId } }),
+        );
+      });
+    });
+  };
+
+  // Keep latest activation closure available to the global key listener
+  // without rebinding it on every render.
+  const activateRef = useRef(activateLeftPanel);
+  useEffect(() => {
+    activateRef.current = activateLeftPanel;
+  });
+
+  useEffect(() => {
+    const isModKey = (e: KeyboardEvent) =>
+      e.key === 'Meta' || e.key === 'Control';
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isModKey(e)) {
+        setModPressed(true);
+        return;
+      }
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const key = e.key.toLowerCase();
+      const target = LEFT_PANEL_SEGMENTS.find((s) => s.shortcut === key);
+      if (target) {
+        e.preventDefault();
+        e.stopPropagation();
+        activateRef.current(target.id);
+        return;
+      }
+      // Cmd+; → focus the visible xterm. TabbedTerminalPanel hides inactive
+      // tabs with display:none, so the wrong textarea has offsetParent=null.
+      if (key === ';') {
+        const textareas = document.querySelectorAll<HTMLTextAreaElement>(
+          '.xterm-helper-textarea',
+        );
+        for (const ta of Array.from(textareas)) {
+          if (ta.offsetParent !== null) {
+            e.preventDefault();
+            e.stopPropagation();
+            ta.focus();
+            break;
+          }
+        }
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (isModKey(e) || (!e.metaKey && !e.ctrlKey)) setModPressed(false);
+    };
+    const onBlur = () => setModPressed(false);
+
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('keyup', onKeyUp, true);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('keyup', onKeyUp, true);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
+
   return (
     <div
-      onMouseEnter={() => setIsTitlebarHovered(true)}
-      onMouseLeave={() => setIsTitlebarHovered(false)}
       style={{
         height: '56px',
         backgroundColor: theme.colors.backgroundSecondary,
@@ -158,17 +227,23 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
               WebkitAppRegion: 'no-drag',
             }}
           >
-            {LEFT_PANEL_SEGMENTS.map(({ id, label, Icon }) => {
+            {LEFT_PANEL_SEGMENTS.map(({ id, label, Icon, shortcut }, index) => {
               const isActive = layout.left === id;
+              const shortcutLabel = shortcut.toUpperCase();
+              // Decreasing z-index left→right so each segment's corner
+              // badge (which overflows into the next sibling's area at
+              // right: -6) stacks above the later segments. Without this,
+              // an active right-side neighbor paints its solid background
+              // over the earlier badge.
+              const stackIndex = LEFT_PANEL_SEGMENTS.length - index;
               return (
                 <button
                   key={id}
-                  onClick={() => {
-                    handleLeftPanelChange(id);
-                    handleExpandLeftPanel();
-                  }}
-                  title={label}
+                  onClick={() => activateLeftPanel(id)}
+                  title={`${label} (⌘${shortcutLabel})`}
                   style={{
+                    position: 'relative',
+                    zIndex: stackIndex,
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
@@ -195,6 +270,30 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
                 >
                   <Icon size={14} strokeWidth={1.75} />
                   <span>{label}</span>
+                  {modPressed && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: -6,
+                        right: -6,
+                        minWidth: 16,
+                        height: 16,
+                        padding: '0 4px',
+                        borderRadius: 8,
+                        background: theme.colors.primary,
+                        color: theme.colors.background,
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[0],
+                        fontWeight: theme.fontWeights.semibold,
+                        lineHeight: '16px',
+                        textAlign: 'center',
+                        pointerEvents: 'none',
+                        boxShadow: `0 0 0 2px ${theme.colors.backgroundTertiary}`,
+                      }}
+                    >
+                      {shortcutLabel}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -203,8 +302,12 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
 
       </div>
 
-      {/* Center: Workspace name and selected repository */}
-      <div
+      {/* Center: Workspace name and selected repository — click to open
+          the workspace-info modal (workspace details + theme picker). */}
+      <button
+        type="button"
+        onClick={() => setShowInfoModal(true)}
+        title="Workspace info & theme"
         style={{
           position: 'absolute',
           left: '50%',
@@ -213,8 +316,23 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           flexDirection: 'column',
           alignItems: 'center',
           gap: '2px',
+          background: 'transparent',
+          border: 'none',
+          borderRadius: '6px',
+          padding: '4px 10px',
+          cursor: 'pointer',
+          color: 'inherit',
+          fontFamily: theme.fonts.body,
+          transition: 'background-color 0.15s',
           // @ts-ignore - WebkitAppRegion is not in CSSProperties
           WebkitAppRegion: 'no-drag',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor =
+            theme.colors.backgroundTertiary;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
         }}
       >
         {/* Workspace name */}
@@ -260,7 +378,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             {workspace.description}
           </span>
         ) : null}
-      </div>
+      </button>
 
       {/* Right: Actions will go here */}
       <div
@@ -274,62 +392,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Hover-reveal buttons: Theme, Create, Add */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            opacity: showHoverButtons ? 1 : 0,
-            visibility: showHoverButtons ? 'visible' : 'hidden',
-            transition: 'opacity 0.2s ease, visibility 0.2s ease',
-          }}
-        >
-          {/* Theme Toggle */}
-          <WorkspaceThemeDropdown
-            workspaceId={workspace.id}
-            currentTheme={workspace.theme}
-            onOpenChange={setIsDropdownOpen}
-          />
-
-          {/* Create Repository Button - only show if workspace has a clone path */}
-          {workspace.suggestedClonePath && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                backgroundColor: 'transparent',
-                border: `1px solid ${theme.colors.border}`,
-                color: theme.colors.textSecondary,
-                cursor: 'pointer',
-                fontSize: `${theme.fontSizes[0]}px`,
-                fontWeight: theme.fontWeights.medium,
-                fontFamily: theme.fonts.body,
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.primary;
-                e.currentTarget.style.borderColor = theme.colors.primary;
-                e.currentTarget.style.color = theme.colors.background;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.borderColor = theme.colors.border;
-                e.currentTarget.style.color = theme.colors.textSecondary;
-              }}
-              title="Create new GitHub repository"
-            >
-              <FilePlus2 size={14} />
-              Create
-            </button>
-          )}
-
-        </div>
-
         {/* Brief Agent — always visible. Draggable; drop on a terminal to
             link its Claude session to the current topic. */}
         <BriefAgentButton topicId={workspace.topicIds?.[0]} />
@@ -364,10 +426,9 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         )}
       </div>
 
-      {/* Create Repository Modal */}
-      <CreateRepositoryInWorkspaceModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+      <WorkspaceInfoModal
+        isOpen={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
         workspace={workspace}
       />
     </div>

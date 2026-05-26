@@ -34,6 +34,10 @@ interface CreateRepositoryInWorkspaceModalProps {
   workspace?: Workspace;
   workspaces?: Workspace[];
   baseDefaultDirectory?: string | null;
+  // When true, skip destination selection, force the base directory, and
+  // place the repo under `{baseDir}/{owner}/{repoName}` (GitHub-style).
+  // For local-only repos the owner segment falls back to the current user.
+  useOwnerSubdir?: boolean;
 }
 
 type ModalStep = 'select-destination' | 'select-org' | 'create-repo' | 'progress' | 'complete';
@@ -44,13 +48,28 @@ const LOCAL_ONLY_OPTION = 'LOCAL_ONLY';
 
 export const CreateRepositoryInWorkspaceModal: React.FC<
   CreateRepositoryInWorkspaceModalProps
-> = ({ isOpen, onClose, workspace, workspaces = [], baseDefaultDirectory = null }) => {
+> = ({ isOpen, onClose, workspace, workspaces = [], baseDefaultDirectory = null, useOwnerSubdir = false }) => {
   const { theme } = useTheme();
 
+  // In owner-subdir mode the destination is fixed to the base dir, so we
+  // jump straight to org selection (or surface an error if no base dir is
+  // configured).
+  const ownerSubdirActive = useOwnerSubdir && !!baseDefaultDirectory;
+
+  const initialStep: ModalStep = workspace || ownerSubdirActive
+    ? 'select-org'
+    : 'select-destination';
+  const initialDestination: { type: 'workspace' | 'base'; value: Workspace | string } | null =
+    workspace
+      ? { type: 'workspace', value: workspace }
+      : ownerSubdirActive
+        ? { type: 'base', value: baseDefaultDirectory as string }
+        : null;
+
   // Step state
-  const [step, setStep] = useState<ModalStep>(workspace ? 'select-org' : 'select-destination');
+  const [step, setStep] = useState<ModalStep>(initialStep);
   const [selectedDestination, setSelectedDestination] = useState<{ type: 'workspace' | 'base'; value: Workspace | string } | null>(
-    workspace ? { type: 'workspace', value: workspace } : null
+    initialDestination,
   );
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
   const [isSelectedOrgUser, setIsSelectedOrgUser] = useState(false);
@@ -94,8 +113,8 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setStep(workspace ? 'select-org' : 'select-destination');
-      setSelectedDestination(workspace ? { type: 'workspace', value: workspace } : null);
+      setStep(initialStep);
+      setSelectedDestination(initialDestination);
       setSelectedOrg(null);
       setIsSelectedOrgUser(false);
       setRepositoryName('');
@@ -109,7 +128,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       setProgressStep('creating');
       setIsCreating(false);
     }
-  }, [isOpen, workspace]);
+  }, [isOpen, initialStep, initialDestination]);
 
   const loadOrganizations = async () => {
     setIsLoadingOrgs(true);
@@ -161,14 +180,15 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
   }, []);
 
   const handleBack = useCallback(() => {
-    if (step === 'select-org' && !workspace) {
-      // Go back to destination selection if we didn't have a pre-selected workspace
+    if (step === 'select-org' && !workspace && !ownerSubdirActive) {
+      // Go back to destination selection if we didn't have a pre-selected
+      // workspace or a forced base-dir destination.
       setStep('select-destination');
     } else {
       setStep('select-org');
     }
     setError(null);
-  }, [step, workspace]);
+  }, [step, workspace, ownerSubdirActive]);
 
   const handleCreate = async () => {
     if (!repositoryName.trim()) {
@@ -215,7 +235,19 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
 
     try {
       const repoName = repositoryName.trim();
-      const targetPath = path.join(clonePath, repoName);
+      // GitHub-style layout: when invoked from the Principal titlebar we
+      // group repos by their owner under the base dir
+      // ({baseDir}/{owner}/{repoName}). For the local-only flow the owner
+      // segment falls back to the signed-in user's login.
+      const ownerSegment =
+        ownerSubdirActive && selectedDestination.type === 'base'
+          ? selectedOrg === LOCAL_ONLY_OPTION
+            ? currentUser?.login || ''
+            : selectedOrg
+          : '';
+      const targetPath = ownerSegment
+        ? path.join(clonePath, ownerSegment, repoName)
+        : path.join(clonePath, repoName);
 
       // Check if this is a local-only repository
       if (selectedOrg === LOCAL_ONLY_OPTION) {
@@ -1491,6 +1523,14 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
         if (selectedDestination?.type === 'workspace') {
           const ws = selectedDestination.value as Workspace;
           return `Will be added to: ${ws.name}`;
+        } else if (ownerSubdirActive && selectedOrg && repositoryName.trim()) {
+          const ownerSegment =
+            selectedOrg === LOCAL_ONLY_OPTION
+              ? currentUser?.login || ''
+              : selectedOrg;
+          return ownerSegment
+            ? `Will be cloned to ${ownerSegment}/${repositoryName.trim()}`
+            : `Will be cloned to home folder`;
         } else {
           return `Will be cloned to home folder`;
         }

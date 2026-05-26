@@ -7,9 +7,10 @@ import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls'
 import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
-import { Layers, FolderPlus } from 'lucide-react';
+import { Layers, FolderPlus, FilePlus2 } from 'lucide-react';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
+import { CreateRepositoryInWorkspaceModal } from '../../../panels/components/CreateRepositoryInWorkspaceModal';
 
 declare global {
   interface Window {
@@ -52,6 +53,11 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   const [showCustomizeButton, setShowCustomizeButton] = useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
   const [showOpenThreadButton, setShowOpenThreadButton] = useState(false);
+  const [showCreateRepoButton, setShowCreateRepoButton] = useState(false);
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
+    string | null
+  >(null);
+  const [showCreateRepoModal, setShowCreateRepoModal] = useState(false);
   const { theme } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
@@ -74,6 +80,10 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       setShowCustomizeButton(preferences.titlebarButtons?.customize ?? false);
       setShowPullMailbox(preferences.titlebarButtons?.pullMailbox ?? false);
       setShowOpenThreadButton(preferences.titlebarButtons?.openThread ?? false);
+      setShowCreateRepoButton(
+        preferences.titlebarButtons?.createRepository ?? false,
+      );
+      setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
     };
 
     void UserPreferencesService.getPreferences().then(applyPreferences);
@@ -215,6 +225,43 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           >
             <FolderPlus size={14} />
             Add a project
+          </button>
+        )}
+        {/* Create Repository — gated by titlebarButtons.createRepository.
+            Opens the modal in owner-subdir mode: skips workspace pick,
+            clones under {baseDefaultDirectory}/{owner}/{repoName}. */}
+        {showCreateRepoButton && baseDefaultDirectory && (
+          <button
+            onClick={() => setShowCreateRepoModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              cursor: 'pointer',
+              fontSize: theme.fontSizes[1],
+              fontWeight: 500,
+              fontFamily: theme.fonts.body,
+              transition: 'all 0.2s',
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
+            }}
+            title="Create a new GitHub repository under your base directory"
+          >
+            <FilePlus2 size={14} />
+            Create
           </button>
         )}
         {/* Open Thread button */}
@@ -382,6 +429,12 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         </div>
       )}
 
+      <CreateRepositoryInWorkspaceModal
+        isOpen={showCreateRepoModal}
+        onClose={() => setShowCreateRepoModal(false)}
+        baseDefaultDirectory={baseDefaultDirectory}
+        useOwnerSubdir
+      />
     </div>
   );
 };

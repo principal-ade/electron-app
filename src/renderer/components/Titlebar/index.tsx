@@ -16,6 +16,3 @@ export type { GitSyncStatusIndicatorProps } from './GitSyncStatusIndicator';
 // Window-specific titlebars
 export { AlexandriaWorkspaceTitlebar } from './AlexandriaWorkspaceTitlebar';
 export type { AlexandriaWorkspaceTitlebarProps } from './AlexandriaWorkspaceTitlebar';
-
-export { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
-export type { WorkspaceThemeDropdownProps } from './WorkspaceThemeDropdown';
