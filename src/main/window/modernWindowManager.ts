@@ -777,7 +777,46 @@ export async function createWindow(
 }
 
 /**
- * Create a special purpose window
+ * Look up a special window by `purpose` and bring it to the front.
+ * Returns the existing window, or `null` when none is live for that key.
+ *
+ * On hit: restores from minimize, shows, focuses, and `moveTop`s — the
+ * `show()` + `moveTop()` pair is needed because `focus()` alone doesn't
+ * pull a window forward when it's on another macOS Space or behind a
+ * fullscreen app.
+ *
+ * On a stale registry entry (window destroyed since it was registered),
+ * deletes the entry and returns null so the caller falls through to
+ * createSpecialWindow.
+ *
+ * Always call this before `createSpecialWindow`; that function throws on
+ * a duplicate `purpose`.
+ */
+export function focusExistingSpecialWindow(
+  purpose: string,
+): IModernApplicationWindow | null {
+  const existingId = specialWindows.get(purpose);
+  if (!existingId) return null;
+  const existing = applicationWindows.get(existingId);
+  if (!existing || existing.window.isDestroyed()) {
+    specialWindows.delete(purpose);
+    return null;
+  }
+  if (existing.window.isMinimized()) {
+    existing.window.restore();
+  }
+  existing.window.show();
+  existing.window.focus();
+  existing.window.moveTop();
+  return existing;
+}
+
+/**
+ * Create a special purpose window. The `purpose` key must be unique among
+ * live windows — callers must dedup with `focusExistingSpecialWindow()`
+ * first. A silent-reuse fallback here would force callers to re-run
+ * `loadURL` and other post-create setup against a window that already has
+ * renderer state, wiping it.
  */
 export function createSpecialWindow(
   purpose: string,
@@ -792,21 +831,18 @@ export function createSpecialWindow(
     },
   });
 
-  // Check if window already exists
   const existingId = specialWindows.get(purpose);
   if (existingId) {
     const existing = applicationWindows.get(existingId);
     if (existing && !existing.window.isDestroyed()) {
-      span.setAttribute('window.reused', true);
-      span.setAttribute('window.id', existingId);
+      span.setAttribute('window.duplicate-purpose', true);
       span.end();
-      existing.window.focus();
-      if (existing.window.isMinimized()) {
-        existing.window.restore();
-      }
-      return existing;
+      throw new Error(
+        `createSpecialWindow: a window with purpose '${purpose}' is already registered. ` +
+          `Call focusExistingSpecialWindow('${purpose}') first and early-return on a hit.`,
+      );
     }
-    // Clean up stale reference
+    // Stale registry entry — window was destroyed since registration.
     specialWindows.delete(purpose);
   }
 

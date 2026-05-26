@@ -10,8 +10,7 @@ import path from 'path';
 import { resolveHtmlPath } from '../util';
 import {
   createSpecialWindow,
-  applicationWindows,
-  specialWindows,
+  focusExistingSpecialWindow,
 } from './modernWindowManager';
 import { PrimaryWindowType, WindowMetadata } from './types';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -141,21 +140,9 @@ export async function openDevWorkspaceWindow(
       // Don't block opening the window if refresh fails
     });
 
-  const existingId = specialWindows.get(windowName);
-  if (existingId) {
-    const existing = applicationWindows.get(existingId);
-    if (existing && !existing.window.isDestroyed()) {
-      if (existing.window.isMinimized()) {
-        existing.window.restore();
-      }
-      // show() + moveTop() ensures the window comes forward even when on
-      // another Space or behind a fullscreen app — focus() alone doesn't.
-      existing.window.show();
-      existing.window.focus();
-      existing.window.moveTop();
-      return { windowId: existing.window.id };
-    }
-    specialWindows.delete(windowName);
+  const existing = focusExistingSpecialWindow(windowName);
+  if (existing) {
+    return { windowId: existing.window.id };
   }
 
   // Get the dev-workspace preload path

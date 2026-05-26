@@ -10,8 +10,7 @@ import path from 'path';
 import { resolveHtmlPath } from '../util';
 import {
   createSpecialWindow,
-  applicationWindows,
-  specialWindows,
+  focusExistingSpecialWindow,
 } from './modernWindowManager';
 import { PrimaryWindowType, WindowMetadata } from './types';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -43,19 +42,9 @@ export async function openExtensionWindow(
 ): Promise<{ windowId: number } | null> {
   const windowName = EXTENSION_WINDOW_PURPOSE;
 
-  // Check if window already exists
-  const existingId = specialWindows.get(windowName);
-  if (existingId) {
-    const existing = applicationWindows.get(existingId);
-    if (existing && !existing.window.isDestroyed()) {
-      existing.window.focus();
-      if (existing.window.isMinimized()) {
-        existing.window.restore();
-      }
-      return { windowId: existing.window.id };
-    }
-    // Clean up stale reference
-    specialWindows.delete(windowName);
+  const existing = focusExistingSpecialWindow(windowName);
+  if (existing) {
+    return { windowId: existing.window.id };
   }
 
   // Get the extension window preload path

@@ -376,12 +376,27 @@ export function setupQuickOpenHandlers(): void {
         log.info(`[Quick Open] Opening dev workspace for ${item.name}`);
       } else if (item.type === 'workspace') {
         // Open workspace window directly from main process
-        const { createSpecialWindow } = require('./modernWindowManager');
+        const {
+          createSpecialWindow,
+          focusExistingSpecialWindow,
+        } = require('./modernWindowManager');
         const { resolveHtmlPath } = require('../util');
         const { PrimaryWindowType } = require('./types');
 
         const workspaceId = item.id;
         const windowName = `alexandria-workspace-${workspaceId}`;
+
+        // Belt-and-braces: the outer `item.openWindowId` check already
+        // catches the common reuse case, but a stale item (no openWindowId
+        // populated for a workspace whose window is in fact open) would
+        // otherwise hit createSpecialWindow's duplicate-purpose throw.
+        const existing = focusExistingSpecialWindow(windowName);
+        if (existing) {
+          log.info(
+            `[Quick Open] Focused existing workspace window for ${item.name}`,
+          );
+          return;
+        }
 
         // Fetch workspace name from the registry
         let workspaceName = 'Alexandria Workspace';

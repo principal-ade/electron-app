@@ -6,6 +6,7 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import {
   createSpecialWindow,
+  focusExistingSpecialWindow,
   focusOrCreateMainWindow,
 } from './modernWindowManager';
 import { resolveHtmlPath } from '../util';
@@ -151,6 +152,14 @@ export function registerModernWindowHandlers(): void {
         console.error(
           '[modernWindowHandlers] OPEN_ALEXANDRIA_WORKSPACE called without workspaceId or repository info',
         );
+        return;
+      }
+
+      // If a window with this purpose is already live, focus it and stop.
+      // The post-create setup below (loadURL, terminalManager rebind, watch
+      // re-acquisition) would otherwise tear down the existing renderer.
+      const existing = focusExistingSpecialWindow(windowName);
+      if (existing) {
         return;
       }
 
