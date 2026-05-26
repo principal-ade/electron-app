@@ -543,6 +543,7 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
           lastExit: null,
           watcherImpl: null,
           requestedWatcherImpl: 'parcel' as const,
+          watcherImplFallbackReason: null,
           lifecycleHistory: [],
           stdoutTail: [],
           stderrTail: [],

@@ -468,11 +468,31 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
                         marginLeft: '8px',
                       }}
                     >
-                      (requested: {diagnostics.requestedWatcherImpl} — restart
-                      pending)
+                      (requested: {diagnostics.requestedWatcherImpl} —{' '}
+                      {diagnostics.watcherImplFallbackReason
+                        ? 'fell back automatically'
+                        : 'restart pending'}
+                      )
                     </span>
                   )}
               </div>
+              {diagnostics.watcherImplFallbackReason && (
+                <div
+                  style={{
+                    fontSize: '11px',
+                    color: theme.colors.warning,
+                    marginTop: '4px',
+                    fontFamily: theme.fonts.monospace,
+                    wordBreak: 'break-word',
+                  }}
+                  title={diagnostics.watcherImplFallbackReason}
+                >
+                  Fallback reason:{' '}
+                  {diagnostics.watcherImplFallbackReason.length > 200
+                    ? diagnostics.watcherImplFallbackReason.slice(0, 200) + '…'
+                    : diagnostics.watcherImplFallbackReason}
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '4px' }}>
               {(['parcel', 'chokidar'] as const).map((impl) => {

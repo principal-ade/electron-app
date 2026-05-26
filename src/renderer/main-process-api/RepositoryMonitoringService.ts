@@ -442,6 +442,7 @@ export class RepositoryMonitoringService {
         lastExit: null,
         watcherImpl: null,
         requestedWatcherImpl: 'parcel',
+        watcherImplFallbackReason: null,
         lifecycleHistory: [],
         stdoutTail: [],
         stderrTail: [],
