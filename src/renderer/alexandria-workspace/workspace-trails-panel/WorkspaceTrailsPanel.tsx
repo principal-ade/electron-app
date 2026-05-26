@@ -12,13 +12,26 @@ import { formatRelativeTime } from '../../principal-window/views/TrailsView/Trai
 export interface WorkspaceTrailsPanelProps {
   workspace: Workspace;
   /**
-   * Fires when a trail row is clicked. The layout opens (or focuses) the
+   * Fires when a trail row is left-clicked. The layout opens (or focuses) the
    * singleton `file-city-trail` tab and loads this payload into it.
    */
   onTrailActivate?: (
     payload: TrailPayload,
     repositoryPath?: string,
   ) => void;
+  /**
+   * Fires when a trail row is right-clicked. The layout switches the right
+   * panel to the trail explorer and loads this payload into it.
+   */
+  onTrailOpenInRightPanel?: (
+    payload: TrailPayload,
+    repositoryPath?: string,
+  ) => void;
+  /**
+   * Id of the trail currently loaded in the layout (middle tab or right
+   * panel). The matching row renders with a selected style.
+   */
+  activeTrailId?: string | null;
 }
 
 const repoBasename = (repositoryPath?: string): string | null => {
@@ -33,6 +46,8 @@ const REPO_AGNOSTIC_KEY = '__repo_agnostic__';
 export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
   workspace,
   onTrailActivate,
+  onTrailOpenInRightPanel,
+  activeTrailId,
 }) => {
   const { theme } = useTheme();
   // v1 single-topic invariant: every workspace has exactly one topic. The
@@ -194,6 +209,16 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
     [onTrailActivate],
   );
 
+  const handleOpenInRightPanel = useCallback(
+    async (trailId: string) => {
+      if (!onTrailOpenInRightPanel) return;
+      const result = await TrailLibraryService.activate(trailId);
+      if (!result) return;
+      onTrailOpenInRightPanel(result.payload, result.repositoryPath);
+    },
+    [onTrailOpenInRightPanel],
+  );
+
   const handleRemove = useCallback(
     async (trailId: string) => {
       if (!topicId) return;
@@ -332,11 +357,17 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
                     entry={entry}
                     inWorkspace={inWs}
                     busy={busyTrailId === entry.id}
+                    isActive={activeTrailId === entry.id}
                     onAction={() =>
                       inWs ? handleRemove(entry.id) : handleAdd(entry.id)
                     }
                     onActivate={
                       onTrailActivate ? () => handleActivate(entry.id) : undefined
+                    }
+                    onOpenInRightPanel={
+                      onTrailOpenInRightPanel
+                        ? () => handleOpenInRightPanel(entry.id)
+                        : undefined
                     }
                     disabled={!topicId}
                   />
@@ -355,6 +386,8 @@ interface TrailRowProps {
   inWorkspace: boolean;
   busy: boolean;
   disabled: boolean;
+  /** Renders selected styling when this row's trail is the active one. */
+  isActive: boolean;
   onAction: () => void;
   /**
    * When provided, clicking the row body (not the action button) opens the
@@ -362,6 +395,12 @@ interface TrailRowProps {
    * activation isn't wired (e.g. unit tests).
    */
   onActivate?: () => void;
+  /**
+   * When provided, right-clicking the row body opens the trail in the
+   * layout's right panel (trail explorer). The default browser context
+   * menu is suppressed.
+   */
+  onOpenInRightPanel?: () => void;
 }
 
 const TrailRow: React.FC<TrailRowProps> = ({
@@ -369,8 +408,10 @@ const TrailRow: React.FC<TrailRowProps> = ({
   inWorkspace,
   busy,
   disabled,
+  isActive,
   onAction,
   onActivate,
+  onOpenInRightPanel,
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
@@ -382,6 +423,15 @@ const TrailRow: React.FC<TrailRowProps> = ({
       role={onActivate ? 'button' : undefined}
       tabIndex={onActivate ? 0 : undefined}
       onClick={onActivate}
+      onContextMenu={
+        onOpenInRightPanel
+          ? (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onOpenInRightPanel();
+            }
+          : undefined
+      }
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onKeyDown={
@@ -400,10 +450,17 @@ const TrailRow: React.FC<TrailRowProps> = ({
         gap: '10px',
         padding: '10px 12px',
         borderRadius: '8px',
-        border: `1px solid ${theme.colors.border}`,
-        background: isHovered
+        border: `1px solid ${
+          isActive ? theme.colors.primary : theme.colors.border
+        }`,
+        boxShadow: isActive
+          ? `inset 0 0 0 1px ${theme.colors.primary}`
+          : undefined,
+        background: isActive
           ? theme.colors.background
-          : theme.colors.backgroundSecondary,
+          : isHovered
+            ? theme.colors.background
+            : theme.colors.backgroundSecondary,
         cursor: onActivate ? 'pointer' : 'default',
         transition: 'all 0.15s ease',
       }}

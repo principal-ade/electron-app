@@ -235,35 +235,37 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     }
   }, [onPanelControlReady]);
 
-  // Open (or focus) the singleton file-city-trail tab and load the given
-  // payload into it. Mirrors dev-workspace's `openFileCityTrailTab` — one
-  // tab id, payload swaps on subsequent activations.
-  const handleTrailActivate = useCallback(
-    (payload: TrailPayload, repositoryPath?: string) => {
-      setActiveTrailPayload(payload);
-      setActiveTrailRepoPath(repositoryPath);
-      setTabs((prev) => {
-        if (prev.some((t) => t.contentType === 'file-city-trail')) return prev;
-        const newTab: FileCityTrailTab = {
-          id: 'file-city-trail',
-          label: 'Trail',
-          contentType: 'file-city-trail',
-          closable: true,
-        };
-        return [...prev, newTab];
-      });
-      setFocusTabId('file-city-trail');
-    },
-    [],
-  );
+  // Tear down whatever surface(s) currently host the active trail. Clearing
+  // the payload empties both the middle tab and the right-panel slot; we also
+  // drop the file-city-trail tab so the middle goes back to terminals-only,
+  // and swap the right panel back to markdown-viewer + collapse it if it was
+  // showing the trail explorer (deselecting should put the workspace back to
+  // its idle two-pane shape).
+  const handleCloseActiveTrail = useCallback(() => {
+    setActiveTrailPayload(null);
+    setActiveTrailRepoPath(undefined);
+    setTabs((prev) => prev.filter((t) => t.contentType !== 'file-city-trail'));
+    if (layout.right === 'trail-explorer') {
+      onLayoutChange({ ...layout, right: 'markdown-viewer' });
+      panelLayoutRef.current?.collapsePanel('right');
+      collapsedStateRef.current = {
+        ...collapsedStateRef.current,
+        right: true,
+      };
+      onCollapsedChangeRef.current(collapsedStateRef.current);
+    }
+  }, [layout, onLayoutChange]);
 
-  // Right-click on a trail row: swap the same active payload into the right
-  // panel's trail-explorer slot. Shares `activeTrailPayload` with the middle
-  // tab so both surfaces stay in sync when the user activates a new trail.
-  // Always force-expand + resize to a usable width — the right panel may be
-  // collapsed, sized to <20%, or out of sync with `collapsed.right`.
+  // Route a trail into the right panel's trail-explorer slot. Always force-
+  // expand + resize to a usable width — the right panel may be collapsed,
+  // sized to <20%, or out of sync with `collapsed.right`. Re-activating the
+  // already-active trail closes it (toggle).
   const handleTrailOpenInRightPanel = useCallback(
     (payload: TrailPayload, repositoryPath?: string) => {
+      if (activeTrailPayload?.id === payload.id) {
+        handleCloseActiveTrail();
+        return;
+      }
       setActiveTrailPayload(payload);
       setActiveTrailRepoPath(repositoryPath);
       onLayoutChange({ ...layout, right: 'trail-explorer' });
@@ -284,7 +286,44 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       };
       onCollapsedChangeRef.current(collapsedStateRef.current);
     },
-    [layout, onLayoutChange],
+    [activeTrailPayload?.id, handleCloseActiveTrail, layout, onLayoutChange],
+  );
+
+  // Left-click on a trail: if any terminal is live in this workspace, the
+  // middle slot is "in use" — route the trail into the right panel instead so
+  // the user doesn't lose their terminal context. Otherwise open (or focus)
+  // the singleton file-city-trail tab in the middle, mirroring dev-workspace's
+  // `openFileCityTrailTab`. Re-activating the already-active trail closes it.
+  const handleTrailActivate = useCallback(
+    (payload: TrailPayload, repositoryPath?: string) => {
+      if (activeTrailPayload?.id === payload.id) {
+        handleCloseActiveTrail();
+        return;
+      }
+      if (terminalCtx.terminalSessions.length > 0) {
+        handleTrailOpenInRightPanel(payload, repositoryPath);
+        return;
+      }
+      setActiveTrailPayload(payload);
+      setActiveTrailRepoPath(repositoryPath);
+      setTabs((prev) => {
+        if (prev.some((t) => t.contentType === 'file-city-trail')) return prev;
+        const newTab: FileCityTrailTab = {
+          id: 'file-city-trail',
+          label: 'Trail',
+          contentType: 'file-city-trail',
+          closable: true,
+        };
+        return [...prev, newTab];
+      });
+      setFocusTabId('file-city-trail');
+    },
+    [
+      activeTrailPayload?.id,
+      handleCloseActiveTrail,
+      terminalCtx.terminalSessions.length,
+      handleTrailOpenInRightPanel,
+    ],
   );
 
   // Sync from the TabbedTerminalPanel. Terminal tabs are managed inside the
@@ -313,10 +352,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             trailPayload={activeTrailPayload}
             repositoryPath={activeTrailRepoPath}
             events={events}
-            onCloseTrail={() => {
-              setActiveTrailPayload(null);
-              setActiveTrailRepoPath(undefined);
-            }}
           />
         );
       }
@@ -1215,6 +1250,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               workspace={workspace}
               onTrailActivate={handleTrailActivate}
               onTrailOpenInRightPanel={handleTrailOpenInRightPanel}
+              activeTrailId={activeTrailPayload?.id ?? null}
             />
           </div>
         ),
@@ -1282,10 +1318,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               trailPayload={activeTrailPayload}
               repositoryPath={activeTrailRepoPath}
               events={events}
-              onCloseTrail={() => {
-                setActiveTrailPayload(null);
-                setActiveTrailRepoPath(undefined);
-              }}
+              mobileShowMap
             />
           </div>
         ),

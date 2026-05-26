@@ -43,6 +43,13 @@ interface FileCityTrailTabContentProps {
    * none of which we provide — so the panel shows its empty/idle UI).
    */
   onCloseTrail?: () => void;
+  /**
+   * Forwarded to the underlying `FileCityTrailExplorerPanel`. When true and
+   * the panel is at mobile width (<768px), the city map stays pinned beneath
+   * the brief instead of letting the brief cover the whole panel. Useful for
+   * narrow desktop sidepanel mounts (e.g. Alexandria's right panel).
+   */
+  mobileShowMap?: boolean;
 }
 
 const EMPTY_FILE_TREE_ROOT = {
@@ -94,6 +101,7 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
   repositoryPath,
   events,
   onCloseTrail,
+  mobileShowMap,
 }) => {
   const [fileTree, setFileTree] = useState<RepoFileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
@@ -299,6 +307,7 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
         actions={trailActions}
         events={events}
         briefLayout="split"
+        mobileShowMap={mobileShowMap}
       />
     </div>
   );
