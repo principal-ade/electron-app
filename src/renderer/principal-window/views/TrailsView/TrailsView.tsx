@@ -821,6 +821,45 @@ const TrailsViewInner: React.FC<{
     };
   }, []);
 
+  // Per-workspace repo lists, keyed by workspace id. Used to label topic rows
+  // on the dashboard with the names of the repos in the topic's workspace.
+  // Refetched on every workspace/membership change via the same event bus
+  // that drives `workspaces` above.
+  const [workspaceRepos, setWorkspaceRepos] = useState<
+    Map<string, AlexandriaEntry[]>
+  >(new Map());
+
+  useEffect(() => {
+    let cancelled = false;
+    const targetIds = workspaces
+      .filter((w) => (w.topicIds?.length ?? 0) > 0)
+      .map((w) => w.id);
+    if (targetIds.length === 0) {
+      setWorkspaceRepos((prev) => (prev.size === 0 ? prev : new Map()));
+      return;
+    }
+    Promise.all(
+      targetIds.map((id) =>
+        WorkspaceService.getRepositoriesInWorkspace(id)
+          .then((repos) => [id, repos] as const)
+          .catch((err) => {
+            console.error(
+              '[TrailsView] Failed to load repos for workspace',
+              id,
+              err,
+            );
+            return [id, [] as AlexandriaEntry[]] as const;
+          }),
+      ),
+    ).then((pairs) => {
+      if (cancelled) return;
+      setWorkspaceRepos(new Map(pairs));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaces]);
+
   // Tab state for the TabbedTerminalPanel — one tab per opened project.
   // The panel only reads `initialTabs` on mount, so we bump `remountKey` to
   // remount the panel when we add a tab. Existing terminal sessions reconnect
@@ -1539,6 +1578,11 @@ const TrailsViewInner: React.FC<{
     );
     return sorted.map((t) => {
       const workspace = workspaces.find((w) => w.topicIds?.includes(t.id));
+      const repos = workspace ? (workspaceRepos.get(workspace.id) ?? []) : [];
+      const projectRepos = repos.map((repo) => ({
+        name: repo.github?.name ?? repo.name ?? trailRepoLabel(repo.path),
+        ownerLogin: repo.github?.owner,
+      }));
       return {
         key: t.id,
         title: t.title,
@@ -1549,9 +1593,10 @@ const TrailsViewInner: React.FC<{
         updatedAt: t.updatedAt,
         folderPath:
           workspace?.suggestedClonePath ?? defaultBaseDirectory ?? undefined,
+        projectRepos: projectRepos.length > 0 ? projectRepos : undefined,
       };
     });
-  }, [topics, workspaces, defaultBaseDirectory]);
+  }, [topics, workspaces, workspaceRepos, defaultBaseDirectory]);
 
   // Click handler for the landing repo cards. Pre-selects the repo's
   // project filter and the specific trail before flipping into Recent,

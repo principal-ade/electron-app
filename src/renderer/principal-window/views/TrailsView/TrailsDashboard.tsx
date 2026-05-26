@@ -53,6 +53,13 @@ export interface TrailsDashboardTopicEntry {
   updatedAt: string;
   /** Filesystem folder the topic's workspace lives in, if set. */
   folderPath?: string;
+  /**
+   * Repos belonging to the topic's workspace. When non-empty, the dashboard
+   * row renders an owner-avatar + repo-name chip per entry in place of
+   * {@link folderPath}. `ownerLogin` is omitted for local-only repos with
+   * no GitHub remote — those render a generic icon fallback.
+   */
+  projectRepos?: Array<{ name: string; ownerLogin?: string }>;
 }
 
 export interface TrailsDashboardProps {
@@ -113,44 +120,6 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
     >
       <Section
         theme={theme}
-        eyebrowIcon={<FolderGit2 size={12} color={theme.colors.primary} />}
-        eyebrow="Repos"
-        title="Repos with trails"
-        subtitle={
-          repoEntries.length === 0
-            ? 'No repos have trails yet.'
-            : `${repoEntries.length} ${repoEntries.length === 1 ? 'repo' : 'repos'}`
-        }
-        action={
-          repoEntries.length > 0 ? (
-            <PillButton
-              theme={theme}
-              onClick={onViewAllTrails}
-              accent
-              icon={<ArrowRight size={14} />}
-              iconPosition="end"
-            >
-              View all trails
-            </PillButton>
-          ) : null
-        }
-      >
-        {visibleRepos.length === 0 ? (
-          <EmptyHint
-            theme={theme}
-            text="Publish a trail from the File City panel and its repo will land here."
-          />
-        ) : (
-          <RepoGrid
-            repos={visibleRepos}
-            theme={theme}
-            onSelectRepo={onSelectRepo}
-          />
-        )}
-      </Section>
-
-      <Section
-        theme={theme}
         eyebrowIcon={<Library size={12} color={theme.colors.primary} />}
         eyebrow="Topics"
         title="Your topics"
@@ -184,6 +153,44 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
             theme={theme}
             onSelectTopic={onSelectTopic}
             onDeleteTopic={onDeleteTopic}
+          />
+        )}
+      </Section>
+
+      <Section
+        theme={theme}
+        eyebrowIcon={<FolderGit2 size={12} color={theme.colors.primary} />}
+        eyebrow="Repos"
+        title="Repos with trails"
+        subtitle={
+          repoEntries.length === 0
+            ? 'No repos have trails yet.'
+            : `${repoEntries.length} ${repoEntries.length === 1 ? 'repo' : 'repos'}`
+        }
+        action={
+          repoEntries.length > 0 ? (
+            <PillButton
+              theme={theme}
+              onClick={onViewAllTrails}
+              accent
+              icon={<ArrowRight size={14} />}
+              iconPosition="end"
+            >
+              View all trails
+            </PillButton>
+          ) : null
+        }
+      >
+        {visibleRepos.length === 0 ? (
+          <EmptyHint
+            theme={theme}
+            text="Publish a trail from the File City panel and its repo will land here."
+          />
+        ) : (
+          <RepoGrid
+            repos={visibleRepos}
+            theme={theme}
+            onSelectRepo={onSelectRepo}
           />
         )}
       </Section>
@@ -494,7 +501,63 @@ function TopicList({
                 {t.title}
               </div>
             </div>
-            {t.folderPath && (
+            {t.projectRepos && t.projectRepos.length > 0 ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  color: theme.colors.textTertiary,
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: theme.fontSizes[0],
+                  minWidth: 0,
+                }}
+                title={t.projectRepos
+                  .map((r) =>
+                    r.ownerLogin ? `${r.ownerLogin}/${r.name}` : r.name,
+                  )
+                  .join(', ')}
+              >
+                {t.projectRepos.map((r, i) => (
+                  <span
+                    key={`${r.ownerLogin ?? ''}/${r.name}/${i}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      minWidth: 0,
+                    }}
+                  >
+                    {r.ownerLogin ? (
+                      <img
+                        src={`https://github.com/${r.ownerLogin}.png?size=40`}
+                        alt={r.ownerLogin}
+                        width={14}
+                        height={14}
+                        style={{
+                          borderRadius: '50%',
+                          flex: '0 0 auto',
+                          border: `1px solid ${theme.colors.border}`,
+                        }}
+                      />
+                    ) : (
+                      <FolderGit2 size={12} />
+                    )}
+                    <span
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        minWidth: 0,
+                      }}
+                    >
+                      {r.name}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            ) : t.folderPath ? (
               <div
                 style={{
                   display: 'flex',
@@ -519,17 +582,18 @@ function TopicList({
                   {tildifyPath(t.folderPath)}
                 </span>
               </div>
+            ) : null}
+            {t.trailCount > 0 && (
+              <div
+                style={{
+                  color: theme.colors.textTertiary,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[0],
+                }}
+              >
+                {t.trailCount} {t.trailCount === 1 ? 'trail' : 'trails'}
+              </div>
             )}
-            <div
-              style={{
-                color: theme.colors.textTertiary,
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[0],
-              }}
-            >
-              {t.trailCount} {t.trailCount === 1 ? 'trail' : 'trails'} ·
-              updated {formatRelativeTime(t.updatedAt)}
-            </div>
             {t.descriptionPreview && (
               <div
                 style={{
