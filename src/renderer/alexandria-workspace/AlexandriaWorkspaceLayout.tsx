@@ -309,19 +309,15 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     [activeTrailPayload?.id, handleCloseActiveTrail, layout, onLayoutChange],
   );
 
-  // Left-click on a trail: if any terminal is live in this workspace, the
-  // middle slot is "in use" — route the trail into the right panel instead so
-  // the user doesn't lose their terminal context. Otherwise open (or focus)
-  // the singleton file-city-trail tab in the middle, mirroring dev-workspace's
-  // `openFileCityTrailTab`. Re-activating the already-active trail closes it.
-  const handleTrailActivate = useCallback(
+  // Force-open (or focus) the singleton file-city-trail tab in the middle,
+  // mirroring dev-workspace's `openFileCityTrailTab`. Re-activating the
+  // already-active trail closes it. Used by left-click when no terminals are
+  // live, and by two-finger click as the explicit "give me a tab" override
+  // regardless of terminal state.
+  const handleTrailOpenInTab = useCallback(
     (payload: TrailPayload, repositoryPath?: string) => {
       if (activeTrailPayload?.id === payload.id) {
         handleCloseActiveTrail();
-        return;
-      }
-      if (terminalCtx.terminalSessions.length > 0) {
-        handleTrailOpenInRightPanel(payload, repositoryPath);
         return;
       }
       setActiveTrailPayload(payload);
@@ -338,11 +334,31 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       });
       setFocusTabId('file-city-trail');
     },
+    [activeTrailPayload?.id, handleCloseActiveTrail],
+  );
+
+  // Left-click on a trail: if any terminal is live in this workspace, the
+  // middle slot is "in use" — route the trail into the right panel instead so
+  // the user doesn't lose their terminal context. Otherwise open (or focus)
+  // the singleton file-city-trail tab in the middle.
+  const handleTrailActivate = useCallback(
+    (payload: TrailPayload, repositoryPath?: string) => {
+      if (activeTrailPayload?.id === payload.id) {
+        handleCloseActiveTrail();
+        return;
+      }
+      if (terminalCtx.terminalSessions.length > 0) {
+        handleTrailOpenInRightPanel(payload, repositoryPath);
+        return;
+      }
+      handleTrailOpenInTab(payload, repositoryPath);
+    },
     [
       activeTrailPayload?.id,
       handleCloseActiveTrail,
       terminalCtx.terminalSessions.length,
       handleTrailOpenInRightPanel,
+      handleTrailOpenInTab,
     ],
   );
 
@@ -1366,7 +1382,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             <WorkspaceTrailsPanel
               workspace={workspace}
               onTrailActivate={handleTrailActivate}
-              onTrailOpenInRightPanel={handleTrailOpenInRightPanel}
+              onTrailOpenInTab={handleTrailOpenInTab}
               activeTrailId={activeTrailPayload?.id ?? null}
             />
           </div>
@@ -2172,6 +2188,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       renderTabContent,
       handleTrailActivate,
       handleTrailOpenInRightPanel,
+      handleTrailOpenInTab,
       activeTrailPayload,
       activeTrailRepoPath,
       focusTabId,

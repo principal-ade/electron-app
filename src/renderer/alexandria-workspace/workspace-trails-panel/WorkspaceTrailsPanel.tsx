@@ -21,10 +21,11 @@ export interface WorkspaceTrailsPanelProps {
     repositoryPath?: string,
   ) => void;
   /**
-   * Fires when a trail row is right-clicked. The layout switches the right
-   * panel to the trail explorer and loads this payload into it.
+   * Fires when a trail row is right-clicked (two-finger click). The layout
+   * force-opens the singleton file-city-trail tab in the middle, bypassing
+   * the terminal-routing fallback that `onTrailActivate` applies.
    */
-  onTrailOpenInRightPanel?: (
+  onTrailOpenInTab?: (
     payload: TrailPayload,
     repositoryPath?: string,
   ) => void;
@@ -47,7 +48,7 @@ const REPO_AGNOSTIC_KEY = '__repo_agnostic__';
 export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
   workspace,
   onTrailActivate,
-  onTrailOpenInRightPanel,
+  onTrailOpenInTab,
   activeTrailId,
 }) => {
   const { theme } = useTheme();
@@ -142,13 +143,19 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
 
   const groupedByRepo = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
+    // Default (no query): show only trails attached to this workspace's
+    // topic — same pattern as the workspace projects panel. Typing in the
+    // search box widens the pool to every known trail so users can find
+    // and add new ones.
     const matches = (e: TrailIndexEntry): boolean => {
-      if (!q) return true;
-      return Boolean(
-        e.title?.toLowerCase().includes(q) ||
-          e.purpose?.toLowerCase().includes(q) ||
-          e.repositoryPath?.toLowerCase().includes(q),
-      );
+      if (q) {
+        return Boolean(
+          e.title?.toLowerCase().includes(q) ||
+            e.purpose?.toLowerCase().includes(q) ||
+            e.repositoryPath?.toLowerCase().includes(q),
+        );
+      }
+      return topicTrailIds.has(e.id);
     };
     const groups = new Map<
       string,
@@ -225,14 +232,14 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
     [onTrailActivate],
   );
 
-  const handleOpenInRightPanel = useCallback(
+  const handleOpenInTab = useCallback(
     async (trailId: string) => {
-      if (!onTrailOpenInRightPanel) return;
+      if (!onTrailOpenInTab) return;
       const result = await TrailLibraryService.activate(trailId);
       if (!result) return;
-      onTrailOpenInRightPanel(result.payload, result.repositoryPath);
+      onTrailOpenInTab(result.payload, result.repositoryPath);
     },
-    [onTrailOpenInRightPanel],
+    [onTrailOpenInTab],
   );
 
   const handleRemove = useCallback(
@@ -349,7 +356,9 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
                 ? 'No trails match your search.'
                 : entries.length === 0
                   ? 'No saved trails on this machine yet.'
-                  : 'No trails to show.'
+                  : topicTrailIds.size === 0
+                    ? 'No trails added to this workspace yet. Search to find trails to add.'
+                    : 'No trails to show.'
             }
           />
         )}
@@ -381,9 +390,9 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
                     onActivate={
                       onTrailActivate ? () => handleActivate(entry.id) : undefined
                     }
-                    onOpenInRightPanel={
-                      onTrailOpenInRightPanel
-                        ? () => handleOpenInRightPanel(entry.id)
+                    onOpenInTab={
+                      onTrailOpenInTab
+                        ? () => handleOpenInTab(entry.id)
                         : undefined
                     }
                     disabled={!topicId}
@@ -413,11 +422,11 @@ interface TrailRowProps {
    */
   onActivate?: () => void;
   /**
-   * When provided, right-clicking the row body opens the trail in the
-   * layout's right panel (trail explorer). The default browser context
-   * menu is suppressed.
+   * When provided, right-clicking (two-finger click) the row body opens
+   * the trail in the layout's file-city-trail tab. The default browser
+   * context menu is suppressed.
    */
-  onOpenInRightPanel?: () => void;
+  onOpenInTab?: () => void;
 }
 
 const TrailRow: React.FC<TrailRowProps> = ({
@@ -428,7 +437,7 @@ const TrailRow: React.FC<TrailRowProps> = ({
   isActive,
   onAction,
   onActivate,
-  onOpenInRightPanel,
+  onOpenInTab,
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
@@ -441,11 +450,11 @@ const TrailRow: React.FC<TrailRowProps> = ({
       tabIndex={onActivate ? 0 : undefined}
       onClick={onActivate}
       onContextMenu={
-        onOpenInRightPanel
+        onOpenInTab
           ? (e) => {
               e.preventDefault();
               e.stopPropagation();
-              onOpenInRightPanel();
+              onOpenInTab();
             }
           : undefined
       }
