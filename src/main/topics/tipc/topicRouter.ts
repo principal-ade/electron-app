@@ -25,7 +25,7 @@ import type { CreateTopicInput } from '../../../shared/main-process-api-interfac
 const registryService = TopicRegistryService.getInstance();
 const t = tipc.create();
 
-function broadcastTopicEvent(
+export function broadcastTopicEvent(
   eventType:
     | TopicAPIEvent.TOPIC_ADDED
     | TopicAPIEvent.TOPIC_UPDATED
