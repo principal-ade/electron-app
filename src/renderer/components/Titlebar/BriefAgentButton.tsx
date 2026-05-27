@@ -34,6 +34,8 @@ export function buildBriefingText(payload: BriefAgentDragPayload): string {
   return [
     `Fetch http://localhost:3044/api/topics/${payload.topicId} to begin working on topic "${payload.topicTitle}". The response returns its description and trails — continue with that context in mind.`,
     '',
+    `If you author a trail during this task, include "topicId": "${payload.topicId}" in the POST body so it attaches to this topic.`,
+    '',
   ].join('\n');
 }
 

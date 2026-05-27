@@ -15,6 +15,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   FileCityTrailExplorerPanel,
+  type BaseTrailIndexEntry,
   type FileCityTrailExplorerPanelActions,
   type FileCityTrailExplorerPanelContext,
   type FileCityTrailExplorerRepository,
@@ -30,6 +31,7 @@ import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstract
 
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import { TrailNotesService } from '../../services/TrailNotesService';
+import { TrailShareModal } from '../../dev-workspace/trails-panel/TrailShareModal';
 
 interface FileCityTrailTabContentProps {
   trailPayload: TrailPayload | null;
@@ -107,6 +109,11 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
   const [lineCounts, setLineCounts] = useState<LineCountsSliceData | null>(null);
   const [lineCountsLoading, setLineCountsLoading] = useState(false);
+  // Share-modal state. Opened from the brief card's title-row share icon —
+  // the modal owns the actual API call (TrailShareService) and the
+  // sharing → success (copy link / open in browser) UX.
+  const [shareModalTrail, setShareModalTrail] =
+    useState<BaseTrailIndexEntry | null>(null);
 
   // Re-fetch fileTree + lineCounts when the active trail's repo changes.
   // Repo-agnostic trails (no repositoryPath) skip the fetch and render with
@@ -287,8 +294,32 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
       createTrailSignOff: async () => null,
       deleteTrailSignOff: async () => {},
       closeTrail: onCloseTrail,
+      // The brief card's share icon calls this; we synthesize a minimal
+      // `BaseTrailIndexEntry` from the live payload (the modal only reads
+      // id/title/markerCount/hasDiffSnippets) so we can open the modal
+      // without a `TrailLibraryService.list` round trip. The modal then
+      // runs `TrailShareService.share` and handles the copy/open-in-
+      // browser UX itself.
+      shareTrail: () => {
+        if (!trailPayload) return;
+        const entry: BaseTrailIndexEntry = {
+          id: trailPayload.id,
+          title: trailPayload.title || 'Untitled trail',
+          summaryPreview: (trailPayload.summary ?? '').slice(0, 200),
+          markerCount: trailPayload.markers?.length ?? 0,
+          repoNames: trailPayload.repos?.map((r) => r.name) ?? [],
+          hasDiffSnippets:
+            trailPayload.markers?.some(
+              (m) => m.snippet?.kind === 'diff',
+            ) ?? false,
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString(),
+          sizeBytes: 0,
+        };
+        setShareModalTrail(entry);
+      },
     }),
-    [repositoryPath, events, onCloseTrail],
+    [repositoryPath, events, onCloseTrail, trailPayload],
   );
 
   return (
@@ -309,6 +340,13 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
         briefLayout="split"
         mobileShowMap={mobileShowMap}
       />
+      {shareModalTrail && repositoryPath && (
+        <TrailShareModal
+          trail={shareModalTrail}
+          repositoryPath={repositoryPath}
+          onClose={() => setShareModalTrail(null)}
+        />
+      )}
     </div>
   );
 };
