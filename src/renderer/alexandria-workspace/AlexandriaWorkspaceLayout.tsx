@@ -40,6 +40,7 @@ import {
   ALEXANDRIA_LEFT_PANEL_ICONS,
 } from '../components/Sidebar/PanelIconSidebar';
 import { WorkspaceTrailsPanel } from './workspace-trails-panel/WorkspaceTrailsPanel';
+import { TrailService } from '../services/TrailService';
 import { SessionsPanel } from './sessions-panel/SessionsPanel';
 import { HookDebugPanel } from './hook-debug-panel/HookDebugPanel';
 import {
@@ -308,6 +309,19 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     },
     [activeTrailPayload?.id, handleCloseActiveTrail, layout, onLayoutChange],
   );
+
+  // Auto-open trails POSTed against this workspace's topic in the right
+  // panel. `sendToTopicWindows` scopes PAYLOAD_SET delivery to windows
+  // whose `metadata.topicIds` includes the topic, so this listener only
+  // fires for trails meant for this workspace — no client-side filter
+  // needed. The LEFT trails panel still refreshes via its own
+  // `LIBRARY_CHANGED` listener.
+  useEffect(() => {
+    const off = TrailService.onPayloadSet(({ payload, repositoryPath }) => {
+      handleTrailOpenInRightPanel(payload, repositoryPath);
+    });
+    return () => off();
+  }, [handleTrailOpenInRightPanel]);
 
   // Force-open (or focus) the singleton file-city-trail tab in the middle,
   // mirroring dev-workspace's `openFileCityTrailTab`. Re-activating the

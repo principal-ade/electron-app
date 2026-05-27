@@ -404,17 +404,25 @@ export function registerTrailRoutes(
           console.error('[trailRoutes] ensure window failed', err);
         }
       }
-      const broadcastTo =
-        sendToRepoWindows(
-          FileCityTrailEvent.PAYLOAD_SET,
-          { payload, repositoryPath: result.repositoryPath },
-          result.repositoryPath,
-        ) +
-        sendToTopicWindows(
-          FileCityTrailEvent.PAYLOAD_SET,
-          { payload, repositoryPath: result.repositoryPath },
-          result.topicId,
-        );
+      // PAYLOAD_SET routing: topic window wins. When the trail carries a
+      // topicId and at least one workspace window for that topic is open,
+      // the dev-workspace repo broadcast is suppressed so the trail
+      // doesn't pop in two places. LIBRARY_CHANGED stays broadcast
+      // everywhere — it's a cheap "your list changed, refresh" hint.
+      const topicCount = sendToTopicWindows(
+        FileCityTrailEvent.PAYLOAD_SET,
+        { payload, repositoryPath: result.repositoryPath },
+        result.topicId,
+      );
+      const repoCount =
+        topicCount > 0
+          ? 0
+          : sendToRepoWindows(
+              FileCityTrailEvent.PAYLOAD_SET,
+              { payload, repositoryPath: result.repositoryPath },
+              result.repositoryPath,
+            );
+      const broadcastTo = topicCount + repoCount;
       sendToRepoWindows(
         FileCityTrailEvent.LIBRARY_CHANGED,
         { repositoryPath: result.repositoryPath },
@@ -571,17 +579,22 @@ export function registerTrailRoutes(
             );
           }
         }
-        const broadcastTo =
-          sendToRepoWindows(
-            FileCityTrailEvent.PAYLOAD_SET,
-            { payload, repositoryPath },
-            repositoryPath,
-          ) +
-          sendToTopicWindows(
-            FileCityTrailEvent.PAYLOAD_SET,
-            { payload, repositoryPath },
-            topicId,
-          );
+        // Topic window wins for PAYLOAD_SET — same rule as the create
+        // route. LIBRARY_CHANGED still fans out everywhere.
+        const topicCount = sendToTopicWindows(
+          FileCityTrailEvent.PAYLOAD_SET,
+          { payload, repositoryPath },
+          topicId,
+        );
+        const repoCount =
+          topicCount > 0
+            ? 0
+            : sendToRepoWindows(
+                FileCityTrailEvent.PAYLOAD_SET,
+                { payload, repositoryPath },
+                repositoryPath,
+              );
+        const broadcastTo = topicCount + repoCount;
         sendToRepoWindows(
           FileCityTrailEvent.LIBRARY_CHANGED,
           { repositoryPath },

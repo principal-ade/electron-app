@@ -1111,7 +1111,11 @@ export class PrincipalMCPBridge extends EventEmitter {
     // ============================================
     // TOPIC ROUTES
     // ============================================
-    registerTopicRoutes(this.app, TopicRegistryService.getInstance());
+    registerTopicRoutes(
+      this.app,
+      TopicRegistryService.getInstance(),
+      getTrailStore(),
+    );
   }
 
   public async start(): Promise<number> {
