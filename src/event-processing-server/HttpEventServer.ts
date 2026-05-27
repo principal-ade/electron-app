@@ -663,6 +663,54 @@ export class HttpEventServer extends EventEmitter {
   }
 
   /**
+   * If a normalized event is a Claude `session-start`, fire-and-forget a
+   * BIND_AGENT_SESSION message so main can stamp the `session_id` onto a
+   * live terminal in the same git root.
+   *
+   * Reads everything off the normalized event — `sessionId`,
+   * `repository.root`, and `data.source` (`"startup" | "resume" | "clear"`).
+   * The normalized union drops Claude's raw `"compact"` source; we treat
+   * any source outside the known three as a no-op.
+   */
+  private maybeBindAgentSession(repoNormalizedEvent: unknown): void {
+    if (!repoNormalizedEvent || typeof repoNormalizedEvent !== 'object') return;
+    const evt = repoNormalizedEvent as {
+      eventType?: unknown;
+      sessionId?: unknown;
+      workingDirectory?: unknown;
+      repository?: { root?: unknown };
+      data?: { source?: unknown };
+    };
+
+    const eventType = evt.eventType?.toString() ?? '';
+    if (!eventType.includes('session-start')) return;
+
+    const sessionId = typeof evt.sessionId === 'string' ? evt.sessionId : '';
+    const workingDirectory =
+      typeof evt.workingDirectory === 'string' ? evt.workingDirectory : '';
+    const repoRoot =
+      typeof evt.repository?.root === 'string' ? evt.repository.root : '';
+    // Need at least one usable join key; `workingDirectory` is the fallback
+    // when the agent ran outside any git repo and `repoRoot` is empty.
+    if (!sessionId || !workingDirectory) return;
+
+    const rawSource = evt.data?.source;
+    if (rawSource !== 'startup' && rawSource !== 'resume' && rawSource !== 'clear') {
+      return;
+    }
+
+    this.sendToMain({
+      type: 'BIND_AGENT_SESSION',
+      id: `bind-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: Date.now(),
+      agentSessionId: sessionId,
+      repoPath: repoRoot,
+      workingDirectory,
+      source: rawSource,
+    });
+  }
+
+  /**
    * Process an agent event through the pipeline
    */
   private async processAgentEvent(
@@ -718,6 +766,14 @@ export class HttpEventServer extends EventEmitter {
         this.maybeLinkSessionToTopic(rawData, repoNormalizedEvent.sessionId);
       } catch (err) {
         this.log('warn', `Topic link sidecar failed: ${err}`);
+      }
+
+      // Sidecar: on Claude `session-start`, bind the `session_id` onto a live
+      // terminal in the same git root. Fail-soft for the same reason.
+      try {
+        this.maybeBindAgentSession(repoNormalizedEvent);
+      } catch (err) {
+        this.log('warn', `Agent session bind sidecar failed: ${err}`);
       }
 
       // Event: Repository info resolved for event path (if applicable)

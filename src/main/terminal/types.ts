@@ -35,6 +35,9 @@ export interface TerminalSession {
   // Repository tracking for WebSocket room organization
   repoPath?: string;
   repoId?: string; // Format: "owner/repo"
+  // Agent session linkage — set when a Claude SessionStart hook fires in a
+  // matching repo and claims this terminal. Undefined means "unclaimed."
+  agentSessionId?: string;
   // Ownership and remote access
   owner: TerminalOwner | null;
   remoteAttachments: Set<string>; // Set of remote clientIds

@@ -24,10 +24,14 @@ import {
   isGetTracesRequestMessage,
   isGetRegistrationsRequestMessage,
   isLinkSessionToTopicMessage,
+  isBindAgentSessionMessage,
   GetTracesRequestMessage,
   GetRegistrationsRequestMessage,
   LinkSessionToTopicMessage,
+  BindAgentSessionMessage,
 } from '../../event-processing-server/types';
+import { getSessionManagerInstance } from '../terminal/sessionManagerSingleton';
+import { broadcastTerminalSessionsChanged } from '../terminal/tipc/terminalRouter';
 import { OtelCollectorService } from '../services/OtelCollectorService';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
 import { AgentSessionSDKAPIEvents } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
@@ -407,6 +411,8 @@ export class EventServerManager extends EventEmitter {
         this.handleGetRegistrationsRequest(msg);
       } else if (isLinkSessionToTopicMessage(msg)) {
         this.handleLinkSessionToTopic(msg);
+      } else if (isBindAgentSessionMessage(msg)) {
+        this.handleBindAgentSession(msg);
       } else if (msg.type === 'SERVER_ERROR') {
         this.log('error', `Server error: ${msg.error}`);
         this.emit('server-error', new Error(msg.error));
@@ -445,6 +451,26 @@ export class EventServerManager extends EventEmitter {
       }
     } catch (error) {
       this.log('error', `Failed to link session to topic: ${error}`);
+    }
+  }
+
+  /**
+   * Bind a Claude `session_id` onto a live terminal. Fire-and-forget; on a
+   * successful bind we re-broadcast the terminal sessions list so the
+   * renderer picks up the new `agentSessionId` without a manual refresh.
+   */
+  private handleBindAgentSession(msg: BindAgentSessionMessage): void {
+    try {
+      const bound = getSessionManagerInstance().bindAgentSession({
+        agentSessionId: msg.agentSessionId,
+        repoPath: msg.repoPath,
+        workingDirectory: msg.workingDirectory,
+        source: msg.source,
+      });
+      if (!bound) return;
+      broadcastTerminalSessionsChanged();
+    } catch (error) {
+      this.log('error', `Failed to bind agent session to terminal: ${error}`);
     }
   }
 

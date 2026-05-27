@@ -110,6 +110,23 @@ export interface LinkSessionToTopicMessage extends BaseServerMessage {
   topicId: string;
 }
 
+/**
+ * Fire-and-forget request to bind a Claude `session_id` onto a live terminal.
+ * Emitted when a normalized `session-start` event clears the pipeline; main
+ * routes it to TerminalSessionManager.bindAgentSession.
+ */
+export interface BindAgentSessionMessage extends BaseServerMessage {
+  type: 'BIND_AGENT_SESSION';
+  agentSessionId: string;
+  // The git-root-normalized cwd of the session-start. Empty when the agent
+  // started outside any repo — the main-side handler falls back to raw cwd.
+  repoPath: string;
+  // The raw cwd off the normalized event; used as a fallback join key when
+  // `repoPath` is empty.
+  workingDirectory: string;
+  source: 'startup' | 'resume' | 'clear';
+}
+
 export interface GetTracesRequestMessage extends BaseServerMessage {
   type: 'GET_TRACES_REQUEST';
   limit?: number;
@@ -130,7 +147,8 @@ export type ServerToMainMessage =
   | ServerErrorMessage
   | GetTracesRequestMessage
   | GetRegistrationsRequestMessage
-  | LinkSessionToTopicMessage;
+  | LinkSessionToTopicMessage
+  | BindAgentSessionMessage;
 
 /**
  * Messages sent from main to server process
@@ -332,4 +350,10 @@ export function isLinkSessionToTopicMessage(
   msg: ServerToMainMessage,
 ): msg is LinkSessionToTopicMessage {
   return msg.type === 'LINK_SESSION_TO_TOPIC';
+}
+
+export function isBindAgentSessionMessage(
+  msg: ServerToMainMessage,
+): msg is BindAgentSessionMessage {
+  return msg.type === 'BIND_AGENT_SESSION';
 }

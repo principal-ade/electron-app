@@ -618,6 +618,100 @@ export class TerminalSessionManager {
     return this.sessions;
   }
 
+  /**
+   * Bind a Claude `session_id` onto a live terminal. Called by the
+   * HttpEventServer sidecar after a `session-start` event clears the pipeline.
+   *
+   * Join keys, strongest-first:
+   *  - `repoPath` (git-root-normalized): primary key, 60s unclaimed window.
+   *  - `workingDirectory` (raw cwd): fallback when the agent ran outside any
+   *    repo and `repoPath` is empty. Tight ~5s window to keep the weaker
+   *    join from snapping to an unrelated tab.
+   *
+   * Branching on `source`:
+   *  - `startup`: claim the freshest *unclaimed* terminal matching the join
+   *    key within its window.
+   *  - `resume`: if a terminal already carries this `agentSessionId` we're
+   *    done; otherwise try the same fresh-unclaimed match as `startup`.
+   *  - `clear`: expects an existing link; logs and drops if none.
+   *
+   * Returns `true` when a binding was made (i.e. the renderer needs a
+   * broadcast). Idempotent re-links and miss-and-drop returns `false`.
+   */
+  bindAgentSession(opts: {
+    repoPath: string;
+    workingDirectory: string;
+    agentSessionId: string;
+    source: 'startup' | 'resume' | 'clear';
+    unclaimedWindowMs?: number;
+    cwdFallbackWindowMs?: number;
+  }): boolean {
+    const { repoPath, workingDirectory, agentSessionId, source } = opts;
+    const unclaimedWindowMs = opts.unclaimedWindowMs ?? 60_000;
+    const cwdFallbackWindowMs = opts.cwdFallbackWindowMs ?? 5_000;
+
+    const existing = this.findSessionByAgentSessionId(agentSessionId);
+    if (existing) {
+      // Already linked — no-op for resume; warn on clear if the repo drifted.
+      if (source === 'clear' && existing.repoPath !== repoPath) {
+        console.warn(
+          `[Terminal] clear source for agent session ${agentSessionId} matched terminal ${existing.id} in different repo (${existing.repoPath} vs ${repoPath})`,
+        );
+      }
+      return false;
+    }
+
+    if (source === 'clear') {
+      console.warn(
+        `[Terminal] clear source for agent session ${agentSessionId} had no existing terminal binding (repo ${repoPath || workingDirectory}) — dropping`,
+      );
+      return false;
+    }
+
+    const useRepoKey = repoPath !== '';
+    const windowMs = useRepoKey ? unclaimedWindowMs : cwdFallbackWindowMs;
+    const now = Date.now();
+    let candidate: TerminalSession | undefined;
+    for (const session of this.sessions.values()) {
+      if (useRepoKey) {
+        if (session.repoPath !== repoPath) continue;
+      } else {
+        // Fallback path: both sides must lack a git root, and raw cwds must
+        // match exactly. Skipping any terminal with a resolved `repoPath`
+        // keeps the weak join from competing with the strong one.
+        if (session.repoPath) continue;
+        if (session.directory !== workingDirectory) continue;
+      }
+      if (session.agentSessionId !== undefined) continue;
+      if (now - session.createdAt > windowMs) continue;
+      if (!candidate || session.createdAt > candidate.createdAt) {
+        candidate = session;
+      }
+    }
+
+    if (!candidate) {
+      console.log(
+        `[Terminal] No unclaimed terminal matching ${useRepoKey ? `repo ${repoPath}` : `cwd ${workingDirectory}`} within ${windowMs}ms for agent session ${agentSessionId} (source=${source}) — dropping`,
+      );
+      return false;
+    }
+
+    candidate.agentSessionId = agentSessionId;
+    console.log(
+      `[Terminal] Bound agent session ${agentSessionId} → terminal ${candidate.id} (${useRepoKey ? `repo ${repoPath}` : `cwd ${workingDirectory}`}, source=${source})`,
+    );
+    return true;
+  }
+
+  private findSessionByAgentSessionId(
+    agentSessionId: string,
+  ): TerminalSession | undefined {
+    for (const session of this.sessions.values()) {
+      if (session.agentSessionId === agentSessionId) return session;
+    }
+    return undefined;
+  }
+
   canCreateSession(): boolean {
     return this.sessions.size < this.maxSessions;
   }

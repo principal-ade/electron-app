@@ -24,10 +24,11 @@ const t = tipc.create();
 
 /**
  * Broadcast terminal sessions list to all windows.
- * Called when sessions are created or destroyed.
+ * Called when sessions are created or destroyed, and from the
+ * agent-session-events sidecar when a Claude SessionStart binds onto a tab.
  * Returns counts for telemetry.
  */
-function broadcastSessionsChanged(): { sessionsCount: number; windowsCount: number } {
+export function broadcastTerminalSessionsChanged(): { sessionsCount: number; windowsCount: number } {
   const sessions = Array.from(sessionManager.getAllSessions().entries()).map(
     ([id, session]) => {
       const owner = ownershipManager.getOwner(id);
@@ -38,7 +39,7 @@ function broadcastSessionsChanged(): { sessionsCount: number; windowsCount: numb
         cwd: session.directory,
         directory: session.directory,
         context: session.context,
-        agentSessionId: undefined,
+        agentSessionId: session.agentSessionId,
         createdAt: session.createdAt,
         lastActivity: session.lastActivity,
         status: 'active' as const,
@@ -137,7 +138,7 @@ export const terminalRouter = {
 
         // Broadcast session list change to all windows
         try {
-          const { sessionsCount, windowsCount } = broadcastSessionsChanged();
+          const { sessionsCount, windowsCount } = broadcastTerminalSessionsChanged();
           span.addEvent('terminal.sessions.broadcast', {
             'sessions.count': sessionsCount,
             'windows.count': windowsCount,
@@ -181,7 +182,7 @@ export const terminalRouter = {
 
         // Broadcast session list change to all windows
         try {
-          const { sessionsCount, windowsCount } = broadcastSessionsChanged();
+          const { sessionsCount, windowsCount } = broadcastTerminalSessionsChanged();
           span.addEvent('terminal.sessions.broadcast', {
             'sessions.count': sessionsCount,
             'windows.count': windowsCount,
@@ -224,7 +225,7 @@ export const terminalRouter = {
             cwd: session.directory,
             directory: session.directory,
             context: session.context,
-            agentSessionId: undefined, // TODO: Add agentSessionId to TerminalSession type
+            agentSessionId: session.agentSessionId,
             createdAt: session.createdAt,
             lastActivity: session.lastActivity,
             status: 'active' as const,
