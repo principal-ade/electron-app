@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, Check, FolderOpen, Calendar, Star } from 'lucide-react';
+import { X, FolderOpen, Calendar, Star } from 'lucide-react';
+import { IndustryMarkdownSlide } from 'themed-markdown';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
+import type { Topic } from '../../tipc/topicClient';
 import { predefinedThemes, getThemeNames } from '../../themes/predefinedThemes';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
+import { TopicService } from '../../main-process-api/TopicService';
 
 export interface WorkspaceInfoModalProps {
   isOpen: boolean;
@@ -33,6 +36,8 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
   const { theme } = useTheme();
   const availableThemes = getThemeNames();
   const selectedTheme = workspace.theme || 'principalAI';
+  const topicId = workspace.topicIds?.[0];
+  const [topic, setTopic] = useState<Topic | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -42,6 +47,37 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
+
+  // Load the workspace's topic only while the modal is open. The topic
+  // description can be large markdown; keeping the load gated on `isOpen`
+  // avoids paying for it on every workspace render. Subscribes to topic
+  // change broadcasts so an in-flight description edit reflects live.
+  useEffect(() => {
+    if (!isOpen || !topicId) {
+      setTopic(null);
+      return;
+    }
+    let cancelled = false;
+    const load = () => {
+      TopicService.getTopic(topicId)
+        .then((t) => {
+          if (cancelled) return;
+          setTopic(t);
+        })
+        .catch((err) => {
+          console.error('[WorkspaceInfoModal] failed to load topic', err);
+        });
+    };
+    load();
+    const off = TopicService.onTopicChange((event) => {
+      const changedId = event.topic?.id ?? event.id;
+      if (changedId === topicId) load();
+    });
+    return () => {
+      cancelled = true;
+      off();
+    };
+  }, [isOpen, topicId]);
 
   if (!isOpen) return null;
 
@@ -170,6 +206,31 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
           </button>
         </div>
 
+        {/* Topic description — rendered as markdown so headings, lists, and
+            code blocks from the topic's `description` (e.g. a design doc
+            appended via `/api/topics/:id/description/append`) read as authored.
+            Sits above the Details block so it reads as the main body
+            content; hidden when there's no topic or it has no description. */}
+        {topic?.description && topic.description.trim().length > 0 && (
+          <div
+            style={{
+              padding: '16px 20px',
+              borderBottom: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <IndustryMarkdownSlide
+              content={topic.description}
+              slideIdPrefix={`workspace-info-topic-${topic.id}`}
+              slideIndex={0}
+              isVisible={isOpen}
+              theme={theme}
+              transparentBackground
+              disableScroll
+              enableKeyboardScrolling={false}
+            />
+          </div>
+        )}
+
         {/* Details */}
         <div
           style={{
@@ -212,7 +273,11 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
           )}
         </div>
 
-        {/* Theme picker */}
+
+        {/* Theme picker — native <select> for a compact dropdown. The
+            selected theme's description (when present) renders below as a
+            small caption so the per-theme blurbs aren't lost in the
+            collapse from list to dropdown. */}
         <div style={{ padding: '16px 20px 20px 20px' }}>
           <div
             style={{
@@ -223,80 +288,42 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
           >
             Theme
           </div>
-          <div
+          <select
+            value={selectedTheme}
+            onChange={(e) => handleThemeChange(e.target.value)}
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              border: `1px solid ${theme.colors.border}`,
+              width: '100%',
+              padding: '10px 14px',
               borderRadius: '8px',
-              overflow: 'hidden',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+              fontSize: `${theme.fontSizes[1]}px`,
+              cursor: 'pointer',
             }}
           >
             {availableThemes.map((themeName) => {
               const info = predefinedThemes[themeName];
-              const isSelected = themeName === selectedTheme;
               return (
-                <button
-                  key={themeName}
-                  onClick={() => handleThemeChange(themeName)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    width: '100%',
-                    padding: '10px 14px',
-                    border: 'none',
-                    backgroundColor: isSelected
-                      ? theme.colors.backgroundTertiary
-                      : 'transparent',
-                    color: theme.colors.text,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    fontFamily: theme.fonts.body,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.backgroundSecondary;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span
-                      style={{
-                        fontSize: `${theme.fontSizes[1]}px`,
-                        fontWeight: isSelected
-                          ? theme.fontWeights.semibold
-                          : theme.fontWeights.medium,
-                      }}
-                    >
-                      {info?.name || themeName}
-                    </span>
-                    {info?.description && (
-                      <span
-                        style={{
-                          fontSize: `${theme.fontSizes[0]}px`,
-                          color: theme.colors.textSecondary,
-                        }}
-                      >
-                        {info.description}
-                      </span>
-                    )}
-                  </div>
-                  {isSelected && (
-                    <Check size={16} color={theme.colors.accent} />
-                  )}
-                </button>
+                <option key={themeName} value={themeName}>
+                  {info?.name || themeName}
+                </option>
               );
             })}
-          </div>
+          </select>
+          {predefinedThemes[selectedTheme]?.description && (
+            <div
+              style={{
+                marginTop: '8px',
+                fontSize: `${theme.fontSizes[0]}px`,
+                color: theme.colors.textSecondary,
+                lineHeight: 1.4,
+              }}
+            >
+              {predefinedThemes[selectedTheme].description}
+            </div>
+          )}
         </div>
       </div>
     </div>
