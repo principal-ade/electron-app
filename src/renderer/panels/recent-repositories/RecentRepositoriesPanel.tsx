@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Folder, Plus, Search, TerminalSquare, X } from 'lucide-react';
+import { BookOpen, Folder, Plus, Search, TerminalSquare, X } from 'lucide-react';
 import { PANEL_FOCUS_SEARCH_EVENT } from '../../components/Sidebar/PanelIconSidebar';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
@@ -49,6 +49,7 @@ interface RepositoryCardProps {
   onOpen: (repo: AlexandriaEntry) => void;
   onRemove?: (repo: AlexandriaEntry) => void;
   onAdd?: (repo: AlexandriaEntry) => void;
+  onOpenDocs?: (repo: AlexandriaEntry) => void;
 }
 
 const RepositoryCard: React.FC<RepositoryCardProps> = ({
@@ -60,6 +61,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
   onOpen,
   onRemove,
   onAdd,
+  onOpenDocs,
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
@@ -141,6 +143,40 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
             color={theme.colors.primary}
             aria-label="Terminal open"
           />
+        )}
+        {isHovered && onOpenDocs && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenDocs(repository);
+            }}
+            title="Open docs"
+            aria-label="Open docs"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2px',
+              border: 'none',
+              background: 'transparent',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = theme.colors.text;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = theme.colors.textSecondary;
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <BookOpen size={14} />
+          </button>
         )}
         {isMember && isHovered && onRemove && (
           <button
@@ -464,6 +500,21 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
     [events]
   );
 
+  // Docs-button click — ask the layout to open the alexandria-docs panel
+  // in the right slot, scoped to this repo.
+  const handleOpenDocs = useCallback(
+    (repository: AlexandriaEntry) => {
+      events.emit(
+        createPanelEvent('repository:openDocs', {
+          repositoryId: repository.name,
+          repository,
+          repositoryPath: repository.path,
+        })
+      );
+    },
+    [events]
+  );
+
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -628,6 +679,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
             onOpen={handleOpenRepository}
             onRemove={handleRemoveRepository}
             onAdd={handleAddRepository}
+            onOpenDocs={handleOpenDocs}
           />
         ))}
       </div>

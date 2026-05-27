@@ -1019,6 +1019,62 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     return unsubscribe;
   }, [events, actions, layout, onLayoutChange, collapsed, onCollapsedChange]);
 
+  // Listen for repository:openDocs — the book-icon hover button on a project
+  // card. Toggle behavior: if the right panel is already showing alexandria-
+  // docs for *this* repo, collapse it. Otherwise select the repo (so the docs
+  // panel keys onto it), switch the right slot to alexandria-docs, and
+  // force-expand the right panel.
+  useEffect(() => {
+    const unsubscribe = events.on('repository:openDocs', async (event) => {
+      const { repository, repositoryPath } = event.payload as {
+        repositoryId: string;
+        repository: AlexandriaEntry;
+        repositoryPath: string;
+      };
+      if (!repository) return;
+
+      const repoPath = repositoryPath || repository.path;
+
+      const docsAlreadyOpenForRepo =
+        layout.right === 'alexandria-docs' &&
+        !collapsedStateRef.current.right &&
+        selectedRepository?.path === repoPath;
+
+      if (docsAlreadyOpenForRepo) {
+        panelLayoutRef.current?.collapsePanel('right');
+        collapsedStateRef.current = {
+          ...collapsedStateRef.current,
+          right: true,
+        };
+        onCollapsedChangeRef.current(collapsedStateRef.current);
+        return;
+      }
+
+      onRepositorySelected({ name: repository.name, path: repoPath });
+
+      onLayoutChange({ ...layout, right: 'alexandria-docs' });
+
+      if (panelLayoutRef.current) {
+        panelLayoutRef.current.expandPanel('right');
+        const currentLayout = panelLayoutRef.current.getLayout();
+        if (!currentLayout || currentLayout.right < 20) {
+          panelLayoutRef.current.setLayout({
+            left: currentLayout?.left ?? 23,
+            middle: 50,
+            right: 30,
+          });
+        }
+      }
+      collapsedStateRef.current = {
+        ...collapsedStateRef.current,
+        right: false,
+      };
+      onCollapsedChangeRef.current(collapsedStateRef.current);
+    });
+
+    return unsubscribe;
+  }, [events, layout, onLayoutChange, onRepositorySelected, selectedRepository]);
+
   // Get panel components - using direct imports instead of array access
   // to avoid type inference issues with mixed desktop/web panels
   const WorkspacePanelComponent = RecentRepositoriesPanel;
