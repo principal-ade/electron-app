@@ -9,6 +9,12 @@ import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import type { TrailIndexEntry } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { formatRelativeTime } from '../../principal-window/views/TrailsView/TrailCard';
 import { PANEL_FOCUS_SEARCH_EVENT } from '../../components/Sidebar/PanelIconSidebar';
+import { APP_BRANDING } from '../../../shared/config/appBranding';
+
+const bridgePort = (): number =>
+  process.env.NODE_ENV === 'development'
+    ? APP_BRANDING.BRIDGE_PORTS.DEVELOPMENT.PRINCIPAL_MCP
+    : APP_BRANDING.BRIDGE_PORTS.PRODUCTION.PRINCIPAL_MCP;
 
 export interface WorkspaceTrailsPanelProps {
   workspace: Workspace;
@@ -443,10 +449,23 @@ const TrailRow: React.FC<TrailRowProps> = ({
   const ActionIcon = inWorkspace ? Check : Plus;
   const actionLabel = inWorkspace ? 'Remove from workspace' : 'Add to workspace';
 
+  const handleDragStart = useCallback(
+    (e: React.DragEvent) => {
+      if (!e.dataTransfer) return;
+      const title = entry.title?.trim() || entry.id;
+      const payload = `Use file-city trail "${title}" (id: ${entry.id}) as context — fetch via:\ncurl -s http://localhost:${bridgePort()}/api/file-city/trail/${entry.id}`;
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', payload);
+    },
+    [entry.id, entry.title],
+  );
+
   return (
     <div
       role={onActivate ? 'button' : undefined}
       tabIndex={onActivate ? 0 : undefined}
+      draggable
+      onDragStart={handleDragStart}
       onClick={onActivate}
       onContextMenu={
         onOpenInTab
