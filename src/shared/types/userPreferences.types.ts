@@ -151,6 +151,18 @@ export interface UserPreferences {
     createRepository?: boolean; // Show/hide the create-repository button in the Principal titlebar (default: false)
   };
 
+  // Alexandria Workspace window: visibility of titlebar segments.
+  // All toggles default to false (the segment is hidden until explicitly
+  // enabled).
+  alexandriaWorkspace?: {
+    titlebar?: {
+      // The "Hooks" left-panel segment that toggles the HookDebugPanel.
+      // It's a developer tool — gated off by default to keep the
+      // titlebar clean for normal use.
+      hookDebug?: boolean;
+    };
+  };
+
   // Dev Workspace window: visibility of titlebar buttons and panel icon sidebars.
   // All toggles default to true (current behavior shows everything) unless noted otherwise.
   devWorkspace?: {

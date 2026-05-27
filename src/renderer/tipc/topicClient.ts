@@ -13,6 +13,8 @@ import type {
   DeleteTopicInput,
   GetTopicInput,
   GetTopicsForTrailInput,
+  LinkSessionInput,
+  LinkSessionResult,
   LocalTopicRecord,
   RemoveTrailInput,
   ReorderTrailsInput,
@@ -39,6 +41,13 @@ export interface TopicClient {
   getRecords: () => Promise<LocalTopicRecord[]>;
   getSessionLinks: () => Promise<Record<string, string>>;
   /**
+   * User-initiated session→topic link. Idempotent — returns
+   * `{ changed: false }` if the session was already linked to this topic.
+   * On change, main broadcasts SESSION_LINKED so `onSessionLinked`
+   * subscribers refresh.
+   */
+  linkSession: (input: LinkSessionInput) => Promise<LinkSessionResult>;
+  /**
    * Subscribe to session-link broadcasts. Fires after a new
    * `{sessionId → topicId}` row is written to disk by the hook pipeline
    * (idempotent re-links are filtered out in main).
@@ -62,6 +71,7 @@ interface TipcTopicClient {
   topic_getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
   topic_getRecords: () => Promise<LocalTopicRecord[]>;
   topic_getSessionLinks: () => Promise<Record<string, string>>;
+  topic_linkSession: (input: LinkSessionInput) => Promise<LinkSessionResult>;
 }
 
 let _tipcClient: TipcTopicClient | null = null;
@@ -95,6 +105,7 @@ export const topicClient: TopicClient = {
   getRecord: (input) => getTipcClient().topic_getRecord(input),
   getRecords: () => getTipcClient().topic_getRecords(),
   getSessionLinks: () => getTipcClient().topic_getSessionLinks(),
+  linkSession: (input) => getTipcClient().topic_linkSession(input),
   onSessionLinked: (callback) => {
     return window.electron.ipcRenderer.on(
       TopicAPIEvent.SESSION_LINKED,

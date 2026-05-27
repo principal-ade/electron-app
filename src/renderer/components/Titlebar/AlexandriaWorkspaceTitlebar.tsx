@@ -5,7 +5,7 @@ import {
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { Bot, FolderGit2, Route } from 'lucide-react';
+import { Bot, FolderGit2, Plug, Route } from 'lucide-react';
 import { WorkspaceInfoModal } from './WorkspaceInfoModal';
 import {
   PanelSelectorDropdown,
@@ -13,6 +13,8 @@ import {
 } from './PanelSelectorDropdown';
 import { BriefAgentButton } from './BriefAgentButton';
 import { PANEL_FOCUS_SEARCH_EVENT } from '../Sidebar/PanelIconSidebar';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
+import type { UserPreferences } from '../../../shared/types/userPreferences.types';
 
 // Available panels for Alexandria workspace
 // Ordered to match dev workspace panel options
@@ -24,15 +26,25 @@ const AVAILABLE_PANELS: PanelOption[] = [
 ];
 
 /**
- * Left-panel segments. The left side is restricted to two views — the
- * workspace's repositories and its trails — so we render a two-segment
- * switch instead of the generic panel dropdown.
+ * Left-panel segments. The "Hooks" entry is a developer tool and is gated
+ * by the `alexandriaWorkspace.titlebar.hookDebug` user preference — the
+ * full list lives here for layout/shortcut declarations and is filtered
+ * at render time.
  */
 const LEFT_PANEL_SEGMENTS = [
   { id: 'workspace-repos', label: 'Projects', Icon: FolderGit2, shortcut: 'j' },
   { id: 'trails', label: 'Trails', Icon: Route, shortcut: 'k' },
   { id: 'sessions', label: 'Sessions', Icon: Bot, shortcut: 'l' },
+  { id: 'hook-debug', label: 'Hooks', Icon: Plug, shortcut: 'h' },
 ] as const;
+
+type LeftPanelSegmentId = (typeof LEFT_PANEL_SEGMENTS)[number]['id'];
+
+const ALWAYS_ON_SEGMENT_IDS = new Set<LeftPanelSegmentId>([
+  'workspace-repos',
+  'trails',
+  'sessions',
+]);
 
 export interface AlexandriaWorkspaceTitlebarProps {
   workspace: Workspace;
@@ -64,6 +76,36 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   // True while Cmd (macOS) or Ctrl (Win/Linux) is held — reveals the
   // numeric shortcut badges on the left-panel segment buttons.
   const [modPressed, setModPressed] = useState(false);
+  // Whether to render the "Hooks" segment. Gated by the
+  // `alexandriaWorkspace.titlebar.hookDebug` user preference; false until
+  // we've loaded prefs so a stale toggle doesn't flash on cold start.
+  const [showHookDebug, setShowHookDebug] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const applyPrefs = (prefs: UserPreferences) => {
+      if (!isMounted) return;
+      setShowHookDebug(prefs.alexandriaWorkspace?.titlebar?.hookDebug ?? false);
+    };
+    UserPreferencesService.getPreferences().then(applyPrefs).catch(() => {});
+
+    const onPrefsUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<UserPreferences>).detail;
+      if (detail) applyPrefs(detail);
+    };
+    window.addEventListener('user-preferences-updated', onPrefsUpdated);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('user-preferences-updated', onPrefsUpdated);
+    };
+  }, []);
+
+  // Final list rendered in the segment switch and matched by the
+  // keyboard-shortcut handler. The "Hooks" entry is conditional; the
+  // others are always on.
+  const visibleSegments = LEFT_PANEL_SEGMENTS.filter((seg) =>
+    ALWAYS_ON_SEGMENT_IDS.has(seg.id) ? true : showHookDebug,
+  );
 
   // Handler for changing the left panel
   const handleLeftPanelChange = (panelId: string) => {
@@ -118,6 +160,13 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
     activateRef.current = activateLeftPanel;
   });
 
+  // Mirror `showHookDebug` into a ref so the always-on keyboard handler
+  // can gate Cmd+H without re-binding the listener.
+  const showHookDebugRef = useRef(showHookDebug);
+  useEffect(() => {
+    showHookDebugRef.current = showHookDebug;
+  });
+
   useEffect(() => {
     const isModKey = (e: KeyboardEvent) =>
       e.key === 'Meta' || e.key === 'Control';
@@ -131,6 +180,14 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
       const key = e.key.toLowerCase();
       const target = LEFT_PANEL_SEGMENTS.find((s) => s.shortcut === key);
       if (target) {
+        // Respect the same hookDebug gate the render path uses — pressing
+        // ⌘H when the segment is hidden in settings must be a no-op.
+        if (
+          !ALWAYS_ON_SEGMENT_IDS.has(target.id) &&
+          !showHookDebugRef.current
+        ) {
+          return;
+        }
         e.preventDefault();
         e.stopPropagation();
         activateRef.current(target.id);
@@ -227,7 +284,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
               WebkitAppRegion: 'no-drag',
             }}
           >
-            {LEFT_PANEL_SEGMENTS.map(({ id, label, Icon, shortcut }, index) => {
+            {visibleSegments.map(({ id, label, Icon, shortcut }, index) => {
               const isActive = layout.left === id;
               const shortcutLabel = shortcut.toUpperCase();
               // Decreasing z-index left→right so each segment's corner
@@ -235,7 +292,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
               // right: -6) stacks above the later segments. Without this,
               // an active right-side neighbor paints its solid background
               // over the earlier badge.
-              const stackIndex = LEFT_PANEL_SEGMENTS.length - index;
+              const stackIndex = visibleSegments.length - index;
               return (
                 <button
                   key={id}

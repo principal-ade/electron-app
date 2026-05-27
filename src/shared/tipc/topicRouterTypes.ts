@@ -60,6 +60,15 @@ export interface GetTopicsForTrailInput {
   trailId: string;
 }
 
+export interface LinkSessionInput {
+  topicId: string;
+  sessionId: string;
+}
+
+export interface LinkSessionResult {
+  changed: boolean;
+}
+
 // =============================================================================
 // Router type
 // =============================================================================
@@ -144,5 +153,11 @@ export type TopicRouterType = Record<
       context: ActionContext;
       input?: void;
     }) => Promise<Record<string, string>>;
+  };
+  topic_linkSession: {
+    action: (args: {
+      context: ActionContext;
+      input: LinkSessionInput;
+    }) => Promise<LinkSessionResult>;
   };
 };

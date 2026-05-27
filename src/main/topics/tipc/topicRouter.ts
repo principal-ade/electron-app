@@ -16,10 +16,12 @@ import type {
   DeleteTopicInput,
   GetTopicInput,
   GetTopicsForTrailInput,
+  LinkSessionInput,
   RemoveTrailInput,
   ReorderTrailsInput,
   UpdateTopicInputArgs,
 } from '../../../shared/tipc/topicRouterTypes';
+import type { SessionLinkedEvent } from '../../../shared/main-process-api-interfaces/TopicAPI';
 import type { CreateTopicInput } from '../../../shared/main-process-api-interfaces/TopicAPI';
 
 const registryService = TopicRegistryService.getInstance();
@@ -134,6 +136,27 @@ export const topicRouter = {
       );
       broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
       return topic;
+    }),
+
+  // User-initiated session→topic link from the SessionsPanel. Mirrors the
+  // fire-and-forget path in EventServerManager.handleLinkSessionToTopic:
+  // idempotent in the registry, and we only broadcast SESSION_LINKED when
+  // the link actually changed.
+  topic_linkSession: t.procedure
+    .input<LinkSessionInput>()
+    .action(async ({ input }) => {
+      const changed = registryService.linkSession(input.topicId, input.sessionId);
+      if (changed) {
+        const payload: SessionLinkedEvent = {
+          sessionId: input.sessionId,
+          topicId: input.topicId,
+        };
+        for (const win of BrowserWindow.getAllWindows()) {
+          if (win.isDestroyed()) continue;
+          win.webContents.send(TopicAPIEvent.SESSION_LINKED, payload);
+        }
+      }
+      return { changed };
     }),
 };
 
