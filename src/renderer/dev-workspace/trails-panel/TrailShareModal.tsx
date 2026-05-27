@@ -14,39 +14,60 @@ import {
 import type { BaseTrailIndexEntry } from '@industry-theme/file-city-panel';
 import { TrailShareError } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { TrailShareService } from '../../services/TrailShareService';
+import { GitService } from '../../main-process-api/GitService';
 
 const COPY_FEEDBACK_MS = 1500;
 
 // Persisted "Don't show this again" preference for the pre-share
-// confirmation. When set, the modal opens directly in `sharing` state and
-// fires the share IPC on mount — the user still sees spinner / success /
-// error feedback, just not the explanatory step.
-const SKIP_CONFIRMATION_STORAGE_KEY = 'trail-share.skip-confirmation';
+// confirmation. Scoped by the repo's git origin URL so toggling skip in
+// one repo doesn't silently auto-share trails from a different repo the
+// user hasn't reviewed yet. When set, the modal opens directly in
+// `sharing` state and fires the share IPC on mount — the user still sees
+// spinner / success / error feedback, just not the explanatory step.
+const SKIP_CONFIRMATION_KEY_PREFIX = 'trail-share.skip-confirmation:';
 
-const readSkipConfirmation = (): boolean => {
+const storageKeyFor = (remoteUrl: string): string =>
+  `${SKIP_CONFIRMATION_KEY_PREFIX}${remoteUrl}`;
+
+const readSkipConfirmation = (remoteUrl: string | null): boolean => {
+  if (!remoteUrl) return false;
   try {
-    return (
-      window.localStorage?.getItem(SKIP_CONFIRMATION_STORAGE_KEY) === 'true'
-    );
+    return window.localStorage?.getItem(storageKeyFor(remoteUrl)) === 'true';
   } catch {
     return false;
   }
 };
 
-const writeSkipConfirmation = (value: boolean): void => {
+const writeSkipConfirmation = (
+  remoteUrl: string | null,
+  value: boolean,
+): void => {
+  // No remote URL → no stable per-repo identity, so we can't honor the
+  // preference on next open. Silently skip the write rather than fall
+  // back to a global key (which would defeat the per-repo scoping).
+  if (!remoteUrl) return;
   try {
+    const key = storageKeyFor(remoteUrl);
     if (value) {
-      window.localStorage?.setItem(SKIP_CONFIRMATION_STORAGE_KEY, 'true');
+      window.localStorage?.setItem(key, 'true');
     } else {
-      window.localStorage?.removeItem(SKIP_CONFIRMATION_STORAGE_KEY);
+      window.localStorage?.removeItem(key);
     }
   } catch {
     // localStorage can throw in restricted webview contexts — fail open.
   }
 };
 
-const buildAgentCommand = (trailId: string) =>
-  `npx -y @principal-ai/principal-view-cli@latest trail ${trailId}`;
+// The CLI's `trail` command accepts either a bare share id or a full
+// share URL (see `parseTrailId` in principal-view-core-library — it
+// extracts the id from `/trail/<id>`). We pass the URL because it's
+// already the single source of truth in success state (both the fresh
+// share and the re-open-from-shared-list paths converge on it), and
+// because agents can also navigate the URL directly if they prefer.
+// Note: passing `trail.id` here would be wrong — that's the LOCAL trail
+// index id, which has no meaning to the web-ade backend.
+const buildAgentCommand = (shareUrl: string) =>
+  `npx -y @principal-ai/principal-view-cli@latest trail ${shareUrl}`;
 
 type CopiedKind = 'url' | 'agent' | null;
 
@@ -64,6 +85,11 @@ const MIN_SHARING_MS = 2000;
 const STEPS_DONE_HOLD_MS = 400;
 
 type ModalState =
+  // Brief async gap on open while we look up the repo's git origin URL
+  // to decide whether the per-repo skip-confirmation flag is set. Renders
+  // an empty body so users who previously opted in don't see the idle
+  // confirmation flash before auto-sharing kicks in.
+  | { kind: 'resolving-scope' }
   | { kind: 'idle' }
   | { kind: 'sharing'; stepIndex: number }
   | { kind: 'missing-files'; missing: string[] }
@@ -113,17 +139,18 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
   onShared,
 }) => {
   const { theme } = useTheme();
-  // Auto-share path: user previously chose "Don't show this again" AND we
-  // have what we need to run the share IPC (no initialUrl means we're not
-  // in re-show mode, and `repositoryPath` is required by the share path).
-  const shouldAutoShareRef = useRef(
-    !initialUrl && !!repositoryPath && readSkipConfirmation(),
-  );
+  // Per-repo skip flag is keyed by git origin URL, which we have to
+  // resolve via IPC. While that's in flight we render an empty body
+  // (`resolving-scope`) so users who opted in don't briefly see the
+  // confirmation step before auto-share kicks in. The share path also
+  // requires `repositoryPath`; without it we go straight to idle.
+  const needsScopeLookup = !initialUrl && !!repositoryPath;
   const [state, setState] = useState<ModalState>(() => {
     if (initialUrl) return { kind: 'success', url: initialUrl };
-    if (shouldAutoShareRef.current) return { kind: 'sharing', stepIndex: 0 };
+    if (needsScopeLookup) return { kind: 'resolving-scope' };
     return { kind: 'idle' };
   });
+  const [remoteUrl, setRemoteUrl] = useState<string | null>(null);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [copiedKind, setCopiedKind] = useState<CopiedKind>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,14 +165,19 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
     };
   }, []);
 
+  // States where the modal is mid-operation and Esc / backdrop / close
+  // button should be blocked: the scope lookup may flip us into auto-share
+  // any moment, and the share request itself is mid-flight.
+  const isBusy = state.kind === 'sharing' || state.kind === 'resolving-scope';
+
   // Esc to close — but only when not in the middle of a share request.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && state.kind !== 'sharing') onClose();
+      if (e.key === 'Escape' && !isBusy) onClose();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, state.kind]);
+  }, [onClose, isBusy]);
 
   const runShare = useCallback(
     async (allowMissing: boolean) => {
@@ -212,21 +244,44 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
   );
 
   const handleConfirm = useCallback(() => {
-    if (dontShowAgain) writeSkipConfirmation(true);
+    if (dontShowAgain) writeSkipConfirmation(remoteUrl, true);
     return runShare(false);
-  }, [dontShowAgain, runShare]);
+  }, [dontShowAgain, remoteUrl, runShare]);
   const handleAllowMissing = useCallback(() => runShare(true), [runShare]);
   const handleRetry = useCallback(() => setState({ kind: 'idle' }), []);
 
-  // Kick off the auto-share path once on mount. We guard with the ref so
-  // strict-mode double-invocation doesn't fire the IPC twice.
-  const autoShareTriggeredRef = useRef(false);
+  // Resolve the repo's git origin URL on mount, then decide whether to
+  // auto-share (per-repo skip flag set) or fall through to the idle
+  // confirmation step. Guarded against strict-mode double-invocation and
+  // unmount-during-flight so we don't fire the share IPC twice or push
+  // state into an unmounted modal.
+  const scopeLookupStartedRef = useRef(false);
   useEffect(() => {
-    if (shouldAutoShareRef.current && !autoShareTriggeredRef.current) {
-      autoShareTriggeredRef.current = true;
-      void runShare(false);
-    }
-  }, [runShare]);
+    if (!needsScopeLookup || scopeLookupStartedRef.current) return;
+    scopeLookupStartedRef.current = true;
+    let cancelled = false;
+    void (async () => {
+      let origin: string | null = null;
+      try {
+        const info = await GitService.getRepositoryInfo(repositoryPath!);
+        origin =
+          info?.remotes?.find((r) => r.name === 'origin')?.url ?? null;
+      } catch {
+        // Treat lookup failures as "no scope" — user sees the idle
+        // confirmation step and can still share manually.
+      }
+      if (cancelled) return;
+      setRemoteUrl(origin);
+      if (readSkipConfirmation(origin)) {
+        void runShare(false);
+      } else {
+        setState((s) => (s.kind === 'resolving-scope' ? { kind: 'idle' } : s));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [needsScopeLookup, repositoryPath, runShare]);
 
   const handleCopy = useCallback(async (text: string, kind: CopiedKind) => {
     try {
@@ -263,7 +318,7 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
         padding: '20px',
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && state.kind !== 'sharing') {
+        if (e.target === e.currentTarget && !isBusy) {
           onClose();
         }
       }}
@@ -305,7 +360,7 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            disabled={state.kind === 'sharing'}
+            disabled={isBusy}
             title="Close"
             aria-label="Close"
             style={{
@@ -314,7 +369,7 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
               border: 'none',
               background: 'transparent',
               color: theme.colors.textSecondary,
-              cursor: state.kind === 'sharing' ? 'not-allowed' : 'pointer',
+              cursor: isBusy ? 'not-allowed' : 'pointer',
               display: 'inline-flex',
             }}
           >
@@ -324,8 +379,12 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
 
         {/* Trail name — only shown for in-flight / error states. The idle
             body leads with a value-prop intro instead, and the success
-            state's action buttons speak for themselves. */}
-        {state.kind !== 'success' && state.kind !== 'idle' && (
+            state's action buttons speak for themselves. The resolving
+            state intentionally renders an empty body so we don't flash
+            content before deciding whether to auto-share. */}
+        {state.kind !== 'success' &&
+          state.kind !== 'idle' &&
+          state.kind !== 'resolving-scope' && (
           <div
             style={{
               fontSize: theme.fontSizes[3],
@@ -367,11 +426,11 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
           <SuccessBody
             theme={theme}
             url={state.url}
-            agentCommand={buildAgentCommand(trail.id)}
+            agentCommand={buildAgentCommand(state.url)}
             copiedKind={copiedKind}
             onCopyUrl={() => handleCopy(state.url, 'url')}
             onCopyAgent={() =>
-              handleCopy(buildAgentCommand(trail.id), 'agent')
+              handleCopy(buildAgentCommand(state.url), 'agent')
             }
             onOpenExternal={() => handleOpenInBrowser(state.url)}
           />
