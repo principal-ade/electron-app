@@ -143,10 +143,11 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
 
   const groupedByRepo = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    // Default (no query): show only trails attached to this workspace's
-    // topic — same pattern as the workspace projects panel. Typing in the
-    // search box widens the pool to every known trail so users can find
-    // and add new ones.
+    // Default (no query): show trails attached to this workspace's topic.
+    // If the topic has none attached yet, fall back to showing every known
+    // trail so users have something to pick from. Typing in the search box
+    // always widens the pool to every known trail.
+    const showAll = topicTrailIds.size === 0;
     const matches = (e: TrailIndexEntry): boolean => {
       if (q) {
         return Boolean(
@@ -155,7 +156,7 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
             e.repositoryPath?.toLowerCase().includes(q),
         );
       }
-      return topicTrailIds.has(e.id);
+      return showAll || topicTrailIds.has(e.id);
     };
     const groups = new Map<
       string,
@@ -356,9 +357,7 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
                 ? 'No trails match your search.'
                 : entries.length === 0
                   ? 'No saved trails on this machine yet.'
-                  : topicTrailIds.size === 0
-                    ? 'No trails added to this workspace yet. Search to find trails to add.'
-                    : 'No trails to show.'
+                  : 'No trails to show.'
             }
           />
         )}
