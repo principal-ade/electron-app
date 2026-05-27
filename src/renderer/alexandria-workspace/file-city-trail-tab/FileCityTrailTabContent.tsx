@@ -20,6 +20,7 @@ import {
   type FileCityTrailExplorerPanelContext,
   type FileCityTrailExplorerRepository,
   type LineCountsSliceData,
+  type TrailNote,
   type TrailPayload,
 } from '@industry-theme/file-city-panel';
 import type {
@@ -114,6 +115,24 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
   // sharing → success (copy link / open in browser) UX.
   const [shareModalTrail, setShareModalTrail] =
     useState<BaseTrailIndexEntry | null>(null);
+
+  // Optimistic notes override. The upstream panel renders notes purely from
+  // `trail.notes` — it does no local merging — and our IPC note handlers
+  // persist to disk without re-broadcasting PAYLOAD_SET, so a freshly added
+  // note never makes it back into the prop. We mirror the writes here so
+  // create/update/delete are visible immediately. Keyed by trail id so a
+  // different trail loading clears the override; null means "no overrides,
+  // use prop's notes as-is".
+  const [notesOverride, setNotesOverride] = useState<{
+    trailId: string;
+    notes: TrailNote[];
+  } | null>(null);
+
+  useEffect(() => {
+    setNotesOverride((prev) =>
+      prev && prev.trailId === trailPayload?.id ? prev : null,
+    );
+  }, [trailPayload?.id]);
 
   // Re-fetch fileTree + lineCounts when the active trail's repo changes.
   // Repo-agnostic trails (no repositoryPath) skip the fetch and render with
@@ -213,9 +232,17 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
     () => makeSlice('lineCounts', lineCounts, lineCountsLoading),
     [lineCounts, lineCountsLoading],
   );
+  const effectiveTrail = useMemo<TrailPayload | null>(() => {
+    if (!trailPayload) return null;
+    if (!notesOverride || notesOverride.trailId !== trailPayload.id) {
+      return trailPayload;
+    }
+    return { ...trailPayload, notes: notesOverride.notes };
+  }, [trailPayload, notesOverride]);
+
   const trailSlice = useMemo(
-    () => makeSlice('trail', trailPayload),
-    [trailPayload],
+    () => makeSlice('trail', effectiveTrail),
+    [effectiveTrail],
   );
   const highlightLayersSlice = useMemo(
     () => makeSlice('highlightLayers', null),
@@ -281,12 +308,47 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
         if (!result) throw new Error(`File not found: ${path}`);
         return result.content;
       },
-      createTrailNote: (payloadId, draft) =>
-        TrailNotesService.create(payloadId, draft),
-      updateTrailNote: (payloadId, noteId, body) =>
-        TrailNotesService.update(payloadId, noteId, body),
+      createTrailNote: async (payloadId, draft) => {
+        const note = await TrailNotesService.create(payloadId, draft);
+        if (note) {
+          setNotesOverride((prev) => {
+            const base =
+              prev && prev.trailId === payloadId
+                ? prev.notes
+                : (trailPayload?.notes ?? []);
+            return { trailId: payloadId, notes: [...base, note] };
+          });
+        }
+        return note;
+      },
+      updateTrailNote: async (payloadId, noteId, body) => {
+        const note = await TrailNotesService.update(payloadId, noteId, body);
+        if (note) {
+          setNotesOverride((prev) => {
+            const base =
+              prev && prev.trailId === payloadId
+                ? prev.notes
+                : (trailPayload?.notes ?? []);
+            return {
+              trailId: payloadId,
+              notes: base.map((n) => (n.id === noteId ? note : n)),
+            };
+          });
+        }
+        return note;
+      },
       deleteTrailNote: async (payloadId, noteId) => {
         await TrailNotesService.remove(payloadId, noteId);
+        setNotesOverride((prev) => {
+          const base =
+            prev && prev.trailId === payloadId
+              ? prev.notes
+              : (trailPayload?.notes ?? []);
+          return {
+            trailId: payloadId,
+            notes: base.filter((n) => n.id !== noteId),
+          };
+        });
       },
       // Sign-off persistence isn't wired in the Electron host (matches the
       // dev-workspace wrapper). The LGTM button animates optimistically but
