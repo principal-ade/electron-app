@@ -84,31 +84,21 @@ const topics: TrailsDashboardTopicEntry[] = [
   {
     key: 'topic-auth',
     title: 'Auth & sessions',
-    descriptionPreview:
-      'Every trail covering the login handshake, session cookie wiring, and refresh logic across our apps.',
-    trailCount: 7,
     updatedAt: hoursAgo(6),
   },
   {
     key: 'topic-trails',
     title: 'Trails subsystem',
-    descriptionPreview:
-      'How trails get authored, indexed, persisted, and surfaced in the renderer + File City panel.',
-    trailCount: 5,
     updatedAt: daysAgo(2),
   },
   {
     key: 'topic-ipc',
     title: 'Renderer ↔ main IPC',
-    descriptionPreview:
-      'Cross-process boundaries, the preload bridge, and event payload contracts.',
-    trailCount: 4,
     updatedAt: daysAgo(8),
   },
   {
     key: 'topic-theme',
     title: 'Industry theme',
-    trailCount: 2,
     updatedAt: daysAgo(14),
   },
 ];

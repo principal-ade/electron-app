@@ -2,7 +2,6 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   ArrowRight,
-  Folder,
   FolderGit2,
   Footprints,
   Library,
@@ -45,10 +44,6 @@ export interface TrailsDashboardTopicEntry {
   key: string;
   /** Topic title, e.g. "Auth & sessions". */
   title: string;
-  /** Optional short blurb. */
-  descriptionPreview?: string;
-  /** Trails curated into this topic. */
-  trailCount: number;
   /** ISO 8601 — drives the "updated Xd ago" hint. */
   updatedAt: string;
   /** Filesystem folder the topic's workspace lives in, if set. */
@@ -126,7 +121,7 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
         subtitle={
           topicEntries.length === 0
             ? 'Curated sets of trails on a shared subject.'
-            : `${topicEntries.length} ${topicEntries.length === 1 ? 'topic' : 'topics'}`
+            : undefined
         }
         action={
           onCreateTopic ? (
@@ -160,12 +155,10 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
       <Section
         theme={theme}
         eyebrowIcon={<FolderGit2 size={12} color={theme.colors.primary} />}
-        eyebrow="Repos"
-        title="Repos with trails"
+        eyebrow="Projects"
+        title="Projects with Trails"
         subtitle={
-          repoEntries.length === 0
-            ? 'No repos have trails yet.'
-            : `${repoEntries.length} ${repoEntries.length === 1 ? 'repo' : 'repos'}`
+          repoEntries.length === 0 ? 'No projects have trails yet.' : undefined
         }
         action={
           repoEntries.length > 0 ? (
@@ -478,40 +471,37 @@ function TopicList({
           >
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
+                color: theme.colors.text,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.semibold,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
                 minWidth: 0,
               }}
             >
-              <Library size={16} color={theme.colors.primary} />
-              <div
-                style={{
-                  color: theme.colors.text,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[2],
-                  fontWeight: theme.fontWeights.semibold,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                {t.title}
-              </div>
+              {t.title}
             </div>
             {t.projectRepos && t.projectRepos.length > 0 ? (
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  flexWrap: 'wrap',
+                  flexWrap: 'nowrap',
                   gap: 8,
                   color: theme.colors.textTertiary,
                   fontFamily: theme.fonts.monospace,
                   fontSize: theme.fontSizes[0],
                   minWidth: 0,
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  whiteSpace: 'nowrap',
+                }}
+                onWheel={(e) => {
+                  if (e.deltaY !== 0 && e.deltaX === 0) {
+                    e.currentTarget.scrollLeft += e.deltaY;
+                  }
                 }}
                 title={t.projectRepos
                   .map((r) =>
@@ -527,6 +517,7 @@ function TopicList({
                       alignItems: 'center',
                       gap: 5,
                       minWidth: 0,
+                      flex: '0 0 auto',
                     }}
                   >
                     {r.ownerLogin ? (
@@ -570,7 +561,6 @@ function TopicList({
                 }}
                 title={tildifyPath(t.folderPath)}
               >
-                <Folder size={12} />
                 <span
                   style={{
                     overflow: 'hidden',
@@ -583,33 +573,6 @@ function TopicList({
                 </span>
               </div>
             ) : null}
-            {t.trailCount > 0 && (
-              <div
-                style={{
-                  color: theme.colors.textTertiary,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[0],
-                }}
-              >
-                {t.trailCount} {t.trailCount === 1 ? 'trail' : 'trails'}
-              </div>
-            )}
-            {t.descriptionPreview && (
-              <div
-                style={{
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[1],
-                  lineHeight: 1.4,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}
-              >
-                {t.descriptionPreview}
-              </div>
-            )}
           </button>
           {onDeleteTopic && (
             <button

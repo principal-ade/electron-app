@@ -1586,10 +1586,6 @@ const TrailsViewInner: React.FC<{
       return {
         key: t.id,
         title: t.title,
-        descriptionPreview: t.description
-          ? t.description.slice(0, 140)
-          : undefined,
-        trailCount: t.trailIds.length,
         updatedAt: t.updatedAt,
         folderPath:
           workspace?.suggestedClonePath ?? defaultBaseDirectory ?? undefined,
