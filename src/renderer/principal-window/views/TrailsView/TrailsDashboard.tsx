@@ -353,20 +353,6 @@ function RepoGrid({
                 >
                   {r.label}
                 </div>
-                {r.ownerLogin && (
-                  <div
-                    style={{
-                      fontFamily: theme.fonts.monospace ?? theme.fonts.body,
-                      fontSize: theme.fontSizes[0],
-                      color: theme.colors.textTertiary,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {r.ownerLogin}
-                  </div>
-                )}
               </div>
             </div>
             <div

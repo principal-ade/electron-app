@@ -13,8 +13,6 @@ import {
   Check,
   Search,
   Loader2,
-  BookOpen,
-  Compass,
   ArrowRight,
   Network,
 } from 'lucide-react';
@@ -61,7 +59,6 @@ import {
 import { TrailShareModal } from '../../../dev-workspace/trails-panel/TrailShareModal';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
-import { formatRelativeTime } from './TrailCard';
 import { TrailsRecentList } from './TrailsRecentList';
 import {
   TrailsRecentHeaders,
@@ -69,32 +66,6 @@ import {
 } from './TrailsRecentHeaders';
 import { SpikeConvertToolbar } from './SpikeConvertToolbar';
 
-/**
- * Accent color for a trail purpose. Matches the city's highlight palette
- * (green = informative, purple = investigation) so a card's color reads
- * as the same identity as the city's per-purpose layer. Per the upstream
- * schema, `undefined` purpose is treated as investigation, so unknown /
- * legacy entries fall back to the investigation color rather than the
- * theme primary.
- */
-const purposeAccent = (
-  purpose: string | undefined,
-  theme: {
-    colors: { success?: string };
-  },
-): string => {
-  if (purpose === 'informative') return theme.colors.success ?? '#10b981';
-  return '#a855f7';
-};
-
-/** Lucide icon component for a given trail purpose. */
-const purposeIcon = (
-  purpose: string | undefined,
-): React.ComponentType<{ size?: number; color?: string }> => {
-  if (purpose === 'informative') return BookOpen;
-  // Per upstream schema, undefined purpose is treated as investigation.
-  return Compass;
-};
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 /**
@@ -1090,6 +1061,7 @@ const TrailsViewInner: React.FC<{
     Array<{
       repo: { path: string; label: string; ownerLogin?: string };
       trail: TrailIndexEntry;
+      trailCount: number;
     }>
   >(() => {
     const byRepo = new Map<
@@ -1097,10 +1069,16 @@ const TrailsViewInner: React.FC<{
       {
         repo: { path: string; label: string; ownerLogin?: string };
         trail: TrailIndexEntry;
+        trailCount: number;
       }
     >();
     for (const trail of recentTrails) {
-      if (!trail.repositoryPath || byRepo.has(trail.repositoryPath)) continue;
+      if (!trail.repositoryPath) continue;
+      const existing = byRepo.get(trail.repositoryPath);
+      if (existing) {
+        existing.trailCount += 1;
+        continue;
+      }
       const entry = repositories.find((r) => r.path === trail.repositoryPath);
       byRepo.set(trail.repositoryPath, {
         repo: {
@@ -1109,10 +1087,77 @@ const TrailsViewInner: React.FC<{
           ownerLogin: entry?.github?.owner,
         },
         trail,
+        trailCount: 1,
       });
     }
     return Array.from(byRepo.values());
   }, [recentTrails, repositories]);
+
+  // Per-repo "percentage explored" for the landing cards: distinct files
+  // touched by *every* saved trail in the repo, over the repo's total file
+  // count. Computed per card (the toolbar `coverageStats` only covers the
+  // selected project). `undefined` = still resolving (card shimmers);
+  // `null` = resolved but the repo tree wasn't cached, so we can't compute
+  // a denominator (card hides the metric).
+  const [repoCardCoverage, setRepoCardCoverage] = useState<
+    Map<string, { covered: number; total: number; pct: number } | null>
+  >(() => new Map());
+  useEffect(() => {
+    if (repoCardEntries.length === 0) {
+      setRepoCardCoverage(new Map());
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      for (const { repo } of repoCardEntries) {
+        if (cancelled) return;
+        // Total files — cache-only; null when the repo has never been
+        // opened in the app (tree isn't warm).
+        const tree = await RepositoryMonitoringService.getFileTree(repo.path);
+        if (cancelled) return;
+        if (!tree) {
+          setRepoCardCoverage((prev) => {
+            const next = new Map(prev);
+            next.set(repo.path, null);
+            return next;
+          });
+          continue;
+        }
+        const treePaths = new Set(
+          tree.allFiles.map((f) => f.relativePath),
+        );
+        const trailIds = recentTrails
+          .filter((t) => t.repositoryPath === repo.path)
+          .map((t) => t.id);
+        const payloads = await Promise.all(
+          trailIds.map((id) => TrailLibraryService.load(id)),
+        );
+        if (cancelled) return;
+        // Union of marker source paths across all the repo's trails,
+        // intersected with the tree so stale paths from renamed/deleted
+        // files don't inflate the count.
+        const covered = new Set<string>();
+        for (const payload of payloads) {
+          if (!payload) continue;
+          for (const marker of payload.markers) {
+            if (marker.sourcePath && treePaths.has(marker.sourcePath)) {
+              covered.add(marker.sourcePath);
+            }
+          }
+        }
+        const total = tree.stats.totalFiles;
+        const pct = total > 0 ? (covered.size / total) * 100 : 0;
+        setRepoCardCoverage((prev) => {
+          const next = new Map(prev);
+          next.set(repo.path, { covered: covered.size, total, pct });
+          return next;
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [repoCardEntries, recentTrails]);
 
   // Click handler for the landing repo cards. Pre-selects the repo's
   // project filter and the specific trail before flipping into Recent,
@@ -1972,6 +2017,28 @@ const TrailsViewInner: React.FC<{
               .trail-idea-card:hover {
                 border-color: ${theme.colors.primary} !important;
               }
+              .trail-card-sub {
+                opacity: 0;
+                transition: opacity 150ms ease;
+              }
+              .trail-idea-card:hover .trail-card-sub {
+                opacity: 1;
+              }
+              .trail-card-shimmer {
+                background: linear-gradient(
+                  90deg,
+                  ${theme.colors.border} 25%,
+                  ${theme.colors.backgroundSecondary} 50%,
+                  ${theme.colors.border} 75%
+                );
+                background-size: 200% 100%;
+                animation: trail-card-shimmer 1.4s ease infinite;
+                border-radius: 4px;
+              }
+              @keyframes trail-card-shimmer {
+                0% { background-position: 200% 0; }
+                100% { background-position: -200% 0; }
+              }
             `}</style>
 
             {/* Repo cards — one per distinct repo in the Recent feed,
@@ -2001,7 +2068,7 @@ const TrailsViewInner: React.FC<{
                       marginBottom: 12,
                     }}
                   >
-                    Recent <span style={{ color: theme.colors.primary }}>Trails</span>
+                    Projects with <span style={{ color: theme.colors.primary }}>Trails</span>
                   </div>
                 </div>
                 <div
@@ -2014,8 +2081,7 @@ const TrailsViewInner: React.FC<{
                   }}
                 >
                   {repoCardEntries.map((entry) => {
-                    const trailAccent = purposeAccent(entry.trail.purpose, theme);
-                    const TrailIcon = purposeIcon(entry.trail.purpose);
+                    const coverage = repoCardCoverage.get(entry.repo.path);
                     return (
                     <div
                       key={entry.repo.path}
@@ -2035,14 +2101,17 @@ const TrailsViewInner: React.FC<{
                         flex: '0 1 300px',
                         width: '100%',
                         maxWidth: 300,
-                        padding: '24px 26px',
+                        minHeight: 100,
+                        padding: '24px 20px',
                         borderRadius: 10,
                         border: `1px solid ${theme.colors.border}`,
                         backgroundColor: theme.colors.backgroundSecondary,
                         display: 'flex',
                         flexDirection: 'column',
+                        justifyContent: 'center',
                         gap: 12,
                         cursor: 'pointer',
+                        overflow: 'hidden',
                       }}
                     >
                       <div
@@ -2054,10 +2123,10 @@ const TrailsViewInner: React.FC<{
                       >
                         {entry.repo.ownerLogin ? (
                           <img
-                            src={`https://github.com/${entry.repo.ownerLogin}.png?size=96`}
+                            src={`https://github.com/${entry.repo.ownerLogin}.png?size=128`}
                             alt={entry.repo.ownerLogin}
-                            width={44}
-                            height={44}
+                            width={64}
+                            height={64}
                             style={{
                               borderRadius: '50%',
                               flex: '0 0 auto',
@@ -2065,7 +2134,7 @@ const TrailsViewInner: React.FC<{
                             }}
                           />
                         ) : (
-                          <FolderGit2 size={36} color={theme.colors.primary} />
+                          <FolderGit2 size={52} color={theme.colors.primary} />
                         )}
                         <div
                           style={{
@@ -2088,62 +2157,84 @@ const TrailsViewInner: React.FC<{
                           >
                             {entry.repo.label}
                           </div>
-                          {entry.repo.ownerLogin && (
-                            <div
-                              style={{
-                                fontFamily: theme.fonts.monospace,
-                                fontSize: theme.fontSizes[0],
-                                color: theme.colors.textTertiary,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {entry.repo.ownerLogin}
-                            </div>
-                          )}
+                          <div
+                            style={{
+                              fontFamily: theme.fonts.body,
+                              fontSize: theme.fontSizes[0],
+                              color: theme.colors.textTertiary,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {entry.trailCount}{' '}
+                            {entry.trailCount === 1 ? 'trail' : 'trails'}
+                          </div>
                         </div>
                       </div>
-                      <div
-                        style={{
-                          paddingTop: 12,
-                          borderTop: `1px solid ${theme.colors.border}`,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 8,
-                        }}
-                      >
+                      {/* Coverage sub-label — overlaid just above the bottom
+                          line, revealed on hover. Absolute so the avatar +
+                          repo name stay vertically centered in the card. */}
+                      {coverage === undefined ? (
                         <div
+                          className="trail-card-shimmer trail-card-sub"
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            color: theme.colors.textTertiary,
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            bottom: 10,
+                            marginLeft: 'auto',
+                            marginRight: 'auto',
+                            height: 12,
+                            width: 96,
+                          }}
+                        />
+                      ) : coverage === null ? null : (
+                        <div
+                          className="trail-card-sub"
+                          style={{
+                            position: 'absolute',
+                            left: 20,
+                            right: 20,
+                            bottom: 8,
+                            textAlign: 'center',
                             fontFamily: theme.fonts.body,
                             fontSize: theme.fontSizes[0],
-                          }}
-                        >
-                          <TrailIcon size={14} color={trailAccent} />
-                          <span>
-                            {entry.trail.markerCount} markers ·{' '}
-                            {entry.trail.fileCount ?? 0} files ·{' '}
-                            {formatRelativeTime(entry.trail.updatedAt)}
-                          </span>
-                        </div>
-                        <div
-                          style={{
-                            color: trailAccent,
-                            fontFamily: theme.fonts.body,
-                            fontSize: theme.fontSizes[1],
-                            lineHeight: 1.35,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
+                            color: theme.colors.textTertiary,
                             overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          {entry.trail.title || 'Untitled trail'}
+                          {coverage.covered} of {coverage.total} files explored
                         </div>
+                      )}
+                      {/* Always-visible explored-progress line pinned to the
+                          card's bottom edge. */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: 3,
+                          backgroundColor: theme.colors.border,
+                        }}
+                      >
+                        {coverage === undefined ? (
+                          <div
+                            className="trail-card-shimmer"
+                            style={{ height: '100%', width: '100%' }}
+                          />
+                        ) : coverage === null ? null : (
+                          <div
+                            style={{
+                              width: `${Math.min(100, coverage.pct)}%`,
+                              height: '100%',
+                              backgroundColor: theme.colors.primary,
+                            }}
+                          />
+                        )}
                       </div>
                     </div>
                     );
