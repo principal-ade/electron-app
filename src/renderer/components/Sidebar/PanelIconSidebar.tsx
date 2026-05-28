@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import type { Theme } from '@principal-ade/industry-theme';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -133,84 +133,17 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
   onOpenGitHubRepo,
   customButtons,
 }) => {
-  // True while Cmd (macOS) or Ctrl (Win/Linux) is held — used to reveal
-  // numeric shortcut badges on each icon.
-  const [modPressed, setModPressed] = useState(false);
-
-  // Keep latest props/state available to the keyboard handler without
-  // re-binding the global listener every render.
-  const sidebarStateRef = useRef({
-    panelIcons,
-    currentPanelId,
-    collapsed,
-    onPanelChange,
-    onCollapse,
-    onExpand,
-  });
-  useEffect(() => {
-    sidebarStateRef.current = {
-      panelIcons,
-      currentPanelId,
-      collapsed,
-      onPanelChange,
-      onCollapse,
-      onExpand,
-    };
-  }, [panelIcons, currentPanelId, collapsed, onPanelChange, onCollapse, onExpand]);
-
-  const activatePanel = (panelId: string) => {
-    const { collapsed: c, currentPanelId: cur, onCollapse: oc, onExpand: oe, onPanelChange: opc } =
-      sidebarStateRef.current;
-    // Same icon while expanded → collapse (no focus dispatch).
-    if (!c && cur === panelId && oc) {
-      oc();
+  const handlePanelClick = (panelId: string) => {
+    if (!collapsed && currentPanelId === panelId && onCollapse) {
+      onCollapse();
       return;
     }
-    if (c && oe) oe();
-    opc(panelId);
+    if (collapsed && onExpand) onExpand();
+    onPanelChange(panelId);
     window.dispatchEvent(
       new CustomEvent(PANEL_FOCUS_SEARCH_EVENT, { detail: { panelId } }),
     );
   };
-
-  const handlePanelClick = (panelId: string) => {
-    activatePanel(panelId);
-  };
-
-  useEffect(() => {
-    const isModKey = (e: KeyboardEvent) => e.key === 'Meta' || e.key === 'Control';
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (isModKey(e)) {
-        setModPressed(true);
-        return;
-      }
-      if (!(e.metaKey || e.ctrlKey)) return;
-      // Digits 1-9 → activate icon at that index (1-based).
-      if (e.key >= '1' && e.key <= '9') {
-        const idx = Number(e.key) - 1;
-        const target = sidebarStateRef.current.panelIcons[idx];
-        if (target) {
-          e.preventDefault();
-          e.stopPropagation();
-          activatePanel(target.id);
-        }
-      }
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (isModKey(e) || (!e.metaKey && !e.ctrlKey)) setModPressed(false);
-    };
-    const onBlur = () => setModPressed(false);
-
-    window.addEventListener('keydown', onKeyDown, true);
-    window.addEventListener('keyup', onKeyUp, true);
-    window.addEventListener('blur', onBlur);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown, true);
-      window.removeEventListener('keyup', onKeyUp, true);
-      window.removeEventListener('blur', onBlur);
-    };
-  }, []);
 
   return (
     <div
@@ -236,14 +169,12 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
         overflowX: 'hidden',
       }}
     >
-      {panelIcons.map(({ id, Icon, label }, index) => {
+      {panelIcons.map(({ id, Icon, label }) => {
         const isActive = currentPanelId === id;
         const isOverlayActive = overlayPanelId === id;
         // When the panel is collapsed, the icon shouldn't show the active
         // highlight — only the label stays colored to indicate the active slot.
         const iconActive = isActive && !collapsed;
-        const shortcutNumber = index < 9 ? index + 1 : null;
-        const showShortcut = modPressed && shortcutNumber !== null;
 
         return (
           <button
@@ -255,7 +186,7 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
                 onPanelOverlay(id);
               }
             }}
-            title={shortcutNumber ? `${label} (⌘${shortcutNumber})` : label}
+            title={label}
             aria-label={label}
             style={{
               width: 'calc(100% - 20px)',
@@ -307,30 +238,6 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
               }}
             >
               <Icon size={20} strokeWidth={1.5} />
-              {showShortcut && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: -4,
-                    right: -4,
-                    minWidth: 16,
-                    height: 16,
-                    padding: '0 4px',
-                    borderRadius: 8,
-                    background: theme.colors.primary,
-                    color: theme.colors.background,
-                    fontFamily: theme.fonts.body,
-                    fontSize: theme.fontSizes[0],
-                    fontWeight: theme.fontWeights.semibold,
-                    lineHeight: '16px',
-                    textAlign: 'center',
-                    pointerEvents: 'none',
-                    boxShadow: `0 0 0 2px ${theme.colors.backgroundSecondary}`,
-                  }}
-                >
-                  {shortcutNumber}
-                </span>
-              )}
             </div>
             <span
               style={{
