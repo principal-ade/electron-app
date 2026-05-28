@@ -11,6 +11,7 @@ import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
 import { TrailsView } from '../../views/TrailsView';
+import { HomeView } from '../../views/HomeView';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { WindowService } from '../../../main-process-api/WindowService';
@@ -30,6 +31,7 @@ export type NavigationView = InteractiveShellNavigationView;
 
 // Available views for switch command
 const VIEW_OPTIONS = [
+  'home',
   'trails',
   'feed',
   'onboarding',
@@ -114,6 +116,12 @@ export const IntegratedShell: React.FC = () => {
   const [bootstrapTrailId, setBootstrapTrailId] = useState<string | null>(
     () => TrailService.getOpenTrailId(),
   );
+  // Set when HomeView dispatches `home:open-in-trails` so TrailsView can
+  // pre-select that repo on mount. Distinct from bootstrapTrailId so the
+  // two flows don't fight each other when both arrive in the same session.
+  const [bootstrapProjectPath, setBootstrapProjectPath] = useState<
+    string | null
+  >(null);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | undefined>(undefined);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
@@ -203,6 +211,19 @@ export const IntegratedShell: React.FC = () => {
       setBootstrapTrailId(trailId);
     });
     return unsubscribe;
+  }, []);
+
+  // HomeView dashboard click → switch to TrailsView, optionally pre-selecting
+  // a repo. The event detail's `repoPath` is undefined for the "view all
+  // trails" path; TrailsView just opens its Recent grid in that case.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ repoPath?: string }>).detail ?? {};
+      setActiveView('trails');
+      setBootstrapProjectPath(detail.repoPath ?? '');
+    };
+    window.addEventListener('home:open-in-trails', handler);
+    return () => window.removeEventListener('home:open-in-trails', handler);
   }, []);
 
   // Listen for navigate to updates events from other windows
@@ -581,8 +602,15 @@ export const IntegratedShell: React.FC = () => {
             }}
           >
             {/* Views will be rendered here based on activeView */}
+            {activeView === 'home' && <HomeView />}
             {activeView === 'trails' && (
-              <TrailsView bootstrapTrailId={bootstrapTrailId} />
+              <TrailsView
+                bootstrapTrailId={bootstrapTrailId}
+                bootstrapProjectPath={bootstrapProjectPath}
+                onBootstrapProjectPathConsumed={() =>
+                  setBootstrapProjectPath(null)
+                }
+              />
             )}
             {activeView === 'feed' && <FeedView />}
             {activeView === 'onboarding' && (

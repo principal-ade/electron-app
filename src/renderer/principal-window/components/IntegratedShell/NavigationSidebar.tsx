@@ -8,6 +8,7 @@ import {
   ToolCase,
   GraduationCap,
   Footprints,
+  Home,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -137,6 +138,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     );
 
   const navItems: NavItem[] = [
+    { id: 'home', icon: <Home size={20} />, label: 'Home' },
     { id: 'trails', icon: <Footprints size={20} />, label: 'Trails' },
     { id: 'feed', icon: <GitIcon size={20} />, label: 'Projects' },
     { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },

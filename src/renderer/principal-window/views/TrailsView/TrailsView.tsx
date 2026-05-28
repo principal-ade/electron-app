@@ -9,16 +9,12 @@ import {
   X,
   Folder,
   FolderGit2,
-  Footprints,
   Plus,
-  Copy,
   Check,
-  ExternalLink,
   Search,
   Loader2,
   BookOpen,
   Compass,
-  Share2,
   ArrowRight,
   Network,
 } from 'lucide-react';
@@ -47,14 +43,9 @@ import {
   useTerminalActivity,
 } from '../../../contexts/TerminalContext';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
-import { TopicService } from '../../../main-process-api/TopicService';
-import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { GitService } from '../../../main-process-api/GitService';
-import { GithubService } from '../../../main-process-api/GithubService';
-import { SkillLockService } from '../../../main-process-api/SkillLockService';
-import { ShellService } from '../../../main-process-api/ShellService';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import {
@@ -70,101 +61,13 @@ import {
 import { TrailShareModal } from '../../../dev-workspace/trails-panel/TrailShareModal';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
-import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
-import { NewTopicModal } from '../../../components/NewTopicModal';
-import { DeleteTopicConfirmDialog } from '../../../components/DeleteTopicConfirmDialog';
-import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import { formatRelativeTime } from './TrailCard';
-import {
-  TrailsDashboard,
-  type TrailsDashboardRepoEntry,
-  type TrailsDashboardTopicEntry,
-} from './TrailsDashboard';
 import { TrailsRecentList } from './TrailsRecentList';
 import {
   TrailsRecentHeaders,
   type TrailHeaderRow,
 } from './TrailsRecentHeaders';
 import { SpikeConvertToolbar } from './SpikeConvertToolbar';
-
-/** Constants for the trail skills bundled in principal-ai/skills. */
-const TRAIL_SKILL_REPO_OWNER = 'principal-ai';
-const TRAIL_SKILL_REPO_NAME = 'skills';
-const TRAIL_SKILL_BRANCH = 'main';
-const TRAIL_SKILL_GITHUB_URL = `https://github.com/${TRAIL_SKILL_REPO_OWNER}/${TRAIL_SKILL_REPO_NAME}`;
-
-/** All skill folders the Trails install button writes to disk. */
-const TRAIL_INSTALL_SKILL_NAMES = [
-  'convert-investigation',
-  'author-investigation-trail',
-  'author-informative-trail',
-] as const;
-
-/**
- * Display metadata for the "What skills" expander shown above the install
- * button. Order here drives the card order in the row. Each card links to
- * the skill's folder on GitHub.
- */
-const TRAIL_SKILL_DETAILS: ReadonlyArray<{
-  name: (typeof TRAIL_INSTALL_SKILL_NAMES)[number];
-  title: string;
-  description: string;
-  url: string;
-  Icon: React.ComponentType<{ size?: number; color?: string }>;
-}> = [
-  {
-    name: 'author-investigation-trail',
-    title: 'Author Investigation Trail',
-    description:
-      'Capture an investigation as you debug — records the files, calls, and findings you walked through so the chain of reasoning is preserved.',
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/author-investigation-trail`,
-    Icon: Search,
-  },
-  {
-    name: 'author-informative-trail',
-    title: 'Author Informative Trail',
-    description:
-      'Lay a guided tour through the code to explain how a feature or system works, so a teammate can follow the path without reverse-engineering it.',
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/author-informative-trail`,
-    Icon: BookOpen,
-  },
-  {
-    name: 'convert-investigation',
-    title: 'Convert Investigation',
-    description:
-      'Turn a raw investigation trail into a polished, shareable spec — cleans up the trail and forwards it through the convert pipeline.',
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/convert-investigation`,
-    Icon: Share2,
-  },
-];
-
-/**
- * Starter prompts shown on the post-install "Trail Prompt Ideas" screen.
- * Users can paste them straight into their agent's terminal.
- */
-type PromptIdeaPurpose = 'informative' | 'investigation';
-
-const TRAIL_PROMPT_IDEAS: Array<{
-  label: string;
-  prompt: string;
-  purpose: PromptIdeaPurpose;
-  Icon: React.ComponentType<{ size?: number; color?: string }>;
-}> = [
-  {
-    label: 'Investigation',
-    Icon: Compass,
-    purpose: 'investigation',
-    prompt:
-      'Use the author-investigation-trail skill in this codebase to investigate <question or symptom>.',
-  },
-  {
-    label: 'Informative',
-    Icon: BookOpen,
-    purpose: 'informative',
-    prompt:
-      'Use the author-informative-trail skill in this codebase to lay a canonical trail through <feature or system>.',
-  },
-];
 
 /**
  * Accent color for a trail purpose. Matches the city's highlight palette
@@ -192,11 +95,7 @@ const purposeIcon = (
   // Per upstream schema, undefined purpose is treated as investigation.
   return Compass;
 };
-import type {
-  AlexandriaEntry,
-  Topic,
-  Workspace,
-} from '@principal-ai/alexandria-core-library/types';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 /**
  * Workspace-global default for the brief-layout switch — applied when
@@ -716,7 +615,15 @@ const TrailsViewInner: React.FC<{
   selectedProject: AlexandriaEntry | null;
   onClearProject: () => void;
   bootstrapTrailId: string | null;
-}> = ({ selectedProject, onClearProject, bootstrapTrailId }) => {
+  bootstrapProjectPath: string | null;
+  onBootstrapProjectPathConsumed?: () => void;
+}> = ({
+  selectedProject,
+  onClearProject,
+  bootstrapTrailId,
+  bootstrapProjectPath,
+  onBootstrapProjectPathConsumed,
+}) => {
   const { theme } = useTheme();
 
   const events = useMemo(() => new PanelEventBus(), []);
@@ -726,139 +633,6 @@ const TrailsViewInner: React.FC<{
   // Local Alexandria entries
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
   const [reposLoading, setReposLoading] = useState(true);
-
-  // Open the "New topic" modal from the dashboard's Topics action.
-  const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
-
-  // Confirmation dialog state for the trash icon on a topic card.
-  // Deletes both the topic and any workspace that links to it.
-  const [pendingDeleteTopic, setPendingDeleteTopic] =
-    useState<TrailsDashboardTopicEntry | null>(null);
-  const [deletingTopic, setDeletingTopic] = useState(false);
-
-  // Locally persisted topics, surfaced as cards in the dashboard's Topics
-  // section. Loaded once on mount and kept fresh via the change-event bus.
-  const [topics, setTopics] = useState<Topic[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    TopicService.getTopics()
-      .then((list) => {
-        if (!cancelled) setTopics(list);
-      })
-      .catch((err) => {
-        console.error('[TrailsView] Failed to load topics:', err);
-      });
-
-    const unsubscribe = TopicService.onTopicChange((event) => {
-      if (event.type === 'added' && event.topic) {
-        const topic = event.topic;
-        setTopics((prev) =>
-          prev.some((t) => t.id === topic.id) ? prev : [...prev, topic],
-        );
-      } else if (event.type === 'updated' && event.topic) {
-        const topic = event.topic;
-        setTopics((prev) =>
-          prev.map((t) => (t.id === topic.id ? topic : t)),
-        );
-      } else if (event.type === 'removed' && event.id) {
-        const id = event.id;
-        setTopics((prev) => prev.filter((t) => t.id !== id));
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
-
-  // Workspaces, kept in sync via the same change-event bus. Used to look
-  // up each topic's `suggestedClonePath` so the dashboard can show the
-  // folder where the topic lives.
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-
-  // User's default clone/workspace base directory. Used as the displayed
-  // folder for topic cards whose workspace hasn't picked a custom path.
-  const [defaultBaseDirectory, setDefaultBaseDirectory] = useState<
-    string | null
-  >(null);
-  useEffect(() => {
-    let cancelled = false;
-    UserPreferencesService.getPreferences()
-      .then((prefs) => {
-        if (!cancelled)
-          setDefaultBaseDirectory(prefs.baseDefaultDirectory || null);
-      })
-      .catch(() => {
-        // Service failure leaves the fallback null; cards just omit folder.
-      });
-    const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
-      setDefaultBaseDirectory(prefs.baseDefaultDirectory || null);
-    });
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const refresh = () => {
-      WorkspaceService.getWorkspaces()
-        .then((list) => {
-          if (!cancelled) setWorkspaces(list);
-        })
-        .catch((err) => {
-          console.error('[TrailsView] Failed to load workspaces:', err);
-        });
-    };
-    refresh();
-    const unsubscribe = WorkspaceService.onWorkspaceChange(refresh);
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
-
-  // Per-workspace repo lists, keyed by workspace id. Used to label topic rows
-  // on the dashboard with the names of the repos in the topic's workspace.
-  // Refetched on every workspace/membership change via the same event bus
-  // that drives `workspaces` above.
-  const [workspaceRepos, setWorkspaceRepos] = useState<
-    Map<string, AlexandriaEntry[]>
-  >(new Map());
-
-  useEffect(() => {
-    let cancelled = false;
-    const targetIds = workspaces
-      .filter((w) => (w.topicIds?.length ?? 0) > 0)
-      .map((w) => w.id);
-    if (targetIds.length === 0) {
-      setWorkspaceRepos((prev) => (prev.size === 0 ? prev : new Map()));
-      return;
-    }
-    Promise.all(
-      targetIds.map((id) =>
-        WorkspaceService.getRepositoriesInWorkspace(id)
-          .then((repos) => [id, repos] as const)
-          .catch((err) => {
-            console.error(
-              '[TrailsView] Failed to load repos for workspace',
-              id,
-              err,
-            );
-            return [id, [] as AlexandriaEntry[]] as const;
-          }),
-      ),
-    ).then((pairs) => {
-      if (cancelled) return;
-      setWorkspaceRepos(new Map(pairs));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaces]);
 
   // Tab state for the TabbedTerminalPanel — one tab per opened project.
   // The panel only reads `initialTabs` on mount, so we bump `remountKey` to
@@ -937,6 +711,21 @@ const TrailsViewInner: React.FC<{
   const [selectedProjectPath, setSelectedProjectPath] = useState<string | null>(
     null,
   );
+
+  // Consume the cross-view nav bootstrap from HomeView. A non-null value
+  // (including '') flips us into Recent; a non-empty string also pre-
+  // selects that repo. Notify the shell so the prop is cleared and the
+  // same bootstrap doesn't reapply on the next render.
+  useEffect(() => {
+    if (bootstrapProjectPath === null || bootstrapProjectPath === undefined) {
+      return;
+    }
+    setViewMode('recent');
+    if (bootstrapProjectPath.length > 0) {
+      setSelectedProjectPath(bootstrapProjectPath);
+    }
+    onBootstrapProjectPathConsumed?.();
+  }, [bootstrapProjectPath, onBootstrapProjectPathConsumed]);
 
   // Trail card clicked in Recent view — its full payload renders in the
   // right preview pane (TrailBriefModal). Clicking Start on the
@@ -1107,208 +896,6 @@ const TrailsViewInner: React.FC<{
     null,
   );
   const [removeBusy, setRemoveBusy] = useState(false);
-
-  // Global git user.name, used to personalize the welcome view heading.
-  // Null until loaded or if no global git identity is configured.
-  const [gitUserName, setGitUserName] = useState<string | null>(null);
-  const [gitConfigOpen, setGitConfigOpen] = useState(false);
-
-  const loadGitUserName = useCallback(async () => {
-    try {
-      const result = await GitService.execCommand(
-        process.env.HOME || '/',
-        ['config', '--global', 'user.name'],
-      );
-      setGitUserName(result.stdout.trim() || null);
-    } catch {
-      // No global git identity — leave gitUserName null and fall back.
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadGitUserName();
-  }, [loadGitUserName]);
-
-
-  // Trail skill installation state.
-  // `null` while we're still loading the skill lock file.
-  const [skillInstalled, setSkillInstalled] = useState<boolean | null>(null);
-  const [installingSkill, setInstallingSkill] = useState(false);
-  const [skillInstallError, setSkillInstallError] = useState<string | null>(
-    null,
-  );
-  // Toggle for the "What skills" expander on the install screen.
-  const [showSkillDetails, setShowSkillDetails] = useState(false);
-
-  // Which trail-prompt-idea card was most recently copied (resets after a
-  // short delay so the check icon goes back to the copy icon).
-  const [copiedPromptIndex, setCopiedPromptIndex] = useState<number | null>(
-    null,
-  );
-
-  const handleCopyPrompt = useCallback(
-    async (prompt: string, index: number) => {
-      try {
-        await navigator.clipboard.writeText(prompt);
-        setCopiedPromptIndex(index);
-        window.setTimeout(
-          () =>
-            setCopiedPromptIndex((current) =>
-              current === index ? null : current,
-            ),
-          1500,
-        );
-      } catch (error) {
-        console.error('[TrailsView] Failed to copy prompt:', error);
-      }
-    },
-    [],
-  );
-
-  // Considered "installed" only when every trail skill is present. If any
-  // are missing the install button stays available so the user can install
-  // the rest.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const checks = await Promise.all(
-          TRAIL_INSTALL_SKILL_NAMES.map((name) =>
-            SkillLockService.isSkillInstalled(name),
-          ),
-        );
-        if (!cancelled) setSkillInstalled(checks.every(Boolean));
-      } catch (error) {
-        console.error('[TrailsView] Failed to load skill state:', error);
-        if (!cancelled) setSkillInstalled(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Keep skillInstalled state in sync with global install/uninstall events
-  // (e.g. user installs the skill from SkillBrowserView in another tab).
-  // Any change to a trail skill triggers a full re-check rather than a flip,
-  // since "installed" means *all* trail skills are present.
-  useEffect(() => {
-    const tracked = new Set<string>(TRAIL_INSTALL_SKILL_NAMES);
-    const recheck = async () => {
-      try {
-        const checks = await Promise.all(
-          TRAIL_INSTALL_SKILL_NAMES.map((name) =>
-            SkillLockService.isSkillInstalled(name),
-          ),
-        );
-        setSkillInstalled(checks.every(Boolean));
-      } catch (error) {
-        console.error('[TrailsView] Failed to refresh skill state:', error);
-      }
-    };
-    const offInstalled = SkillLockService.onSkillInstalled((payload) => {
-      if (tracked.has(payload.skillName)) void recheck();
-    });
-    const offUninstalled = SkillLockService.onSkillUninstalled((payload) => {
-      if (tracked.has(payload.skillName)) void recheck();
-    });
-    return () => {
-      offInstalled();
-      offUninstalled();
-    };
-  }, []);
-
-  // Install the trail skills (convert-investigation and the author-*-trail
-  // skills) into both the Claude-specific and universal (.agents) skill
-  // directories. Cursor/Windsurf/etc. now also read from .agents/skills, so
-  // installing to those two locations covers everyone.
-  const handleInstallSkill = useCallback(async () => {
-    setInstallingSkill(true);
-    setSkillInstallError(null);
-    try {
-      const treeResult = await GithubService.getTree(
-        TRAIL_SKILL_REPO_OWNER,
-        TRAIL_SKILL_REPO_NAME,
-        TRAIL_SKILL_BRANCH,
-      );
-      if (!treeResult?.success || !treeResult.data) {
-        throw new Error('Could not fetch skills repository tree.');
-      }
-
-      const tree = treeResult.data.tree;
-      const destinations = [
-        DIRECTORY_ID_TO_DESTINATION['claude-specific'],
-        DIRECTORY_ID_TO_DESTINATION['agent-universal'],
-      ] as const;
-
-      const failures: string[] = [];
-      const fullyInstalled = new Set<string>();
-
-      for (const skillName of TRAIL_INSTALL_SKILL_NAMES) {
-        const prefix = `${skillName}/`;
-        const fileList = tree
-          .filter(
-            (item) => item.type === 'blob' && item.path.startsWith(prefix),
-          )
-          .map((item) => item.path);
-        if (fileList.length === 0) {
-          failures.push(`${skillName}: not found in repo`);
-          continue;
-        }
-        const folderEntry = tree.find(
-          (item) => item.type === 'tree' && item.path === skillName,
-        );
-
-        let skillSucceededOnce = false;
-        for (const destination of destinations) {
-          const result = await GithubService.installSkill({
-            githubUrl: TRAIL_SKILL_GITHUB_URL,
-            skillPath: skillName,
-            destination,
-            skillName,
-            fileList,
-            skillTreeSha: folderEntry?.sha,
-          });
-          if (result.success) {
-            skillSucceededOnce = true;
-          } else {
-            failures.push(
-              `${skillName} → ${destination}: ${result.error || 'failed'}`,
-            );
-          }
-        }
-        if (skillSucceededOnce) {
-          fullyInstalled.add(skillName);
-        }
-      }
-
-      if (fullyInstalled.size === 0) {
-        throw new Error(
-          failures.length > 0
-            ? failures.join('; ')
-            : 'Failed to install trail skills.',
-        );
-      }
-      // Only consider the trail "installed" when every skill landed
-      // somewhere. Otherwise leave the install button available so the user
-      // can retry the missing ones — the event subscription will also
-      // re-check, but we set this here for immediacy.
-      const allInstalled = TRAIL_INSTALL_SKILL_NAMES.every((name) =>
-        fullyInstalled.has(name),
-      );
-      setSkillInstalled(allInstalled);
-      if (failures.length > 0) {
-        setSkillInstallError(`Partial install: ${failures.join('; ')}`);
-      }
-    } catch (error) {
-      console.error('[TrailsView] Skill install failed:', error);
-      setSkillInstallError(
-        error instanceof Error ? error.message : 'Install failed.',
-      );
-    } finally {
-      setInstallingSkill(false);
-    }
-  }, []);
 
   // Remove a project from the Alexandria registry without touching the
   // folder on disk. If the removed project is currently selected, clear
@@ -1498,10 +1085,7 @@ const TrailsViewInner: React.FC<{
   // Landing-screen repo cards. One entry per distinct repo in the Recent
   // feed, carrying the repo identity + that repo's newest trail. Since
   // `recentTrails` is sorted newest-first, the first occurrence of a
-  // `repositoryPath` is also that repo's most recent trail. Capped at
-  // three so the landing stays scannable — the full Recent view is the
-  // canonical browser for everything else.
-  const REPO_CARD_LIMIT = 3;
+  // `repositoryPath` is also that repo's most recent trail.
   const repoCardEntries = useMemo<
     Array<{
       repo: { path: string; label: string; ownerLogin?: string };
@@ -1526,73 +1110,9 @@ const TrailsViewInner: React.FC<{
         },
         trail,
       });
-      if (byRepo.size >= REPO_CARD_LIMIT) break;
     }
     return Array.from(byRepo.values());
   }, [recentTrails, repositories]);
-
-  // Once the user has a meaningful library of trails, swap the prompt-idea
-  // landing for a denser repo+topics dashboard. Threshold is conservative —
-  // brand-new users still see the cards that explain how to create a trail.
-  const DASHBOARD_TRAIL_THRESHOLD = 3;
-  const showDashboard = recentTrails.length > DASHBOARD_TRAIL_THRESHOLD;
-
-  // Per-repo rollup for the dashboard. Mirrors `repoCardEntries` but
-  // aggregates the total trail count per repo and doesn't truncate at
-  // `REPO_CARD_LIMIT` — the dashboard does its own clipping.
-  const dashboardRepoEntries = useMemo<TrailsDashboardRepoEntry[]>(() => {
-    const byRepo = new Map<
-      string,
-      { entry: TrailsDashboardRepoEntry; count: number }
-    >();
-    for (const trail of recentTrails) {
-      if (!trail.repositoryPath) continue;
-      const existing = byRepo.get(trail.repositoryPath);
-      if (existing) {
-        existing.count += 1;
-        continue;
-      }
-      const repo = repositories.find((r) => r.path === trail.repositoryPath);
-      byRepo.set(trail.repositoryPath, {
-        count: 1,
-        entry: {
-          key: trail.repositoryPath,
-          label: trailRepoLabel(trail.repositoryPath),
-          ownerLogin: repo?.github?.owner,
-          trailCount: 1,
-          latestTrail: trail,
-        },
-      });
-    }
-    return Array.from(byRepo.values()).map(({ entry, count }) => ({
-      ...entry,
-      trailCount: count,
-    }));
-  }, [recentTrails, repositories]);
-
-  // Map local Topic records into the dashboard's row shape. Sorted most-
-  // recently-updated first so a freshly created topic lands at the top.
-  const dashboardTopicEntries = useMemo<TrailsDashboardTopicEntry[]>(() => {
-    const sorted = [...topics].sort((a, b) =>
-      b.updatedAt.localeCompare(a.updatedAt),
-    );
-    return sorted.map((t) => {
-      const workspace = workspaces.find((w) => w.topicIds?.includes(t.id));
-      const repos = workspace ? (workspaceRepos.get(workspace.id) ?? []) : [];
-      const projectRepos = repos.map((repo) => ({
-        name: repo.github?.name ?? repo.name ?? trailRepoLabel(repo.path),
-        ownerLogin: repo.github?.owner,
-      }));
-      return {
-        key: t.id,
-        title: t.title,
-        updatedAt: t.updatedAt,
-        folderPath:
-          workspace?.suggestedClonePath ?? defaultBaseDirectory ?? undefined,
-        projectRepos: projectRepos.length > 0 ? projectRepos : undefined,
-      };
-    });
-  }, [topics, workspaces, workspaceRepos, defaultBaseDirectory]);
 
   // Click handler for the landing repo cards. Pre-selects the repo's
   // project filter and the specific trail before flipping into Recent,
@@ -2362,90 +1882,6 @@ const TrailsViewInner: React.FC<{
 
   const overlayBg = theme.colors.background;
 
-  // Shared welcome header rendered at the top of every onboarding step.
-  // "Welcome" sits above the git user.name (clickable to open the global git
-  // config modal). Falls back to "to Principal AI" when no identity is set.
-  const welcomeHeader = (
-    <div style={{ textAlign: 'center', maxWidth: 640 }}>
-      <div
-        style={{
-          color: theme.colors.text,
-          fontFamily: theme.fonts.heading ?? theme.fonts.body,
-          fontSize: 'clamp(40px, 6vw, 72px)',
-          fontWeight: theme.fontWeights.bold,
-          letterSpacing: '-0.02em',
-          lineHeight: 1.05,
-          marginBottom: 12,
-        }}
-      >
-        <div>
-          Welcome{' '}
-          <button
-            type="button"
-            onClick={() => setGitConfigOpen(true)}
-            title={
-              gitUserName
-                ? "This name comes from your global git config (user.name). Click to view or edit."
-                : "No global git identity is configured. Click to set one."
-            }
-            style={{
-              background: 'transparent',
-              border: 'none',
-              padding: 0,
-              margin: 0,
-              color: theme.colors.primary,
-              font: 'inherit',
-              fontStyle: gitUserName ? 'normal' : 'italic',
-              letterSpacing: 'inherit',
-              lineHeight: 'inherit',
-              cursor: 'pointer',
-              transition: 'color 150ms ease, opacity 150ms ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.85';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1';
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.opacity = '0.85';
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.opacity = '1';
-            }}
-          >
-            {gitUserName ?? 'stranger'}
-          </button>
-        </div>
-        <div>to</div>
-        <div style={{ color: theme.colors.text }}>
-          Principal <span style={{ color: theme.colors.primary }}>AI</span>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Header used in place of `welcomeHeader` when the landing is showing
-  // the repo cards (i.e. the user already has trails) — the page is no
-  // longer a welcome, it's a create surface.
-  const createTrailHeader = (
-    <div style={{ textAlign: 'center', maxWidth: 640 }}>
-      <div
-        style={{
-          color: theme.colors.text,
-          fontFamily: theme.fonts.heading ?? theme.fonts.body,
-          fontSize: 'clamp(40px, 6vw, 72px)',
-          fontWeight: theme.fontWeights.bold,
-          letterSpacing: '-0.02em',
-          lineHeight: 1.05,
-          marginBottom: 12,
-        }}
-      >
-        Create a <span style={{ color: theme.colors.primary }}>Trail</span>
-      </div>
-    </div>
-  );
-
   return (
     <div
       style={{
@@ -2507,208 +1943,9 @@ const TrailsViewInner: React.FC<{
         </button>
       )}
 
-      {/* Skill install step — shown before the project-add step when any */}
-      {/* trail skill isn't installed yet. */}
-      {!selectedProject && skillInstalled === false && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 10,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            backgroundColor: overlayBg,
-            padding: 32,
-            overflowY: 'auto',
-          }}
-        >
-          <div style={{ flex: '0 0 auto', marginTop: '9vh' }}>{welcomeHeader}</div>
-
-          <div
-            style={{
-              flex: '0 0 auto',
-              marginTop: 40,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 16,
-              width: '100%',
-            }}
-          >
-          <div
-            style={{
-              display: 'flex',
-              gap: 16,
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-            }}
-          >
-            <button
-              onClick={() => void handleInstallSkill()}
-              disabled={installingSkill}
-              title="Installs the trail skills (convert-investigation, author-investigation-trail, author-informative-trail) to ~/.claude/skills and ~/.agents/skills. Cursor and Windsurf also read skills from ~/.agents/skills."
-              style={{
-                width: 360,
-                padding: 36,
-                borderRadius: 12,
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.backgroundSecondary,
-                color: theme.colors.text,
-                fontFamily: theme.fonts.body,
-                cursor: installingSkill ? 'default' : 'pointer',
-                opacity: installingSkill ? 0.7 : 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 10,
-                textAlign: 'center',
-                transition: 'border-color 150ms ease',
-              }}
-              onMouseEnter={(e) => {
-                if (installingSkill) return;
-                e.currentTarget.style.borderColor = theme.colors.primary;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = theme.colors.border;
-              }}
-            >
-              <Footprints size={36} color={theme.colors.primary} />
-              <div
-                style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights.semibold,
-                }}
-              >
-                {installingSkill ? 'Installing…' : 'Install Trail Skills'}
-              </div>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowSkillDetails((prev) => !prev)}
-            aria-expanded={showSkillDetails}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              padding: 0,
-              color: theme.colors.primary,
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[1],
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              textDecoration: 'underline',
-            }}
-          >
-            What skills
-          </button>
-
-          {/* Skill detail cards — revealed by the "What skills" toggle. */}
-          {/* Sits directly below the "What skills" link. Clicking a card */}
-          {/* opens that skill's folder on GitHub. */}
-          {showSkillDetails && (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: 16,
-                flexWrap: 'wrap',
-                width: '100%',
-                maxWidth: 1080,
-              }}
-            >
-              {TRAIL_SKILL_DETAILS.map((skill) => {
-                const SkillIcon = skill.Icon;
-                return (
-                  <button
-                    key={skill.name}
-                    type="button"
-                    onClick={() => void ShellService.openExternal(skill.url)}
-                    title={`Open ${skill.name} on GitHub`}
-                    style={{
-                      flex: '1 1 240px',
-                      maxWidth: 320,
-                      minWidth: 220,
-                      padding: 20,
-                      borderRadius: 12,
-                      border: `1px solid ${theme.colors.border}`,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      color: theme.colors.text,
-                      fontFamily: theme.fonts.body,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      gap: 8,
-                      textAlign: 'left',
-                      transition: 'border-color 150ms ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.border;
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        width: '100%',
-                      }}
-                    >
-                      <SkillIcon size={20} color={theme.colors.primary} />
-                      <ExternalLink size={12} color={theme.colors.textSecondary} />
-                    </div>
-                    <div
-                      style={{
-                        fontSize: theme.fontSizes[2],
-                        fontWeight: theme.fontWeights.semibold,
-                      }}
-                    >
-                      {skill.title}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: theme.fontSizes[1],
-                        color: theme.colors.textSecondary,
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      {skill.description}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {skillInstallError && (
-            <div
-              style={{
-                color: theme.colors.error ?? theme.colors.primary,
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[1],
-                maxWidth: 520,
-                textAlign: 'center',
-              }}
-            >
-              {skillInstallError}
-            </div>
-          )}
-          </div>
-        </div>
-      )}
-
       {/* Trail prompt ideas — the landing screen whenever no project is */}
       {/* selected. Hidden only while the user is browsing the recent feed. */}
       {!selectedProject &&
-        skillInstalled === true &&
         !reposLoading &&
         !recentTrailsLoading &&
         viewMode !== 'recent' && (
@@ -2726,181 +1963,16 @@ const TrailsViewInner: React.FC<{
               overflowY: 'auto',
             }}
           >
-            {showDashboard ? (
-              <TrailsDashboard
-                repoEntries={dashboardRepoEntries}
-                topicEntries={dashboardTopicEntries}
-                onSelectRepo={(entry) => {
-                  setSelectedProjectPath(entry.key);
-                  setViewMode('recent');
-                }}
-                onSelectTopic={(entry) => {
-                  // Open the workspace whose topicIds include this topic.
-                  // v1 single-topic flow always has exactly one match;
-                  // multi-topic later picks the first by convention.
-                  WorkspaceService.getWorkspaces()
-                    .then((workspaces) => {
-                      const target = workspaces.find((w) =>
-                        w.topicIds?.includes(entry.key),
-                      );
-                      if (!target) {
-                        console.warn(
-                          '[TrailsView] No workspace found for topic:',
-                          entry.key,
-                        );
-                        return;
-                      }
-                      return WindowService.openAlexandriaWorkspace({
-                        workspaceId: target.id,
-                      });
-                    })
-                    .catch((err) => {
-                      console.error(
-                        '[TrailsView] Failed to open topic workspace:',
-                        err,
-                      );
-                    });
-                }}
-                onCreateTopic={() => setIsNewTopicOpen(true)}
-                onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
-                onViewAllTrails={() => setViewMode('recent')}
-              />
-            ) : (
-            <>
-            <div style={{ flex: '0 0 auto', marginTop: '9vh' }}>
-              {createTrailHeader}
-            </div>
-
-            <div
-              style={{
-                flex: '0 0 auto',
-                marginTop: 40,
-                width: '100%',
-                maxWidth: 960,
-                display: 'flex',
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                alignItems: 'stretch',
-                justifyContent: 'center',
-                gap: 24,
-              }}
-            >
-              <style>{`
-                .trail-idea-card {
-                  border-color: transparent !important;
-                  transition: border-color 150ms ease;
-                }
-                .trail-idea-card:hover {
-                  border-color: ${theme.colors.primary} !important;
-                }
-                .trail-idea-copy {
-                  opacity: 0;
-                  transition: opacity 150ms ease;
-                }
-                .trail-idea-card:hover .trail-idea-copy,
-                .trail-idea-copy.is-copied {
-                  opacity: 1;
-                }
-                @keyframes trails-spin { to { transform: rotate(360deg); } }
-              `}</style>
-
-              {/* Prompt-idea cards: always rendered. These replace the
-                  former modal — the "Create a Trail" entry point. */}
-              {TRAIL_PROMPT_IDEAS.map((idea, i) => {
-                const isCopied = copiedPromptIndex === i;
-                const accent = purposeAccent(idea.purpose, theme);
-                return (
-                  <div
-                    key={idea.label}
-                    className="trail-idea-card"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => void handleCopyPrompt(idea.prompt, i)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        void handleCopyPrompt(idea.prompt, i);
-                      }
-                    }}
-                    style={{
-                      position: 'relative',
-                      flex: '0 1 300px',
-                      width: '100%',
-                      maxWidth: 300,
-                      aspectRatio: '16 / 9',
-                      padding: '20px 22px',
-                      borderRadius: 10,
-                      border: `1px solid ${theme.colors.border}`,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      gap: 12,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <idea.Icon size={32} color={accent} />
-                    <div
-                      style={{
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[0],
-                        fontWeight: theme.fontWeights.semibold,
-                        color: accent,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                      }}
-                    >
-                      {idea.label}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: theme.fonts.monospace,
-                        fontSize: theme.fontSizes[1],
-                        color: theme.colors.text,
-                        lineHeight: 1.5,
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {idea.prompt}
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleCopyPrompt(idea.prompt, i);
-                      }}
-                      title={isCopied ? 'Copied' : 'Copy prompt'}
-                      className={
-                        isCopied
-                          ? 'trail-idea-copy is-copied'
-                          : 'trail-idea-copy'
-                      }
-                      style={{
-                        position: 'absolute',
-                        top: 10,
-                        right: 10,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 32,
-                        height: 32,
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: 6,
-                        background: theme.colors.background,
-                        color: isCopied
-                          ? theme.colors.primary
-                          : theme.colors.textSecondary,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {isCopied ? <Check size={14} /> : <Copy size={14} />}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+            {/* Hover styles for the repo cards below — render once. */}
+            <style>{`
+              .trail-idea-card {
+                border-color: transparent !important;
+                transition: border-color 150ms ease;
+              }
+              .trail-idea-card:hover {
+                border-color: ${theme.colors.primary} !important;
+              }
+            `}</style>
 
             {/* Repo cards — one per distinct repo in the Recent feed,
                 showing the repo identity and its newest trail. Only
@@ -3116,8 +2188,6 @@ const TrailsViewInner: React.FC<{
                 `}</style>
               </div>
             )}
-            </>
-            )}
           </div>
         )}
 
@@ -3126,7 +2196,6 @@ const TrailsViewInner: React.FC<{
       {/* "View Recent Trails" button. Covers the panel until the user */}
       {/* navigates back. */}
       {!selectedProject &&
-        skillInstalled === true &&
         !recentTrailsLoading &&
         viewMode === 'recent' && (
         <div
@@ -3934,64 +3003,6 @@ const TrailsViewInner: React.FC<{
         </div>
       )}
 
-      {/* Global git config modal — opened by clicking the welcome name. */}
-      <GitGlobalConfigModal
-        isOpen={gitConfigOpen}
-        onClose={() => {
-          setGitConfigOpen(false);
-          // Re-read user.name in case the user edited it in the modal.
-          void loadGitUserName();
-        }}
-      />
-
-      {/* New topic modal — opened from the dashboard's Topics action. */}
-      <NewTopicModal
-        isOpen={isNewTopicOpen}
-        onClose={() => setIsNewTopicOpen(false)}
-      />
-
-      {/* Confirm + execute topic deletion (also drops the linked workspace). */}
-      {pendingDeleteTopic && (
-        <DeleteTopicConfirmDialog
-          topicTitle={pendingDeleteTopic.title}
-          workspaceFolderPath={pendingDeleteTopic.folderPath}
-          busy={deletingTopic}
-          onCancel={() => {
-            if (deletingTopic) return;
-            setPendingDeleteTopic(null);
-          }}
-          onConfirm={() => {
-            const target = pendingDeleteTopic;
-            if (!target) return;
-            setDeletingTopic(true);
-            void (async () => {
-              try {
-                const linked = workspaces.filter((w) =>
-                  w.topicIds?.includes(target.key),
-                );
-                await Promise.all(
-                  linked.map((w) =>
-                    WorkspaceService.deleteWorkspace(w.id).catch((err) => {
-                      console.error(
-                        '[TrailsView] Failed to delete workspace for topic:',
-                        target.key,
-                        err,
-                      );
-                    }),
-                  ),
-                );
-                await TopicService.deleteTopic(target.key);
-              } catch (err) {
-                console.error('[TrailsView] Failed to delete topic:', err);
-              } finally {
-                setDeletingTopic(false);
-                setPendingDeleteTopic(null);
-              }
-            })();
-          }}
-        />
-      )}
-
     </div>
   );
 };
@@ -4004,9 +3015,22 @@ export interface TrailsViewProps {
    * the Recent grid instead of the landing screen.
    */
   bootstrapTrailId?: string | null;
+  /**
+   * Repo path to pre-select when TrailsView mounts/activates. Set by
+   * IntegratedShell in response to `home:open-in-trails`; an empty string
+   * means "no specific repo, just flip to Recent". TrailsView clears it
+   * via `onBootstrapProjectPathConsumed` once applied so the same path
+   * doesn't reapply on re-render.
+   */
+  bootstrapProjectPath?: string | null;
+  onBootstrapProjectPathConsumed?: () => void;
 }
 
-export const TrailsView: React.FC<TrailsViewProps> = ({ bootstrapTrailId }) => {
+export const TrailsView: React.FC<TrailsViewProps> = ({
+  bootstrapTrailId,
+  bootstrapProjectPath,
+  onBootstrapProjectPathConsumed,
+}) => {
   const [selectedProject, setSelectedProject] =
     useState<AlexandriaEntry | null>(null);
 
@@ -4020,6 +3044,8 @@ export const TrailsView: React.FC<TrailsViewProps> = ({ bootstrapTrailId }) => {
         selectedProject={selectedProject}
         onClearProject={() => setSelectedProject(null)}
         bootstrapTrailId={bootstrapTrailId ?? null}
+        bootstrapProjectPath={bootstrapProjectPath ?? null}
+        onBootstrapProjectPathConsumed={onBootstrapProjectPathConsumed}
       />
     </TerminalProvider>
   );
