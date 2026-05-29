@@ -59,22 +59,10 @@ export const TrailCard: React.FC<TrailCardProps> = ({
     : null;
 
   // Per upstream schema, an unset purpose is treated as 'investigation'.
-  // Colors mirror the eyebrow in `@industry-theme/file-city-panel`'s trail
-  // drawer so the list and the drawer use the same visual language. For
-  // informative, the drawer splits Verified (green) vs Unverified (gray)
-  // by stamp count; we mirror that here using `signOffCount`.
+  // Cards use neutral text + border; selection is shown with a subtle
+  // primary-tinted background only.
   const effectivePurpose = trail.purpose ?? 'investigation';
-  const isInformativeVerified =
-    effectivePurpose === 'informative' && (trail.signOffCount ?? 0) > 0;
-  const purposeColor =
-    effectivePurpose === 'informative'
-      ? isInformativeVerified
-        ? theme.colors.success ?? '#10b981'
-        : theme.colors.textTertiary
-      : effectivePurpose === 'changelog'
-        ? '#f97316'
-        : '#a855f7'; // investigation (default)
-  const selectedBg = `color-mix(in srgb, ${purposeColor} 18%, ${theme.colors.background})`;
+  const selectedBg = `color-mix(in srgb, ${theme.colors.primary ?? '#3b82f6'} 18%, ${theme.colors.background})`;
 
   return (
     <button
@@ -91,7 +79,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({
         gap: 8,
         padding: 16,
         borderRadius: 8,
-        border: `1px solid ${purposeColor}`,
+        border: `1px solid ${theme.colors.border}`,
         background: selected ? selectedBg : theme.colors.background,
         color: theme.colors.text,
         cursor: 'pointer',
@@ -116,10 +104,9 @@ export const TrailCard: React.FC<TrailCardProps> = ({
           minWidth: 0,
           fontSize: theme.fontSizes[1],
           fontWeight: theme.fontWeights.semibold,
-          color: selected ? '#ffffff' : purposeColor,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          color: theme.colors.text,
+          overflowWrap: 'anywhere',
+          whiteSpace: 'normal',
         }}
       >
         {trail.title || 'Untitled trail'}

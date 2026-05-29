@@ -85,22 +85,13 @@ export interface TrailsRecentHeadersProps {
 }
 
 /**
- * Resolve the trail-card purpose color the same way `TrailCard` does so chips
- * in the headers view match the cards in the list view.
+ * Trail chips no longer color by purpose — they use the primary accent to
+ * match `TrailCard` in the list view.
  */
 const purposeChipColor = (
-  trail: TrailIndexEntry,
+  _trail: TrailIndexEntry,
   theme: ReturnType<typeof useTheme>['theme'],
-): string => {
-  const effective = trail.purpose ?? 'investigation';
-  if (effective === 'informative') {
-    return (trail.signOffCount ?? 0) > 0
-      ? theme.colors.success ?? '#10b981'
-      : theme.colors.textTertiary;
-  }
-  if (effective === 'changelog') return '#f97316';
-  return '#a855f7';
-};
+): string => theme.colors.primary ?? '#3b82f6';
 
 export const TrailsRecentHeaders: React.FC<TrailsRecentHeadersProps> = ({
   rows,

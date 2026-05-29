@@ -9,12 +9,11 @@ import {
   X,
   Folder,
   FolderGit2,
-  Plus,
   Check,
   Search,
   Loader2,
-  ArrowRight,
   Network,
+  ArrowLeftRight,
 } from 'lucide-react';
 import type {
   ConvertProgressEntry,
@@ -637,13 +636,10 @@ const TrailsViewInner: React.FC<{
   // are dropped before bucketing, so empty columns surface naturally.
   const [recentFilter, setRecentFilter] = useState('');
 
-  // Purpose filter — narrows the Recent feed to one trail purpose. `'all'`
-  // (the default) shows both. Only the two purposes the app actually
-  // produces are exposed (investigation, informative); changelog exists
-  // in the upstream schema but isn't authored from this host.
-  const [purposeFilter, setPurposeFilter] = useState<
-    'all' | 'investigation' | 'informative'
-  >('all');
+  // Purpose filter — the Recent feed always shows every purpose now that
+  // the purpose dropdown has been removed. Kept as a constant so the
+  // downstream filtering and highlight-color logic still reads cleanly.
+  const purposeFilter: 'all' | 'investigation' | 'informative' = 'all';
 
   // Recent-feed display mode. `'cards'` is the existing per-trail list; `'headers'`
   // pivots the same filtered set into an aggregate of top-level sequence-diagram
@@ -1161,15 +1157,16 @@ const TrailsViewInner: React.FC<{
 
   // Click handler for the landing repo cards. Pre-selects the repo's
   // project filter and the specific trail before flipping into Recent,
-  // so the user lands on a populated grid with the trail already open
-  // in the preview pane.
+  // so the user lands on that repo's populated trail grid. We intentionally
+  // do not open a specific trail in the preview pane — the user picks which
+  // trail to open from the grid.
   const openTrailFromRepoCard = useCallback(
     (entry: {
       repo: { path: string };
       trail: TrailIndexEntry;
     }) => {
       setSelectedProjectPath(entry.repo.path);
-      setPreviewTrail(entry.trail);
+      setPreviewTrail(null);
       setViewMode('recent');
     },
     [],
@@ -1348,59 +1345,34 @@ const TrailsViewInner: React.FC<{
     return { covered, total, pct };
   }, [projectFileTree, coveragePathSet]);
 
-  // Two highlight layers fed to the explorer when no trail is selected.
-  // Investigation paints first (lower priority); informative paints on
-  // top so files covered by both show up as informative. Colors match
-  // the per-purpose accents used by `TrailCard`.
+  // Single highlight layer fed to the explorer when no trail is selected.
+  // Every covered file (regardless of purpose) paints in the primary accent.
   const aggregateHighlightLayers = useMemo<HighlightLayer[] | null>(() => {
     if (!projectFileTree) return null;
     const treePaths = new Set(
       projectFileTree.allFiles.map((f) => f.relativePath),
     );
-    const informativePaths: string[] = [];
-    for (const path of coverageByPurpose.informative) {
-      if (treePaths.has(path)) informativePaths.push(path);
+    const coveredPaths: string[] = [];
+    for (const path of coveragePathSet) {
+      if (treePaths.has(path)) coveredPaths.push(path);
     }
-    const investigationOnlyPaths: string[] = [];
-    const informativeSet = coverageByPurpose.informative;
-    for (const path of coverageByPurpose.investigation) {
-      if (!treePaths.has(path)) continue;
-      if (informativeSet.has(path)) continue;
-      investigationOnlyPaths.push(path);
-    }
-    const layers: HighlightLayer[] = [];
-    if (investigationOnlyPaths.length > 0) {
-      layers.push({
-        id: 'trails-aggregate-investigation',
-        name: 'Files covered by investigation trails',
+    if (coveredPaths.length === 0) return null;
+    return [
+      {
+        id: 'trails-aggregate-covered',
+        name: 'Files covered by trails',
         enabled: true,
-        color: '#a855f7',
-        opacity: 0.45,
-        priority: 10,
-        items: investigationOnlyPaths.map((path) => ({
-          path,
-          type: 'file',
-          renderStrategy: 'fill',
-        })),
-      });
-    }
-    if (informativePaths.length > 0) {
-      layers.push({
-        id: 'trails-aggregate-informative',
-        name: 'Files covered by informative trails',
-        enabled: true,
-        color: theme.colors.success ?? '#10b981',
+        color: theme.colors.primary ?? '#3b82f6',
         opacity: 0.55,
         priority: 20,
-        items: informativePaths.map((path) => ({
+        items: coveredPaths.map((path) => ({
           path,
           type: 'file',
           renderStrategy: 'fill',
         })),
-      });
-    }
-    return layers.length > 0 ? layers : null;
-  }, [coverageByPurpose, projectFileTree, theme.colors.success]);
+      },
+    ];
+  }, [coveragePathSet, projectFileTree, theme.colors.primary]);
 
   // Clear the preview when the project changes so we don't show a trail
   // from a different repo in the right pane. When a bootstrap trail belongs
@@ -1713,22 +1685,12 @@ const TrailsViewInner: React.FC<{
     if (!selectedAreaHeader) return null;
     const paths = areaFilesByHeader.get(selectedAreaHeader);
     if (!paths || paths.size === 0) return null;
-    // Color follows the active purpose so the visual continues to read as
-    // "trails of this purpose, narrowed to one area" rather than a new
-    // unrelated layer. In `'all'` mode we fall back to the theme accent so
-    // the layer reads as "area scope" without claiming a purpose.
-    const color =
-      purposeFilter === 'informative'
-        ? theme.colors.success ?? '#10b981'
-        : purposeFilter === 'investigation'
-          ? '#a855f7'
-          : theme.colors.primary ?? '#3b82f6';
     return [
       {
         id: `trails-area-${selectedAreaHeader}`,
         name: `Files in area "${selectedAreaHeader}"`,
         enabled: true,
-        color,
+        color: theme.colors.primary ?? '#3b82f6',
         opacity: 0.55,
         priority: 30,
         items: Array.from(paths).map((path) => ({
@@ -1741,8 +1703,6 @@ const TrailsViewInner: React.FC<{
   }, [
     selectedAreaHeader,
     areaFilesByHeader,
-    purposeFilter,
-    theme.colors.success,
     theme.colors.primary,
   ]);
 
@@ -1769,23 +1729,11 @@ const TrailsViewInner: React.FC<{
       if (p && treePaths.has(p)) paths.add(p);
     }
     if (paths.size === 0) return null;
-    // Match the trail row's purpose chip color so the city visual reads
-    // as "this exact trail." Mirrors `purposeChipColor` in
-    // TrailsRecentHeaders to avoid a cross-package import.
-    const effective = trail.purpose ?? 'investigation';
-    const color =
-      effective === 'informative'
-        ? (trail.signOffCount ?? 0) > 0
-          ? theme.colors.success ?? '#10b981'
-          : theme.colors.textTertiary
-        : effective === 'changelog'
-          ? '#f97316'
-          : '#a855f7';
     return {
       id: `trails-trail-hover-${hoveredTrailId}`,
       name: `Hovered trail "${trail.title ?? hoveredTrailId}"`,
       enabled: true,
-      color,
+      color: theme.colors.primary ?? '#3b82f6',
       opacity: 0.6,
       // Slightly above the area-fill (priority 30) so the hovered trail
       // visually sits on top of the area scope it lives within.
@@ -1803,8 +1751,7 @@ const TrailsViewInner: React.FC<{
     aggregatePayloads,
     recentTrails,
     projectFileTree,
-    theme.colors.success,
-    theme.colors.textTertiary,
+    theme.colors.primary,
   ]);
 
   // Transient folder-border layer for the hovered area card. Pulled from
@@ -2068,7 +2015,7 @@ const TrailsViewInner: React.FC<{
                       marginBottom: 12,
                     }}
                   >
-                    Projects with <span style={{ color: theme.colors.primary }}>Trails</span>
+                    Explored <span style={{ color: theme.colors.primary }}>Projects</span>
                   </div>
                 </div>
                 <div
@@ -2240,43 +2187,6 @@ const TrailsViewInner: React.FC<{
                     );
                   })}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setViewMode('recent')}
-                  className="trails-view-all-btn"
-                  style={{
-                    alignSelf: 'center',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '14px 28px',
-                    background: 'transparent',
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: 10,
-                    color: theme.colors.primary,
-                    fontFamily: theme.fonts.body,
-                    fontSize: theme.fontSizes[3],
-                    fontWeight: theme.fontWeights.semibold,
-                    cursor: 'pointer',
-                    transition:
-                      'background-color 120ms ease, border-color 120ms ease, transform 120ms ease',
-                  }}
-                >
-                  View all
-                  <ArrowRight size={18} className="trails-view-all-arrow" />
-                </button>
-                <style>{`
-                  .trails-view-all-btn:hover {
-                    background-color: ${theme.colors.backgroundSecondary};
-                    border-color: ${theme.colors.primary};
-                  }
-                  .trails-view-all-btn:hover .trails-view-all-arrow {
-                    transform: translateX(3px);
-                  }
-                  .trails-view-all-arrow {
-                    transition: transform 120ms ease;
-                  }
-                `}</style>
               </div>
             )}
           </div>
@@ -2353,99 +2263,74 @@ const TrailsViewInner: React.FC<{
                       maxWidth: 280,
                     }}
                   >
-                    <FolderGit2
-                      size={14}
-                      color={theme.colors.textSecondary}
-                    />
-                    <select
-                      value={selectedProjectPath ?? ''}
-                      onChange={(e) =>
-                        setSelectedProjectPath(e.target.value || null)
-                      }
-                      disabled={recentProjects.length === 0}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        outline: 'none',
-                        background: 'transparent',
-                        color: theme.colors.text,
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[1],
-                        cursor:
-                          recentProjects.length === 0
-                            ? 'default'
-                            : 'pointer',
-                        minWidth: 0,
-                      }}
-                    >
-                      {recentProjects.length === 0 ? (
-                        <option value="">No projects with trails</option>
-                      ) : (
-                        recentProjects.map((p) => (
-                          <option key={p.path} value={p.path}>
-                            {p.label}
-                          </option>
-                        ))
-                      )}
-                    </select>
+                    {(() => {
+                      const activeProject = recentProjects.find(
+                        (p) => p.path === selectedProjectPath,
+                      );
+                      const avatarUrl = activeProject?.ownerLogin
+                        ? `https://github.com/${activeProject.ownerLogin}.png?size=32`
+                        : null;
+                      return (
+                        <>
+                          {avatarUrl ? (
+                            <img
+                              src={avatarUrl}
+                              alt=""
+                              style={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: '50%',
+                                flexShrink: 0,
+                              }}
+                            />
+                          ) : (
+                            <FolderGit2
+                              size={14}
+                              color={theme.colors.textSecondary}
+                            />
+                          )}
+                          <span
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              color: theme.colors.text,
+                              fontFamily: theme.fonts.body,
+                              fontSize: theme.fontSizes[1],
+                              fontWeight: theme.fontWeights.semibold,
+                            }}
+                          >
+                            {activeProject?.label ?? 'No project selected'}
+                          </span>
+                        </>
+                      );
+                    })()}
                   </div>
-                  {/* Purpose dropdown. `All` (the default) shows every trail
-                      regardless of purpose; the two specific options narrow
-                      the feed and recolor the area-highlight layer to match
-                      the chosen purpose. */}
-                  <div
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode('landing');
+                      setRecentFilter('');
+                    }}
+                    title="Switch project"
+                    aria-label="Switch project"
                     style={{
                       flex: '0 0 auto',
-                      display: 'flex',
+                      display: 'inline-flex',
                       alignItems: 'center',
-                      gap: 8,
-                      padding: '8px 12px',
-                      borderRadius: 8,
+                      justifyContent: 'center',
+                      padding: 8,
                       border: `1px solid ${theme.colors.border}`,
+                      borderRadius: 8,
                       backgroundColor: theme.colors.backgroundSecondary,
+                      color: theme.colors.textSecondary,
+                      cursor: 'pointer',
                     }}
                   >
-                    <span
-                      aria-hidden
-                      style={{
-                        display: 'inline-block',
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        backgroundColor:
-                          purposeFilter === 'informative'
-                            ? theme.colors.success ?? '#10b981'
-                            : purposeFilter === 'investigation'
-                              ? '#a855f7'
-                              : theme.colors.textTertiary,
-                      }}
-                    />
-                    <select
-                      aria-label="Trail purpose"
-                      value={purposeFilter}
-                      onChange={(e) =>
-                        setPurposeFilter(
-                          e.target.value as
-                            | 'all'
-                            | 'investigation'
-                            | 'informative',
-                        )
-                      }
-                      style={{
-                        border: 'none',
-                        outline: 'none',
-                        background: 'transparent',
-                        color: theme.colors.text,
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[1],
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <option value="all">All</option>
-                      <option value="informative">Informative</option>
-                      <option value="investigation">Investigations</option>
-                    </select>
-                  </div>
+                    <ArrowLeftRight size={14} />
+                  </button>
                   <div style={{ flex: 1 }} />
                   <div
                     style={{
@@ -2549,30 +2434,6 @@ const TrailsViewInner: React.FC<{
                       }}
                     >
                       Open Project
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setViewMode('landing');
-                        setRecentFilter('');
-                      }}
-                      style={{
-                        flex: '0 0 auto',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '8px 12px',
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: 8,
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        color: theme.colors.text,
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[1],
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Plus size={14} />
-                      Create new trail
                     </button>
                   </div>
                 </div>
