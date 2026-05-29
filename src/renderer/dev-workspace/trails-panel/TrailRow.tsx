@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Check, GitCompare, Share2, Trash2 } from 'lucide-react';
+import { Check, GitCompare, Share2 } from 'lucide-react';
 import type { TrailIndexEntry } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 
 const RECENT_THRESHOLD_MS = 24 * 60 * 60 * 1000;
@@ -86,7 +86,10 @@ export const TrailRow: React.FC<TrailRowProps> = ({
   );
 
   const title =
-    entry.title?.trim() || `Untitled trail · ${entry.markerCount} markers`;
+    entry.title?.trim() ||
+    (entry.fileCount !== undefined && entry.fileCount > 0
+      ? `Untitled trail · ${entry.fileCount} ${entry.fileCount === 1 ? 'file' : 'files'}`
+      : 'Untitled trail');
 
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
@@ -100,9 +103,8 @@ export const TrailRow: React.FC<TrailRowProps> = ({
   const shareButtonTitle = shareUrl
     ? 'Open share dialog (copy link)'
     : 'Share to web-ade';
-  const shareButtonColor = shareUrl
-    ? theme.colors.primary
-    : theme.colors.textSecondary;
+  const shareButtonColor = theme.colors.primary;
+  const deleteButtonColor = theme.colors.error ?? '#e5484d';
 
   return (
     <div
@@ -158,7 +160,7 @@ export const TrailRow: React.FC<TrailRowProps> = ({
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             gap: '6px',
             minWidth: 0,
           }}
@@ -169,16 +171,15 @@ export const TrailRow: React.FC<TrailRowProps> = ({
               strokeWidth={2.5}
               color={theme.colors.primary}
               aria-label="Active"
+              style={{ flexShrink: 0, marginTop: '3px' }}
             />
           )}
           <span
             style={{
-              fontSize: theme.fontSizes[1],
-              fontWeight: theme.fontWeights.medium,
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.semibold,
               color: theme.colors.text,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              wordBreak: 'break-word',
               flex: 1,
               minWidth: 0,
             }}
@@ -247,79 +248,81 @@ export const TrailRow: React.FC<TrailRowProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            fontSize: theme.fontSizes[0],
-            color: theme.colors.textSecondary,
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textMuted,
           }}
         >
-          <span>{entry.markerCount} markers</span>
-          <span aria-hidden>·</span>
           <span title={entry.createdAt}>{relativeTime(entry.createdAt)}</span>
-        </div>
-        {entry.summaryPreview && (
           <div
             style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-            }}
-          >
-            {entry.summaryPreview}
-          </div>
-        )}
-      </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '4px',
-          alignSelf: 'flex-start',
-        }}
-      >
-        {onShare && (
-          <button
-            type="button"
-            onClick={handleShare}
-            title={shareButtonTitle}
-            aria-label={shareButtonTitle}
-            style={{
-              padding: '4px',
-              borderRadius: '6px',
-              border: 'none',
-              background: 'transparent',
-              color: shareButtonColor,
-              cursor: 'pointer',
-              opacity: hovered || isActive || shareUrl ? 1 : 0,
-              transition: 'opacity 120ms, color 120ms',
-              display: 'inline-flex',
+              marginLeft: 'auto',
+              display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
+              gap: '8px',
             }}
           >
-            <Share2 size={14} />
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={handleRemove}
-          title="Delete trail"
-          aria-label={`Delete ${title}`}
-          style={{
-            padding: '4px',
-            borderRadius: '6px',
-            border: 'none',
-            background: 'transparent',
-            color: theme.colors.textSecondary,
-            cursor: 'pointer',
-            opacity: hovered || isActive ? 1 : 0,
-            transition: 'opacity 120ms',
-          }}
-        >
-          <Trash2 size={14} />
-        </button>
+            {onShare && (
+              <button
+                type="button"
+                onClick={handleShare}
+                title={shareButtonTitle}
+                aria-label={shareButtonTitle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = shareButtonColor;
+                  e.currentTarget.style.color = theme.colors.background;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = shareButtonColor;
+                }}
+                style={{
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  border: `1px solid ${shareButtonColor}`,
+                  background: 'transparent',
+                  color: shareButtonColor,
+                  cursor: 'pointer',
+                  opacity: hovered || isActive || shareUrl ? 1 : 0,
+                  transition: 'opacity 120ms, background 120ms, color 120ms',
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: theme.fontWeights.medium,
+                }}
+              >
+                Share
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleRemove}
+              title="Delete trail"
+              aria-label={`Delete ${title}`}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = deleteButtonColor;
+                e.currentTarget.style.color = theme.colors.background;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = deleteButtonColor;
+              }}
+              style={{
+                padding: '3px 10px',
+                borderRadius: '6px',
+                border: `1px solid ${deleteButtonColor}`,
+                background: 'transparent',
+                color: deleteButtonColor,
+                cursor: 'pointer',
+                opacity: hovered || isActive ? 1 : 0,
+                transition: 'opacity 120ms, background 120ms, color 120ms',
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.medium,
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

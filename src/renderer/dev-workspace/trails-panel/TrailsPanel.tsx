@@ -44,13 +44,6 @@ export interface TrailsPanelProps {
   events?: PanelEventEmitter;
 }
 
-const repoBasename = (repositoryPath?: string): string | null => {
-  if (!repositoryPath) return null;
-  const trimmed = repositoryPath.replace(/[\\/]+$/, '');
-  const idx = trimmed.search(/[\\/](?!.*[\\/])/);
-  return idx >= 0 ? trimmed.slice(idx + 1) : trimmed;
-};
-
 export const TrailsPanel: React.FC<TrailsPanelProps> = ({
   repositoryPath,
   events,
@@ -59,8 +52,7 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
   const library = useTrailLibrary(repositoryPath ?? null);
   const shares = useTrailShares(repositoryPath ?? null);
   const [shareModal, setShareModal] = useState<ShareModalState | null>(null);
-
-  const repoLabel = repoBasename(repositoryPath);
+  const [view, setView] = useState<'local' | 'shared'>('local');
 
   const handleRefresh = useCallback(async () => {
     await Promise.all([library.refresh(), shares.refresh()]);
@@ -186,60 +178,51 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
       <header
         style={{
           display: 'flex',
-          alignItems: 'center',
+          flexDirection: 'column',
           gap: '10px',
           padding: '14px 16px',
           borderBottom: `1px solid ${theme.colors.border}`,
         }}
       >
-        <Route size={18} strokeWidth={1.5} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Route size={18} strokeWidth={1.5} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.semibold,
+                lineHeight: 1.2,
+              }}
+            >
+              Trails
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            title="Refresh"
+            aria-label="Refresh"
+            disabled={library.loading || sharedLoading}
             style={{
-              margin: 0,
-              fontSize: theme.fontSizes[2],
-              fontWeight: theme.fontWeights.semibold,
-              lineHeight: 1.2,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '6px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              background: 'transparent',
+              color: theme.colors.textSecondary,
+              cursor:
+                library.loading || sharedLoading ? 'not-allowed' : 'pointer',
             }}
           >
-            Trails
-          </h2>
-          {repoLabel && (
-            <div
-              style={{
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.textSecondary,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-              title={repositoryPath}
-            >
-              for {repoLabel}
-            </div>
-          )}
+            <RefreshCw size={12} />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          title="Refresh"
-          aria-label="Refresh"
-          disabled={library.loading || sharedLoading}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '6px',
-            borderRadius: '6px',
-            border: `1px solid ${theme.colors.border}`,
-            background: 'transparent',
-            color: theme.colors.textSecondary,
-            cursor:
-              library.loading || sharedLoading ? 'not-allowed' : 'pointer',
-          }}
-        >
-          <RefreshCw size={12} />
-        </button>
+        {showSharedSection && (
+          <ViewToggle theme={theme} value={view} onChange={setView} />
+        )}
       </header>
 
       <div
@@ -252,31 +235,30 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
           gap: '16px',
         }}
       >
-        <Section
-          theme={theme}
-          title={showSharedSection ? 'On this machine' : null}
-        >
-          {!localReady && <Loading theme={theme} />}
-          {localReady && localEmpty && (
-            <EmptyState theme={theme} repositoryPath={repositoryPath} />
-          )}
-          {localReady &&
-            !localEmpty &&
-            library.entries.map((entry) => (
-              <TrailRow
-                key={entry.id}
-                entry={entry}
-                isActive={entry.id === library.activeId}
-                onActivate={handleActivateLocal}
-                onRemove={handleRemoveLocal}
-                shareUrl={shares.sharedUrlByLocalId.get(entry.id) ?? null}
-                onShare={handleOpenShareModal}
-              />
-            ))}
-        </Section>
+        {(!showSharedSection || view === 'local') && (
+          <Section theme={theme} title={null}>
+            {!localReady && <Loading theme={theme} />}
+            {localReady && localEmpty && (
+              <EmptyState theme={theme} repositoryPath={repositoryPath} />
+            )}
+            {localReady &&
+              !localEmpty &&
+              library.entries.map((entry) => (
+                <TrailRow
+                  key={entry.id}
+                  entry={entry}
+                  isActive={entry.id === library.activeId}
+                  onActivate={handleActivateLocal}
+                  onRemove={handleRemoveLocal}
+                  shareUrl={shares.sharedUrlByLocalId.get(entry.id) ?? null}
+                  onShare={handleOpenShareModal}
+                />
+              ))}
+          </Section>
+        )}
 
-        {showSharedSection && (
-          <Section theme={theme} title="Shared with this repo">
+        {showSharedSection && view === 'shared' && (
+          <Section theme={theme} title={null}>
             {sharedLoading && <Loading theme={theme} />}
             {!sharedLoading && shares.availability === 'error' && (
               <ErrorRow
@@ -331,6 +313,61 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
           }
         />
       )}
+    </div>
+  );
+};
+
+const ViewToggle: React.FC<{
+  theme: ReturnType<typeof useTheme>['theme'];
+  value: 'local' | 'shared';
+  onChange: (value: 'local' | 'shared') => void;
+}> = ({ theme, value, onChange }) => {
+  const options: Array<{ key: 'local' | 'shared'; label: string }> = [
+    { key: 'local', label: 'Local' },
+    { key: 'shared', label: 'Shared' },
+  ];
+  return (
+    <div
+      role="tablist"
+      aria-label="Filter trails"
+      style={{
+        display: 'flex',
+        gap: '4px',
+        padding: '3px',
+        borderRadius: '8px',
+        border: `1px solid ${theme.colors.border}`,
+        background: theme.colors.backgroundSecondary,
+      }}
+    >
+      {options.map((opt) => {
+        const active = opt.key === value;
+        return (
+          <button
+            key={opt.key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(opt.key)}
+            style={{
+              flex: 1,
+              padding: '5px 10px',
+              borderRadius: '6px',
+              border: 'none',
+              background: active ? theme.colors.background : 'transparent',
+              color: active ? theme.colors.text : theme.colors.textSecondary,
+              fontSize: theme.fontSizes[0],
+              fontWeight: active
+                ? theme.fontWeights.semibold
+                : theme.fontWeights.medium,
+              fontFamily: theme.fonts.body,
+              cursor: 'pointer',
+              transition: 'background 120ms, color 120ms',
+            }}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 };
