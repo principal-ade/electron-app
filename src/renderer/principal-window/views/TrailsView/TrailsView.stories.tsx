@@ -3,7 +3,6 @@ import React from 'react';
 import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
 import { TrailsView } from './TrailsView';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
-import { SkillLockService } from '../../../main-process-api/SkillLockService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { GitService } from '../../../main-process-api/GitService';
@@ -14,23 +13,21 @@ import type { TrailPayload } from '@industry-theme/file-city-panel';
  * TrailsView depends on many `window.mainProcess` IPC surfaces plus a set
  * of static service classes. The Storybook preview already stubs the IPC
  * surfaces with safe defaults; here we additionally rewire the static
- * service methods so per-story state (skills installed yes/no, trail
- * library populated or empty) can drive the render branches.
+ * service methods so per-story state (trail library populated or empty)
+ * can drive the render branches.
  *
  * The patches are installed once at module load and read from a mutable
  * `activeMocks` cell each call, so per-story `withMocks(...)` swaps
  * state without re-patching the classes.
  */
 interface MockState {
-  /** Drives the install screen vs the post-install landing/recent screens. */
-  skillInstalled: boolean;
   /** Saved-trail entries returned by `TrailLibraryService.list`. */
   trails: TrailIndexEntry[];
   /** Optional id→payload map for `TrailLibraryService.load` (preview pane). */
   payloads?: Record<string, TrailPayload>;
 }
 
-let activeMocks: MockState = { skillInstalled: false, trails: [] };
+let activeMocks: MockState = { trails: [] };
 
 /** Set per-story before returning the rendered element. */
 const withMocks = (state: MockState): void => {
@@ -46,16 +43,6 @@ const withMocks = (state: MockState): void => {
 (TrailLibraryService as unknown as {
   onLibraryChanged: typeof TrailLibraryService.onLibraryChanged;
 }).onLibraryChanged = () => () => {};
-
-(SkillLockService as unknown as {
-  isSkillInstalled: typeof SkillLockService.isSkillInstalled;
-}).isSkillInstalled = async () => activeMocks.skillInstalled;
-(SkillLockService as unknown as {
-  onSkillInstalled: typeof SkillLockService.onSkillInstalled;
-}).onSkillInstalled = () => () => {};
-(SkillLockService as unknown as {
-  onSkillUninstalled: typeof SkillLockService.onSkillUninstalled;
-}).onSkillUninstalled = () => () => {};
 
 (AlexandriaService as unknown as {
   getRepositories: typeof AlexandriaService.getRepositories;
@@ -169,41 +156,30 @@ export default meta;
 type Story = StoryObj<typeof TrailsView>;
 
 /**
- * Pre-install welcome screen: trail skills are missing, so TrailsView
- * shows the install prompt + "What skills" expander above an Install
- * button. No trails are loaded.
+ * Empty-library landing: no saved trails, so `hasRecentTrails` is false and
+ * the landing overlay renders the shared `TrailPromptIdeas` empty state —
+ * the "Create a Trail" hero plus the Investigation / Informative prompt
+ * cards (the same component HomeView shows on its welcome screen).
  */
 export const Landing: Story = {
   render: () => {
-    withMocks({ skillInstalled: false, trails: [] });
-    return <TrailsView />;
-  },
-};
-
-/**
- * Post-install landing: skills are present, library is empty, so
- * TrailsView shows the prompt-idea cards + "Add a project" / "View
- * Recent Trails" affordances rather than the install screen.
- */
-export const LandingPostInstall: Story = {
-  render: () => {
-    withMocks({ skillInstalled: true, trails: [] });
+    withMocks({ trails: [] });
     return <TrailsView />;
   },
 };
 
 /**
  * Landing screen when the user already has saved trails — `hasRecentTrails`
- * is true so the prompt-idea cards are replaced by "Create a Trail" and
- * "View Recent Trails" affordances. No `bootstrapTrailId`, so `viewMode`
- * stays on `'landing'` and doesn't auto-flip into the Recent grid.
+ * is true so the empty-state prompt cards give way to the "Explored
+ * Projects" repo-card grid. No `bootstrapTrailId`, so `viewMode` stays on
+ * `'landing'` and doesn't auto-flip into the Recent grid.
  */
 export const LandingWithRecentAvailable: Story = {
   render: () => {
     const payloads = Object.fromEntries(
       fixtureTrails.map((t) => [t.id, payloadFor(t)]),
     );
-    withMocks({ skillInstalled: true, trails: fixtureTrails, payloads });
+    withMocks({ trails: fixtureTrails, payloads });
     return <TrailsView />;
   },
 };
@@ -219,7 +195,7 @@ export const RecentWithFixtures: Story = {
     const payloads = Object.fromEntries(
       fixtureTrails.map((t) => [t.id, payloadFor(t)]),
     );
-    withMocks({ skillInstalled: true, trails: fixtureTrails, payloads });
+    withMocks({ trails: fixtureTrails, payloads });
     return <TrailsView bootstrapTrailId={fixtureTrails[0].id} />;
   },
 };

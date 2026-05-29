@@ -66,6 +66,7 @@ import {
 import { TrailsRecentFiles, type TrailFileRow } from './TrailsRecentFiles';
 import { TrailFileTrailsOverlay } from './TrailFileTrailsOverlay';
 import { SpikeConvertToolbar } from './SpikeConvertToolbar';
+import { TrailPromptIdeas } from '../../components/TrailPromptIdeas';
 
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
@@ -2239,7 +2240,7 @@ const TrailsViewInner: React.FC<{
             {/* Repo cards — one per distinct repo in the Recent feed,
                 showing the repo identity and its newest trail. Only
                 rendered once the user has at least one saved trail. */}
-            {hasRecentTrails && (
+            {hasRecentTrails ? (
               <div
                 style={{
                   flex: '0 0 auto',
@@ -2436,6 +2437,8 @@ const TrailsViewInner: React.FC<{
                   })}
                 </div>
               </div>
+            ) : (
+              <TrailPromptIdeas />
             )}
           </div>
         )}
