@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { AlertCircle, Check, Plus, Search, X } from 'lucide-react';
+import { AlertCircle, Search, X } from 'lucide-react';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
 import { TrailLibraryService } from '../../services/TrailLibraryService';
@@ -269,6 +269,32 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
     [topicId],
   );
 
+  const handleDelete = useCallback(
+    async (trailId: string) => {
+      const entry = entries.find((e) => e.id === trailId);
+      const label = entry?.title?.trim() || 'this trail';
+      if (
+        !window.confirm(
+          `Delete "${label}"? This permanently removes the trail from this machine and cannot be undone.`,
+        )
+      ) {
+        return;
+      }
+      setBusyTrailId(trailId);
+      try {
+        await TrailLibraryService.remove(trailId);
+        // The library-changed broadcast refreshes the list, but refresh
+        // eagerly too so the row disappears immediately.
+        await refresh();
+      } catch (err) {
+        console.error('[WorkspaceTrailsPanel] delete failed', err);
+      } finally {
+        setBusyTrailId(null);
+      }
+    },
+    [entries, refresh],
+  );
+
   return (
     <div
       style={{
@@ -392,6 +418,7 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
                     onAction={() =>
                       inWs ? handleRemove(entry.id) : handleAdd(entry.id)
                     }
+                    onDelete={() => handleDelete(entry.id)}
                     onActivate={
                       onTrailActivate ? () => handleActivate(entry.id) : undefined
                     }
@@ -420,6 +447,8 @@ interface TrailRowProps {
   /** Renders selected styling when this row's trail is the active one. */
   isActive: boolean;
   onAction: () => void;
+  /** Permanently deletes the trail from this machine. */
+  onDelete: () => void;
   /**
    * When provided, clicking the row body (not the action button) opens the
    * trail in the layout's file-city-trail tab. Omitted in contexts where
@@ -441,13 +470,15 @@ const TrailRow: React.FC<TrailRowProps> = ({
   disabled,
   isActive,
   onAction,
+  onDelete,
   onActivate,
   onOpenInTab,
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
-  const ActionIcon = inWorkspace ? Check : Plus;
   const actionLabel = inWorkspace ? 'Remove from workspace' : 'Add to workspace';
+  const membershipColor = theme.colors.primary;
+  const deleteColor = theme.colors.error ?? '#e5484d';
 
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
@@ -526,8 +557,8 @@ const TrailRow: React.FC<TrailRowProps> = ({
             fontSize: theme.fontSizes[1],
             color: theme.colors.textMuted,
             display: 'flex',
+            alignItems: 'center',
             gap: '8px',
-            flexWrap: 'wrap',
           }}
           title={entry.repositoryPath}
         >
@@ -536,34 +567,90 @@ const TrailRow: React.FC<TrailRowProps> = ({
               {formatRelativeTime(entry.updatedAt)}
             </span>
           )}
+          <div
+            style={{
+              marginLeft: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAction();
+              }}
+              disabled={busy || disabled}
+              title={actionLabel}
+              aria-label={actionLabel}
+              onMouseEnter={(e) => {
+                if (busy || disabled) return;
+                e.currentTarget.style.backgroundColor = membershipColor;
+                e.currentTarget.style.color = theme.colors.background;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = membershipColor;
+              }}
+              style={{
+                padding: '3px 10px',
+                borderRadius: '6px',
+                border: `1px solid ${membershipColor}`,
+                background: 'transparent',
+                color: membershipColor,
+                cursor: busy || disabled ? 'not-allowed' : 'pointer',
+                opacity:
+                  busy || disabled
+                    ? 0.5
+                    : isHovered || isActive || inWorkspace
+                      ? 1
+                      : 0,
+                transition: 'opacity 120ms, background 120ms, color 120ms',
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.medium,
+              }}
+            >
+              {inWorkspace ? 'Remove' : 'Add'}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              disabled={busy}
+              title="Delete trail"
+              aria-label={`Delete ${entry.title || entry.id}`}
+              onMouseEnter={(e) => {
+                if (busy) return;
+                e.currentTarget.style.backgroundColor = deleteColor;
+                e.currentTarget.style.color = theme.colors.background;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = deleteColor;
+              }}
+              style={{
+                padding: '3px 10px',
+                borderRadius: '6px',
+                border: `1px solid ${deleteColor}`,
+                background: 'transparent',
+                color: deleteColor,
+                cursor: busy ? 'not-allowed' : 'pointer',
+                opacity: busy ? 0.5 : isHovered || isActive ? 1 : 0,
+                transition: 'opacity 120ms, background 120ms, color 120ms',
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.medium,
+              }}
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onAction();
-        }}
-        disabled={busy || disabled}
-        title={actionLabel}
-        aria-label={actionLabel}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '6px',
-          borderRadius: '6px',
-          border: `1px solid ${theme.colors.border}`,
-          background: inWorkspace ? theme.colors.primary : 'transparent',
-          color: inWorkspace
-            ? theme.colors.background
-            : theme.colors.textSecondary,
-          cursor: busy || disabled ? 'not-allowed' : 'pointer',
-          opacity: busy || disabled ? 0.5 : 1,
-        }}
-      >
-        <ActionIcon size={14} />
-      </button>
     </div>
   );
 };
