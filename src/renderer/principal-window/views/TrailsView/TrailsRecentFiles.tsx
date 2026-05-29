@@ -18,13 +18,25 @@ export interface TrailFileRow {
 export interface TrailsRecentFilesProps {
   /** Touched files across the filtered trails. Order doesn't matter. */
   files: TrailFileRow[];
-  /** Repo-relative path currently spotlighted on the city, or null. */
+  /**
+   * Currently selected tree path (file or folder), so the tree's selection
+   * highlight survives the `resetPaths` calls as payloads stream in. Null
+   * when nothing is selected.
+   */
   selectedPath: string | null;
   /**
    * Fired when the user picks a file row. Receives the repo-relative path, or
    * null when the selection is cleared. Parent toggles the city spotlight.
    */
   onSelectFile: (path: string | null) => void;
+  /**
+   * Fired when the user picks a folder row (which also toggles the folder
+   * open/closed). Receives the repo-relative directory path (no trailing
+   * slash). Parent highlights that folder's region + touched files on the
+   * city. The tree exposes no expand-only callback, so this rides on the
+   * row-selection event clicking a folder name produces.
+   */
+  onSelectFolder: (path: string) => void;
   /** Filtered trails whose payload hasn't loaded yet — drives the footer. */
   pendingCount: number;
   /** Copy shown when no trail touches any file yet. */
@@ -44,6 +56,7 @@ export const TrailsRecentFiles: React.FC<TrailsRecentFilesProps> = ({
   files,
   selectedPath,
   onSelectFile,
+  onSelectFolder,
   pendingCount,
   emptyLabel = 'No files touched by these trails yet.',
 }) => {
@@ -79,11 +92,15 @@ export const TrailsRecentFiles: React.FC<TrailsRecentFilesProps> = ({
     initialSelectedPaths: selectedPath ? [selectedPath] : [],
     onSelectionChange: (selected) => {
       const next = selected[0] ?? null;
-      // Directory rows shouldn't drive the single-file spotlight; only emit
-      // for file selections (and for clears).
       if (next) {
         const item = modelRef.current?.getItem(next);
-        if (item && item.isDirectory()) return;
+        if (item && item.isDirectory()) {
+          // Folder row: clicking the name both selects and toggles it. Strip
+          // the canonical trailing slash so the path matches the repo-
+          // relative file paths the city's highlight layer keys on.
+          onSelectFolder(next.replace(/\/+$/, ''));
+          return;
+        }
       }
       onSelectFile(next);
     },

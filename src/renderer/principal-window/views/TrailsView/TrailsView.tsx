@@ -659,6 +659,14 @@ const TrailsViewInner: React.FC<{
     null,
   );
 
+  // Folder selection inside the files view (no trailing slash). When set, the
+  // city outlines that folder's region and fills the touched files under it so
+  // the user can associate a tree folder with its part of the map. Mutually
+  // exclusive with `selectedFilePath` — both ride the same tree selection.
+  const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(
+    null,
+  );
+
   // Area selection inside the headers view. When set, the city's highlight
   // layer narrows to just the files referenced by markers whose top-level
   // lane matches this header. Mutually exclusive with `previewTrail` — area
@@ -1958,6 +1966,48 @@ const TrailsViewInner: React.FC<{
     theme.colors.primary,
   ]);
 
+  // Folder spotlight for the files view. Fills the *touched* files under the
+  // selected folder — exactly how an area selection highlights its files
+  // (`type: 'file'` fills). The folder lights up because its member files do;
+  // untouched files stay dim because they're not in the set. Deliberately no
+  // `directory` item — that forces a whole-district cover that also lights
+  // every untouched building. Null when no folder is selected or nothing
+  // under it is touched.
+  const selectedFolderHighlightLayers = useMemo<HighlightLayer[] | null>(() => {
+    if (recentDisplayMode !== 'files' || !selectedFolderPath) return null;
+    const prefix = selectedFolderPath + '/';
+    const treePaths = projectFileTree
+      ? new Set(projectFileTree.allFiles.map((f) => f.relativePath))
+      : null;
+    const touched = recentFileRows
+      .map((r) => r.path)
+      .filter((p) => p.startsWith(prefix) && (!treePaths || treePaths.has(p)));
+    if (touched.length === 0) return null;
+    return [
+      {
+        id: `trails-folder-${selectedFolderPath}`,
+        name: `Touched files in "${selectedFolderPath}"`,
+        enabled: true,
+        color: theme.colors.primary ?? '#3b82f6',
+        opacity: 0.9,
+        // Above the area-fill / hover layers, below the single-file
+        // spotlight (45).
+        priority: 43,
+        items: touched.map((path) => ({
+          path,
+          type: 'file' as const,
+          renderStrategy: 'fill' as const,
+        })),
+      },
+    ];
+  }, [
+    recentDisplayMode,
+    selectedFolderPath,
+    recentFileRows,
+    projectFileTree,
+    theme.colors.primary,
+  ]);
+
   // What the preview pane actually consumes: area-scoped layer when an area
   // is selected, otherwise the cross-purpose aggregate. Note the branch on
   // `selectedAreaHeader` (not `selectedAreaHighlightLayers`): an area that
@@ -1973,6 +2023,7 @@ const TrailsViewInner: React.FC<{
     const extras: HighlightLayer[] = [];
     if (hoveredTrailHighlightLayer) extras.push(hoveredTrailHighlightLayer);
     if (hoveredAreaBorderLayer) extras.push(hoveredAreaBorderLayer);
+    if (selectedFolderHighlightLayers) extras.push(...selectedFolderHighlightLayers);
     if (selectedFileHighlightLayer) extras.push(selectedFileHighlightLayer);
     if (extras.length === 0) return base;
     return [...(base ?? []), ...extras];
@@ -1982,6 +2033,7 @@ const TrailsViewInner: React.FC<{
     aggregateHighlightLayers,
     hoveredTrailHighlightLayer,
     hoveredAreaBorderLayer,
+    selectedFolderHighlightLayers,
     selectedFileHighlightLayer,
   ]);
 
@@ -2041,6 +2093,21 @@ const TrailsViewInner: React.FC<{
     );
     if (!stillTouched) setSelectedFilePath(null);
   }, [recentDisplayMode, recentFileRows, selectedFilePath]);
+
+  // Same cleanup for the selected folder — drop it when leaving files mode or
+  // when nothing under it is touched anymore (project / filter change).
+  useEffect(() => {
+    if (!selectedFolderPath) return;
+    if (recentDisplayMode !== 'files') {
+      setSelectedFolderPath(null);
+      return;
+    }
+    const prefix = selectedFolderPath + '/';
+    const stillTouched = recentFileRows.some((row) =>
+      row.path.startsWith(prefix),
+    );
+    if (!stillTouched) setSelectedFolderPath(null);
+  }, [recentDisplayMode, recentFileRows, selectedFolderPath]);
 
   // How many filtered trails still need a payload load. Surfaces under the
   // headers list so users know rows may still reshuffle as IPC resolves.
@@ -2716,14 +2783,26 @@ const TrailsViewInner: React.FC<{
                       {recentDisplayMode === 'files' ? (
                         <TrailsRecentFiles
                           files={recentFileRows}
-                          selectedPath={selectedFilePath}
+                          selectedPath={
+                            selectedFilePath ?? selectedFolderPath
+                          }
                           onSelectFile={(path) => {
                             // File spotlight wins — clear any single-trail
-                            // preview and area scope so the city renders the
-                            // file layer over the aggregate heat-map.
+                            // preview, area scope, and folder selection so the
+                            // city renders the file layer over the heat-map.
                             setPreviewTrail(null);
                             setSelectedAreaHeader(null);
+                            setSelectedFolderPath(null);
                             setSelectedFilePath(path);
+                          }}
+                          onSelectFolder={(path) => {
+                            // Folder region highlight — clear the trail
+                            // preview, area scope, and any single-file
+                            // spotlight so the folder layer reads cleanly.
+                            setPreviewTrail(null);
+                            setSelectedAreaHeader(null);
+                            setSelectedFilePath(null);
+                            setSelectedFolderPath(path);
                           }}
                           pendingCount={recentFilePendingCount}
                         />
