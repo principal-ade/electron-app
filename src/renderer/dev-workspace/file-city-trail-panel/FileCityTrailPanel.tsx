@@ -73,6 +73,14 @@ export interface FileCityTrailPanelProps {
    */
   briefLayout?: TrailBriefLayout;
   /**
+   * Which side the brief card claims in the landscape `split` layout — the
+   * map / graph zone takes the opposite side. `'leading'` puts the brief on
+   * the left, `'trailing'` (upstream default) on the right. No effect in the
+   * `diagram` layout or portrait split. Forwarded to the upstream panel's
+   * `briefSide` prop.
+   */
+  briefSide?: 'leading' | 'trailing';
+  /**
    * Initial value for the hide-map toggle on the brief-layout switch.
    * Forwarded to the upstream panel's `defaultHideMap` prop. Like
    * `briefLayout`, hosts that persist reader preferences feed the
@@ -132,6 +140,7 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
   onCloseTrail,
   onShareTrail,
   briefLayout,
+  briefSide,
   defaultHideMap,
   onBriefLayoutChange,
 }) => {
@@ -258,6 +267,7 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
       actions={trailActions}
       events={events}
       briefLayout={briefLayout}
+      briefSide={briefSide}
       defaultHideMap={defaultHideMap}
       onBriefLayoutChange={onBriefLayoutChange}
     />

@@ -466,7 +466,7 @@ export const TrailsRecentHeaders: React.FC<TrailsRecentHeadersProps> = ({
                     style={{
                       all: 'unset',
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: 'flex-start',
                       gap: 8,
                       padding: '8px 10px',
                       borderRadius: 8,
@@ -496,6 +496,7 @@ export const TrailsRecentHeaders: React.FC<TrailsRecentHeadersProps> = ({
                       style={{
                         width: 8,
                         height: 8,
+                        marginTop: 5,
                         borderRadius: '50%',
                         backgroundColor: color,
                         flexShrink: 0,
@@ -504,9 +505,8 @@ export const TrailsRecentHeaders: React.FC<TrailsRecentHeadersProps> = ({
                     <span
                       style={{
                         flex: 1,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        minWidth: 0,
+                        overflowWrap: 'anywhere',
                         color: isSelected ? '#ffffff' : color,
                         fontFamily: theme.fonts.body,
                         fontSize: theme.fontSizes[0],
@@ -519,6 +519,7 @@ export const TrailsRecentHeaders: React.FC<TrailsRecentHeadersProps> = ({
                       <span
                         style={{
                           flex: '0 0 auto',
+                          marginTop: 1,
                           color: theme.colors.textSecondary,
                           fontFamily: theme.fonts.body,
                           fontSize: theme.fontSizes[0],

@@ -63,6 +63,8 @@ import {
   TrailsRecentHeaders,
   type TrailHeaderRow,
 } from './TrailsRecentHeaders';
+import { TrailsRecentFiles, type TrailFileRow } from './TrailsRecentFiles';
+import { TrailFileTrailsOverlay } from './TrailFileTrailsOverlay';
 import { SpikeConvertToolbar } from './SpikeConvertToolbar';
 
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -73,7 +75,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
  * own defaults so first-mount behavior is unchanged.
  */
 const DEFAULT_BRIEF_LAYOUT_STATE: TrailBriefLayoutState = {
-  layout: 'diagram',
+  layout: 'split',
   hideMap: false,
   splitPct: 50,
   drawerHeightPct: 30,
@@ -391,6 +393,7 @@ const RecentTrailPreviewPane: React.FC<{
           onCloseTrail={onCloseTrail}
           onShareTrail={onShareTrail}
           briefLayout={briefLayoutState.layout}
+          briefSide="leading"
           defaultHideMap={briefLayoutState.hideMap}
           onBriefLayoutChange={handleBriefLayoutChange}
         />
@@ -646,8 +649,15 @@ const TrailsViewInner: React.FC<{
   // lane namespaces (one row per unique header) so the user can spot overlap
   // and candidate groupings across trails.
   const [recentDisplayMode, setRecentDisplayMode] = useState<
-    'cards' | 'headers'
-  >('cards');
+    'cards' | 'headers' | 'files'
+  >('files');
+
+  // File selection inside the files view. When set, the city spotlights just
+  // this one file on top of the aggregate heat-map. Mutually exclusive with
+  // `previewTrail` and `selectedAreaHeader` — picking a file clears those.
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(
+    null,
+  );
 
   // Area selection inside the headers view. When set, the city's highlight
   // layer narrows to just the files referenced by markers whose top-level
@@ -1737,6 +1747,63 @@ const TrailsViewInner: React.FC<{
     projectFileTree,
   ]);
 
+  // Files view: the union of every file the filtered trails touch (one entry
+  // per distinct `marker.sourcePath`) with a per-file trail count. Feeds the
+  // `TrailsRecentFiles` tree and its "×N" row badges. Counts a file once per
+  // trail even when several markers in that trail point at it. Gated on the
+  // files display mode so we don't walk payloads when the tree isn't shown.
+  const recentFileRows = useMemo<TrailFileRow[]>(() => {
+    if (recentDisplayMode !== 'files') return [];
+    const counts = new Map<string, number>();
+    for (const trail of filteredRecentTrails) {
+      const payload = aggregatePayloads.get(trail.id);
+      if (!payload) continue;
+      const seenInTrail = new Set<string>();
+      for (const marker of payload.markers) {
+        const p = marker.sourcePath;
+        if (!p || seenInTrail.has(p)) continue;
+        seenInTrail.add(p);
+        counts.set(p, (counts.get(p) ?? 0) + 1);
+      }
+    }
+    return Array.from(counts.entries()).map(([path, trailCount]) => ({
+      path,
+      trailCount,
+    }));
+  }, [recentDisplayMode, filteredRecentTrails, aggregatePayloads]);
+
+  // How many filtered trails still need a payload load (for the files-view
+  // footer). Mirrors `recentHeaderPendingCount` but gated on files mode.
+  const recentFilePendingCount = useMemo(() => {
+    if (recentDisplayMode !== 'files') return 0;
+    let pending = 0;
+    for (const trail of filteredRecentTrails) {
+      if (!aggregatePayloads.has(trail.id)) pending++;
+    }
+    return pending;
+  }, [recentDisplayMode, filteredRecentTrails, aggregatePayloads]);
+
+  // Trails touching the file picked in the Files tree — drives the overlay
+  // that floats over the explorer. Preserves `filteredRecentTrails` order
+  // (date-sorted) so the most recent trails surface first.
+  const selectedFileTrails = useMemo<TrailIndexEntry[]>(() => {
+    if (recentDisplayMode !== 'files' || !selectedFilePath) return [];
+    const out: TrailIndexEntry[] = [];
+    for (const trail of filteredRecentTrails) {
+      const payload = aggregatePayloads.get(trail.id);
+      if (!payload) continue;
+      if (payload.markers.some((m) => m.sourcePath === selectedFilePath)) {
+        out.push(trail);
+      }
+    }
+    return out;
+  }, [
+    recentDisplayMode,
+    selectedFilePath,
+    filteredRecentTrails,
+    aggregatePayloads,
+  ]);
+
   // Files referenced by markers in the selected area. Reads the cached set
   // `areaFilesByHeader` produced by the headers memo above so we don't walk
   // payloads twice. Returns null when no area is selected (panel falls back
@@ -1855,6 +1922,42 @@ const TrailsViewInner: React.FC<{
     theme.colors.primary,
   ]);
 
+  // Single-file spotlight for the files view. Renders one bright fill layer
+  // in the primary accent on top of the aggregate heat-map (so the rest of
+  // the touched files stay visible for context). Returns null when no file is
+  // selected or the file isn't in the project tree.
+  const selectedFileHighlightLayer = useMemo<HighlightLayer | null>(() => {
+    if (recentDisplayMode !== 'files' || !selectedFilePath) return null;
+    if (projectFileTree) {
+      const treePaths = new Set(
+        projectFileTree.allFiles.map((f) => f.relativePath),
+      );
+      if (!treePaths.has(selectedFilePath)) return null;
+    }
+    return {
+      id: `trails-file-${selectedFilePath}`,
+      name: `File "${selectedFilePath}"`,
+      enabled: true,
+      color: theme.colors.primary ?? '#3b82f6',
+      opacity: 0.9,
+      // Above the area-fill (30) and hover layers (35/40) so the picked file
+      // reads as the focused element regardless of what else is painted.
+      priority: 45,
+      items: [
+        {
+          path: selectedFilePath,
+          type: 'file',
+          renderStrategy: 'fill',
+        },
+      ],
+    };
+  }, [
+    recentDisplayMode,
+    selectedFilePath,
+    projectFileTree,
+    theme.colors.primary,
+  ]);
+
   // What the preview pane actually consumes: area-scoped layer when an area
   // is selected, otherwise the cross-purpose aggregate. Note the branch on
   // `selectedAreaHeader` (not `selectedAreaHighlightLayers`): an area that
@@ -1870,6 +1973,7 @@ const TrailsViewInner: React.FC<{
     const extras: HighlightLayer[] = [];
     if (hoveredTrailHighlightLayer) extras.push(hoveredTrailHighlightLayer);
     if (hoveredAreaBorderLayer) extras.push(hoveredAreaBorderLayer);
+    if (selectedFileHighlightLayer) extras.push(selectedFileHighlightLayer);
     if (extras.length === 0) return base;
     return [...(base ?? []), ...extras];
   }, [
@@ -1878,6 +1982,7 @@ const TrailsViewInner: React.FC<{
     aggregateHighlightLayers,
     hoveredTrailHighlightLayer,
     hoveredAreaBorderLayer,
+    selectedFileHighlightLayer,
   ]);
 
   // Clear the area scope when the headers view goes away or the selected
@@ -1920,6 +2025,22 @@ const TrailsViewInner: React.FC<{
       setHoveredTrailId(null);
     }
   }, [recentDisplayMode, hoveredTrailId]);
+
+  // Drop the file spotlight when the files view goes away (mode switch) or
+  // the selected file drops out of the touched-file set (project / filter
+  // change), so the city doesn't keep highlighting a file the user can no
+  // longer see in the tree.
+  useEffect(() => {
+    if (!selectedFilePath) return;
+    if (recentDisplayMode !== 'files') {
+      setSelectedFilePath(null);
+      return;
+    }
+    const stillTouched = recentFileRows.some(
+      (row) => row.path === selectedFilePath,
+    );
+    if (!stillTouched) setSelectedFilePath(null);
+  }, [recentDisplayMode, recentFileRows, selectedFilePath]);
 
   // How many filtered trails still need a payload load. Surfaces under the
   // headers list so users know rows may still reshuffle as IPC resolves.
@@ -2537,8 +2658,9 @@ const TrailsViewInner: React.FC<{
                     >
                       {(
                         [
-                          { value: 'headers', label: 'Areas' },
+                          { value: 'files', label: 'Files' },
                           { value: 'cards', label: 'Trails' },
+                          { value: 'headers', label: 'Areas' },
                         ] as const
                       ).map((option) => {
                         const active = recentDisplayMode === option.value;
@@ -2552,7 +2674,9 @@ const TrailsViewInner: React.FC<{
                             title={
                               option.value === 'headers'
                                 ? 'Aggregate top-level sequence-diagram areas across the filtered trails'
-                                : 'Show one card per trail, grouped by day'
+                                : option.value === 'files'
+                                  ? 'File tree of every file the filtered trails touch'
+                                  : 'Show one card per trail, grouped by day'
                             }
                             style={{
                               flex: 1,
@@ -2589,7 +2713,21 @@ const TrailsViewInner: React.FC<{
                         minHeight: 0,
                       }}
                     >
-                      {recentDisplayMode === 'cards' ? (
+                      {recentDisplayMode === 'files' ? (
+                        <TrailsRecentFiles
+                          files={recentFileRows}
+                          selectedPath={selectedFilePath}
+                          onSelectFile={(path) => {
+                            // File spotlight wins — clear any single-trail
+                            // preview and area scope so the city renders the
+                            // file layer over the aggregate heat-map.
+                            setPreviewTrail(null);
+                            setSelectedAreaHeader(null);
+                            setSelectedFilePath(path);
+                          }}
+                          pendingCount={recentFilePendingCount}
+                        />
+                      ) : recentDisplayMode === 'cards' ? (
                         <TrailsRecentList
                           groups={trailDayGroups.map((group) => ({
                             key: String(group.date.getTime()),
@@ -2646,28 +2784,56 @@ const TrailsViewInner: React.FC<{
                       )}
                     </div>
                   </div>
-                  <RecentTrailPreviewPane
-                    repositoryPath={selectedProjectPath}
-                    fileTree={projectFileTree}
-                    aggregateHighlightLayers={effectiveHighlightLayers}
-                    trail={previewTrail}
-                    payload={previewPayload}
-                    loading={previewLoading}
-                    events={events}
-                    onCloseTrail={() => setPreviewTrail(null)}
-                    onShareTrail={handleShareActiveTrail}
-                    aggregatePayloads={projectAggregatePayloads}
-                    onOpenTrailFromTopology={(trailId) => {
-                      // Route a topology-overlay trail click through the
-                      // same path a recent-list card click takes: look
-                      // the id up against the in-memory index and set
-                      // it as the preview. Falls back to a no-op when
-                      // the id can't be matched (e.g. the trail was
-                      // deleted between layout and click).
-                      const entry = recentTrails.find((t) => t.id === trailId);
-                      if (entry) setPreviewTrail(entry);
-                    }}
-                  />
+                  {/* Single-cell grid so the pane fills the column while the
+                      file-trails overlay floats on top as an absolute sibling
+                      (the pane clips its own children with overflow:hidden, so
+                      the overlay can't live inside it). */}
+                  <div style={{ position: 'relative', minHeight: 0, display: 'grid' }}>
+                    <RecentTrailPreviewPane
+                      repositoryPath={selectedProjectPath}
+                      fileTree={projectFileTree}
+                      aggregateHighlightLayers={effectiveHighlightLayers}
+                      trail={previewTrail}
+                      payload={previewPayload}
+                      loading={previewLoading}
+                      events={events}
+                      onCloseTrail={() => setPreviewTrail(null)}
+                      onShareTrail={handleShareActiveTrail}
+                      aggregatePayloads={projectAggregatePayloads}
+                      onOpenTrailFromTopology={(trailId) => {
+                        // Route a topology-overlay trail click through the
+                        // same path a recent-list card click takes: look
+                        // the id up against the in-memory index and set
+                        // it as the preview. Falls back to a no-op when
+                        // the id can't be matched (e.g. the trail was
+                        // deleted between layout and click).
+                        const entry = recentTrails.find(
+                          (t) => t.id === trailId,
+                        );
+                        if (entry) setPreviewTrail(entry);
+                      }}
+                    />
+                    {recentDisplayMode === 'files' &&
+                      selectedFilePath &&
+                      selectedFileTrails.length > 0 && (
+                        <TrailFileTrailsOverlay
+                          filePath={selectedFilePath}
+                          trails={selectedFileTrails}
+                          selectedTrailId={previewTrail?.id ?? null}
+                          resolveRepoLabel={(trail) =>
+                            trailRepoLabel(trail.repositoryPath)
+                          }
+                          onSelectTrail={(trail) => {
+                            // Open the trail in the pane and dismiss the
+                            // overlay (which also drops the file spotlight)
+                            // so the chosen trail is fully visible.
+                            setPreviewTrail(trail);
+                            setSelectedFilePath(null);
+                          }}
+                          onClose={() => setSelectedFilePath(null)}
+                        />
+                      )}
+                  </div>
                 </div>
               </div>
             )}
