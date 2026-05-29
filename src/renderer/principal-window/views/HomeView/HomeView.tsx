@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   BookOpen,
+  Check,
   ExternalLink,
   Footprints,
   Search,
@@ -108,6 +109,9 @@ export function HomeView() {
   }, [loadGitUserName]);
 
   const [skillInstalled, setSkillInstalled] = useState<boolean | null>(null);
+  const [installedSkillNames, setInstalledSkillNames] = useState<Set<string>>(
+    new Set(),
+  );
   const [installingSkill, setInstallingSkill] = useState(false);
   const [skillInstallError, setSkillInstallError] = useState<string | null>(
     null,
@@ -325,6 +329,11 @@ export function HomeView() {
 
   const hasAnyTrail = recentTrails.length > 0;
 
+  const installedSkillDetails = useMemo(
+    () => TRAIL_SKILL_DETAILS.filter((s) => installedSkillNames.has(s.name)),
+    [installedSkillNames],
+  );
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -334,7 +343,12 @@ export function HomeView() {
             SkillLockService.isSkillInstalled(name),
           ),
         );
-        if (!cancelled) setSkillInstalled(checks.every(Boolean));
+        if (!cancelled) {
+          setSkillInstalled(checks.every(Boolean));
+          setInstalledSkillNames(
+            new Set(TRAIL_INSTALL_SKILL_NAMES.filter((_, i) => checks[i])),
+          );
+        }
       } catch (error) {
         console.error('[HomeView] Failed to load skill state:', error);
         if (!cancelled) setSkillInstalled(false);
@@ -355,6 +369,9 @@ export function HomeView() {
           ),
         );
         setSkillInstalled(checks.every(Boolean));
+        setInstalledSkillNames(
+          new Set(TRAIL_INSTALL_SKILL_NAMES.filter((_, i) => checks[i])),
+        );
       } catch (error) {
         console.error('[HomeView] Failed to refresh skill state:', error);
       }
@@ -767,6 +784,84 @@ export function HomeView() {
         )}
 
         {skillInstalled === true && !hasAnyTrail && <TrailPromptIdeas />}
+
+        {installedSkillDetails.length > 0 && (
+          <div
+            style={{
+              flex: '0 0 auto',
+              marginTop: 'auto',
+              paddingTop: 32,
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[0],
+                fontWeight: theme.fontWeights.semibold,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                color: theme.colors.textSecondary,
+              }}
+            >
+              Installed Skills
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 10,
+                flexWrap: 'wrap',
+                maxWidth: 900,
+              }}
+            >
+              {installedSkillDetails.map((skill) => {
+                const SkillIcon = skill.Icon;
+                return (
+                  <button
+                    key={skill.name}
+                    type="button"
+                    onClick={() => void ShellService.openExternal(skill.url)}
+                    title={`${skill.title} is installed — open on GitHub`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      borderRadius: 999,
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      color: theme.colors.text,
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[1],
+                      cursor: 'pointer',
+                      transition: 'border-color 150ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                    }}
+                  >
+                    <SkillIcon size={16} color={theme.colors.primary} />
+                    <span style={{ fontWeight: theme.fontWeights.medium }}>
+                      {skill.title}
+                    </span>
+                    <Check
+                      size={14}
+                      color={theme.colors.success ?? theme.colors.primary}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <GitGlobalConfigModal
