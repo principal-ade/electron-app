@@ -1327,6 +1327,28 @@ const TrailsViewInner: React.FC<{
     return set;
   }, [coverageByPurpose]);
 
+  // How many distinct trails touch each file in the active project. Drives
+  // the aggregate "heat map" — files referenced by more trails read hotter
+  // (more opaque). A file referenced by several markers in one trail still
+  // counts once for that trail.
+  const coverageCountByPath = useMemo(() => {
+    const counts = new Map<string, number>();
+    if (!projectFileTree || !selectedProjectPath) return counts;
+    for (const trail of recentTrails) {
+      if (trail.repositoryPath !== selectedProjectPath) continue;
+      const payload = aggregatePayloads.get(trail.id);
+      if (!payload) continue;
+      const seenInTrail = new Set<string>();
+      for (const marker of payload.markers) {
+        const p = marker.sourcePath;
+        if (!p || seenInTrail.has(p)) continue;
+        seenInTrail.add(p);
+        counts.set(p, (counts.get(p) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [recentTrails, selectedProjectPath, aggregatePayloads, projectFileTree]);
+
   // Coverage stats for the toolbar badge. Filters covered paths against
   // the file tree so stale marker paths from a renamed file don't inflate
   // the count. `null` until the paired tree resolves for the active
@@ -1345,34 +1367,72 @@ const TrailsViewInner: React.FC<{
     return { covered, total, pct };
   }, [projectFileTree, coveragePathSet]);
 
-  // Single highlight layer fed to the explorer when no trail is selected.
-  // Every covered file (regardless of purpose) paints in the primary accent.
+  // Heat-map layers fed to the explorer when no trail is selected. Files are
+  // bucketed by how many trails touch them and painted in the primary accent
+  // at increasing opacity — more-covered files read hotter. Tiers cap at 4+
+  // so a few heavily-referenced files don't wash out the rest.
   const aggregateHighlightLayers = useMemo<HighlightLayer[] | null>(() => {
     if (!projectFileTree) return null;
     const treePaths = new Set(
       projectFileTree.allFiles.map((f) => f.relativePath),
     );
-    const coveredPaths: string[] = [];
-    for (const path of coveragePathSet) {
-      if (treePaths.has(path)) coveredPaths.push(path);
+    // tier (1..4) -> paths covered by that many trails (4 = "4 or more")
+    const pathsByTier = new Map<number, string[]>();
+    for (const [path, count] of coverageCountByPath) {
+      if (!treePaths.has(path)) continue;
+      const tier = Math.min(count, 4);
+      const bucket = pathsByTier.get(tier);
+      if (bucket) bucket.push(path);
+      else pathsByTier.set(tier, [path]);
     }
-    if (coveredPaths.length === 0) return null;
-    return [
-      {
-        id: 'trails-aggregate-covered',
-        name: 'Files covered by trails',
+    if (pathsByTier.size === 0) return null;
+    // Single-hue sequential ramp: every tier is the primary hue, but cooler
+    // tiers are lightened toward white so the four levels stay distinct at a
+    // solid opacity (an opacity-only ramp washed out against the buildings).
+    const parseHex = (hex: string): [number, number, number] => {
+      const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+      if (!m) return [59, 130, 246]; // #3b82f6 fallback
+      const n = parseInt(m[1], 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    };
+    const toHex = (r: number, g: number, b: number) =>
+      '#' +
+      [r, g, b]
+        .map((v) => Math.round(v).toString(16).padStart(2, '0'))
+        .join('');
+    const [pr, pg, pb] = parseHex(theme.colors.primary ?? '#3b82f6');
+    // Mix the primary toward white: tier 1 lightest, tier 4 pure primary.
+    const tierColor = (tier: number) => {
+      const whiteFrac = (4 - tier) * 0.22;
+      return toHex(
+        pr + (255 - pr) * whiteFrac,
+        pg + (255 - pg) * whiteFrac,
+        pb + (255 - pb) * whiteFrac,
+      );
+    };
+    const layers: HighlightLayer[] = [];
+    for (const [tier, paths] of pathsByTier) {
+      layers.push({
+        id: `trails-heat-${tier}`,
+        name:
+          tier >= 4
+            ? 'Files covered by 4+ trails'
+            : `Files covered by ${tier} trail${tier === 1 ? '' : 's'}`,
         enabled: true,
-        color: theme.colors.primary ?? '#3b82f6',
-        opacity: 0.55,
-        priority: 20,
-        items: coveredPaths.map((path) => ({
+        color: tierColor(tier),
+        opacity: 0.85,
+        // Hotter tiers sit on higher priorities so they stack above the
+        // cooler ones (and below the area/hover layers at 30+).
+        priority: 20 + tier,
+        items: paths.map((path) => ({
           path,
           type: 'file',
           renderStrategy: 'fill',
         })),
-      },
-    ];
-  }, [coveragePathSet, projectFileTree, theme.colors.primary]);
+      });
+    }
+    return layers;
+  }, [coverageCountByPath, projectFileTree, theme.colors.primary]);
 
   // Clear the preview when the project changes so we don't show a trail
   // from a different repo in the right pane. When a bootstrap trail belongs
