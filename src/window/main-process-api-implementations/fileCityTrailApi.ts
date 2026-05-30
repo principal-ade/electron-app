@@ -3,6 +3,7 @@ import {
   FileCityTrailEvent,
   TrailShareError,
   type FileCityTrailAPI,
+  type FileCityTrailFetchSharedByIdResult,
   type FileCityTrailFetchSharedResult,
   type FileCityTrailShareResult,
   type TrailIndexEntry,
@@ -159,6 +160,14 @@ export const fileCityTrailAPI: FileCityTrailAPI = {
         repo,
         id,
       );
+    return unwrapShare(envelope);
+  },
+
+  fetchSharedById: async (
+    id: string,
+  ): Promise<FileCityTrailFetchSharedByIdResult> => {
+    const envelope: TrailShareEnvelope<FileCityTrailFetchSharedByIdResult> =
+      await ipcRenderer.invoke(FileCityTrailEvent.FETCH_SHARED_BY_ID, id);
     return unwrapShare(envelope);
   },
 

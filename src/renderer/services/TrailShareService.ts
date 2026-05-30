@@ -8,6 +8,7 @@
 
 import {
   TrailShareError,
+  type FileCityTrailFetchSharedByIdResult,
   type FileCityTrailFetchSharedResult,
   type FileCityTrailShareResult,
   type TrailListSharedOptions,
@@ -48,6 +49,19 @@ export class TrailShareService {
     const api = window.mainProcess?.fileCityTrail;
     if (!api) throw missingApiError();
     return api.fetchShared(owner, repo, id);
+  }
+
+  /**
+   * Hydrate a shared trail from a bare id (no owner/repo). web-ade resolves
+   * the owning repo and gates access. Used by the titlebar to open a pasted
+   * `…/trail/{id}` URL.
+   */
+  static async fetchSharedById(
+    id: string,
+  ): Promise<FileCityTrailFetchSharedByIdResult> {
+    const api = window.mainProcess?.fileCityTrail;
+    if (!api) throw missingApiError();
+    return api.fetchSharedById(id);
   }
 
   /**

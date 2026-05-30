@@ -121,16 +121,12 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
   const handleShareCompleted = useCallback(
     async (id: string, url: string) => {
       shares.recordShare(id, url);
-      // The registry owns the trail once it's published — drop the
-      // local copy so users only access it via the remote URL. Local
-      // delete is best-effort; the trail is live on web-ade regardless.
-      try {
-        await library.remove(id);
-      } catch (err) {
-        console.error('[trails] failed to remove local trail after publish', err);
-      }
-      // Refresh the shared list so the just-shared entry appears under
-      // "Shared with this repo" — round-trip verification path.
+      // The local copy is kept but locked once published: main stamps
+      // `sharedAt` on the index entry and rejects content re-authoring of
+      // the id. Refresh the local list so the row picks up its locked
+      // state, and the shared list so it also appears under "Shared with
+      // this repo".
+      await library.refresh();
       shares.refresh();
     },
     [shares, library],

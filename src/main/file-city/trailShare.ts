@@ -25,6 +25,7 @@ import {
 } from '../services/UnifiedSecureStorage';
 import {
   TrailShareError,
+  type FileCityTrailFetchSharedByIdResult,
   type FileCityTrailFetchSharedResult,
   type FileCityTrailShareResult,
   type SharedTrailIndexEntry,
@@ -443,4 +444,40 @@ export async function fetchSharedTrail(
 ): Promise<FileCityTrailFetchSharedResult> {
   const token = await getGithubToken();
   return fetchFromWebAde(owner, repo, id, token);
+}
+
+/**
+ * By-id sibling of `fetchFromWebAde`. The bare-id endpoint resolves the
+ * owning repo server-side and gates on the viewer's GitHub access, so the
+ * URL carries no owner/repo. Returns `{ owner, repo, payload }`.
+ */
+async function fetchByIdFromWebAde(
+  id: string,
+  token: string,
+): Promise<FileCityTrailFetchSharedByIdResult> {
+  const url = `${apiBase()}/trails/by-id/${encodeURIComponent(id)}`;
+  let res: import('node-fetch').Response;
+  try {
+    res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (err) {
+    throw new TrailShareError(
+      'NETWORK_ERROR',
+      'Could not reach web-ade to fetch the shared trail.',
+      { cause: err instanceof Error ? err.message : String(err) },
+    );
+  }
+  if (!res.ok) {
+    const body = await readErrorBody(res);
+    throw shareErrorFromResponse(res, body, 'fetch');
+  }
+  return (await res.json()) as FileCityTrailFetchSharedByIdResult;
+}
+
+export async function fetchSharedTrailById(
+  id: string,
+): Promise<FileCityTrailFetchSharedByIdResult> {
+  const token = await getGithubToken();
+  return fetchByIdFromWebAde(id, token);
 }

@@ -16,6 +16,7 @@ import * as crypto from 'crypto';
 import {
   FileCityTrailEvent,
   TrailShareError,
+  type FileCityTrailFetchSharedByIdResult,
   type FileCityTrailFetchSharedResult,
   type FileCityTrailShareResult,
   type TrailIndexEntry,
@@ -32,6 +33,7 @@ import type {
 import { TrailPersistence } from './trailPersistence';
 import {
   fetchSharedTrail,
+  fetchSharedTrailById,
   listSharedTrails,
   shareTrail,
 } from './trailShare';
@@ -154,11 +156,11 @@ export class TrailStore {
     }
   }
 
-  share(
+  async share(
     id: string,
     options?: TrailShareOptions,
   ): Promise<FileCityTrailShareResult> {
-    return shareTrail(
+    const result = await shareTrail(
       {
         loadPayload: (payloadId) => this.persistence.loadById(payloadId),
         loadEntry: (payloadId) => this.persistence.loadEntryById(payloadId),
@@ -166,6 +168,11 @@ export class TrailStore {
       id,
       options,
     );
+    // Keep the local copy but lock it: stamp `sharedAt`/`sharedUrl` on the
+    // index entry. Subsequent content re-POSTs of this id are rejected by
+    // `save` (TrailLockedError → 409); notes still flow via applyToPayload.
+    await this.persistence.markShared(id, result.url);
+    return result;
   }
 
   listShared(
@@ -180,6 +187,10 @@ export class TrailStore {
     id: string,
   ): Promise<FileCityTrailFetchSharedResult> {
     return fetchSharedTrail(owner, repo, id);
+  }
+
+  fetchSharedById(id: string): Promise<FileCityTrailFetchSharedByIdResult> {
+    return fetchSharedTrailById(id);
   }
 
   /**
@@ -351,6 +362,11 @@ export function registerTrailHandlers(): void {
     FileCityTrailEvent.FETCH_SHARED,
     (_event, owner: string, repo: string, id: string) =>
       shareEnvelope(() => store.fetchShared(owner, repo, id)),
+  );
+  ipcMain.handle(
+    FileCityTrailEvent.FETCH_SHARED_BY_ID,
+    (_event, id: string) =>
+      shareEnvelope(() => store.fetchSharedById(id)),
   );
   ipcMain.handle(
     FileCityTrailEvent.SET_TRANSIENT,

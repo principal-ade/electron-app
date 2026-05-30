@@ -25,6 +25,7 @@ import type {
   ActivityFeedTab,
   FeedTab,
   ProjectInfoTab,
+  SharedTrailTab,
   UserProfileTab,
 } from '../../feed-view/FeedPanelFramework';
 import type { FeedRepositorySelectedPayload } from '../../events/feedRepositorySelected';
@@ -48,6 +49,8 @@ interface FeedTabsContextValue {
   openProjectInfo: (payload: FeedRepositorySelectedPayload) => void;
   /** Open a `user-profile-<username>` tab idempotently and focus it. */
   openUserProfile: (username: string, email?: string) => void;
+  /** Open a `shared-trail-<trailId>` tab idempotently and focus it. */
+  openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
 }
 
 const FeedTabsContext = createContext<FeedTabsContextValue | null>(null);
@@ -102,6 +105,28 @@ export const FeedTabsProvider: React.FC<{ children: React.ReactNode }> = ({
     setActiveTabId(tabId);
   }, []);
 
+  const openSharedTrail = useCallback(
+    (trailId: string, owner?: string, repo?: string) => {
+      const tabId = `shared-trail-${trailId}`;
+
+      setTabs((prev) => {
+        if (prev.some((t) => t.id === tabId)) return prev;
+        const newTab: SharedTrailTab = {
+          id: tabId,
+          label: 'Shared trail',
+          contentType: 'shared-trail',
+          closable: true,
+          trailId,
+          owner,
+          repo,
+        };
+        return [...prev, newTab];
+      });
+      setActiveTabId(tabId);
+    },
+    [],
+  );
+
   const value = useMemo<FeedTabsContextValue>(
     () => ({
       tabs,
@@ -110,8 +135,9 @@ export const FeedTabsProvider: React.FC<{ children: React.ReactNode }> = ({
       setActiveTabId,
       openProjectInfo,
       openUserProfile,
+      openSharedTrail,
     }),
-    [tabs, activeTabId, openProjectInfo, openUserProfile],
+    [tabs, activeTabId, openProjectInfo, openUserProfile, openSharedTrail],
   );
 
   return (

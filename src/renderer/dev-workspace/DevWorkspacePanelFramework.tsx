@@ -550,6 +550,7 @@ const FileCityTrailTabContent: React.FC = () => {
         events={events}
         onCloseTrail={handleCloseTrail}
         onShareTrail={handleShareTrail}
+        briefSide="leading"
       />
       {shareModalTrail && repositoryPath && (
         <TrailShareModal

@@ -37,6 +37,22 @@ import type { TrailIndexEntry } from '../../shared/main-process-api-interfaces/F
 
 const BY_ID_DIR = 'by-id';
 const INDEX_FILENAME = '_index.json';
+
+/**
+ * Thrown by `save()` when a content edit targets a trail that has already
+ * been shared (its index entry carries `sharedAt`). Shared trails are kept
+ * locally but locked — re-authoring the id is rejected so the published
+ * snapshot stays the source of truth. The HTTP POST route maps this to a
+ * 409. Notes are unaffected: they go through `applyToPayload`, not `save`.
+ */
+export class TrailLockedError extends Error {
+  constructor(public readonly trailId: string) {
+    super(
+      `Trail ${trailId} is shared and locked; content edits are not allowed.`,
+    );
+    this.name = 'TrailLockedError';
+  }
+}
 const SUMMARY_PREVIEW_MAX = 200;
 const PER_REPO_CAP = 50;
 
@@ -124,6 +140,7 @@ const buildEntry = (
   sizeBytes: number,
   cachePath: string,
   derivedFrom: string | undefined,
+  shared: { sharedAt?: string; sharedUrl?: string } = {},
 ): IndexEntryV2 => ({
   id: payload.id,
   title: payload.title || 'Untitled trail',
@@ -139,6 +156,8 @@ const buildEntry = (
   sizeBytes,
   repositoryPath,
   derivedFrom,
+  sharedAt: shared.sharedAt,
+  sharedUrl: shared.sharedUrl,
   cachePath,
 });
 
@@ -245,6 +264,13 @@ export class TrailPersistence {
     const existingIdx = idx.entries.findIndex((e) => e.id === id);
     const existing = existingIdx >= 0 ? idx.entries[existingIdx] : null;
 
+    // Shared trails are locked: the published snapshot is the source of
+    // truth, so reject content re-authoring of an already-shared id. Notes
+    // are exempt — they flow through `applyToPayload`, not here.
+    if (existing?.sharedAt) {
+      throw new TrailLockedError(id);
+    }
+
     // Lift notes from the existing payload on disk so external re-pushes
     // (which never carry `notes` — validation strips them) don't wipe
     // user-authored notes. Renderer note mutations go through
@@ -285,6 +311,9 @@ export class TrailPersistence {
       Buffer.byteLength(serialized, 'utf8'),
       cachePath,
       derivedFrom,
+      // Unshared by construction: a shared `existing` would have thrown
+      // above, so these are always undefined here. Passed for symmetry.
+      { sharedAt: existing?.sharedAt, sharedUrl: existing?.sharedUrl },
     );
     if (existingIdx >= 0) {
       idx.entries[existingIdx] = entry;
@@ -336,6 +365,9 @@ export class TrailPersistence {
       Buffer.byteLength(serialized, 'utf8'),
       cachePath,
       existing.derivedFrom,
+      // Preserve the shared marker: notes are allowed on a locked trail
+      // and must not silently un-share it.
+      { sharedAt: existing.sharedAt, sharedUrl: existing.sharedUrl },
     );
     await this.persistIndex();
     return next;
@@ -355,6 +387,26 @@ export class TrailPersistence {
     const payload = await this.readPayload(entry.cachePath);
     if (!payload) return null;
     return { payload, repositoryPath: entry.repositoryPath };
+  }
+
+  /**
+   * Stamp an index entry as shared & locked after a successful web-ade
+   * publish. Touches the index only — the payload file is unchanged. No-op
+   * (returns null) if the id is unknown, e.g. the trail was evicted or
+   * deleted between publish and stamp. Returns the entry's host-private
+   * repositoryPath so callers can scope a LIBRARY_CHANGED broadcast.
+   */
+  async markShared(
+    id: string,
+    sharedUrl: string,
+  ): Promise<{ repositoryPath?: string } | null> {
+    const idx = await this.getIndex();
+    const entry = idx.entries.find((e) => e.id === id);
+    if (!entry) return null;
+    entry.sharedAt = new Date().toISOString();
+    entry.sharedUrl = sharedUrl;
+    await this.persistIndex();
+    return { repositoryPath: entry.repositoryPath };
   }
 
   async deleteById(

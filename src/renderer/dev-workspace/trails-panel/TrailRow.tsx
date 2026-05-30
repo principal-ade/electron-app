@@ -50,6 +50,9 @@ export const TrailRow: React.FC<TrailRowProps> = ({
 }) => {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
+  // `entry.sharedAt` is the durable lock marker (survives reload); `shareUrl`
+  // covers the just-shared-this-session window before the list refresh lands.
+  const isShared = Boolean(entry.sharedAt) || Boolean(shareUrl);
 
   // Always re-activate. Re-activating a current active trail is a cheap
   // idempotent re-broadcast that surfaces the trail tab in case the user
@@ -100,7 +103,7 @@ export const TrailRow: React.FC<TrailRowProps> = ({
     },
     [entry.id, title],
   );
-  const shareButtonTitle = shareUrl
+  const shareButtonTitle = isShared
     ? 'Open share dialog (copy link)'
     : 'Share to web-ade';
   const shareButtonColor = theme.colors.primary;
@@ -187,9 +190,9 @@ export const TrailRow: React.FC<TrailRowProps> = ({
           >
             {title}
           </span>
-          {shareUrl && (
+          {isShared && (
             <span
-              title="Shared to web-ade this session"
+              title="Shared to web-ade — locked"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -282,7 +285,7 @@ export const TrailRow: React.FC<TrailRowProps> = ({
                   background: 'transparent',
                   color: shareButtonColor,
                   cursor: 'pointer',
-                  opacity: hovered || isActive || shareUrl ? 1 : 0,
+                  opacity: hovered || isActive || isShared ? 1 : 0,
                   transition: 'opacity 120ms, background 120ms, color 120ms',
                   fontFamily: theme.fonts.body,
                   fontSize: theme.fontSizes[1],

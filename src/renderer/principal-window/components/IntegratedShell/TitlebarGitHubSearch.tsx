@@ -12,14 +12,35 @@ import {
   payloadFromLocalEntry,
 } from '../../../events/feedRepositorySelected';
 
-type ParsedGitHubUrl =
+type ParsedTitlebarUrl =
   | { type: 'user'; username: string }
-  | { type: 'repo'; owner: string; name: string };
+  | { type: 'repo'; owner: string; name: string }
+  | { type: 'trail'; id: string };
 
-const parseGitHubUrl = (input: string): ParsedGitHubUrl | null => {
+// web-ade shares trails as flat `…/trail/{uuid}` links. Match the
+// production host plus any `*.principal-ade.com` (covers preview/dev
+// origins) and localhost for local web-ade.
+const isTrailHost = (hostname: string): boolean =>
+  hostname === 'app.principal-ade.com' ||
+  hostname.endsWith('.principal-ade.com') ||
+  hostname === 'localhost' ||
+  hostname === '127.0.0.1';
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const parseTitlebarUrl = (input: string): ParsedTitlebarUrl | null => {
+  const trimmed = input.trim();
+  // A bare trail UUID (no surrounding URL) is a valid paste target too.
+  if (UUID_RE.test(trimmed)) return { type: 'trail', id: trimmed };
   try {
-    const urlStr = input.trim().startsWith('http') ? input.trim() : `https://${input.trim()}`;
+    const urlStr = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
     const url = new URL(urlStr);
+    if (isTrailHost(url.hostname)) {
+      const match = url.pathname.match(/\/trail\/([0-9a-f-]+)/i);
+      if (match && UUID_RE.test(match[1])) return { type: 'trail', id: match[1] };
+      return null;
+    }
     if (url.hostname !== 'github.com') return null;
     const parts = url.pathname.split('/').filter(Boolean);
     if (parts.length === 1) return { type: 'user', username: parts[0] };
@@ -40,7 +61,7 @@ const formatStars = (n?: number): string => {
 export const TitlebarGitHubSearch: React.FC = () => {
   const { theme } = useTheme();
   const { events } = usePrincipalEvents();
-  const { openProjectInfo, openUserProfile } = useFeedTabs();
+  const { openProjectInfo, openUserProfile, openSharedTrail } = useFeedTabs();
   const [query, setQuery] = useState('');
   const [repoResults, setRepoResults] = useState<GitHubRepository[]>([]);
   const [userResults, setUserResults] = useState<GitHubUser[]>([]);
@@ -204,14 +225,38 @@ export const TitlebarGitHubSearch: React.FC = () => {
     [events, openProjectInfo, clearSearch],
   );
 
+  const openTrailById = useCallback(
+    (id: string) => {
+      // A pasted trail URL is someone else's published trail — not in the
+      // local library. Open it as a feed tab (next to repo profiles), which
+      // self-fetches the payload and conveys its remote-ness. Switch to the
+      // feed view first; openSharedTrail is called directly on the context
+      // (not via principal events) for the same reason the repo openers are —
+      // FeedView may not be mounted yet to receive an event.
+      events.emit({
+        type: 'panel:switch',
+        source: 'titlebar-search',
+        timestamp: Date.now(),
+        payload: { view: 'feed' },
+      });
+      openSharedTrail(id);
+      clearSearch();
+    },
+    [events, openSharedTrail, clearSearch],
+  );
+
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLInputElement>) => {
       const pasted = e.clipboardData.getData('text');
-      const parsed = parseGitHubUrl(pasted);
+      const parsed = parseTitlebarUrl(pasted);
       if (!parsed) return;
       e.preventDefault();
       const entity =
-        parsed.type === 'user' ? `@${parsed.username}` : `${parsed.owner}/${parsed.name}`;
+        parsed.type === 'user'
+          ? `@${parsed.username}`
+          : parsed.type === 'repo'
+            ? `${parsed.owner}/${parsed.name}`
+            : 'trail';
       const message = `Opening ${entity}`;
       const duration = message.length * 30 + 250;
       setFlashLabel(message);
@@ -219,12 +264,14 @@ export const TitlebarGitHubSearch: React.FC = () => {
         setFlashLabel(null);
         if (parsed.type === 'user') {
           openUserByUsername(parsed.username);
-        } else {
+        } else if (parsed.type === 'repo') {
           openRepoByOwnerName(parsed.owner, parsed.name);
+        } else {
+          openTrailById(parsed.id);
         }
       }, duration);
     },
-    [openUserByUsername, openRepoByOwnerName],
+    [openUserByUsername, openRepoByOwnerName, openTrailById],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

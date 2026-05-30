@@ -12,13 +12,13 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, Users, Activity, FolderGit2, User, Building2, BookMarked, Radio, Wrench } from 'lucide-react';
+import { GitCommit, Users, Activity, FolderGit2, User, Building2, BookMarked, Radio, Wrench, Route, ExternalLink } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
   type ConfigurablePanelLayoutHandle,
 } from '@principal-ade/panel-layouts';
-import type { PanelEventEmitter, RepositoryMetadata } from '@principal-ade/panel-framework-core';
+import type { PanelEventEmitter, RepositoryMetadata, DataSlice } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import {
   extractPurlFromRemoteUrl,
@@ -67,7 +67,12 @@ import { GithubService } from '../main-process-api/GithubService';
 import { GitService } from '../main-process-api/GitService';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import { ApiProxyService } from '../main-process-api/ApiProxyService';
-import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
+import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+import type { HighlightLayer } from '@principal-ai/file-city-react';
+import type { TrailPayload } from '@industry-theme/file-city-panel';
+import { FileCityTrailPanel } from '../dev-workspace/file-city-trail-panel';
+import { TrailShareService } from '../services/TrailShareService';
+import { TrailShareError } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { SecureAuthService } from '../services/SecureAuthService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
@@ -195,9 +200,22 @@ export interface WatchedRepoActivityTab extends BaseTab {
 }
 
 /**
+ * Shared trail tab — a trail published to web-ade, opened from a pasted
+ * `…/trail/{id}` URL. NOT in the local trail library, so it lives in the
+ * feed tabs (next to repo profiles) rather than TrailsView. Carries only the
+ * id; the panel self-fetches the payload (and resolves owner/repo).
+ */
+export interface SharedTrailTab extends BaseTab {
+  contentType: 'shared-trail';
+  trailId: string;
+  owner?: string;
+  repo?: string;
+}
+
+/**
  * Union type of all supported tab types in FeedView
  */
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | WatchedOwnerActivityTab | WatchedRepoActivityTab;
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | WatchedOwnerActivityTab | WatchedRepoActivityTab | SharedTrailTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -599,6 +617,249 @@ const RepositoryProfileTabContent: React.FC<{
         actions={projectActions}
         events={events}
       />
+    </div>
+  );
+};
+
+/**
+ * Build a File City `FileTree` from a repo's latest GitHub commit. Used when
+ * a shared trail's repo isn't cloned locally — mirrors the `getRemoteFileTree`
+ * action RepositoryProfilePanel uses for uncloned profiles.
+ */
+async function fetchRemoteFileTree(
+  owner: string,
+  name: string,
+): Promise<FileTree | null> {
+  try {
+    const latestCommit = await GithubService.getLatestCommit(owner, name);
+    if (!latestCommit) return null;
+    const filePaths = await GithubService.getFileTreeAtCommit(
+      owner,
+      name,
+      latestCommit.sha,
+    );
+    return new PathsFileTreeBuilder().build({ files: filePaths, rootPath: name });
+  } catch (error) {
+    console.error('[SharedTrailTab] Failed to fetch remote file tree:', error);
+    return null;
+  }
+}
+
+/**
+ * Wrapper for the shared-trail tab. Self-fetches the payload by id, resolves
+ * a local clone (for the on-disk file tree) or falls back to the GitHub tree
+ * when uncloned, and mounts `FileCityTrailPanel` with the same context shape
+ * TrailsView's `RecentTrailPreviewPane` uses. A banner marks it as remote so
+ * it never reads as one of your local trails.
+ */
+const SharedTrailTabContent: React.FC<{
+  trailId: string;
+  events: PanelEventEmitter;
+  repositories: AlexandriaEntry[];
+}> = ({ trailId, events, repositories }) => {
+  const { theme } = useTheme();
+  const [payload, setPayload] = React.useState<TrailPayload | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [origin, setOrigin] = React.useState<{
+    owner: string;
+    repo: string;
+  } | null>(null);
+  const [repositoryPath, setRepositoryPath] = React.useState<string | null>(
+    null,
+  );
+  const [fileTree, setFileTree] = React.useState<FileTree | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    void (async () => {
+      try {
+        const result = await TrailShareService.fetchSharedById(trailId);
+        if (cancelled) return;
+        setPayload(result.payload);
+        setOrigin({ owner: result.owner, repo: result.repo });
+
+        // Render the city against on-disk files when the repo is cloned;
+        // otherwise build the tree from GitHub so an uncloned shared trail
+        // still gets a city (the deferred "open in browser" affordance sits
+        // in the banner regardless).
+        const localPath = findClonedGithubEntry(
+          repositories,
+          result.owner,
+          result.repo,
+        )?.path;
+        if (cancelled) return;
+        setRepositoryPath(localPath ?? null);
+
+        let tree: FileTree | null = null;
+        if (localPath) {
+          tree = await RepositoryMonitoringService.getFileTree(localPath);
+        }
+        if (!tree) {
+          tree = await fetchRemoteFileTree(result.owner, result.repo);
+        }
+        if (cancelled) return;
+        setFileTree(tree);
+      } catch (err) {
+        if (cancelled) return;
+        setError(
+          err instanceof TrailShareError
+            ? err.message
+            : 'Could not load this shared trail.',
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [trailId, repositories]);
+
+  const repoName = origin?.repo ?? null;
+  const panelContext = React.useMemo(
+    () => ({
+      currentScope: {
+        type: 'repository' as const,
+        ...(repositoryPath
+          ? { repository: { path: repositoryPath, name: repoName ?? '' } }
+          : {}),
+      },
+      refresh: async () => {},
+      adapters: {},
+      repository: repositoryPath
+        ? { path: repositoryPath, name: repoName, owner: origin?.owner ?? null }
+        : null,
+      fileTree: {
+        scope: 'repository' as const,
+        name: 'fileTree',
+        data: fileTree,
+        loading: false,
+        error: null,
+        refresh: async () => {},
+      } as DataSlice<FileTree | null>,
+      trail: {
+        scope: 'repository' as const,
+        name: 'trail',
+        data: payload,
+        loading,
+        error: null,
+        refresh: async () => {},
+      } as DataSlice<TrailPayload | null>,
+      highlightLayers: {
+        scope: 'repository' as const,
+        name: 'highlightLayers',
+        data: null,
+        loading: false,
+        error: null,
+        refresh: async () => {},
+      } as DataSlice<HighlightLayer[] | null>,
+    }),
+    [repositoryPath, repoName, origin, fileTree, payload, loading],
+  );
+
+  const browserUrl = `https://app.principal-ade.com/trail/${trailId}`;
+
+  return (
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Remote/shared banner — this is the load-bearing cue that the trail
+          is published on web-ade, not one of your local library trails. */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '6px 12px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.backgroundSecondary,
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[0],
+          color: theme.colors.textSecondary,
+          flexShrink: 0,
+        }}
+      >
+        <Route size={13} />
+        <span style={{ fontWeight: 600, color: theme.colors.text }}>
+          Shared trail
+        </span>
+        {origin && (
+          <span>
+            · {origin.owner}/{origin.repo}
+          </span>
+        )}
+        {origin && !repositoryPath && (
+          <span style={{ opacity: 0.8 }}>· not cloned locally</span>
+        )}
+        <a
+          href={browserUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            marginLeft: 'auto',
+            color: theme.colors.primary,
+            textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          Open in browser <ExternalLink size={12} />
+        </a>
+      </div>
+      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+        {error ? (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 24,
+              textAlign: 'center',
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+            }}
+          >
+            {error}
+          </div>
+        ) : (
+          <FileCityTrailPanel
+            key={`shared-trail:${trailId}`}
+            context={panelContext}
+            actions={{}}
+            events={events}
+          />
+        )}
+        {!error && loading && !payload && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              backgroundColor: `color-mix(in srgb, ${theme.colors.background} 70%, transparent)`,
+              pointerEvents: 'none',
+            }}
+          >
+            Loading shared trail…
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -1701,6 +1962,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       case 'watched-owner-activity':
       case 'watched-repo-activity':
         return <Radio size={14} />;
+      case 'shared-trail':
+        return <Route size={14} />;
       default:
         return null;
     }
@@ -1809,6 +2072,17 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               source={{ kind: 'repo', owner: repoTab.owner, repo: repoTab.repo }}
               events={eventsRef.current}
               actions={watchedActivityPanelActions}
+            />
+          );
+        }
+        case 'shared-trail': {
+          const trailTab = tab as SharedTrailTab;
+          return (
+            <SharedTrailTabContent
+              key={trailTab.id}
+              trailId={trailTab.trailId}
+              events={eventsRef.current}
+              repositories={repositories}
             />
           );
         }

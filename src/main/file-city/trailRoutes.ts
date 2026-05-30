@@ -23,6 +23,7 @@ import {
   sendToRepoWindows,
   sendToTopicWindows,
 } from './trailStore';
+import { TrailLockedError } from './trailPersistence';
 import type { TrailShowInPrincipalEnvelope } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { fetchSharedTrail } from './trailShare';
 import {
@@ -444,6 +445,13 @@ export function registerTrailRoutes(
         windowOpened,
       });
     } catch (err) {
+      if (err instanceof TrailLockedError) {
+        // Shared trails are locked; re-authoring the id is not allowed.
+        // 409 Conflict so callers (agents/skills re-POSTing) can tell this
+        // apart from a transient 500 and stop retrying.
+        res.status(409).json({ success: false, error: err.message });
+        return;
+      }
       console.error('[trailRoutes] set failed', err);
       res.status(500).json({
         success: false,

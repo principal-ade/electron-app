@@ -45,6 +45,7 @@ export enum FileCityTrailEvent {
   SHARE = 'file-city:trail:share',
   LIST_SHARED = 'file-city:trail:list-shared',
   FETCH_SHARED = 'file-city:trail:fetch-shared',
+  FETCH_SHARED_BY_ID = 'file-city:trail:fetch-shared-by-id',
   SET_TRANSIENT = 'file-city:trail:set-transient',
   SHOW_IN_PRINCIPAL = 'file-city:trail:show-in-principal',
 }
@@ -95,6 +96,20 @@ export interface TrailIndexEntry extends BaseTrailIndexEntry {
    * the payload. `undefined` on legacy entries; treat as 0 (unverified).
    */
   signOffCount?: number;
+  /**
+   * ISO timestamp the trail was published to web-ade. Its presence marks
+   * the trail as "shared & locked": the local copy is retained but content
+   * edits (re-POSTs through `save`) are rejected. `undefined` means the
+   * trail is a local draft that can still be edited. Host-private — not
+   * part of the portable payload.
+   */
+  sharedAt?: string;
+  /**
+   * Public web-ade URL for the shared trail, captured at publish time.
+   * Lets the row render a "copy link" affordance after reload without the
+   * ephemeral renderer-session share map. Set iff `sharedAt` is set.
+   */
+  sharedUrl?: string;
 }
 
 /**
@@ -122,6 +137,20 @@ export interface TrailListSharedResult {
 export interface FileCityTrailFetchSharedResult {
   entry: SharedTrailIndexEntry;
   payload: TrailPayload;
+}
+
+/**
+ * Result of a by-id shared-trail fetch. Unlike `fetchShared`, the caller
+ * supplies only the trail id — web-ade resolves the owning `{owner, repo}`
+ * server-side (from its id→repo pointer) and gates on the viewer's GitHub
+ * repo access. The owner/repo are echoed back so the renderer can resolve a
+ * local clone (or, when absent, fall back to opening the trail in a browser).
+ */
+export interface FileCityTrailFetchSharedByIdResult {
+  owner: string;
+  repo: string;
+  payload: TrailPayload;
+  entry?: SharedTrailIndexEntry;
 }
 
 export type TrailShareErrorCode =
@@ -315,6 +344,14 @@ export interface FileCityTrailAPI {
     repo: string,
     id: string,
   ) => Promise<FileCityTrailFetchSharedResult>;
+
+  /**
+   * Hydrate a shared trail by id alone — no owner/repo required. web-ade
+   * resolves the owning repo server-side and gates on GitHub access.
+   * Used by the titlebar to open a pasted `…/trail/{id}` URL. Throws on
+   * 404 / no-access.
+   */
+  fetchSharedById: (id: string) => Promise<FileCityTrailFetchSharedByIdResult>;
 
   /**
    * Push a payload to renderer trail panels for a specific repo via
