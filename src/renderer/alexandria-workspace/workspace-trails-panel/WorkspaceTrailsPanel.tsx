@@ -1,6 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { AlertCircle, Search, X } from 'lucide-react';
+import { AlertCircle, FileText, Search, X } from 'lucide-react';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
 import { TrailLibraryService } from '../../services/TrailLibraryService';
@@ -22,24 +28,24 @@ export interface WorkspaceTrailsPanelProps {
    * Fires when a trail row is left-clicked. The layout opens (or focuses) the
    * singleton `file-city-trail` tab and loads this payload into it.
    */
-  onTrailActivate?: (
-    payload: TrailPayload,
-    repositoryPath?: string,
-  ) => void;
+  onTrailActivate?: (payload: TrailPayload, repositoryPath?: string) => void;
   /**
    * Fires when a trail row is right-clicked (two-finger click). The layout
    * force-opens the singleton file-city-trail tab in the middle, bypassing
    * the terminal-routing fallback that `onTrailActivate` applies.
    */
-  onTrailOpenInTab?: (
-    payload: TrailPayload,
-    repositoryPath?: string,
-  ) => void;
+  onTrailOpenInTab?: (payload: TrailPayload, repositoryPath?: string) => void;
   /**
    * Id of the trail currently loaded in the layout (middle tab or right
    * panel). The matching row renders with a selected style.
    */
   activeTrailId?: string | null;
+  /**
+   * Opens the topic's markdown description in the MDX editor tab. The header
+   * "edit description" button only renders when this is provided and the
+   * workspace actually has a topic.
+   */
+  onEditTopicDescription?: () => void;
 }
 
 const repoBasename = (repositoryPath?: string): string | null => {
@@ -56,6 +62,7 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
   onTrailActivate,
   onTrailOpenInTab,
   activeTrailId,
+  onEditTopicDescription,
 }) => {
   const { theme } = useTheme();
   // v1 single-topic invariant: every workspace has exactly one topic. The
@@ -158,8 +165,8 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
       if (q) {
         return Boolean(
           e.title?.toLowerCase().includes(q) ||
-            e.purpose?.toLowerCase().includes(q) ||
-            e.repositoryPath?.toLowerCase().includes(q),
+          e.purpose?.toLowerCase().includes(q) ||
+          e.repositoryPath?.toLowerCase().includes(q),
         );
       }
       return showAll || topicTrailIds.has(e.id);
@@ -261,7 +268,10 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
           return next;
         });
       } catch (err) {
-        console.error('[WorkspaceTrailsPanel] removeTrailFromTopic failed', err);
+        console.error(
+          '[WorkspaceTrailsPanel] removeTrailFromTopic failed',
+          err,
+        );
       } finally {
         setBusyTrailId(null);
       }
@@ -310,12 +320,17 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
     >
       <div
         style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
           padding: '10px 16px',
           borderBottom: `1px solid ${theme.colors.border}`,
         }}
       >
         <div
           style={{
+            flex: 1,
+            minWidth: 0,
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
@@ -360,6 +375,28 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
             </button>
           )}
         </div>
+        {onEditTopicDescription && topicId && (
+          <button
+            type="button"
+            onClick={onEditTopicDescription}
+            aria-label="Edit description"
+            title="Edit description"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              padding: '6px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              background: theme.colors.backgroundSecondary,
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+            }}
+          >
+            <FileText size={14} />
+          </button>
+        )}
       </div>
 
       <div
@@ -380,7 +417,10 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
         )}
         {error && <ErrorRow theme={theme} message={error} />}
 
-        {loading && <Loading theme={theme} />}
+        {/* Spinner only on the first load (nothing to show yet). A background
+            refresh — e.g. the topic-change fired by saving the description —
+            keeps the existing list on screen instead of blanking to a spinner. */}
+        {loading && entries.length === 0 && <Loading theme={theme} />}
         {!loading && totalMatched === 0 && (
           <EmptyHint
             theme={theme}
@@ -393,45 +433,47 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
             }
           />
         )}
-        {!loading &&
+        {totalMatched > 0 &&
           groupedByRepo.map((group) => {
             const owner = group.repositoryPath
               ? ownerByPath.get(group.repositoryPath)
               : undefined;
             return (
-            <Section
-              key={group.key}
-              theme={theme}
-              title={group.label}
-              count={group.entries.length}
-              owner={owner}
-            >
-              {group.entries.map((entry) => {
-                const inWs = topicTrailIds.has(entry.id);
-                return (
-                  <TrailRow
-                    key={entry.id}
-                    entry={entry}
-                    inWorkspace={inWs}
-                    busy={busyTrailId === entry.id}
-                    isActive={activeTrailId === entry.id}
-                    onAction={() =>
-                      inWs ? handleRemove(entry.id) : handleAdd(entry.id)
-                    }
-                    onDelete={() => handleDelete(entry.id)}
-                    onActivate={
-                      onTrailActivate ? () => handleActivate(entry.id) : undefined
-                    }
-                    onOpenInTab={
-                      onTrailOpenInTab
-                        ? () => handleOpenInTab(entry.id)
-                        : undefined
-                    }
-                    disabled={!topicId}
-                  />
-                );
-              })}
-            </Section>
+              <Section
+                key={group.key}
+                theme={theme}
+                title={group.label}
+                count={group.entries.length}
+                owner={owner}
+              >
+                {group.entries.map((entry) => {
+                  const inWs = topicTrailIds.has(entry.id);
+                  return (
+                    <TrailRow
+                      key={entry.id}
+                      entry={entry}
+                      inWorkspace={inWs}
+                      busy={busyTrailId === entry.id}
+                      isActive={activeTrailId === entry.id}
+                      onAction={() =>
+                        inWs ? handleRemove(entry.id) : handleAdd(entry.id)
+                      }
+                      onDelete={() => handleDelete(entry.id)}
+                      onActivate={
+                        onTrailActivate
+                          ? () => handleActivate(entry.id)
+                          : undefined
+                      }
+                      onOpenInTab={
+                        onTrailOpenInTab
+                          ? () => handleOpenInTab(entry.id)
+                          : undefined
+                      }
+                      disabled={!topicId}
+                    />
+                  );
+                })}
+              </Section>
             );
           })}
       </div>
@@ -476,7 +518,9 @@ const TrailRow: React.FC<TrailRowProps> = ({
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
-  const actionLabel = inWorkspace ? 'Remove from workspace' : 'Add to workspace';
+  const actionLabel = inWorkspace
+    ? 'Remove from workspace'
+    : 'Add to workspace';
   const membershipColor = theme.colors.primary;
   const deleteColor = theme.colors.error ?? '#e5484d';
 

@@ -17,4 +17,21 @@ export interface FileCityTrailTab {
   closable?: boolean;
 }
 
-export type AlexandriaTab = TerminalTab | FileCityTrailTab;
+/**
+ * Edits the workspace topic's `description` (an in-memory markdown string) in
+ * the file-backed `MDXEditorPanel`. `filePath` is a synthetic sentinel
+ * (`topic://<id>/description.md`) that the panel's injected file actions route
+ * to `TopicService` instead of disk — see `topicDescriptionSentinel.ts`.
+ */
+export interface TopicDescriptionTab {
+  id: string;
+  label: string;
+  contentType: 'topic-description';
+  filePath: string;
+  closable?: boolean;
+}
+
+export type AlexandriaTab =
+  | TerminalTab
+  | FileCityTrailTab
+  | TopicDescriptionTab;

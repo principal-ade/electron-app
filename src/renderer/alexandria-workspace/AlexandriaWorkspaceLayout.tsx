@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import {
@@ -16,18 +22,28 @@ import {
 } from '../contexts/TerminalContext';
 import { AgentHighlightProvider } from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
-import {
-  LocalProjectsPanel,
-} from '@industry-theme/alexandria-panels';
+import { LocalProjectsPanel } from '@industry-theme/alexandria-panels';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { localhostProcessesPanels, RecentRepositoriesPanel } from '../panels';
-import { EventBusPanel, AgentToolsPanel } from '@industry-theme/agent-driven-ui-panels';
+import {
+  EventBusPanel,
+  AgentToolsPanel,
+} from '@industry-theme/agent-driven-ui-panels';
 import { MarkdownPanel } from '../panels/markdown-panel';
-import { StoryboardListPanel, CanvasEditorPanel } from '@industry-theme/principal-view-panels';
+import {
+  StoryboardListPanel,
+  CanvasEditorPanel,
+} from '@industry-theme/principal-view-panels';
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
 import { panels as agentPanels } from '@industry-theme/agent-panels'; // Keep as array - multiple panels with different IDs
-import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/github-panels';
-import { GitChangesPanel, PackageCompositionPanel } from '@industry-theme/repository-composition-panels';
+import {
+  GitHubIssuesPanel,
+  GitHubIssueDetailPanel,
+} from '@industry-theme/github-panels';
+import {
+  GitChangesPanel,
+  PackageCompositionPanel,
+} from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { TerminalService } from '../main-process-api/TerminalService';
@@ -51,7 +67,21 @@ import {
 } from '../components/Titlebar/BriefAgentButton';
 import { terminalClient } from '../tipc/terminalClient';
 import { FileCityTrailTabContent } from './file-city-trail-tab/FileCityTrailTabContent';
-import type { AlexandriaTab, FileCityTrailTab } from './tab-types';
+import {
+  MDXEditorPanel,
+  type MDXEditorPanelActions,
+  type MDXEditorPanelProps,
+} from '@industry-theme/file-editing-panels';
+import {
+  buildTopicDescriptionPath,
+  readTopicDescription,
+  writeTopicDescription,
+} from './topic-description-tab/topicDescriptionSentinel';
+import type {
+  AlexandriaTab,
+  FileCityTrailTab,
+  TopicDescriptionTab,
+} from './tab-types';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
 
 type PanelDefinition = {
@@ -148,7 +178,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
 }) => {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
-  const { context: terminalCtx, actions: terminalActions } = useTerminalProvider();
+  const { context: terminalCtx, actions: terminalActions } =
+    useTerminalProvider();
   const [showAllTerminals, setShowAllTerminals] = useState(false);
 
   // Imperative focus request for the TabbedTerminalPanel — set when we want
@@ -215,7 +246,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       const control: PanelControlHandle = {
         collapseLeft: () => {
           panelLayoutRef.current?.collapsePanel('left');
-          collapsedStateRef.current = { ...collapsedStateRef.current, left: true };
+          collapsedStateRef.current = {
+            ...collapsedStateRef.current,
+            left: true,
+          };
           onCollapsedChangeRef.current(collapsedStateRef.current);
         },
         expandLeft: () => {
@@ -229,12 +263,18 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               right: currentLayout.right,
             });
           }
-          collapsedStateRef.current = { ...collapsedStateRef.current, left: false };
+          collapsedStateRef.current = {
+            ...collapsedStateRef.current,
+            left: false,
+          };
           onCollapsedChangeRef.current(collapsedStateRef.current);
         },
         collapseRight: () => {
           panelLayoutRef.current?.collapsePanel('right');
-          collapsedStateRef.current = { ...collapsedStateRef.current, right: true };
+          collapsedStateRef.current = {
+            ...collapsedStateRef.current,
+            right: true,
+          };
           onCollapsedChangeRef.current(collapsedStateRef.current);
         },
         expandRight: () => {
@@ -248,7 +288,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               right: 25,
             });
           }
-          collapsedStateRef.current = { ...collapsedStateRef.current, right: false };
+          collapsedStateRef.current = {
+            ...collapsedStateRef.current,
+            right: false,
+          };
           onCollapsedChangeRef.current(collapsedStateRef.current);
         },
       };
@@ -351,6 +394,53 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     [activeTrailPayload?.id, handleCloseActiveTrail],
   );
 
+  // Open (or focus) the singleton topic-description editor tab. The tab carries
+  // a sentinel path the MDXEditorPanel reads/writes through `topicEditorActions`
+  // below, so editing round-trips `topic.description` via TopicService — no file
+  // on disk. No-ops when the workspace has no topic.
+  const handleOpenTopicDescription = useCallback(() => {
+    const topicId = workspace.topicIds?.[0];
+    if (!topicId) return;
+    const filePath = buildTopicDescriptionPath(topicId);
+    setTabs((prev) => {
+      if (prev.some((t) => t.contentType === 'topic-description')) return prev;
+      const newTab: TopicDescriptionTab = {
+        id: 'topic-description',
+        label: 'Description',
+        contentType: 'topic-description',
+        filePath,
+        closable: true,
+      };
+      return [...prev, newTab];
+    });
+    setFocusTabId('topic-description');
+  }, [workspace.topicIds]);
+
+  // File actions handed to the topic-description MDXEditorPanel. Sentinel paths
+  // route to TopicService; anything else falls back to the host's real file
+  // reader (the panel never writes non-sentinel paths in this tab).
+  const topicEditorActions = useMemo<MDXEditorPanelActions>(
+    () => ({
+      ...actions,
+      readFile: (path: string) => readTopicDescription(path),
+      writeFile: (path: string, content: string) =>
+        writeTopicDescription(path, content),
+    }),
+    [actions],
+  );
+
+  // `renderTabContent` is a dep of the `panels` memo, so it must stay
+  // identity-stable — otherwise every panel definition rebuilds on each
+  // render. `context` (and the derived `topicEditorActions`) change identity
+  // constantly (active-file/git slices churn on every keystroke and save), so
+  // we read them through refs instead of listing them as callback deps. This
+  // mirrors dev-workspace's renderTabContent. The MDX panel doesn't need live
+  // context — it loads via `filePath`/`readFile` and manages its own buffer.
+  const contextRef = useRef(context);
+  contextRef.current = context;
+  const topicEditorActionsRef = useRef(topicEditorActions);
+  topicEditorActionsRef.current = topicEditorActions;
+
   // Left-click on a trail: if any terminal is live in this workspace, the
   // middle slot is "in use" — route the trail into the right panel instead so
   // the user doesn't lose their terminal context. Otherwise open (or focus)
@@ -386,20 +476,14 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       const sameLength = nextCustom.length === prevCustom.length;
       const sameIds =
         sameLength &&
-        nextCustom.every((t) =>
-          prevCustom.some((p) => p.id === t.id),
-        );
+        nextCustom.every((t) => prevCustom.some((p) => p.id === t.id));
       if (sameIds) return prev;
       return nextCustom;
     });
   }, []);
 
   const renderTabContent = useCallback(
-    (
-      tab: AlexandriaTab,
-      _isActive?: boolean,
-      sessionId?: string | null,
-    ) => {
+    (tab: AlexandriaTab, _isActive?: boolean, sessionId?: string | null) => {
       if (tab.contentType === 'terminal') {
         if (sessionId) {
           tabSessionMapRef.current.set(tab.id, sessionId);
@@ -414,6 +498,28 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             repositoryPath={activeTrailRepoPath}
             events={events}
           />
+        );
+      }
+      if (tab.contentType === 'topic-description') {
+        return (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <MDXEditorPanel
+              context={contextRef.current as MDXEditorPanelProps['context']}
+              actions={topicEditorActionsRef.current}
+              events={events}
+              filePath={tab.filePath}
+              showCloseButton={false}
+            />
+          </div>
         );
       }
       // Terminal tabs: return null → TabbedTerminalPanel renders its default.
@@ -436,7 +542,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     [context, terminalCtx.terminalSessions, terminalCtx.terminalContext],
   );
 
-// State for remove from workspace modal
+  // State for remove from workspace modal
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [entryToRemove, setEntryToRemove] = useState<AlexandriaEntry | null>(
     null,
@@ -488,9 +594,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       // available yet (e.g. mount race) or its session has been destroyed.
       let target = undefined as (typeof sessions)[number] | undefined;
       if (activeTerminalTabId) {
-        const activeSessionId = tabSessionMapRef.current.get(
-          activeTerminalTabId,
-        );
+        const activeSessionId =
+          tabSessionMapRef.current.get(activeTerminalTabId);
         if (activeSessionId) {
           target = sessions.find((s) => s.id === activeSessionId);
         }
@@ -607,7 +712,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
 
         // Then move to default directory if requested
         if (moveToDefault) {
-          await WorkspaceService.moveRepositoryToDefaultDirectory(entryToRemove);
+          await WorkspaceService.moveRepositoryToDefaultDirectory(
+            entryToRemove,
+          );
         }
       } catch (error) {
         console.error(
@@ -748,10 +855,11 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           // a member. Clicking a project in the panel is now the canonical
           // way to add it — there's no longer a separate "Add" button.
           try {
-            const alreadyMember = await WorkspaceService.isRepositoryInWorkspace(
-              repository,
-              workspace.id,
-            );
+            const alreadyMember =
+              await WorkspaceService.isRepositoryInWorkspace(
+                repository,
+                workspace.id,
+              );
             if (!alreadyMember) {
               await WorkspaceService.addRepositoryToWorkspace(
                 repository,
@@ -803,7 +911,15 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     });
 
     return unsubscribe;
-  }, [events, onRepositorySelected, selectedRepository, terminalActions, terminalContext, workspace.id, context]);
+  }, [
+    events,
+    onRepositorySelected,
+    selectedRepository,
+    terminalActions,
+    terminalContext,
+    workspace.id,
+    context,
+  ]);
 
   // Listen for repository:opened events (for explicitly opening windows)
   useEffect(() => {
@@ -1073,7 +1189,13 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     });
 
     return unsubscribe;
-  }, [events, layout, onLayoutChange, onRepositorySelected, selectedRepository]);
+  }, [
+    events,
+    layout,
+    onLayoutChange,
+    onRepositorySelected,
+    selectedRepository,
+  ]);
 
   // Get panel components - using direct imports instead of array access
   // to avoid type inference issues with mixed desktop/web panels
@@ -1453,6 +1575,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               workspace={workspace}
               onTrailActivate={handleTrailActivate}
               onTrailOpenInTab={handleTrailOpenInTab}
+              onEditTopicDescription={handleOpenTopicDescription}
               activeTrailId={activeTrailPayload?.id ?? null}
             />
           </div>
@@ -2303,7 +2426,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         {showPanelSidebar && (
           <PanelIconSidebar
             currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
-            onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
+            onPanelChange={(panelId) =>
+              onLayoutChange({ ...layout, left: panelId })
+            }
             theme={theme}
             collapsed={collapsed.left}
             onExpand={handleLeftExpand}
@@ -2453,9 +2578,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
         terminalContext={terminalContext}
         repoName={selectedRepository?.name}
       >
-        <AgentHighlightProvider
-          repositoryPath={selectedRepository?.path || ''}
-        >
+        <AgentHighlightProvider repositoryPath={selectedRepository?.path || ''}>
           <AlexandriaWorkspaceLayoutContent
             workspace={workspace}
             selectedRepository={selectedRepository}
