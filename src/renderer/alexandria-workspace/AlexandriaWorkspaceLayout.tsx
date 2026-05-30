@@ -417,17 +417,31 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   }, [workspace.topicIds]);
 
   // File actions handed to the topic-description MDXEditorPanel. Sentinel paths
-  // route to TopicService; anything else falls back to the host's real file
-  // reader (the panel never writes non-sentinel paths in this tab).
-  const topicEditorActions = useMemo<MDXEditorPanelActions>(
-    () => ({
-      ...actions,
-      readFile: (path: string) => readTopicDescription(path),
-      writeFile: (path: string, content: string) =>
-        writeTopicDescription(path, content),
-    }),
-    [actions],
-  );
+  // route reads/writes to TopicService; everything else is delegated to the
+  // host's live actions.
+  //
+  // This object MUST keep a stable identity. MDXEditorPanel re-runs its
+  // file-load effect whenever its `actions` prop changes identity, and that
+  // effect flips on a "Loading file..." screen while it re-reads. The provider
+  // `actions` churns on every keystroke/save (active-file/git slices), so
+  // spreading it here — and depending on `[actions]` — made the panel reload
+  // and flash "Loading file..." after every Cmd+S. We read the live provider
+  // actions through a ref instead, so the memo can be built once.
+  const actionsRef = useRef(actions);
+  actionsRef.current = actions;
+  const topicEditorActions = useMemo<MDXEditorPanelActions>(() => {
+    const readFile = (path: string) => readTopicDescription(path);
+    const writeFile = (path: string, content: string) =>
+      writeTopicDescription(path, content);
+    return new Proxy({ readFile, writeFile } as MDXEditorPanelActions, {
+      get(target, prop, receiver) {
+        if (prop === 'readFile' || prop === 'writeFile') {
+          return Reflect.get(target, prop, receiver);
+        }
+        return actionsRef.current[prop as keyof typeof actionsRef.current];
+      },
+    });
+  }, []);
 
   // `renderTabContent` is a dep of the `panels` memo, so it must stay
   // identity-stable — otherwise every panel definition rebuilds on each
