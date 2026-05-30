@@ -44,6 +44,11 @@ interface RepositoryCardProps {
   repository: AlexandriaEntry;
   hasActiveTerminal: boolean;
   isMember: boolean;
+  /**
+   * True when the keyboard cursor (arrow-key navigation from the search input)
+   * is on this card. Renders a highlight and scrolls the card into view.
+   */
+  isSelected: boolean;
   homePath: string | null;
   onSelect: (repo: AlexandriaEntry) => void;
   onOpen: (repo: AlexandriaEntry) => void;
@@ -56,6 +61,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
   repository,
   hasActiveTerminal,
   isMember,
+  isSelected,
   homePath,
   onSelect,
   onOpen,
@@ -66,6 +72,17 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Keep the keyboard-highlighted card visible as the cursor moves through a
+  // list that overflows the scroll area.
+  useEffect(() => {
+    if (isSelected) cardRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [isSelected]);
+
+  // The arrow-key cursor and the hover state share the same emphasis so the
+  // highlight reads the same however the card was reached.
+  const emphasized = isHovered || isSelected;
 
   const owner = repository.github?.owner;
   const avatarUrl = owner
@@ -74,6 +91,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
 
   return (
     <div
+      ref={cardRef}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'copy';
@@ -87,9 +105,14 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
         padding: '12px',
         borderRadius: '6px',
         border: `1px solid ${
-          hasActiveTerminal ? theme.colors.primary : theme.colors.border
+          hasActiveTerminal || isSelected
+            ? theme.colors.primary
+            : theme.colors.border
         }`,
-        backgroundColor: isHovered
+        boxShadow: isSelected
+          ? `inset 0 0 0 1px ${theme.colors.primary}`
+          : undefined,
+        backgroundColor: emphasized
           ? theme.colors.background
           : theme.colors.backgroundSecondary,
         cursor: 'pointer',
@@ -144,7 +167,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
             aria-label="Terminal open"
           />
         )}
-        {isHovered && onOpenDocs && (
+        {emphasized && onOpenDocs && (
           <button
             type="button"
             onClick={(e) => {
@@ -178,7 +201,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
             <BookOpen size={14} />
           </button>
         )}
-        {isMember && isHovered && onRemove && (
+        {isMember && emphasized && onRemove && (
           <button
             type="button"
             onClick={(e) => {
@@ -212,7 +235,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
             <X size={14} />
           </button>
         )}
-        {!isMember && isHovered && onAdd && (
+        {!isMember && emphasized && onAdd && (
           <button
             type="button"
             onClick={(e) => {
@@ -307,6 +330,14 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
   const [homePath, setHomePath] = useState<string | null>(null);
   const { context: terminalCtx } = useTerminalProvider();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  // Keyboard navigation cursor, tracked by repository path rather than list
+  // index. The Projects data slices refresh in the background (new array
+  // identity, same contents), which would reset an index-based cursor on every
+  // refresh — making the highlight vanish after ~a second. Tracking the path
+  // and deriving the index each render keeps the selection stable across those
+  // refreshes; it clears only when the repo actually leaves the list. null
+  // means the search input itself is the active element (nothing highlighted).
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
   useEffect(() => {
     const onFocus = (e: Event) => {
@@ -442,6 +473,21 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
     });
   }, [repositories, searchPool, searchQuery, activeRepoPaths]);
 
+  // The cursor's position in the *current* list, recomputed each render from
+  // the tracked path. -1 when nothing is selected or the selected repo has
+  // dropped out of the results (filtered away / removed), which transparently
+  // clears the highlight without a reset effect fighting the data refresh.
+  const selectedIndex = selectedPath
+    ? filteredRepositories.findIndex((r) => r.path === selectedPath)
+    : -1;
+
+  // Typing a new query returns the cursor to the input so the next ArrowDown
+  // starts from the top. Background data refreshes don't touch searchQuery, so
+  // they no longer wipe an active selection.
+  useEffect(() => {
+    setSelectedPath(null);
+  }, [searchQuery]);
+
   // Event handlers
   const handleSelectRepository = useCallback(
     (repository: AlexandriaEntry) => {
@@ -513,6 +559,40 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
       );
     },
     [events]
+  );
+
+  // Arrow-key navigation while the search input holds focus. ArrowDown steps
+  // the cursor into (and through) the results; ArrowUp steps back, returning
+  // to the input (-1) past the first card. Enter selects the highlighted repo.
+  const handleSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      const list = filteredRepositories;
+      if (e.key === 'ArrowDown') {
+        if (list.length === 0) return;
+        e.preventDefault();
+        // From -1 (input) this lands on index 0; clamps at the last row.
+        const next = Math.min(selectedIndex + 1, list.length - 1);
+        setSelectedPath(list[next]?.path ?? null);
+      } else if (e.key === 'ArrowUp') {
+        if (list.length === 0) return;
+        e.preventDefault();
+        // Stepping up past the first row returns focus-flow to the input.
+        setSelectedPath(
+          selectedIndex <= 0 ? null : list[selectedIndex - 1]?.path ?? null,
+        );
+      } else if (e.key === 'Enter') {
+        if (selectedIndex < 0) return;
+        const repo = list[selectedIndex];
+        if (repo) {
+          e.preventDefault();
+          handleSelectRepository(repo);
+        }
+      } else if (e.key === 'Escape' && selectedIndex >= 0) {
+        e.preventDefault();
+        setSelectedPath(null);
+      }
+    },
+    [filteredRepositories, selectedIndex, handleSelectRepository],
   );
 
   const baseContainerStyle: React.CSSProperties = {
@@ -593,6 +673,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             placeholder={searchPlaceholder}
             style={{
               flex: 1,
@@ -674,6 +755,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
             repository={repository}
             hasActiveTerminal={activeRepoPaths.has(repository.path)}
             isMember={memberPaths.has(repository.path)}
+            isSelected={repository.path === selectedPath}
             homePath={homePath}
             onSelect={handleSelectRepository}
             onOpen={handleOpenRepository}

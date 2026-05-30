@@ -75,6 +75,11 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  // Keyboard navigation: index into the flattened result list. -1 means the
+  // search input itself is the active element (no row highlighted). Arrow keys
+  // pressed in the input move this down into the results; the input keeps DOM
+  // focus throughout, so the user can keep typing to refine the search.
+  const [selectedIndex, setSelectedIndex] = useState(-1);
 
   useEffect(() => {
     const onFocus = (e: Event) => {
@@ -216,6 +221,22 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
   }, [entries, topicTrailIds, searchQuery]);
   const totalMatched = groupedByRepo.reduce((n, g) => n + g.entries.length, 0);
 
+  // Flattened, render-order list of the matched entries. The keyboard cursor
+  // (`selectedIndex`) indexes into this so arrow keys traverse rows across
+  // repo sections in the same order they're displayed.
+  const flatEntries = useMemo(
+    () => groupedByRepo.flatMap((g) => g.entries),
+    [groupedByRepo],
+  );
+  const selectedId =
+    selectedIndex >= 0 ? flatEntries[selectedIndex]?.id ?? null : null;
+
+  // Any change to the result set resets the cursor back to the input so a
+  // stale highlight never points at the wrong (or a removed) row.
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [flatEntries]);
+
   const handleAdd = useCallback(
     async (trailId: string) => {
       if (!topicId) return;
@@ -305,6 +326,34 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
     [entries, refresh],
   );
 
+  // Arrow-key navigation while the search input holds focus. ArrowDown steps
+  // the cursor into (and through) the results; ArrowUp steps back, returning
+  // to the input (-1) past the first row. Enter opens the highlighted trail.
+  const handleSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'ArrowDown') {
+        if (flatEntries.length === 0) return;
+        e.preventDefault();
+        setSelectedIndex((i) => Math.min(i + 1, flatEntries.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        if (flatEntries.length === 0) return;
+        e.preventDefault();
+        setSelectedIndex((i) => (i <= 0 ? -1 : i - 1));
+      } else if (e.key === 'Enter') {
+        if (selectedIndex < 0) return;
+        const entry = flatEntries[selectedIndex];
+        if (entry && onTrailActivate) {
+          e.preventDefault();
+          handleActivate(entry.id);
+        }
+      } else if (e.key === 'Escape' && selectedIndex >= 0) {
+        e.preventDefault();
+        setSelectedIndex(-1);
+      }
+    },
+    [flatEntries, selectedIndex, onTrailActivate, handleActivate],
+  );
+
   return (
     <div
       style={{
@@ -346,6 +395,7 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             placeholder="Search all trails…"
             style={{
               flex: 1,
@@ -455,6 +505,7 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
                       inWorkspace={inWs}
                       busy={busyTrailId === entry.id}
                       isActive={activeTrailId === entry.id}
+                      isSelected={entry.id === selectedId}
                       onAction={() =>
                         inWs ? handleRemove(entry.id) : handleAdd(entry.id)
                       }
@@ -488,6 +539,11 @@ interface TrailRowProps {
   disabled: boolean;
   /** Renders selected styling when this row's trail is the active one. */
   isActive: boolean;
+  /**
+   * True when the keyboard cursor (arrow-key navigation from the search input)
+   * is on this row. Renders a highlight and scrolls the row into view.
+   */
+  isSelected: boolean;
   onAction: () => void;
   /** Permanently deletes the trail from this machine. */
   onDelete: () => void;
@@ -511,6 +567,7 @@ const TrailRow: React.FC<TrailRowProps> = ({
   busy,
   disabled,
   isActive,
+  isSelected,
   onAction,
   onDelete,
   onActivate,
@@ -518,6 +575,17 @@ const TrailRow: React.FC<TrailRowProps> = ({
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  // Keep the keyboard-highlighted row visible as the cursor moves through a
+  // list that overflows the scroll area.
+  useEffect(() => {
+    if (isSelected) rowRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [isSelected]);
+
+  // The arrow-key cursor and the hover state share the same emphasis so the
+  // highlight reads the same however the row was reached.
+  const emphasized = isHovered || isSelected;
   const actionLabel = inWorkspace
     ? 'Remove from workspace'
     : 'Add to workspace';
@@ -537,6 +605,7 @@ const TrailRow: React.FC<TrailRowProps> = ({
 
   return (
     <div
+      ref={rowRef}
       role={onActivate ? 'button' : undefined}
       tabIndex={onActivate ? 0 : undefined}
       draggable
@@ -570,14 +639,14 @@ const TrailRow: React.FC<TrailRowProps> = ({
         padding: '10px 12px',
         borderRadius: '8px',
         border: `1px solid ${
-          isActive ? theme.colors.primary : theme.colors.border
+          isActive || isSelected ? theme.colors.primary : theme.colors.border
         }`,
-        boxShadow: isActive
-          ? `inset 0 0 0 1px ${theme.colors.primary}`
-          : undefined,
-        background: isActive
-          ? theme.colors.background
-          : isHovered
+        boxShadow:
+          isActive || isSelected
+            ? `inset 0 0 0 1px ${theme.colors.primary}`
+            : undefined,
+        background:
+          isActive || emphasized
             ? theme.colors.background
             : theme.colors.backgroundSecondary,
         cursor: onActivate ? 'pointer' : 'default',
@@ -647,7 +716,7 @@ const TrailRow: React.FC<TrailRowProps> = ({
                 opacity:
                   busy || disabled
                     ? 0.5
-                    : isHovered || isActive || inWorkspace
+                    : emphasized || isActive || inWorkspace
                       ? 1
                       : 0,
                 transition: 'opacity 120ms, background 120ms, color 120ms',
@@ -683,7 +752,7 @@ const TrailRow: React.FC<TrailRowProps> = ({
                 background: 'transparent',
                 color: deleteColor,
                 cursor: busy ? 'not-allowed' : 'pointer',
-                opacity: busy ? 0.5 : isHovered || isActive ? 1 : 0,
+                opacity: busy ? 0.5 : emphasized || isActive ? 1 : 0,
                 transition: 'opacity 120ms, background 120ms, color 120ms',
                 fontFamily: theme.fonts.body,
                 fontSize: theme.fontSizes[1],
