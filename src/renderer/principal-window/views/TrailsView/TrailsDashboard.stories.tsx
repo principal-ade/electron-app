@@ -140,7 +140,7 @@ export const Populated: Story = {
       onSelectRepo={logSelect('onSelectRepo')}
       onSelectTopic={logSelect('onSelectTopic')}
       onCreateTopic={noop}
-      onViewAllTrails={noop}
+      onViewAllProjects={noop}
     />
   ),
 };
@@ -154,7 +154,7 @@ export const ReposNoTopics: Story = {
       onSelectRepo={logSelect('onSelectRepo')}
       onSelectTopic={logSelect('onSelectTopic')}
       onCreateTopic={noop}
-      onViewAllTrails={noop}
+      onViewAllProjects={noop}
     />
   ),
 };
@@ -168,7 +168,7 @@ export const Minimal: Story = {
       onSelectRepo={logSelect('onSelectRepo')}
       onSelectTopic={logSelect('onSelectTopic')}
       onCreateTopic={noop}
-      onViewAllTrails={noop}
+      onViewAllProjects={noop}
     />
   ),
 };
@@ -186,7 +186,7 @@ export const Empty: Story = {
       onSelectRepo={logSelect('onSelectRepo')}
       onSelectTopic={logSelect('onSelectTopic')}
       onCreateTopic={noop}
-      onViewAllTrails={noop}
+      onViewAllProjects={noop}
     />
   ),
 };
@@ -218,7 +218,7 @@ export const ManyRepos: Story = {
         onSelectRepo={logSelect('onSelectRepo')}
         onSelectTopic={logSelect('onSelectTopic')}
         onCreateTopic={noop}
-        onViewAllTrails={noop}
+        onViewAllProjects={noop}
         repoLimit={9}
       />
     );

@@ -213,14 +213,16 @@ export const IntegratedShell: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // HomeView dashboard click → switch to TrailsView, optionally pre-selecting
-  // a repo. The event detail's `repoPath` is undefined for the "view all
-  // trails" path; TrailsView just opens its Recent grid in that case.
+  // HomeView dashboard click → switch to TrailsView. A repo card sends a
+  // `repoPath` and we pre-select that repo (opening its Recent grid). The
+  // "View All Projects" button sends no `repoPath`; we leave the bootstrap
+  // null so TrailsView mounts on its projects landing screen showing every
+  // explored project.
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ repoPath?: string }>).detail ?? {};
       setActiveView('trails');
-      setBootstrapProjectPath(detail.repoPath ?? '');
+      setBootstrapProjectPath(detail.repoPath ?? null);
     };
     window.addEventListener('home:open-in-trails', handler);
     return () => window.removeEventListener('home:open-in-trails', handler);

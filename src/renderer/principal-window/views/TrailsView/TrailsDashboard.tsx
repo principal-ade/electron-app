@@ -1,15 +1,11 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import {
-  ArrowRight,
-  FolderGit2,
-  Footprints,
-  Library,
-  Plus,
-  Trash2,
-} from 'lucide-react';
+import { ArrowRight, FolderGit2, Library, Plus, Trash2 } from 'lucide-react';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
-import { formatRelativeTime } from './TrailCard';
+import {
+  ExploredProjectsGrid,
+  type ExploredProjectRepoEntry,
+} from './ExploredProjectsGrid';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
 
@@ -61,6 +57,12 @@ export interface TrailsDashboardProps {
   /** Repos with at least one trail, in display order. */
   repoEntries: TrailsDashboardRepoEntry[];
   /**
+   * Full recent-trail list, passed straight through to the repo cards so
+   * each can compute its file-coverage metric. Defaults to empty (cards
+   * render without coverage).
+   */
+  recentTrails?: TrailIndexEntry[];
+  /**
    * Curated topic collections, in display order. Ignored when the user is
    * signed out — topics are a server-backed concept that requires auth.
    */
@@ -73,8 +75,8 @@ export interface TrailsDashboardProps {
   onCreateTopic?: () => void;
   /** Fired when the user clicks the trash icon on a topic card. Hides the icon when omitted. */
   onDeleteTopic?: (entry: TrailsDashboardTopicEntry) => void;
-  /** "View all trails" → opens the full recent grid. */
-  onViewAllTrails: () => void;
+  /** "View All Projects" → opens the Trails view's projects landing. */
+  onViewAllProjects: () => void;
   /** Max repo cards to render before clipping. Default 6. */
   repoLimit?: number;
   /** Max topic rows to render before clipping. Default 6. */
@@ -88,18 +90,33 @@ export interface TrailsDashboardProps {
  */
 export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
   repoEntries,
+  recentTrails = [],
   topicEntries,
   onSelectRepo,
   onSelectTopic,
   onCreateTopic,
   onDeleteTopic,
-  onViewAllTrails,
+  onViewAllProjects,
   repoLimit = 6,
   topicLimit = 6,
 }) => {
   const { theme } = useTheme();
   const visibleRepos = repoEntries.slice(0, repoLimit);
   const visibleTopics = topicEntries.slice(0, topicLimit);
+
+  // Map the dashboard's repo entries into the shared explored-card shape.
+  // Memoized so the cards' coverage effect keys off a stable array.
+  const exploredEntries = React.useMemo<ExploredProjectRepoEntry[]>(
+    () =>
+      visibleRepos.map((r) => ({
+        repo: { path: r.key, label: r.label, ownerLogin: r.ownerLogin },
+        trail: r.latestTrail,
+        trailCount: r.trailCount,
+      })),
+    // visibleRepos is a fresh slice each render; key off its contents.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [repoEntries, repoLimit],
+  );
 
   return (
     <section
@@ -164,12 +181,12 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
           repoEntries.length > 0 ? (
             <PillButton
               theme={theme}
-              onClick={onViewAllTrails}
+              onClick={onViewAllProjects}
               accent
               icon={<ArrowRight size={14} />}
               iconPosition="end"
             >
-              View all trails
+              View All Projects
             </PillButton>
           ) : null
         }
@@ -180,10 +197,13 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
             text="Publish a trail from the File City panel and its repo will land here."
           />
         ) : (
-          <RepoGrid
-            repos={visibleRepos}
-            theme={theme}
-            onSelectRepo={onSelectRepo}
+          <ExploredProjectsGrid
+            entries={exploredEntries}
+            recentTrails={recentTrails}
+            onOpenRepo={(e) => {
+              const original = repoEntries.find((r) => r.key === e.repo.path);
+              if (original) onSelectRepo(original);
+            }}
           />
         )}
       </Section>
@@ -262,142 +282,6 @@ function Section({
         {action}
       </div>
       {children}
-    </div>
-  );
-}
-
-function RepoGrid({
-  repos,
-  theme,
-  onSelectRepo,
-}: {
-  repos: TrailsDashboardRepoEntry[];
-  theme: ThemeShape;
-  onSelectRepo: (entry: TrailsDashboardRepoEntry) => void;
-}) {
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-        gap: 16,
-      }}
-    >
-      {repos.map((r) => {
-        const accent = purposeAccent(r.latestTrail.purpose, theme);
-        return (
-          <button
-            key={r.key}
-            type="button"
-            onClick={() => onSelectRepo(r)}
-            style={{
-              textAlign: 'left',
-              background: theme.colors.backgroundSecondary,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: 12,
-              padding: '18px 18px 16px',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 14,
-              transition: 'border-color 120ms ease, transform 120ms ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.primary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.border;
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                minWidth: 0,
-              }}
-            >
-              {r.ownerLogin ? (
-                <img
-                  src={`https://github.com/${r.ownerLogin}.png?size=80`}
-                  alt={r.ownerLogin}
-                  width={36}
-                  height={36}
-                  style={{
-                    borderRadius: '50%',
-                    flex: '0 0 auto',
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                />
-              ) : (
-                <FolderGit2 size={28} color={theme.colors.primary} />
-              )}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                  minWidth: 0,
-                }}
-              >
-                <div
-                  style={{
-                    color: theme.colors.text,
-                    fontFamily: theme.fonts.body,
-                    fontSize: theme.fontSizes[2],
-                    fontWeight: theme.fontWeights.semibold,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {r.label}
-                </div>
-              </div>
-            </div>
-            <div
-              style={{
-                paddingTop: 12,
-                borderTop: `1px solid ${theme.colors.border}`,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 6,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  color: theme.colors.textTertiary,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[0],
-                }}
-              >
-                <Footprints size={12} color={accent} />
-                <span>
-                  {r.trailCount} {r.trailCount === 1 ? 'trail' : 'trails'} ·
-                  latest {formatRelativeTime(r.latestTrail.updatedAt)}
-                </span>
-              </div>
-              <div
-                style={{
-                  color: accent,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[1],
-                  lineHeight: 1.35,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}
-              >
-                {r.latestTrail.title || 'Untitled trail'}
-              </div>
-            </div>
-          </button>
-        );
-      })}
     </div>
   );
 }
@@ -591,8 +475,7 @@ function TopicList({
               onMouseEnter={(e) => {
                 e.currentTarget.style.background =
                   theme.colors.backgroundTertiary ?? theme.colors.background;
-                e.currentTarget.style.color =
-                  theme.colors.error ?? '#ef4444';
+                e.currentTarget.style.color = theme.colors.error ?? '#ef4444';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
@@ -666,14 +549,4 @@ function PillButton({
       {iconPosition === 'end' && icon}
     </button>
   );
-}
-
-function purposeAccent(
-  purpose: TrailIndexEntry['purpose'],
-  theme: ThemeShape,
-): string {
-  const p = purpose ?? 'investigation';
-  if (p === 'informative') return theme.colors.success ?? '#4ade80';
-  if (p === 'changelog') return theme.colors.warning ?? '#fb923c';
-  return theme.colors.primary;
 }

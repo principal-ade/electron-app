@@ -744,6 +744,7 @@ export function HomeView() {
           <div style={{ flex: '0 0 auto', width: '100%', marginTop: 24 }}>
             <TrailsDashboard
               repoEntries={dashboardRepoEntries}
+              recentTrails={recentTrails}
               topicEntries={dashboardTopicEntries}
               onSelectRepo={(entry) => {
                 window.dispatchEvent(
@@ -774,7 +775,7 @@ export function HomeView() {
               }}
               onCreateTopic={() => setIsNewTopicOpen(true)}
               onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
-              onViewAllTrails={() =>
+              onViewAllProjects={() =>
                 window.dispatchEvent(
                   new CustomEvent('home:open-in-trails', { detail: {} }),
                 )
