@@ -12,6 +12,7 @@ import {
   type PanelOption,
 } from './PanelSelectorDropdown';
 import { BriefAgentButton } from './BriefAgentButton';
+import { ShareTopicButton } from './ShareTopicButton';
 import { PANEL_FOCUS_SEARCH_EVENT } from '../Sidebar/PanelIconSidebar';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import type { UserPreferences } from '../../../shared/types/userPreferences.types';
@@ -495,6 +496,10 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         {/* Brief Agent — always visible. Draggable; drop on a terminal to
             link its Claude session to the current topic. */}
         <BriefAgentButton topicId={workspace.topicIds?.[0]} />
+
+        {/* Share Topic — publish this workspace's topic to web-ade (or copy
+            its link once shared). */}
+        <ShareTopicButton topicId={workspace.topicIds?.[0]} />
 
         {/* Right Panel Selector */}
         {layout && onLayoutChange && typeof layout.right === 'string' && (

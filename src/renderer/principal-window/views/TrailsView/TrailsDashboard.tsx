@@ -7,6 +7,7 @@ import {
   LayoutGrid,
   Library,
   Plus,
+  Share2,
   Trash2,
   X,
 } from 'lucide-react';
@@ -70,6 +71,11 @@ export interface TrailsDashboardTopicEntry {
    * no GitHub remote — those render a generic icon fallback.
    */
   projectRepos?: Array<{ name: string; ownerLogin?: string }>;
+  /**
+   * Whether this topic has been published to web-ade (its sync record carries
+   * a `remoteId`). Drives the "Shared" badge on the card.
+   */
+  shared?: boolean;
 }
 
 export interface TrailsDashboardProps {
@@ -502,17 +508,47 @@ function TopicList({
           >
             <div
               style={{
-                color: theme.colors.text,
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[2],
-                fontWeight: theme.fontWeights.semibold,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
                 minWidth: 0,
               }}
             >
-              {t.title}
+              <div
+                style={{
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: theme.fontWeights.semibold,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: 0,
+                }}
+              >
+                {t.title}
+              </div>
+              {t.shared && (
+                <span
+                  title="Shared to web-ade"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    flex: '0 0 auto',
+                    padding: '1px 6px',
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.primary,
+                    border: `1px solid ${theme.colors.primary}`,
+                    borderRadius: 999,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Share2 size={10} />
+                  Shared
+                </span>
+              )}
             </div>
             {t.projectRepos && t.projectRepos.length > 0 ? (
               <div

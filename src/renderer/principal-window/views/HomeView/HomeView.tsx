@@ -122,6 +122,9 @@ export function HomeView() {
   const [recentTrails, setRecentTrails] = useState<TrailIndexEntry[]>([]);
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
+  // Ids of topics published to web-ade (sync.remoteId present), from the
+  // sync-aware records endpoint. Drives the "Shared" badge on topic cards.
+  const [sharedTopicIds, setSharedTopicIds] = useState<Set<string>>(new Set());
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceRepos, setWorkspaceRepos] = useState<
     Map<string, AlexandriaEntry[]>
@@ -185,7 +188,29 @@ export function HomeView() {
         console.error('[HomeView] Failed to load topics:', err);
       });
 
+    // Sync metadata isn't on the plain Topic, so the shared set comes from
+    // the records endpoint. Refetched on every topic change — publishing
+    // fires TOPIC_UPDATED, and remoteId only appears on a reread.
+    const refreshSharedIds = () => {
+      TopicService.getRecords()
+        .then((records) => {
+          if (cancelled) return;
+          setSharedTopicIds(
+            new Set(
+              records
+                .filter((r) => r.sync.remoteId)
+                .map((r) => r.topic.id),
+            ),
+          );
+        })
+        .catch((err) => {
+          console.error('[HomeView] Failed to load topic records:', err);
+        });
+    };
+    refreshSharedIds();
+
     const unsubscribe = TopicService.onTopicChange((event) => {
+      refreshSharedIds();
       if (event.type === 'added' && event.topic) {
         const topic = event.topic;
         setTopics((prev) =>
@@ -323,9 +348,10 @@ export function HomeView() {
         folderPath:
           workspace?.suggestedClonePath ?? defaultBaseDirectory ?? undefined,
         projectRepos: projectRepos.length > 0 ? projectRepos : undefined,
+        shared: sharedTopicIds.has(t.id),
       };
     });
-  }, [topics, workspaces, workspaceRepos, defaultBaseDirectory]);
+  }, [topics, workspaces, workspaceRepos, defaultBaseDirectory, sharedTopicIds]);
 
   const hasAnyTrail = recentTrails.length > 0;
 

@@ -14,13 +14,16 @@ import { TopicAPIEvent } from '../../../shared/main-process-api-interfaces/Topic
 import type {
   AddTrailInput,
   DeleteTopicInput,
+  FetchSharedTopicInput,
   GetTopicInput,
   GetTopicsForTrailInput,
   LinkSessionInput,
+  PublishTopicInput,
   RemoveTrailInput,
   ReorderTrailsInput,
   UpdateTopicInputArgs,
 } from '../../../shared/tipc/topicRouterTypes';
+import { fetchSharedTopicById } from '../topicShare';
 import type { SessionLinkedEvent } from '../../../shared/main-process-api-interfaces/TopicAPI';
 import type { CreateTopicInput } from '../../../shared/main-process-api-interfaces/TopicAPI';
 
@@ -59,6 +62,27 @@ export const topicRouter = {
     .input<GetTopicsForTrailInput>()
     .action(async ({ input }) => {
       return registryService.getTopicsForTrail(input.trailId);
+    }),
+
+  // Hydrate a topic published to web-ade by id. Unlike the queries above
+  // (which read the local registry), this reaches the shared registry over
+  // HTTP — the inbox's topic tab opens topics that may not exist locally.
+  topic_fetchSharedById: t.procedure
+    .input<FetchSharedTopicInput>()
+    .action(async ({ input }) => {
+      return fetchSharedTopicById(input.id);
+    }),
+
+  // Publish a local topic to web-ade and stamp its server id onto sync
+  // metadata. Broadcast UPDATED so list/detail views reflect the now-shared
+  // state. Throws (rejecting the publish) when a referenced trail isn't
+  // shared yet — the renderer surfaces the typed error.
+  topic_publishTopic: t.procedure
+    .input<PublishTopicInput>()
+    .action(async ({ input }) => {
+      const result = await registryService.publishTopic(input.id);
+      broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, result.record.topic);
+      return result;
     }),
 
   topic_getRecord: t.procedure

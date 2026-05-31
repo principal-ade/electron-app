@@ -9,7 +9,9 @@
 import type { Topic } from '@principal-ai/alexandria-core-library/types';
 import type {
   CreateTopicInput,
+  FetchSharedTopicResult,
   LocalTopicRecord,
+  PublishTopicResult,
   TopicChangeEvent,
   UpdateTopicInput,
 } from '../../shared/main-process-api-interfaces/TopicAPI';
@@ -72,6 +74,24 @@ export class TopicService {
 
   static async getTopicsForTrail(trailId: string): Promise<Topic[]> {
     return topicClient.getTopicsForTrail({ trailId });
+  }
+
+  /**
+   * Hydrate a topic published to web-ade by id. Used by the inbox's topic
+   * tab, which opens topics that may not exist in the local registry.
+   * Throws (via the IPC error path) on 404 / no-access.
+   */
+  static async fetchSharedById(id: string): Promise<FetchSharedTopicResult> {
+    return topicClient.fetchSharedById({ id });
+  }
+
+  /**
+   * Publish a local topic to web-ade, stamping its server id onto sync
+   * metadata so subsequent edits write through. Rejects (leaving the local
+   * topic unchanged) when a referenced trail isn't shared yet.
+   */
+  static async publishTopic(id: string): Promise<PublishTopicResult> {
+    return topicClient.publishTopic({ id });
   }
 
   /** Full LocalTopicRecord including sync metadata (for sync UI). */

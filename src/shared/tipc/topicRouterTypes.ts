@@ -9,7 +9,9 @@ import type { ActionContext } from '@egoist/tipc/main';
 import type { Topic } from '@principal-ai/alexandria-core-library';
 import type {
   CreateTopicInput,
+  FetchSharedTopicResult,
   LocalTopicRecord,
+  PublishTopicResult,
   UpdateTopicInput,
 } from '../main-process-api-interfaces/TopicAPI';
 
@@ -17,7 +19,14 @@ import type {
 // Re-export domain types
 // =============================================================================
 
-export type { Topic, CreateTopicInput, UpdateTopicInput, LocalTopicRecord };
+export type {
+  Topic,
+  CreateTopicInput,
+  UpdateTopicInput,
+  LocalTopicRecord,
+  FetchSharedTopicResult,
+  PublishTopicResult,
+};
 
 export type {
   TopicChangeEvent,
@@ -58,6 +67,16 @@ export interface ReorderTrailsInput {
 
 export interface GetTopicsForTrailInput {
   trailId: string;
+}
+
+/** Input to {@link TopicRouterType.topic_fetchSharedById}. */
+export interface FetchSharedTopicInput {
+  id: string;
+}
+
+/** Input to {@link TopicRouterType.topic_publishTopic}. */
+export interface PublishTopicInput {
+  id: string;
 }
 
 export interface LinkSessionInput {
@@ -135,6 +154,18 @@ export type TopicRouterType = Record<
       context: ActionContext;
       input: GetTopicsForTrailInput;
     }) => Promise<Topic[]>;
+  };
+  topic_fetchSharedById: {
+    action: (args: {
+      context: ActionContext;
+      input: FetchSharedTopicInput;
+    }) => Promise<FetchSharedTopicResult>;
+  };
+  topic_publishTopic: {
+    action: (args: {
+      context: ActionContext;
+      input: PublishTopicInput;
+    }) => Promise<PublishTopicResult>;
   };
   topic_getRecord: {
     action: (args: {

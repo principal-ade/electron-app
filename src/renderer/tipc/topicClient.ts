@@ -11,11 +11,15 @@ import type {
   AddTrailInput,
   CreateTopicInput,
   DeleteTopicInput,
+  FetchSharedTopicInput,
+  FetchSharedTopicResult,
   GetTopicInput,
   GetTopicsForTrailInput,
   LinkSessionInput,
   LinkSessionResult,
   LocalTopicRecord,
+  PublishTopicInput,
+  PublishTopicResult,
   RemoveTrailInput,
   ReorderTrailsInput,
   Topic,
@@ -39,6 +43,12 @@ export interface TopicClient {
   getTopicsForTrail: (input: GetTopicsForTrailInput) => Promise<Topic[]>;
   getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
   getRecords: () => Promise<LocalTopicRecord[]>;
+  /** Hydrate a topic published to web-ade by id. Throws on 404 / no-access. */
+  fetchSharedById: (
+    input: FetchSharedTopicInput,
+  ) => Promise<FetchSharedTopicResult>;
+  /** Publish a local topic to web-ade. Throws on failure (e.g. unshared trail). */
+  publishTopic: (input: PublishTopicInput) => Promise<PublishTopicResult>;
   getSessionLinks: () => Promise<Record<string, string>>;
   /**
    * User-initiated session→topic link. Idempotent — returns
@@ -70,6 +80,12 @@ interface TipcTopicClient {
   topic_getTopicsForTrail: (input: GetTopicsForTrailInput) => Promise<Topic[]>;
   topic_getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
   topic_getRecords: () => Promise<LocalTopicRecord[]>;
+  topic_fetchSharedById: (
+    input: FetchSharedTopicInput,
+  ) => Promise<FetchSharedTopicResult>;
+  topic_publishTopic: (
+    input: PublishTopicInput,
+  ) => Promise<PublishTopicResult>;
   topic_getSessionLinks: () => Promise<Record<string, string>>;
   topic_linkSession: (input: LinkSessionInput) => Promise<LinkSessionResult>;
 }
@@ -104,6 +120,8 @@ export const topicClient: TopicClient = {
   getTopicsForTrail: (input) => getTipcClient().topic_getTopicsForTrail(input),
   getRecord: (input) => getTipcClient().topic_getRecord(input),
   getRecords: () => getTipcClient().topic_getRecords(),
+  fetchSharedById: (input) => getTipcClient().topic_fetchSharedById(input),
+  publishTopic: (input) => getTipcClient().topic_publishTopic(input),
   getSessionLinks: () => getTipcClient().topic_getSessionLinks(),
   linkSession: (input) => getTipcClient().topic_linkSession(input),
   onSessionLinked: (callback) => {

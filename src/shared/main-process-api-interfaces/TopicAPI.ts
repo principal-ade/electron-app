@@ -36,6 +36,28 @@ export interface LocalTopicRecord {
   sync: LocalTopicSync;
 }
 
+/**
+ * Result of hydrating a published topic from web-ade by id. Mirrors the
+ * `{ topic, starred }` shape the `/api/topics/by-id/{id}` GET route returns.
+ * Read access is public-by-link, so `starred` is always `false` for
+ * anonymous (signed-out) callers.
+ */
+export interface FetchSharedTopicResult {
+  topic: Topic;
+  starred: boolean;
+}
+
+/**
+ * Result of publishing a local topic to web-ade. `url` is the public topic
+ * link (for copy-to-clipboard); `record` is the local record after its
+ * `sync.remoteId` was stamped, so the renderer reflects the now-shared state
+ * without a refetch.
+ */
+export interface PublishTopicResult {
+  url: string;
+  record: LocalTopicRecord;
+}
+
 export enum TopicEventType {
   ADDED = 'added',
   UPDATED = 'updated',

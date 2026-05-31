@@ -21,7 +21,7 @@ import React, {
   useEffect,
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Inbox, Route } from 'lucide-react';
+import { Inbox, Route, Layers } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -44,6 +44,7 @@ import {
 } from '@industry-theme/xterm-terminal-panel';
 import { InboxLeftPanel } from '../panels/InboxLeftPanel';
 import { SharedTrailTabContent } from '../feed-view/SharedTrailTabContent';
+import { TopicTabContent } from './TopicTabContent';
 import { useInboxTabs } from '../principal-window/contexts/InboxTabsContext';
 
 /**
@@ -65,7 +66,16 @@ export interface SharedTrailTab extends BaseTab {
   repo?: string;
 }
 
-export type InboxTab = TerminalTab | InboxHomeTab | SharedTrailTab;
+/**
+ * Topic tab — a topic published to web-ade, opened from an inbox row. Carries
+ * only the id; the panel self-fetches the topic and its trails.
+ */
+export interface TopicTab extends BaseTab {
+  contentType: 'topic';
+  topicId: string;
+}
+
+export type InboxTab = TerminalTab | InboxHomeTab | SharedTrailTab | TopicTab;
 
 export interface InboxPanelFrameworkProps {
   /** Local repositories — used to resolve a clone for shared-trail file trees. */
@@ -234,6 +244,8 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
         return <Inbox size={14} />;
       case 'shared-trail':
         return <Route size={14} />;
+      case 'topic':
+        return <Layers size={14} />;
       default:
         return null;
     }
@@ -249,6 +261,17 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
           <SharedTrailTabContent
             key={trailTab.id}
             trailId={trailTab.trailId}
+            events={eventsRef.current}
+            repositories={repositoriesRef.current}
+          />
+        );
+      }
+      case 'topic': {
+        const topicTab = tab as TopicTab;
+        return (
+          <TopicTabContent
+            key={topicTab.id}
+            topicId={topicTab.topicId}
             events={eventsRef.current}
             repositories={repositoriesRef.current}
           />

@@ -3,13 +3,17 @@
  *
  * Renders a trail published to web-ade, opened from a bare trail id (an inbox
  * row, a recently-visited row, or a pasted `…/trail/{id}` URL). Self-fetches the
- * payload via `TrailShareService.fetchSharedById`, resolves a local clone for the
- * on-disk file tree (or falls back to the GitHub tree when uncloned), and mounts
+ * payload via `TrailShareService.fetchSharedById`, then hands it to
+ * `SharedTrailViewer`, which resolves a local clone for the on-disk file tree
+ * (or falls back to the GitHub tree when uncloned) and mounts
  * `FileCityTrailPanel` with the same context shape TrailsView's preview pane uses.
  * A banner marks it as remote so it never reads as one of your local trails.
  *
  * Extracted from FeedPanelFramework so both the Projects (feed) view and the
- * Inbox view can reuse it.
+ * Inbox view can reuse it. The presentational half (`SharedTrailViewer`) is
+ * split out so callers that already hold a payload — e.g. the inbox's topic
+ * tab, which fetches a topic's trails up front — can render the city without
+ * re-fetching.
  */
 
 import React from 'react';
@@ -60,91 +64,88 @@ export async function fetchRemoteFileTree(
   }
 }
 
-export const SharedTrailTabContent: React.FC<{
+/**
+ * Presentational half of the shared-trail tab: given an already-fetched
+ * payload and its origin `{owner, repo}`, resolve the file tree (local clone
+ * first, GitHub fallback) and mount `FileCityTrailPanel`. Stateless about
+ * *fetching* the trail — the caller owns that — so it can be reused by any
+ * surface that already holds a payload.
+ */
+export const SharedTrailViewer: React.FC<{
   trailId: string;
+  payload: TrailPayload;
+  owner: string;
+  repo: string;
   events: PanelEventEmitter;
   repositories: AlexandriaEntry[];
-}> = ({ trailId, events, repositories }) => {
+  /** Render the "Shared trail · owner/repo" banner. Default true. */
+  showBanner?: boolean;
+}> = ({
+  trailId,
+  payload,
+  owner,
+  repo,
+  events,
+  repositories,
+  showBanner = true,
+}) => {
   const { theme } = useTheme();
-  const [payload, setPayload] = React.useState<TrailPayload | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [origin, setOrigin] = React.useState<{
-    owner: string;
-    repo: string;
-  } | null>(null);
   const [repositoryPath, setRepositoryPath] = React.useState<string | null>(
     null,
   );
   const [fileTree, setFileTree] = React.useState<FileTree | null>(null);
+  const [treeLoading, setTreeLoading] = React.useState(true);
 
   React.useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    setTreeLoading(true);
     void (async () => {
       try {
-        const result = await TrailShareService.fetchSharedById(trailId);
-        if (cancelled) return;
-        setPayload(result.payload);
-        setOrigin({ owner: result.owner, repo: result.repo });
-
         // Render the city against on-disk files when the repo is cloned;
         // otherwise build the tree from GitHub so an uncloned shared trail
         // still gets a city (the deferred "open in browser" affordance sits
         // in the banner regardless).
-        const localPath = findClonedGithubEntry(
-          repositories,
-          result.owner,
-          result.repo,
-        )?.path;
+        const localPath =
+          findClonedGithubEntry(repositories, owner, repo)?.path ?? null;
         if (cancelled) return;
-        setRepositoryPath(localPath ?? null);
+        setRepositoryPath(localPath);
 
         let tree: FileTree | null = null;
         if (localPath) {
           tree = await RepositoryMonitoringService.getFileTree(localPath);
         }
         if (!tree) {
-          tree = await fetchRemoteFileTree(result.owner, result.repo);
+          tree = await fetchRemoteFileTree(owner, repo);
         }
         if (cancelled) return;
         setFileTree(tree);
-      } catch (err) {
-        if (cancelled) return;
-        setError(
-          err instanceof TrailShareError
-            ? err.message
-            : 'Could not load this shared trail.',
-        );
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setTreeLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [trailId, repositories]);
+  }, [owner, repo, repositories]);
 
-  const repoName = origin?.repo ?? null;
   const panelContext = React.useMemo(
     () => ({
       currentScope: {
         type: 'repository' as const,
         ...(repositoryPath
-          ? { repository: { path: repositoryPath, name: repoName ?? '' } }
+          ? { repository: { path: repositoryPath, name: repo } }
           : {}),
       },
       refresh: async () => {},
       adapters: {},
       repository: repositoryPath
-        ? { path: repositoryPath, name: repoName, owner: origin?.owner ?? null }
+        ? { path: repositoryPath, name: repo, owner }
         : null,
       fileTree: {
         scope: 'repository' as const,
         name: 'fileTree',
         data: fileTree,
-        loading: false,
+        loading: treeLoading,
         error: null,
         refresh: async () => {},
       } as DataSlice<FileTree | null>,
@@ -152,7 +153,7 @@ export const SharedTrailTabContent: React.FC<{
         scope: 'repository' as const,
         name: 'trail',
         data: payload,
-        loading,
+        loading: false,
         error: null,
         refresh: async () => {},
       } as DataSlice<TrailPayload | null>,
@@ -165,7 +166,7 @@ export const SharedTrailTabContent: React.FC<{
         refresh: async () => {},
       } as DataSlice<HighlightLayer[] | null>,
     }),
-    [repositoryPath, repoName, origin, fileTree, payload, loading],
+    [repositoryPath, repo, owner, fileTree, treeLoading, payload],
   );
 
   const browserUrl = `https://app.principal-ade.com/trail/${trailId}`;
@@ -181,94 +182,150 @@ export const SharedTrailTabContent: React.FC<{
     >
       {/* Remote/shared banner — this is the load-bearing cue that the trail
           is published on web-ade, not one of your local library trails. */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '6px 12px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-          backgroundColor: theme.colors.backgroundSecondary,
-          fontFamily: theme.fonts.body,
-          fontSize: theme.fontSizes[0],
-          color: theme.colors.textSecondary,
-          flexShrink: 0,
-        }}
-      >
-        <Route size={13} />
-        <span style={{ fontWeight: 600, color: theme.colors.text }}>
-          Shared trail
-        </span>
-        {origin && (
-          <span>
-            · {origin.owner}/{origin.repo}
-          </span>
-        )}
-        {origin && !repositoryPath && (
-          <span style={{ opacity: 0.8 }}>· not cloned locally</span>
-        )}
-        <a
-          href={browserUrl}
-          target="_blank"
-          rel="noreferrer"
+      {showBanner && (
+        <div
           style={{
-            marginLeft: 'auto',
-            color: theme.colors.primary,
-            textDecoration: 'none',
-            display: 'inline-flex',
+            display: 'flex',
             alignItems: 'center',
-            gap: 4,
+            gap: 8,
+            padding: '6px 12px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.backgroundSecondary,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textSecondary,
+            flexShrink: 0,
           }}
         >
-          Open in browser <ExternalLink size={12} />
-        </a>
-      </div>
+          <Route size={13} />
+          <span style={{ fontWeight: 600, color: theme.colors.text }}>
+            Shared trail
+          </span>
+          <span>
+            · {owner}/{repo}
+          </span>
+          {!repositoryPath && (
+            <span style={{ opacity: 0.8 }}>· not cloned locally</span>
+          )}
+          <a
+            href={browserUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              marginLeft: 'auto',
+              color: theme.colors.primary,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            Open in browser <ExternalLink size={12} />
+          </a>
+        </div>
+      )}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-        {error ? (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 24,
-              textAlign: 'center',
-              color: theme.colors.textSecondary,
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[1],
-            }}
-          >
-            {error}
-          </div>
-        ) : (
-          <FileCityTrailPanel
-            key={`shared-trail:${trailId}`}
-            context={panelContext}
-            actions={{}}
-            events={events}
-          />
-        )}
-        {!error && loading && !payload && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: theme.colors.textSecondary,
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[1],
-              backgroundColor: `color-mix(in srgb, ${theme.colors.background} 70%, transparent)`,
-              pointerEvents: 'none',
-            }}
-          >
-            Loading shared trail…
-          </div>
-        )}
+        <FileCityTrailPanel
+          key={`shared-trail:${trailId}`}
+          context={panelContext}
+          actions={{}}
+          events={events}
+        />
       </div>
     </div>
+  );
+};
+
+export const SharedTrailTabContent: React.FC<{
+  trailId: string;
+  events: PanelEventEmitter;
+  repositories: AlexandriaEntry[];
+}> = ({ trailId, events, repositories }) => {
+  const { theme } = useTheme();
+  const [result, setResult] = React.useState<{
+    payload: TrailPayload;
+    owner: string;
+    repo: string;
+  } | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    void (async () => {
+      try {
+        const fetched = await TrailShareService.fetchSharedById(trailId);
+        if (cancelled) return;
+        setResult({
+          payload: fetched.payload,
+          owner: fetched.owner,
+          repo: fetched.repo,
+        });
+      } catch (err) {
+        if (cancelled) return;
+        setError(
+          err instanceof TrailShareError
+            ? err.message
+            : 'Could not load this shared trail.',
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [trailId]);
+
+  if (error) {
+    return (
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 24,
+          textAlign: 'center',
+          color: theme.colors.textSecondary,
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[1],
+        }}
+      >
+        {error}
+      </div>
+    );
+  }
+
+  if (!result) {
+    return (
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: theme.colors.textSecondary,
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[1],
+        }}
+      >
+        {loading ? 'Loading shared trail…' : null}
+      </div>
+    );
+  }
+
+  return (
+    <SharedTrailViewer
+      trailId={trailId}
+      payload={result.payload}
+      owner={result.owner}
+      repo={result.repo}
+      events={events}
+      repositories={repositories}
+    />
   );
 };
 
