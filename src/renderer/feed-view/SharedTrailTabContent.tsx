@@ -80,6 +80,12 @@ export const SharedTrailViewer: React.FC<{
   repositories: AlexandriaEntry[];
   /** Render the "Shared trail · owner/repo" banner. Default true. */
   showBanner?: boolean;
+  /**
+   * Which side the brief card claims in the landscape split layout.
+   * Forwarded to `FileCityTrailPanel`; defaults to the upstream
+   * `'trailing'` (brief on the right). The inbox passes `'leading'`.
+   */
+  briefSide?: 'leading' | 'trailing';
 }> = ({
   trailId,
   payload,
@@ -88,6 +94,7 @@ export const SharedTrailViewer: React.FC<{
   events,
   repositories,
   showBanner = true,
+  briefSide,
 }) => {
   const { theme } = useTheme();
   const [repositoryPath, setRepositoryPath] = React.useState<string | null>(
@@ -230,6 +237,7 @@ export const SharedTrailViewer: React.FC<{
           context={panelContext}
           actions={{}}
           events={events}
+          briefSide={briefSide}
         />
       </div>
     </div>
@@ -240,7 +248,9 @@ export const SharedTrailTabContent: React.FC<{
   trailId: string;
   events: PanelEventEmitter;
   repositories: AlexandriaEntry[];
-}> = ({ trailId, events, repositories }) => {
+  /** Forwarded to `SharedTrailViewer` → `FileCityTrailPanel`. */
+  briefSide?: 'leading' | 'trailing';
+}> = ({ trailId, events, repositories, briefSide }) => {
   const { theme } = useTheme();
   const [result, setResult] = React.useState<{
     payload: TrailPayload;
@@ -325,6 +335,7 @@ export const SharedTrailTabContent: React.FC<{
       repo={result.repo}
       events={events}
       repositories={repositories}
+      briefSide={briefSide}
     />
   );
 };

@@ -1836,6 +1836,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               trailId={trailTab.trailId}
               events={eventsRef.current}
               repositories={repositories}
+              briefSide="leading"
             />
           );
         }

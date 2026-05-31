@@ -263,6 +263,7 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
             trailId={trailTab.trailId}
             events={eventsRef.current}
             repositories={repositoriesRef.current}
+            briefSide="leading"
           />
         );
       }

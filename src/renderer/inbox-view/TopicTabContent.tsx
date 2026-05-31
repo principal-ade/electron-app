@@ -431,6 +431,7 @@ export const TopicTabContent: React.FC<{
               repo={selected.repo}
               events={events}
               repositories={repositories}
+              briefSide="leading"
             />
           ) : (
             <div style={centeredMessage(theme)}>
