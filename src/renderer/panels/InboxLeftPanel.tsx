@@ -216,7 +216,7 @@ export const InboxLeftPanel: React.FC = () => {
       return (
         <button
           key={entry.id}
-          style={{ ...rowBaseStyle, alignItems: 'stretch' }}
+          style={{ ...rowBaseStyle, alignItems: 'center' }}
           onClick={() => openSharedTrail(entry.id, entry.owner, entry.repo)}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor =
@@ -233,13 +233,15 @@ export const InboxLeftPanel: React.FC = () => {
               src={ownerAvatar}
               alt={entry.owner}
               title={`${entry.owner}/${entry.repo}`}
+              width={40}
+              height={40}
               style={{
-                alignSelf: 'stretch',
-                width: 'auto',
-                aspectRatio: '1 / 1',
+                width: 40,
+                height: 40,
                 borderRadius: '50%',
                 objectFit: 'cover',
                 flexShrink: 0,
+                display: 'block',
               }}
             />
           ) : (
