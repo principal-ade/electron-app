@@ -6,7 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { AlertCircle, FileText, Search, X } from 'lucide-react';
+import { AlertCircle, Search, X } from 'lucide-react';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
 import { TrailLibraryService } from '../../services/TrailLibraryService';
@@ -40,12 +40,6 @@ export interface WorkspaceTrailsPanelProps {
    * panel). The matching row renders with a selected style.
    */
   activeTrailId?: string | null;
-  /**
-   * Opens the topic's markdown description in the MDX editor tab. The header
-   * "edit description" button only renders when this is provided and the
-   * workspace actually has a topic.
-   */
-  onEditTopicDescription?: () => void;
 }
 
 const repoBasename = (repositoryPath?: string): string | null => {
@@ -62,7 +56,6 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
   onTrailActivate,
   onTrailOpenInTab,
   activeTrailId,
-  onEditTopicDescription,
 }) => {
   const { theme } = useTheme();
   // v1 single-topic invariant: every workspace has exactly one topic. The
@@ -425,28 +418,6 @@ export const WorkspaceTrailsPanel: React.FC<WorkspaceTrailsPanelProps> = ({
             </button>
           )}
         </div>
-        {onEditTopicDescription && topicId && (
-          <button
-            type="button"
-            onClick={onEditTopicDescription}
-            aria-label="Edit description"
-            title="Edit description"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              padding: '6px',
-              borderRadius: '6px',
-              border: `1px solid ${theme.colors.border}`,
-              background: theme.colors.backgroundSecondary,
-              color: theme.colors.textSecondary,
-              cursor: 'pointer',
-            }}
-          >
-            <FileText size={14} />
-          </button>
-        )}
       </div>
 
       <div
@@ -716,7 +687,7 @@ const TrailRow: React.FC<TrailRowProps> = ({
                 opacity:
                   busy || disabled
                     ? 0.5
-                    : emphasized || isActive || inWorkspace
+                    : emphasized || isActive
                       ? 1
                       : 0,
                 transition: 'opacity 120ms, background 120ms, color 120ms',

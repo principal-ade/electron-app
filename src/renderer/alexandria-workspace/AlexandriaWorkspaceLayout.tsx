@@ -56,6 +56,7 @@ import {
   ALEXANDRIA_LEFT_PANEL_ICONS,
 } from '../components/Sidebar/PanelIconSidebar';
 import { WorkspaceTrailsPanel } from './workspace-trails-panel/WorkspaceTrailsPanel';
+import { TopicDescriptionSlideOver } from './topic-description-tab/TopicDescriptionSlideOver';
 import { TrailService } from '../services/TrailService';
 import { SessionsPanel } from './sessions-panel/SessionsPanel';
 import { HookDebugPanel } from './hook-debug-panel/HookDebugPanel';
@@ -142,6 +143,13 @@ interface AlexandriaWorkspaceLayoutProps {
    * Callback to receive panel control methods for imperative collapse/expand
    */
   onPanelControlReady?: (control: PanelControlHandle) => void;
+  /**
+   * Whether the topic-description slide-over is open. Toggled from the
+   * titlebar's Description button; the overlay renders over the left column.
+   */
+  descriptionOpen?: boolean;
+  /** Closes the topic-description slide-over. */
+  onCloseDescription?: () => void;
 }
 
 interface AlexandriaWorkspaceLayoutContentProps {
@@ -157,6 +165,8 @@ interface AlexandriaWorkspaceLayoutContentProps {
   onLayoutChange: (layout: PanelLayout) => void;
   showPanelSidebar: boolean;
   onPanelControlReady?: (control: PanelControlHandle) => void;
+  descriptionOpen?: boolean;
+  onCloseDescription?: () => void;
 }
 
 /**
@@ -175,6 +185,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   onLayoutChange,
   showPanelSidebar,
   onPanelControlReady,
+  descriptionOpen,
+  onCloseDescription,
 }) => {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
@@ -1272,6 +1284,12 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               actions={actions}
               events={events}
             />
+            <TopicDescriptionSlideOver
+              open={descriptionOpen ?? false}
+              topicId={workspace.topicIds?.[0]}
+              onClose={() => onCloseDescription?.()}
+              onEdit={handleOpenTopicDescription}
+            />
           </div>
         ) : (
           <div
@@ -1589,8 +1607,13 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               workspace={workspace}
               onTrailActivate={handleTrailActivate}
               onTrailOpenInTab={handleTrailOpenInTab}
-              onEditTopicDescription={handleOpenTopicDescription}
               activeTrailId={activeTrailPayload?.id ?? null}
+            />
+            <TopicDescriptionSlideOver
+              open={descriptionOpen ?? false}
+              topicId={workspace.topicIds?.[0]}
+              onClose={() => onCloseDescription?.()}
+              onEdit={handleOpenTopicDescription}
             />
           </div>
         ),
@@ -1613,6 +1636,12 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               <FocusIndicator isFocused={isFocused('left')} />
             )}
             <SessionsPanel topicId={workspace.topicIds?.[0]} />
+            <TopicDescriptionSlideOver
+              open={descriptionOpen ?? false}
+              topicId={workspace.topicIds?.[0]}
+              onClose={() => onCloseDescription?.()}
+              onEdit={handleOpenTopicDescription}
+            />
           </div>
         ),
       },
@@ -2400,6 +2429,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       activeTrailRepoPath,
       focusTabId,
       terminalRemountKey,
+      descriptionOpen,
     ],
   );
 
@@ -2489,6 +2519,8 @@ export const AlexandriaWorkspaceLayout: React.FC<
   onRepositorySelected: externalOnRepositorySelected,
   showPanelSidebar = true,
   onPanelControlReady,
+  descriptionOpen,
+  onCloseDescription,
 }) => {
   const { theme } = useTheme();
 
@@ -2604,6 +2636,8 @@ export const AlexandriaWorkspaceLayout: React.FC<
             onLayoutChange={onLayoutChange}
             showPanelSidebar={showPanelSidebar}
             onPanelControlReady={onPanelControlReady}
+            descriptionOpen={descriptionOpen}
+            onCloseDescription={onCloseDescription}
           />
         </AgentHighlightProvider>
       </TerminalProvider>

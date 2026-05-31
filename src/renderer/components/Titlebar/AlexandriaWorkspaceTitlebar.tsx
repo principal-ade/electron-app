@@ -5,7 +5,7 @@ import {
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { Bot, FolderGit2, Plug, Route } from 'lucide-react';
+import { Bot, FileText, FolderGit2, Plug, Route } from 'lucide-react';
 import { WorkspaceInfoModal } from './WorkspaceInfoModal';
 import {
   PanelSelectorDropdown,
@@ -58,6 +58,9 @@ export interface AlexandriaWorkspaceTitlebarProps {
   // Layout controls
   layout?: PanelLayout;
   onLayoutChange?: (layout: PanelLayout) => void;
+  // Topic-description slide-over (rendered over the left column by the layout)
+  descriptionOpen?: boolean;
+  onToggleDescription?: () => void;
 }
 
 export const AlexandriaWorkspaceTitlebar: React.FC<
@@ -71,6 +74,8 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   onCollapsedChange,
   layout,
   onLayoutChange,
+  descriptionOpen,
+  onToggleDescription,
 }) => {
   const { theme } = useTheme();
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -168,6 +173,16 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
     showHookDebugRef.current = showHookDebug;
   });
 
+  // ⌘D toggles the topic-description slide-over. Mirror the handler and the
+  // "has a topic" gate into refs so the always-on key listener stays bound.
+  const hasTopic = Boolean(workspace.topicIds?.[0]);
+  const onToggleDescriptionRef = useRef(onToggleDescription);
+  const hasTopicRef = useRef(hasTopic);
+  useEffect(() => {
+    onToggleDescriptionRef.current = onToggleDescription;
+    hasTopicRef.current = hasTopic;
+  });
+
   useEffect(() => {
     const isModKey = (e: KeyboardEvent) =>
       e.key === 'Meta' || e.key === 'Control';
@@ -192,6 +207,14 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         e.preventDefault();
         e.stopPropagation();
         activateRef.current(target.id);
+        return;
+      }
+      // ⌘D → toggle the topic-description slide-over (no-op without a topic).
+      if (key === 'd') {
+        if (!hasTopicRef.current || !onToggleDescriptionRef.current) return;
+        e.preventDefault();
+        e.stopPropagation();
+        onToggleDescriptionRef.current();
         return;
       }
       // Cmd+; → focus the visible xterm. TabbedTerminalPanel hides inactive
@@ -356,6 +379,62 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
               );
             })}
           </div>
+        )}
+
+        {/* Topic Description — toggles the markdown slide-over over the left
+            column. Only shown when the workspace has a topic to describe. */}
+        {onToggleDescription && hasTopic && (
+          <button
+            onClick={onToggleDescription}
+            title="Topic description (⌘D)"
+            aria-label="Topic description"
+            aria-pressed={descriptionOpen ?? false}
+            style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '6px 8px',
+              minHeight: '34px',
+              boxSizing: 'border-box',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              background: descriptionOpen
+                ? theme.colors.background
+                : theme.colors.backgroundTertiary,
+              color: descriptionOpen
+                ? theme.colors.text
+                : theme.colors.textSecondary,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            <FileText size={16} strokeWidth={1.75} />
+            {modPressed && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -6,
+                  minWidth: 16,
+                  height: 16,
+                  padding: '0 4px',
+                  borderRadius: 8,
+                  background: theme.colors.primary,
+                  color: theme.colors.background,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[0],
+                  fontWeight: theme.fontWeights.semibold,
+                  lineHeight: '16px',
+                  textAlign: 'center',
+                  pointerEvents: 'none',
+                  boxShadow: `0 0 0 2px ${theme.colors.backgroundTertiary}`,
+                }}
+              >
+                D
+              </span>
+            )}
+          </button>
         )}
 
         {/* Cmd-held hint: shortcut to focus the terminal. Appears inline

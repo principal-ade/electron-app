@@ -110,6 +110,9 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   const enableKeyboardShortcuts = false;
   const [collapsed, setCollapsed] = useState({ left: false, right: true });
   const [showPanelSidebar] = useState(false);
+  // Topic-description slide-over: toggled from the titlebar Description button,
+  // rendered as an overlay over the left column by the layout.
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'workspace-repos',
     middle: 'terminal',
@@ -673,6 +676,15 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         onCollapsedChange={setCollapsed}
         layout={layout}
         onLayoutChange={setLayout}
+        descriptionOpen={descriptionOpen}
+        onToggleDescription={() => {
+          const willOpen = !descriptionOpen;
+          setDescriptionOpen(willOpen);
+          // The overlay lives inside the left column — make sure it's visible.
+          if (willOpen && collapsed.left) {
+            panelControlRef.current?.expandLeft();
+          }
+        }}
       />
 
       {/* Main Content - Panel Layout */}
@@ -688,6 +700,8 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         onPanelControlReady={(control) => {
           panelControlRef.current = control;
         }}
+        descriptionOpen={descriptionOpen}
+        onCloseDescription={() => setDescriptionOpen(false)}
       />
 
       {/* Agent Command Palette - Cmd+Shift+P to open */}
