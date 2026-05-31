@@ -99,7 +99,7 @@ export const InboxLeftPanel: React.FC = () => {
     alignItems: 'flex-start',
     gap: spacing.sm,
     width: '100%',
-    padding: spacing.sm,
+    padding: `${spacing.sm * 1.5}px ${spacing.sm * 2}px`,
     backgroundColor: 'transparent',
     border: 'none',
     borderBottom: `1px solid ${theme.colors.border}`,
@@ -164,7 +164,7 @@ export const InboxLeftPanel: React.FC = () => {
             <div
               style={{
                 fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[1],
+                fontSize: theme.fontSizes[2],
                 fontWeight: unread ? 700 : 500,
                 color: theme.colors.text,
                 marginBottom: 2,
@@ -177,31 +177,27 @@ export const InboxLeftPanel: React.FC = () => {
             </div>
             <div
               style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: spacing.sm,
                 fontFamily: theme.fonts.monospace,
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.textSecondary,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textMuted,
               }}
             >
-              from @{entry.sender.githubLogin} · {timeAgo(entry.sentAt)}
-            </div>
-            {entry.comment && (
-              <div
+              <span
                 style={{
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[0],
-                  color: theme.colors.textSecondary,
-                  marginTop: 2,
+                  flex: 1,
+                  minWidth: 0,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}
               >
-                {entry.comment}
-              </div>
-            )}
+                from @{entry.sender.githubLogin}
+              </span>
+              <span style={{ flexShrink: 0 }}>{timeAgo(entry.sentAt)}</span>
+            </div>
           </div>
         </button>
       );
@@ -213,54 +209,90 @@ export const InboxLeftPanel: React.FC = () => {
     if (recentEntries.length === 0) {
       return emptyState('Trails you open will show up here.');
     }
-    return recentEntries.map((entry) => (
-      <button
-        key={entry.id}
-        style={rowBaseStyle}
-        onClick={() => openSharedTrail(entry.id, entry.owner, entry.repo)}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor =
-            theme.colors.backgroundSecondary;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'transparent';
-        }}
-      >
-        <Route
-          size={14}
-          color={theme.colors.textSecondary}
-          style={{ marginTop: 3, flexShrink: 0 }}
-        />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[1],
-              fontWeight: 500,
-              color: theme.colors.text,
-              marginBottom: 2,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {entry.title || `${entry.owner}/${entry.repo}`}
+    return recentEntries.map((entry) => {
+      const ownerAvatar = entry.owner
+        ? `https://github.com/${entry.owner}.png?size=32`
+        : null;
+      return (
+        <button
+          key={entry.id}
+          style={{ ...rowBaseStyle, alignItems: 'stretch' }}
+          onClick={() => openSharedTrail(entry.id, entry.owner, entry.repo)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          {/* Repo-owner avatar, stretched to the full row height (falls back
+              to the trail icon for local-only trails with no GitHub owner). */}
+          {ownerAvatar ? (
+            <img
+              src={ownerAvatar}
+              alt={entry.owner}
+              title={`${entry.owner}/${entry.repo}`}
+              style={{
+                alignSelf: 'stretch',
+                width: 'auto',
+                aspectRatio: '1 / 1',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <Route
+              size={14}
+              color={theme.colors.textSecondary}
+              style={{ marginTop: 3, flexShrink: 0 }}
+            />
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[2],
+                fontWeight: 500,
+                color: theme.colors.text,
+                marginBottom: 2,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {entry.title || `${entry.owner}/${entry.repo}`}
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: spacing.sm,
+                fontFamily: theme.fonts.monospace,
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textMuted,
+              }}
+            >
+              <span
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {entry.repo}
+              </span>
+              <span style={{ flexShrink: 0 }}>
+                visited {timeAgo(entry.lastVisitedAt)}
+              </span>
+            </div>
           </div>
-          <div
-            style={{
-              fontFamily: theme.fonts.monospace,
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {entry.owner}/{entry.repo} · visited {timeAgo(entry.lastVisitedAt)}
-          </div>
-        </div>
-      </button>
-    ));
+        </button>
+      );
+    });
   };
 
   return (
