@@ -3,24 +3,27 @@
  *
  * Renders a topic published to web-ade, opened from an inbox row. A topic is a
  * curated bundle of trails on one subject; this is the desktop counterpart to
- * web-ade's `/topic/{id}` page.
+ * web-ade's `/topic/{id}` page, and is modeled on that page's interaction flow.
  *
  * Mirrors `SharedTrailTabContent`'s shape: self-fetches the topic by id via
  * `TopicService.fetchSharedById`, then resolves each of the topic's `trailIds`
- * through `TrailShareService.fetchSharedById`. The left pane shows the title,
- * a markdown description, and the trail list grouped by repo; selecting a trail
- * mounts it in the right pane via the shared `SharedTrailViewer` (reusing the
- * payload we already fetched, so there's no second round-trip).
+ * through `TrailShareService.fetchSharedById`. No trail is selected by default —
+ * the tab opens on the topic *overview*: title, curator, a row of repo cards
+ * (one per `owner/repo`), and a markdown description. A repo card with a single
+ * trail opens that trail directly; a multi-trail card expands an inline trail
+ * list below the cards. Only once a trail is chosen does the `SharedTrailViewer`
+ * dock into the right column (the overview shrinks to a left rail), reusing the
+ * payload we already fetched so there's no second round-trip.
  *
  * Read access is public-by-link, so a signed-out user can open a topic; the
- * individual trails still require GitHub sign-in to hydrate, so each row
- * surfaces its own error state independently.
+ * individual trails still require GitHub sign-in to hydrate, so a trail that
+ * can't be loaded simply doesn't surface as a card (matching the web page).
  */
 
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
-import { Layers, Route, ExternalLink, AlertCircle } from 'lucide-react';
+import { Route, ChevronDown } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type {
   AlexandriaEntry,
@@ -38,7 +41,7 @@ type TrailState =
   | { status: 'ok'; payload: TrailPayload; owner: string; repo: string }
   | { status: 'error'; message: string };
 
-/** A repo group in the trail list — `key` is `owner/repo`. */
+/** A repo group in the overview — `key` is `owner/repo`. */
 interface RepoGroup {
   key: string;
   owner: string;
@@ -58,7 +61,13 @@ export const TopicTabContent: React.FC<{
   const [trailStates, setTrailStates] = React.useState<
     Record<string, TrailState>
   >({});
+  // No trail is selected by default — the tab opens on the overview.
   const [selectedTrailId, setSelectedTrailId] = React.useState<string | null>(
+    null,
+  );
+  // Which multi-trail repo card is expanded (its trail list is shown inline).
+  // Single-trail cards skip the expansion and open their trail directly.
+  const [expandedRepoKey, setExpandedRepoKey] = React.useState<string | null>(
     null,
   );
 
@@ -70,6 +79,7 @@ export const TopicTabContent: React.FC<{
     setTopic(null);
     setTrailStates({});
     setSelectedTrailId(null);
+    setExpandedRepoKey(null);
     void (async () => {
       try {
         const { topic: fetched } = await TopicService.fetchSharedById(topicId);
@@ -92,8 +102,8 @@ export const TopicTabContent: React.FC<{
   }, [topicId]);
 
   // Once the topic resolves, hydrate each of its trails. Done up front (not
-  // lazily on click) because the list needs titles and the repo grouping
-  // needs each trail's origin; the payloads are then reused by the viewer.
+  // lazily on click) because the repo cards need each trail's origin to group,
+  // and the titles to label; the payloads are then reused by the viewer.
   React.useEffect(() => {
     if (!topic) return;
     let cancelled = false;
@@ -116,9 +126,6 @@ export const TopicTabContent: React.FC<{
               repo: fetched.repo,
             },
           }));
-          // Auto-select the first trail that resolves so the viewer isn't
-          // empty on open.
-          setSelectedTrailId((cur) => cur ?? trailId);
         } catch (err) {
           if (cancelled) return;
           setTrailStates((prev) => ({
@@ -140,33 +147,34 @@ export const TopicTabContent: React.FC<{
   }, [topic]);
 
   // Group resolved trails by `owner/repo`, preserving the topic's trail order
-  // by first appearance. Trails still loading or errored are grouped under a
-  // synthetic "pending" bucket so the list reflects the full topic even before
-  // every trail resolves.
-  const { groups, pendingTrailIds } = React.useMemo(() => {
-    if (!topic) return { groups: [] as RepoGroup[], pendingTrailIds: [] };
+  // by first appearance. A trail still loading or errored doesn't surface as a
+  // card (it has no resolved origin to group under) — matching the web page.
+  const groups = React.useMemo(() => {
+    if (!topic) return [] as RepoGroup[];
     // Map preserves insertion order, so the first-seen repo stays first.
     const byKey = new Map<string, RepoGroup>();
-    const pending: string[] = [];
     for (const trailId of topic.trailIds) {
       const state = trailStates[trailId];
-      if (state?.status === 'ok') {
-        const key = `${state.owner}/${state.repo}`;
-        let group = byKey.get(key);
-        if (!group) {
-          group = { key, owner: state.owner, repo: state.repo, trailIds: [] };
-          byKey.set(key, group);
-        }
-        group.trailIds.push(trailId);
-      } else {
-        pending.push(trailId);
+      if (state?.status !== 'ok') continue;
+      const key = `${state.owner}/${state.repo}`;
+      let group = byKey.get(key);
+      if (!group) {
+        group = { key, owner: state.owner, repo: state.repo, trailIds: [] };
+        byKey.set(key, group);
       }
+      group.trailIds.push(trailId);
     }
-    return {
-      groups: Array.from(byKey.values()),
-      pendingTrailIds: pending,
-    };
+    return Array.from(byKey.values());
   }, [topic, trailStates]);
+
+  // If the expanded repo disappears (e.g. all its trails errored out of the
+  // grouping), collapse so we don't render against a stale key.
+  React.useEffect(() => {
+    if (!expandedRepoKey) return;
+    if (!groups.some((g) => g.key === expandedRepoKey)) {
+      setExpandedRepoKey(null);
+    }
+  }, [groups, expandedRepoKey]);
 
   const selectedState =
     selectedTrailId && trailStates[selectedTrailId]?.status === 'ok'
@@ -180,16 +188,34 @@ export const TopicTabContent: React.FC<{
   const trailLabel = (trailId: string): string => {
     const state = trailStates[trailId];
     if (state?.status === 'ok') return state.payload.title || 'Untitled trail';
-    return trailId;
+    return 'Untitled trail';
   };
 
-  const browserUrl = `https://app.principal-ade.com/topic/${topicId}`;
+  const openTrail = (trailId: string) => setSelectedTrailId(trailId);
+  const closeTrail = () => setSelectedTrailId(null);
+
+  // A repo card was clicked. Single-trail cards open their only trail directly
+  // (re-click closes it); multi-trail cards toggle their inline expansion,
+  // closing any open viewer first.
+  const onRepoCardClick = (group: RepoGroup) => {
+    if (group.trailIds.length === 1) {
+      const only = group.trailIds[0];
+      setExpandedRepoKey(null);
+      if (selectedTrailId === only) closeTrail();
+      else openTrail(only);
+      return;
+    }
+    if (selectedTrailId) closeTrail();
+    setExpandedRepoKey((prev) => (prev === group.key ? null : group.key));
+  };
+
+  const anyLoading = topic
+    ? topic.trailIds.some((id) => trailStates[id]?.status === 'loading')
+    : false;
 
   // ── Error / loading shells ────────────────────────────────────────────────
   if (topicError) {
-    return (
-      <div style={centeredMessage(theme)}>{topicError}</div>
-    );
+    return <div style={centeredMessage(theme)}>{topicError}</div>;
   }
   if (topicLoading && !topic) {
     return <div style={centeredMessage(theme)}>Loading topic…</div>;
@@ -206,77 +232,267 @@ export const TopicTabContent: React.FC<{
         backgroundColor: theme.colors.background,
       }}
     >
-      {/* Remote/topic banner — the load-bearing cue that this is a published
-          topic, not a local bundle. */}
+      {/* Body: overview is full-width until a trail is selected, then it
+          shrinks to a left rail and the viewer docks on the right. All-fr
+          grid tracks so the column split animates instead of snapping. */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '6px 12px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-          backgroundColor: theme.colors.backgroundSecondary,
-          fontFamily: theme.fonts.body,
-          fontSize: theme.fontSizes[0],
-          color: theme.colors.textSecondary,
-          flexShrink: 0,
+          flex: 1,
+          minHeight: 0,
+          display: 'grid',
+          gridTemplateColumns: selected ? '1fr 2fr' : '1fr 0fr',
+          transition: 'grid-template-columns 360ms cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        <Layers size={13} />
-        <span style={{ fontWeight: 600, color: theme.colors.text }}>Topic</span>
-        {topic.createdBy?.githubLogin && (
-          <span>· by @{topic.createdBy.githubLogin}</span>
-        )}
-        <a
-          href={browserUrl}
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            marginLeft: 'auto',
-            color: theme.colors.primary,
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-          }}
-        >
-          Open in browser <ExternalLink size={12} />
-        </a>
-      </div>
-
-      {/* Body: master list on the left, trail viewer on the right. */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+        {/* Overview column */}
         <div
           style={{
-            width: 340,
-            flexShrink: 0,
-            borderRight: `1px solid ${theme.colors.border}`,
+            minWidth: 0,
             overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
+            borderRight: selected
+              ? `1px solid ${theme.colors.border}`
+              : 'none',
             fontFamily: theme.fonts.body,
           }}
         >
-          {/* Title + description */}
           <div
             style={{
-              padding: '16px 16px 12px',
-              borderBottom: `1px solid ${theme.colors.border}`,
+              maxWidth: selected ? 'none' : 760,
+              margin: selected ? 0 : '0 auto',
+              padding: '20px 24px 28px',
             }}
           >
             <h1
               style={{
                 margin: 0,
-                fontSize: theme.fontSizes[3],
+                fontSize: theme.fontSizes[selected ? 3 : 4],
                 fontWeight: 700,
                 color: theme.colors.primary,
-                lineHeight: 1.25,
+                lineHeight: 1.2,
               }}
             >
               {topic.title}
             </h1>
+            {topic.createdBy?.githubLogin && (
+              <div
+                style={{
+                  marginTop: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  color: theme.colors.textSecondary,
+                  fontSize: theme.fontSizes[1],
+                }}
+              >
+                <span>by</span>
+                <img
+                  src={`https://github.com/${topic.createdBy.githubLogin}.png?size=48`}
+                  alt=""
+                  width={24}
+                  height={24}
+                  style={{
+                    borderRadius: '50%',
+                    border: `1px solid ${theme.colors.border}`,
+                  }}
+                />
+                <span style={{ fontWeight: 600, color: theme.colors.text }}>
+                  @{topic.createdBy.githubLogin}
+                </span>
+              </div>
+            )}
+
+            {/* Repo cards — one per unique owner/repo across the topic's
+                trails. Clicking opens (single trail) or expands (multiple). */}
+            <div style={{ marginTop: 20 }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: theme.fontSizes[0],
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                Project Trails
+              </h2>
+
+              <div
+                style={{
+                  marginTop: 12,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                }}
+              >
+                {groups.map((group) => {
+                  const multi = group.trailIds.length > 1;
+                  const isSelected =
+                    expandedRepoKey === group.key ||
+                    (selectedTrailId !== null &&
+                      group.trailIds.includes(selectedTrailId));
+                  return (
+                    <button
+                      key={group.key}
+                      type="button"
+                      onClick={() => onRepoCardClick(group)}
+                      aria-pressed={isSelected}
+                      aria-label={`Show trails for ${group.key}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        background: isSelected
+                          ? theme.colors.backgroundSecondary
+                          : 'transparent',
+                        border: `1px solid ${
+                          isSelected ? theme.colors.primary : theme.colors.border
+                        }`,
+                        color: theme.colors.text,
+                        fontFamily: theme.fonts.body,
+                      }}
+                    >
+                      <img
+                        src={`https://github.com/${group.owner}.png?size=64`}
+                        alt=""
+                        width={28}
+                        height={28}
+                        style={{
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                          border: `1px solid ${theme.colors.border}`,
+                        }}
+                      />
+                      <span
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          lineHeight: 1.25,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: theme.fontSizes[1],
+                            fontWeight: 600,
+                          }}
+                        >
+                          {group.repo}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
+                          {group.owner}
+                          {multi ? ` · ${group.trailIds.length} trails` : ''}
+                        </span>
+                      </span>
+                      {multi && (
+                        <ChevronDown
+                          size={14}
+                          style={{
+                            flexShrink: 0,
+                            opacity: 0.7,
+                            transition: 'transform 200ms ease',
+                            transform:
+                              expandedRepoKey === group.key
+                                ? 'rotate(180deg)'
+                                : 'none',
+                          }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {groups.length === 0 && (
+                <p
+                  style={{
+                    marginTop: 12,
+                    fontStyle: 'italic',
+                    fontSize: theme.fontSizes[1],
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  {topic.trailIds.length === 0
+                    ? 'No trails attached yet.'
+                    : anyLoading
+                      ? 'Loading trails…'
+                      : 'No trails available.'}
+                </p>
+              )}
+
+              {/* Inline expansion — the selected multi-trail repo's trails. */}
+              {expandedRepoKey && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                  }}
+                >
+                  {(
+                    groups.find((g) => g.key === expandedRepoKey)?.trailIds ?? []
+                  ).map((trailId) => {
+                    const isSelected = trailId === selectedTrailId;
+                    return (
+                      <button
+                        key={trailId}
+                        type="button"
+                        onClick={() => openTrail(trailId)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '10px 12px',
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          background: isSelected
+                            ? theme.colors.backgroundSecondary
+                            : 'transparent',
+                          border: `1px solid ${
+                            isSelected
+                              ? theme.colors.primary
+                              : theme.colors.border
+                          }`,
+                          color: theme.colors.text,
+                          fontFamily: theme.fonts.body,
+                          fontSize: theme.fontSizes[1],
+                        }}
+                      >
+                        <Route
+                          size={14}
+                          style={{ flexShrink: 0, opacity: 0.8 }}
+                        />
+                        <span
+                          style={{
+                            flex: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {trailLabel(trailId)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Description */}
             {topic.description && topic.description.trim().length > 0 && (
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 20 }}>
                 <IndustryMarkdownSlide
                   content={topic.description}
                   slideIdPrefix={`topic-${topic.id}`}
@@ -285,144 +501,17 @@ export const TopicTabContent: React.FC<{
                   theme={theme}
                   transparentBackground
                   disableScroll
+                  disableBasePadding={{ horizontal: true }}
                   enableKeyboardScrolling={false}
                 />
               </div>
             )}
           </div>
-
-          {/* Trail list, grouped by repo */}
-          <div style={{ padding: '8px 0' }}>
-            {groups.map((group) => (
-              <div key={group.key} style={{ marginBottom: 4 }}>
-                <div
-                  style={{
-                    padding: '6px 16px',
-                    fontSize: theme.fontSizes[0],
-                    fontWeight: 600,
-                    color: theme.colors.textSecondary,
-                    textTransform: 'none',
-                  }}
-                >
-                  {group.key}
-                </div>
-                {group.trailIds.map((trailId) => {
-                  const isSelected = trailId === selectedTrailId;
-                  const state = trailStates[trailId] as Extract<
-                    TrailState,
-                    { status: 'ok' }
-                  >;
-                  return (
-                    <button
-                      key={trailId}
-                      onClick={() => setSelectedTrailId(trailId)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        width: '100%',
-                        textAlign: 'left',
-                        padding: '8px 16px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        background: isSelected
-                          ? theme.colors.backgroundSecondary
-                          : 'transparent',
-                        color: theme.colors.text,
-                        borderLeft: `2px solid ${
-                          isSelected ? theme.colors.primary : 'transparent'
-                        }`,
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[1],
-                      }}
-                    >
-                      <Route
-                        size={13}
-                        style={{ flexShrink: 0, opacity: 0.8 }}
-                      />
-                      <span
-                        style={{
-                          flex: 1,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {trailLabel(trailId)}
-                      </span>
-                      {state.payload.purpose &&
-                        state.payload.purpose !== 'investigation' && (
-                          <span
-                            style={{
-                              fontSize: theme.fontSizes[0],
-                              color: theme.colors.textSecondary,
-                              opacity: 0.8,
-                            }}
-                          >
-                            {state.payload.purpose}
-                          </span>
-                        )}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-
-            {/* Pending / errored trails — shown so the list mirrors the full
-                topic while trails resolve (or when one can't be loaded). */}
-            {pendingTrailIds.map((trailId) => {
-              const state = trailStates[trailId];
-              const isError = state?.status === 'error';
-              return (
-                <div
-                  key={trailId}
-                  title={isError ? (state as { message: string }).message : undefined}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '8px 16px',
-                    color: theme.colors.textSecondary,
-                    fontSize: theme.fontSizes[1],
-                    opacity: 0.75,
-                  }}
-                >
-                  {isError ? (
-                    <AlertCircle size={13} style={{ flexShrink: 0 }} />
-                  ) : (
-                    <Route size={13} style={{ flexShrink: 0, opacity: 0.6 }} />
-                  )}
-                  <span
-                    style={{
-                      flex: 1,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {isError ? 'Unavailable trail' : 'Loading trail…'}
-                  </span>
-                </div>
-              );
-            })}
-
-            {topic.trailIds.length === 0 && (
-              <div
-                style={{
-                  padding: '12px 16px',
-                  color: theme.colors.textSecondary,
-                  fontSize: theme.fontSizes[1],
-                }}
-              >
-                This topic has no trails yet.
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* Viewer pane */}
-        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-          {selected ? (
+        {/* Viewer column — only mounted once a trail is selected. */}
+        <div style={{ minWidth: 0, overflow: 'hidden', position: 'relative' }}>
+          {selected && (
             <SharedTrailViewer
               key={selected.id}
               trailId={selected.id}
@@ -432,13 +521,8 @@ export const TopicTabContent: React.FC<{
               events={events}
               repositories={repositories}
               briefSide="leading"
+              showBanner={false}
             />
-          ) : (
-            <div style={centeredMessage(theme)}>
-              {topic.trailIds.length === 0
-                ? 'No trails to show.'
-                : 'Select a trail to view it.'}
-            </div>
           )}
         </div>
       </div>
