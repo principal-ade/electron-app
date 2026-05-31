@@ -1,13 +1,32 @@
 import React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ArrowRight, FolderGit2, Library, Plus, Trash2 } from 'lucide-react';
+import {
+  ArrowRight,
+  FolderGit2,
+  LayoutGrid,
+  Library,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import {
   ExploredProjectsGrid,
   type ExploredProjectRepoEntry,
 } from './ExploredProjectsGrid';
+import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
+
+/**
+ * Session-level cache of the persisted "All topics" preference. The store read
+ * is async, so the first dashboard mount of a session falls back to `false`
+ * and reconciles once the read resolves. Subsequent mounts (e.g. switching
+ * back to Home) initialize straight from this cache, so the expanded state is
+ * restored instantly with no flash or replayed animation.
+ */
+let cachedShowAllTopics: boolean | undefined;
 
 /**
  * Replace the platform home prefix with `~` so paths render compactly.
@@ -101,8 +120,76 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
   topicLimit = 6,
 }) => {
   const { theme } = useTheme();
+  // "All topics" mode hides the Projects section and lets the Topics section
+  // grow into a scrollable list of every topic. The transition is staged so
+  // one half finishes before the other starts:
+  //   forward: Projects collapses → THEN topics expand
+  //   reverse: topics collapse    → THEN Projects grows back
+  // `showAllTopics` is the immediate button intent; `projectsPresent` and
+  // `topicsExpanded` are flipped by animation-complete callbacks so the two
+  // halves never overlap.
+  // Initialize from the session cache so a re-mount (view switch) restores the
+  // expanded state instantly. `initial={false}` on the AnimatePresence regions
+  // means this resting state paints without any enter animation.
+  const initialShowAll = cachedShowAllTopics ?? false;
+  const [showAllTopics, setShowAllTopics] = React.useState(initialShowAll);
+  const [projectsPresent, setProjectsPresent] = React.useState(!initialShowAll);
+  const [topicsExpanded, setTopicsExpanded] = React.useState(initialShowAll);
+
+  // First mount of the session: reconcile against the persisted preference.
+  // Sets the resting state directly (not via the toggle) so it doesn't replay
+  // the staged animation. Skipped on later mounts where the cache already
+  // matches.
+  React.useEffect(() => {
+    if (cachedShowAllTopics !== undefined) return;
+    let cancelled = false;
+    void UserPreferencesService.getPreferences().then((prefs) => {
+      const stored = prefs.trails?.showAllTopics ?? false;
+      cachedShowAllTopics = stored;
+      if (cancelled || !stored) return;
+      setShowAllTopics(true);
+      setProjectsPresent(false);
+      setTopicsExpanded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const visibleRepos = repoEntries.slice(0, repoLimit);
-  const visibleTopics = topicEntries.slice(0, topicLimit);
+  // The first `topicLimit` topics are always shown; the remainder reveal in a
+  // height-animated block when expanded. `topicLimit` (6) divides evenly into
+  // every possible column count (1–3 within the 1100px container), so the base
+  // rows stay full and the extra block starts on a clean new row.
+  const baseTopics = topicEntries.slice(0, topicLimit);
+  const extraTopics = topicEntries.slice(topicLimit);
+
+  const toggleAllTopics = () => {
+    const next = !showAllTopics;
+    // Persist the choice (fire-and-forget) and keep the session cache in sync
+    // so a subsequent re-mount restores this state without a flash.
+    cachedShowAllTopics = next;
+    void UserPreferencesService.updatePreferences({
+      trails: { showAllTopics: next },
+    });
+    if (!showAllTopics) {
+      // Forward: signal intent and start collapsing Projects. The extra topics
+      // reveal only once Projects' fade-out completes.
+      setShowAllTopics(true);
+      setProjectsPresent(false);
+    } else {
+      // Reverse: signal intent and start collapsing the extra topics. Projects
+      // re-enters once that collapse completes — unless there were no extra
+      // topics to collapse, in which case restore Projects immediately.
+      setShowAllTopics(false);
+      if (topicsExpanded && extraTopics.length > 0) {
+        setTopicsExpanded(false);
+      } else {
+        setTopicsExpanded(false);
+        setProjectsPresent(true);
+      }
+    }
+  };
 
   // Map the dashboard's repo entries into the shared explored-card shape.
   // Memoized so the cards' coverage effect keys off a stable array.
@@ -127,7 +214,6 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
         padding: '40px 32px 64px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 36,
       }}
     >
       <Section
@@ -141,72 +227,147 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
             : undefined
         }
         action={
-          onCreateTopic ? (
-            <PillButton
-              theme={theme}
-              onClick={onCreateTopic}
-              accent
-              icon={<Plus size={14} />}
-              iconPosition="start"
-            >
-              New topic
-            </PillButton>
-          ) : null
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {topicEntries.length > 0 && (
+              <PillButton
+                theme={theme}
+                onClick={toggleAllTopics}
+                icon={
+                  showAllTopics ? (
+                    <X size={14} />
+                  ) : (
+                    <LayoutGrid size={14} />
+                  )
+                }
+                iconPosition="start"
+              >
+                {showAllTopics ? 'Show projects' : 'All topics'}
+              </PillButton>
+            )}
+            {onCreateTopic && (
+              <PillButton
+                theme={theme}
+                onClick={onCreateTopic}
+                accent
+                icon={<Plus size={14} />}
+                iconPosition="start"
+              >
+                New topic
+              </PillButton>
+            )}
+          </div>
         }
       >
-        {visibleTopics.length === 0 ? (
+        {topicEntries.length === 0 ? (
           <EmptyHint
             theme={theme}
             text="No topics yet. Bundle related trails together so they're easy to share."
           />
         ) : (
-          <TopicList
-            topics={visibleTopics}
-            theme={theme}
-            onSelectTopic={onSelectTopic}
-            onDeleteTopic={onDeleteTopic}
-          />
+          <>
+            <TopicList
+              topics={baseTopics}
+              theme={theme}
+              onSelectTopic={onSelectTopic}
+              onDeleteTopic={onDeleteTopic}
+            />
+            {/* Extra topics reveal by growing height from 0 → auto, so the
+                container visibly expands instead of the cards popping in.
+                When its collapse completes on reverse, Projects fades back. */}
+            <AnimatePresence
+              initial={false}
+              onExitComplete={() => setProjectsPresent(true)}
+            >
+              {topicsExpanded && extraTopics.length > 0 && (
+                <motion.div
+                  key="extra-topics"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.35, ease: 'easeInOut' }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  {/* paddingTop sits inside the measured height so the
+                      inter-row gap eases in with the rest. */}
+                  <div style={{ paddingTop: 12 }}>
+                    <TopicList
+                      topics={extraTopics}
+                      theme={theme}
+                      onSelectTopic={onSelectTopic}
+                      onDeleteTopic={onDeleteTopic}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
         )}
       </Section>
 
-      <Section
-        theme={theme}
-        eyebrowIcon={<FolderGit2 size={12} color={theme.colors.primary} />}
-        eyebrow="Projects"
-        title="Projects with Trails"
-        subtitle={
-          repoEntries.length === 0 ? 'No projects have trails yet.' : undefined
-        }
-        action={
-          repoEntries.length > 0 ? (
-            <PillButton
-              theme={theme}
-              onClick={onViewAllProjects}
-              accent
-              icon={<ArrowRight size={14} />}
-              iconPosition="end"
-            >
-              View All Projects
-            </PillButton>
-          ) : null
-        }
+      <AnimatePresence
+        initial={false}
+        // Forward toggle: Projects has fully collapsed → now expand topics.
+        onExitComplete={() => setTopicsExpanded(true)}
       >
-        {visibleRepos.length === 0 ? (
-          <EmptyHint
-            theme={theme}
-            text="Publish a trail from the File City panel and its repo will land here."
-          />
-        ) : (
-          <ExploredProjectsGrid
-            entries={exploredEntries}
-            recentTrails={recentTrails}
-            onOpenRepo={(e) => {
-              const original = repoEntries.find((r) => r.key === e.repo.path);
-              if (original) onSelectRepo(original);
-            }}
-          />
+        {projectsPresent && (
+          <motion.div
+            key="projects-section"
+            // Pure fade — Projects is the last element in the column, so
+            // fading in place (no height collapse) reads cleaner and causes
+            // no layout jump.
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            style={{ marginTop: 36 }}
+          >
+            <Section
+              theme={theme}
+              eyebrowIcon={
+                <FolderGit2 size={12} color={theme.colors.primary} />
+              }
+              eyebrow="Projects"
+              title="Projects with Trails"
+              subtitle={
+                repoEntries.length === 0
+                  ? 'No projects have trails yet.'
+                  : undefined
+              }
+              action={
+                repoEntries.length > 0 ? (
+                  <PillButton
+                    theme={theme}
+                    onClick={onViewAllProjects}
+                    accent
+                    icon={<ArrowRight size={14} />}
+                    iconPosition="end"
+                  >
+                    View All Projects
+                  </PillButton>
+                ) : null
+              }
+            >
+              {visibleRepos.length === 0 ? (
+                <EmptyHint
+                  theme={theme}
+                  text="Publish a trail from the File City panel and its repo will land here."
+                />
+              ) : (
+                <ExploredProjectsGrid
+                  entries={exploredEntries}
+                  recentTrails={recentTrails}
+                  onOpenRepo={(e) => {
+                    const original = repoEntries.find(
+                      (r) => r.key === e.repo.path,
+                    );
+                    if (original) onSelectRepo(original);
+                  }}
+                />
+              )}
+            </Section>
+          </motion.div>
         )}
-      </Section>
+      </AnimatePresence>
     </section>
   );
 };

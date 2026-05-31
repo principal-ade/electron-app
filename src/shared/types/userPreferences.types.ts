@@ -252,6 +252,10 @@ export interface UserPreferences {
       layout: 'split' | 'diagram';
       hideMap: boolean;
     };
+    // Home dashboard "All topics" mode — when true, the Projects section is
+    // hidden and every topic is shown. Persisted so the choice survives view
+    // switches and app restarts. Default false.
+    showAllTopics?: boolean;
   };
 
   // Onboarding state and completion tracking
