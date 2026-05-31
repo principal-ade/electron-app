@@ -61,6 +61,7 @@ export interface AlexandriaWorkspaceTitlebarProps {
   // Topic-description slide-over (rendered over the left column by the layout)
   descriptionOpen?: boolean;
   onToggleDescription?: () => void;
+  onCloseDescription?: () => void;
 }
 
 export const AlexandriaWorkspaceTitlebar: React.FC<
@@ -76,6 +77,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   onLayoutChange,
   descriptionOpen,
   onToggleDescription,
+  onCloseDescription,
 }) => {
   const { theme } = useTheme();
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -150,6 +152,12 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   const activateLeftPanel = (panelId: string) => {
     handleLeftPanelChange(panelId);
     handleExpandLeftPanel();
+    // The description slide-over covers the left column, so selecting a
+    // panel while it's open would leave the chosen panel hidden behind it.
+    // Dismiss it so the panel the user just picked is actually visible.
+    if (descriptionOpen && onCloseDescription) {
+      onCloseDescription();
+    }
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         window.dispatchEvent(
@@ -394,7 +402,8 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '6px 8px',
+              gap: '6px',
+              padding: '6px 10px',
               minHeight: '34px',
               boxSizing: 'border-box',
               borderRadius: '6px',
@@ -406,10 +415,16 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
                 ? theme.colors.text
                 : theme.colors.textSecondary,
               cursor: 'pointer',
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: descriptionOpen
+                ? theme.fontWeights.semibold
+                : theme.fontWeights.medium,
+              fontFamily: theme.fonts.body,
               transition: 'all 0.15s',
             }}
           >
             <FileText size={16} strokeWidth={1.75} />
+            <span>Notes</span>
             {modPressed && (
               <span
                 style={{

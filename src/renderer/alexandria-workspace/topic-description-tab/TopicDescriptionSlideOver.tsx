@@ -119,7 +119,7 @@ export const TopicDescriptionSlideOver: React.FC<
             whiteSpace: 'nowrap',
           }}
         >
-          Description
+          Topic Notes
         </span>
         <button
           type="button"

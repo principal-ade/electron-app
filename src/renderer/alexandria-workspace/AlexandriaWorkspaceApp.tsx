@@ -685,6 +685,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
             panelControlRef.current?.expandLeft();
           }
         }}
+        onCloseDescription={() => setDescriptionOpen(false)}
       />
 
       {/* Main Content - Panel Layout */}
