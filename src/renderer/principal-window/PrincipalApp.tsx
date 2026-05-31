@@ -4,6 +4,7 @@ import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
 import { PrincipalEventProvider } from './PrincipalEventContext';
 import { FeedTabsProvider } from './contexts/FeedTabsContext';
+import { InboxTabsProvider } from './contexts/InboxTabsContext';
 import { IntegratedShell } from './components/IntegratedShell/IntegratedShell';
 import { KeychainConsentModal } from '../components/KeychainConsentModal';
 import {
@@ -40,7 +41,9 @@ export const PrincipalApp: React.FC = () => {
           <MemoryRouter>
             <PrincipalEventProvider>
               <FeedTabsProvider>
-                <IntegratedShell />
+                <InboxTabsProvider>
+                  <IntegratedShell />
+                </InboxTabsProvider>
               </FeedTabsProvider>
             </PrincipalEventProvider>
           </MemoryRouter>

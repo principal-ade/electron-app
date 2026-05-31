@@ -22,6 +22,10 @@ import type {
   ExplainCommitsResponse,
   ExplainWorkingChangesInput,
   ExplainWorkingChangesResponse,
+  ListRecentlyVisitedTrailsResponse,
+  GetInboxInput,
+  ListInboxResponse,
+  InboxUnreadCountResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -181,5 +185,26 @@ export class WebAdeService {
     input: ExplainWorkingChangesInput,
   ): Promise<ExplainWorkingChangesResponse> {
     return webAdeClient.explainWorkingChanges(input);
+  }
+
+  /**
+   * Get the signed-in user's recently visited trails (newest first).
+   */
+  static async getRecentlyVisitedTrails(): Promise<ListRecentlyVisitedTrailsResponse> {
+    return webAdeClient.getRecentlyVisitedTrails();
+  }
+
+  /**
+   * Get the signed-in user's trail inbox (shared trails sent to them).
+   */
+  static async getInbox(input: GetInboxInput = {}): Promise<ListInboxResponse> {
+    return webAdeClient.getInbox(input);
+  }
+
+  /**
+   * Get just the unread inbox count.
+   */
+  static async getInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
+    return webAdeClient.getInboxUnreadCount();
   }
 }

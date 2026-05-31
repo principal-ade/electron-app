@@ -28,6 +28,10 @@ import type {
   ExplainCommitsResponse,
   ExplainWorkingChangesInput,
   ExplainWorkingChangesResponse,
+  ListRecentlyVisitedTrailsResponse,
+  GetInboxInput,
+  ListInboxResponse,
+  InboxUnreadCountResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -783,5 +787,126 @@ export class WebAdeService {
     }
 
     return { text };
+  }
+
+  /**
+   * Fetch the signed-in user's "recently visited" trails.
+   * The web-ade route keys on the numeric GitHub id (not the token), so we
+   * resolve it from AuthService. Returns empty if we can't (signed out / no id).
+   */
+  async getRecentlyVisitedTrails(): Promise<ListRecentlyVisitedTrailsResponse> {
+    const token = await this.getToken();
+    const user = await authService.getCurrentUser();
+    const githubId = user?.id;
+    if (!githubId) {
+      // Not signed in, or the stored auth predates id capture.
+      return { entries: [] };
+    }
+
+    const url = `${this.baseUrl}/trails/recently-visited/by-user/${githubId}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch recently-visited trails: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data = (await response.json()) as Partial<ListRecentlyVisitedTrailsResponse>;
+      return { entries: Array.isArray(data?.entries) ? data.entries : [] };
+    } catch (error) {
+      console.error('[WebADE] Failed to fetch recently-visited trails:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch the signed-in user's trail inbox (shared trails sent to them).
+   * Auth'd by the GitHub token; the server resolves the recipient.
+   */
+  async getInbox(input: GetInboxInput = {}): Promise<ListInboxResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const params = new URLSearchParams();
+    if (input.limit != null) params.set('limit', String(input.limit));
+    if (input.cursor) params.set('cursor', input.cursor);
+    if (input.unreadOnly) params.set('unreadOnly', 'true');
+    const query = params.toString();
+    const url = `${this.baseUrl}/trails/inbox${query ? `?${query}` : ''}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        throw new Error(`Failed to fetch inbox: ${response.status} ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as Partial<ListInboxResponse>;
+      return {
+        entries: Array.isArray(data?.entries) ? data.entries : [],
+        unreadCount: typeof data?.unreadCount === 'number' ? data.unreadCount : 0,
+        ...(data?.cursor ? { cursor: data.cursor } : {}),
+      };
+    } catch (error) {
+      console.error('[WebADE] Failed to fetch inbox:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch just the unread inbox count — cheap badge poll.
+   */
+  async getInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/trails/inbox/unread-count`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        throw new Error(
+          `Failed to fetch inbox unread count: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data = (await response.json()) as Partial<InboxUnreadCountResponse>;
+      return { count: typeof data?.count === 'number' ? data.count : 0 };
+    } catch (error) {
+      console.error('[WebADE] Failed to fetch inbox unread count:', error);
+      throw error;
+    }
   }
 }

@@ -342,6 +342,89 @@ export interface ExplainWorkingChangesResponse {
 }
 
 // =============================================================================
+// Trail Inbox + Recently Visited (web-ade per-user trail feeds)
+// =============================================================================
+
+/**
+ * One trail in a user's "recently visited" manifest.
+ * Mirrors web-ade `src/lib/trails/types.ts`.
+ */
+export interface TrailRecentlyVisitedEntry {
+  id: string;
+  title: string;
+  owner: string;
+  repo: string;
+  /** The trail's own updatedAt, snapshotted at visit time. */
+  updatedAt: string;
+  /** ISO 8601 — when this user last opened the trail. */
+  lastVisitedAt: string;
+  /** Times this user has opened the trail since tracking began. */
+  visitCount: number;
+  /** Creator's GitHub login, for "{login}'s trail" subtitles. */
+  createdByLogin?: string;
+}
+
+export interface ListRecentlyVisitedTrailsResponse {
+  entries: TrailRecentlyVisitedEntry[];
+}
+
+/**
+ * Minimal snapshot of the underlying shared trail carried on an inbox row,
+ * so the list renders without a per-row fan-out. Subset of web-ade's
+ * `SharedTrailIndexEntry`.
+ */
+export interface InboxTrailSnapshot {
+  id: string;
+  title: string;
+  owner: string;
+  repo: string;
+  updatedAt: string;
+}
+
+/**
+ * One delivered shared trail in a recipient's inbox.
+ * Mirrors web-ade `src/lib/trails/types.ts`.
+ */
+export interface InboxIndexEntry {
+  /** Trail id — foreign key into `/api/trails/by-id/{id}`. */
+  trailId: string;
+  /** Sender identity at send-time. */
+  sender: { githubId: number; githubLogin: string };
+  /** Optional sender note ("why I'm sharing this"). */
+  comment?: string;
+  /** ISO 8601 — server-stamped on send, refreshed on resend. */
+  sentAt: string;
+  /** ISO 8601 — server-stamped when the recipient marks the entry read. */
+  readAt: string | null;
+  /** Snapshot of the live trail entry at send-time. */
+  snapshot: InboxTrailSnapshot;
+  /** Resolved owner/repo for the trail — duplicated for fast list rendering. */
+  owner: string;
+  repo: string;
+}
+
+export interface GetInboxInput {
+  /** Page size (server clamps to 1..100, default 50). */
+  limit?: number;
+  /** Opaque pagination cursor from a prior response. */
+  cursor?: string;
+  /** Only return unread entries. */
+  unreadOnly?: boolean;
+}
+
+export interface ListInboxResponse {
+  entries: InboxIndexEntry[];
+  /** Total unread across the whole inbox (independent of filters/paging). */
+  unreadCount: number;
+  /** Present when more pages remain. */
+  cursor?: string;
+}
+
+export interface InboxUnreadCountResponse {
+  count: number;
+}
+
+// =============================================================================
 // Router Type Definition
 // =============================================================================
 
@@ -467,5 +550,23 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: ExplainWorkingChangesInput;
     }) => Promise<ExplainWorkingChangesResponse>;
+  };
+  getRecentlyVisitedTrails: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<ListRecentlyVisitedTrailsResponse>;
+  };
+  getInbox: {
+    action: (args: {
+      context: ActionContext;
+      input: GetInboxInput;
+    }) => Promise<ListInboxResponse>;
+  };
+  getInboxUnreadCount: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<InboxUnreadCountResponse>;
   };
 };

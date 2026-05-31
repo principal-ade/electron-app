@@ -11,6 +11,7 @@ import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
 import { TrailsView } from '../../views/TrailsView';
+import { InboxView } from '../../views/InboxView';
 import { HomeView } from '../../views/HomeView';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { PresenceService } from '../../../main-process-api/PresenceService';
@@ -33,6 +34,7 @@ export type NavigationView = InteractiveShellNavigationView;
 const VIEW_OPTIONS = [
   'home',
   'trails',
+  'inbox',
   'feed',
   'onboarding',
   'settings',
@@ -133,6 +135,7 @@ export const IntegratedShell: React.FC = () => {
     Record<string, { left: boolean; right: boolean }>
   >({
     trails: { left: false, right: false },
+    inbox: { left: false, right: false },
     feed: { left: false, right: false },
     onboarding: { left: false, right: false },
     auth: { left: false, right: false },
@@ -614,6 +617,7 @@ export const IntegratedShell: React.FC = () => {
                 }
               />
             )}
+            {activeView === 'inbox' && <InboxView />}
             {activeView === 'feed' && <FeedView />}
             {activeView === 'onboarding' && (
               <OnboardingView onComplete={() => handleViewChange('feed')} />

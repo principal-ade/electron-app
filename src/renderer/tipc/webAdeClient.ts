@@ -37,6 +37,10 @@ import type {
   ExplainCommitsResponse,
   ExplainWorkingChangesInput,
   ExplainWorkingChangesResponse,
+  ListRecentlyVisitedTrailsResponse,
+  GetInboxInput,
+  ListInboxResponse,
+  InboxUnreadCountResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
@@ -85,6 +89,11 @@ export interface WebAdeClient {
   explainWorkingChanges: (
     input: ExplainWorkingChangesInput,
   ) => Promise<ExplainWorkingChangesResponse>;
+
+  // Trail Inbox + Recently Visited
+  getRecentlyVisitedTrails: () => Promise<ListRecentlyVisitedTrailsResponse>;
+  getInbox: (input: GetInboxInput) => Promise<ListInboxResponse>;
+  getInboxUnreadCount: () => Promise<InboxUnreadCountResponse>;
 }
 
 // =============================================================================
@@ -167,4 +176,11 @@ export type {
   ExplainCommitsInput,
   ExplainCommitsResponse,
   ExplainCommitData,
+  TrailRecentlyVisitedEntry,
+  ListRecentlyVisitedTrailsResponse,
+  InboxTrailSnapshot,
+  InboxIndexEntry,
+  GetInboxInput,
+  ListInboxResponse,
+  InboxUnreadCountResponse,
 } from '../../shared/tipc/webAdeRouterTypes';

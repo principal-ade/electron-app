@@ -23,6 +23,7 @@ export interface WorkspaceLayout {
 export type InteractiveShellNavigationView =
   | 'home'
   | 'trails'
+  | 'inbox'
   | 'feed'
   | 'onboarding'
   | 'settings'

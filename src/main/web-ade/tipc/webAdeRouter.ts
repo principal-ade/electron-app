@@ -24,6 +24,7 @@ import type {
   GetPinnedRepositoriesInput,
   ExplainCommitsInput,
   ExplainWorkingChangesInput,
+  GetInboxInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 
@@ -178,4 +179,22 @@ export const webAdeRouter = {
     .action(async ({ input }) => {
       return webAdeService.explainWorkingChanges(input);
     }),
+
+  // ===========================================================================
+  // Trail Inbox + Recently Visited
+  // ===========================================================================
+
+  getRecentlyVisitedTrails: t.procedure.action(async () => {
+    return webAdeService.getRecentlyVisitedTrails();
+  }),
+
+  getInbox: t.procedure
+    .input<GetInboxInput>()
+    .action(async ({ input }) => {
+      return webAdeService.getInbox(input);
+    }),
+
+  getInboxUnreadCount: t.procedure.action(async () => {
+    return webAdeService.getInboxUnreadCount();
+  }),
 };
