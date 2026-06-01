@@ -5,6 +5,7 @@ import {
   Check,
   ExternalLink,
   Footprints,
+  Layers,
   Search,
   Share2,
 } from 'lucide-react';
@@ -51,6 +52,7 @@ const TRAIL_INSTALL_SKILL_NAMES = [
   'convert-investigation',
   'author-investigation-trail',
   'author-informative-trail',
+  'topic-context',
 ] as const;
 
 const TRAIL_SKILL_DETAILS: ReadonlyArray<{
@@ -83,6 +85,14 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
       'Turn a raw investigation trail into a polished, shareable spec — cleans up the trail and forwards it through the convert pipeline.',
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/convert-investigation`,
     Icon: Share2,
+  },
+  {
+    name: 'topic-context',
+    title: 'Topic Context',
+    description:
+      'Read the topic an agent was briefed on and keep its description current — fetch the topic and its trails, append discovered context, or replace a status section in place.',
+    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/topic-context`,
+    Icon: Layers,
   },
 ];
 
@@ -611,7 +621,7 @@ export function HomeView() {
               <button
                 onClick={() => void handleInstallSkill()}
                 disabled={installingSkill}
-                title="Installs the trail skills (convert-investigation, author-investigation-trail, author-informative-trail) to ~/.claude/skills and ~/.agents/skills. Cursor and Windsurf also read skills from ~/.agents/skills."
+                title="Installs the trail skills (convert-investigation, author-investigation-trail, author-informative-trail, topic-context) to ~/.claude/skills and ~/.agents/skills. Cursor and Windsurf also read skills from ~/.agents/skills."
                 style={{
                   width: 360,
                   padding: 36,
