@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.725",
+  "version": "0.0.726",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -287,7 +287,6 @@
     "remark-gfm": "^4.0.1",
     "roughjs": "^4.6.6",
     "simple-git": "^3.30.0",
-    "simple-peer": "^9.11.1",
     "socket.io-client": "^4.8.1",
     "stream-browserify": "^3.0.0",
     "themed-markdown": "^0.1.91",
@@ -329,7 +328,6 @@
     "@types/react-dom": "^19.1.8",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/react-test-renderer": "^19.1.0",
-    "@types/simple-peer": "^9.11.8",
     "@types/uuid": "^10.0.0",
     "@types/webpack-bundle-analyzer": "^4.7.0",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
