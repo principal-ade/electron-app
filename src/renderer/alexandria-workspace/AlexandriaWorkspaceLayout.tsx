@@ -81,6 +81,7 @@ import {
 import type {
   AlexandriaTab,
   FileCityTrailTab,
+  MarkdownDocTab,
   TopicDescriptionTab,
 } from './tab-types';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
@@ -242,6 +243,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   // Refs to track current state
   const collapsedStateRef = useRef(collapsed);
   const onCollapsedChangeRef = useRef(onCollapsedChange);
+  // Read inside the once-mounted file:opened listener so newly opened doc tabs
+  // carry the currently selected repo without re-subscribing on every change.
+  const selectedRepositoryRef = useRef(selectedRepository);
+  selectedRepositoryRef.current = selectedRepository;
 
   // Update refs when props change
   useEffect(() => {
@@ -544,6 +549,28 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               events={events}
               filePath={tab.filePath}
               showCloseButton={false}
+            />
+          </div>
+        );
+      }
+      if (tab.contentType === 'markdown-doc') {
+        return (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <MarkdownPanel
+              context={contextRef.current}
+              actions={actionsRef.current}
+              events={events}
+              filePath={tab.filePath}
+              repositoryPath={tab.repositoryPath}
             />
           </div>
         );
@@ -1093,19 +1120,34 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     return unsubscribe;
   }, [events, workspace.id, context]);
 
-  // Listen for file:opened events (from Alexandria docs panel)
-  // TODO: Implement tabbed view for markdown files
+  // Listen for file:opened events (from Alexandria docs panel). Clicking a doc
+  // opens it as a tab in the middle slot — one tab per distinct file, keyed by
+  // absolute path. If the doc already has a tab, just bring it to front.
   useEffect(() => {
     const unsubscribe = events.on('file:opened', async (event) => {
       const { filePath } = event.payload as { filePath: string };
 
-      console.info(
-        '[AlexandriaWorkspaceLayout] File opened event received:',
-        filePath,
-      );
+      if (!filePath) {
+        console.warn('[AlexandriaWorkspaceLayout] file:opened with no path');
+        return;
+      }
 
-      // Markdown files will be shown in tabs when tabbed view is implemented
-      // For now, just log the event
+      const tabId = `markdown-doc:${filePath}`;
+      const label = filePath.split('/').pop() || filePath;
+
+      setTabs((prev) => {
+        if (prev.some((t) => t.id === tabId)) return prev;
+        const newTab: MarkdownDocTab = {
+          id: tabId,
+          label,
+          contentType: 'markdown-doc',
+          filePath,
+          repositoryPath: selectedRepositoryRef.current?.path,
+          closable: true,
+        };
+        return [...prev, newTab];
+      });
+      setFocusTabId(tabId);
     });
 
     return unsubscribe;

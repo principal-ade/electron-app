@@ -31,7 +31,24 @@ export interface TopicDescriptionTab {
   closable?: boolean;
 }
 
+/**
+ * A documentation file opened from the Alexandria docs panel. Unlike the two
+ * singleton tabs above, these are multi-instance — one per distinct file —
+ * keyed by absolute `filePath`. Rendered read-only in the same `MarkdownPanel`
+ * the right slot uses. `repositoryPath` is carried so the viewer can resolve
+ * relative links and notes without depending on the live selected repo.
+ */
+export interface MarkdownDocTab {
+  id: string;
+  label: string;
+  contentType: 'markdown-doc';
+  filePath: string;
+  repositoryPath?: string;
+  closable?: boolean;
+}
+
 export type AlexandriaTab =
   | TerminalTab
   | FileCityTrailTab
-  | TopicDescriptionTab;
+  | TopicDescriptionTab
+  | MarkdownDocTab;
