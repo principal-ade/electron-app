@@ -349,6 +349,7 @@ export function HomeView() {
           workspace?.suggestedClonePath ?? defaultBaseDirectory ?? undefined,
         projectRepos: projectRepos.length > 0 ? projectRepos : undefined,
         shared: sharedTopicIds.has(t.id),
+        trailCount: t.trailIds.length,
       };
     });
   }, [topics, workspaces, workspaceRepos, defaultBaseDirectory, sharedTopicIds]);

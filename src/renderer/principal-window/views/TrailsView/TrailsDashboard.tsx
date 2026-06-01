@@ -7,8 +7,6 @@ import {
   LayoutGrid,
   Library,
   Plus,
-  Share2,
-  Trash2,
   X,
 } from 'lucide-react';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
@@ -16,6 +14,7 @@ import {
   ExploredProjectsGrid,
   type ExploredProjectRepoEntry,
 } from './ExploredProjectsGrid';
+import { TopicCard } from './TopicCard';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
@@ -28,19 +27,6 @@ type ThemeShape = ReturnType<typeof useTheme>['theme'];
  * restored instantly with no flash or replayed animation.
  */
 let cachedShowAllTopics: boolean | undefined;
-
-/**
- * Replace the platform home prefix with `~` so paths render compactly.
- * Matches macOS (`/Users/<name>`) and Linux (`/home/<name>`); other paths
- * pass through untouched.
- */
-const tildifyPath = (path: string): string => {
-  const mac = path.match(/^\/Users\/[^/]+/);
-  if (mac) return path.replace(mac[0], '~');
-  const linux = path.match(/^\/home\/[^/]+/);
-  if (linux) return path.replace(linux[0], '~');
-  return path;
-};
 
 export interface TrailsDashboardRepoEntry {
   /** Stable key — usually the repo path. */
@@ -76,6 +62,12 @@ export interface TrailsDashboardTopicEntry {
    * a `remoteId`). Drives the "Shared" badge on the card.
    */
   shared?: boolean;
+  /**
+   * Number of trails curated into this topic (`topic.trailIds.length`).
+   * Drives the trail-count glyph in the card's bottom-right corner. Omitted
+   * when unknown; the card hides the count rather than rendering a 0.
+   */
+  trailCount?: number;
 }
 
 export interface TrailsDashboardProps {
@@ -464,7 +456,6 @@ function TopicList({
   onSelectTopic: (entry: TrailsDashboardTopicEntry) => void;
   onDeleteTopic?: (entry: TrailsDashboardTopicEntry) => void;
 }) {
-  const [hoveredKey, setHoveredKey] = React.useState<string | null>(null);
   return (
     <ul
       style={{
@@ -477,212 +468,13 @@ function TopicList({
       }}
     >
       {topics.map((t) => (
-        <li
+        <TopicCard
           key={t.key}
-          style={{ position: 'relative' }}
-          onMouseEnter={() => setHoveredKey(t.key)}
-          onMouseLeave={() => setHoveredKey((k) => (k === t.key ? null : k))}
-        >
-          <button
-            type="button"
-            onClick={() => onSelectTopic(t)}
-            style={{
-              width: '100%',
-              textAlign: 'left',
-              background: theme.colors.backgroundSecondary,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: 10,
-              padding: '14px 16px',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
-              transition: 'border-color 120ms ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.primary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.border;
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                minWidth: 0,
-              }}
-            >
-              <div
-                style={{
-                  color: theme.colors.text,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[2],
-                  fontWeight: theme.fontWeights.semibold,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  minWidth: 0,
-                }}
-              >
-                {t.title}
-              </div>
-              {t.shared && (
-                <span
-                  title="Shared to web-ade"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3,
-                    flex: '0 0 auto',
-                    padding: '1px 6px',
-                    fontSize: theme.fontSizes[0],
-                    fontFamily: theme.fonts.body,
-                    color: theme.colors.primary,
-                    border: `1px solid ${theme.colors.primary}`,
-                    borderRadius: 999,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <Share2 size={10} />
-                  Shared
-                </span>
-              )}
-            </div>
-            {t.projectRepos && t.projectRepos.length > 0 ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  flexWrap: 'nowrap',
-                  gap: 8,
-                  color: theme.colors.textTertiary,
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[0],
-                  minWidth: 0,
-                  overflowX: 'auto',
-                  overflowY: 'hidden',
-                  whiteSpace: 'nowrap',
-                }}
-                onWheel={(e) => {
-                  if (e.deltaY !== 0 && e.deltaX === 0) {
-                    e.currentTarget.scrollLeft += e.deltaY;
-                  }
-                }}
-                title={t.projectRepos
-                  .map((r) =>
-                    r.ownerLogin ? `${r.ownerLogin}/${r.name}` : r.name,
-                  )
-                  .join(', ')}
-              >
-                {t.projectRepos.map((r, i) => (
-                  <span
-                    key={`${r.ownerLogin ?? ''}/${r.name}/${i}`}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      minWidth: 0,
-                      flex: '0 0 auto',
-                    }}
-                  >
-                    {r.ownerLogin ? (
-                      <img
-                        src={`https://github.com/${r.ownerLogin}.png?size=40`}
-                        alt={r.ownerLogin}
-                        width={14}
-                        height={14}
-                        style={{
-                          borderRadius: '50%',
-                          flex: '0 0 auto',
-                          border: `1px solid ${theme.colors.border}`,
-                        }}
-                      />
-                    ) : (
-                      <FolderGit2 size={12} />
-                    )}
-                    <span
-                      style={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        minWidth: 0,
-                      }}
-                    >
-                      {r.name}
-                    </span>
-                  </span>
-                ))}
-              </div>
-            ) : t.folderPath ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  color: theme.colors.textTertiary,
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[0],
-                  minWidth: 0,
-                }}
-                title={tildifyPath(t.folderPath)}
-              >
-                <span
-                  style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    minWidth: 0,
-                  }}
-                >
-                  {tildifyPath(t.folderPath)}
-                </span>
-              </div>
-            ) : null}
-          </button>
-          {onDeleteTopic && (
-            <button
-              type="button"
-              aria-label={`Delete topic ${t.title}`}
-              title="Delete topic"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteTopic(t);
-              }}
-              style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                width: 26,
-                height: 26,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'transparent',
-                border: 'none',
-                borderRadius: 6,
-                color: theme.colors.textTertiary,
-                cursor: 'pointer',
-                padding: 0,
-                opacity: hoveredKey === t.key ? 1 : 0,
-                pointerEvents: hoveredKey === t.key ? 'auto' : 'none',
-                transition: 'opacity 120ms ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background =
-                  theme.colors.backgroundTertiary ?? theme.colors.background;
-                e.currentTarget.style.color = theme.colors.error ?? '#ef4444';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.color = theme.colors.textTertiary;
-              }}
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
-        </li>
+          topic={t}
+          theme={theme}
+          onSelect={onSelectTopic}
+          onDelete={onDeleteTopic}
+        />
       ))}
     </ul>
   );
