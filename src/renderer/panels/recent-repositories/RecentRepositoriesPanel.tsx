@@ -42,7 +42,14 @@ function shellQuote(s: string): string {
  */
 interface RepositoryCardProps {
   repository: AlexandriaEntry;
+  /** True when this repo has any live terminal session. Drives the icon. */
   hasActiveTerminal: boolean;
+  /**
+   * True when this repo's terminal is the one currently visible/focused in the
+   * terminal panel. Drives the highlighted border — only the active terminal's
+   * project gets it, not every project that merely has a session open.
+   */
+  isActiveTerminal: boolean;
   isMember: boolean;
   /**
    * True when the keyboard cursor (arrow-key navigation from the search input)
@@ -60,6 +67,7 @@ interface RepositoryCardProps {
 const RepositoryCard: React.FC<RepositoryCardProps> = ({
   repository,
   hasActiveTerminal,
+  isActiveTerminal,
   isMember,
   isSelected,
   homePath,
@@ -105,7 +113,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
         padding: '12px',
         borderRadius: '6px',
         border: `1px solid ${
-          hasActiveTerminal || isSelected
+          isActiveTerminal || isSelected
             ? theme.colors.primary
             : theme.colors.border
         }`,
@@ -305,6 +313,14 @@ interface RecentRepositoriesPanelContext extends PanelContextValue {
   recentRepositories?: DataSlice<{ repositories: AlexandriaEntry[] }>;
   workspaceRepositories?: DataSlice<{ repositories: AlexandriaEntry[] }>;
   alexandriaRepositories?: DataSlice<{ repositories: AlexandriaEntry[] }>;
+  /**
+   * Path of the repo whose terminal is currently visible/focused in the
+   * terminal panel. Only this project's card gets the highlighted border;
+   * other projects with open sessions keep just the terminal icon. Carried on
+   * context (not a sibling prop) to keep the panel's context/actions/events
+   * contract intact.
+   */
+  activeTerminalRepoPath?: string | null;
 }
 
 interface RecentRepositoriesPanelProps {
@@ -325,6 +341,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
   context,
   events,
 }) => {
+  const activeTerminalRepoPath = context.activeTerminalRepoPath;
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [homePath, setHomePath] = useState<string | null>(null);
@@ -754,6 +771,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
             key={repository.path}
             repository={repository}
             hasActiveTerminal={activeRepoPaths.has(repository.path)}
+            isActiveTerminal={repository.path === activeTerminalRepoPath}
             isMember={memberPaths.has(repository.path)}
             isSelected={repository.path === selectedPath}
             homePath={homePath}

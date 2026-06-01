@@ -595,6 +595,33 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     [context, terminalCtx.terminalSessions, terminalCtx.terminalContext],
   );
 
+  // The repo path whose terminal tab is currently visible. Drives the
+  // "active terminal" border on the Projects panel: only the project whose
+  // terminal the user is actually looking at gets the highlight, while every
+  // project with a live session still shows the terminal icon. Resolved from
+  // the active tab via our captured tab→session map, then matching the
+  // session's `repo:` context. Null when no terminal tab is active (e.g. a
+  // file-city-trail tab is selected) or the active tab isn't repo-pinned.
+  const activeTerminalRepoPath = useMemo(() => {
+    if (!activeTerminalTabId) return null;
+    const sessionId = tabSessionMapRef.current.get(activeTerminalTabId);
+    if (!sessionId) return null;
+    const session = terminalCtx.terminalSessions.find((s) => s.id === sessionId);
+    const prefix = `${terminalContext}:repo:`;
+    if (session?.context?.startsWith(prefix)) {
+      return session.context.slice(prefix.length);
+    }
+    return null;
+  }, [activeTerminalTabId, terminalCtx.terminalSessions, terminalContext]);
+
+  // Context for the configurable left ("Projects") panel. Carries the active
+  // terminal's repo path through `context` rather than a sibling prop so the
+  // panel keeps the standard context/actions/events contract.
+  const workspacePanelContext = useMemo(
+    () => ({ ...context, activeTerminalRepoPath }),
+    [context, activeTerminalRepoPath],
+  );
+
   // State for remove from workspace modal
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [entryToRemove, setEntryToRemove] = useState<AlexandriaEntry | null>(
@@ -1322,7 +1349,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               <FocusIndicator isFocused={isFocused('left')} />
             )}
             <WorkspacePanelComponent
-              context={context}
+              context={workspacePanelContext}
               actions={actions}
               events={events}
             />
@@ -2472,6 +2499,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       focusTabId,
       terminalRemountKey,
       descriptionOpen,
+      workspacePanelContext,
     ],
   );
 
