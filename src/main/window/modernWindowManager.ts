@@ -182,6 +182,10 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         }
       }
 
+      // Capture before the map entry is removed below.
+      const wasWorkspaceWindow =
+        this.metadata?.primaryType === PrimaryWindowType.WORKSPACE;
+
       // Clean up file system watchers before removing from map
       if (this.fileSystemAdapter) {
         console.log(
@@ -252,6 +256,21 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
           .catch((error) => {
             console.error(
               '[ModernWindow] Error broadcasting window change:',
+              error,
+            );
+          });
+      }
+
+      // Tell the home view a topic window closed so it can drop the "open"
+      // indicator on the matching topic card.
+      if (wasWorkspaceWindow) {
+        import('./modernWindowHandlers')
+          .then((module) => {
+            module.broadcastWorkspaceWindowsChanged?.();
+          })
+          .catch((error) => {
+            console.error(
+              '[ModernWindow] Error broadcasting workspace window change:',
               error,
             );
           });

@@ -142,6 +142,11 @@ export function HomeView() {
   const [defaultBaseDirectory, setDefaultBaseDirectory] = useState<
     string | null
   >(null);
+  // Workspace ids that currently have a window open. Drives the "open"
+  // indicator on topic cards (a topic is open when its workspace window is).
+  const [openWorkspaceIds, setOpenWorkspaceIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Topic modal state.
   const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
@@ -264,6 +269,28 @@ export function HomeView() {
 
   useEffect(() => {
     let cancelled = false;
+    const apply = (
+      windowsList: { workspaceId?: string }[],
+    ) => {
+      if (cancelled) return;
+      setOpenWorkspaceIds(
+        new Set(
+          windowsList
+            .map((w) => w.workspaceId)
+            .filter((id): id is string => !!id),
+        ),
+      );
+    };
+    void WindowService.getOpenWorkspaceWindows().then(apply);
+    const unsubscribe = WindowService.onWorkspaceWindowsChanged(apply);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
     const targetIds = workspaces
       .filter((w) => (w.topicIds?.length ?? 0) > 0)
       .map((w) => w.id);
@@ -360,9 +387,17 @@ export function HomeView() {
         projectRepos: projectRepos.length > 0 ? projectRepos : undefined,
         shared: sharedTopicIds.has(t.id),
         trailCount: t.trailIds.length,
+        isOpen: workspace ? openWorkspaceIds.has(workspace.id) : false,
       };
     });
-  }, [topics, workspaces, workspaceRepos, defaultBaseDirectory, sharedTopicIds]);
+  }, [
+    topics,
+    workspaces,
+    workspaceRepos,
+    defaultBaseDirectory,
+    sharedTopicIds,
+    openWorkspaceIds,
+  ]);
 
   const hasAnyTrail = recentTrails.length > 0;
 

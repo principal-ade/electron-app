@@ -68,6 +68,12 @@ export interface TrailsDashboardTopicEntry {
    * when unknown; the card hides the count rather than rendering a 0.
    */
   trailCount?: number;
+  /**
+   * Whether this topic's workspace currently has a window open. Drives the
+   * "open" indicator on the card (and collapses the "Shared" badge to its
+   * icon to keep the title row compact).
+   */
+  isOpen?: boolean;
 }
 
 export interface TrailsDashboardProps {

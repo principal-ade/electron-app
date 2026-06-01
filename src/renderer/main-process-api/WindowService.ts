@@ -9,6 +9,7 @@
 
 import type {
   RepositoryWindowState,
+  WorkspaceWindowState,
   DevWorkspaceOptions,
   ExtensionWindowOptions,
   AlexandriaWorkspaceOptions,
@@ -16,7 +17,7 @@ import type {
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 // Re-export for convenience
-export type { RepositoryWindowState };
+export type { RepositoryWindowState, WorkspaceWindowState };
 
 /**
  * Service for managing application windows
@@ -135,6 +136,41 @@ export class WindowService {
         '[WindowService] Failed to register repository windows listener:',
         error,
       );
+    }
+  }
+
+  /**
+   * Get the currently open Alexandria workspace windows
+   * @returns One entry per live workspace window (empty array on failure)
+   */
+  static async getOpenWorkspaceWindows(): Promise<WorkspaceWindowState[]> {
+    try {
+      return await window.mainProcess.window.getOpenWorkspaceWindows();
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to get open workspace windows:',
+        error,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Listen for workspace window open/close changes
+   * @param callback - Called with the full list of open workspace windows
+   * @returns Unsubscribe function
+   */
+  static onWorkspaceWindowsChanged(
+    callback: (workspaceWindows: WorkspaceWindowState[]) => void,
+  ): () => void {
+    try {
+      return window.mainProcess.window.onWorkspaceWindowsChanged(callback);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to register workspace windows listener:',
+        error,
+      );
+      return () => {};
     }
   }
 

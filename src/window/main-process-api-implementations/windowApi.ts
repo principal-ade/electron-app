@@ -7,6 +7,7 @@ import { ipcRenderer } from 'electron';
 import type {
   WindowAPI,
   RepositoryWindowState,
+  WorkspaceWindowState,
   DevWorkspaceOptions,
   ExtensionWindowOptions,
   AlexandriaWorkspaceOptions,
@@ -59,6 +60,33 @@ export const windowAPI: WindowAPI = {
         callback(repoWindows);
       },
     );
+  },
+
+  /**
+   * Get the currently open Alexandria workspace windows
+   */
+  getOpenWorkspaceWindows: () =>
+    ipcRenderer.invoke(WindowEvent.GET_OPEN_WORKSPACE_WINDOWS),
+
+  /**
+   * Listen for workspace window open/close changes
+   */
+  onWorkspaceWindowsChanged: (
+    callback: (workspaceWindows: WorkspaceWindowState[]) => void,
+  ) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      workspaceWindows: WorkspaceWindowState[],
+    ) => {
+      callback(workspaceWindows);
+    };
+    ipcRenderer.on(WindowEvent.WORKSPACE_WINDOWS_CHANGED, handler);
+    return () => {
+      ipcRenderer.removeListener(
+        WindowEvent.WORKSPACE_WINDOWS_CHANGED,
+        handler,
+      );
+    };
   },
 
   /**

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, Route, Share2, Trash2 } from 'lucide-react';
+import { AppWindow, FolderGit2, Route, Share2, Trash2 } from 'lucide-react';
 import type { TrailsDashboardTopicEntry } from './TrailsDashboard';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
@@ -39,6 +39,10 @@ export function TopicCard({
   onDelete,
 }: TopicCardProps) {
   const [hovered, setHovered] = React.useState(false);
+  // The trash button shares the card's top-right corner with the status
+  // indicators, so fade the indicators out while it's revealed to avoid an
+  // overlap (deletion is hidden for shared topics, matching the trash guard).
+  const trashVisible = hovered && !!onDelete && !topic.shared;
   return (
     <li
       style={{ position: 'relative' }}
@@ -90,26 +94,59 @@ export function TopicCard({
           >
             {topic.title}
           </div>
-          {topic.shared && (
+          {(topic.isOpen || topic.shared) && (
             <span
-              title="Shared to web-ade"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 3,
+                gap: 6,
                 flex: '0 0 auto',
                 marginLeft: 'auto',
-                padding: '1px 6px',
-                fontSize: theme.fontSizes[0],
-                fontFamily: theme.fonts.body,
                 color: theme.colors.primary,
-                border: `1px solid ${theme.colors.primary}`,
-                borderRadius: 5,
-                whiteSpace: 'nowrap',
+                // Crossfade with the hover trash button so they never collide
+                // in the corner.
+                opacity: trashVisible ? 0 : 1,
+                transition: 'opacity 120ms ease',
               }}
             >
-              <Share2 size={10} />
-              Shared
+              {topic.isOpen && (
+                <span
+                  title="Window open"
+                  style={{ display: 'inline-flex', alignItems: 'center' }}
+                >
+                  <AppWindow size={14} />
+                </span>
+              )}
+              {topic.shared &&
+                // When a topic is open we already show an indicator, so the
+                // "Shared" badge collapses to just its icon to keep the row
+                // from getting crowded.
+                (topic.isOpen ? (
+                  <span
+                    title="Shared to web-ade"
+                    style={{ display: 'inline-flex', alignItems: 'center' }}
+                  >
+                    <Share2 size={14} />
+                  </span>
+                ) : (
+                  <span
+                    title="Shared to web-ade"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      padding: '1px 6px',
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts.body,
+                      border: `1px solid ${theme.colors.primary}`,
+                      borderRadius: 5,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <Share2 size={10} />
+                    Shared
+                  </span>
+                ))}
             </span>
           )}
         </div>

@@ -16,6 +16,17 @@ export interface RepositoryWindowState {
 }
 
 /**
+ * Open Alexandria workspace window, reduced to the bits the home view needs
+ * to mark which topics currently have a window open.
+ */
+export interface WorkspaceWindowState {
+  /** Workspace id backing the window (absent for ephemeral threads). */
+  workspaceId?: string;
+  /** Topics hosted by the window's workspace, mirrored at open time. */
+  topicIds: string[];
+}
+
+/**
  * Options for opening a dev workspace window
  */
 export interface DevWorkspaceOptions {
@@ -108,6 +119,21 @@ export interface WindowAPI {
   onRepositoryWindowsChanged(
     callback: (repoWindows: RepositoryWindowState[]) => void,
   ): void;
+
+  /**
+   * Get the currently open Alexandria workspace windows.
+   * @returns One entry per live workspace window
+   */
+  getOpenWorkspaceWindows(): Promise<WorkspaceWindowState[]>;
+
+  /**
+   * Listen for workspace window open/close changes.
+   * @param callback - Called with the full list of open workspace windows
+   * @returns Unsubscribe function
+   */
+  onWorkspaceWindowsChanged(
+    callback: (workspaceWindows: WorkspaceWindowState[]) => void,
+  ): () => void;
 
   /**
    * Open a dev workspace window with the panel framework

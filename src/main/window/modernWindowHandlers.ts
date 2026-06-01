@@ -86,6 +86,54 @@ export function broadcastRepositoryWindowsChanged(): void {
 }
 
 /**
+ * Open Alexandria workspace window, reduced to the bits the home view needs
+ * to mark which topics currently have a window open.
+ */
+export interface WorkspaceWindowState {
+  workspaceId?: string;
+  topicIds: string[];
+}
+
+/**
+ * Get list of open Alexandria workspace windows with their workspace/topic ids.
+ * Driven off window metadata (`workspaceId` + `topicIds`), which is mirrored
+ * from the workspace registry at open time.
+ */
+function getOpenWorkspaceWindows(): WorkspaceWindowState[] {
+  const { getApplicationWindows } = require('./modernWindowManager');
+  const applicationWindows = getApplicationWindows();
+
+  const workspaceWindows: WorkspaceWindowState[] = [];
+  applicationWindows.forEach((appWindow: IModernApplicationWindow) => {
+    if (!appWindow.window || appWindow.window.isDestroyed()) return;
+    if (appWindow.metadata?.primaryType !== PrimaryWindowType.WORKSPACE) return;
+    workspaceWindows.push({
+      workspaceId: appWindow.metadata.workspaceId,
+      topicIds: appWindow.metadata.topicIds ?? [],
+    });
+  });
+  return workspaceWindows;
+}
+
+/**
+ * Broadcast workspace windows changed event to all windows
+ */
+export function broadcastWorkspaceWindowsChanged(): void {
+  const { getApplicationWindows } = require('./modernWindowManager');
+  const applicationWindows = getApplicationWindows();
+  const openWorkspaceWindows = getOpenWorkspaceWindows();
+
+  applicationWindows.forEach((appWindow: IModernApplicationWindow) => {
+    if (appWindow.window && !appWindow.window.isDestroyed()) {
+      appWindow.window.webContents.send(
+        WindowEvent.WORKSPACE_WINDOWS_CHANGED,
+        openWorkspaceWindows,
+      );
+    }
+  });
+}
+
+/**
  * Register all modern window IPC handlers
  */
 export function registerModernWindowHandlers(): void {
@@ -206,6 +254,9 @@ export function registerModernWindowHandlers(): void {
       );
 
       if (!window) return;
+
+      // Let the home view (and any other window) mark this topic as open.
+      broadcastWorkspaceWindowsChanged();
 
       // Register window with terminal manager to receive terminal events
       const { terminalManager } = await import('../terminal');
@@ -500,6 +551,11 @@ export function registerModernWindowHandlers(): void {
       return !!windowExists;
     },
   );
+
+  // Get list of open Alexandria workspace windows
+  ipcMain.handle(WindowEvent.GET_OPEN_WORKSPACE_WINDOWS, async () => {
+    return getOpenWorkspaceWindows();
+  });
 
   // Focus or create main window
   ipcMain.handle(WindowEvent.FOCUS_OR_CREATE_MAIN_WINDOW, async () => {
