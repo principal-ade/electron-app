@@ -208,8 +208,9 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
 
         {/* Topic description — rendered as markdown so headings, lists, and
             code blocks from the topic's `description` (e.g. a design doc
-            appended via `/api/topics/:id/description/append`) read as authored.
-            Sits above the Details block so it reads as the main body
+            appended via `/api/topics/:id/description/append`, or a section
+            replaced in place via `/api/topics/:id/description/section`) read as
+            authored. Sits above the Details block so it reads as the main body
             content; hidden when there's no topic or it has no description. */}
         {topic?.description && topic.description.trim().length > 0 && (
           <div

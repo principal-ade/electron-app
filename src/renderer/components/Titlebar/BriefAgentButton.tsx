@@ -36,6 +36,8 @@ export function buildBriefingText(payload: BriefAgentDragPayload): string {
     '',
     `If you author a trail during this task, include "topicId": "${payload.topicId}" in the POST body so it attaches to this topic.`,
     '',
+    `To leave context on the topic, POST to http://localhost:3044/api/topics/${payload.topicId}/description/append with {"text": "..."} to add a paragraph, or POST to .../description/section with {"heading": "...", "body": "..."} to replace one section in place (match the heading text exactly — GET the topic first to read it). Section upsert keeps a status section truthful instead of stacking duplicates.`,
+    '',
   ].join('\n');
 }
 

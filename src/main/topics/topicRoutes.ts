@@ -9,6 +9,7 @@
  */
 
 import type { Application, Request, Response } from 'express';
+import { upsertSection } from '@principal-ade/markdown-utils';
 import type { Topic } from '@principal-ai/alexandria-core-library';
 import type { TopicRegistryService } from '../stores/TopicRegistryService';
 import type { TrailStore } from '../file-city/trailStore';
@@ -135,6 +136,79 @@ export function registerTopicRoutes(
         res
           .status(500)
           .json({ success: false, error: 'failed to append description' });
+      }
+    },
+  );
+
+  // Replace a single `##`/`###` section of the description in place, or append
+  // it if absent. Unlike the append route (which only ever grows the body),
+  // this lets an agent keep a status section truthful instead of stacking
+  // contradictory blocks. Matching is exact on heading text (trailing
+  // whitespace ignored); a heading that matches more than one section is
+  // refused with 409 so we never clobber the wrong one — the caller resolves
+  // the duplicates first. The typical loop is: GET the topic, read the exact
+  // heading text, then POST it back here.
+  app.post(
+    '/api/topics/:id/description/section',
+    async (req: Request, res: Response) => {
+      const id = String(req.params.id);
+      if (!id) {
+        res.status(400).json({ success: false, error: 'topic id is required' });
+        return;
+      }
+      const body =
+        req.body && typeof req.body === 'object'
+          ? (req.body as Record<string, unknown>)
+          : null;
+      const heading =
+        body && typeof body.heading === 'string' ? body.heading : '';
+      const sectionBody =
+        body && typeof body.body === 'string' ? body.body : '';
+      const level =
+        body && typeof body.level === 'number' ? body.level : undefined;
+      if (heading.trim().length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'heading (non-empty string) is required',
+        });
+        return;
+      }
+      if (sectionBody.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'body (non-empty string) is required',
+        });
+        return;
+      }
+      try {
+        const existing = await registry.getTopic(id);
+        if (!existing) {
+          res.status(404).json({ success: false, error: 'unknown topic id' });
+          return;
+        }
+        const result = upsertSection(existing.description ?? '', {
+          heading,
+          body: sectionBody,
+          level,
+        });
+        if (!result.ok) {
+          res.status(409).json({
+            success: false,
+            error: `heading "${heading}" matches ${result.count} sections; resolve the duplicates first`,
+          });
+          return;
+        }
+        const topic = await registry.updateTopic(id, {
+          description: result.markdown,
+        });
+        broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
+        const trails = await resolveTopicTrails(topic, trailStore);
+        res.json({ success: true, topic, trails, action: result.action });
+      } catch (err) {
+        console.error('[topicRoutes] section upsert failed', err);
+        res
+          .status(500)
+          .json({ success: false, error: 'failed to update description section' });
       }
     },
   );
