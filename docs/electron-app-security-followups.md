@@ -80,72 +80,106 @@ this investigation):
 - `repository-traffic-controller` — the Next.js + WebSocket service that consumes it and
   owns the real auth adapter and token-minting HTTP routes. This is where the live risk is.
 
-Findings below were **confirmed by reading the code** unless marked "(sweep, not
-re-verified)".
+Findings below were **confirmed by reading the code AND tracing what's actually wired into
+the running server.** Two corrections to the first-pass agent sweep are folded in (the sweep
+over-escalated both the WS fallback and the mint routes); the verified picture is recorded
+here. Status as of 2026-06-01: items 1 and 2 are **fixed**; the rest are open.
 
-### CRITICAL — confirmed
+### Live production entry point (so severity is grounded)
 
-1. **`/api/register` mints a repo-scoped token for ANY repo with no credential check.**
-   POST `{githubToken, repoId, agentId}` returns a signed 24h JWT with
-   `permissions: ['sync:read','sync:write','sync:broadcast']`. The `githubToken` is never
-   validated — `// TODO: Verify GitHub token and get user info` is still a TODO; the userId
-   is just `user-${Math.random()...}`. An attacker can mint a working sync token for any
-   `repoId` they name.
-   - `repository-traffic-controller/app/api/register/route.ts:11-49`
-   - A correct, GitHub-verifying implementation exists at
-     `app/api/register/secure-route.ts` but is **dead code — not wired/imported anywhere**
-     (`grep` for `secure-route` returns nothing).
+Prod runs `dist/server-control-tower.js`, compiled from **`server-control-tower.ts`**
+(Dockerfile `CMD ["node","dist/server-control-tower.js"]`; pm2 deploy scripts the same).
+That file: (a) wires the WebSocket server using **control-tower-core's**
+`WebSocketServerTransportAdapter` + `BaseServer` + **`JWTAuthAdapter`** as the auth adapter
+(`server-control-tower.ts:207-264`), and (b) delegates all non-`/ws` HTTP to the Next.js
+handler (`:74-75,1061-1072`) — so `app/api/**` routes are live.
 
-2. **`/api/auth/exchange` has the same hole.** POST `{githubToken, repoId, agentId}` →
-   signed 1h JWT with `['sync:read','sync:write']`, no GitHub verification
-   (`// TODO: Verify GitHub token with your main app`).
-   - `repository-traffic-controller/app/api/auth/exchange/route.ts:8-34`
+The root-level `server-control-tower.js` / `server-control-tower.mjs` (Sept 2025, ~9 KB)
+are **stale legacy files referenced by nothing live** — they're the only things that
+instantiate `lib/adapters/ControlTowerTransportAdapter`. Worth deleting to avoid confusion.
 
-3. **WebSocket auth has an unverified fallback branch.** In `authenticateClient`, if the
-   presented token contains no `.` (so it isn't treated as a JWT) and a `messageData`
-   object is present, the server sets `authenticated = true` and trusts the client-supplied
-   `repoId`/`agentId`/`userId` with **no signature check** ("Legacy GitHub token auth
-   (fallback)"). The JWT branch above it is correct (`jwt.verify` HS256 + issuer
-   `dev-collab-auth-server`), but the fallback bypasses it entirely.
-   - `repository-traffic-controller/lib/adapters/ControlTowerTransportAdapter.ts:233-246`
+### FIXED
 
-**Net effect:** these three independently let an unauthenticated actor obtain repo-scoped
-sync access to *any* `repoId` — read presence/file-activity events and broadcast forged
-events into that repo's room. This is the same auth-system trust boundary as the
-auth-server `/token/current` disclosure, on the realtime side.
+1. **(was flagged CRITICAL — corrected to dead code) WebSocket "legacy fallback" auth
+   bypass.** `ControlTowerTransportAdapter.authenticateClient` had an `else if (messageData)`
+   branch that set `authenticated = true` for any dot-less token, trusting client-supplied
+   `repoId`/`agentId` with no verification. **But that adapter is NOT on the live path** —
+   the running server authenticates via `JWTAuthAdapter.validateToken`
+   (`lib/adapters/JWTAuthAdapter.ts:27-100`), which always `jwt.verify`s with HS256 + issuer
+   `dev-collab-auth-server` and throws on failure. No bypass exists in production. The first
+   pass mistook the dead adapter for the live one.
+   - **Done anyway (defense-in-depth):** removed the fallback branch from
+     `ControlTowerTransportAdapter.ts` so the exported-but-unused adapter can't be footgun-
+     wired later. Recommend also deleting that adapter + the stale `server-control-tower.js`/
+     `.mjs`.
 
-### HIGH / MEDIUM
+2. **(was flagged HIGH-latent — this one was real and is now fixed) `/api/register` and
+   `/api/auth/exchange` minted signed JWTs with no GitHub verification.** Both are live Next.js
+   routes. Previously they only checked field presence (`// TODO: Verify GitHub token`;
+   `userId = Math.random()`). The output isn't honored by the live WS today (it signs with
+   `syncJwtSecret`/no issuer; the WS requires `roomTokenSecret` + issuer; and the only
+   `syncJwtSecret` consumer `lib/auth-middleware.ts` is defined-but-never-instantiated) — but
+   they are live endpoints handing signed tokens to any caller, so they were fixed regardless.
+   - **Done:** both routes now call `GitHubAuthService.verifyRepoAccess(githubToken, repoId)`
+     before minting, return 401 on invalid token / 403 on no access, and derive
+     `sync:write`/`sync:broadcast` from real GitHub push permission. `/api/register` now uses
+     the (previously dead) `secure-route.ts` logic and `secure-route.ts` was deleted to
+     consolidate. Typecheck clean (`tsc --noEmit` exit 0); 91/91 unit tests pass.
+   - Files: `app/api/register/route.ts`, `app/api/auth/exchange/route.ts`.
 
-4. **Shared static signing secret with an insecure in-code default.**
-   `roomTokenSecret` / `syncJwtSecret` fall back to literals like
-   `'development-secret-change-in-production'` when env is unset
-   (`repository-traffic-controller/lib/config/config-service.ts:24-25`). One shared HMAC
-   secret signs all tokens; anyone who learns it can mint tokens for any room. Production
-   config only *warns*, doesn't fail closed.
+### PARTIALLY DONE
+
+3. **Unauthenticated, wildcard-CORS webhook/status routes.** Partly addressed this session.
+   - **Done:** the two debug-only broadcast endpoints `POST /api/webhooks/events` and
+     `POST /api/webhooks/test` now 404 in production via a shared `blockInProduction()` guard
+     (`lib/dev-only.ts`). Removed the pointless `Access-Control-Allow-Origin: *` from
+     `POST /api/webhooks/github`'s OPTIONS (GitHub delivers server-to-server; browsers never
+     call it).
+   - **Still open — `GET /api/webhooks/events` is live and unauthenticated.** It returns
+     global cross-repo event history (repos/branches/commits) and **the electron client
+     fetches it in production with no auth header** (`electron-app
+     src/main/services/GitSyncIPC.ts:342`, channel `git-sync:fetch-events`). So it cannot
+     simply be dev-gated or auth-gated without a matching electron change. Fix needs two
+     coordinated steps: (a) require a registration/room JWT on the route and scope returned
+     events to the repos that token grants; (b) update `GitSyncIPC` to send the room token
+     it already holds. CORS note: stripping `ACAO:*` here only matters once it's reachable
+     from a victim's browser network; auth is the higher-value fix.
+   - **Untouched (need external-caller trace first):** `ACAO:*` on `GET
+     /api/github-app/status` (leaks per-repo install state) and `/api/github-app/install-url`
+     (low concern), plus `server-control-tower.ts:969,1034`. Left as-is because a browser UI
+     in another repo (landing-page / electron) may rely on them — confirm callers before
+     tightening.
+
+### MEDIUM / hygiene
+
+4. **Shared static signing secret with an insecure in-code default.** `roomTokenSecret` /
+   `syncJwtSecret` fall back to literals like `'development-secret-change-in-production'`
+   when env is unset (`lib/config/config-service.ts:24-26`). One shared HMAC secret signs
+   all tokens; production config only *warns*, doesn't fail closed.
    - **Correction to first-pass sweep:** the real-looking 64-hex `ROOM_TOKEN_SECRET` in
      `.env.local` is **not** committed — only `.env.example` is git-tracked and
-     `git log -S` finds the value nowhere. It's a local working-tree value, not a git
-     exposure. Lower severity than initially flagged.
+     `git log -S` finds the value nowhere. Local working-tree value, not a git exposure.
 
-5. **Wildcard CORS + unauthenticated webhook/status routes** (sweep, not re-verified).
-   `Access-Control-Allow-Origin: *` on the webhook / github-app routes; `GET
-   /api/webhooks/events`, `POST /api/webhooks/test`, and `GET /api/github-app/status` were
-   reported as unauthenticated (event enumeration + broadcast-to-all-clients). Worth a
-   direct pass before acting.
-   - `repository-traffic-controller/app/api/webhooks/**`, `app/api/github-app/**`
+5. **`control-tower-core` ships permissive framework defaults** the consumer must override:
+   `requireAuth`/`closeOnAuthFailure` default false, no `Origin`/`verifyClient` check on the
+   WS handshake, no connection/message rate limits, unbounded room history; room join has no
+   per-room ACL and auto-creates rooms. Severity depends on consumer config; the live issue
+   is the consumer's fallback (item 1), so this is secondary.
+   - `control-tower-core/src/adapters/websocket/WebSocketServerTransportAdapter.ts`,
+     `control-tower-core/src/server/BaseServer.ts`
 
-6. **`control-tower-core` ships permissive defaults** that the consumer must override:
-   `requireAuth` and `closeOnAuthFailure` default false, no `Origin`/`verifyClient` check on
-   the WS handshake, no connection/message rate limits, unbounded room event history. These
-   are framework defaults — severity depends on consumer config, and the consumer
-   (`repository-traffic-controller`) does enable auth, so this is secondary to items 1-3.
-   - `control-tower-core/src/adapters/websocket/WebSocketServerTransportAdapter.ts`
-   - `control-tower-core/src/server/BaseServer.ts` (room join has no per-room ACL;
-     auto-creates rooms on join)
+### Electron client is clean on this path
 
-### Highest-priority across everything
+The desktop app does **not** use the vulnerable HTTP mint routes. `GitSyncWebSocketManager`
+fetches a room token from the auth/OAuth server via `getRoomToken(...)` and connects with a
+`JWTAuthAdapter` carrying that token (`src/main/services/GitSyncWebSocketManager.ts:311-346`,
+`src/renderer/services/git-sync/GitSyncClient.ts:301-332`). That token is a proper
+`dev-collab-auth-server`-issued JWT, so it goes through the *verified* WS branch, not the
+fallback.
 
-Items **1** and **2** (unauthenticated token minting for any repo) are the most serious
-findings in this whole investigation — they're remotely exploitable with a single curl and
-require no foothold. Fix = wire in the existing `secure-route.ts` verification (or
-equivalent) on both routes, and remove the WS fallback branch (item 3).
+### Remaining priority
+
+With items 1 (dead code, hardened) and 2 (live mint routes, fixed) handled, the open work is
+item 3 (auth + CORS on the webhook/status routes), then the hygiene items (4: env-driven
+secrets that fail closed in prod; 5: tighten control-tower-core framework defaults; delete
+the stale `server-control-tower.js/.mjs` + the dead `ControlTowerTransportAdapter`).
