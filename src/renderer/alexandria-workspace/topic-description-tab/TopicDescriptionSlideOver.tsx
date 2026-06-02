@@ -13,7 +13,13 @@ import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 import { FileText, Pencil, X } from 'lucide-react';
+import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import type { TopicStatus } from '@principal-ai/alexandria-core-library';
 import { TopicService } from '../../main-process-api/TopicService';
+import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
+import { useWorkspaceFileIndex } from '../../hooks/useWorkspaceFileIndex';
+import { MarkdownLinkNotice } from '../../components/MarkdownLinkNotice';
+import { TopicStatusControl } from './TopicStatusControl';
 
 export interface TopicDescriptionSlideOverProps {
   open: boolean;
@@ -22,13 +28,35 @@ export interface TopicDescriptionSlideOverProps {
   onClose: () => void;
   /** Opens the topic-description MDXEditor tab (current edit affordance). */
   onEdit: () => void;
+  /** Event bus — used to open clicked doc links as tabs (`file:opened`). */
+  events: PanelEventEmitter;
+  /**
+   * Workspace whose member repositories doc links resolve against. Topic notes
+   * span projects and usually have no single "current repo", so links are
+   * matched against the file trees of every repo in this workspace.
+   */
+  workspaceId?: string;
+  /**
+   * Fallback repo for resolving links before the workspace file index has
+   * loaded (the currently selected repo, when there is one).
+   */
+  repositoryPath?: string;
 }
 
 export const TopicDescriptionSlideOver: React.FC<
   TopicDescriptionSlideOverProps
-> = ({ open, topicId, onClose, onEdit }) => {
+> = ({ open, topicId, onClose, onEdit, events, workspaceId, repositoryPath }) => {
   const { theme } = useTheme();
+  const { resolve } = useWorkspaceFileIndex(workspaceId);
+  const { onLinkClick, notice, dismissNotice, openCandidate } =
+    useMarkdownLinkHandler({
+      events,
+      resolve,
+      repositoryPath,
+      source: 'topic-notes',
+    });
   const [description, setDescription] = useState<string | null>(null);
+  const [status, setStatus] = useState<TopicStatus | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
   // Load the description when opened, and refresh whenever this topic changes
@@ -40,10 +68,16 @@ export const TopicDescriptionSlideOver: React.FC<
       setLoading(true);
       try {
         const topic = await TopicService.getTopic(topicId);
-        if (!cancelled) setDescription(topic?.description ?? '');
+        if (!cancelled) {
+          setDescription(topic?.description ?? '');
+          setStatus(topic?.status);
+        }
       } catch (err) {
         console.error('[TopicDescriptionSlideOver] load failed', err);
-        if (!cancelled) setDescription('');
+        if (!cancelled) {
+          setDescription('');
+          setStatus(undefined);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -157,6 +191,8 @@ export const TopicDescriptionSlideOver: React.FC<
         </button>
       </div>
 
+      {topicId && <TopicStatusControl topicId={topicId} status={status} />}
+
       <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
         {loading && description === null ? (
           <div
@@ -177,6 +213,7 @@ export const TopicDescriptionSlideOver: React.FC<
             theme={theme}
             transparentBackground
             enableKeyboardScrolling={false}
+            onLinkClick={onLinkClick}
           />
         ) : (
           <div
@@ -215,6 +252,14 @@ export const TopicDescriptionSlideOver: React.FC<
           </div>
         )}
       </div>
+
+      {notice && (
+        <MarkdownLinkNotice
+          notice={notice}
+          onDismiss={dismissNotice}
+          onChoose={openCandidate}
+        />
+      )}
     </div>
   );
 };

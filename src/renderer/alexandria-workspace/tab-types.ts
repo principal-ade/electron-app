@@ -47,8 +47,37 @@ export interface MarkdownDocTab {
   closable?: boolean;
 }
 
+/**
+ * A non-markdown source file opened from a doc link. Rendered read-only in the
+ * same `PierreFileView` the dev-workspace file-city panel uses (it reads the
+ * file itself and syntax-highlights it). Multi-instance, keyed by absolute
+ * `filePath`. Markdown links use {@link MarkdownDocTab} instead.
+ */
+export interface SourceFileTab {
+  id: string;
+  label: string;
+  contentType: 'source-file';
+  filePath: string;
+  closable?: boolean;
+}
+
+/**
+ * An image/video opened from a doc link. Rendered in the shared
+ * `MediaViewerPanel` (served over the `local-media://` protocol). Multi-instance,
+ * keyed by absolute `filePath`.
+ */
+export interface MediaTab {
+  id: string;
+  label: string;
+  contentType: 'media';
+  filePath: string;
+  closable?: boolean;
+}
+
 export type AlexandriaTab =
   | TerminalTab
   | FileCityTrailTab
   | TopicDescriptionTab
-  | MarkdownDocTab;
+  | MarkdownDocTab
+  | SourceFileTab
+  | MediaTab;

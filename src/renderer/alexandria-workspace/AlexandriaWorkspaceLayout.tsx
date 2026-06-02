@@ -30,6 +30,8 @@ import {
   AgentToolsPanel,
 } from '@industry-theme/agent-driven-ui-panels';
 import { MarkdownPanel } from '../panels/markdown-panel';
+import { PierreFileView } from '../dev-workspace/file-city-panel/PierreFileView';
+import { MediaViewerPanel } from '../panels/MediaViewerPanel';
 import {
   StoryboardListPanel,
   CanvasEditorPanel,
@@ -82,6 +84,8 @@ import type {
   AlexandriaTab,
   FileCityTrailTab,
   MarkdownDocTab,
+  MediaTab,
+  SourceFileTab,
   TopicDescriptionTab,
 } from './tab-types';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
@@ -572,6 +576,36 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               filePath={tab.filePath}
               repositoryPath={tab.repositoryPath}
             />
+          </div>
+        );
+      }
+      if (tab.contentType === 'source-file') {
+        return (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'auto',
+              position: 'relative',
+            }}
+          >
+            <PierreFileView filePath={tab.filePath} fileName={tab.label} />
+          </div>
+        );
+      }
+      if (tab.contentType === 'media') {
+        return (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <MediaViewerPanel filePath={tab.filePath} fileName={tab.label} />
           </div>
         );
       }
@@ -1152,28 +1186,61 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   // absolute path. If the doc already has a tab, just bring it to front.
   useEffect(() => {
     const unsubscribe = events.on('file:opened', async (event) => {
-      const { filePath } = event.payload as { filePath: string };
+      const { filePath, repositoryPath } = event.payload as {
+        filePath: string;
+        repositoryPath?: string;
+      };
 
       if (!filePath) {
         console.warn('[AlexandriaWorkspaceLayout] file:opened with no path');
         return;
       }
 
-      const tabId = `markdown-doc:${filePath}`;
       const label = filePath.split('/').pop() || filePath;
+      // Route by file type, mirroring the dev workspace: markdown →
+      // MarkdownPanel, image/video → MediaViewerPanel, everything else →
+      // read-only PierreFileView. Distinct tab-id prefixes so the same path
+      // can't collide across viewers.
+      const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
+      const isMedia =
+        /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(
+          filePath,
+        );
 
-      setTabs((prev) => {
-        if (prev.some((t) => t.id === tabId)) return prev;
-        const newTab: MarkdownDocTab = {
-          id: tabId,
+      let newTab: MarkdownDocTab | SourceFileTab | MediaTab;
+      if (isMarkdown) {
+        newTab = {
+          id: `markdown-doc:${filePath}`,
           label,
           contentType: 'markdown-doc',
           filePath,
-          repositoryPath: selectedRepositoryRef.current?.path,
+          // Prefer the emitter's repo (e.g. a link into another project keeps
+          // its own context); fall back to the selected repo.
+          repositoryPath: repositoryPath ?? selectedRepositoryRef.current?.path,
           closable: true,
         };
-        return [...prev, newTab];
-      });
+      } else if (isMedia) {
+        newTab = {
+          id: `media:${filePath}`,
+          label,
+          contentType: 'media',
+          filePath,
+          closable: true,
+        };
+      } else {
+        newTab = {
+          id: `source-file:${filePath}`,
+          label,
+          contentType: 'source-file',
+          filePath,
+          closable: true,
+        };
+      }
+      const { id: tabId } = newTab;
+
+      setTabs((prev) =>
+        prev.some((t) => t.id === tabId) ? prev : [...prev, newTab],
+      );
       setFocusTabId(tabId);
     });
 
@@ -1358,6 +1425,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               topicId={workspace.topicIds?.[0]}
               onClose={() => onCloseDescription?.()}
               onEdit={handleOpenTopicDescription}
+              events={events}
+              workspaceId={workspace.id}
+              repositoryPath={selectedRepository?.path}
             />
           </div>
         ) : (
@@ -1683,6 +1753,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               topicId={workspace.topicIds?.[0]}
               onClose={() => onCloseDescription?.()}
               onEdit={handleOpenTopicDescription}
+              events={events}
+              workspaceId={workspace.id}
+              repositoryPath={selectedRepository?.path}
             />
           </div>
         ),
@@ -1710,6 +1783,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               topicId={workspace.topicIds?.[0]}
               onClose={() => onCloseDescription?.()}
               onEdit={handleOpenTopicDescription}
+              events={events}
+              workspaceId={workspace.id}
+              repositoryPath={selectedRepository?.path}
             />
           </div>
         ),
