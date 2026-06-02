@@ -9,6 +9,7 @@ import {
   Plus,
   X,
 } from 'lucide-react';
+import type { TopicStatus } from '@principal-ai/alexandria-core-library';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import {
   ExploredProjectsGrid,
@@ -74,6 +75,12 @@ export interface TrailsDashboardTopicEntry {
    * icon to keep the title row compact).
    */
   isOpen?: boolean;
+  /**
+   * Optional workflow status (mirrors the canonical `Topic.status`). Drives the
+   * status pill on the card. Absent / `active` renders no pill so the common
+   * case stays quiet.
+   */
+  status?: TopicStatus;
 }
 
 export interface TrailsDashboardProps {

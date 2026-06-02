@@ -388,6 +388,7 @@ export function HomeView() {
         shared: sharedTopicIds.has(t.id),
         trailCount: t.trailIds.length,
         isOpen: workspace ? openWorkspaceIds.has(workspace.id) : false,
+        status: t.status,
       };
     });
   }, [

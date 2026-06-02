@@ -8,7 +8,7 @@
  * the Topic; sync UIs ask for the full LocalTopicRecord.
  */
 
-import type { Topic } from '@principal-ai/alexandria-core-library';
+import type { Topic, TopicStatus } from '@principal-ai/alexandria-core-library';
 
 /**
  * Sync metadata layered on top of the canonical Topic. Local-only — never
@@ -103,6 +103,8 @@ export interface CreateTopicInput {
   id?: string;
   /** Optional visibility intent; defaults to `'sharable'`. */
   visibility?: 'private' | 'sharable';
+  /** Optional initial workflow status; defaults to absent (treated as `active`). */
+  status?: TopicStatus;
 }
 
 /** Input to {@link TopicAPI.updateTopic} — partial patch. */
@@ -111,6 +113,11 @@ export interface UpdateTopicInput {
   description?: string;
   createdBy?: { githubId: number; githubLogin: string };
   visibility?: 'private' | 'sharable';
+  /**
+   * New workflow status. Like title/description, this is canonical content
+   * that writes through to web-ade for published topics. See {@link TopicStatus}.
+   */
+  status?: TopicStatus;
 }
 
 export interface TopicAPI {

@@ -1,9 +1,65 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { AppWindow, FolderGit2, Route, Share2, Trash2 } from 'lucide-react';
+import type { TopicStatus } from '@principal-ai/alexandria-core-library';
+
+/** The structured status axis — derived from the core lib's inline union. */
+type TopicStatusState = TopicStatus['state'];
+import {
+  AppWindow,
+  Clock,
+  FolderGit2,
+  Link2,
+  Route,
+  Share2,
+  Trash2,
+} from 'lucide-react';
 import type { TrailsDashboardTopicEntry } from './TrailsDashboard';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
+
+/**
+ * Per-state pill presentation. `active` has no default label — an active topic
+ * shows a pill only when it carries a custom label, so the common (untriaged)
+ * case stays visually quiet. The color keys off the structured `state`, never
+ * the free-form label, so a topic reading "revisit after launch" still shows
+ * in the `needs-attention` color.
+ */
+function statusPresentation(
+  state: TopicStatusState,
+  theme: ThemeShape,
+): { defaultLabel: string; color: string } {
+  switch (state) {
+    case 'needs-attention':
+      return { defaultLabel: 'Needs attention', color: theme.colors.warning };
+    case 'waiting':
+      return { defaultLabel: 'Waiting', color: theme.colors.info };
+    case 'done':
+      return { defaultLabel: 'Done', color: theme.colors.success };
+    case 'active':
+    default:
+      return { defaultLabel: '', color: theme.colors.textTertiary };
+  }
+}
+
+/**
+ * The text + tooltip for a status pill. Returns `null` when there's nothing to
+ * show (an `active` topic with no custom label), so the caller can skip the
+ * pill entirely. The tooltip surfaces the `waitingOn` detail that doesn't fit
+ * in the compact pill text.
+ */
+function describeStatus(
+  status: TopicStatus,
+  defaultLabel: string,
+): { text: string; tooltip: string } | null {
+  const text = status.label?.trim() || defaultLabel;
+  if (!text) return null;
+  const w = status.waitingOn;
+  const parts: string[] = [];
+  if (w?.note) parts.push(`Waiting on: ${w.note}`);
+  if (w?.ref) parts.push(`Ref: ${w.ref.title ?? w.ref.value}`);
+  if (w?.until) parts.push(`Until: ${w.until}`);
+  return { text, tooltip: parts.length > 0 ? parts.join(' · ') : text };
+}
 
 /**
  * Replace the platform home prefix with `~` so paths render compactly.
@@ -43,6 +99,18 @@ export function TopicCard({
   // indicators, so fade the indicators out while it's revealed to avoid an
   // overlap (deletion is hidden for shared topics, matching the trash guard).
   const trashVisible = hovered && !!onDelete && !topic.shared;
+
+  // Status pill: color keys off the structured state, text off the custom
+  // label (or a per-state default). An `active` topic with no label yields no
+  // pill, keeping untriaged cards quiet.
+  const status = topic.status;
+  const statusPres = status ? statusPresentation(status.state, theme) : null;
+  const statusInfo =
+    status && statusPres
+      ? describeStatus(status, statusPres.defaultLabel)
+      : null;
+  const showStatusPill = !!(status && statusPres && statusInfo);
+
   return (
     <li
       style={{ position: 'relative' }}
@@ -94,7 +162,7 @@ export function TopicCard({
           >
             {topic.title}
           </div>
-          {(topic.isOpen || topic.shared) && (
+          {(showStatusPill || topic.isOpen || topic.shared) && (
             <span
               style={{
                 display: 'inline-flex',
@@ -102,51 +170,94 @@ export function TopicCard({
                 gap: 6,
                 flex: '0 0 auto',
                 marginLeft: 'auto',
-                color: theme.colors.primary,
                 // Crossfade with the hover trash button so they never collide
                 // in the corner.
                 opacity: trashVisible ? 0 : 1,
                 transition: 'opacity 120ms ease',
               }}
             >
-              {topic.isOpen && (
+              {showStatusPill && statusInfo && statusPres && (
                 <span
-                  title="Window open"
-                  style={{ display: 'inline-flex', alignItems: 'center' }}
+                  title={statusInfo.tooltip}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    maxWidth: 160,
+                    padding: '1px 6px',
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts.body,
+                    color: statusPres.color,
+                    border: `1px solid ${statusPres.color}`,
+                    borderRadius: 5,
+                    whiteSpace: 'nowrap',
+                  }}
                 >
-                  <AppWindow size={14} />
-                </span>
-              )}
-              {topic.shared &&
-                // When a topic is open we already show an indicator, so the
-                // "Shared" badge collapses to just its icon to keep the row
-                // from getting crowded.
-                (topic.isOpen ? (
+                  {status?.waitingOn?.until ? (
+                    <Clock size={10} style={{ flex: '0 0 auto' }} />
+                  ) : status?.waitingOn?.ref ? (
+                    <Link2 size={10} style={{ flex: '0 0 auto' }} />
+                  ) : null}
                   <span
-                    title="Shared to web-ade"
-                    style={{ display: 'inline-flex', alignItems: 'center' }}
-                  >
-                    <Share2 size={14} />
-                  </span>
-                ) : (
-                  <span
-                    title="Shared to web-ade"
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3,
-                      padding: '1px 6px',
-                      fontSize: theme.fontSizes[0],
-                      fontFamily: theme.fonts.body,
-                      border: `1px solid ${theme.colors.primary}`,
-                      borderRadius: 5,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    <Share2 size={10} />
-                    Shared
+                    {statusInfo.text}
                   </span>
-                ))}
+                </span>
+              )}
+              {(topic.isOpen || topic.shared) && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    color: theme.colors.primary,
+                  }}
+                >
+                  {topic.isOpen && (
+                    <span
+                      title="Window open"
+                      style={{ display: 'inline-flex', alignItems: 'center' }}
+                    >
+                      <AppWindow size={14} />
+                    </span>
+                  )}
+                  {topic.shared &&
+                    // When a topic is open we already show an indicator, so the
+                    // "Shared" badge collapses to just its icon to keep the row
+                    // from getting crowded.
+                    (topic.isOpen ? (
+                      <span
+                        title="Shared to web-ade"
+                        style={{ display: 'inline-flex', alignItems: 'center' }}
+                      >
+                        <Share2 size={14} />
+                      </span>
+                    ) : (
+                      <span
+                        title="Shared to web-ade"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          padding: '1px 6px',
+                          fontSize: theme.fontSizes[0],
+                          fontFamily: theme.fonts.body,
+                          border: `1px solid ${theme.colors.primary}`,
+                          borderRadius: 5,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <Share2 size={10} />
+                        Shared
+                      </span>
+                    ))}
+                </span>
+              )}
             </span>
           )}
         </div>

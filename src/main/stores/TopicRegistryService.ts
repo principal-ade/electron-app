@@ -111,6 +111,7 @@ export class TopicRegistryService {
       description: input.description,
       trailIds: input.trailIds ?? [],
       createdBy: input.createdBy,
+      ...(input.status !== undefined ? { status: input.status } : {}),
     });
 
     // Seed sync metadata for the new local topic.
@@ -128,7 +129,9 @@ export class TopicRegistryService {
     const { visibility, ...topicUpdates } = updates;
     const existing = this.readSync(id);
     const editsContent =
-      topicUpdates.title !== undefined || topicUpdates.description !== undefined;
+      topicUpdates.title !== undefined ||
+      topicUpdates.description !== undefined ||
+      topicUpdates.status !== undefined;
 
     // Source-of-truth gate: a published topic's content edits write through to
     // web-ade first, and the local copy is reconciled from the server's
@@ -143,10 +146,14 @@ export class TopicRegistryService {
         ...(topicUpdates.description !== undefined
           ? { description: topicUpdates.description }
           : {}),
+        ...(topicUpdates.status !== undefined
+          ? { status: topicUpdates.status }
+          : {}),
       });
       const local = await this.outpostManager.topics.updateTopic(id, {
         title: remote.title,
         description: remote.description,
+        status: remote.status,
       });
       const now = new Date().toISOString();
       this.writeSync(id, {
@@ -298,6 +305,7 @@ export class TopicRegistryService {
       title: topic.title,
       description: topic.description,
       trailIds: remoteTrailIds,
+      ...(topic.status !== undefined ? { status: topic.status } : {}),
     });
     const now = new Date().toISOString();
     const sync: LocalTopicSync = {

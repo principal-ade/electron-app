@@ -22,7 +22,7 @@
  */
 
 import fetch from 'node-fetch';
-import type { Topic } from '@principal-ai/alexandria-core-library';
+import type { Topic, TopicStatus } from '@principal-ai/alexandria-core-library';
 import {
   TOKEN_KEYS,
   UnifiedSecureStorage,
@@ -207,6 +207,7 @@ export async function publishTopicToWebAde(input: {
   title: string;
   description?: string;
   trailIds: string[];
+  status?: TopicStatus;
 }): Promise<PublishedTopic> {
   const json = await topicRequest<{ id: string; url: string; topic: Topic }>(
     'POST',
@@ -216,16 +217,17 @@ export async function publishTopicToWebAde(input: {
       title: input.title,
       description: input.description ?? '',
       trailIds: input.trailIds,
+      ...(input.status !== undefined ? { status: input.status } : {}),
     },
   );
   return { id: json.id, url: absoluteUrl(json.url), topic: json.topic };
 }
 
-/** Owner edit of a published topic's title/description. Returns the server's
- *  updated canonical topic. */
+/** Owner edit of a published topic's title/description/status. Returns the
+ *  server's updated canonical topic. */
 export async function patchTopicOnWebAde(
   remoteId: string,
-  updates: { title?: string; description?: string },
+  updates: { title?: string; description?: string; status?: TopicStatus },
 ): Promise<Topic> {
   const json = await topicRequest<{ topic: Topic }>(
     'PATCH',
