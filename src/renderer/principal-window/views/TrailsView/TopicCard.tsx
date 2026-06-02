@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { TopicStatus } from '@principal-ai/alexandria-core-library';
 
@@ -16,6 +17,12 @@ import {
 import type { TrailsDashboardTopicEntry } from './TrailsDashboard';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
+
+/**
+ * Drag MIME that carries a topic id when a card is dragged between kanban
+ * status columns. Kept app-specific so only our lane drop zones react to it.
+ */
+export const TOPIC_STATUS_DND_MIME = 'application/x-alexandria-topic-status';
 
 /**
  * Per-state pill presentation. `active` has no default label — an active topic
@@ -80,6 +87,12 @@ export interface TopicCardProps {
   onSelect: (entry: TrailsDashboardTopicEntry) => void;
   /** Renders the hover-reveal delete button when provided. */
   onDelete?: (entry: TrailsDashboardTopicEntry) => void;
+  /**
+   * When true the card is draggable; on drag start it writes its topic id to
+   * {@link TOPIC_STATUS_DND_MIME} so a kanban lane can restatus it on drop.
+   * Enabled only in the board view.
+   */
+  draggable?: boolean;
 }
 
 /**
@@ -93,8 +106,12 @@ export function TopicCard({
   theme,
   onSelect,
   onDelete,
+  draggable = false,
 }: TopicCardProps) {
   const [hovered, setHovered] = React.useState(false);
+  // Dim the source card while it's mid-drag (kanban restatus). The drag image
+  // is snapshotted at dragstart, so dimming after only affects the original.
+  const [dragging, setDragging] = React.useState(false);
   // The trash button shares the card's top-right corner with the status
   // indicators, so fade the indicators out while it's revealed to avoid an
   // overlap (deletion is hidden for shared topics, matching the trash guard).
@@ -111,15 +128,40 @@ export function TopicCard({
       : null;
   const showStatusPill = !!(status && statusPres && statusInfo);
 
+  // Shared-layout animation: each card carries a stable `layoutId` (the topic
+  // id). When the dashboard swaps between the flat list and the kanban board,
+  // the card unmounts from one tree and remounts in the other — framer-motion
+  // matches the id across that swap and tweens the bounding box, so the card
+  // visibly flies from its sorted slot into its status column. Honored only
+  // when the user hasn't asked for reduced motion.
+  const reduceMotion = useReducedMotion();
+
   return (
-    <li
-      style={{ position: 'relative' }}
+    <motion.li
+      layoutId={topic.key}
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : { type: 'spring', stiffness: 500, damping: 42 }
+      }
+      style={{ position: 'relative', opacity: dragging ? 0.4 : 1 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <button
         type="button"
         onClick={() => onSelect(topic)}
+        draggable={draggable}
+        onDragStart={
+          draggable
+            ? (e) => {
+                e.dataTransfer.setData(TOPIC_STATUS_DND_MIME, topic.key);
+                e.dataTransfer.effectAllowed = 'move';
+                setDragging(true);
+              }
+            : undefined
+        }
+        onDragEnd={draggable ? () => setDragging(false) : undefined}
         style={{
           width: '100%',
           textAlign: 'left',
@@ -127,7 +169,7 @@ export function TopicCard({
           border: `1px solid ${theme.colors.border}`,
           borderRadius: 10,
           padding: '14px 16px',
-          cursor: 'pointer',
+          cursor: draggable ? 'grab' : 'pointer',
           display: 'flex',
           flexDirection: 'column',
           gap: 6,
@@ -426,6 +468,6 @@ export function TopicCard({
           <Trash2 size={14} />
         </button>
       )}
-    </li>
+    </motion.li>
   );
 }

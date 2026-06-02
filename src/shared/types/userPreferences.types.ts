@@ -256,6 +256,10 @@ export interface UserPreferences {
     // hidden and every topic is shown. Persisted so the choice survives view
     // switches and app restarts. Default false.
     showAllTopics?: boolean;
+    // Home dashboard topics layout — 'list' is the sorted grid, 'kanban' is the
+    // status board. Persisted so the choice survives view switches and app
+    // restarts. Default 'list'.
+    topicsViewMode?: 'list' | 'kanban';
   };
 
   // Onboarding state and completion tracking

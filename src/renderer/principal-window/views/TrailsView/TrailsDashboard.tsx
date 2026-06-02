@@ -1,21 +1,26 @@
 import React from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   ArrowRight,
+  Columns3,
   FolderGit2,
   LayoutGrid,
   Library,
   Plus,
+  Rows3,
   X,
 } from 'lucide-react';
 import type { TopicStatus } from '@principal-ai/alexandria-core-library';
+
+/** The structured status axis — derived from the core lib's inline union. */
+type TopicStatusState = TopicStatus['state'];
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import {
   ExploredProjectsGrid,
   type ExploredProjectRepoEntry,
 } from './ExploredProjectsGrid';
-import { TopicCard } from './TopicCard';
+import { TopicCard, TOPIC_STATUS_DND_MIME } from './TopicCard';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
@@ -28,6 +33,14 @@ type ThemeShape = ReturnType<typeof useTheme>['theme'];
  * restored instantly with no flash or replayed animation.
  */
 let cachedShowAllTopics: boolean | undefined;
+
+/**
+ * Session-level cache of the persisted topics layout, mirroring
+ * {@link cachedShowAllTopics}: the first mount falls back to `'list'` and
+ * reconciles once the async pref read resolves; later mounts initialize
+ * straight from this cache so the board/list choice is restored with no flash.
+ */
+let cachedTopicsViewMode: 'list' | 'kanban' | undefined;
 
 export interface TrailsDashboardRepoEntry {
   /** Stable key — usually the repo path. */
@@ -105,6 +118,15 @@ export interface TrailsDashboardProps {
   onCreateTopic?: () => void;
   /** Fired when the user clicks the trash icon on a topic card. Hides the icon when omitted. */
   onDeleteTopic?: (entry: TrailsDashboardTopicEntry) => void;
+  /**
+   * Fired when a card is dragged into a different kanban status column. The
+   * caller persists the new state (e.g. via `TopicService.updateTopic`). Omit
+   * to disable drag-to-restatus on the board.
+   */
+  onChangeTopicStatus?: (
+    entry: TrailsDashboardTopicEntry,
+    nextState: TopicStatusState,
+  ) => void;
   /** "View All Projects" → opens the Trails view's projects landing. */
   onViewAllProjects: () => void;
   /** Max repo cards to render before clipping. Default 6. */
@@ -126,6 +148,7 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
   onSelectTopic,
   onCreateTopic,
   onDeleteTopic,
+  onChangeTopicStatus,
   onViewAllProjects,
   repoLimit = 6,
   topicLimit = 6,
@@ -146,6 +169,47 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
   const [showAllTopics, setShowAllTopics] = React.useState(initialShowAll);
   const [projectsPresent, setProjectsPresent] = React.useState(!initialShowAll);
   const [topicsExpanded, setTopicsExpanded] = React.useState(initialShowAll);
+  // 'list' is the created/updated-sorted grid; 'kanban' buckets every topic by
+  // its status into columns. The same TopicCards carry a stable `layoutId`, so
+  // toggling between the two lets framer-motion fly each card from its sorted
+  // slot into its status column. Persisted to user prefs (see effect below).
+  const [viewMode, setViewMode] = React.useState<'list' | 'kanban'>(
+    cachedTopicsViewMode ?? 'list',
+  );
+  // While true, the kanban lanes keep `overflow: visible` so the cards flying
+  // in from the grid aren't clipped by a lane's scroll box. Cleared once the
+  // spring settles, at which point the lanes take over their own scrolling.
+  const [boardEntering, setBoardEntering] = React.useState(false);
+  const enterBoardTimer = React.useRef<number | null>(null);
+  React.useEffect(
+    () => () => {
+      if (enterBoardTimer.current) window.clearTimeout(enterBoardTimer.current);
+    },
+    [],
+  );
+
+  const toggleViewMode = () => {
+    const next = viewMode === 'kanban' ? 'list' : 'kanban';
+    // Persist (fire-and-forget) and keep the session cache in sync so a
+    // re-mount restores this layout without a flash.
+    cachedTopicsViewMode = next;
+    void UserPreferencesService.updatePreferences({
+      trails: { topicsViewMode: next },
+    });
+    if (viewMode === 'kanban') {
+      setViewMode('list');
+      return;
+    }
+    setViewMode('kanban');
+    // Let the fly-in finish before the lanes start clipping/scrolling. Matches
+    // the card spring's settle time.
+    setBoardEntering(true);
+    if (enterBoardTimer.current) window.clearTimeout(enterBoardTimer.current);
+    enterBoardTimer.current = window.setTimeout(() => {
+      setBoardEntering(false);
+      enterBoardTimer.current = null;
+    }, 650);
+  };
 
   // First mount of the session: reconcile against the persisted preference.
   // Sets the resting state directly (not via the toggle) so it doesn't replay
@@ -155,9 +219,16 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
     if (cachedShowAllTopics !== undefined) return;
     let cancelled = false;
     void UserPreferencesService.getPreferences().then((prefs) => {
+      if (cancelled) return;
+      // Topics layout — apply before the showAllTopics early-return so a
+      // persisted 'kanban' is restored even when "All topics" is off.
+      const storedView = prefs.trails?.topicsViewMode ?? 'list';
+      cachedTopicsViewMode = storedView;
+      setViewMode(storedView);
+
       const stored = prefs.trails?.showAllTopics ?? false;
       cachedShowAllTopics = stored;
-      if (cancelled || !stored) return;
+      if (!stored) return;
       setShowAllTopics(true);
       setProjectsPresent(false);
       setTopicsExpanded(true);
@@ -242,6 +313,22 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
             {topicEntries.length > 0 && (
               <PillButton
                 theme={theme}
+                onClick={toggleViewMode}
+                icon={
+                  viewMode === 'kanban' ? (
+                    <Rows3 size={14} />
+                  ) : (
+                    <Columns3 size={14} />
+                  )
+                }
+                iconPosition="start"
+              >
+                {viewMode === 'kanban' ? 'List' : 'Board'}
+              </PillButton>
+            )}
+            {topicEntries.length > 0 && viewMode === 'list' && (
+              <PillButton
+                theme={theme}
                 onClick={toggleAllTopics}
                 icon={
                   showAllTopics ? (
@@ -275,43 +362,58 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
             text="No topics yet. Bundle related trails together so they're easy to share."
           />
         ) : (
-          <>
-            <TopicList
-              topics={baseTopics}
-              theme={theme}
-              onSelectTopic={onSelectTopic}
-              onDeleteTopic={onDeleteTopic}
-            />
-            {/* Extra topics reveal by growing height from 0 → auto, so the
-                container visibly expands instead of the cards popping in.
-                When its collapse completes on reverse, Projects fades back. */}
-            <AnimatePresence
-              initial={false}
-              onExitComplete={() => setProjectsPresent(true)}
-            >
-              {topicsExpanded && extraTopics.length > 0 && (
-                <motion.div
-                  key="extra-topics"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.35, ease: 'easeInOut' }}
-                  style={{ overflow: 'hidden' }}
+          // A single LayoutGroup spans both views so a card's `layoutId`
+          // survives the list↔board swap and framer tweens it across.
+          <LayoutGroup>
+            {viewMode === 'kanban' ? (
+              <KanbanBoard
+                topics={topicEntries}
+                theme={theme}
+                lanesScroll={!boardEntering}
+                onSelectTopic={onSelectTopic}
+                onDeleteTopic={onDeleteTopic}
+                onChangeTopicStatus={onChangeTopicStatus}
+              />
+            ) : (
+              <>
+                <TopicList
+                  topics={baseTopics}
+                  theme={theme}
+                  onSelectTopic={onSelectTopic}
+                  onDeleteTopic={onDeleteTopic}
+                />
+                {/* Extra topics reveal by growing height from 0 → auto, so the
+                    container visibly expands instead of the cards popping in.
+                    When its collapse completes on reverse, Projects fades back. */}
+                <AnimatePresence
+                  initial={false}
+                  onExitComplete={() => setProjectsPresent(true)}
                 >
-                  {/* paddingTop sits inside the measured height so the
-                      inter-row gap eases in with the rest. */}
-                  <div style={{ paddingTop: 12 }}>
-                    <TopicList
-                      topics={extraTopics}
-                      theme={theme}
-                      onSelectTopic={onSelectTopic}
-                      onDeleteTopic={onDeleteTopic}
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </>
+                  {topicsExpanded && extraTopics.length > 0 && (
+                    <motion.div
+                      key="extra-topics"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.35, ease: 'easeInOut' }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      {/* paddingTop sits inside the measured height so the
+                          inter-row gap eases in with the rest. */}
+                      <div style={{ paddingTop: 12 }}>
+                        <TopicList
+                          topics={extraTopics}
+                          theme={theme}
+                          onSelectTopic={onSelectTopic}
+                          onDeleteTopic={onDeleteTopic}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            )}
+          </LayoutGroup>
         )}
       </Section>
 
@@ -320,7 +422,8 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
         // Forward toggle: Projects has fully collapsed → now expand topics.
         onExitComplete={() => setTopicsExpanded(true)}
       >
-        {projectsPresent && (
+        {/* Board view is topic-only; Projects re-enters when we return to list. */}
+        {viewMode === 'list' && projectsPresent && (
           <motion.div
             key="projects-section"
             // Pure fade — Projects is the last element in the column, so
@@ -490,6 +593,215 @@ function TopicList({
         />
       ))}
     </ul>
+  );
+}
+
+/**
+ * Kanban view: one column per status state, every topic bucketed by its
+ * `status.state` (untriaged / `active` topics land in the Active column).
+ * Columns read left→right toward completion. The cards are the same
+ * {@link TopicCard}s the list renders — their shared `layoutId` is what lets
+ * framer-motion animate each one from its sorted grid slot into its column
+ * when the dashboard toggles into this view.
+ */
+// Untriaged topics (no status) share the quiet `active` default.
+const bucketOf = (t: TrailsDashboardTopicEntry): TopicStatusState =>
+  t.status?.state ?? 'active';
+
+function KanbanBoard({
+  topics,
+  theme,
+  lanesScroll,
+  onSelectTopic,
+  onDeleteTopic,
+  onChangeTopicStatus,
+}: {
+  topics: TrailsDashboardTopicEntry[];
+  theme: ThemeShape;
+  /**
+   * Whether each lane scrolls its own overflow. Held `false` during the
+   * list→board fly-in so the lanes' `overflow` doesn't clip cards while they
+   * animate in from the grid; flipped to `true` once they've landed.
+   */
+  lanesScroll: boolean;
+  onSelectTopic: (entry: TrailsDashboardTopicEntry) => void;
+  onDeleteTopic?: (entry: TrailsDashboardTopicEntry) => void;
+  onChangeTopicStatus?: (
+    entry: TrailsDashboardTopicEntry,
+    nextState: TopicStatusState,
+  ) => void;
+}) {
+  // Which lane the pointer is currently over during a drag, for the
+  // drop-target highlight. Null when nothing's being dragged over the board.
+  const [dropTarget, setDropTarget] = React.useState<TopicStatusState | null>(
+    null,
+  );
+  const canDrag = !!onChangeTopicStatus;
+
+  const handleDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    target: TopicStatusState,
+  ) => {
+    if (!e.dataTransfer.types.includes(TOPIC_STATUS_DND_MIME)) return;
+    e.preventDefault();
+    setDropTarget(null);
+    const topicId = e.dataTransfer.getData(TOPIC_STATUS_DND_MIME);
+    const topic = topics.find((t) => t.key === topicId);
+    // No-op when dropped back into its own column.
+    if (!topic || bucketOf(topic) === target) return;
+    onChangeTopicStatus?.(topic, target);
+  };
+
+  // The Waiting lane is hidden for now. Topics already in the `waiting` state
+  // keep that status (and still show their Waiting pill in List view) — they
+  // just don't surface on the board until the lane returns.
+  const columns: Array<{
+    state: TopicStatusState;
+    label: string;
+    color: string;
+  }> = [
+    { state: 'active', label: 'Active', color: theme.colors.primary },
+    {
+      state: 'needs-attention',
+      label: 'Needs attention',
+      color: theme.colors.warning,
+    },
+    { state: 'done', label: 'Done for now', color: theme.colors.success },
+  ];
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
+        gap: 12,
+        alignItems: 'start',
+      }}
+    >
+      {columns.map((col) => {
+        const items = topics.filter((t) => bucketOf(t) === col.state);
+        const isDropTarget = dropTarget === col.state;
+        return (
+          <div
+            key={col.state}
+            // The whole column is a drop zone, so a card can land on the header
+            // or an empty lane, not just on top of another card.
+            onDragOver={
+              canDrag
+                ? (e) => {
+                    if (!e.dataTransfer.types.includes(TOPIC_STATUS_DND_MIME))
+                      return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dropTarget !== col.state) setDropTarget(col.state);
+                  }
+                : undefined
+            }
+            onDragLeave={
+              canDrag
+                ? (e) => {
+                    // Ignore leaves into descendants; only clear when the
+                    // pointer truly exits the column.
+                    if (e.currentTarget.contains(e.relatedTarget as Node))
+                      return;
+                    setDropTarget((s) => (s === col.state ? null : s));
+                  }
+                : undefined
+            }
+            onDrop={canDrag ? (e) => handleDrop(e, col.state) : undefined}
+            style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+          >
+            {/* Static lane header — it sits above the scroll region, so only
+                the cards in the lane below it scroll. */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '0 2px',
+                flex: '0 0 auto',
+              }}
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: col.color,
+                  flex: '0 0 auto',
+                }}
+              />
+              <span
+                style={{
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: theme.fontWeights.semibold,
+                }}
+              >
+                {col.label}
+              </span>
+              <span
+                style={{
+                  color: theme.colors.textTertiary,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[0],
+                }}
+              >
+                {items.length}
+              </span>
+            </div>
+            <ul
+              style={{
+                listStyle: 'none',
+                margin: 0,
+                // Room for the scrollbar so it doesn't sit on the cards.
+                padding: lanesScroll ? '2px 6px 2px 0' : 0,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                // Fixed-height lane that fills toward the bottom of the
+                // viewport, so the WHOLE column is a drop target — not just the
+                // strip its cards happen to occupy. The 240px offset leaves
+                // room for the titlebar + section header; tune if it over/under
+                // shoots. The lane scrolls its own cards (header stays put);
+                // held `visible` during the fly-in so animating cards aren't
+                // clipped.
+                height: 'max(320px, calc(100vh - 240px))',
+                overflowY: lanesScroll ? 'auto' : 'visible',
+                borderRadius: 10,
+                // Solid accent outline while a card hovers over this lane;
+                // otherwise a faint dashed outline only when the lane is empty,
+                // so the board still reads as four lanes with nothing in one.
+                border: isDropTarget
+                  ? `1px solid ${col.color}`
+                  : `1px dashed ${
+                      items.length === 0
+                        ? theme.colors.border
+                        : 'transparent'
+                    }`,
+                background: isDropTarget
+                  ? (theme.colors.backgroundTertiary ??
+                    theme.colors.backgroundSecondary)
+                  : 'transparent',
+                transition: 'border-color 120ms ease, background 120ms ease',
+              }}
+            >
+              {items.map((t) => (
+                <TopicCard
+                  key={t.key}
+                  topic={t}
+                  theme={theme}
+                  draggable={canDrag}
+                  onSelect={onSelectTopic}
+                  onDelete={onDeleteTopic}
+                />
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

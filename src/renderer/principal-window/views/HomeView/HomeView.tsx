@@ -30,6 +30,7 @@ import type {
   Topic,
   Workspace,
 } from '@principal-ai/alexandria-core-library/types';
+import type { TopicStatus } from '@principal-ai/alexandria-core-library';
 import {
   TrailsDashboard,
   type TrailsDashboardRepoEntry,
@@ -848,6 +849,27 @@ export function HomeView() {
               }}
               onCreateTopic={() => setIsNewTopicOpen(true)}
               onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
+              onChangeTopicStatus={(entry, nextState) => {
+                const topic = topics.find((t) => t.id === entry.key);
+                const prev = topic?.status;
+                if ((prev?.state ?? 'active') === nextState) return;
+                // Change only the column axis (state). Keep a custom label, but
+                // drop `waitingOn` when leaving the Waiting lane — that context
+                // is meaningless (and would show a stray clock) elsewhere.
+                const next: TopicStatus = { state: nextState };
+                if (prev?.label) next.label = prev.label;
+                if (nextState === 'waiting' && prev?.waitingOn) {
+                  next.waitingOn = prev.waitingOn;
+                }
+                void TopicService.updateTopic(entry.key, {
+                  status: next,
+                }).catch((err) => {
+                  console.error(
+                    '[HomeView] Failed to update topic status:',
+                    err,
+                  );
+                });
+              }}
               onViewAllProjects={() =>
                 window.dispatchEvent(
                   new CustomEvent('home:open-in-trails', { detail: {} }),
