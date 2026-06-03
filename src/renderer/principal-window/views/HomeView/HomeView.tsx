@@ -821,11 +821,22 @@ export function HomeView() {
               recentTrails={recentTrails}
               topicEntries={dashboardTopicEntries}
               onSelectRepo={(entry) => {
-                window.dispatchEvent(
-                  new CustomEvent('home:open-in-trails', {
-                    detail: { repoPath: entry.key },
-                  }),
-                );
+                void (async () => {
+                  try {
+                    const existing =
+                      await AlexandriaService.getRepositoryByPath(entry.key);
+                    const alexandriaEntry =
+                      existing ??
+                      (await AlexandriaService.registerRepository(entry.key));
+                    await WindowService.openDevWorkspace({ alexandriaEntry });
+                  } catch (err) {
+                    console.error(
+                      '[HomeView] Failed to open dev workspace for repo:',
+                      entry.key,
+                      err,
+                    );
+                  }
+                })();
               }}
               onSelectTopic={(entry) => {
                 const target = workspaces.find((w) =>
