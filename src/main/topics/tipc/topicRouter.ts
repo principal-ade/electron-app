@@ -13,6 +13,7 @@ import { TopicRegistryService } from '../../stores/TopicRegistryService';
 import { TopicAPIEvent } from '../../../shared/main-process-api-interfaces/TopicAPI';
 import type {
   AddTrailInput,
+  AppendDescriptionInput,
   DeleteTopicInput,
   FetchSharedTopicInput,
   GetTopicInput,
@@ -115,6 +116,29 @@ export const topicRouter = {
     .input<UpdateTopicInputArgs>()
     .action(async ({ input }) => {
       const topic = await registryService.updateTopic(input.id, input.updates);
+      broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
+      return topic;
+    }),
+
+  // Append text to the bottom of the topic's markdown description, preserving
+  // existing content with a blank-line separator. Mirrors the HTTP
+  // /api/topics/:id/description/append route (used by agents) so the UI's
+  // drag-to-notes path and agent writes converge on identical semantics.
+  topic_appendDescription: t.procedure
+    .input<AppendDescriptionInput>()
+    .action(async ({ input }) => {
+      const text = typeof input.text === 'string' ? input.text : '';
+      if (text.trim().length === 0) {
+        throw new Error('text (non-empty string) is required');
+      }
+      const existing = await registryService.getTopic(input.id);
+      if (!existing) {
+        throw new Error(`Unknown topic id: ${input.id}`);
+      }
+      const prior = (existing.description ?? '').replace(/\s+$/, '');
+      const description =
+        prior.length > 0 ? `${prior}\n\n${text}` : text;
+      const topic = await registryService.updateTopic(input.id, { description });
       broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
       return topic;
     }),

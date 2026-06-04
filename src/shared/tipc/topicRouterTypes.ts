@@ -46,6 +46,12 @@ export interface UpdateTopicInputArgs {
   updates: UpdateTopicInput;
 }
 
+export interface AppendDescriptionInput {
+  id: string;
+  /** Text appended to the bottom of the description (blank-line separated). */
+  text: string;
+}
+
 export interface DeleteTopicInput {
   id: string;
 }
@@ -123,6 +129,12 @@ export type TopicRouterType = Record<
     action: (args: {
       context: ActionContext;
       input: UpdateTopicInputArgs;
+    }) => Promise<Topic>;
+  };
+  topic_appendDescription: {
+    action: (args: {
+      context: ActionContext;
+      input: AppendDescriptionInput;
     }) => Promise<Topic>;
   };
   topic_deleteTopic: {

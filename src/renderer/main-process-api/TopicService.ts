@@ -47,6 +47,16 @@ export class TopicService {
     return topicClient.updateTopic({ id, updates });
   }
 
+  /**
+   * Append text to the bottom of a topic's markdown description. Atomic in
+   * main (read-modify-write + TOPIC_UPDATED broadcast), with a blank-line
+   * separator between the existing body and the new text. Used by the
+   * drag-to-notes drop target in the Alexandria description overlay.
+   */
+  static async appendToDescription(id: string, text: string): Promise<Topic> {
+    return topicClient.appendDescription({ id, text });
+  }
+
   static async deleteTopic(id: string): Promise<boolean> {
     return topicClient.deleteTopic({ id });
   }

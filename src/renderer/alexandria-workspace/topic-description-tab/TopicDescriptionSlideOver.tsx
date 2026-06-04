@@ -12,8 +12,12 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
-import { FileText, Pencil, X } from 'lucide-react';
-import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import { ArrowDownToLine, FileText, Pencil, X } from 'lucide-react';
+import {
+  DATA_TYPES,
+  useDropZone,
+  type PanelEventEmitter,
+} from '@principal-ade/panel-framework-core';
 import type { TopicStatus } from '@principal-ai/alexandria-core-library';
 import { TopicService } from '../../main-process-api/TopicService';
 import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
@@ -92,6 +96,38 @@ export const TopicDescriptionSlideOver: React.FC<
       off();
     };
   }, [open, topicId]);
+
+  // Append dropped text (e.g. a terminal selection dragged in via the
+  // panel-framework drag protocol) to the bottom of the description. The
+  // append is atomic in main and broadcasts TOPIC_UPDATED, which the
+  // onTopicChange subscription above turns into a live refresh.
+  const appendDroppedText = React.useCallback(
+    async (text: string) => {
+      const value = text.trim();
+      if (!value || !topicId) return;
+      try {
+        await TopicService.appendToDescription(topicId, value);
+      } catch (err) {
+        console.error('[TopicDescriptionSlideOver] append failed', err);
+      }
+    },
+    [topicId],
+  );
+
+  const { isDragOver, ...dropZoneProps } = useDropZone({
+    handlers: [
+      {
+        dataType: DATA_TYPES.TEXT_SELECTION,
+        onDrop: (data) => {
+          void appendDroppedText(data.primaryData);
+        },
+      },
+    ],
+    onPlainTextDrop: (text) => {
+      void appendDroppedText(text);
+    },
+    showVisualFeedback: true,
+  });
 
   const trimmed = (description ?? '').trim();
 
@@ -193,7 +229,40 @@ export const TopicDescriptionSlideOver: React.FC<
 
       {topicId && <TopicStatusControl topicId={topicId} status={status} />}
 
-      <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+      <div
+        {...dropZoneProps}
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          position: 'relative',
+          outline: isDragOver ? `2px dashed ${theme.colors.primary}` : 'none',
+          outlineOffset: -2,
+          background: isDragOver ? `${theme.colors.primary}14` : undefined,
+          transition: 'background 0.12s ease',
+        }}
+      >
+        {isDragOver && (
+          <div
+            style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              background: theme.colors.primary,
+              color: '#ffffff',
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights.medium,
+              pointerEvents: 'none',
+            }}
+          >
+            <ArrowDownToLine size={14} />
+            Drop to append to notes
+          </div>
+        )}
         {loading && description === null ? (
           <div
             style={{
