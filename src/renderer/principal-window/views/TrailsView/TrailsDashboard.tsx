@@ -130,6 +130,12 @@ export interface TrailsDashboardProps {
   ) => void;
   /** "View All Projects" → opens the Trails view's projects landing. */
   onViewAllProjects: () => void;
+  /**
+   * Fired whenever the Topics view toggle changes (and once on mount with the
+   * restored value). Lets the host adapt its layout — board mode wants a
+   * flex-fill container so the lanes can scroll internally.
+   */
+  onViewModeChange?: (mode: 'list' | 'kanban') => void;
   /** Max repo cards to render before clipping. Default 6. */
   repoLimit?: number;
   /** Max topic rows to render before clipping. Default 6. */
@@ -151,6 +157,7 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
   onDeleteTopic,
   onChangeTopicStatus,
   onViewAllProjects,
+  onViewModeChange,
   repoLimit = 6,
   topicLimit = 6,
 }) => {
@@ -189,6 +196,11 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
   // True while the search field is expanded. Used to fade the Projects section
   // out so the search lands on a topics-only view, mirroring "All topics".
   const [searchActive, setSearchActive] = React.useState(false);
+  // True between clicking "Board" and the board actually appearing: we hold the
+  // view in `list` while the Projects section fades out, then flip to `kanban`
+  // once its exit completes (see the Projects AnimatePresence). Staged so the
+  // cards never fly into the board behind a still-fading Projects section.
+  const [pendingBoardSwitch, setPendingBoardSwitch] = React.useState(false);
   React.useEffect(
     () => () => {
       if (enterBoardTimer.current) window.clearTimeout(enterBoardTimer.current);
@@ -196,27 +208,70 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
     [],
   );
 
-  const selectViewMode = (next: 'list' | 'kanban') => {
-    if (next === viewMode) return;
-    // Persist (fire-and-forget) and keep the session cache in sync so a
-    // re-mount restores this layout without a flash.
+  // Surface the current view to the host so it can switch its container to a
+  // flex-fill layout in board mode. Done synchronously alongside every
+  // setViewMode (not in a [viewMode] effect) so the host's fill layout lands in
+  // the SAME commit as the board — otherwise the board's first frame renders
+  // unbounded (lanes at full content height) and framer flies the cards to that
+  // too-tall layout before the host bounds it a frame later. This mount effect
+  // only covers the initial paint; toggles/restores notify inline.
+  React.useEffect(() => {
+    onViewModeChange?.(viewMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist (fire-and-forget) and keep the session cache in sync so a re-mount
+  // restores this layout without a flash.
+  const persistViewMode = (next: 'list' | 'kanban') => {
     cachedTopicsViewMode = next;
     void UserPreferencesService.updatePreferences({
       trails: { topicsViewMode: next },
     });
-    if (next === 'list') {
-      setViewMode('list');
-      return;
-    }
+  };
+
+  // Commit to the board: flip the view and run the fly-in, holding the lanes
+  // `visible` until the spring settles so the cards aren't clipped mid-flight.
+  const enterBoard = () => {
     setViewMode('kanban');
-    // Let the fly-in finish before the lanes start clipping/scrolling. Matches
-    // the card spring's settle time.
+    // Same-commit so the host bounds the board before framer measures it.
+    onViewModeChange?.('kanban');
     setBoardEntering(true);
     if (enterBoardTimer.current) window.clearTimeout(enterBoardTimer.current);
     enterBoardTimer.current = window.setTimeout(() => {
       setBoardEntering(false);
       enterBoardTimer.current = null;
     }, 650);
+  };
+
+  const selectViewMode = (next: 'list' | 'kanban') => {
+    if (next === 'list') {
+      // Cancel an in-flight switch-to-board that hasn't committed yet, bringing
+      // Projects back (unless "All topics" owns that space).
+      if (pendingBoardSwitch) {
+        setPendingBoardSwitch(false);
+        persistViewMode('list');
+        setProjectsPresent(!showAllTopics);
+        return;
+      }
+      if (viewMode === 'list') return;
+      persistViewMode('list');
+      setViewMode('list');
+      onViewModeChange?.('list');
+      // Projects re-enters once we're back in list (unless "All topics" is on).
+      setProjectsPresent(!showAllTopics);
+      return;
+    }
+    // → board.
+    if (viewMode === 'kanban' || pendingBoardSwitch) return;
+    persistViewMode('kanban');
+    // Stage it: if Projects is on screen, fade it out first and defer the board
+    // fly-in to its exit-complete. Otherwise go straight to the board.
+    if (projectsPresent && !searchActive) {
+      setPendingBoardSwitch(true);
+      setProjectsPresent(false);
+    } else {
+      enterBoard();
+    }
   };
 
   // First mount of the session: reconcile against the persisted preference.
@@ -233,6 +288,7 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
       const storedView = prefs.trails?.topicsViewMode ?? 'list';
       cachedTopicsViewMode = storedView;
       setViewMode(storedView);
+      onViewModeChange?.(storedView);
 
       const stored = prefs.trails?.showAllTopics ?? false;
       cachedShowAllTopics = stored;
@@ -244,6 +300,8 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
     return () => {
       cancelled = true;
     };
+    // Mount-only reconciliation; the view notification is intentionally inline.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const visibleRepos = repoEntries.slice(0, repoLimit);
@@ -325,13 +383,18 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
         width: '100%',
         maxWidth: 1100,
         margin: '0 auto',
-        padding: '40px 32px 64px',
+        // Board mode fills its (bounded) parent so the lanes can size to the
+        // available height; the bottom padding shrinks since the lanes already
+        // reach toward the footer. List mode keeps its natural, paddingy height.
+        padding: viewMode === 'kanban' ? '40px 32px 24px' : '40px 32px 64px',
         display: 'flex',
         flexDirection: 'column',
+        ...(viewMode === 'kanban' ? { flex: 1, minHeight: 0 } : {}),
       }}
     >
       <Section
         theme={theme}
+        fill={viewMode === 'kanban'}
         eyebrowIcon={<Library size={12} color={theme.colors.primary} />}
         eyebrow="Topics"
         eyebrowAccessory={
@@ -407,6 +470,7 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
               <KanbanBoard
                 topics={filteredTopics}
                 theme={theme}
+                fill
                 lanesScroll={!boardEntering}
                 onSelectTopic={onSelectTopic}
                 onDeleteTopic={onDeleteTopic}
@@ -457,10 +521,17 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
 
       <AnimatePresence
         initial={false}
-        // Forward toggle: Projects has fully collapsed → now expand topics.
-        // Guarded to the "All topics" flow so a search- or board-driven exit
-        // (showAllTopics still false) doesn't spuriously reveal every topic.
         onExitComplete={() => {
+          // Staged switch-to-board: Projects has fully faded → now fly the
+          // cards into the board (held in `list` until this moment).
+          if (pendingBoardSwitch) {
+            setPendingBoardSwitch(false);
+            enterBoard();
+            return;
+          }
+          // Forward "All topics" toggle: Projects has fully collapsed → now
+          // expand topics. Guarded to that flow so a search-driven exit
+          // (showAllTopics still false) doesn't spuriously reveal every topic.
           if (showAllTopics) setTopicsExpanded(true);
         }}
       >
@@ -537,6 +608,7 @@ function Section({
   title,
   subtitle,
   action,
+  fill = false,
   children,
 }: {
   theme: ThemeShape;
@@ -546,10 +618,23 @@ function Section({
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
+  /**
+   * Fill the parent's height: the header stays its natural size and the
+   * children area flexes to take the rest (so a board inside can size its
+   * lanes to the available space). Default: natural height.
+   */
+  fill?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+        ...(fill ? { flex: 1, minHeight: 0 } : {}),
+      }}
+    >
       <div
         style={{
           display: 'flex',
@@ -610,7 +695,20 @@ function Section({
         </div>
         {action}
       </div>
-      {children}
+      {fill ? (
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {children}
+        </div>
+      ) : (
+        children
+      )}
     </div>
   );
 }
@@ -666,6 +764,7 @@ function KanbanBoard({
   topics,
   theme,
   lanesScroll,
+  fill = false,
   onSelectTopic,
   onDeleteTopic,
   onChangeTopicStatus,
@@ -678,6 +777,12 @@ function KanbanBoard({
    * animate in from the grid; flipped to `true` once they've landed.
    */
   lanesScroll: boolean;
+  /**
+   * Fill the parent's height: the board grid and its lanes flex to fill the
+   * available space (each lane scrolls its own cards) instead of being sized
+   * to a viewport-relative height. Default: viewport-relative lane height.
+   */
+  fill?: boolean;
   onSelectTopic: (entry: TrailsDashboardTopicEntry) => void;
   onDeleteTopic?: (entry: TrailsDashboardTopicEntry) => void;
   onChangeTopicStatus?: (
@@ -729,7 +834,24 @@ function KanbanBoard({
         display: 'grid',
         gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
         gap: 12,
-        alignItems: 'start',
+        // When filling, stretch the lanes to the grid's height so each whole
+        // column is a full-height drop target; otherwise align to the top.
+        alignItems: fill ? 'stretch' : 'start',
+        ...(fill
+          ? {
+              flex: 1,
+              minHeight: 0,
+              // During the fly-in the lanes run `overflow: visible` so a card
+              // animating across columns isn't clipped by its lane's scroll
+              // box. That would let a full lane spill past its bottom (over the
+              // footer) until the lanes flip to `auto` and snap-clip it. Clip
+              // at the grid instead: it spans all columns, so the horizontal
+              // fly-in is untouched, but the vertical spill is bounded to the
+              // same edge the lanes settle to — no spill, no snap. Released to
+              // `visible` at rest so the lanes own their scrolling.
+              overflow: lanesScroll ? 'visible' : 'hidden',
+            }
+          : {}),
       }}
     >
       {columns.map((col) => {
@@ -763,7 +885,12 @@ function KanbanBoard({
                 : undefined
             }
             onDrop={canDrag ? (e) => handleDrop(e, col.state) : undefined}
-            style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              ...(fill ? { minHeight: 0 } : {}),
+            }}
           >
             {/* Static lane header — it sits above the scroll region, so only
                 the cards in the lane below it scroll. */}
@@ -814,14 +941,16 @@ function KanbanBoard({
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 12,
-                // Fixed-height lane that fills toward the bottom of the
-                // viewport, so the WHOLE column is a drop target — not just the
-                // strip its cards happen to occupy. The 240px offset leaves
-                // room for the titlebar + section header; tune if it over/under
-                // shoots. The lane scrolls its own cards (header stays put);
-                // held `visible` during the fly-in so animating cards aren't
-                // clipped.
-                height: 'max(320px, calc(100vh - 240px))',
+                // The lane fills its column so the WHOLE column is a drop
+                // target — not just the strip its cards happen to occupy. When
+                // `fill`, it flexes to the height the parent hands down (the
+                // host bounds that to fit between the header and footer);
+                // otherwise it falls back to a viewport-relative height. The
+                // lane scrolls its own cards (header stays put); held `visible`
+                // during the fly-in so animating cards aren't clipped.
+                ...(fill
+                  ? { flex: 1, minHeight: 0 }
+                  : { height: 'max(320px, calc(100vh - 240px))' }),
                 overflowY: lanesScroll ? 'auto' : 'visible',
                 borderRadius: 10,
                 // Solid accent outline while a card hovers over this lane;

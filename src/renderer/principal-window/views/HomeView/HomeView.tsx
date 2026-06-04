@@ -154,6 +154,10 @@ export function HomeView() {
   const [pendingDeleteTopic, setPendingDeleteTopic] =
     useState<TrailsDashboardTopicEntry | null>(null);
   const [deletingTopic, setDeletingTopic] = useState(false);
+  // Mirrors the dashboard's Topics view toggle so this view can switch the
+  // dashboard wrapper to a flex-fill layout in board mode (keeps the footer
+  // visible without scrolling).
+  const [dashboardBoardMode, setDashboardBoardMode] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -815,8 +819,28 @@ export function HomeView() {
         )}
 
         {skillInstalled === true && hasAnyTrail && (
-          <div style={{ flex: '0 0 auto', width: '100%', marginTop: 24 }}>
+          <div
+            style={{
+              width: '100%',
+              marginTop: 24,
+              // Board mode fills the space between the header and the footer so
+              // the lanes scroll their own cards and the "Installed Skills"
+              // footer stays pinned/visible. List mode keeps its natural height
+              // and lets the page scroll.
+              ...(dashboardBoardMode
+                ? {
+                    flex: '1 1 auto',
+                    minHeight: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }
+                : { flex: '0 0 auto' }),
+            }}
+          >
             <TrailsDashboard
+              onViewModeChange={(mode) =>
+                setDashboardBoardMode(mode === 'kanban')
+              }
               repoEntries={dashboardRepoEntries}
               recentTrails={recentTrails}
               topicEntries={dashboardTopicEntries}
