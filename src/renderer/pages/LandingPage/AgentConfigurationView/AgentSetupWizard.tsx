@@ -57,10 +57,29 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
   const [localInstallStatus, setLocalInstallStatus] = useState<boolean | null>(
     null,
   );
+  // Real PATH detection — agentStatus.isInstalled is hardcoded true by the
+  // agent-config handler (it only configures hooks), so it can't be trusted
+  // to decide whether to show the "download it" prompt.
+  const [realInstalled, setRealInstalled] = useState<boolean | null>(null);
   const [mcpStatus, setMcpStatus] = useState<{
     enabled: boolean;
     serverCount: number;
   }>({ enabled: false, serverCount: 0 });
+
+  // Detect whether the agent's CLI binary is actually on PATH.
+  useEffect(() => {
+    let cancelled = false;
+    AgentConfigurationService.detectInstalled(agentType)
+      .then((result) => {
+        if (!cancelled) setRealInstalled(result.installed);
+      })
+      .catch(() => {
+        if (!cancelled) setRealInstalled(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [agentType]);
 
   // Sync local status with prop changes
   useEffect(() => {
@@ -357,7 +376,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
                   isClaudeTourActive={isClaudeTourActive}
                   claudeTourStepIndex={claudeTourStepIndex}
                   isCurrentStep={currentStep === 'install'}
-                  isInstalled={agentStatus?.isInstalled ?? true}
+                  isInstalled={realInstalled ?? true}
                 />
               </div>
 
@@ -581,11 +600,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
           <div className="flex-1" style={{ minHeight: 0 }}>
             <AgentConnectionVisualizer
               agentType={agentType}
-              isInstalled={
-                localInstallStatus !== null
-                  ? localInstallStatus
-                  : (agentStatus?.isInstalled ?? true)
-              }
+              isInstalled={realInstalled ?? true}
               hasHooks={agentStatus?.hasHooks || false}
               hasMCP={mcpStatus.enabled}
             />

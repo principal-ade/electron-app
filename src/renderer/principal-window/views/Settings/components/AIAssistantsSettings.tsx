@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Bot, CheckCircle } from 'lucide-react';
-import { SupportedAgent } from '@principal-ai/agent-monitoring';
+import { Bot, CheckCircle, AlertCircle, Download } from 'lucide-react';
+import { SupportedAgent, AGENT_INFO } from '@principal-ai/agent-monitoring';
 import {
   AgentConfigurationService,
   AgentInstallationStatus,
+  AgentDetectionResult,
 } from '../../../../main-process-api/AgentConfigurationService';
+import { ShellService } from '../../../../main-process-api/ShellService';
 import { AgentConfigurationView } from '../../../../pages/LandingPage/AgentConfigurationView';
 
 export const AIAssistantsSettings: React.FC = () => {
   const { theme } = useTheme();
   const [agentStatus, setAgentStatus] =
     useState<AgentInstallationStatus | null>(null);
+  const [claudeDetection, setClaudeDetection] =
+    useState<AgentDetectionResult | null>(null);
   const [activeAgentView, setActiveAgentView] = useState<'claude' | null>(null);
   const [agentViewLayout, setAgentViewLayout] = useState<'simple' | 'detailed'>(
     'simple',
@@ -23,6 +27,16 @@ export const AIAssistantsSettings: React.FC = () => {
       setAgentStatus(status);
     } catch (error) {
       console.error('Failed to check agent status:', error);
+    }
+    // Real PATH detection, independent of the hook-config status above.
+    try {
+      const detection = await AgentConfigurationService.detectInstalled(
+        SupportedAgent.CLAUDE,
+      );
+      setClaudeDetection(detection);
+    } catch (error) {
+      console.error('Failed to detect Claude installation:', error);
+      setClaudeDetection({ installed: false });
     }
   }, []);
 
@@ -97,26 +111,72 @@ export const AIAssistantsSettings: React.FC = () => {
                     >
                       Anthropic's AI assistant
                     </p>
-                    {agentStatus?.claude?.isInstalled && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          marginTop: '4px',
-                        }}
-                      >
-                        <CheckCircle size={12} color={theme.colors.success} />
-                        <span
+                    {claudeDetection &&
+                      (claudeDetection.installed ? (
+                        <div
+                          title={claudeDetection.path}
                           style={{
-                            fontSize: '11px',
-                            color: theme.colors.success,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            marginTop: '4px',
                           }}
                         >
-                          Installed
-                        </span>
-                      </div>
-                    )}
+                          <CheckCircle size={12} color={theme.colors.success} />
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              color: theme.colors.success,
+                            }}
+                          >
+                            Installed
+                          </span>
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginTop: '4px',
+                          }}
+                        >
+                          <AlertCircle
+                            size={12}
+                            color={theme.colors.textSecondary}
+                          />
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              color: theme.colors.textSecondary,
+                            }}
+                          >
+                            Not installed
+                          </span>
+                          <button
+                            onClick={() =>
+                              ShellService.openExternal(
+                                AGENT_INFO[SupportedAgent.CLAUDE].ui
+                                  .downloadUrl,
+                              )
+                            }
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: 0,
+                              border: 'none',
+                              background: 'none',
+                              color: theme.colors.primary,
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                            }}
+                          >
+                            <Download size={12} />
+                            Get it
+                          </button>
+                        </div>
+                      ))}
                   </div>
                 </div>
                 <button

@@ -46,10 +46,15 @@ export function setupCommandHandlers(
         const fullPath = isAvailable
           ? await terminalEnvironment.findCommand(command)
           : null;
-        return { available: isAvailable, path: fullPath };
+        // Shape matches the ShellAPI.checkCommand contract ({ exists, path }),
+        // the only renderer wrapper exposing this channel.
+        return { exists: isAvailable, path: fullPath ?? undefined };
       } catch (error) {
         console.error(`Failed to check command ${command}:`, error);
-        return { available: false, path: null };
+        return {
+          exists: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
       }
     },
   );

@@ -1,10 +1,21 @@
-import { SupportedAgent } from '@principal-ai/agent-monitoring';
+import { SupportedAgent, AGENT_INFO } from '@principal-ai/agent-monitoring';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { AgentSetupStatus } from '../../shared/main-process-api-interfaces/AgentConfigAPI';
 import type { AgentSettings } from '../../shared/types/agent-settings.types';
+import { ShellService } from './ShellService';
 
 export type AgentInstallationStatus = {
   claude: AgentSetupStatus;
+};
+
+/**
+ * Whether an agent's CLI binary is actually present on the user's PATH.
+ * Unlike AgentSetupStatus.isInstalled (which the agent-config handler hardcodes
+ * to true because it only configures hooks), this is a real detection result.
+ */
+export type AgentDetectionResult = {
+  installed: boolean;
+  path?: string;
 };
 
 const EMPTY_STATUS: AgentSetupStatus = {
@@ -24,6 +35,27 @@ export class AgentConfigurationService {
     } catch (error) {
       console.error('Failed to check agent installations:', error);
       return { claude: EMPTY_STATUS };
+    }
+  }
+
+  /**
+   * Detect whether an agent's CLI binary is actually installed (on PATH).
+   * Uses the agent's declared binaryName + a real `which` check, rather than
+   * the agent-config hook status which always reports installed.
+   */
+  static async detectInstalled(
+    agentType: SupportedAgent,
+  ): Promise<AgentDetectionResult> {
+    const binaryName = AGENT_INFO[agentType]?.installation?.binaryName;
+    if (!binaryName) {
+      return { installed: false };
+    }
+    try {
+      const result = await ShellService.checkCommand(binaryName);
+      return { installed: result.exists, path: result.path };
+    } catch (error) {
+      console.error(`Failed to detect ${agentType} installation:`, error);
+      return { installed: false };
     }
   }
 
