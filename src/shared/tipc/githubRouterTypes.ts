@@ -105,6 +105,22 @@ export interface GetOrgMembersInput {
   org: string;
 }
 
+export interface GetRepositoryCollaboratorsInput {
+  owner: string;
+  repo: string;
+}
+
+export interface RepoCollaborator {
+  login: string;
+  avatar_url: string;
+}
+
+export interface GetRepositoryCollaboratorsResponse {
+  collaborators: RepoCollaborator[];
+  /** True when GitHub refused to enumerate (caller lacks push access). */
+  forbidden: boolean;
+}
+
 export interface GetUserFollowersInput {
   username?: string;
 }
@@ -248,6 +264,12 @@ export type GithubRouterType = Record<
       context: ActionContext;
       input: GetOrgMembersInput;
     }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubOrgMember[]>;
+  };
+  getRepositoryCollaborators: {
+    action: (args: {
+      context: ActionContext;
+      input: GetRepositoryCollaboratorsInput;
+    }) => Promise<GetRepositoryCollaboratorsResponse>;
   };
 
   // User Profile (for other users)

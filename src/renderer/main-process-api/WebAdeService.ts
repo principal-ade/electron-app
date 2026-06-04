@@ -26,6 +26,8 @@ import type {
   GetInboxInput,
   ListInboxResponse,
   InboxUnreadCountResponse,
+  SendTrailInput,
+  SendTrailResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -206,5 +208,13 @@ export class WebAdeService {
    */
   static async getInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
     return webAdeClient.getInboxUnreadCount();
+  }
+
+  /**
+   * Send a shared trail to one or more GitHub-login recipients.
+   * `shareId` is the web-ade share id (parsed from the share URL).
+   */
+  static async sendTrail(input: SendTrailInput): Promise<SendTrailResponse> {
+    return webAdeClient.sendTrail(input);
   }
 }

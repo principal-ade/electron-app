@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
@@ -7,14 +7,20 @@ import {
   Circle,
   Copy,
   ExternalLink,
+  Loader2,
   Lock,
+  Plus,
+  Send,
   Share2,
+  Users,
   X,
 } from 'lucide-react';
 import type { BaseTrailIndexEntry } from '@industry-theme/file-city-panel';
 import { TrailShareError } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { TrailShareService } from '../../services/TrailShareService';
 import { GitService } from '../../main-process-api/GitService';
+import { GithubService } from '../../main-process-api/GithubService';
+import { WebAdeService } from '../../main-process-api/WebAdeService';
 
 const COPY_FEEDBACK_MS = 1500;
 
@@ -428,6 +434,7 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
             url={state.url}
             agentCommand={buildAgentCommand(state.url)}
             copiedKind={copiedKind}
+            repositoryPath={repositoryPath}
             onCopyUrl={() => handleCopy(state.url, 'url')}
             onCopyAgent={() =>
               handleCopy(buildAgentCommand(state.url), 'agent')
@@ -752,11 +759,429 @@ const MissingFilesBody: React.FC<{
   </>
 );
 
+// ---------------------------------------------------------------------------
+// Send-to-people section (rendered inside the success state)
+// ---------------------------------------------------------------------------
+
+// Parse the web-ade share id from a share URL (`…/trail/<id>`). This is the
+// id `/api/trails/by-id/{id}/send` keys on — NOT the local trail-index id.
+const parseShareId = (url: string): string | null => {
+  try {
+    const { pathname } = new URL(url);
+    const m = pathname.match(/\/trail\/([^/?#]+)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  } catch {
+    return null;
+  }
+};
+
+// Pull owner/repo out of a GitHub origin remote URL. Mirrors the main
+// process `parseGitRemoteUrl` patterns so the picker can list collaborators
+// without another IPC round-trip.
+const parseOwnerRepo = (
+  remoteUrl: string | null,
+): { owner: string; repo: string } | null => {
+  if (!remoteUrl) return null;
+  const patterns = [
+    /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/,
+    /^https?:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/,
+  ];
+  for (const p of patterns) {
+    const m = remoteUrl.match(p);
+    if (m) return { owner: m[1], repo: m[2] };
+  }
+  return null;
+};
+
+interface Recipient {
+  login: string;
+  avatarUrl?: string;
+}
+
+type SendState =
+  | { kind: 'loading' }
+  | { kind: 'ready' }
+  | { kind: 'sending' }
+  | {
+      kind: 'sent';
+      delivered: number;
+      failed: Array<{ login: string; reason: string }>;
+    }
+  | { kind: 'error'; message: string };
+
+const FAILURE_LABEL: Record<string, string> = {
+  unknown_user: 'no such GitHub user',
+  invalid_login: 'invalid login',
+};
+
+/**
+ * Recipient picker shown after a successful share. Seeds from the repo's
+ * collaborators (everyone selected by default), and falls back to manual
+ * GitHub-login entry when collaborators can't be enumerated — which is the
+ * common case for a reader, since GitHub gates the collaborators endpoint
+ * behind write/maintain/admin access.
+ */
+const SendToPeopleSection: React.FC<{
+  theme: Theme;
+  shareUrl: string;
+  repositoryPath?: string;
+}> = ({ theme, shareUrl, repositoryPath }) => {
+  const [people, setPeople] = useState<Recipient[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [manualMode, setManualMode] = useState(false);
+  const [manualInput, setManualInput] = useState('');
+  const [comment, setComment] = useState('');
+  const [state, setState] = useState<SendState>({ kind: 'loading' });
+
+  const shareId = useMemo(() => parseShareId(shareUrl), [shareUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      // No repo path → can't resolve owner/repo, so we can't enumerate
+      // collaborators. Drop straight to manual entry.
+      if (!repositoryPath) {
+        if (!cancelled) {
+          setManualMode(true);
+          setState({ kind: 'ready' });
+        }
+        return;
+      }
+      try {
+        const info = await GitService.getRepositoryInfo(repositoryPath);
+        const origin =
+          info?.remotes?.find((r) => r.name === 'origin')?.url ?? null;
+        const ownerRepo = parseOwnerRepo(origin);
+        if (!ownerRepo) {
+          if (!cancelled) {
+            setManualMode(true);
+            setState({ kind: 'ready' });
+          }
+          return;
+        }
+        const [{ collaborators, forbidden }, currentUser] = await Promise.all([
+          GithubService.getRepositoryCollaborators(
+            ownerRepo.owner,
+            ownerRepo.repo,
+          ),
+          GithubService.getCurrentUser(),
+        ]);
+        if (cancelled) return;
+        const selfLogin = currentUser?.login?.toLowerCase();
+        // Drop yourself — sending a trail to your own inbox is pointless.
+        const list = collaborators
+          .filter((c) => c.login.toLowerCase() !== selfLogin)
+          .map((c) => ({ login: c.login, avatarUrl: c.avatar_url }));
+        setPeople(list);
+        setSelected(new Set(list.map((p) => p.login))); // default: everyone
+        // Forbidden (reader) or genuinely empty → also offer manual entry so
+        // the section is never a dead end.
+        setManualMode(forbidden || list.length === 0);
+        setState({ kind: 'ready' });
+      } catch {
+        if (cancelled) return;
+        setManualMode(true);
+        setState({ kind: 'ready' });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [repositoryPath]);
+
+  const toggle = useCallback((login: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(login)) next.delete(login);
+      else next.add(login);
+      return next;
+    });
+  }, []);
+
+  const addManual = useCallback(() => {
+    const login = manualInput.trim().replace(/^@/, '');
+    if (!login) return;
+    setPeople((prev) =>
+      prev.some((p) => p.login.toLowerCase() === login.toLowerCase())
+        ? prev
+        : [...prev, { login }],
+    );
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.add(login);
+      return next;
+    });
+    setManualInput('');
+  }, [manualInput]);
+
+  const selectedLogins = useMemo(
+    () => people.filter((p) => selected.has(p.login)).map((p) => p.login),
+    [people, selected],
+  );
+
+  const handleSend = useCallback(async () => {
+    if (!shareId) {
+      setState({
+        kind: 'error',
+        message: 'Could not read the share id from the link.',
+      });
+      return;
+    }
+    if (selectedLogins.length === 0) return;
+    setState({ kind: 'sending' });
+    try {
+      const res = await WebAdeService.sendTrail({
+        shareId,
+        recipients: selectedLogins,
+        comment: comment.trim() || undefined,
+      });
+      setState({
+        kind: 'sent',
+        delivered: res.delivered.length,
+        failed: res.failed,
+      });
+    } catch (err) {
+      setState({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Send failed.',
+      });
+    }
+  }, [shareId, selectedLogins, comment]);
+
+  return (
+    <div style={{ marginTop: '20px', borderTop: `1px solid ${theme.colors.border}`, paddingTop: '16px' }}>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <SectionLabel theme={theme}>Send to people</SectionLabel>
+
+      {state.kind === 'loading' && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: theme.colors.textSecondary,
+            fontSize: theme.fontSizes[1],
+            padding: '4px 0',
+          }}
+        >
+          <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+          Finding people with access…
+        </div>
+      )}
+
+      {state.kind === 'sent' && (
+        <div style={{ fontSize: theme.fontSizes[1] }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: theme.colors.primary,
+              marginBottom: state.failed.length ? '8px' : 0,
+            }}
+          >
+            <Check size={14} />
+            {state.delivered === 1
+              ? 'Sent to 1 person'
+              : `Sent to ${state.delivered} people`}
+          </div>
+          {state.failed.length > 0 && (
+            <div style={{ color: theme.colors.textSecondary }}>
+              Couldn’t deliver to{' '}
+              {state.failed
+                .map((f) => `${f.login} (${FAILURE_LABEL[f.reason] ?? f.reason})`)
+                .join(', ')}
+              .
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setState({ kind: 'ready' })}
+            style={{
+              marginTop: '10px',
+              padding: 0,
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.primary,
+              cursor: 'pointer',
+              fontSize: theme.fontSizes[1],
+            }}
+          >
+            Send to more people
+          </button>
+        </div>
+      )}
+
+      {(state.kind === 'ready' ||
+        state.kind === 'sending' ||
+        state.kind === 'error') && (
+        <>
+          {people.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                marginBottom: '12px',
+              }}
+            >
+              {people.map((p) => {
+                const isOn = selected.has(p.login);
+                return (
+                  <button
+                    key={p.login}
+                    type="button"
+                    onClick={() => toggle(p.login)}
+                    title={`@${p.login}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px 4px 4px',
+                      borderRadius: '999px',
+                      border: `1px solid ${isOn ? theme.colors.primary : theme.colors.border}`,
+                      background: isOn
+                        ? `${theme.colors.primary}1a`
+                        : theme.colors.backgroundSecondary,
+                      color: isOn ? theme.colors.primary : theme.colors.text,
+                      cursor: 'pointer',
+                      fontSize: theme.fontSizes[1],
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {p.avatarUrl ? (
+                      <img
+                        src={p.avatarUrl}
+                        alt=""
+                        width={20}
+                        height={20}
+                        style={{ borderRadius: '50%' }}
+                      />
+                    ) : (
+                      <span
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: '50%',
+                          background: theme.colors.border,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Users size={11} />
+                      </span>
+                    )}
+                    {p.login}
+                    {isOn && <Check size={13} />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {manualMode && (
+            <div style={{ marginBottom: '12px' }}>
+              {people.length === 0 && (
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textSecondary,
+                    marginBottom: '6px',
+                  }}
+                >
+                  Couldn’t list this repo’s collaborators — add recipients by
+                  GitHub username.
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={manualInput}
+                  onChange={(e) => setManualInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault();
+                      addManual();
+                    }
+                  }}
+                  placeholder="GitHub username"
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: `1px solid ${theme.colors.border}`,
+                    background: theme.colors.backgroundSecondary,
+                    color: theme.colors.text,
+                    fontSize: theme.fontSizes[1],
+                    fontFamily: 'inherit',
+                  }}
+                />
+                <SecondaryButton theme={theme} onClick={addManual}>
+                  <Plus size={14} />
+                </SecondaryButton>
+              </div>
+            </div>
+          )}
+
+          <input
+            type="text"
+            value={comment}
+            onChange={(e) => setComment(e.target.value.slice(0, 500))}
+            placeholder="Add a note (optional)"
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '8px 10px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              background: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              fontSize: theme.fontSizes[1],
+              fontFamily: 'inherit',
+              marginBottom: '12px',
+            }}
+          />
+
+          {state.kind === 'error' && (
+            <div
+              style={{
+                color: theme.colors.error ?? '#e5484d',
+                fontSize: theme.fontSizes[0],
+                marginBottom: '10px',
+              }}
+            >
+              {state.message}
+            </div>
+          )}
+
+          <ButtonRow>
+            <PrimaryButton
+              theme={theme}
+              onClick={state.kind === 'sending' ? () => {} : handleSend}
+            >
+              {state.kind === 'sending' ? (
+                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              ) : (
+                <Send size={14} />
+              )}
+              {selectedLogins.length > 0
+                ? `Send to ${selectedLogins.length}`
+                : 'Send'}
+            </PrimaryButton>
+          </ButtonRow>
+        </>
+      )}
+    </div>
+  );
+};
+
 const SuccessBody: React.FC<{
   theme: Theme;
   url: string;
   agentCommand: string;
   copiedKind: CopiedKind;
+  repositoryPath?: string;
   onCopyUrl: () => void;
   onCopyAgent: () => void;
   onOpenExternal: () => void;
@@ -765,6 +1190,7 @@ const SuccessBody: React.FC<{
   url,
   agentCommand,
   copiedKind,
+  repositoryPath,
   onCopyUrl,
   onCopyAgent,
   onOpenExternal,
@@ -809,6 +1235,11 @@ const SuccessBody: React.FC<{
           {copiedAgent ? 'Command copied' : 'Copy for agents'}
         </ActionButton>
       </div>
+      <SendToPeopleSection
+        theme={theme}
+        shareUrl={url}
+        repositoryPath={repositoryPath}
+      />
     </>
   );
 };

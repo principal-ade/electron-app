@@ -19,6 +19,7 @@ import type {
   GetUserOrgsForUserInput,
   GetUserStarredForUserInput,
   GetOrgMembersInput,
+  GetRepositoryCollaboratorsInput,
   GetUserFollowersInput,
   GetUserFollowingInput,
   FollowUserInput,
@@ -90,6 +91,12 @@ export const githubRouter = {
     .input<GetOrgMembersInput>()
     .action(async ({ input }) => {
       return githubAdapter.getOrgMembers(input.org);
+    }),
+
+  getRepositoryCollaborators: t.procedure
+    .input<GetRepositoryCollaboratorsInput>()
+    .action(async ({ input }) => {
+      return githubAdapter.getRepositoryCollaborators(input.owner, input.repo);
     }),
 
   // ===========================================================================

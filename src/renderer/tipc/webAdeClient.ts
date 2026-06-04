@@ -41,6 +41,8 @@ import type {
   GetInboxInput,
   ListInboxResponse,
   InboxUnreadCountResponse,
+  SendTrailInput,
+  SendTrailResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
@@ -94,6 +96,7 @@ export interface WebAdeClient {
   getRecentlyVisitedTrails: () => Promise<ListRecentlyVisitedTrailsResponse>;
   getInbox: (input: GetInboxInput) => Promise<ListInboxResponse>;
   getInboxUnreadCount: () => Promise<InboxUnreadCountResponse>;
+  sendTrail: (input: SendTrailInput) => Promise<SendTrailResponse>;
 }
 
 // =============================================================================
@@ -183,4 +186,6 @@ export type {
   GetInboxInput,
   ListInboxResponse,
   InboxUnreadCountResponse,
+  SendTrailInput,
+  SendTrailResponse,
 } from '../../shared/tipc/webAdeRouterTypes';

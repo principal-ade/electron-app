@@ -16,6 +16,7 @@ import type {
   GitHubCommit,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { githubClient } from '../tipc/githubClient';
+import type { GetRepositoryCollaboratorsResponse } from '../../shared/tipc/githubRouterTypes';
 
 // DELETED: detectRepository - unused (0 calls)
 // DELETED: fetchConfigFromGitHub - unused (0 calls)
@@ -209,6 +210,24 @@ export class GithubService {
   static async getUser(username: string): Promise<GitHubUser | null> {
     const result = await window.mainProcess.github.getUser(username);
     return result;
+  }
+
+  /**
+   * List the collaborators (people with access) on a repository.
+   * GitHub gates this behind write/maintain/admin access; a reader gets
+   * `forbidden: true` with an empty list so callers can fall back to
+   * manual recipient entry.
+   */
+  static async getRepositoryCollaborators(
+    owner: string,
+    repo: string,
+  ): Promise<GetRepositoryCollaboratorsResponse> {
+    try {
+      return await githubClient.getRepositoryCollaborators({ owner, repo });
+    } catch (error) {
+      console.error('[GithubService] Failed to fetch collaborators:', error);
+      return { collaborators: [], forbidden: false };
+    }
   }
 
   /**

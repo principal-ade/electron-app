@@ -32,6 +32,8 @@ import type {
   GetInboxInput,
   ListInboxResponse,
   InboxUnreadCountResponse,
+  SendTrailInput,
+  SendTrailResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -906,6 +908,58 @@ export class WebAdeService {
       return { count: typeof data?.count === 'number' ? data.count : 0 };
     } catch (error) {
       console.error('[WebADE] Failed to fetch inbox unread count:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a shared trail to one or more GitHub-login recipients. Auth'd by
+   * the GitHub token; the server resolves owner/repo from the share id and
+   * gates on the sender's repo read access. Partial delivery is non-fatal —
+   * unknown/invalid logins come back in `failed[]`.
+   */
+  async sendTrail(input: SendTrailInput): Promise<SendTrailResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/trails/by-id/${encodeURIComponent(input.shareId)}/send`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipients: input.recipients,
+          ...(input.comment ? { comment: input.comment } : {}),
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        let detail = `${response.status} ${response.statusText}`;
+        try {
+          const err = (await response.json()) as { error?: string };
+          if (err?.error) detail = err.error;
+        } catch {
+          // Non-JSON error body — keep the status line.
+        }
+        throw new Error(`Failed to send trail: ${detail}`);
+      }
+
+      const data = (await response.json()) as Partial<SendTrailResponse>;
+      return {
+        delivered: Array.isArray(data?.delivered) ? data.delivered : [],
+        failed: Array.isArray(data?.failed) ? data.failed : [],
+      };
+    } catch (error) {
+      console.error('[WebADE] Failed to send trail:', error);
       throw error;
     }
   }

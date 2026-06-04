@@ -424,6 +424,24 @@ export interface InboxUnreadCountResponse {
   count: number;
 }
 
+/**
+ * Send a shared trail to one or more GitHub-login recipients.
+ * `shareId` is the web-ade share id (parsed from the share URL), NOT the
+ * local trail-index id.
+ */
+export interface SendTrailInput {
+  shareId: string;
+  /** GitHub logins to deliver to (server caps at 50). */
+  recipients: string[];
+  /** Optional sender note (server caps at 500 chars). */
+  comment?: string;
+}
+
+export interface SendTrailResponse {
+  delivered: Array<{ login: string; githubId: number }>;
+  failed: Array<{ login: string; reason: 'unknown_user' | 'invalid_login' }>;
+}
+
 // =============================================================================
 // Router Type Definition
 // =============================================================================
@@ -568,5 +586,11 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input?: void;
     }) => Promise<InboxUnreadCountResponse>;
+  };
+  sendTrail: {
+    action: (args: {
+      context: ActionContext;
+      input: SendTrailInput;
+    }) => Promise<SendTrailResponse>;
   };
 };

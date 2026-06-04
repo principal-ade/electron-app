@@ -19,6 +19,8 @@ import type {
   GetUserOrgsForUserInput,
   GetUserStarredForUserInput,
   GetOrgMembersInput,
+  GetRepositoryCollaboratorsInput,
+  GetRepositoryCollaboratorsResponse,
   GetUserFollowersInput,
   GetUserFollowingInput,
   FollowUserInput,
@@ -74,6 +76,9 @@ export interface GithubClient {
     input: GetOrgRepositoriesInput,
   ) => Promise<GitHubRepository[]>;
   getOrgMembers: (input: GetOrgMembersInput) => Promise<GitHubOrgMember[]>;
+  getRepositoryCollaborators: (
+    input: GetRepositoryCollaboratorsInput,
+  ) => Promise<GetRepositoryCollaboratorsResponse>;
 
   // User Profile (for other users)
   getUser: (input: GetUserInput) => Promise<GitHubUser | null>;

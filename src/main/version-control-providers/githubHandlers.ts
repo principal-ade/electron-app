@@ -1724,6 +1724,61 @@ export class GitHubAdapter {
   }
 
   /**
+   * Get repository collaborators (people with access to the repo).
+   *
+   * GitHub gates this endpoint behind write/maintain/admin access — a
+   * reader (pull-only) gets a 403. We surface that as `forbidden: true`
+   * rather than an empty list so the caller can distinguish "no
+   * collaborators" from "you're not allowed to enumerate them" and fall
+   * back to manual recipient entry.
+   */
+  async getRepositoryCollaborators(
+    owner: string,
+    repo: string,
+  ): Promise<{
+    collaborators: Array<{ login: string; avatar_url: string }>;
+    forbidden: boolean;
+  }> {
+    const endpoint = `/repos/${owner}/${repo}/collaborators?per_page=100`;
+
+    console.log(`[GitHub] Fetching collaborators for ${owner}/${repo}`);
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      const raw = apiResult.data as Array<{ login: string; avatar_url: string }>;
+      const collaborators = raw.map((c) => ({
+        login: c.login,
+        avatar_url: c.avatar_url,
+      }));
+      console.log(
+        `[GitHub] Fetched ${collaborators.length} collaborators for ${owner}/${repo}`,
+      );
+      return { collaborators, forbidden: false };
+    }
+
+    // 403 (no push access) / 404 (no read access) → can't enumerate.
+    if (apiResult.status === 403 || apiResult.status === 404) {
+      return { collaborators: [], forbidden: true };
+    }
+
+    // Fallback to CLI for transient API failures.
+    try {
+      const result = await this.executeCommand(['gh', 'api', `/repos/${owner}/${repo}/collaborators`]);
+      if (result.success && result.stdout) {
+        const raw = JSON.parse(result.stdout) as Array<{ login: string; avatar_url: string }>;
+        return {
+          collaborators: raw.map((c) => ({ login: c.login, avatar_url: c.avatar_url })),
+          forbidden: false,
+        };
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting repository collaborators:', error);
+    }
+
+    return { collaborators: [], forbidden: false };
+  }
+
+  /**
    * Get followers for a user (defaults to authenticated user)
    */
   async getUserFollowers(username?: string): Promise<GitHubUser[]> {

@@ -25,6 +25,7 @@ import type {
   ExplainCommitsInput,
   ExplainWorkingChangesInput,
   GetInboxInput,
+  SendTrailInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 
@@ -197,4 +198,10 @@ export const webAdeRouter = {
   getInboxUnreadCount: t.procedure.action(async () => {
     return webAdeService.getInboxUnreadCount();
   }),
+
+  sendTrail: t.procedure
+    .input<SendTrailInput>()
+    .action(async ({ input }) => {
+      return webAdeService.sendTrail(input);
+    }),
 };
