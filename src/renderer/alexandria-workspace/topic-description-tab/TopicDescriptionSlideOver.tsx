@@ -1,12 +1,14 @@
 /**
  * Left-column slide-over that renders the current topic's description as
- * read-only markdown (via IndustryMarkdownSlide). It's anchored inside the
- * left panel column — toggled from the titlebar's Description button — and
- * slides in over whichever left segment (Projects/Trails/Sessions) is active.
+ * markdown (via IndustryMarkdownSlide). It's anchored inside the left panel
+ * column — toggled from the titlebar's Description button — and slides in over
+ * whichever left segment (Projects/Trails/Sessions) is active.
  *
- * Editing still happens in the dedicated MDXEditor tab: the header "Edit"
+ * Full editing happens in the dedicated MDXEditor tab: the header "Edit"
  * button calls `onEdit`, which opens that tab (the slide-over stays open and
- * live-refreshes via `TopicService.onTopicChange`).
+ * live-refreshes via `TopicService.onTopicChange`). The preview also supports
+ * lightweight inline deletion — highlight text or click a list item's bullet
+ * to remove it — persisted through the same `TopicService.updateTopic` sink.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -49,7 +51,15 @@ export interface TopicDescriptionSlideOverProps {
 
 export const TopicDescriptionSlideOver: React.FC<
   TopicDescriptionSlideOverProps
-> = ({ open, topicId, onClose, onEdit, events, workspaceId, repositoryPath }) => {
+> = ({
+  open,
+  topicId,
+  onClose,
+  onEdit,
+  events,
+  workspaceId,
+  repositoryPath,
+}) => {
   const { theme } = useTheme();
   const { resolve } = useWorkspaceFileIndex(workspaceId);
   const { onLinkClick, notice, dismissNotice, openCandidate } =
@@ -110,6 +120,26 @@ export const TopicDescriptionSlideOver: React.FC<
       } catch (err) {
         console.error('[TopicDescriptionSlideOver] append failed', err);
       }
+    },
+    [topicId],
+  );
+
+  // Inline deletion: highlighting text (or clicking a list item's bullet) in
+  // the preview removes it and hands us the new content. Update optimistically
+  // and persist through the same sink the MDX editor tab uses; the
+  // TOPIC_UPDATED broadcast then reconciles via the onTopicChange subscription.
+  const handleContentChange = React.useCallback(
+    (next: string) => {
+      if (!topicId) return;
+      setDescription(next);
+      void TopicService.updateTopic(topicId, { description: next }).catch(
+        (err) => {
+          console.error(
+            '[TopicDescriptionSlideOver] description update failed',
+            err,
+          );
+        },
+      );
     },
     [topicId],
   );
@@ -283,6 +313,9 @@ export const TopicDescriptionSlideOver: React.FC<
             transparentBackground
             enableKeyboardScrolling={false}
             onLinkClick={onLinkClick}
+            selectableBlocks
+            deletionMode="text"
+            onContentChange={handleContentChange}
           />
         ) : (
           <div
