@@ -41,6 +41,7 @@ import {
 } from '../../../contexts/TerminalContext';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { WindowService } from '../../../main-process-api/WindowService';
+import { useTerminalLinkHandler } from '../../../hooks/useTerminalLinkHandler';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { GitService } from '../../../main-process-api/GitService';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
@@ -602,6 +603,8 @@ const TrailsViewInner: React.FC<{
   const { theme } = useTheme();
 
   const events = useMemo(() => new PanelEventBus(), []);
+  // Open links clicked in the terminal in the default browser
+  useTerminalLinkHandler(events);
   const { context: terminalCtx, actions: terminalActions } = useTerminalProvider();
   const { activities: terminalActivities } = useTerminalActivity();
 

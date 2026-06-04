@@ -35,6 +35,7 @@ import { BaseDirectorySetupPanel } from './components/BaseDirectorySetupPanel';
 import { ONBOARDING_CARDS } from './data/onboardingCards';
 import type { OnboardingState } from './types/onboarding.types';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
+import { useTerminalLinkHandler } from '../../../hooks/useTerminalLinkHandler';
 
 /**
  * Tab type for base directory setup
@@ -92,6 +93,9 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
 
   // Create event bus for panel communication
   const events = useMemo(() => new PanelEventBus(), []);
+
+  // Open links clicked in the terminal in the default browser
+  useTerminalLinkHandler(events);
 
   // Terminal context
   const { context: terminalCtx, actions: terminalActions, activityActions } = useTerminalProvider();

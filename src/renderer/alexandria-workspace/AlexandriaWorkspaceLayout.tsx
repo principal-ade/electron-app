@@ -50,6 +50,7 @@ import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels'
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { TerminalService } from '../main-process-api/TerminalService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { WindowService } from '../main-process-api/WindowService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { RemoveFromWorkspaceModal } from '../panels/components/RemoveFromWorkspaceModal';
@@ -195,6 +196,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
 }) => {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
+  // Open links clicked in the terminal in the default browser
+  useTerminalLinkHandler(events);
   const { context: terminalCtx, actions: terminalActions } =
     useTerminalProvider();
   const [showAllTerminals, setShowAllTerminals] = useState(false);

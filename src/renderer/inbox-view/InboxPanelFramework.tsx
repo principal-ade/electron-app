@@ -35,6 +35,7 @@ import {
   useTerminalActivity,
 } from '../contexts/TerminalContext';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import {
   TabbedTerminalPanel,
   type TerminalTab,
@@ -282,6 +283,9 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
         return null;
     }
   }, []);
+
+  // Open links clicked in the terminal in the default browser
+  useTerminalLinkHandler(events);
 
   // Listen for terminal activity events
   useEffect(() => {

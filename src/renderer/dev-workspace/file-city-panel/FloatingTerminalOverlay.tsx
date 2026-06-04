@@ -16,6 +16,7 @@ import {
   Minimize2,
   TerminalSquare,
 } from 'lucide-react';
+import { ShellService } from '../../main-process-api/ShellService';
 
 export interface FloatingTerminalOverlayProps {
   context: TerminalPanelProps['context'];
@@ -278,6 +279,8 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
             cwd={cwd}
             transparent
             backgroundColor="rgba(0, 0, 0, 0)"
+            // No panel event bus here — open clicked links directly.
+            onLinkClick={(url) => void ShellService.openExternal(url)}
           />
         </div>
       )}

@@ -136,6 +136,7 @@ import {
 } from '../components/Sidebar/PanelIconSidebar';
 import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarButton';
 import type { StorybookManager } from '../hooks/useStorybookManager';
+import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
 import { TypeInformationSidebarButton } from '../components/Sidebar/TypeInformationSidebarButton';
 import { GitConfigPanel } from './git-config-panel';
@@ -942,6 +943,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     }
     return states;
   }, [terminalActivities]);
+
+  // Open links clicked in the terminal in the default browser
+  useTerminalLinkHandler(events);
 
   // Listen for terminal:activity-changed events from TabbedTerminalPanel and update activity state
   useEffect(() => {

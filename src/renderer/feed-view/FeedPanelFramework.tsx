@@ -36,6 +36,7 @@ import {
   useTerminalActivity,
 } from '../contexts/TerminalContext';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import {
   TabbedTerminalPanel,
@@ -1078,6 +1079,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // This prevents unnecessary remounts when switching windows
   const eventsRef = React.useRef(events);
   const repositoriesRef = React.useRef(repositories);
+
+  // Open links clicked in the terminal in the default browser
+  useTerminalLinkHandler(events);
   const onOpenRepositoryRef = React.useRef(onOpenRepository);
   const feedModeRef = React.useRef(feedMode);
 
