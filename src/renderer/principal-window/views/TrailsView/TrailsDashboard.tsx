@@ -9,6 +9,7 @@ import {
   Library,
   Plus,
   Rows3,
+  Search,
   X,
 } from 'lucide-react';
 import type { TopicStatus } from '@principal-ai/alexandria-core-library';
@@ -181,6 +182,13 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
   // spring settles, at which point the lanes take over their own scrolling.
   const [boardEntering, setBoardEntering] = React.useState(false);
   const enterBoardTimer = React.useRef<number | null>(null);
+  // Free-text filter for the topics section. Matches title, the topic's project
+  // repo names, and any custom status label. While active it shows every match
+  // (the topicLimit/"All topics" split is bypassed) and works in both views.
+  const [topicQuery, setTopicQuery] = React.useState('');
+  // True while the search field is expanded. Used to fade the Projects section
+  // out so the search lands on a topics-only view, mirroring "All topics".
+  const [searchActive, setSearchActive] = React.useState(false);
   React.useEffect(
     () => () => {
       if (enterBoardTimer.current) window.clearTimeout(enterBoardTimer.current);
@@ -188,15 +196,15 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
     [],
   );
 
-  const toggleViewMode = () => {
-    const next = viewMode === 'kanban' ? 'list' : 'kanban';
+  const selectViewMode = (next: 'list' | 'kanban') => {
+    if (next === viewMode) return;
     // Persist (fire-and-forget) and keep the session cache in sync so a
     // re-mount restores this layout without a flash.
     cachedTopicsViewMode = next;
     void UserPreferencesService.updatePreferences({
       trails: { topicsViewMode: next },
     });
-    if (viewMode === 'kanban') {
+    if (next === 'list') {
       setViewMode('list');
       return;
     }
@@ -239,12 +247,36 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
   }, []);
 
   const visibleRepos = repoEntries.slice(0, repoLimit);
+
+  const normalizedQuery = topicQuery.trim().toLowerCase();
+  const searching = normalizedQuery.length > 0;
+  // Case-insensitive substring match over title + status label + each project
+  // repo's name and owner (so "owner", "name", or "owner/name" all match).
+  // Memoized so the filtered array is stable across unrelated renders.
+  const filteredTopics = React.useMemo(() => {
+    if (!normalizedQuery) return topicEntries;
+    return topicEntries.filter((t) => {
+      const repoTerms = (t.projectRepos ?? []).flatMap((r) =>
+        [r.name, r.ownerLogin, r.ownerLogin ? `${r.ownerLogin}/${r.name}` : null]
+          .filter(Boolean),
+      );
+      const haystack = [t.title, t.status?.label, ...repoTerms]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [topicEntries, normalizedQuery]);
+
   // The first `topicLimit` topics are always shown; the remainder reveal in a
   // height-animated block when expanded. `topicLimit` (6) divides evenly into
   // every possible column count (1–3 within the 1100px container), so the base
-  // rows stay full and the extra block starts on a clean new row.
-  const baseTopics = topicEntries.slice(0, topicLimit);
-  const extraTopics = topicEntries.slice(topicLimit);
+  // rows stay full and the extra block starts on a clean new row. While
+  // searching the split collapses — every match lands in the base list.
+  const baseTopics = searching
+    ? filteredTopics
+    : topicEntries.slice(0, topicLimit);
+  const extraTopics = searching ? [] : topicEntries.slice(topicLimit);
 
   const toggleAllTopics = () => {
     const next = !showAllTopics;
@@ -302,6 +334,23 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
         theme={theme}
         eyebrowIcon={<Library size={12} color={theme.colors.primary} />}
         eyebrow="Topics"
+        eyebrowAccessory={
+          topicEntries.length > 0 ? (
+            <>
+              <ViewModeSwitch
+                theme={theme}
+                value={viewMode}
+                onChange={selectViewMode}
+              />
+              <TopicSearch
+                theme={theme}
+                value={topicQuery}
+                onChange={setTopicQuery}
+                onActiveChange={setSearchActive}
+              />
+            </>
+          ) : undefined
+        }
         title="Your topics"
         subtitle={
           topicEntries.length === 0
@@ -310,23 +359,7 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
         }
         action={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {topicEntries.length > 0 && (
-              <PillButton
-                theme={theme}
-                onClick={toggleViewMode}
-                icon={
-                  viewMode === 'kanban' ? (
-                    <Rows3 size={14} />
-                  ) : (
-                    <Columns3 size={14} />
-                  )
-                }
-                iconPosition="start"
-              >
-                {viewMode === 'kanban' ? 'List' : 'Board'}
-              </PillButton>
-            )}
-            {topicEntries.length > 0 && viewMode === 'list' && (
+            {topicEntries.length > 0 && viewMode === 'list' && !searching && (
               <PillButton
                 theme={theme}
                 onClick={toggleAllTopics}
@@ -361,13 +394,18 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
             theme={theme}
             text="No topics yet. Bundle related trails together so they're easy to share."
           />
+        ) : searching && filteredTopics.length === 0 ? (
+          <EmptyHint
+            theme={theme}
+            text={`No topics match “${topicQuery.trim()}”.`}
+          />
         ) : (
           // A single LayoutGroup spans both views so a card's `layoutId`
           // survives the list↔board swap and framer tweens it across.
           <LayoutGroup>
             {viewMode === 'kanban' ? (
               <KanbanBoard
-                topics={topicEntries}
+                topics={filteredTopics}
                 theme={theme}
                 lanesScroll={!boardEntering}
                 onSelectTopic={onSelectTopic}
@@ -420,10 +458,15 @@ export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
       <AnimatePresence
         initial={false}
         // Forward toggle: Projects has fully collapsed → now expand topics.
-        onExitComplete={() => setTopicsExpanded(true)}
+        // Guarded to the "All topics" flow so a search- or board-driven exit
+        // (showAllTopics still false) doesn't spuriously reveal every topic.
+        onExitComplete={() => {
+          if (showAllTopics) setTopicsExpanded(true);
+        }}
       >
-        {/* Board view is topic-only; Projects re-enters when we return to list. */}
-        {viewMode === 'list' && projectsPresent && (
+        {/* Board view is topic-only; Projects re-enters when we return to list.
+            It also fades while the search field is open for a focused view. */}
+        {viewMode === 'list' && projectsPresent && !searchActive && (
           <motion.div
             key="projects-section"
             // Pure fade — Projects is the last element in the column, so
@@ -490,6 +533,7 @@ function Section({
   theme,
   eyebrowIcon,
   eyebrow,
+  eyebrowAccessory,
   title,
   subtitle,
   action,
@@ -498,6 +542,7 @@ function Section({
   theme: ThemeShape;
   eyebrowIcon?: React.ReactNode;
   eyebrow: string;
+  eyebrowAccessory?: React.ReactNode;
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
@@ -519,16 +564,25 @@ function Section({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 6,
-              color: theme.colors.textTertiary,
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[0],
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              gap: 10,
             }}
           >
-            {eyebrowIcon}
-            {eyebrow}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                color: theme.colors.textTertiary,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[0],
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}
+            >
+              {eyebrowIcon}
+              {eyebrow}
+            </div>
+            {eyebrowAccessory}
           </div>
           <div
             style={{
@@ -862,5 +916,185 @@ function PillButton({
       {children}
       {iconPosition === 'end' && icon}
     </button>
+  );
+}
+
+/**
+ * Expanding topic filter. Renders as a lone search icon next to the view switch
+ * until clicked, then grows into an inline input. The icon-only resting state
+ * keeps the eyebrow uncluttered; closing (X or Escape) clears the query so the
+ * full topic list is always restored.
+ */
+function TopicSearch({
+  theme,
+  value,
+  onChange,
+  onActiveChange,
+}: {
+  theme: ThemeShape;
+  value: string;
+  onChange: (next: string) => void;
+  /** Fired when the field expands (true) or collapses (false). */
+  onActiveChange?: (active: boolean) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+  React.useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  const openSearch = () => {
+    setOpen(true);
+    onActiveChange?.(true);
+  };
+
+  const close = () => {
+    onChange('');
+    setOpen(false);
+    onActiveChange?.(false);
+  };
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        aria-label="Search topics"
+        onClick={openSearch}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 26,
+          height: 26,
+          borderRadius: 999,
+          border: `1px solid ${theme.colors.border}`,
+          background: 'transparent',
+          color: theme.colors.textTertiary,
+          cursor: 'pointer',
+        }}
+      >
+        <Search size={13} />
+      </button>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '3px 10px',
+        borderRadius: 999,
+        border: `1px solid ${theme.colors.primary}`,
+        background: 'transparent',
+      }}
+    >
+      <Search size={13} color={theme.colors.textTertiary} />
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') close();
+        }}
+        placeholder="Search topics…"
+        style={{
+          border: 'none',
+          outline: 'none',
+          background: 'transparent',
+          color: theme.colors.text,
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[1],
+          width: 150,
+          padding: 0,
+        }}
+      />
+      <button
+        type="button"
+        aria-label="Clear search"
+        onClick={close}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: 'none',
+          background: 'transparent',
+          color: theme.colors.textTertiary,
+          cursor: 'pointer',
+          padding: 0,
+        }}
+      >
+        <X size={13} />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Compact two-segment switch for the topics list↔board view. Lives inline next
+ * to the "Topics" eyebrow; each segment carries an icon + label and the active
+ * one gets a primary-tinted fill.
+ */
+function ViewModeSwitch({
+  theme,
+  value,
+  onChange,
+}: {
+  theme: ThemeShape;
+  value: 'list' | 'kanban';
+  onChange: (next: 'list' | 'kanban') => void;
+}) {
+  const segments: { mode: 'list' | 'kanban'; label: string; icon: React.ReactNode }[] = [
+    { mode: 'list', label: 'List', icon: <Rows3 size={12} /> },
+    { mode: 'kanban', label: 'Board', icon: <Columns3 size={12} /> },
+  ];
+  return (
+    <div
+      role="tablist"
+      aria-label="Topics view"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 2,
+        padding: 2,
+        borderRadius: 999,
+        border: `1px solid ${theme.colors.border}`,
+        background: 'transparent',
+      }}
+    >
+      {segments.map((seg) => {
+        const active = value === seg.mode;
+        return (
+          <button
+            key={seg.mode}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => {
+              if (!active) onChange(seg.mode);
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 10px',
+              borderRadius: 999,
+              border: 'none',
+              background: active ? theme.colors.primary : 'transparent',
+              color: active ? theme.colors.background : theme.colors.textTertiary,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.medium,
+              cursor: active ? 'default' : 'pointer',
+            }}
+          >
+            {seg.icon}
+            {seg.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
