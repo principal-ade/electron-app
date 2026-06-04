@@ -28,7 +28,7 @@ import type {
   DataSlice,
 } from '@principal-ade/panel-framework-core';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
-import type { TrailPayload } from '@industry-theme/file-city-panel';
+import type { TrailNote, TrailPayload } from '@industry-theme/file-city-panel';
 import type { HighlightLayer } from '@principal-ai/file-city-react';
 
 import { TrailNotesService } from '../../services/TrailNotesService';
@@ -173,10 +173,40 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
     [context.lineCounts],
   );
 
-  const trailSlice = React.useMemo<DataSlice<TrailPayload | null>>(
-    () => context.trail ?? emptySlice('repository', 'trail', null),
-    [context.trail],
-  );
+  // Optimistic notes override. The upstream panel renders notes purely from
+  // `trail.notes` — it does no local merging — and our IPC note handlers
+  // persist to disk without re-broadcasting PAYLOAD_SET, so a freshly added
+  // note never makes it back into the slice until the trail is reloaded from
+  // disk. We mirror the writes here so create/update/delete are visible
+  // immediately. Keyed by trail id so a different trail loading clears the
+  // override; null means "no overrides, use the slice's notes as-is". This
+  // mirrors the Alexandria mount (FileCityTrailTabContent.tsx).
+  const baseTrail = context.trail?.data ?? null;
+  const trailId = baseTrail?.id ?? null;
+
+  const [notesOverride, setNotesOverride] = React.useState<{
+    trailId: string;
+    notes: TrailNote[];
+  } | null>(null);
+
+  React.useEffect(() => {
+    setNotesOverride((prev) =>
+      prev && prev.trailId === trailId ? prev : null,
+    );
+  }, [trailId]);
+
+  const effectiveTrail = React.useMemo<TrailPayload | null>(() => {
+    if (!baseTrail) return null;
+    if (!notesOverride || notesOverride.trailId !== baseTrail.id) {
+      return baseTrail;
+    }
+    return { ...baseTrail, notes: notesOverride.notes };
+  }, [baseTrail, notesOverride]);
+
+  const trailSlice = React.useMemo<DataSlice<TrailPayload | null>>(() => {
+    const baseSlice = context.trail ?? emptySlice('repository', 'trail', null);
+    return { ...baseSlice, data: effectiveTrail };
+  }, [context.trail, effectiveTrail]);
 
   // Host-supplied idle-state highlight layers. Only honored by the
   // upstream panel when `trail.data` is null — once a trail is active
@@ -242,12 +272,47 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
         if (!result) throw new Error(`File not found: ${path}`);
         return result.content;
       },
-      createTrailNote: (payloadId, draft) =>
-        TrailNotesService.create(payloadId, draft),
-      updateTrailNote: (payloadId, noteId, body) =>
-        TrailNotesService.update(payloadId, noteId, body),
+      createTrailNote: async (payloadId, draft) => {
+        const note = await TrailNotesService.create(payloadId, draft);
+        if (note) {
+          setNotesOverride((prev) => {
+            const base =
+              prev && prev.trailId === payloadId
+                ? prev.notes
+                : (baseTrail?.notes ?? []);
+            return { trailId: payloadId, notes: [...base, note] };
+          });
+        }
+        return note;
+      },
+      updateTrailNote: async (payloadId, noteId, body) => {
+        const note = await TrailNotesService.update(payloadId, noteId, body);
+        if (note) {
+          setNotesOverride((prev) => {
+            const base =
+              prev && prev.trailId === payloadId
+                ? prev.notes
+                : (baseTrail?.notes ?? []);
+            return {
+              trailId: payloadId,
+              notes: base.map((n) => (n.id === noteId ? note : n)),
+            };
+          });
+        }
+        return note;
+      },
       deleteTrailNote: async (payloadId, noteId) => {
         await TrailNotesService.remove(payloadId, noteId);
+        setNotesOverride((prev) => {
+          const base =
+            prev && prev.trailId === payloadId
+              ? prev.notes
+              : (baseTrail?.notes ?? []);
+          return {
+            trailId: payloadId,
+            notes: base.filter((n) => n.id !== noteId),
+          };
+        });
       },
       // Sign-off persistence is not yet implemented in the Electron host —
       // the multi-reviewer workflow targets the web version. These stubs
@@ -258,7 +323,7 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
       closeTrail: onCloseTrail,
       shareTrail: onShareTrail,
     }),
-    [repositoryPath, events, onCloseTrail, onShareTrail],
+    [repositoryPath, events, onCloseTrail, onShareTrail, baseTrail],
   );
 
   return (
