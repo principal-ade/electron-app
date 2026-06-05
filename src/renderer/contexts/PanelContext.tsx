@@ -270,6 +270,13 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
 
+  // Track git status (with file lists) for the current repository. Powers the
+  // file-tree git coloring and the "Touched" filter in the Files panel.
+  const [gitStatusWithFilesData, setGitStatusWithFilesData] =
+    useState<GitStatusWithFiles | null>(null);
+  const [gitStatusWithFilesLoading, setGitStatusWithFilesLoading] =
+    useState(false);
+
   // Track localhost servers
   const [localhostServers, setLocalhostServers] = useState<RunningServer[]>([]);
   const [localhostServersLoading, setLocalhostServersLoading] = useState(false);
@@ -375,6 +382,48 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     };
 
     fetchFileTree();
+  }, [repository?.path]);
+
+  // Fetch git status when the repository changes, then keep it live by
+  // subscribing to git status change events for this repo. The Files panel's
+  // "Touched" filter and the file-tree git coloring read off this slice.
+  useEffect(() => {
+    const repoPath = repository?.path;
+    if (!repoPath) {
+      setGitStatusWithFilesData(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchGitStatus = async () => {
+      setGitStatusWithFilesLoading(true);
+      try {
+        const status =
+          await RepositoryMonitoringService.getGitStatusWithFiles(repoPath);
+        if (!cancelled) setGitStatusWithFilesData(status);
+      } catch (error) {
+        console.error('[PanelContext] Failed to fetch git status:', error);
+        if (!cancelled) setGitStatusWithFilesData(null);
+      } finally {
+        if (!cancelled) setGitStatusWithFilesLoading(false);
+      }
+    };
+
+    fetchGitStatus();
+
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
+      (status) => {
+        if (cancelled) return;
+        // Change events fan out across all watched repos; keep only this one.
+        if (status.repoPath === repoPath) setGitStatusWithFilesData(status);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [repository?.path]);
 
   // Fetch workspace repositories
@@ -943,20 +992,35 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     [],
   );
 
-  // Git status with files slice (for GitChangesPanelContext)
+  // Git status with files slice (for GitChangesPanelContext and the Files panel)
   const gitStatusWithFilesSlice = useMemo<DataSlice<GitStatusWithFiles | null>>(
     () => ({
       scope: 'repository' as const,
       name: 'gitStatusWithFiles',
-      data: null, // null = not fetched yet
-      loading: false,
+      data: gitStatusWithFilesData,
+      loading: gitStatusWithFilesLoading,
       error: null,
       refresh: async () => {
-        // TODO: Implement git status fetching
-        console.info('[PanelContext] Refreshing git status with files...');
+        if (!repository?.path) return;
+        setGitStatusWithFilesLoading(true);
+        try {
+          const status =
+            await RepositoryMonitoringService.getGitStatusWithFiles(
+              repository.path,
+            );
+          setGitStatusWithFilesData(status);
+        } catch (error) {
+          console.error(
+            '[PanelContext] Failed to refresh git status:',
+            error,
+          );
+          setGitStatusWithFilesData(null);
+        } finally {
+          setGitStatusWithFilesLoading(false);
+        }
       },
     }),
-    [],
+    [gitStatusWithFilesData, gitStatusWithFilesLoading, repository?.path],
   );
 
   // Packages slice (for PackageCompositionPanelContext)

@@ -25,6 +25,7 @@ import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { LocalProjectsPanel } from '@industry-theme/alexandria-panels';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { localhostProcessesPanels, RecentRepositoriesPanel } from '../panels';
+import { AlexandriaFilesPanel } from './files-panel/AlexandriaFilesPanel';
 import {
   EventBusPanel,
   AgentToolsPanel,
@@ -1362,6 +1363,68 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     selectedRepository,
   ]);
 
+  // Listen for repository:openFiles — the file-tree hover button on a project
+  // card. Mirrors repository:openDocs: toggle the right slot if it's already
+  // showing the files panel for this repo, otherwise select the repo (so the
+  // panel keys onto its file tree), switch the right slot to the files panel,
+  // and force-expand the right panel.
+  useEffect(() => {
+    const unsubscribe = events.on('repository:openFiles', async (event) => {
+      const { repository, repositoryPath } = event.payload as {
+        repositoryId: string;
+        repository: AlexandriaEntry;
+        repositoryPath: string;
+      };
+      if (!repository) return;
+
+      const repoPath = repositoryPath || repository.path;
+
+      const filesAlreadyOpenForRepo =
+        layout.right === 'repository-files' &&
+        !collapsedStateRef.current.right &&
+        selectedRepository?.path === repoPath;
+
+      if (filesAlreadyOpenForRepo) {
+        panelLayoutRef.current?.collapsePanel('right');
+        collapsedStateRef.current = {
+          ...collapsedStateRef.current,
+          right: true,
+        };
+        onCollapsedChangeRef.current(collapsedStateRef.current);
+        return;
+      }
+
+      onRepositorySelected({ name: repository.name, path: repoPath });
+
+      onLayoutChange({ ...layout, right: 'repository-files' });
+
+      if (panelLayoutRef.current) {
+        panelLayoutRef.current.expandPanel('right');
+        const currentLayout = panelLayoutRef.current.getLayout();
+        if (!currentLayout || currentLayout.right < 20) {
+          panelLayoutRef.current.setLayout({
+            left: currentLayout?.left ?? 23,
+            middle: 50,
+            right: 30,
+          });
+        }
+      }
+      collapsedStateRef.current = {
+        ...collapsedStateRef.current,
+        right: false,
+      };
+      onCollapsedChangeRef.current(collapsedStateRef.current);
+    });
+
+    return unsubscribe;
+  }, [
+    events,
+    layout,
+    onLayoutChange,
+    onRepositorySelected,
+    selectedRepository,
+  ]);
+
   // Get panel components - using direct imports instead of array access
   // to avoid type inference issues with mixed desktop/web panels
   const WorkspacePanelComponent = RecentRepositoriesPanel;
@@ -1392,6 +1455,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   const GitHubIssuesPanelComponent = GitHubIssuesPanel;
   const GitHubIssueDetailPanelComponent = GitHubIssueDetailPanel;
   const GitChangesPanelComponent = GitChangesPanel;
+  const FilesPanelComponent = AlexandriaFilesPanel;
   const PackageCompositionPanelComponent = PackageCompositionPanel;
   const CodeQualityPanelComponent = codeQualityPanels.find(
     (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',
@@ -2441,6 +2505,52 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         ),
       },
       {
+        id: 'repository-files',
+        label: 'Files',
+        content: FilesPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
+            <FilesPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Files panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
         id: 'packageComposition',
         label: 'Package Composition',
         content: PackageCompositionPanelComponent ? (
@@ -2558,6 +2668,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       GitHubIssuesPanelComponent,
       GitHubIssueDetailPanelComponent,
       GitChangesPanelComponent,
+      FilesPanelComponent,
       PackageCompositionPanelComponent,
       CodeQualityPanelComponent,
       isFocused,

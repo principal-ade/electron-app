@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { BookOpen, Folder, Plus, Search, TerminalSquare, X } from 'lucide-react';
+import { BookOpen, Folder, FolderTree, Plus, Search, TerminalSquare, X } from 'lucide-react';
 import { PANEL_FOCUS_SEARCH_EVENT } from '../../components/Sidebar/PanelIconSidebar';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
@@ -62,6 +62,7 @@ interface RepositoryCardProps {
   onRemove?: (repo: AlexandriaEntry) => void;
   onAdd?: (repo: AlexandriaEntry) => void;
   onOpenDocs?: (repo: AlexandriaEntry) => void;
+  onOpenFiles?: (repo: AlexandriaEntry) => void;
 }
 
 const RepositoryCard: React.FC<RepositoryCardProps> = ({
@@ -76,6 +77,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
   onRemove,
   onAdd,
   onOpenDocs,
+  onOpenFiles,
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
@@ -174,6 +176,40 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
             color={theme.colors.primary}
             aria-label="Terminal open"
           />
+        )}
+        {emphasized && onOpenFiles && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenFiles(repository);
+            }}
+            title="Open files"
+            aria-label="Open files"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2px',
+              border: 'none',
+              background: 'transparent',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = theme.colors.text;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = theme.colors.textSecondary;
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <FolderTree size={14} />
+          </button>
         )}
         {emphasized && onOpenDocs && (
           <button
@@ -578,6 +614,21 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
     [events]
   );
 
+  // Files-button click — ask the layout to open the slimmed-down file tree
+  // panel in the right slot, scoped to this repo.
+  const handleOpenFiles = useCallback(
+    (repository: AlexandriaEntry) => {
+      events.emit(
+        createPanelEvent('repository:openFiles', {
+          repositoryId: repository.name,
+          repository,
+          repositoryPath: repository.path,
+        })
+      );
+    },
+    [events]
+  );
+
   // Arrow-key navigation while the search input holds focus. ArrowDown steps
   // the cursor into (and through) the results; ArrowUp steps back, returning
   // to the input (-1) past the first card. Enter selects the highlighted repo.
@@ -780,6 +831,7 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
             onRemove={handleRemoveRepository}
             onAdd={handleAddRepository}
             onOpenDocs={handleOpenDocs}
+            onOpenFiles={handleOpenFiles}
           />
         ))}
       </div>
