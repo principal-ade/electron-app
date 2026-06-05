@@ -176,7 +176,7 @@ const render = () => (
 export const Default: Story = {
   render: () => {
     withMocks({
-      topic: { topic: topic({ trailIds: ['t-1', 't-2', 't-3'] }), starred: false },
+      topic: { topic: topic({ trailIds: ['t-1', 't-2', 't-3'] }), bookmarked: false },
       trails: trailFixtures,
     });
     return render();
@@ -195,7 +195,7 @@ export const MixedTrailStates: Story = {
     withMocks({
       topic: {
         topic: topic({ trailIds: ['t-1', 't-pending', 't-broken'] }),
-        starred: false,
+        bookmarked: false,
       },
       trails: {
         't-1': trailFixtures['t-1'],
@@ -213,7 +213,7 @@ export const NoDescription: Story = {
     withMocks({
       topic: {
         topic: topic({ trailIds: ['t-1', 't-2'], description: undefined }),
-        starred: false,
+        bookmarked: false,
       },
       trails: trailFixtures,
     });
@@ -225,7 +225,7 @@ export const NoDescription: Story = {
 export const EmptyTopic: Story = {
   render: () => {
     withMocks({
-      topic: { topic: topic({ trailIds: [] }), starred: false },
+      topic: { topic: topic({ trailIds: [] }), bookmarked: false },
       trails: {},
     });
     return render();

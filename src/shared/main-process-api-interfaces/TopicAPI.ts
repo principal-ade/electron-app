@@ -38,13 +38,13 @@ export interface LocalTopicRecord {
 
 /**
  * Result of hydrating a published topic from web-ade by id. Mirrors the
- * `{ topic, starred }` shape the `/api/topics/by-id/{id}` GET route returns.
- * Read access is public-by-link, so `starred` is always `false` for
+ * `{ topic, bookmarked }` shape the `/api/topics/by-id/{id}` GET route returns.
+ * Read access is public-by-link, so `bookmarked` is always `false` for
  * anonymous (signed-out) callers.
  */
 export interface FetchSharedTopicResult {
   topic: Topic;
-  starred: boolean;
+  bookmarked: boolean;
 }
 
 /**
