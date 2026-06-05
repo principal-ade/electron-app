@@ -25,7 +25,11 @@ import { TopicService } from '../../main-process-api/TopicService';
 import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
 import { useWorkspaceFileIndex } from '../../hooks/useWorkspaceFileIndex';
 import { MarkdownLinkNotice } from '../../components/MarkdownLinkNotice';
-import { TopicStatusControl } from './TopicStatusControl';
+import {
+  TopicStatusControl,
+  STATES,
+  stateColor,
+} from './TopicStatusControl';
 
 export interface TopicDescriptionSlideOverProps {
   open: boolean;
@@ -72,6 +76,9 @@ export const TopicDescriptionSlideOver: React.FC<
   const [description, setDescription] = useState<string | null>(null);
   const [status, setStatus] = useState<TopicStatus | undefined>(undefined);
   const [loading, setLoading] = useState(false);
+  // The status editor is collapsed by default — the header pill reflects the
+  // current state and toggles the full TopicStatusControl form open/closed.
+  const [statusOpen, setStatusOpen] = useState(false);
 
   // Load the description when opened, and refresh whenever this topic changes
   // while open — so edits made in the MDX tab flow into the preview live.
@@ -161,6 +168,15 @@ export const TopicDescriptionSlideOver: React.FC<
 
   const trimmed = (description ?? '').trim();
 
+  // Header status pill — color-coded by the structured state, labelled by the
+  // topic's custom label when set (otherwise the state's display name).
+  const pillState = status?.state ?? 'active';
+  const pillColor = stateColor(pillState, theme);
+  const pillLabel =
+    status?.label?.trim() ||
+    STATES.find((s) => s.value === pillState)?.label ||
+    'Active';
+
   const iconButtonStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
@@ -221,6 +237,51 @@ export const TopicDescriptionSlideOver: React.FC<
         >
           Topic Notes
         </span>
+        {topicId && (
+          <button
+            type="button"
+            onClick={() => setStatusOpen((v) => !v)}
+            title="Topic status"
+            aria-label="Topic status"
+            aria-expanded={statusOpen}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              height: 28,
+              maxWidth: 140,
+              flexShrink: 0,
+              padding: '0 10px',
+              borderRadius: 6,
+              border: `1px solid ${pillColor}`,
+              background: statusOpen ? pillColor : 'transparent',
+              color: statusOpen ? theme.colors.background : pillColor,
+              cursor: 'pointer',
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[0],
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                flexShrink: 0,
+                borderRadius: '50%',
+                background: statusOpen ? theme.colors.background : pillColor,
+              }}
+            />
+            <span
+              style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {pillLabel}
+            </span>
+          </button>
+        )}
         <button
           type="button"
           onClick={onEdit}
@@ -257,7 +318,9 @@ export const TopicDescriptionSlideOver: React.FC<
         </button>
       </div>
 
-      {topicId && <TopicStatusControl topicId={topicId} status={status} />}
+      {topicId && statusOpen && (
+        <TopicStatusControl topicId={topicId} status={status} />
+      )}
 
       <div
         {...dropZoneProps}

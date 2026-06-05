@@ -819,13 +819,13 @@ function KanbanBoard({
     label: string;
     color: string;
   }> = [
-    { state: 'active', label: 'Active', color: theme.colors.primary },
+    { state: 'active', label: 'Active', color: theme.colors.success },
     {
       state: 'needs-attention',
       label: 'Needs attention',
       color: theme.colors.warning,
     },
-    { state: 'done', label: 'Done for now', color: theme.colors.success },
+    { state: 'done', label: 'Done for now', color: theme.colors.textTertiary },
   ];
 
   return (
@@ -976,6 +976,7 @@ function KanbanBoard({
                   topic={t}
                   theme={theme}
                   draggable={canDrag}
+                  showStatus={false}
                   onSelect={onSelectTopic}
                   onDelete={onDeleteTopic}
                 />

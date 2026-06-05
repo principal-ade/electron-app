@@ -19,27 +19,30 @@ type TopicStatusState = TopicStatus['state'];
 type RefKind = NonNullable<NonNullable<TopicStatus['waitingOn']>['ref']>['kind'];
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
 
-const STATES: ReadonlyArray<{ value: TopicStatusState; label: string }> = [
+export const STATES: ReadonlyArray<{
+  value: TopicStatusState;
+  label: string;
+}> = [
   { value: 'active', label: 'Active' },
   { value: 'needs-attention', label: 'Needs attention' },
   { value: 'waiting', label: 'Waiting' },
-  { value: 'done', label: 'Done' },
+  { value: 'done', label: 'Done for now' },
 ];
 
 const REF_KINDS: readonly RefKind[] = ['url', 'pr', 'issue', 'topic', 'trail'];
 
 /** State color — keyed off the structured axis, matching the home-card pill. */
-function stateColor(state: TopicStatusState, theme: ThemeShape): string {
+export function stateColor(state: TopicStatusState, theme: ThemeShape): string {
   switch (state) {
     case 'needs-attention':
       return theme.colors.warning;
     case 'waiting':
       return theme.colors.info;
     case 'done':
-      return theme.colors.success;
+      return theme.colors.textTertiary;
     case 'active':
     default:
-      return theme.colors.textTertiary;
+      return theme.colors.success;
   }
 }
 

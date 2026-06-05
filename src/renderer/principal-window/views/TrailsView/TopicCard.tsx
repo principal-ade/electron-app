@@ -41,10 +41,10 @@ function statusPresentation(
     case 'waiting':
       return { defaultLabel: 'Waiting', color: theme.colors.info };
     case 'done':
-      return { defaultLabel: 'Done', color: theme.colors.success };
+      return { defaultLabel: 'Done', color: theme.colors.textTertiary };
     case 'active':
     default:
-      return { defaultLabel: '', color: theme.colors.textTertiary };
+      return { defaultLabel: '', color: theme.colors.success };
   }
 }
 
@@ -93,6 +93,12 @@ export interface TopicCardProps {
    * Enabled only in the board view.
    */
   draggable?: boolean;
+  /**
+   * Whether to render the status pill. Defaults to true. The board view sets
+   * this false — its columns already bucket cards by status, so a per-card
+   * status badge would be redundant.
+   */
+  showStatus?: boolean;
 }
 
 /**
@@ -107,6 +113,7 @@ export function TopicCard({
   onSelect,
   onDelete,
   draggable = false,
+  showStatus = true,
 }: TopicCardProps) {
   const [hovered, setHovered] = React.useState(false);
   // Dim the source card while it's mid-drag (kanban restatus). The drag image
@@ -126,7 +133,7 @@ export function TopicCard({
     status && statusPres
       ? describeStatus(status, statusPres.defaultLabel)
       : null;
-  const showStatusPill = !!(status && statusPres && statusInfo);
+  const showStatusPill = showStatus && !!(status && statusPres && statusInfo);
 
   // Shared-layout animation: each card carries a stable `layoutId` (the topic
   // id). When the dashboard swaps between the flat list and the kanban board,
