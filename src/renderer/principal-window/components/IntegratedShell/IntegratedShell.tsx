@@ -108,7 +108,7 @@ const getViewDefaults = (
 };
 
 export const IntegratedShell: React.FC = () => {
-  const [activeView, setActiveView] = useState<NavigationView>('trails');
+  const [activeView, setActiveView] = useState<NavigationView>('home');
   // Trail id this window was opened with (cold-start URL hash) or routed
   // to (warm-start SHOW_IN_PRINCIPAL IPC). Flows down to TrailsView so it
   // boots on the Recent grid with the activated trail surfaced. Lifted
@@ -435,7 +435,7 @@ export const IntegratedShell: React.FC = () => {
           return { success: true };
         }
         case 'reset':
-          setActiveView('trails');
+          setActiveView('home');
           setViewCollapsedStates({
             trails: { left: false, right: false },
             feed: { left: false, right: false },
@@ -494,7 +494,7 @@ export const IntegratedShell: React.FC = () => {
         }
       }),
       events.on('panel:reset-layout', () => {
-        setActiveView('trails');
+        setActiveView('home');
         setViewCollapsedStates({
           trails: { left: false, right: false },
           feed: { left: false, right: false },
