@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../../../hooks/useAuthState';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { ShellService } from '../../../main-process-api/ShellService';
+import { WebAdeService } from '../../../main-process-api/WebAdeService';
 import type { NavigationView } from './IntegratedShell';
 import { useEffect, useState } from 'react';
 
@@ -39,6 +40,7 @@ interface NavItem {
   icon: React.ReactNode;
   label: string;
   position?: 'top' | 'bottom';
+  badgeCount?: number;
 }
 
 export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
@@ -51,6 +53,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const [showConnectionsButton, setShowConnectionsButton] = useState(false);
   const [showProcessesButton, setShowProcessesButton] = useState(false);
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
+  const [inboxUnread, setInboxUnread] = useState(0);
   useEffect(() => {
     UserPreferencesService.getPreferences().then((prefs) => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
@@ -89,6 +92,39 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       );
     };
   }, []);
+
+  // Poll the inbox unread count to drive the nav badge. Gated on auth so we
+  // never hit the token-protected endpoint while logged out.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setInboxUnread(0);
+      return;
+    }
+
+    let active = true;
+    const refresh = () =>
+      WebAdeService.getInboxUnreadCount()
+        .then((result) => {
+          if (active) setInboxUnread(result.count);
+        })
+        .catch(() => {
+          // Offline / transient failure — leave the last known count in place.
+        });
+
+    refresh();
+    const intervalId = setInterval(refresh, 60_000);
+    window.addEventListener('focus', refresh);
+
+    const handleInboxRead = () => refresh();
+    window.addEventListener('inbox-read', handleInboxRead);
+
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('inbox-read', handleInboxRead);
+    };
+  }, [isAuthenticated]);
 
   const backgroundColor =
     mode === 'dark' && theme.modes?.dark?.backgroundSecondary
@@ -141,7 +177,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const navItems: NavItem[] = [
     { id: 'home', icon: <Home size={20} />, label: 'Home' },
     { id: 'trails', icon: <Footprints size={20} />, label: 'Trails' },
-    { id: 'inbox', icon: <Inbox size={20} />, label: 'Inbox' },
+    {
+      id: 'inbox',
+      icon: <Inbox size={20} />,
+      label: 'Inbox',
+      badgeCount: inboxUnread,
+    },
     { id: 'feed', icon: <GitIcon size={20} />, label: 'Projects' },
     { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },
     ...(showOnboardingButton
@@ -221,6 +262,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     >
       <div
         style={{
+          position: 'relative',
           width: '36px',
           height: '36px',
           display: 'flex',
@@ -243,6 +285,31 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }}
       >
         {item.icon}
+        {item.badgeCount ? (
+          <span
+            style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              minWidth: '16px',
+              height: '16px',
+              padding: '0 4px',
+              borderRadius: '8px',
+              background: theme.colors.primary,
+              color: theme.colors.background,
+              fontFamily: theme.fonts.monospace,
+              fontSize: theme.fontSizes[0],
+              fontWeight: 700,
+              lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxSizing: 'border-box',
+            }}
+          >
+            {item.badgeCount > 99 ? '99+' : item.badgeCount}
+          </span>
+        ) : null}
       </div>
       {item.label && (
         <span
