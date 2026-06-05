@@ -136,6 +136,13 @@ export interface TopicsDashboardProps {
    * flex-fill container so the lanes can scroll internally.
    */
   onViewModeChange?: (mode: 'list' | 'kanban') => void;
+  /**
+   * Fired when the list-view topics grid needs to scroll internally — the user
+   * expanded "All topics" or is searching with matches. Lets the host switch
+   * the dashboard wrapper to a flex-fill layout so the grid scrolls itself and
+   * the page footer stays pinned, instead of the whole page scrolling.
+   */
+  onListScrollChange?: (scroll: boolean) => void;
   /** Max repo cards to render before clipping. Default 6. */
   repoLimit?: number;
   /** Max topic rows to render before clipping. Default 6. */
@@ -158,6 +165,7 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
   onChangeTopicStatus,
   onViewAllProjects,
   onViewModeChange,
+  onListScrollChange,
   repoLimit = 6,
   topicLimit = 6,
 }) => {
@@ -336,6 +344,27 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
     : topicEntries.slice(0, topicLimit);
   const extraTopics = searching ? [] : topicEntries.slice(topicLimit);
 
+  // The list-view grid switches to an internal scroll once it's showing a long
+  // list — "All topics" expanded (extra rows revealed) or a search with
+  // matches. In both states the Projects section is hidden, so the grid can
+  // take the full height and scroll its own overflow while the page footer
+  // stays pinned. Gated on `topicsExpanded` (not just the button intent) so the
+  // box only fills once the extra rows are actually in, avoiding a tall empty
+  // box mid expand-animation.
+  const listScroll =
+    viewMode === 'list' && ((showAllTopics && topicsExpanded) || searching);
+  // Fill = the host should hand this section a bounded height. Board lanes and
+  // the long list both scroll their own overflow inside it.
+  const fill = viewMode === 'kanban' || listScroll;
+
+  // Tell the host to flex-fill its wrapper for the long-list case (board fill is
+  // driven separately via onViewModeChange, which fires same-commit so the
+  // board's fly-in measures a bounded layout). The list scroll has no such
+  // cross-layout animation, so an effect-timed notification is fine here.
+  React.useEffect(() => {
+    onListScrollChange?.(listScroll);
+  }, [listScroll, onListScrollChange]);
+
   const toggleAllTopics = () => {
     const next = !showAllTopics;
     // Persist the choice (fire-and-forget) and keep the session cache in sync
@@ -383,18 +412,19 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
         width: '100%',
         maxWidth: 1100,
         margin: '0 auto',
-        // Board mode fills its (bounded) parent so the lanes can size to the
-        // available height; the bottom padding shrinks since the lanes already
-        // reach toward the footer. List mode keeps its natural, paddingy height.
-        padding: viewMode === 'kanban' ? '40px 32px 24px' : '40px 32px 64px',
+        // When filling (board lanes, or the long topics list) the section sizes
+        // to its bounded parent so the inner region can scroll; the bottom
+        // padding shrinks since that region already reaches toward the footer.
+        // Otherwise it keeps its natural, paddingy height.
+        padding: fill ? '40px 32px 24px' : '40px 32px 64px',
         display: 'flex',
         flexDirection: 'column',
-        ...(viewMode === 'kanban' ? { flex: 1, minHeight: 0 } : {}),
+        ...(fill ? { flex: 1, minHeight: 0 } : {}),
       }}
     >
       <Section
         theme={theme}
-        fill={viewMode === 'kanban'}
+        fill={fill}
         eyebrowIcon={<Library size={12} color={theme.colors.primary} />}
         eyebrow="Topics"
         eyebrowAccessory={
@@ -477,7 +507,27 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
                 onChangeTopicStatus={onChangeTopicStatus}
               />
             ) : (
-              <>
+              // Once the list is long ("All topics" expanded, or a search with
+              // many matches) the grid scrolls *itself* in a flex-filled box
+              // instead of growing the page — the section header and the footer
+              // stay put. The host bounds this region's height (see
+              // onListScrollChange), so `flex: 1; minHeight: 0` makes the box
+              // take exactly the leftover space and scroll its overflow. The
+              // default 6-card view keeps `undefined` styling, so it (and its
+              // list↔board fly animation) is left exactly as it was.
+              <div
+                style={
+                  listScroll
+                    ? {
+                        flex: 1,
+                        minHeight: 0,
+                        overflowY: 'auto',
+                        // Gutter so the scrollbar clears the cards.
+                        paddingRight: 4,
+                      }
+                    : undefined
+                }
+              >
                 <TopicList
                   topics={baseTopics}
                   theme={theme}
@@ -513,7 +563,7 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </>
+              </div>
             )}
           </LayoutGroup>
         )}

@@ -158,6 +158,13 @@ export function HomeView() {
   // dashboard wrapper to a flex-fill layout in board mode (keeps the footer
   // visible without scrolling).
   const [dashboardBoardMode, setDashboardBoardMode] = useState(false);
+  // Set when the list-view topics grid is showing a long list ("All topics" or
+  // an active search). Like board mode, this flex-fills the wrapper so the grid
+  // scrolls its own overflow and the footer stays pinned, rather than the whole
+  // page scrolling.
+  const [dashboardListScroll, setDashboardListScroll] = useState(false);
+  // Either path wants the wrapper bounded so the dashboard scrolls internally.
+  const dashboardFill = dashboardBoardMode || dashboardListScroll;
 
   useEffect(() => {
     let cancelled = false;
@@ -823,11 +830,11 @@ export function HomeView() {
             style={{
               width: '100%',
               marginTop: 24,
-              // Board mode fills the space between the header and the footer so
-              // the lanes scroll their own cards and the "Installed Skills"
-              // footer stays pinned/visible. List mode keeps its natural height
-              // and lets the page scroll.
-              ...(dashboardBoardMode
+              // Board mode and a long topics list both fill the space between
+              // the header and the footer so the dashboard scrolls its own
+              // content and the "Installed Skills" footer stays pinned/visible.
+              // The short list keeps its natural height and lets the page flow.
+              ...(dashboardFill
                 ? {
                     flex: '1 1 auto',
                     minHeight: 0,
@@ -841,6 +848,7 @@ export function HomeView() {
               onViewModeChange={(mode) =>
                 setDashboardBoardMode(mode === 'kanban')
               }
+              onListScrollChange={setDashboardListScroll}
               repoEntries={dashboardRepoEntries}
               recentTrails={recentTrails}
               topicEntries={dashboardTopicEntries}
