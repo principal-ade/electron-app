@@ -32,10 +32,10 @@ import type {
 } from '@principal-ai/alexandria-core-library/types';
 import type { TopicStatus } from '@principal-ai/alexandria-core-library';
 import {
-  TrailsDashboard,
-  type TrailsDashboardRepoEntry,
-  type TrailsDashboardTopicEntry,
-} from '../TrailsView/TrailsDashboard';
+  TopicsDashboard,
+  type TopicsDashboardRepoEntry,
+  type TopicsDashboardTopicEntry,
+} from './TopicsDashboard';
 
 const trailRepoLabel = (repositoryPath: string | undefined): string => {
   if (!repositoryPath) return 'No repo';
@@ -152,7 +152,7 @@ export function HomeView() {
   // Topic modal state.
   const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
   const [pendingDeleteTopic, setPendingDeleteTopic] =
-    useState<TrailsDashboardTopicEntry | null>(null);
+    useState<TopicsDashboardTopicEntry | null>(null);
   const [deletingTopic, setDeletingTopic] = useState(false);
   // Mirrors the dashboard's Topics view toggle so this view can switch the
   // dashboard wrapper to a flex-fill layout in board mode (keeps the footer
@@ -342,10 +342,10 @@ export function HomeView() {
     };
   }, []);
 
-  const dashboardRepoEntries = useMemo<TrailsDashboardRepoEntry[]>(() => {
+  const dashboardRepoEntries = useMemo<TopicsDashboardRepoEntry[]>(() => {
     const byRepo = new Map<
       string,
-      { entry: TrailsDashboardRepoEntry; count: number }
+      { entry: TopicsDashboardRepoEntry; count: number }
     >();
     for (const trail of recentTrails) {
       if (!trail.repositoryPath) continue;
@@ -372,7 +372,7 @@ export function HomeView() {
     }));
   }, [recentTrails, repositories]);
 
-  const dashboardTopicEntries = useMemo<TrailsDashboardTopicEntry[]>(() => {
+  const dashboardTopicEntries = useMemo<TopicsDashboardTopicEntry[]>(() => {
     const sorted = [...topics].sort((a, b) =>
       b.updatedAt.localeCompare(a.updatedAt),
     );
@@ -837,7 +837,7 @@ export function HomeView() {
                 : { flex: '0 0 auto' }),
             }}
           >
-            <TrailsDashboard
+            <TopicsDashboard
               onViewModeChange={(mode) =>
                 setDashboardBoardMode(mode === 'kanban')
               }

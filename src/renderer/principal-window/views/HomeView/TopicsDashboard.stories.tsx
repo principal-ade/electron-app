@@ -2,10 +2,10 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React from 'react';
 import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
 import {
-  TrailsDashboard,
-  type TrailsDashboardRepoEntry,
-  type TrailsDashboardTopicEntry,
-} from './TrailsDashboard';
+  TopicsDashboard,
+  type TopicsDashboardRepoEntry,
+  type TopicsDashboardTopicEntry,
+} from './TopicsDashboard';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 
 const minutesAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
@@ -31,7 +31,7 @@ const trail = (
   ...overrides,
 });
 
-const repos: TrailsDashboardRepoEntry[] = [
+const repos: TopicsDashboardRepoEntry[] = [
   {
     key: '/Users/fernando/Developer/desktop-app/electron-app',
     label: 'electron-app',
@@ -80,7 +80,7 @@ const repos: TrailsDashboardRepoEntry[] = [
   },
 ];
 
-const topics: TrailsDashboardTopicEntry[] = [
+const topics: TopicsDashboardTopicEntry[] = [
   {
     key: 'topic-auth',
     title: 'Auth & sessions',
@@ -103,9 +103,9 @@ const topics: TrailsDashboardTopicEntry[] = [
   },
 ];
 
-const meta: Meta<typeof TrailsDashboard> = {
-  title: 'PrincipalWindow/TrailsView/TrailsDashboard',
-  component: TrailsDashboard,
+const meta: Meta<typeof TopicsDashboard> = {
+  title: 'PrincipalWindow/HomeView/TopicsDashboard',
+  component: TopicsDashboard,
   parameters: { layout: 'fullscreen' },
   decorators: [
     (Story) => (
@@ -124,17 +124,17 @@ const meta: Meta<typeof TrailsDashboard> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof TrailsDashboard>;
+type Story = StoryObj<typeof TopicsDashboard>;
 
 const noop = () => undefined;
 const logSelect = (label: string) => (x: unknown) =>
   // eslint-disable-next-line no-console
-  console.log(`[TrailsDashboard story] ${label}`, x);
+  console.log(`[TopicsDashboard story] ${label}`, x);
 
 /** A user with several repos and a handful of topics. */
 export const Populated: Story = {
   render: () => (
-    <TrailsDashboard
+    <TopicsDashboard
       repoEntries={repos}
       topicEntries={topics}
       onSelectRepo={logSelect('onSelectRepo')}
@@ -148,7 +148,7 @@ export const Populated: Story = {
 /** Repos exist but no topics yet — exercises the topic empty state. */
 export const ReposNoTopics: Story = {
   render: () => (
-    <TrailsDashboard
+    <TopicsDashboard
       repoEntries={repos}
       topicEntries={[]}
       onSelectRepo={logSelect('onSelectRepo')}
@@ -162,7 +162,7 @@ export const ReposNoTopics: Story = {
 /** Single repo, single topic — sanity-check the singular pluralizations. */
 export const Minimal: Story = {
   render: () => (
-    <TrailsDashboard
+    <TopicsDashboard
       repoEntries={repos.slice(0, 1)}
       topicEntries={topics.slice(0, 1)}
       onSelectRepo={logSelect('onSelectRepo')}
@@ -180,7 +180,7 @@ export const Minimal: Story = {
  */
 export const Empty: Story = {
   render: () => (
-    <TrailsDashboard
+    <TopicsDashboard
       repoEntries={[]}
       topicEntries={[]}
       onSelectRepo={logSelect('onSelectRepo')}
@@ -194,7 +194,7 @@ export const Empty: Story = {
 /** Many repos — exercises the grid wrap and the "view all" affordance. */
 export const ManyRepos: Story = {
   render: () => {
-    const many: TrailsDashboardRepoEntry[] = Array.from(
+    const many: TopicsDashboardRepoEntry[] = Array.from(
       { length: 9 },
       (_, i) => {
         const base = repos[i % repos.length]!;
@@ -212,7 +212,7 @@ export const ManyRepos: Story = {
       },
     );
     return (
-      <TrailsDashboard
+      <TopicsDashboard
         repoEntries={many}
         topicEntries={topics}
         onSelectRepo={logSelect('onSelectRepo')}

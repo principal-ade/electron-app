@@ -14,7 +14,7 @@ import {
   Share2,
   Trash2,
 } from 'lucide-react';
-import type { TrailsDashboardTopicEntry } from './TrailsDashboard';
+import type { TopicsDashboardTopicEntry } from './TopicsDashboard';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
 
@@ -82,11 +82,11 @@ const tildifyPath = (path: string): string => {
 };
 
 export interface TopicCardProps {
-  topic: TrailsDashboardTopicEntry;
+  topic: TopicsDashboardTopicEntry;
   theme: ThemeShape;
-  onSelect: (entry: TrailsDashboardTopicEntry) => void;
+  onSelect: (entry: TopicsDashboardTopicEntry) => void;
   /** Renders the hover-reveal delete button when provided. */
-  onDelete?: (entry: TrailsDashboardTopicEntry) => void;
+  onDelete?: (entry: TopicsDashboardTopicEntry) => void;
   /**
    * When true the card is draggable; on drag start it writes its topic id to
    * {@link TOPIC_STATUS_DND_MIME} so a kanban lane can restatus it on drop.

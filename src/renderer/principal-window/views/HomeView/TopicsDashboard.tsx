@@ -20,7 +20,7 @@ import type { TrailIndexEntry } from '../../../../shared/main-process-api-interf
 import {
   ExploredProjectsGrid,
   type ExploredProjectRepoEntry,
-} from './ExploredProjectsGrid';
+} from '../TrailsView/ExploredProjectsGrid';
 import { TopicCard, TOPIC_STATUS_DND_MIME } from './TopicCard';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
@@ -43,7 +43,7 @@ let cachedShowAllTopics: boolean | undefined;
  */
 let cachedTopicsViewMode: 'list' | 'kanban' | undefined;
 
-export interface TrailsDashboardRepoEntry {
+export interface TopicsDashboardRepoEntry {
   /** Stable key — usually the repo path. */
   key: string;
   /** Last-segment label, e.g. "electron-app". */
@@ -56,7 +56,7 @@ export interface TrailsDashboardRepoEntry {
   latestTrail: TrailIndexEntry;
 }
 
-export interface TrailsDashboardTopicEntry {
+export interface TopicsDashboardTopicEntry {
   /** Stable key — topic id. */
   key: string;
   /** Topic title, e.g. "Auth & sessions". */
@@ -97,9 +97,9 @@ export interface TrailsDashboardTopicEntry {
   status?: TopicStatus;
 }
 
-export interface TrailsDashboardProps {
+export interface TopicsDashboardProps {
   /** Repos with at least one trail, in display order. */
-  repoEntries: TrailsDashboardRepoEntry[];
+  repoEntries: TopicsDashboardRepoEntry[];
   /**
    * Full recent-trail list, passed straight through to the repo cards so
    * each can compute its file-coverage metric. Defaults to empty (cards
@@ -110,22 +110,22 @@ export interface TrailsDashboardProps {
    * Curated topic collections, in display order. Ignored when the user is
    * signed out — topics are a server-backed concept that requires auth.
    */
-  topicEntries: TrailsDashboardTopicEntry[];
+  topicEntries: TopicsDashboardTopicEntry[];
   /** Fired when the user clicks a repo card. */
-  onSelectRepo: (entry: TrailsDashboardRepoEntry) => void;
+  onSelectRepo: (entry: TopicsDashboardRepoEntry) => void;
   /** Fired when the user clicks a topic row. */
-  onSelectTopic: (entry: TrailsDashboardTopicEntry) => void;
+  onSelectTopic: (entry: TopicsDashboardTopicEntry) => void;
   /** Fired by the "New topic" button. Hide the button by omitting. */
   onCreateTopic?: () => void;
   /** Fired when the user clicks the trash icon on a topic card. Hides the icon when omitted. */
-  onDeleteTopic?: (entry: TrailsDashboardTopicEntry) => void;
+  onDeleteTopic?: (entry: TopicsDashboardTopicEntry) => void;
   /**
    * Fired when a card is dragged into a different kanban status column. The
    * caller persists the new state (e.g. via `TopicService.updateTopic`). Omit
    * to disable drag-to-restatus on the board.
    */
   onChangeTopicStatus?: (
-    entry: TrailsDashboardTopicEntry,
+    entry: TopicsDashboardTopicEntry,
     nextState: TopicStatusState,
   ) => void;
   /** "View All Projects" → opens the Trails view's projects landing. */
@@ -147,7 +147,7 @@ export interface TrailsDashboardProps {
  * accumulated trails — replaces the prompt-idea cards for return users.
  * Purely presentational; caller supplies data + handlers.
  */
-export const TrailsDashboard: React.FC<TrailsDashboardProps> = ({
+export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
   repoEntries,
   recentTrails = [],
   topicEntries,
@@ -719,10 +719,10 @@ function TopicList({
   onSelectTopic,
   onDeleteTopic,
 }: {
-  topics: TrailsDashboardTopicEntry[];
+  topics: TopicsDashboardTopicEntry[];
   theme: ThemeShape;
-  onSelectTopic: (entry: TrailsDashboardTopicEntry) => void;
-  onDeleteTopic?: (entry: TrailsDashboardTopicEntry) => void;
+  onSelectTopic: (entry: TopicsDashboardTopicEntry) => void;
+  onDeleteTopic?: (entry: TopicsDashboardTopicEntry) => void;
 }) {
   return (
     <ul
@@ -757,7 +757,7 @@ function TopicList({
  * when the dashboard toggles into this view.
  */
 // Untriaged topics (no status) share the quiet `active` default.
-const bucketOf = (t: TrailsDashboardTopicEntry): TopicStatusState =>
+const bucketOf = (t: TopicsDashboardTopicEntry): TopicStatusState =>
   t.status?.state ?? 'active';
 
 function KanbanBoard({
@@ -769,7 +769,7 @@ function KanbanBoard({
   onDeleteTopic,
   onChangeTopicStatus,
 }: {
-  topics: TrailsDashboardTopicEntry[];
+  topics: TopicsDashboardTopicEntry[];
   theme: ThemeShape;
   /**
    * Whether each lane scrolls its own overflow. Held `false` during the
@@ -783,10 +783,10 @@ function KanbanBoard({
    * to a viewport-relative height. Default: viewport-relative lane height.
    */
   fill?: boolean;
-  onSelectTopic: (entry: TrailsDashboardTopicEntry) => void;
-  onDeleteTopic?: (entry: TrailsDashboardTopicEntry) => void;
+  onSelectTopic: (entry: TopicsDashboardTopicEntry) => void;
+  onDeleteTopic?: (entry: TopicsDashboardTopicEntry) => void;
   onChangeTopicStatus?: (
-    entry: TrailsDashboardTopicEntry,
+    entry: TopicsDashboardTopicEntry,
     nextState: TopicStatusState,
   ) => void;
 }) {
