@@ -197,10 +197,11 @@ function buildActivityCards(
     const hour = date.getUTCHours();
     const itemId = `${dateStr}:${hour.toString().padStart(2, '0')}:${owner}/${repoName}`;
 
-    if (!cardMap.has(itemId)) {
+    let card = cardMap.get(itemId);
+    if (!card) {
       const hourBucket = new Date(date);
       hourBucket.setUTCMinutes(0, 0, 0);
-      cardMap.set(itemId, {
+      card = {
         itemId,
         repo: { owner, name: repoName },
         hour,
@@ -208,10 +209,9 @@ function buildActivityCards(
         commits: [],
         commitCount: 0,
         latestCommitAt: commit.committedAt,
-      });
+      };
+      cardMap.set(itemId, card);
     }
-
-    const card = cardMap.get(itemId)!;
     if (!card.commits.some(c => c.sha === commit.sha)) {
       card.commits.push({
         sha: commit.sha,
@@ -2777,11 +2777,15 @@ export class GitHubAdapter {
       if (!repoOwner || !repoName) continue;
 
       const key = `${repoOwner}/${repoName}`;
-      if (!repoCommits.has(key)) repoCommits.set(key, []);
+      let commits = repoCommits.get(key);
+      if (!commits) {
+        commits = [];
+        repoCommits.set(key, commits);
+      }
 
       if (event.type === 'PushEvent') {
         for (const commit of event.payload.commits ?? []) {
-          repoCommits.get(key)!.push({
+          commits.push({
             sha: commit.sha,
             message: commit.message,
             authorLogin: event.actor.login,
@@ -2794,7 +2798,7 @@ export class GitHubAdapter {
         const pr = event.payload.pull_request;
         const action = event.payload.action;
         if (!pr || (action !== 'opened' && action !== 'synchronize')) continue;
-        repoCommits.get(key)!.push({
+        commits.push({
           sha: pr.head.sha,
           message: `PR #${pr.number}: ${pr.title}`,
           authorLogin: pr.user.login,
@@ -2808,7 +2812,8 @@ export class GitHubAdapter {
     const allCards: CommitActivityCard[] = [];
     for (const [key, commits] of repoCommits) {
       const [repoOwner, repoName] = key.split('/');
-      allCards.push(...buildActivityCards(repoOwner!, repoName!, commits));
+      if (!repoOwner || !repoName) continue;
+      allCards.push(...buildActivityCards(repoOwner, repoName, commits));
     }
     return allCards.sort((a, b) =>
       new Date(b.latestCommitAt).getTime() - new Date(a.latestCommitAt).getTime()

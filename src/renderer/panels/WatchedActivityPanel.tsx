@@ -80,14 +80,16 @@ function cardsToHourlyGroups(cards: CommitActivityCard[]): HourlyGroup[] {
   const hourMap = new Map<string, Map<string, RepoActivitySummary>>();
 
   for (const card of cards) {
-    if (!hourMap.has(card.hourBucket)) {
-      hourMap.set(card.hourBucket, new Map());
+    let repoMap = hourMap.get(card.hourBucket);
+    if (!repoMap) {
+      repoMap = new Map();
+      hourMap.set(card.hourBucket, repoMap);
     }
-    const repoMap = hourMap.get(card.hourBucket)!;
     const key = `${card.repo.owner}/${card.repo.name}`;
 
-    if (!repoMap.has(key)) {
-      repoMap.set(key, {
+    let summary = repoMap.get(key);
+    if (!summary) {
+      summary = {
         repoPath: '',
         repoName: card.repo.name,
         commits: [],
@@ -95,10 +97,9 @@ function cardsToHourlyGroups(cards: CommitActivityCard[]): HourlyGroup[] {
         commitCount: 0,
         githubOwner: card.repo.owner,
         githubRepoName: card.repo.name,
-      });
+      };
+      repoMap.set(key, summary);
     }
-
-    const summary = repoMap.get(key)!;
     for (const c of card.commits) {
       const commit: ActivityCommit = {
         repoName: card.repo.name,
@@ -185,9 +186,17 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
     setLoading(true);
     setCards([]);
 
-    const fetch = sourceKind === 'owner'
-      ? actions.getOwnerActivity(sourceLogin!, sourceAccountType!)
-      : actions.getRepoActivity(sourceOwner!, sourceRepo!);
+    // Narrow on the destructured primitives themselves: when `sourceKind` is
+    // 'owner' the two owner fields are always set (and the repo fields unset),
+    // and vice-versa — see the destructuring above. Testing the values lets TS
+    // prove non-null without re-introducing `source` into the dep array. The
+    // final branch is unreachable but keeps the type total.
+    const fetch =
+      sourceLogin !== undefined && sourceAccountType !== undefined
+        ? actions.getOwnerActivity(sourceLogin, sourceAccountType)
+        : sourceOwner !== undefined && sourceRepo !== undefined
+          ? actions.getRepoActivity(sourceOwner, sourceRepo)
+          : Promise.resolve<CommitActivityCard[]>([]);
 
     fetch.then(result => {
       if (!cancelled) {

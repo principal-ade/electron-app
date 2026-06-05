@@ -434,10 +434,11 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         ) : (
           repoSummaries.map((summary) => {
             const gitStatus = summary.repoId ? gitStatusMap.get(summary.repoId) : null;
+            const entry = summary.entry;
             return (
               <div
                 key={summary.repoId}
-                style={{ opacity: summary.entry ? 1 : 0.5 }}
+                style={{ opacity: entry ? 1 : 0.5 }}
               >
                 <ProjectRepoCard
                   repo={{
@@ -446,7 +447,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                     timeLabel: formatRelativeTime(summary.lastCommitTime),
                     isDirty: gitStatus?.isDirty ?? false,
                   }}
-                  onClick={summary.entry ? () => handleRepoClick(summary.entry!) : undefined}
+                  onClick={entry ? () => handleRepoClick(entry) : undefined}
                 />
               </div>
             );

@@ -273,7 +273,7 @@ export const SpikeConvertToolbar: React.FC<SpikeConvertToolbarProps> = ({
         >
           {progress.slice(-20).map((entry, i) => (
             <div
-              key={`${entry.time}-${i}`}
+              key={`${entry.time}-${entry.kind}-${entry.label}`}
               style={{
                 display: 'flex',
                 gap: 8,

@@ -81,7 +81,8 @@ const buildMockChangedFiles = (
   const files: RepoActivityChangedFiles = new Map();
 
   for (let i = 0; i < fileCount; i++) {
-    const sample = sampleFiles[(seed + i) % sampleFiles.length]!;
+    const sample = sampleFiles[(seed + i) % sampleFiles.length];
+    if (!sample) continue;
     const additions =
       sample.status === 'deleted' ? 0 : (rand(i) % bucket.maxAdd) + 1;
     const deletions =

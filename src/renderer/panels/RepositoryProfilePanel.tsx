@@ -862,11 +862,14 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         const user = await GithubService.getCurrentUser();
         if (!user || cancelled) return;
 
-        const userRepo = await GithubService.getRepository(user.login, repositoryData.github!.name);
+        const github = repositoryData.github;
+        if (!github) return;
+
+        const userRepo = await GithubService.getRepository(user.login, github.name);
         const isFork =
           !!userRepo &&
           userRepo.fork === true &&
-          userRepo.parent?.full_name === `${repositoryData.github!.owner}/${repositoryData.github!.name}`;
+          userRepo.parent?.full_name === `${github.owner}/${github.name}`;
         if (!cancelled) {
           setIsForked(isFork);
           setForkedRepoOwner(isFork ? user.login : null);
@@ -1507,6 +1510,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   const handleOpenCollectionsDropdown = async () => {
     if (!repositoryData?.github) return;
+    const github = repositoryData.github;
 
     if (showCollectionsDropdown) {
       setShowCollectionsDropdown(false);
@@ -1525,7 +1529,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       setUserCollections(collections);
       const ids = new Set<string>();
       for (const col of collections) {
-        if (col.repos.some(r => r.owner === repositoryData.github!.owner && r.repo === repositoryData.github!.name)) {
+        if (col.repos.some(r => r.owner === github.owner && r.repo === github.name)) {
           ids.add(col.id);
         }
       }
@@ -2148,13 +2152,15 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 {repositoryData.isPrivate ? 'Private' : 'Public'}
               </span>
             )}
-            {repositoryData.github && (
+            {repositoryData.github && (() => {
+              const github = repositoryData.github;
+              return (
               <button
                 onClick={() => events.emit({
                   type: 'feed:watched-repo-activity-requested',
                   source: 'repo-profile-panel',
                   timestamp: Date.now(),
-                  payload: { owner: repositoryData.github!.owner, repo: repositoryData.github!.name },
+                  payload: { owner: github.owner, repo: github.name },
                 })}
                 style={{
                   flexShrink: 0,
@@ -2175,7 +2181,8 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 <LucideIcons.Radio size={11} />
                 Activity
               </button>
-            )}
+              );
+            })()}
           </div>
           {!repositoryData.isLocal && (
             <div style={{ marginTop: spacing.sm, display: 'flex', gap: spacing.xs }}>
@@ -2220,7 +2227,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               {isForked && forkedRepoOwner ? (
                 <button
                   onClick={() => {
-                    const forkName = repositoryData.github!.name;
+                    const github = repositoryData.github;
+                    if (!github) return;
+                    const forkName = github.name;
                     events.emit({
                       type: 'feed:repository-selected',
                       source: 'repository-profile-panel',

@@ -447,8 +447,9 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     // Live-update the topic title when it changes from anywhere.
     const unsubscribeTopic = TopicService.onTopicChange((event) => {
       if (event.type === 'updated' && event.topic) {
+        const updatedTopic = event.topic;
         setTopic((current) =>
-          current && current.id === event.topic!.id ? event.topic! : current,
+          current && current.id === updatedTopic.id ? updatedTopic : current,
         );
       } else if (event.type === 'removed' && event.id) {
         setTopic((current) =>

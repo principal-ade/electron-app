@@ -74,7 +74,8 @@ const buildMockChangedFiles = (hash: string): RepoActivityChangedFiles => {
   const files: RepoActivityChangedFiles = new Map();
 
   for (let i = 0; i < fileCount; i++) {
-    const sample = sampleFiles[(seed + i) % sampleFiles.length]!;
+    const sample = sampleFiles[(seed + i) % sampleFiles.length];
+    if (!sample) continue;
     files.set(sample.name, {
       status: sample.status,
       additions: sample.status === 'deleted' ? 0 : (rand(i) % 80) + 1,
@@ -118,7 +119,8 @@ const makeCommits = (count: number, hoursAgo: number, idPrefix: string): CommitI
   const commits: CommitInfo[] = [];
   const base = Date.now() - hoursAgo * 60 * 60 * 1000;
   for (let i = 0; i < count; i++) {
-    const author = AUTHORS[i % AUTHORS.length]!;
+    const author = AUTHORS[i % AUTHORS.length];
+    if (!author) continue;
     const committedAt = new Date(base + i * 5 * 60 * 1000).toISOString();
     commits.push({
       sha: `${idPrefix}${i.toString().padStart(4, '0')}`,
@@ -139,6 +141,10 @@ const makeCard = (
 ): CommitActivityCard => {
   const commits = makeCommits(commitCount, hoursAgo, `${repo.slice(0, 3)}${hoursAgo}`);
   const hourBucket = hourBucketIso(hoursAgo);
+  const latestCommit = commits[commits.length - 1];
+  if (!latestCommit) {
+    throw new Error('makeCard requires at least one commit');
+  }
   return {
     itemId: `${hourBucket.slice(0, 13)}:${owner}/${repo}`,
     repo: { owner, name: repo },
@@ -146,7 +152,7 @@ const makeCard = (
     hourBucket,
     commits,
     commitCount,
-    latestCommitAt: commits[commits.length - 1]!.committedAt,
+    latestCommitAt: latestCommit.committedAt,
   };
 };
 

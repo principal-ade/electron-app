@@ -158,9 +158,9 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
                   gap: 4,
                 }}
               >
-                {toPublish.map((title, i) => (
+                {toPublish.map((title) => (
                   <li
-                    key={`${title}-${i}`}
+                    key={title}
                     style={{
                       display: 'flex',
                       alignItems: 'center',

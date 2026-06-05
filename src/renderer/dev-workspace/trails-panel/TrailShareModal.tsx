@@ -263,13 +263,14 @@ export const TrailShareModal: React.FC<TrailShareModalProps> = ({
   // state into an unmounted modal.
   const scopeLookupStartedRef = useRef(false);
   useEffect(() => {
-    if (!needsScopeLookup || scopeLookupStartedRef.current) return;
+    if (!needsScopeLookup || !repositoryPath || scopeLookupStartedRef.current)
+      return;
     scopeLookupStartedRef.current = true;
     let cancelled = false;
     void (async () => {
       let origin: string | null = null;
       try {
-        const info = await GitService.getRepositoryInfo(repositoryPath!);
+        const info = await GitService.getRepositoryInfo(repositoryPath);
         origin =
           info?.remotes?.find((r) => r.name === 'origin')?.url ?? null;
       } catch {
@@ -741,8 +742,8 @@ const MissingFilesBody: React.FC<{
         color: theme.colors.textSecondary,
       }}
     >
-      {missing.map((m, i) => (
-        <li key={i} style={{ wordBreak: 'break-all' }}>
+      {missing.map((m) => (
+        <li key={m} style={{ wordBreak: 'break-all' }}>
           {m}
         </li>
       ))}

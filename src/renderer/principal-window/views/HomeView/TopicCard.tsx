@@ -346,9 +346,9 @@ export function TopicCard({
                   )
                   .join(', ')}
               >
-                {topic.projectRepos.map((r, i) => (
+                {topic.projectRepos.map((r) => (
                   <span
-                    key={`${r.ownerLogin ?? ''}/${r.name}/${i}`}
+                    key={`${r.ownerLogin ?? ''}/${r.name}`}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',

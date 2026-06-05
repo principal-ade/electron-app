@@ -142,8 +142,8 @@ export const BriefAgentButton: React.FC<BriefAgentButtonProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       title={
-        armed
-          ? `Click to brief the active terminal, or drag onto a specific one — topic "${topic!.title}"`
+        topic
+          ? `Click to brief the active terminal, or drag onto a specific one — topic "${topic.title}"`
           : 'Create a topic to enable briefing'
       }
       style={{

@@ -322,17 +322,19 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           // Local repository
           fileTree = await actions.getFileTreeForLocalRepo(summary.repoPath);
         } else if (summary.githubOwner && summary.githubRepoName) {
+          const githubOwner = summary.githubOwner;
+          const githubRepoName = summary.githubRepoName;
           // Try web-ade's cached tree first; fall back to local clone if available
           try {
             const treeData = await actions.getGithubTree(
-              summary.githubOwner,
-              summary.githubRepoName
+              githubOwner,
+              githubRepoName
             );
             if (cancelled) return;
             fileTree = buildFileTreeFromGitHub(
               treeData.tree,
-              summary.githubOwner,
-              summary.githubRepoName,
+              githubOwner,
+              githubRepoName,
               treeData.sha
             );
           } catch {
@@ -341,8 +343,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             const repos = await actions.getAlexandriaRepositories();
             const match = repos.find(
               (r: AlexandriaEntry) =>
-                r.github?.owner?.toLowerCase() === summary.githubOwner!.toLowerCase() &&
-                (r.github?.name ?? r.name).toLowerCase() === summary.githubRepoName!.toLowerCase() &&
+                r.github?.owner?.toLowerCase() === githubOwner.toLowerCase() &&
+                (r.github?.name ?? r.name).toLowerCase() === githubRepoName.toLowerCase() &&
                 r.path
             );
             if (match?.path) {
@@ -392,7 +394,9 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
       // Fetch changed files for each commit — local git for cloned repos, GitHub API for remote
       const hasLocalPath = Boolean(summary.repoPath);
-      const hasGitHubCoords = Boolean(summary.githubOwner && summary.githubRepoName);
+      const githubOwner = summary.githubOwner;
+      const githubRepoName = summary.githubRepoName;
+      const hasGitHubCoords = Boolean(githubOwner && githubRepoName);
 
       if (hasLocalPath || hasGitHubCoords) {
         await Promise.all(
@@ -400,13 +404,14 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             if (cancelled) return;
 
             try {
-              const changedFiles = hasLocalPath
-                ? await actions.getChangedFilesForLocalCommit(summary.repoPath, commit.hash)
-                : await actions.getChangedFilesForGithubCommit(
-                    summary.githubOwner!,
-                    summary.githubRepoName!,
-                    commit.hash
-                  );
+              const changedFiles =
+                hasLocalPath || !githubOwner || !githubRepoName
+                  ? await actions.getChangedFilesForLocalCommit(summary.repoPath, commit.hash)
+                  : await actions.getChangedFilesForGithubCommit(
+                      githubOwner,
+                      githubRepoName,
+                      commit.hash
+                    );
 
               let totalAdditions = 0;
               let totalDeletions = 0;
@@ -1025,7 +1030,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
           {/* Single-commit: author avatar stacked under repo avatar, name + files to the right */}
           {summary.commits.length === 1 && summary.commits[0] ? (() => {
-            const soleCommit = summary.commits[0]!;
+            const soleCommit = summary.commits[0];
             const soleStats = commitStats.get(soleCommit.hash);
             const soleAdditions = soleStats?.additions ?? 0;
             const soleDeletions = soleStats?.deletions ?? 0;

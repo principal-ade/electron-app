@@ -1583,8 +1583,8 @@ const TrailsViewInner: React.FC<{
           seenThisTrail.add(top);
           ensureHeader(top);
           const sourcePath = markerById.get(marker.markerId);
-          if (sourcePath) {
-            const byPath = headerToPathTrails.get(top)!;
+          const byPath = headerToPathTrails.get(top);
+          if (sourcePath && byPath) {
             let trailMap = byPath.get(sourcePath);
             if (!trailMap) {
               trailMap = new Map();

@@ -197,7 +197,8 @@ export const ManyRepos: Story = {
     const many: TopicsDashboardRepoEntry[] = Array.from(
       { length: 9 },
       (_, i) => {
-        const base = repos[i % repos.length]!;
+        const base = repos[i % repos.length];
+        if (!base) throw new Error('repos fixture is empty');
         return {
           ...base,
           key: `${base.key}-${i}`,

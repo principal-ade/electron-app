@@ -134,10 +134,11 @@ export class TrailStore {
     const updated = await this.persistence.applyToPayload(payloadId, (p) => {
       const existing = (p.notes ?? []).find((n) => n.id === noteId);
       if (!existing) return p;
-      edited = { ...existing, body, updatedAt: new Date().toISOString() };
+      const next = { ...existing, body, updatedAt: new Date().toISOString() };
+      edited = next;
       return {
         ...p,
-        notes: (p.notes ?? []).map((n) => (n.id === noteId ? edited! : n)),
+        notes: (p.notes ?? []).map((n) => (n.id === noteId ? next : n)),
       };
     });
     if (!updated || !edited) {
