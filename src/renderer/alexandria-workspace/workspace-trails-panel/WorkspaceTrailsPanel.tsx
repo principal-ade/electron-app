@@ -685,11 +685,7 @@ const TrailRow: React.FC<TrailRowProps> = ({
                 color: membershipColor,
                 cursor: busy || disabled ? 'not-allowed' : 'pointer',
                 opacity:
-                  busy || disabled
-                    ? 0.5
-                    : emphasized || isActive
-                      ? 1
-                      : 0,
+                  busy || disabled ? 0.5 : emphasized ? 1 : 0,
                 transition: 'opacity 120ms, background 120ms, color 120ms',
                 fontFamily: theme.fonts.body,
                 fontSize: theme.fontSizes[1],
@@ -723,7 +719,7 @@ const TrailRow: React.FC<TrailRowProps> = ({
                 background: 'transparent',
                 color: deleteColor,
                 cursor: busy ? 'not-allowed' : 'pointer',
-                opacity: busy ? 0.5 : emphasized || isActive ? 1 : 0,
+                opacity: busy ? 0.5 : emphasized ? 1 : 0,
                 transition: 'opacity 120ms, background 120ms, color 120ms',
                 fontFamily: theme.fonts.body,
                 fontSize: theme.fontSizes[1],
