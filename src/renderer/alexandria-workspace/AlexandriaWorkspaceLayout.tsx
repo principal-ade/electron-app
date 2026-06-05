@@ -87,9 +87,11 @@ import type {
   FileCityTrailTab,
   MarkdownDocTab,
   MediaTab,
+  MermaidDiagramTab,
   SourceFileTab,
   TopicDescriptionTab,
 } from './tab-types';
+import { IndustryZoomableMermaidDiagram } from 'themed-markdown';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
 
 type PanelDefinition = {
@@ -613,10 +615,31 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           </div>
         );
       }
+      if (tab.contentType === 'mermaid-diagram') {
+        return (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <IndustryZoomableMermaidDiagram
+              code={tab.code}
+              id={tab.id}
+              theme={theme}
+              fitStrategy="contain"
+            />
+          </div>
+        );
+      }
       // Terminal tabs: return null → TabbedTerminalPanel renders its default.
       return null;
     },
-    [activeTrailPayload, activeTrailRepoPath, events],
+    [activeTrailPayload, activeTrailRepoPath, events, theme],
   );
 
   // Get terminal context and directory from TerminalProvider
@@ -1241,6 +1264,46 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         };
       }
       const { id: tabId } = newTab;
+
+      setTabs((prev) =>
+        prev.some((t) => t.id === tabId) ? prev : [...prev, newTab],
+      );
+      setFocusTabId(tabId);
+    });
+
+    return unsubscribe;
+  }, [events]);
+
+  // Listen for mermaid:open-in-tab events (from a markdown diagram's "open in
+  // tab" arrow button, emitted by IndustryMarkdownSlide via onOpenMermaidInTab).
+  // Opens the diagram as its own tab in the middle slot. Keyed by a hash of the
+  // diagram source so re-clicking the same diagram focuses the existing tab.
+  useEffect(() => {
+    const unsubscribe = events.on('mermaid:open-in-tab', async (event) => {
+      const { code, title } = event.payload as {
+        code: string;
+        title?: string;
+      };
+
+      if (!code) {
+        console.warn('[AlexandriaWorkspaceLayout] mermaid:open-in-tab with no code');
+        return;
+      }
+
+      // Stable content hash (djb2) so identical diagrams share one tab.
+      let hash = 5381;
+      for (let i = 0; i < code.length; i++) {
+        hash = (hash * 33) ^ code.charCodeAt(i);
+      }
+      const tabId = `mermaid-diagram:${(hash >>> 0).toString(36)}`;
+
+      const newTab: MermaidDiagramTab = {
+        id: tabId,
+        label: title?.trim() || 'Diagram',
+        contentType: 'mermaid-diagram',
+        code,
+        closable: true,
+      };
 
       setTabs((prev) =>
         prev.some((t) => t.id === tabId) ? prev : [...prev, newTab],

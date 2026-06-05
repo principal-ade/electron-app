@@ -376,6 +376,14 @@ export const TopicDescriptionSlideOver: React.FC<
             transparentBackground
             enableKeyboardScrolling={false}
             onLinkClick={onLinkClick}
+            onOpenMermaidInTab={(code, title) =>
+              events.emit({
+                type: 'mermaid:open-in-tab',
+                source: 'topic-notes',
+                timestamp: Date.now(),
+                payload: { code, title },
+              })
+            }
             selectableBlocks
             deletionMode="text"
             onContentChange={handleContentChange}

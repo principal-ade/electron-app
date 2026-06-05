@@ -74,10 +74,26 @@ export interface MediaTab {
   closable?: boolean;
 }
 
+/**
+ * A mermaid diagram opened from an inline diagram's "open in tab" arrow button
+ * (rendered by `IndustryMarkdownSlide` via `onOpenMermaidInTab`). Unlike the
+ * file-backed tabs above, this carries the diagram source inline — there is no
+ * path on disk. Multi-instance, keyed by a hash of `code` so re-clicking the
+ * same diagram focuses the existing tab instead of stacking duplicates.
+ */
+export interface MermaidDiagramTab {
+  id: string;
+  label: string;
+  contentType: 'mermaid-diagram';
+  code: string;
+  closable?: boolean;
+}
+
 export type AlexandriaTab =
   | TerminalTab
   | FileCityTrailTab
   | TopicDescriptionTab
   | MarkdownDocTab
   | SourceFileTab
-  | MediaTab;
+  | MediaTab
+  | MermaidDiagramTab;
