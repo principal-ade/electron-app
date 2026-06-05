@@ -28,6 +28,8 @@ import type {
   InboxUnreadCountResponse,
   SendTrailInput,
   SendTrailResponse,
+  GetSentInput,
+  ListSentResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -216,5 +218,12 @@ export class WebAdeService {
    */
   static async sendTrail(input: SendTrailInput): Promise<SendTrailResponse> {
     return webAdeClient.sendTrail(input);
+  }
+
+  /**
+   * Get the signed-in user's sent trails (the outbox).
+   */
+  static async getSent(input: GetSentInput = {}): Promise<ListSentResponse> {
+    return webAdeClient.getSent(input);
   }
 }

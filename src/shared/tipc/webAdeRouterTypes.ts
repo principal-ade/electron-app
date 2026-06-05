@@ -442,6 +442,46 @@ export interface SendTrailResponse {
   failed: Array<{ login: string; reason: 'unknown_user' | 'invalid_login' }>;
 }
 
+/** A recipient a trail has been sent to. */
+export interface OutboxRecipient {
+  githubId: number;
+  githubLogin: string;
+}
+
+/**
+ * One trail the signed-in user has shared, in their outbox ("Sent").
+ * Mirrors web-ade `src/lib/trails/types.ts`. One row per trail; recipients
+ * accumulate across resends.
+ */
+export interface OutboxIndexEntry {
+  /** Trail id — foreign key into `/api/trails/by-id/{id}`. */
+  trailId: string;
+  /** Everyone this trail has been delivered to, deduped by githubId. */
+  recipients: OutboxRecipient[];
+  /** Optional sender note from the most recent send. */
+  comment?: string;
+  /** ISO 8601 — most recent send/resend time. */
+  sentAt: string;
+  /** Snapshot of the live trail entry at send-time. */
+  snapshot: InboxTrailSnapshot;
+  /** Resolved owner/repo for the trail — duplicated for fast list rendering. */
+  owner: string;
+  repo: string;
+}
+
+export interface GetSentInput {
+  /** Page size (server clamps to 1..100, default 50). */
+  limit?: number;
+  /** Opaque pagination cursor from a prior response. */
+  cursor?: string;
+}
+
+export interface ListSentResponse {
+  entries: OutboxIndexEntry[];
+  /** Present when more pages remain. */
+  cursor?: string;
+}
+
 // =============================================================================
 // Router Type Definition
 // =============================================================================
@@ -592,5 +632,11 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: SendTrailInput;
     }) => Promise<SendTrailResponse>;
+  };
+  getSent: {
+    action: (args: {
+      context: ActionContext;
+      input: GetSentInput;
+    }) => Promise<ListSentResponse>;
   };
 };

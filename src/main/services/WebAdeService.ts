@@ -34,6 +34,8 @@ import type {
   InboxUnreadCountResponse,
   SendTrailInput,
   SendTrailResponse,
+  GetSentInput,
+  ListSentResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -908,6 +910,50 @@ export class WebAdeService {
       return { count: typeof data?.count === 'number' ? data.count : 0 };
     } catch (error) {
       console.error('[WebADE] Failed to fetch inbox unread count:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch the signed-in user's "sent" trails (the outbox — trails they've
+   * shared with others). Auth'd by the GitHub token; the server resolves the
+   * sender. One row per trail, recipients merged across resends.
+   */
+  async getSent(input: GetSentInput = {}): Promise<ListSentResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const params = new URLSearchParams();
+    if (input.limit != null) params.set('limit', String(input.limit));
+    if (input.cursor) params.set('cursor', input.cursor);
+    const query = params.toString();
+    const url = `${this.baseUrl}/trails/sent${query ? `?${query}` : ''}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        throw new Error(`Failed to fetch sent items: ${response.status} ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as Partial<ListSentResponse>;
+      return {
+        entries: Array.isArray(data?.entries) ? data.entries : [],
+        ...(data?.cursor ? { cursor: data.cursor } : {}),
+      };
+    } catch (error) {
+      console.error('[WebADE] Failed to fetch sent items:', error);
       throw error;
     }
   }
