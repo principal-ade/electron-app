@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import type { Theme } from '@principal-ade/industry-theme';
 import { getThemeByName } from '../themes/predefinedThemes';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { deepMerge } from '../../shared/utils/deepMerge';
 
 export interface ThemeChangeEvent {
   themeName: string;
@@ -48,7 +49,12 @@ class ThemeServiceClass extends EventEmitter {
   }
 
   /**
-   * Get the active theme (customizations disabled - using base theme only)
+   * Get the active theme with any saved customizations merged in.
+   *
+   * Reads `customThemeOverrides` from user preferences and deep-merges them
+   * onto the base theme, so edits made in the theme customization panel are
+   * actually reflected in the rendered UI. Falls back to the base theme when
+   * there are no overrides or the lookup fails.
    */
   async getActiveTheme(themeName?: string): Promise<Theme | undefined> {
     const name = themeName || this.currentThemeName;
@@ -58,7 +64,19 @@ class ThemeServiceClass extends EventEmitter {
       return undefined;
     }
 
-    return baseTheme;
+    try {
+      const preferences = await UserPreferencesService.getPreferences();
+      const overrides = preferences.customThemeOverrides?.[name]?.overrides;
+
+      if (!overrides) {
+        return baseTheme;
+      }
+
+      return deepMerge(baseTheme, overrides) as Theme;
+    } catch (error) {
+      console.error('[ThemeService] Failed to merge theme overrides:', error);
+      return baseTheme;
+    }
   }
 
   private async updateThemeOverride(
