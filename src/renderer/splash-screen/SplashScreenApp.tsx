@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Logo } from '@principal-ai/logo-component';
+import { FileCityLogo } from '@principal-ai/logo-component';
 
 // Type for the electronAPI exposed by preload
 interface SplashElectronAPI {
@@ -73,8 +73,17 @@ export const SplashScreenApp: React.FC = () => {
           animation: 'splashFadeIn 0.5s ease-out',
         }}
       >
-        {/* Logo */}
-        <Logo width={logoSize} height={logoSize} color={theme.colors.primary} particleColor={theme.colors.text} />
+        {/* ANIMATED-LOGO-TODO: previously the animated wireframe `Logo`
+            (orbiting particles) — most prominent animated surface. FileCityLogo
+            is static; swap to an animated file-city mark here when one exists. */}
+        <FileCityLogo
+          mark="P"
+          width={logoSize}
+          height={logoSize}
+          primary={theme.colors.primary}
+          color={theme.colors.text}
+          background="transparent"
+        />
 
       </div>
     </div>

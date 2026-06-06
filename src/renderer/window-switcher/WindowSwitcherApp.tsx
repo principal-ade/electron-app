@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { motion } from 'framer-motion';
 import { LocalProjectCard } from '@industry-theme/repository-composition-panels';
-import { Logo } from '@principal-ai/logo-component';
+import { FileCityLogo } from '@principal-ai/logo-component';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowCard } from './WindowCard';
 
@@ -586,9 +586,16 @@ export const WindowSwitcherApp: React.FC = () => {
                 <span style={{ color: theme.colors.primary }}>AI</span>
               </span>
 
-              {/* Logo */}
+              {/* ANIMATED-LOGO-TODO: was the animated sphere Logo; static for now. */}
               <div style={{ marginTop: '4px' }}>
-                <Logo width={48} height={48} color={theme.colors.primary} />
+                <FileCityLogo
+                  mark="P"
+                  width={48}
+                  height={48}
+                  primary={theme.colors.primary}
+                  color={theme.colors.text}
+                  background="transparent"
+                />
               </div>
             </div>
           </motion.div>

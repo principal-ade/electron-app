@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme, Theme } from '@principal-ade/industry-theme';
-import { Logo } from '@principal-ai/logo-component';
+import { FileCityLogo } from '@principal-ai/logo-component';
 import {
   FolderGit2,
   ArrowRight,
@@ -630,7 +630,8 @@ const WelcomeStep: React.FC<WelcomeStepProps> = ({ theme, onStart }) => (
       justifyContent: 'center',
       marginBottom: 32
     }}>
-      <Logo width={120} height={120} color={theme.colors.primary} particleColor={theme.colors.text} />
+      {/* ANIMATED-LOGO-TODO: was the animated sphere Logo; static for now. */}
+      <FileCityLogo mark="P" width={120} height={120} primary={theme.colors.primary} color={theme.colors.text} background="transparent" />
     </div>
 
     <h1 style={{
@@ -1658,7 +1659,8 @@ const GitHubConnectStep: React.FC<GitHubConnectStepProps> = ({
       gap: 16,
       marginBottom: 24
     }}>
-      <Logo width={80} height={80} color={theme.colors.primary} particleColor={theme.colors.text} />
+      {/* ANIMATED-LOGO-TODO: was the animated sphere Logo; static for now. */}
+      <FileCityLogo mark="P" width={80} height={80} primary={theme.colors.primary} color={theme.colors.text} background="transparent" />
       <ArrowRight size={32} color={theme.colors.textSecondary} />
       <div style={{
         display: 'inline-flex',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
-import { Logo } from '@principal-ai/logo-component';
+import { FileCityLogo } from '@principal-ai/logo-component';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
@@ -147,11 +147,14 @@ export const GeneralSettings: React.FC = () => {
               marginBottom: '16px',
             }}
           >
-            <Logo
+            {/* ANIMATED-LOGO-TODO: was the animated sphere Logo; static for now. */}
+            <FileCityLogo
+              mark="P"
               width={48}
               height={48}
-              color={theme.colors.primary}
-              particleColor={theme.colors.text}
+              primary={theme.colors.primary}
+              color={theme.colors.text}
+              background="transparent"
             />
             <div>
               <p
@@ -187,8 +190,7 @@ export const GeneralSettings: React.FC = () => {
               color: theme.colors.textSecondary,
             }}
           >
-            A powerful tool for creating and presenting markdown slides, with
-            integrated AI assistance and code analysis capabilities.
+            Frame.io for code collaboration
           </p>
           <a
             href="https://principle-md.com"
