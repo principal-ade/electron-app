@@ -9,7 +9,8 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, protocol, ipcMain, dialog, BrowserWindow } from 'electron';
+import fs from 'fs';
+import { app, protocol, ipcMain, dialog, BrowserWindow, nativeImage } from 'electron';
 import log from 'electron-log';
 import { windowSwitcher } from './window/windowSwitcher';
 import { quickOpen } from './window/quickOpen';
@@ -470,6 +471,20 @@ app.on('open-url', (event, url) => {
 app
   .whenReady()
   .then(async () => {
+    // Dev builds: badge the dock icon (macOS) so a dev app is visually
+    // distinct from a production install. Packaged builds are untouched.
+    if (!app.isPackaged && process.platform === 'darwin' && app.dock) {
+      try {
+        const devIconPath = path.join(app.getAppPath(), 'assets', 'icon-dev.png');
+        if (fs.existsSync(devIconPath)) {
+          app.dock.setIcon(nativeImage.createFromPath(devIconPath));
+          console.log('[Main] Applied dev dock icon:', devIconPath);
+        }
+      } catch (err) {
+        console.warn('[Main] Failed to apply dev dock icon:', err);
+      }
+    }
+
     // Register local-media protocol handler for loading local files in renderer
     protocol.handle('local-media', async (request) => {
       // URL format: local-media://localhost/absolute/path/to/file.png

@@ -60,6 +60,7 @@ electron-builder.json
 assets/icon.icns
 assets/icon.ico
 assets/icons/
+assets/icon-dev.png
 
 # Database files
 *.db

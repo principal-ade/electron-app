@@ -7,7 +7,7 @@ Generates all required icon sizes from a single source image
 import os
 import sys
 import shutil
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 def create_rounded_rectangle_mask(size, radius):
     """Create a mask for rounded corners with anti-aliasing"""
@@ -102,6 +102,57 @@ def process_icon_no_padding(source_img, target_size, corner_radius_percent=0.18)
     output.putalpha(mask)
 
     return output
+
+def load_badge_font(size):
+    """Load a bold system font for the badge text, falling back to default."""
+    candidates = [
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        "/Library/Fonts/Arial Bold.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/System/Library/Fonts/SFNS.ttf",
+    ]
+    for p in candidates:
+        try:
+            return ImageFont.truetype(p, size)
+        except Exception:
+            continue
+    return ImageFont.load_default()
+
+def add_dev_ribbon(icon, text="DEV", ribbon_color=(229, 72, 77, 255),
+                   text_color=(255, 255, 255, 255)):
+    """Composite a diagonal corner ribbon onto a (padded, rounded) icon.
+
+    The ribbon is drawn across the bottom-right corner and then clipped to
+    the icon body's alpha so it follows the rounded squircle edge.
+    """
+    icon = icon.convert("RGBA")
+    size = icon.width
+
+    # Short ribbon band tucked into the bottom-right corner (~13% tall).
+    band_h = int(size * 0.135)
+    band_w = int(size * 0.52)
+    band = Image.new("RGBA", (band_w, band_h), (0, 0, 0, 0))
+    bd = ImageDraw.Draw(band)
+    bd.rectangle([0, 0, band_w, band_h], fill=ribbon_color)
+
+    # Centered, letter-spaced text.
+    spaced = " ".join(list(text))
+    font = load_badge_font(int(band_h * 0.5))
+    tb = bd.textbbox((0, 0), spaced, font=font)
+    tw, th = tb[2] - tb[0], tb[3] - tb[1]
+    bd.text(((band_w - tw) / 2 - tb[0], (band_h - th) / 2 - tb[1]),
+            spaced, font=font, fill=text_color)
+
+    # Rotate to a "/" banner and center it near the bottom-right corner.
+    band = band.rotate(45, expand=True, resample=Image.BICUBIC)
+    corner = int(size * 0.80)
+    overlay = Image.new("RGBA", icon.size, (0, 0, 0, 0))
+    overlay.paste(band, (corner - band.width // 2, corner - band.height // 2), band)
+
+    out = Image.alpha_composite(icon, overlay)
+    # Clip ribbon to the icon body so it follows the rounded edge.
+    out.putalpha(ImageChops.multiply(out.getchannel("A"), icon.getchannel("A")))
+    return out
 
 def generate_electron_icons(source_img, output_dir):
     """Generate icons for the Electron app"""
@@ -206,6 +257,14 @@ def main():
     # Generate Electron icons in assets directory
     electron_output_dir = os.path.join(script_dir, "assets")
     generate_electron_icons(source_img, electron_output_dir)
+
+    # Dev-badged icon for non-packaged builds (applied via app.dock.setIcon).
+    print("\nGenerating dev-badged icon...")
+    dev_base = process_icon_with_padding(source_img, 1024)
+    dev_icon = add_dev_ribbon(dev_base, "DEV")
+    dev_path = os.path.join(electron_output_dir, "icon-dev.png")
+    dev_icon.save(dev_path, "PNG")
+    print(f"    ✓ {os.path.relpath(dev_path, script_dir)}")
 
     print("\n✅ All icons generated successfully!")
     print("\nIcon locations:")
