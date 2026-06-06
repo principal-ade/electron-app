@@ -346,6 +346,15 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
     });
   }, [topicEntries, normalizedQuery]);
 
+  // The default list browse hides `done` topics so the view stays focused on
+  // live work; the board's Done column and search both still surface them, so
+  // they're never lost. Search runs against `filteredTopics` (every status),
+  // which is why the hide only applies to the non-searching browse list.
+  const browseTopics = React.useMemo(
+    () => topicEntries.filter((t) => (t.status?.state ?? 'active') !== 'done'),
+    [topicEntries],
+  );
+
   // The first `topicLimit` topics are always shown; the remainder reveal in a
   // height-animated block when expanded. `topicLimit` (6) divides evenly into
   // every possible column count (1–3 within the 1100px container), so the base
@@ -353,8 +362,8 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
   // searching the split collapses — every match lands in the base list.
   const baseTopics = searching
     ? filteredTopics
-    : topicEntries.slice(0, topicLimit);
-  const extraTopics = searching ? [] : topicEntries.slice(topicLimit);
+    : browseTopics.slice(0, topicLimit);
+  const extraTopics = searching ? [] : browseTopics.slice(topicLimit);
 
   // The list-view grid switches to an internal scroll once it's showing a long
   // list — "All topics" expanded (extra rows revealed) or a search with
@@ -454,9 +463,11 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
         fill={fill}
         eyebrowIcon={<Library size={12} color={theme.colors.primary} />}
         eyebrow="Topics"
-        eyebrowAccessory={
+        title={
           topicEntries.length > 0 ? (
-            <>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: 10 }}
+            >
               <ViewModeSwitch
                 theme={theme}
                 value={viewMode}
@@ -468,10 +479,11 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
                 onChange={setTopicQuery}
                 onActiveChange={setSearchActive}
               />
-            </>
-          ) : undefined
+            </div>
+          ) : (
+            'Your topics'
+          )
         }
-        title="Your topics"
         subtitle={
           topicEntries.length === 0
             ? 'Curated sets of trails on a shared subject.'
@@ -518,6 +530,13 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
           <EmptyHint
             theme={theme}
             text={`No topics match “${topicQuery.trim()}”.`}
+          />
+        ) : viewMode === 'list' && !searching && browseTopics.length === 0 ? (
+          // Every topic is done, so the focused browse list is empty. Point at
+          // the board / search, which still surface done topics.
+          <EmptyHint
+            theme={theme}
+            text="Every topic is done. Search above or switch to the board view to see them."
           />
         ) : (
           // A single LayoutGroup spans both views so a card's `layoutId`
@@ -690,7 +709,11 @@ function Section({
   eyebrowIcon?: React.ReactNode;
   eyebrow: string;
   eyebrowAccessory?: React.ReactNode;
-  title: string;
+  /**
+   * The prominent line under the eyebrow. Usually a heading string, but can be
+   * arbitrary nodes (e.g. inline controls) — passing nothing drops the row.
+   */
+  title?: React.ReactNode;
   subtitle?: string;
   action?: React.ReactNode;
   /**
@@ -744,18 +767,25 @@ function Section({
             </div>
             {eyebrowAccessory}
           </div>
-          <div
-            style={{
-              color: theme.colors.text,
-              fontFamily: theme.fonts.heading ?? theme.fonts.body,
-              fontSize: theme.fontSizes[5],
-              fontWeight: theme.fontWeights.bold,
-              letterSpacing: '-0.01em',
-              lineHeight: 1.15,
-            }}
-          >
-            {title}
-          </div>
+          {title != null &&
+            (typeof title === 'string' ? (
+              <div
+                style={{
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.heading ?? theme.fonts.body,
+                  fontSize: theme.fontSizes[5],
+                  fontWeight: theme.fontWeights.bold,
+                  letterSpacing: '-0.01em',
+                  lineHeight: 1.15,
+                }}
+              >
+                {title}
+              </div>
+            ) : (
+              // Non-string titles (e.g. inline controls) render raw so they
+              // keep their own styling instead of the heading treatment.
+              title
+            ))}
           {subtitle && (
             <div
               style={{
