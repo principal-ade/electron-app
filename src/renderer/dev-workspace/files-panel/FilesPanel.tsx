@@ -12,9 +12,6 @@ import type {
   FileTree as RepoFileTree,
   GitStatusWithFiles,
 } from '@principal-ai/repository-abstraction';
-import { Plus } from 'lucide-react';
-import { useScopeManagerOptional } from '../scope-manager-provider';
-import { ScopesTab, AddScopeModal } from '../scopes-tab';
 
 interface FilesPanelContext extends PanelContextValue {
   fileTree?: DataSlice<RepoFileTree | null>;
@@ -27,177 +24,104 @@ export interface FilesPanelProps {
   events: PanelEventEmitter;
 }
 
-type ActiveTab = 'files' | 'scopes';
-type AuditMode = 'off' | 'uncovered' | 'covered';
+type FileFilter = 'all' | 'touched';
 
-const TAB_DEFINITIONS: { id: ActiveTab; label: string; accent: string }[] = [
-  { id: 'files', label: 'File tree', accent: '#3b82f6' },
-  { id: 'scopes', label: 'Scopes', accent: '#a855f7' },
-];
-
-const AUDIT_DEFINITIONS: { mode: AuditMode; label: string; accent: string }[] = [
-  { mode: 'off', label: 'Off', accent: '#475569' },
-  { mode: 'uncovered', label: 'Uncovered', accent: '#dc2626' },
-  { mode: 'covered', label: 'Covered', accent: '#16a34a' },
-];
-
+/**
+ * The dev workspace file tree.
+ *
+ * This used to carry a Scopes tab, a coverage/audit filter, an "add to scope"
+ * modal, and a drag host — scope-authoring tooling layered on top of the tree.
+ * That tooling has been deprecated here in favor of the slimmer Alexandria
+ * workspace panel: a plain repository file tree with git-status coloring and a
+ * single toggle to narrow the view to files that have been "touched" (have
+ * uncommitted git changes).
+ *
+ * The scope system itself is NOT gone — `ScopeManagerProvider` is still mounted
+ * by DevWorkspaceApp and consumed by the File City explorer. This panel simply
+ * no longer reads or writes scopes. Areas authored in the trail view are the
+ * intended future on-ramp to formalized scopes; until that lands, the file tree
+ * stays scope-agnostic.
+ */
 export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {
   const { theme } = useTheme();
-  const [activeTab, setActiveTab] = React.useState<ActiveTab>('files');
-  const scopeCtx = useScopeManagerOptional();
-
-  return (
-    <div
-      style={{
-        height: '100%',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        background: theme.colors.background,
-        color: theme.colors.text,
-        fontFamily: theme.fonts.body,
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          height: 40,
-          borderBottom: `1px solid ${theme.colors.border}`,
-          background: theme.colors.backgroundSecondary,
-        }}
-      >
-        {TAB_DEFINITIONS.map((tab) => {
-          const active = activeTab === tab.id;
-          const disabled = tab.id === 'scopes' && !scopeCtx;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => !disabled && setActiveTab(tab.id)}
-              disabled={disabled}
-              title={
-                disabled
-                  ? 'Scopes tab requires a ScopeManagerProvider'
-                  : undefined
-              }
-              style={{
-                flex: 1,
-                padding: '0 12px',
-                background: active
-                  ? theme.colors.background
-                  : 'transparent',
-                color: active
-                  ? theme.colors.text
-                  : disabled
-                    ? theme.colors.textSecondary
-                    : theme.colors.textSecondary,
-                border: 'none',
-                borderBottom: `2px solid ${active ? tab.accent : 'transparent'}`,
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                fontSize: 12,
-                fontWeight: active ? 600 : 400,
-                opacity: disabled ? 0.5 : 1,
-              }}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {activeTab === 'files' ? (
-        <FileTreeTab context={context} events={events} />
-      ) : (
-        <ScopesTab />
-      )}
-    </div>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// File tree tab
-// ---------------------------------------------------------------------------
-
-const FileTreeTab: React.FC<{
-  context: FilesPanelContext;
-  events: PanelEventEmitter;
-}> = ({ context, events }) => {
-  const { theme } = useTheme();
-  const scopeCtx = useScopeManagerOptional();
   const tree = context.fileTree?.data ?? null;
   const rootPath = tree?.metadata?.id ?? '';
-  const repoPath = context.currentScope?.repository?.path ?? '';
 
   const allPaths = React.useMemo<string[]>(() => {
     if (!tree) return [];
     return tree.allFiles.map((f) => f.path).sort();
   }, [tree]);
 
-  // Compute coverage from the active ScopeManager workspace. A path is
-  // "covered" if any scope.paths or namespace.paths matches it (exact or
-  // ancestor directory). Scope/namespace paths are repo-relative; the file
-  // tree's paths include the rootPath prefix, so we strip it before comparing.
-  const claimedPaths = React.useMemo<string[]>(() => {
-    const scopes = scopeCtx?.workspace.scopes ?? [];
+  // Repo-relative paths of files with uncommitted git changes. A file is
+  // "touched" if git reports it as modified, staged, created, or untracked.
+  // Deleted files are intentionally excluded — they no longer exist in the
+  // tree, so filtering to them would yield an empty view. Git reports
+  // repo-relative paths; we match those against each tree node's relativePath
+  // (also repo-relative) rather than gambling on a rootPath prefix lining up
+  // with the tree's absolute `path` strings.
+  const touchedRelative = React.useMemo<Set<string>>(() => {
+    const status = context.gitStatusWithFiles?.data;
+    if (!status) return new Set();
     const set = new Set<string>();
-    for (const scope of scopes) {
-      for (const p of scope.paths) set.add(p);
-      for (const ns of scope.namespaces) for (const p of ns.paths) set.add(p);
-    }
-    return Array.from(set);
-  }, [scopeCtx?.workspace.scopes]);
+    for (const p of status.modifiedFiles) set.add(p);
+    for (const p of status.stagedFiles) set.add(p);
+    for (const p of status.createdFiles) set.add(p);
+    for (const p of status.untrackedFiles) set.add(p);
+    return set;
+  }, [context.gitStatusWithFiles?.data]);
 
-  const isCovered = React.useCallback(
-    (treePath: string) => {
-      if (claimedPaths.length === 0) return false;
-      const candidate = stripRoot(treePath, rootPath);
-      for (const claimed of claimedPaths) {
-        if (candidate === claimed || candidate.startsWith(claimed + '/')) {
-          return true;
-        }
-      }
-      return false;
-    },
-    [claimedPaths, rootPath],
-  );
+  // The tree-node `path` strings (what useFileTree keys on) for touched files.
+  // Resolved by joining git's relative paths to tree nodes via relativePath.
+  const touchedTreePaths = React.useMemo<string[]>(() => {
+    if (!tree || touchedRelative.size === 0) return [];
+    return tree.allFiles
+      .filter((f) => touchedRelative.has(f.relativePath))
+      .map((f) => f.path);
+  }, [tree, touchedRelative]);
 
-  const { coveredPaths, uncoveredPaths } = React.useMemo(() => {
-    const covered: string[] = [];
-    const uncovered: string[] = [];
-    for (const p of allPaths) {
-      (isCovered(p) ? covered : uncovered).push(p);
-    }
-    return { coveredPaths: covered, uncoveredPaths: uncovered };
-  }, [allPaths, isCovered]);
+  const [filter, setFilter] = React.useState<FileFilter>('all');
 
-  const [auditMode, setAuditMode] = React.useState<AuditMode>('off');
-
-  // Force audit off when there are no scopes — the filter is meaningless.
-  const effectiveAuditMode: AuditMode =
-    claimedPaths.length === 0 ? 'off' : auditMode;
+  // The "Touched" filter is meaningless with no matches; fall back to "all"
+  // so the toggle can never strand the user on an empty tree.
+  const effectiveFilter: FileFilter =
+    touchedTreePaths.length === 0 ? 'all' : filter;
 
   const filteredPaths = React.useMemo<string[]>(() => {
-    const base =
-      effectiveAuditMode === 'uncovered'
-        ? uncoveredPaths
-        : effectiveAuditMode === 'covered'
-          ? coveredPaths
-          : allPaths;
+    const base = effectiveFilter === 'touched' ? touchedTreePaths : allPaths;
     // @pierre/trees' Builder rejects consecutive duplicate paths; FS-watcher
     // batches can coalesce a delete+add for the same path and leak a duplicate
     // into tree.allFiles, so dedupe before resetPaths can crash on it.
-    return Array.from(new Set(base));
-  }, [effectiveAuditMode, allPaths, coveredPaths, uncoveredPaths]);
+    return Array.from(new Set(base)).sort();
+  }, [effectiveFilter, allPaths, touchedTreePaths]);
 
   const initialExpandedPaths = React.useMemo<string[]>(
     () => (rootPath ? [rootPath] : []),
     [rootPath],
   );
 
-  const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
+  // Ancestor directories (tree-node ids) of every file in the current view.
+  // Used to auto-open folders in the "Touched" filter so its small, narrowed
+  // set is visible rather than buried under collapsed parents. Derived from
+  // prefixes of each file's own tree-node path — those are exactly the
+  // directory ids @pierre/trees created from the same strings, so getItem()
+  // resolves them regardless of whether paths are absolute or repo-relative.
+  const ancestorDirPaths = React.useMemo<string[]>(() => {
+    const dirs = new Set<string>();
+    for (const p of filteredPaths) {
+      const segments = p.split('/');
+      // Every prefix up to (but not including) the file itself is an ancestor
+      // directory: a/b/c.ts -> "a", "a/b".
+      for (let i = 1; i < segments.length; i++) {
+        const dir = segments.slice(0, i).join('/');
+        if (dir) dirs.add(dir);
+      }
+    }
+    return Array.from(dirs);
+  }, [filteredPaths]);
 
   const gitStatusEntries = React.useMemo<GitStatusEntry[]>(
-    () => buildGitStatusEntries(context.gitStatusWithFiles?.data, rootPath),
-    [context.gitStatusWithFiles?.data, rootPath],
+    () => buildGitStatusEntries(tree, context.gitStatusWithFiles?.data),
+    [tree, context.gitStatusWithFiles?.data],
   );
 
   const modelRef = React.useRef<ReturnType<typeof useFileTree>['model'] | null>(
@@ -210,7 +134,6 @@ const FileTreeTab: React.FC<{
     gitStatus: gitStatusEntries,
     onSelectionChange: (selected) => {
       const next = selected[0] ?? null;
-      setSelectedPath(next);
       if (!next) return;
       const item = modelRef.current?.getItem(next);
       if (item && item.isDirectory()) return;
@@ -233,18 +156,47 @@ const FileTreeTab: React.FC<{
     model.resetPaths(filteredPaths, { initialExpandedPaths });
   }, [model, filteredPaths, initialExpandedPaths]);
 
+  // Auto-expand folders so the "Touched" filter reveals its files instead of
+  // leaving them collapsed. Runs after the resetPaths effect above (declaration
+  // order = run order on the same commit), so it operates on the rebuilt tree.
+  // "All files" is left collapsed-to-root — auto-opening the whole repo would
+  // be overwhelming. Expansion is driven imperatively via getItem().expand()
+  // rather than resetPaths' initialExpandedPaths, whose sorted-prefix walk is
+  // unreliable across rebuilds.
+  React.useEffect(() => {
+    if (effectiveFilter !== 'touched') return;
+    for (const dir of ancestorDirPaths) {
+      // getItem accepts a bare directory path; fall back to the trailing-slash
+      // canonical form defensively. `'expand' in item` narrows the handle union
+      // to a directory handle — isDirectory() returns a plain boolean and
+      // doesn't narrow the type.
+      const item = model.getItem(dir) ?? model.getItem(`${dir}/`);
+      if (item && 'expand' in item && !item.isExpanded()) item.expand();
+    }
+  }, [model, effectiveFilter, ancestorDirPaths]);
+
+  // useFileTree() builds the model once and ignores later option changes, so
+  // the gitStatus captured at first render (empty, since git status loads
+  // async) would stick forever. Push updates through the model's imperative
+  // setter whenever the resolved entries change.
+  React.useEffect(() => {
+    model.setGitStatus(gitStatusEntries);
+  }, [model, gitStatusEntries]);
+
   if (!tree) {
     return (
       <div
         style={{
-          flex: 1,
-          minHeight: 0,
+          height: '100%',
+          width: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           padding: 16,
+          background: theme.colors.background,
           color: theme.colors.textSecondary,
           fontSize: theme.fontSizes[1],
+          fontFamily: theme.fonts.body,
         }}
       >
         No file tree available
@@ -252,235 +204,115 @@ const FileTreeTab: React.FC<{
     );
   }
 
-  const showAuditFilter = claimedPaths.length > 0;
+  const hasTouched = touchedTreePaths.length > 0;
+  const FILTERS: { id: FileFilter; label: string; count: number }[] = [
+    { id: 'all', label: 'All files', count: allPaths.length },
+    { id: 'touched', label: 'Touched', count: touchedTreePaths.length },
+  ];
 
   return (
     <div
       style={{
-        flex: 1,
-        minHeight: 0,
+        height: '100%',
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
+        background: theme.colors.background,
+        color: theme.colors.text,
+        fontFamily: theme.fonts.body,
       }}
     >
-      <SelectionHeader
-        selectedPath={selectedPath}
-        rootPath={rootPath}
-      />
-
-
-      {showAuditFilter && (
-        <div
-          style={{
-            padding: '10px 12px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-          }}
-        >
-          <div
-            style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-            }}
-          >
-            Audit filter
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: 4,
-              overflow: 'hidden',
-              fontSize: 12,
-            }}
-          >
-            {AUDIT_DEFINITIONS.map(({ mode, label, accent }, i) => {
-              const count =
-                mode === 'off'
-                  ? allPaths.length
-                  : mode === 'uncovered'
-                    ? uncoveredPaths.length
-                    : coveredPaths.length;
-              const active = effectiveAuditMode === mode;
-              return (
-                <button
-                  key={mode}
-                  onClick={() => setAuditMode(mode)}
-                  style={{
-                    flex: 1,
-                    padding: '6px 4px',
-                    background: active ? accent : 'transparent',
-                    border: 'none',
-                    borderLeft:
-                      i === 0 ? 'none' : `1px solid ${theme.colors.border}`,
-                    color: active ? '#ffffff' : theme.colors.text,
-                    fontWeight: active ? 500 : 400,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                    minWidth: 0,
-                  }}
-                >
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {label}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 10,
-                      color: active ? '#fef3c7' : theme.colors.textSecondary,
-                      fontWeight: 400,
-                    }}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <FileTreeDragHost rootPath={rootPath} repoPath={repoPath}>
-        <FileTree
-          model={model}
-          style={
-            {
-              flex: 1,
-              minHeight: 0,
-              paddingTop: 8,
-              '--trees-bg-override': 'transparent',
-              '--trees-search-bg-override': theme.colors.backgroundSecondary,
-              '--trees-theme-list-active-selection-bg': `color-mix(in oklab, ${theme.colors.accent} 28%, transparent)`,
-              '--trees-theme-list-hover-bg': `color-mix(in oklab, ${theme.colors.accent} 14%, transparent)`,
-            } as React.CSSProperties
-          }
-        />
-      </FileTreeDragHost>
-    </div>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Selection header — shows the currently selected path and surfaces the
-// "+ Add to scope" entry point that opens AddScopeModal pre-filled with that
-// path. Only visible when a ScopeManagerProvider is mounted.
-// ---------------------------------------------------------------------------
-
-const SelectionHeader: React.FC<{
-  selectedPath: string | null;
-  rootPath: string;
-}> = ({ selectedPath, rootPath }) => {
-  const { theme } = useTheme();
-  const scopeCtx = useScopeManagerOptional();
-  const [showAddModal, setShowAddModal] = React.useState(false);
-
-  const strippedPath = selectedPath ? stripRoot(selectedPath, rootPath) : null;
-  const canAdd = !!scopeCtx && !!strippedPath;
-
-  const scopes = scopeCtx?.workspace.scopes ?? [];
-
-  const coveringScopes = React.useMemo(() => {
-    if (!scopeCtx || !strippedPath) return [];
-    return scopeCtx.workspace.scopes.filter((s) =>
-      s.paths.some(
-        (p) => strippedPath === p || strippedPath.startsWith(p + '/'),
-      ),
-    );
-  }, [scopeCtx, strippedPath]);
-
-  return (
-    <div
-      style={{
-        padding: '10px 14px',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        fontSize: theme.fontSizes[0],
-        color: theme.colors.textSecondary,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-      }}
-    >
-      Selection
       <div
         style={{
-          marginTop: 4,
-          fontFamily: 'monospace',
-          fontSize: theme.fontSizes[0],
-          color: theme.colors.text,
-          textTransform: 'none',
-          letterSpacing: 0,
-          wordBreak: 'break-all',
-          minHeight: 14,
+          padding: '10px 12px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          display: 'flex',
         }}
       >
-        {strippedPath ?? '(no selection)'}
-      </div>
-
-      {canAdd && coveringScopes.length > 0 && (
         <div
           style={{
-            marginTop: 8,
-            fontSize: theme.fontSizes[0],
-            color: theme.colors.textSecondary,
-            textTransform: 'none',
-            letterSpacing: 0,
-          }}
-        >
-          In scope:{' '}
-          {coveringScopes.map((s, i) => (
-            <React.Fragment key={s.name}>
-              {i > 0 && ', '}
-              <code style={{ color: theme.colors.text }}>{s.name}</code>
-            </React.Fragment>
-          ))}
-        </div>
-      )}
-
-      {canAdd && (
-        <button
-          onClick={() => setShowAddModal(true)}
-          style={{
-            marginTop: 8,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '4px 10px',
-            background: theme.colors.primary,
-            color: '#ffffff',
-            border: 'none',
+            display: 'flex',
+            border: `1px solid ${theme.colors.border}`,
             borderRadius: 4,
-            cursor: 'pointer',
-            fontSize: 11,
-            fontWeight: 500,
-            textTransform: 'none',
-            letterSpacing: 0,
+            overflow: 'hidden',
+            fontSize: 12,
+            flex: 1,
           }}
         >
-          <Plus size={12} strokeWidth={2.5} />
-          Add to scope
-        </button>
-      )}
+          {FILTERS.map(({ id, label, count }, i) => {
+            const active = effectiveFilter === id;
+            const disabled = id === 'touched' && !hasTouched;
+            return (
+              <button
+                key={id}
+                onClick={() => !disabled && setFilter(id)}
+                disabled={disabled}
+                title={
+                  disabled ? 'No files with uncommitted changes' : undefined
+                }
+                style={{
+                  flex: 1,
+                  padding: '6px 8px',
+                  background: active ? theme.colors.primary : 'transparent',
+                  border: 'none',
+                  borderLeft:
+                    i === 0 ? 'none' : `1px solid ${theme.colors.border}`,
+                  color: active
+                    ? '#ffffff'
+                    : disabled
+                      ? theme.colors.textSecondary
+                      : theme.colors.text,
+                  fontWeight: active ? 500 : 400,
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  opacity: disabled ? 0.5 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  minWidth: 0,
+                }}
+              >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {label}
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: active ? '#ffffff' : theme.colors.textSecondary,
+                    fontWeight: 400,
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-      {showAddModal && scopeCtx && strippedPath && (
-        <AddScopeModal
-          scopes={scopes}
-          initialPaths={[strippedPath]}
-          onSubmit={(input) =>
-            scopeCtx.manager.addToScope({
-              scopeName: input.scopeName,
-              namespaceName: input.namespaceName,
-              description: input.description,
-              paths: input.paths,
-            })
-          }
-          onClose={() => setShowAddModal(false)}
-        />
-      )}
+      <FileTree
+        model={model}
+        style={
+          {
+            flex: 1,
+            minHeight: 0,
+            paddingTop: 8,
+            '--trees-bg-override': 'transparent',
+            '--trees-search-bg-override': theme.colors.backgroundSecondary,
+            '--trees-theme-list-active-selection-bg': `color-mix(in oklab, ${theme.colors.accent} 28%, transparent)`,
+            '--trees-theme-list-hover-bg': `color-mix(in oklab, ${theme.colors.accent} 14%, transparent)`,
+            // Pin git-status colors to theme tokens. The library otherwise
+            // derives them via CSS light-dark(), which needs an inherited
+            // color-scheme that doesn't reach this panel — leaving changed
+            // files visually unstyled. Overriding makes them deterministic.
+            '--trees-git-modified-color-override': theme.colors.warning,
+            '--trees-git-added-color-override': theme.colors.success,
+            '--trees-git-untracked-color-override': theme.colors.success,
+            '--trees-git-deleted-color-override': theme.colors.error,
+            '--trees-git-renamed-color-override': theme.colors.info,
+          } as React.CSSProperties
+        }
+      />
     </div>
   );
 };
@@ -490,108 +322,34 @@ function stripRoot(path: string, root: string): string {
   return path;
 }
 
-// Adapter: collapse the categorical buckets in `GitStatusWithFiles` (repo-relative
-// paths) into Pierre's flat `GitStatusEntry[]` (tree-prefixed paths). Pierre stores
-// one status per path, so when a file appears in multiple buckets the higher-
-// priority status wins. Worktree state takes precedence over index state, since
-// that's what the user is actively editing.
+// Adapter: collapse the categorical buckets in `GitStatusWithFiles` (repo-
+// relative paths) into Pierre's flat `GitStatusEntry[]`, keyed by the same
+// tree-node `path` strings the FileTree renders. Git's relative paths are
+// resolved to tree-node paths via each FileInfo's relativePath, so coloring
+// works regardless of whether the tree uses absolute or relative paths. Pierre
+// stores one status per path, so when a file appears in multiple buckets the
+// later (higher-priority) write wins.
 function buildGitStatusEntries(
+  tree: RepoFileTree | null,
   status: GitStatusWithFiles | null | undefined,
-  rootPath: string,
 ): GitStatusEntry[] {
-  if (!status) return [];
+  if (!tree || !status) return [];
+  // relativePath -> tree-node path, so git's relative buckets can be mapped
+  // onto the exact strings the tree keys on.
+  const relToPath = new Map<string, string>();
+  for (const f of tree.allFiles) relToPath.set(f.relativePath, f.path);
+
   const map = new Map<string, GitStatusEntry['status']>();
-  const prefix = rootPath ? rootPath + '/' : '';
-  // Lowest priority first; later writes override earlier ones.
-  for (const p of status.untrackedFiles) map.set(prefix + p, 'untracked');
-  for (const p of status.createdFiles) map.set(prefix + p, 'added');
-  for (const p of status.stagedFiles) map.set(prefix + p, 'modified');
-  for (const p of status.modifiedFiles) map.set(prefix + p, 'modified');
-  for (const p of status.deletedFiles) map.set(prefix + p, 'deleted');
+  const set = (rel: string, s: GitStatusEntry['status']) => {
+    const path = relToPath.get(rel);
+    if (path) map.set(path, s);
+  };
+  for (const p of status.untrackedFiles) set(p, 'untracked');
+  for (const p of status.createdFiles) set(p, 'added');
+  for (const p of status.stagedFiles) set(p, 'modified');
+  for (const p of status.modifiedFiles) set(p, 'modified');
+  for (const p of status.deletedFiles) set(p, 'deleted');
   const entries: GitStatusEntry[] = [];
   for (const [path, s] of map) entries.push({ path, status: s });
   return entries;
 }
-
-function shellQuote(s: string): string {
-  if (/^[\w@%+=:,./-]+$/.test(s)) return s;
-  return `'${s.replace(/'/g, `'\\''`)}'`;
-}
-
-// Pierre's <file-tree-container> renders into an open shadow root, so styles
-// and event targets from the light DOM don't reach the rows. We inject a
-// stylesheet into the shadow root to mark file rows draggable, and use a
-// capturing dragstart listener with composedPath() to read the row's
-// data-item-path before the event retargets to the host.
-const FileTreeDragHost: React.FC<
-  React.PropsWithChildren<{ rootPath: string; repoPath: string }>
-> = ({ rootPath, repoPath, children }) => {
-  const hostRef = React.useRef<HTMLDivElement | null>(null);
-  const rootRef = React.useRef({ rootPath, repoPath });
-  rootRef.current = { rootPath, repoPath };
-
-  React.useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-
-    const injectedRoots = new WeakSet<ShadowRoot>();
-    const injectStyles = () => {
-      const containers = host.querySelectorAll('file-tree-container');
-      containers.forEach((el) => {
-        const sr = (el as HTMLElement & { shadowRoot: ShadowRoot | null })
-          .shadowRoot;
-        if (!sr || injectedRoots.has(sr)) return;
-        const style = document.createElement('style');
-        style.textContent = `[data-type="item"] { -webkit-user-drag: element; cursor: grab; }`;
-        sr.appendChild(style);
-        injectedRoots.add(sr);
-      });
-    };
-
-    injectStyles();
-    const mo = new MutationObserver(injectStyles);
-    mo.observe(host, { childList: true, subtree: true });
-
-    const onDragStart = (e: DragEvent) => {
-      const path = e.composedPath();
-      let row: HTMLElement | null = null;
-      for (const node of path) {
-        if (
-          node instanceof HTMLElement &&
-          node.getAttribute?.('data-type') === 'item'
-        ) {
-          row = node;
-          break;
-        }
-      }
-      if (!row) return;
-      const treePath = row.getAttribute('data-item-path');
-      if (!treePath || !e.dataTransfer) return;
-      const { rootPath: rp, repoPath: rep } = rootRef.current;
-      const relative = stripRoot(treePath, rp);
-      const absolute = rep ? `${rep}/${relative}` : relative;
-      e.dataTransfer.effectAllowed = 'copy';
-      e.dataTransfer.setData('text/plain', shellQuote(absolute));
-    };
-
-    host.addEventListener('dragstart', onDragStart, true);
-    return () => {
-      mo.disconnect();
-      host.removeEventListener('dragstart', onDragStart, true);
-    };
-  }, []);
-
-  return (
-    <div
-      ref={hostRef}
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      {children}
-    </div>
-  );
-};
