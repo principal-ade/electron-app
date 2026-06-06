@@ -401,6 +401,10 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
         events={events}
         briefLayout="split"
         mobileShowMap={mobileShowMap}
+        // Single local user: notes are authored 'You', so the panel's note
+        // Edit/Delete (gated on note.author === currentAuthor since 0.5.152)
+        // need a matching currentAuthor. Harmless on 0.5.151 (its old default).
+        currentAuthor="You"
       />
       {shareModalTrail && repositoryPath && (
         <TrailShareModal

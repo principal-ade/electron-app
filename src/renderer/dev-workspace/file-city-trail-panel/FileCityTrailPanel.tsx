@@ -335,6 +335,10 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
       briefSide={briefSide}
       defaultHideMap={defaultHideMap}
       onBriefLayoutChange={onBriefLayoutChange}
+      // Single local user: notes are authored 'You', so the panel's note
+      // Edit/Delete (gated on note.author === currentAuthor since 0.5.152)
+      // need a matching currentAuthor. Harmless on 0.5.151 (its old default).
+      currentAuthor="You"
     />
   );
 };
