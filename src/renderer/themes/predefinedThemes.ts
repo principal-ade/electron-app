@@ -12,6 +12,8 @@ import {
   defaultTerminalTheme,
   landingPageTheme,
   landingPageLightTheme,
+  iceTangerineTheme,
+  iceTangerineDarkTheme,
 } from '@principal-ade/industry-theme';
 
 // Custom slate theme with our overrides
@@ -183,6 +185,16 @@ export const predefinedThemes: Record<
     name: 'Principal AI Light',
     description: 'Light variant of the Principal AI theme',
     theme: landingPageLightTheme,
+  },
+  iceTangerine: {
+    name: 'Ice Tangerine',
+    description: 'Cool ice blue backgrounds with vibrant tangerine accents',
+    theme: iceTangerineTheme,
+  },
+  iceTangerineDark: {
+    name: 'Ice Tangerine Dark',
+    description: 'Deep navy backgrounds with vibrant tangerine accents',
+    theme: iceTangerineDarkTheme,
   },
   terminal: {
     name: 'Terminal',

@@ -20,6 +20,8 @@ import {
   defaultTerminalTheme,
   landingPageTheme,
   landingPageLightTheme,
+  iceTangerineTheme,
+  iceTangerineDarkTheme,
 } from '@principal-ade/industry-theme';
 
 export interface ThemeMetadata {
@@ -44,6 +46,18 @@ export const predefinedThemesMeta: Record<string, ThemeMetadata> = {
     displayName: 'Principal AI Light',
     description: 'Light variant of the Principal AI theme',
     theme: landingPageLightTheme,
+  },
+  iceTangerine: {
+    name: 'iceTangerine',
+    displayName: 'Ice Tangerine',
+    description: 'Cool ice blue backgrounds with vibrant tangerine accents',
+    theme: iceTangerineTheme,
+  },
+  iceTangerineDark: {
+    name: 'iceTangerineDark',
+    displayName: 'Ice Tangerine Dark',
+    description: 'Deep navy backgrounds with vibrant tangerine accents',
+    theme: iceTangerineDarkTheme,
   },
   terminal: {
     name: 'terminal',
