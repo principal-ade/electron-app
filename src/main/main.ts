@@ -473,15 +473,30 @@ app
   .then(async () => {
     // Dev builds: badge the dock icon (macOS) so a dev app is visually
     // distinct from a production install. Packaged builds are untouched.
+    // The dev main bundle lives in .erb/dll, so resolve the asset against
+    // several candidate roots and use the first that exists.
     if (!app.isPackaged && process.platform === 'darwin' && app.dock) {
       try {
-        const devIconPath = path.join(app.getAppPath(), 'assets', 'icon-dev.png');
-        if (fs.existsSync(devIconPath)) {
-          app.dock.setIcon(nativeImage.createFromPath(devIconPath));
-          console.log('[Main] Applied dev dock icon:', devIconPath);
+        const candidates = [
+          path.join(app.getAppPath(), 'assets', 'icon-dev.png'),
+          path.join(process.cwd(), 'assets', 'icon-dev.png'),
+          path.join(__dirname, '..', '..', 'assets', 'icon-dev.png'),
+          path.join(__dirname, '..', 'assets', 'icon-dev.png'),
+        ];
+        const devIconPath = candidates.find((p) => fs.existsSync(p));
+        if (devIconPath) {
+          const img = nativeImage.createFromPath(devIconPath);
+          log.info(
+            `[Main] Applying dev dock icon: ${devIconPath} (empty=${img.isEmpty()})`,
+          );
+          app.dock.setIcon(img);
+        } else {
+          log.warn(
+            `[Main] Dev dock icon not found. Looked in:\n  ${candidates.join('\n  ')}`,
+          );
         }
       } catch (err) {
-        console.warn('[Main] Failed to apply dev dock icon:', err);
+        log.warn('[Main] Failed to apply dev dock icon:', err);
       }
     }
 
