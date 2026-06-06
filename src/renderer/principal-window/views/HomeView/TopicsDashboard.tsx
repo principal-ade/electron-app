@@ -197,6 +197,10 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
   // spring settles, at which point the lanes take over their own scrolling.
   const [boardEntering, setBoardEntering] = React.useState(false);
   const enterBoardTimer = React.useRef<number | null>(null);
+  // Pending staged "Projects re-enters after the extra topics collapse" timer
+  // from a reverse "Show projects" toggle. Tracked so a quick re-toggle (or a
+  // board switch) can cancel it before it fires.
+  const restoreProjectsTimer = React.useRef<number | null>(null);
   // Free-text filter for the topics section. Matches title, the topic's project
   // repo names, and any custom status label. While active it shows every match
   // (the topicLimit/"All topics" split is bypassed) and works in both views.
@@ -212,6 +216,8 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
   React.useEffect(
     () => () => {
       if (enterBoardTimer.current) window.clearTimeout(enterBoardTimer.current);
+      if (restoreProjectsTimer.current)
+        window.clearTimeout(restoreProjectsTimer.current);
     },
     [],
   );
@@ -252,6 +258,12 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
   };
 
   const selectViewMode = (next: 'list' | 'kanban') => {
+    // A view switch overrides any staged Projects-restore from a reverse "Show
+    // projects" toggle; cancel it so it can't fire against the new layout.
+    if (restoreProjectsTimer.current) {
+      window.clearTimeout(restoreProjectsTimer.current);
+      restoreProjectsTimer.current = null;
+    }
     if (next === 'list') {
       // Cancel an in-flight switch-to-board that hasn't committed yet, bringing
       // Projects back (unless "All topics" owns that space).
@@ -373,6 +385,12 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
     void UserPreferencesService.updatePreferences({
       trails: { showAllTopics: next },
     });
+    // Cancel a staged Projects-restore still pending from a prior reverse toggle
+    // so a quick re-toggle can't resurrect Projects after we've hidden it again.
+    if (restoreProjectsTimer.current) {
+      window.clearTimeout(restoreProjectsTimer.current);
+      restoreProjectsTimer.current = null;
+    }
     if (!showAllTopics) {
       // Forward: signal intent and start collapsing Projects. The extra topics
       // reveal only once Projects' fade-out completes.
@@ -384,7 +402,16 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
       // topics to collapse, in which case restore Projects immediately.
       setShowAllTopics(false);
       if (topicsExpanded && extraTopics.length > 0) {
+        // Collapse the extra topics, then bring Projects back once the collapse
+        // has played. Driven by a timer matching the 0.35s height animation
+        // rather than the block's onExitComplete — AnimatePresence does not fire
+        // onExitComplete reliably for a height:auto→0 exit, which left Projects
+        // stuck hidden until the toggle was clicked a second time.
         setTopicsExpanded(false);
+        restoreProjectsTimer.current = window.setTimeout(() => {
+          setProjectsPresent(true);
+          restoreProjectsTimer.current = null;
+        }, 350);
       } else {
         setTopicsExpanded(false);
         setProjectsPresent(true);
@@ -535,12 +562,10 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
                   onDeleteTopic={onDeleteTopic}
                 />
                 {/* Extra topics reveal by growing height from 0 → auto, so the
-                    container visibly expands instead of the cards popping in.
-                    When its collapse completes on reverse, Projects fades back. */}
-                <AnimatePresence
-                  initial={false}
-                  onExitComplete={() => setProjectsPresent(true)}
-                >
+                    container visibly expands instead of the cards popping in. On
+                    reverse, Projects is restored by a timer in toggleAllTopics
+                    (height:auto→0 exits don't fire onExitComplete reliably). */}
+                <AnimatePresence initial={false}>
                   {topicsExpanded && extraTopics.length > 0 && (
                     <motion.div
                       key="extra-topics"
