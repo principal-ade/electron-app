@@ -45,7 +45,7 @@ export const TitlebarButton: React.FC<TitlebarButtonProps> = ({
         borderRadius: '6px',
         border: 'none',
         backgroundColor: 'transparent',
-        color: mode === 'dark' ? '#9ca3af' : '#6b7280',
+        color: theme.colors.textSecondary,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -60,13 +60,11 @@ export const TitlebarButton: React.FC<TitlebarButtonProps> = ({
           mode === 'dark'
             ? 'rgba(255, 255, 255, 0.1)'
             : 'rgba(0, 0, 0, 0.05)';
-        e.currentTarget.style.color =
-          mode === 'dark' ? '#d1d5db' : '#374151';
+        e.currentTarget.style.color = theme.colors.text;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.backgroundColor = 'transparent';
-        e.currentTarget.style.color =
-          mode === 'dark' ? '#9ca3af' : '#6b7280';
+        e.currentTarget.style.color = theme.colors.textSecondary;
       }}
       aria-label={ariaLabel}
       title={title}

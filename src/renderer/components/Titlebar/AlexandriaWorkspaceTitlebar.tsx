@@ -353,7 +353,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
                     fontFamily: theme.fonts.body,
                     transition: 'all 0.15s',
                     boxShadow: isActive
-                      ? '0 1px 2px rgba(0, 0, 0, 0.15)'
+                      ? theme.shadows[1]
                       : 'none',
                   }}
                 >

@@ -37,7 +37,7 @@
 .titlebar-title {
   font-size: 15px;
   font-weight: 500;
-  color: #ffffff;
+  color: var(--titlebar-fg, #ffffff);
   opacity: 0.9;
   pointer-events: auto;
 }
@@ -54,7 +54,7 @@
   height: 100%;
   border: none;
   background: transparent;
-  color: #ffffff;
+  color: var(--titlebar-fg, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;

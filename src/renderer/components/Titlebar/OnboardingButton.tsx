@@ -54,7 +54,7 @@ export const OnboardingButton: React.FC<OnboardingButtonProps> = ({ onClick }) =
         backgroundColor: isComplete
           ? theme.colors.backgroundSecondary
           : theme.colors.primary,
-        color: isComplete ? theme.colors.textSecondary : '#ffffff',
+        color: isComplete ? theme.colors.textSecondary : theme.colors.textOnPrimary,
         border: `1px solid ${isComplete ? theme.colors.border : theme.colors.primary}`,
         cursor: 'pointer',
         fontSize: theme.fontSizes[1],

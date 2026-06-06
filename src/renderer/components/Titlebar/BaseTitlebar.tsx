@@ -77,6 +77,9 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
         display: 'flex',
         alignItems: 'center',
         position: 'relative',
+        // Expose titlebar foreground as a CSS var so Titlebar.css window
+        // controls (which use currentColor) track the active theme.
+        ['--titlebar-fg' as string]: theme.colors.text,
         ...style,
       }}
     >
