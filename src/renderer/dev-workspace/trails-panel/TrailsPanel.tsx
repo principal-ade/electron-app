@@ -98,7 +98,14 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
       if (!entry) return;
       setShareModal({
         trail: entry,
-        initialUrl: shares.sharedUrlByLocalId.get(id) ?? null,
+        // Create-once: reuse an existing publication rather than minting a
+        // second web-ade id. Prefer the share recorded this session, then
+        // fall back to the `sharedUrl` persisted on the entry from a prior
+        // session — without this fallback a fresh app start has an empty
+        // session map and re-shares, forking the id and orphaning the first
+        // publication's inbox deliveries and anon notes.
+        initialUrl:
+          shares.sharedUrlByLocalId.get(id) ?? entry.sharedUrl ?? null,
         source: 'local',
       });
     },

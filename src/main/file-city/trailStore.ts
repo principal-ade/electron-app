@@ -161,6 +161,24 @@ export class TrailStore {
     id: string,
     options?: TrailShareOptions,
   ): Promise<FileCityTrailShareResult> {
+    // Create-once: a trail publishes to web-ade exactly once. If this id was
+    // already shared, reuse that publication instead of minting a second
+    // web-ade id — every POST /api/trails mints a fresh id, and each id has
+    // its own anon-notes side-table and inbox deliveries, so notes/sends made
+    // against the first publication are invisible from a second one (the
+    // source of the inbox-shows-0-notes divergence). A deliberate re-publish
+    // belongs behind an explicit "regenerate share" action, not here.
+    const existing = await this.persistence.loadEntryById(id);
+    if (existing?.sharedAt && existing.sharedUrl) {
+      const reused = await this.resolveExistingShare(
+        existing.sharedUrl,
+        options?.repositoryPath ?? existing.repositoryPath,
+      );
+      if (reused) return reused;
+      // Prior publication couldn't be resolved (e.g. deleted on web-ade) —
+      // fall through and publish a fresh one, re-stamping the entry below.
+    }
+
     const result = await shareTrail(
       {
         loadPayload: (payloadId) => this.persistence.loadById(payloadId),
@@ -174,6 +192,32 @@ export class TrailStore {
     // `save` (TrailLockedError → 409); notes still flow via applyToPayload.
     await this.persistence.markShared(id, result.url);
     return result;
+  }
+
+  /**
+   * Resolve an already-published share back into a `FileCityTrailShareResult`
+   * from its persisted `sharedUrl`, without re-publishing. The web-ade id is
+   * the trailing `/trail/{id}` path segment; the index entry is pulled from
+   * the repo's shared list. Returns null when the id can't be parsed or the
+   * share is no longer listed, so the caller can fall back to a fresh publish.
+   */
+  private async resolveExistingShare(
+    sharedUrl: string,
+    repositoryPath?: string,
+  ): Promise<FileCityTrailShareResult | null> {
+    const lastSegment = sharedUrl.split('/').filter(Boolean).pop();
+    const shareId = lastSegment ? lastSegment.split(/[?#]/)[0] : null;
+    if (!shareId) return null;
+    try {
+      const { entries } = await this.listShared(
+        repositoryPath ? { repositoryPath } : undefined,
+      );
+      const entry = entries.find((e) => e.id === shareId);
+      if (!entry) return null;
+      return { url: sharedUrl, id: shareId, entry };
+    } catch {
+      return null;
+    }
   }
 
   listShared(

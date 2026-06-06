@@ -211,6 +211,12 @@ export const SharedTrailViewer: React.FC<{
           <span>
             · {owner}/{repo}
           </span>
+          {/* Debug: surface the exact id fed to fetchSharedById and the note
+              count it resolved, so the inbox vs titlebar open can be compared
+              side by side. */}
+          <span style={{ opacity: 0.8, fontFamily: theme.fonts.monospace }}>
+            · id {trailId} · {payload.notes?.length ?? 0} notes
+          </span>
           {!repositoryPath && (
             <span style={{ opacity: 0.8 }}>· not cloned locally</span>
           )}
