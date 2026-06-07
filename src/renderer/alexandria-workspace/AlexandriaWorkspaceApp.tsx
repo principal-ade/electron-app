@@ -113,6 +113,10 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   // Topic-description slide-over: toggled from the titlebar Description button,
   // rendered as an overlay over the left column by the layout.
   const [descriptionOpen, setDescriptionOpen] = useState(false);
+  // True only for the launch-default open, so the notes appear in place rather
+  // than sliding in. Cleared on the first user toggle/close so manual opens and
+  // closes animate normally.
+  const [descriptionInstant, setDescriptionInstant] = useState(false);
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'workspace-repos',
     middle: 'terminal',
@@ -134,6 +138,11 @@ const AlexandriaWorkspaceContent: React.FC = () => {
 
   // Ref for panel control handle
   const panelControlRef = useRef<PanelControlHandle | null>(null);
+  // Flips true once the layout hands us its panel-control handle. Gates the
+  // initial-notes-view effect, which needs the handle to open the middle tab.
+  const [panelControlReady, setPanelControlReady] = useState(false);
+  // Ensures the "open notes on launch" decision runs only once per window.
+  const initializedNotesViewRef = useRef(false);
 
   // Quick command handler for Agent Command Palette
   const handleQuickCommand = useCallback(
@@ -465,6 +474,30 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     };
   }, []);
 
+  // On window open, surface the topic notes by default: if the topic already
+  // has notes, pop the slide-over over the left column (read view); if it's
+  // empty, open the editable description tab in the middle so the user can
+  // start writing. Runs once, after the topic and the panel-control handle
+  // are both ready.
+  useEffect(() => {
+    if (initializedNotesViewRef.current) return;
+    if (!topic || !panelControlReady) return;
+    initializedNotesViewRef.current = true;
+
+    const hasNotes = (topic.description ?? '').trim().length > 0;
+    if (hasNotes) {
+      // Set instant + open together so the slide-over's first render is already
+      // open with the transition disabled — it appears in place, no slide-in.
+      setDescriptionInstant(true);
+      setDescriptionOpen(true);
+      if (collapsed.left) {
+        panelControlRef.current?.expandLeft();
+      }
+    } else {
+      panelControlRef.current?.openTopicDescription();
+    }
+  }, [topic, panelControlReady, collapsed.left]);
+
   // Fetch git status for workspace repositories
   // Watch lifecycle is managed by main process window handlers
   useEffect(() => {
@@ -680,13 +713,22 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         descriptionOpen={descriptionOpen}
         onToggleDescription={() => {
           const willOpen = !descriptionOpen;
+          // Any user toggle should animate, even if the launch-default opened
+          // it instantly.
+          setDescriptionInstant(false);
           setDescriptionOpen(willOpen);
           // The overlay lives inside the left column — make sure it's visible.
           if (willOpen && collapsed.left) {
             panelControlRef.current?.expandLeft();
           }
         }}
-        onCloseDescription={() => setDescriptionOpen(false)}
+        onCloseDescription={() => {
+          setDescriptionInstant(false);
+          setDescriptionOpen(false);
+        }}
+        onOpenDescriptionInTab={() => {
+          panelControlRef.current?.openTopicDescription();
+        }}
       />
 
       {/* Main Content - Panel Layout */}
@@ -701,9 +743,14 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         showPanelSidebar={showPanelSidebar}
         onPanelControlReady={(control) => {
           panelControlRef.current = control;
+          setPanelControlReady(true);
         }}
         descriptionOpen={descriptionOpen}
-        onCloseDescription={() => setDescriptionOpen(false)}
+        descriptionInstant={descriptionInstant}
+        onCloseDescription={() => {
+          setDescriptionInstant(false);
+          setDescriptionOpen(false);
+        }}
       />
 
       {/* Agent Command Palette - Cmd+Shift+P to open */}

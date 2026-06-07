@@ -33,6 +33,12 @@ import {
 
 export interface TopicDescriptionSlideOverProps {
   open: boolean;
+  /**
+   * When true, the panel appears with no slide-in transition — used when the
+   * notes are opened by default on window launch, so they're simply present
+   * rather than animating in. Normal toggles leave this false and animate.
+   */
+  instant?: boolean;
   /** Topic whose description is shown. The slide-over no-ops without one. */
   topicId?: string;
   onClose: () => void;
@@ -57,6 +63,7 @@ export const TopicDescriptionSlideOver: React.FC<
   TopicDescriptionSlideOverProps
 > = ({
   open,
+  instant,
   topicId,
   onClose,
   onEdit,
@@ -207,7 +214,7 @@ export const TopicDescriptionSlideOver: React.FC<
         borderRight: `1px solid ${theme.colors.border}`,
         boxShadow: open ? '4px 0 16px rgba(0,0,0,0.2)' : 'none',
         transform: open ? 'translateX(0)' : 'translateX(-100%)',
-        transition: 'transform 0.25s ease',
+        transition: instant ? 'none' : 'transform 0.25s ease',
         zIndex: 20,
         pointerEvents: open ? 'auto' : 'none',
       }}

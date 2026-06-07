@@ -62,6 +62,8 @@ export interface AlexandriaWorkspaceTitlebarProps {
   descriptionOpen?: boolean;
   onToggleDescription?: () => void;
   onCloseDescription?: () => void;
+  /** Right-click the Notes button to open the description in the middle panel. */
+  onOpenDescriptionInTab?: () => void;
 }
 
 export const AlexandriaWorkspaceTitlebar: React.FC<
@@ -78,6 +80,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   descriptionOpen,
   onToggleDescription,
   onCloseDescription,
+  onOpenDescriptionInTab,
 }) => {
   const { theme } = useTheme();
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -394,7 +397,16 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         {onToggleDescription && hasTopic && (
           <button
             onClick={onToggleDescription}
-            title="Topic description (⌘D)"
+            onContextMenu={
+              onOpenDescriptionInTab
+                ? (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onOpenDescriptionInTab();
+                  }
+                : undefined
+            }
+            title="Topic description (⌘D) — right-click to open in middle panel"
             aria-label="Topic description"
             aria-pressed={descriptionOpen ?? false}
             style={{

@@ -108,6 +108,8 @@ export interface PanelControlHandle {
   expandLeft: () => void;
   collapseRight: () => void;
   expandRight: () => void;
+  /** Open the topic-description ("Notes") editor as a middle-panel tab. */
+  openTopicDescription: () => void;
 }
 
 interface AlexandriaWorkspaceLayoutProps {
@@ -157,6 +159,11 @@ interface AlexandriaWorkspaceLayoutProps {
    * titlebar's Description button; the overlay renders over the left column.
    */
   descriptionOpen?: boolean;
+  /**
+   * Suppress the slide-over's open animation — set when the notes are opened
+   * by default on window launch so they appear in place instead of sliding in.
+   */
+  descriptionInstant?: boolean;
   /** Closes the topic-description slide-over. */
   onCloseDescription?: () => void;
 }
@@ -175,6 +182,7 @@ interface AlexandriaWorkspaceLayoutContentProps {
   showPanelSidebar: boolean;
   onPanelControlReady?: (control: PanelControlHandle) => void;
   descriptionOpen?: boolean;
+  descriptionInstant?: boolean;
   onCloseDescription?: () => void;
 }
 
@@ -195,6 +203,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   showPanelSidebar,
   onPanelControlReady,
   descriptionOpen,
+  descriptionInstant,
   onCloseDescription,
 }) => {
   const { theme } = useTheme();
@@ -253,6 +262,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   // Refs to track current state
   const collapsedStateRef = useRef(collapsed);
   const onCollapsedChangeRef = useRef(onCollapsedChange);
+  // Lets the once-mounted panel-control handle reach the latest
+  // `handleOpenTopicDescription` (defined below) without re-subscribing.
+  const openTopicDescriptionRef = useRef<() => void>(() => {});
   // Read inside the once-mounted file:opened listener so newly opened doc tabs
   // carry the currently selected repo without re-subscribing on every change.
   const selectedRepositoryRef = useRef(selectedRepository);
@@ -320,6 +332,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             right: false,
           };
           onCollapsedChangeRef.current(collapsedStateRef.current);
+        },
+        openTopicDescription: () => {
+          openTopicDescriptionRef.current();
         },
       };
       onPanelControlReady(control);
@@ -442,6 +457,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     });
     setFocusTabId('topic-description');
   }, [workspace.topicIds]);
+  openTopicDescriptionRef.current = handleOpenTopicDescription;
 
   // File actions handed to the topic-description MDXEditorPanel. Sentinel paths
   // route reads/writes to TopicService; everything else is delegated to the
@@ -1552,6 +1568,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             />
             <TopicDescriptionSlideOver
               open={descriptionOpen ?? false}
+              instant={descriptionInstant ?? false}
               topicId={workspace.topicIds?.[0]}
               onClose={() => onCloseDescription?.()}
               onEdit={handleOpenTopicDescription}
@@ -1880,6 +1897,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             />
             <TopicDescriptionSlideOver
               open={descriptionOpen ?? false}
+              instant={descriptionInstant ?? false}
               topicId={workspace.topicIds?.[0]}
               onClose={() => onCloseDescription?.()}
               onEdit={handleOpenTopicDescription}
@@ -1910,6 +1928,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             <SessionsPanel topicId={workspace.topicIds?.[0]} />
             <TopicDescriptionSlideOver
               open={descriptionOpen ?? false}
+              instant={descriptionInstant ?? false}
               topicId={workspace.topicIds?.[0]}
               onClose={() => onCloseDescription?.()}
               onEdit={handleOpenTopicDescription}
@@ -2752,6 +2771,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       focusTabId,
       terminalRemountKey,
       descriptionOpen,
+      descriptionInstant,
       workspacePanelContext,
     ],
   );
@@ -2843,6 +2863,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
   showPanelSidebar = true,
   onPanelControlReady,
   descriptionOpen,
+  descriptionInstant,
   onCloseDescription,
 }) => {
   const { theme } = useTheme();
@@ -2960,6 +2981,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
             showPanelSidebar={showPanelSidebar}
             onPanelControlReady={onPanelControlReady}
             descriptionOpen={descriptionOpen}
+            descriptionInstant={descriptionInstant}
             onCloseDescription={onCloseDescription}
           />
         </AgentHighlightProvider>
