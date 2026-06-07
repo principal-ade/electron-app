@@ -1,6 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FileCityLogo } from '@principal-ai/logo-component';
+import { FileCityLogoAnimated } from '@principal-ai/logo-component';
+
+// Convert a `#rrggbb` hex color to an `rgba()` string with the given alpha,
+// so the splash backdrop can ride the active theme's background color instead
+// of a hardcoded black.
+const hexToRgba = (hex: string, alpha: number): string => {
+  const normalized = hex.replace('#', '');
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 // Type for the electronAPI exposed by preload
 interface SplashElectronAPI {
@@ -57,7 +68,7 @@ export const SplashScreenApp: React.FC = () => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        backgroundColor: hexToRgba(theme.colors.backgroundSecondary, 0.85),
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         opacity: isClosing ? 0 : 1,
@@ -73,14 +84,12 @@ export const SplashScreenApp: React.FC = () => {
           animation: 'splashFadeIn 0.5s ease-out',
         }}
       >
-        {/* ANIMATED-LOGO-TODO: previously the animated wireframe `Logo`
-            (orbiting particles) — most prominent animated surface. FileCityLogo
-            is static; swap to an animated file-city mark here when one exists. */}
-        <FileCityLogo
+        <FileCityLogoAnimated
           mark="P"
           width={logoSize}
           height={logoSize}
           primary={theme.colors.primary}
+          accent={theme.colors.accent}
           color={theme.colors.text}
           background="transparent"
         />

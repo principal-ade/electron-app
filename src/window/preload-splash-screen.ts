@@ -3,10 +3,12 @@
  *
  * This is a minimal preload that only exposes the APIs required for Splash Screen:
  * - electronAPI: Update info and close signal
+ * - mainProcess.userPreferences: For theme loading
  */
 console.info('[Preload-SplashScreen] Script starting...');
 
 import { contextBridge, ipcRenderer } from 'electron';
+import { userPreferencesAPI } from './main-process-api-implementations/userPreferencesApi';
 
 console.info('[Preload-SplashScreen] Electron imports successful');
 
@@ -14,6 +16,19 @@ interface SplashScreenData {
   isPostUpdate: boolean;
   currentVersion: string;
   previousVersion: string | null;
+}
+
+// Expose minimal mainProcess API (only what the splash needs for theming)
+try {
+  contextBridge.exposeInMainWorld('mainProcess', {
+    userPreferences: userPreferencesAPI,
+  });
+  console.info('[Preload-SplashScreen] mainProcess.userPreferences API exposed');
+} catch (error) {
+  console.error(
+    '[Preload-SplashScreen] Failed to expose mainProcess API:',
+    error,
+  );
 }
 
 // Expose Splash Screen specific electronAPI

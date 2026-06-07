@@ -537,6 +537,27 @@ app
       }
     });
 
+    // Register the user-preferences IPC handler BEFORE the splash window so
+    // the splash can read the saved theme and render in the user's palette
+    // instead of falling back to the default. initializeStorage() and
+    // registerHandlers() are both idempotent, so the later calls during
+    // initializeServices() are harmless no-ops.
+    try {
+      const {
+        initializeStorage,
+        getTypedStorageManagerInstance,
+      } = require('./stores/initialization');
+      await initializeStorage();
+      const typedStore = await getTypedStorageManagerInstance();
+      const {
+        UserPreferencesHandler,
+      } = require('./stores/userPreferencesHandler');
+      new UserPreferencesHandler(typedStore).registerHandlers();
+      log.info('[Main] User preferences handler registered early for splash');
+    } catch (err) {
+      log.error('[Main] Failed to register early user preferences handler:', err);
+    }
+
     // Show splash screen IMMEDIATELY - before any heavy initialization
     const postUpdateDetector = getPostUpdateDetector();
     postUpdateDetector.checkForPostUpdate();

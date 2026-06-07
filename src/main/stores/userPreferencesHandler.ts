@@ -145,10 +145,16 @@ export class UserPreferencesHandler {
   }
 
   registerHandlers(): void {
+    // Idempotent: the handlers may be registered early (before the splash
+    // window loads, so it can read the saved theme) and again during normal
+    // service init. removeHandler first so the second call doesn't throw a
+    // "second handler" error and the latest instance always wins.
+    ipcMain.removeHandler(UserPreferencesAPIEvents.GET_PREFERENCES);
     ipcMain.handle(UserPreferencesAPIEvents.GET_PREFERENCES, async () => {
       return this.getUserPreferences();
     });
 
+    ipcMain.removeHandler(UserPreferencesAPIEvents.UPDATE_PREFERENCES);
     ipcMain.handle(
       UserPreferencesAPIEvents.UPDATE_PREFERENCES,
       async (_event, updates: Partial<UserPreferences>) => {
