@@ -10,6 +10,7 @@ import {
   Loader2,
   Lock,
   Plus,
+  Search,
   Send,
   Share2,
   Users,
@@ -79,8 +80,8 @@ type CopiedKind = 'url' | 'agent' | null;
 
 const SHARE_STEPS = [
   'Preparing your trail',
-  'Uploading to web-ade',
-  'Publishing',
+  'Uploading',
+  'Creating your link',
 ] as const;
 // Step advances are time-driven (the share IPC doesn't expose per-phase
 // progress). The total minimum sharing duration is `STEP_2_AT + STEPS_DONE_HOLD`
@@ -491,8 +492,8 @@ const IdleBody: React.FC<{
         color: theme.colors.text,
       }}
     >
-      Sharing a trail will allow you to get quick feedback from your
-      team&apos;s experts.
+      Send a link. They open it in any browser, have all the context, and can
+      leave a note. No clone, no setup.
     </p>
     {isPrivate && (
       <div
@@ -829,8 +830,19 @@ const SendToPeopleSection: React.FC<{
 }> = ({ theme, shareUrl, repositoryPath }) => {
   const [people, setPeople] = useState<Recipient[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [manualMode, setManualMode] = useState(false);
-  const [manualInput, setManualInput] = useState('');
+  // Whether the repo's collaborators could be listed. Drives the
+  // "couldn't list collaborators" hint above the search box — the search
+  // box itself is always shown so any user can be added regardless.
+  const [collaboratorsListed, setCollaboratorsListed] = useState(true);
+  // Current GitHub login, lowercased — used to keep the sender out of
+  // both the suggestion list and the search results.
+  const [selfLogin, setSelfLogin] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Recipient[]>([]);
+  const [searching, setSearching] = useState(false);
+  // Search starts collapsed behind a "+ Add" pill so the field only
+  // appears when the user wants to add someone beyond the suggestions.
+  const [searchOpen, setSearchOpen] = useState(false);
   const [comment, setComment] = useState('');
   const [state, setState] = useState<SendState>({ kind: 'loading' });
 
@@ -840,10 +852,10 @@ const SendToPeopleSection: React.FC<{
     let cancelled = false;
     void (async () => {
       // No repo path → can't resolve owner/repo, so we can't enumerate
-      // collaborators. Drop straight to manual entry.
+      // collaborators. The search box still lets the user add anyone.
       if (!repositoryPath) {
         if (!cancelled) {
-          setManualMode(true);
+          setCollaboratorsListed(false);
           setState({ kind: 'ready' });
         }
         return;
@@ -855,7 +867,7 @@ const SendToPeopleSection: React.FC<{
         const ownerRepo = parseOwnerRepo(origin);
         if (!ownerRepo) {
           if (!cancelled) {
-            setManualMode(true);
+            setCollaboratorsListed(false);
             setState({ kind: 'ready' });
           }
           return;
@@ -868,20 +880,22 @@ const SendToPeopleSection: React.FC<{
           GithubService.getCurrentUser(),
         ]);
         if (cancelled) return;
-        const selfLogin = currentUser?.login?.toLowerCase();
+        const self = currentUser?.login?.toLowerCase() ?? null;
+        setSelfLogin(self);
         // Drop yourself — sending a trail to your own inbox is pointless.
         const list = collaborators
-          .filter((c) => c.login.toLowerCase() !== selfLogin)
+          .filter((c) => c.login.toLowerCase() !== self)
           .map((c) => ({ login: c.login, avatarUrl: c.avatar_url }));
         setPeople(list);
-        setSelected(new Set(list.map((p) => p.login))); // default: everyone
-        // Forbidden (reader) or genuinely empty → also offer manual entry so
-        // the section is never a dead end.
-        setManualMode(forbidden || list.length === 0);
+        // Suggestions start unselected — the user opts people in explicitly.
+        setSelected(new Set());
+        // Forbidden (reader) or genuinely empty → note that the suggestion
+        // list is incomplete so the search box reads as the way forward.
+        setCollaboratorsListed(!forbidden && list.length > 0);
         setState({ kind: 'ready' });
       } catch {
         if (cancelled) return;
-        setManualMode(true);
+        setCollaboratorsListed(false);
         setState({ kind: 'ready' });
       }
     })();
@@ -899,21 +913,64 @@ const SendToPeopleSection: React.FC<{
     });
   }, []);
 
-  const addManual = useCallback(() => {
-    const login = manualInput.trim().replace(/^@/, '');
+  // Add a person to the selection (and to the suggestion list if they're
+  // not already a chip), then clear the search box. Used by both a search
+  // result click and the Enter-to-add-exact-login fallback.
+  const addPerson = useCallback((recipient: Recipient) => {
+    const login = recipient.login.trim().replace(/^@/, '');
     if (!login) return;
     setPeople((prev) =>
       prev.some((p) => p.login.toLowerCase() === login.toLowerCase())
         ? prev
-        : [...prev, { login }],
+        : [...prev, { login, avatarUrl: recipient.avatarUrl }],
     );
     setSelected((prev) => {
       const next = new Set(prev);
       next.add(login);
       return next;
     });
-    setManualInput('');
-  }, [manualInput]);
+    setSearchQuery('');
+    setSearchResults([]);
+  }, []);
+
+  // Live GitHub user search, debounced. Skips logins already shown as
+  // chips and the sender themselves so the dropdown only surfaces people
+  // the user can actually add.
+  useEffect(() => {
+    const q = searchQuery.trim().replace(/^@/, '');
+    if (q.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const { users } = await GithubService.searchUsers(q, { perPage: 6 });
+          if (cancelled) return;
+          const existing = new Set(people.map((p) => p.login.toLowerCase()));
+          const results = users
+            .filter(
+              (u) =>
+                u.login.toLowerCase() !== selfLogin &&
+                !existing.has(u.login.toLowerCase()),
+            )
+            .map((u) => ({ login: u.login, avatarUrl: u.avatar_url }));
+          setSearchResults(results);
+        } catch {
+          if (!cancelled) setSearchResults([]);
+        } finally {
+          if (!cancelled) setSearching(false);
+        }
+      })();
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, people, selfLogin]);
 
   const selectedLogins = useMemo(
     () => people.filter((p) => selected.has(p.login)).map((p) => p.login),
@@ -1081,49 +1138,165 @@ const SendToPeopleSection: React.FC<{
             </div>
           )}
 
-          {manualMode && (
-            <div style={{ marginBottom: '12px' }}>
-              {people.length === 0 && (
-                <div
+          <div style={{ marginBottom: '12px' }}>
+            {!searchOpen ? (
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 12px 4px 8px',
+                  borderRadius: '999px',
+                  border: `1px dashed ${theme.colors.border}`,
+                  background: 'transparent',
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: 'inherit',
+                }}
+              >
+                <Plus size={14} />
+                Add
+              </button>
+            ) : (
+              <>
+            {!collaboratorsListed && (
+              <div
+                style={{
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textSecondary,
+                  marginBottom: '6px',
+                }}
+              >
+                {people.length === 0
+                  ? 'Couldn’t list this repo’s collaborators — search to add anyone by GitHub username.'
+                  : 'Search to add anyone else by GitHub username.'}
+              </div>
+            )}
+            <div style={{ position: 'relative' }}>
+              <Search
+                size={14}
+                color={theme.colors.textSecondary}
+                style={{
+                  position: 'absolute',
+                  left: 10,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  pointerEvents: 'none',
+                }}
+              />
+              <input
+                type="text"
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  // Enter with no results yet still adds the typed login —
+                  // covers users GitHub search can't surface. Escape collapses
+                  // the field back to the pill.
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    e.preventDefault();
+                    addPerson({ login: searchQuery });
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setSearchQuery('');
+                    setSearchResults([]);
+                    setSearchOpen(false);
+                  }
+                }}
+                placeholder="Search people to add…"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '8px 10px 8px 30px',
+                  borderRadius: '6px',
+                  border: `1px solid ${theme.colors.border}`,
+                  background: theme.colors.backgroundSecondary,
+                  color: theme.colors.text,
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: 'inherit',
+                }}
+              />
+              {searching && (
+                <Loader2
+                  size={14}
                   style={{
-                    fontSize: theme.fontSizes[0],
+                    position: 'absolute',
+                    right: 10,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    animation: 'spin 1s linear infinite',
                     color: theme.colors.textSecondary,
-                    marginBottom: '6px',
-                  }}
-                >
-                  Couldn’t list this repo’s collaborators — add recipients by
-                  GitHub username.
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type="text"
-                  value={manualInput}
-                  onChange={(e) => setManualInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ',') {
-                      e.preventDefault();
-                      addManual();
-                    }
-                  }}
-                  placeholder="GitHub username"
-                  style={{
-                    flex: 1,
-                    padding: '8px 10px',
-                    borderRadius: '6px',
-                    border: `1px solid ${theme.colors.border}`,
-                    background: theme.colors.backgroundSecondary,
-                    color: theme.colors.text,
-                    fontSize: theme.fontSizes[1],
-                    fontFamily: 'inherit',
                   }}
                 />
-                <SecondaryButton theme={theme} onClick={addManual}>
-                  <Plus size={14} />
-                </SecondaryButton>
-              </div>
+              )}
             </div>
-          )}
+            {searchResults.length > 0 && (
+              <div
+                style={{
+                  marginTop: '6px',
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '6px',
+                  overflow: 'hidden',
+                  maxHeight: '180px',
+                  overflowY: 'auto',
+                }}
+              >
+                {searchResults.map((r) => (
+                  <button
+                    key={r.login}
+                    type="button"
+                    onClick={() => addPerson(r)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '6px 10px',
+                      background: 'transparent',
+                      border: 'none',
+                      borderBottom: `1px solid ${theme.colors.border}`,
+                      color: theme.colors.text,
+                      cursor: 'pointer',
+                      fontSize: theme.fontSizes[1],
+                      fontFamily: 'inherit',
+                      textAlign: 'left',
+                    }}
+                  >
+                    {r.avatarUrl ? (
+                      <img
+                        src={r.avatarUrl}
+                        alt=""
+                        width={20}
+                        height={20}
+                        style={{ borderRadius: '50%' }}
+                      />
+                    ) : (
+                      <span
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: '50%',
+                          background: theme.colors.border,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Users size={11} />
+                      </span>
+                    )}
+                    <span style={{ flex: 1 }}>{r.login}</span>
+                    <Plus size={14} color={theme.colors.textSecondary} />
+                  </button>
+                ))}
+              </div>
+            )}
+              </>
+            )}
+          </div>
 
           <input
             type="text"

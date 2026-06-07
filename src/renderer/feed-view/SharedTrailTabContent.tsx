@@ -29,11 +29,15 @@ import {
   type FileTree,
 } from '@principal-ai/repository-abstraction';
 import type { HighlightLayer } from '@principal-ai/file-city-react';
-import type { TrailPayload } from '@industry-theme/file-city-panel';
+import type {
+  TrailPayload,
+  BaseTrailIndexEntry,
+} from '@industry-theme/file-city-panel';
 import { findClonedGithubEntry } from '../utils/alexandriaIdentity';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { GithubService } from '../main-process-api/GithubService';
 import { FileCityTrailPanel } from '../dev-workspace/file-city-trail-panel';
+import { TrailShareModal } from '../dev-workspace/trails-panel/TrailShareModal';
 import { TrailShareService } from '../services/TrailShareService';
 import { TrailShareError } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 
@@ -102,6 +106,11 @@ export const SharedTrailViewer: React.FC<{
   );
   const [fileTree, setFileTree] = React.useState<FileTree | null>(null);
   const [treeLoading, setTreeLoading] = React.useState(true);
+  // Whether the share modal is open. This trail is already published to
+  // web-ade (we fetched it by share id), so the modal opens directly in
+  // its success state via `initialUrl` — copy link / open in browser /
+  // send to people — rather than re-running the share IPC.
+  const [shareModalOpen, setShareModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -178,6 +187,24 @@ export const SharedTrailViewer: React.FC<{
 
   const browserUrl = `https://app.principal-ade.com/trail/${trailId}`;
 
+  // Minimal index-entry shape for the share modal. With `initialUrl` set the
+  // modal renders in success state and never runs the share IPC, so only
+  // `title`/`id` are ever read — the rest are filled to satisfy the type.
+  const shareTrailEntry = React.useMemo<BaseTrailIndexEntry>(
+    () => ({
+      id: payload.id,
+      title: payload.title || 'Untitled trail',
+      summaryPreview: '',
+      markerCount: 0,
+      repoNames: [repo],
+      hasDiffSnippets: false,
+      createdAt: '',
+      updatedAt: '',
+      sizeBytes: 0,
+    }),
+    [payload.id, payload.title, repo],
+  );
+
   return (
     <div
       style={{
@@ -244,8 +271,21 @@ export const SharedTrailViewer: React.FC<{
           actions={{}}
           events={events}
           briefSide={briefSide}
+          onShareTrail={() => setShareModalOpen(true)}
         />
       </div>
+      {shareModalOpen && (
+        <TrailShareModal
+          trail={shareTrailEntry}
+          // Already published — open directly in success state so the modal
+          // surfaces copy-link / open-in-browser / send-to-people instead of
+          // re-sharing. `repositoryPath` (when cloned) lets the send picker
+          // enumerate the repo's collaborators.
+          initialUrl={browserUrl}
+          repositoryPath={repositoryPath ?? undefined}
+          onClose={() => setShareModalOpen(false)}
+        />
+      )}
     </div>
   );
 };
