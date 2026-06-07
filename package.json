@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.740",
+  "version": "0.0.741",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -205,7 +205,7 @@
     "@principal-ade/bruno-panels": "^0.1.15",
     "@principal-ade/code-quality-panels": "^0.2.0",
     "@principal-ade/dynamic-file-tree": "^0.2.45",
-    "@principal-ade/industry-theme": "^0.1.21",
+    "@principal-ade/industry-theme": "^0.1.22",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.10",
     "@principal-ade/markdown-utils": "^0.3.1",
     "@principal-ade/panel-framework-core": "^0.5.1",
@@ -219,7 +219,7 @@
     "@principal-ai/file-city-builder": "0.4.10",
     "@principal-ai/file-city-react": "^0.5.52",
     "@principal-ai/file-city-server": "^0.3.9",
-    "@principal-ai/logo-component": "^0.1.18",
+    "@principal-ai/logo-component": "^0.1.19",
     "@principal-ai/markdown-search": "^2.0.7",
     "@principal-ai/otel-collector-server": "^0.3.15",
     "@principal-ai/principal-view-core": "^0.28.6",
