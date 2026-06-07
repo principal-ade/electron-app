@@ -33,6 +33,7 @@ import type {
 import type { TopicStatus } from '@principal-ai/alexandria-core-library';
 import {
   TopicsDashboard,
+  type TopicsDashboardHandle,
   type TopicsDashboardRepoEntry,
   type TopicsDashboardTopicEntry,
 } from './TopicsDashboard';
@@ -151,6 +152,28 @@ export function HomeView() {
 
   // Topic modal state.
   const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
+
+  // Drives keyboard-triggered focus of the dashboard's topic search field.
+  const dashboardRef = React.useRef<TopicsDashboardHandle>(null);
+
+  // Home-view keyboard shortcuts:
+  //   Cmd/Ctrl+T → open the create topic modal
+  //   Cmd/Ctrl+L → focus the topics search field
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const key = e.key.toLowerCase();
+      if (key === 't') {
+        e.preventDefault();
+        setIsNewTopicOpen(true);
+      } else if (key === 'l') {
+        e.preventDefault();
+        dashboardRef.current?.focusSearch();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
   const [pendingDeleteTopic, setPendingDeleteTopic] =
     useState<TopicsDashboardTopicEntry | null>(null);
   const [deletingTopic, setDeletingTopic] = useState(false);
@@ -845,6 +868,7 @@ export function HomeView() {
             }}
           >
             <TopicsDashboard
+              ref={dashboardRef}
               onViewModeChange={(mode) =>
                 setDashboardBoardMode(mode === 'kanban')
               }

@@ -120,7 +120,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'l' && (e.metaKey || e.ctrlKey)) {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         inputRef.current?.focus();
         inputRef.current?.select();
@@ -424,7 +424,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
               opacity: 0.7,
             }}
           >
-            Command + L
+            Command + K
           </span>
         )}
         {loading && !flashLabel && (

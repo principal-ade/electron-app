@@ -97,6 +97,18 @@ export interface TopicsDashboardTopicEntry {
   status?: TopicStatus;
 }
 
+/** Imperative handle for the collapsible topic search field. */
+interface TopicSearchHandle {
+  /** Expand (if needed) and focus the search input. */
+  focus: () => void;
+}
+
+/** Imperative handle the host uses to drive the dashboard via keyboard. */
+export interface TopicsDashboardHandle {
+  /** Expand + focus the topics search field. No-op when no topics exist. */
+  focusSearch: () => void;
+}
+
 export interface TopicsDashboardProps {
   /** Repos with at least one trail, in display order. */
   repoEntries: TopicsDashboardRepoEntry[];
@@ -154,22 +166,37 @@ export interface TopicsDashboardProps {
  * accumulated trails — replaces the prompt-idea cards for return users.
  * Purely presentational; caller supplies data + handlers.
  */
-export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
-  repoEntries,
-  recentTrails = [],
-  topicEntries,
-  onSelectRepo,
-  onSelectTopic,
-  onCreateTopic,
-  onDeleteTopic,
-  onChangeTopicStatus,
-  onViewAllProjects,
-  onViewModeChange,
-  onListScrollChange,
-  repoLimit = 6,
-  topicLimit = 6,
-}) => {
+export const TopicsDashboard = React.forwardRef<
+  TopicsDashboardHandle,
+  TopicsDashboardProps
+>(function TopicsDashboard(
+  {
+    repoEntries,
+    recentTrails = [],
+    topicEntries,
+    onSelectRepo,
+    onSelectTopic,
+    onCreateTopic,
+    onDeleteTopic,
+    onChangeTopicStatus,
+    onViewAllProjects,
+    onViewModeChange,
+    onListScrollChange,
+    repoLimit = 6,
+    topicLimit = 6,
+  },
+  ref,
+) {
   const { theme } = useTheme();
+  // Lets the host (HomeView) focus the search field via keyboard shortcut.
+  const topicSearchRef = React.useRef<TopicSearchHandle>(null);
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      focusSearch: () => topicSearchRef.current?.focus(),
+    }),
+    [],
+  );
   // "All topics" mode hides the Projects section and lets the Topics section
   // grow into a scrollable list of every topic. The transition is staged so
   // one half finishes before the other starts:
@@ -474,6 +501,7 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
                 onChange={selectViewMode}
               />
               <TopicSearch
+                ref={topicSearchRef}
                 theme={theme}
                 value={topicQuery}
                 onChange={setTopicQuery}
@@ -692,7 +720,7 @@ export const TopicsDashboard: React.FC<TopicsDashboardProps> = ({
       </AnimatePresence>
     </section>
   );
-};
+});
 
 function Section({
   theme,
@@ -1160,24 +1188,38 @@ function PillButton({
  * keeps the eyebrow uncluttered; closing (X or Escape) clears the query so the
  * full topic list is always restored.
  */
-function TopicSearch({
-  theme,
-  value,
-  onChange,
-  onActiveChange,
-}: {
-  theme: ThemeShape;
-  value: string;
-  onChange: (next: string) => void;
-  /** Fired when the field expands (true) or collapses (false). */
-  onActiveChange?: (active: boolean) => void;
-}) {
+const TopicSearch = React.forwardRef<
+  TopicSearchHandle,
+  {
+    theme: ThemeShape;
+    value: string;
+    onChange: (next: string) => void;
+    /** Fired when the field expands (true) or collapses (false). */
+    onActiveChange?: (active: boolean) => void;
+  }
+>(function TopicSearch({ theme, value, onChange, onActiveChange }, ref) {
   const [open, setOpen] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
 
   React.useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
+
+  // Imperative entry point for the host's keyboard shortcut (Cmd/Ctrl+L).
+  // Expands the field if collapsed — the effect above then focuses on the next
+  // paint — and focuses+selects directly when it's already open.
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      focus: () => {
+        setOpen(true);
+        onActiveChange?.(true);
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      },
+    }),
+    [onActiveChange],
+  );
 
   const openSearch = () => {
     setOpen(true);
@@ -1265,7 +1307,7 @@ function TopicSearch({
       </button>
     </div>
   );
-}
+});
 
 /**
  * Compact two-segment switch for the topics list↔board view. Lives inline next
