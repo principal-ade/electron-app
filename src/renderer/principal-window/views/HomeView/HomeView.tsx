@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Footprints,
   Layers,
+  Plus,
   Search,
   Share2,
 } from 'lucide-react';
@@ -54,6 +55,7 @@ const TRAIL_INSTALL_SKILL_NAMES = [
   'convert-investigation',
   'author-investigation-trail',
   'author-informative-trail',
+  'create-topic',
   'topic-context',
 ] as const;
 
@@ -87,6 +89,14 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
       'Turn a raw investigation trail into a polished, shareable spec — cleans up the trail and forwards it through the convert pipeline.',
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/convert-investigation`,
     Icon: Share2,
+  },
+  {
+    name: 'create-topic',
+    title: 'Create Topic',
+    description:
+      'Create a topic — a curated bundle of trails on one subject, with a description that doubles as the working brief for agents pointed at it.',
+    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/create-topic`,
+    Icon: Plus,
   },
   {
     name: 'topic-context',

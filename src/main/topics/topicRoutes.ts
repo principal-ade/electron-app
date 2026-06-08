@@ -75,6 +75,64 @@ export function registerTopicRoutes(
   registry: TopicRegistryService,
   trailStore: TrailStore,
 ): void {
+  // Create a local topic. The agent analogue of the in-app UI's "new topic"
+  // affordance (TIPC topic_createTopic): a briefed terminal can mint a topic
+  // to bundle the trails it's about to author. The topic is local-only until
+  // published from the app UI — `id`, timestamps, and `createdBy` are filled
+  // in by the registry when omitted. Returns the same `{ topic, trails }`
+  // shape as the read route so the caller can immediately link/append.
+  app.post('/api/topics', async (req: Request, res: Response) => {
+    const body =
+      req.body && typeof req.body === 'object'
+        ? (req.body as Record<string, unknown>)
+        : null;
+    const title =
+      body && typeof body.title === 'string' ? body.title.trim() : '';
+    if (title.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: 'title (non-empty string) is required',
+      });
+      return;
+    }
+    const description =
+      body && typeof body.description === 'string' ? body.description : undefined;
+    let trailIds: string[] | undefined;
+    if (body && body.trailIds !== undefined) {
+      if (
+        !Array.isArray(body.trailIds) ||
+        !body.trailIds.every((t) => typeof t === 'string')
+      ) {
+        res.status(400).json({
+          success: false,
+          error: 'trailIds must be an array of strings',
+        });
+        return;
+      }
+      trailIds = body.trailIds as string[];
+    }
+    const visibility =
+      body && (body.visibility === 'private' || body.visibility === 'sharable')
+        ? body.visibility
+        : undefined;
+    try {
+      const topic = await registry.createTopic({
+        title,
+        ...(description !== undefined ? { description } : {}),
+        ...(trailIds !== undefined ? { trailIds } : {}),
+        ...(visibility !== undefined ? { visibility } : {}),
+      });
+      broadcastTopicEvent(TopicAPIEvent.TOPIC_ADDED, topic);
+      const trails = await resolveTopicTrails(topic, trailStore);
+      res.status(201).json({ success: true, topic, trails });
+    } catch (err) {
+      console.error('[topicRoutes] create failed', err);
+      res
+        .status(500)
+        .json({ success: false, error: 'failed to create topic' });
+    }
+  });
+
   app.get('/api/topics/:id', async (req: Request, res: Response) => {
     const id = String(req.params.id);
     if (!id) {
