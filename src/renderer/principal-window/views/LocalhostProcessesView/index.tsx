@@ -6,11 +6,52 @@ import {
   LocalhostDetectionService,
   type RunningServer,
 } from '../../../main-process-api/LocalhostDetectionService';
+import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   PanelContextValue,
   PanelActions,
   DataSlice,
 } from '@principal-ade/panel-framework-core';
+
+/**
+ * A detected server enriched with the owner/repo metadata of the registered
+ * Alexandria entry whose path contains the process working directory.
+ */
+type ResolvedServer = RunningServer & {
+  ownerLogin?: string;
+  ownerAvatarUrl?: string;
+  repoName?: string;
+};
+
+/** Strip a single trailing slash so path comparisons are consistent. */
+const normalizePath = (path: string): string =>
+  path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
+
+/**
+ * Find the registered Alexandria entry whose path best matches a process cwd.
+ * Prefers an exact match, then the deepest ancestor path (handles dev servers
+ * launched from a subdirectory of the repo, e.g. a monorepo package).
+ */
+const resolveEntryForCwd = (
+  cwd: string | undefined,
+  entries: AlexandriaEntry[],
+): AlexandriaEntry | undefined => {
+  if (!cwd) {
+    return undefined;
+  }
+  const target = normalizePath(cwd);
+  let best: AlexandriaEntry | undefined;
+  for (const entry of entries) {
+    const entryPath = normalizePath(entry.path);
+    if (target === entryPath || target.startsWith(`${entryPath}/`)) {
+      if (!best || entryPath.length > normalizePath(best.path).length) {
+        best = entry;
+      }
+    }
+  }
+  return best;
+};
 
 /**
  * LocalhostProcessesView - Displays running localhost development servers
@@ -27,6 +68,9 @@ export const LocalhostProcessesView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // Registered Alexandria repos, used to resolve a server's cwd to its owner.
+  const [repoEntries, setRepoEntries] = useState<AlexandriaEntry[]>([]);
+
   // Fetch servers function
   const fetchServers = useCallback(async () => {
     setLoading(true);
@@ -42,6 +86,22 @@ export const LocalhostProcessesView: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Load registered repos and keep them current as the registry changes, so
+  // newly-registered repos resolve their owner without reopening the view.
+  useEffect(() => {
+    const loadRepos = () => {
+      AlexandriaService.getRepositories()
+        .then(setRepoEntries)
+        .catch((err) => {
+          console.error('[LocalhostProcessesView] Failed to load repos:', err);
+        });
+    };
+
+    loadRepos();
+    const unsubscribe = AlexandriaService.onRepositoryChange(loadRepos);
+    return () => unsubscribe();
   }, []);
 
   // Initial fetch and start watching
@@ -77,12 +137,31 @@ export const LocalhostProcessesView: React.FC = () => {
   // Get the LocalhostProcessesPanel component
   const LocalhostProcessesPanel = localhostProcessesPanels[0]?.component;
 
+  // Enrich each detected server with its registered repo's owner/name.
+  const resolvedServers = useMemo<ResolvedServer[]>(() => {
+    return servers.map((server) => {
+      const entry = resolveEntryForCwd(server.cwd, repoEntries);
+      if (!entry) {
+        return server;
+      }
+      const ownerLogin = entry.github?.owner;
+      return {
+        ...server,
+        ownerLogin,
+        ownerAvatarUrl: ownerLogin
+          ? `https://github.com/${ownerLogin}.png?size=96`
+          : undefined,
+        repoName: entry.github?.name ?? entry.name,
+      };
+    });
+  }, [servers, repoEntries]);
+
   // Create panel context with localhostServers slice
   const context: PanelContextValue = useMemo(() => {
-    const localhostServersSlice: DataSlice<RunningServer[]> = {
+    const localhostServersSlice: DataSlice<ResolvedServer[]> = {
       scope: 'workspace',
       name: 'localhostServers',
-      data: servers,
+      data: resolvedServers,
       loading,
       error,
       refresh: fetchServers,
@@ -110,7 +189,7 @@ export const LocalhostProcessesView: React.FC = () => {
       // Typed slice property for direct access
       localhostServers: localhostServersSlice,
     };
-  }, [servers, loading, error, fetchServers]);
+  }, [resolvedServers, loading, error, fetchServers]);
 
   // Create minimal panel actions
   const actions: PanelActions = useMemo(

@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { tildifyPath } from '../utils/tildifyPath';
 
 interface QuickOpenItem {
   id: string;
@@ -70,22 +71,6 @@ interface QuickOpenWindow extends Window {
 // Cast window to QuickOpenWindow since we know electronAPI is always present
 const quickOpenWindow = window as unknown as QuickOpenWindow;
 
-/**
- * Shorten a path by replacing the home directory with ~
- */
-const shortenPath = (path: string): string => {
-  // macOS: /Users/username/...
-  const macMatch = path.match(/^\/Users\/[^/]+/);
-  if (macMatch) {
-    return path.replace(macMatch[0], '~');
-  }
-  // Linux: /home/username/...
-  const linuxMatch = path.match(/^\/home\/[^/]+/);
-  if (linuxMatch) {
-    return path.replace(linuxMatch[0], '~');
-  }
-  return path;
-};
 
 /**
  * Highlight matching text by splitting into segments
@@ -892,7 +877,7 @@ const QuickOpenApp: React.FC = () => {
                             textOverflow: 'ellipsis',
                           }}
                         >
-                          {highlightMatch(shortenPath(item.description), searchQuery, theme.colors.primary)}
+                          {highlightMatch(tildifyPath(item.description), searchQuery, theme.colors.primary)}
                         </div>
                       )}
                     </div>

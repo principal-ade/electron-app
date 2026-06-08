@@ -15,6 +15,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { TopicsDashboardTopicEntry } from './TopicsDashboard';
+import { tildifyPath } from '../../../utils/tildifyPath';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
 
@@ -67,20 +68,6 @@ function describeStatus(
   if (w?.until) parts.push(`Until: ${w.until}`);
   return { text, tooltip: parts.length > 0 ? parts.join(' · ') : text };
 }
-
-/**
- * Replace the platform home prefix with `~` so paths render compactly.
- * Matches macOS (`/Users/<name>`) and Linux (`/home/<name>`); other paths
- * pass through untouched.
- */
-const tildifyPath = (path: string): string => {
-  const mac = path.match(/^\/Users\/[^/]+/);
-  if (mac) return path.replace(mac[0], '~');
-  const linux = path.match(/^\/home\/[^/]+/);
-  if (linux) return path.replace(linux[0], '~');
-  return path;
-};
-
 export interface TopicCardProps {
   topic: TopicsDashboardTopicEntry;
   theme: ThemeShape;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { RefreshCw, Globe, ExternalLink, Terminal, Folder, X } from 'lucide-react';
+import { RefreshCw, Globe, ExternalLink, Folder, X, User } from 'lucide-react';
 import type {
   PanelContextValue,
   PanelActions,
@@ -8,6 +8,22 @@ import type {
   DataSlice,
 } from '@principal-ade/panel-framework-core';
 import { LocalhostDetectionService } from '../../main-process-api/LocalhostDetectionService';
+import { tildifyPath } from '../../utils/tildifyPath';
+
+const STORYBOOK_BRAND = '#FF4785';
+
+/** Official Storybook logo (Simple Icons path). */
+const StorybookIcon: React.FC<{ size?: number }> = ({ size = 12 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M16.71.243l-.12 2.71a.18.18 0 0 0 .29.15l1.06-.79.9.7a.18.18 0 0 0 .29-.143L18.999.12l1.2-.063A1.06.94 0 0 1 21.42.998l-.78 21.05a1.06.94 0 0 1-1.054.95l-15.13.84a1.06.94 0 0 1-1.122-.926L2.58 2.766a1.06.94 0 0 1 1.004-.98L16.71.243zm-2.987 9.485c0 .448 3.022.234 3.43-.08 0-3.082-1.657-4.703-4.69-4.703-3.032 0-4.731 1.646-4.731 4.115 0 4.295 5.803 4.377 5.803 6.72 0 .658-.323 1.05-1.04 1.05-.952 0-1.33-.486-1.286-2.136 0-.357-3.61-.469-3.724 0-.286 4.001 2.204 5.158 5.054 5.158 2.768 0 4.935-1.476 4.935-4.14 0-4.602-5.882-4.482-5.882-6.767 0-.92.685-1.05 1.092-1.05.43 0 1.197.075 1.13 1.31z" />
+  </svg>
+);
 
 export interface RunningServer {
   port: number;
@@ -19,6 +35,10 @@ export interface RunningServer {
   command?: string;
   responsive?: boolean;
   path?: string;
+  // Resolved from the matching Alexandria entry (when the cwd is a registered repo).
+  ownerLogin?: string;
+  ownerAvatarUrl?: string;
+  repoName?: string;
 }
 
 interface LocalhostProcessesPanelContext extends PanelContextValue {
@@ -306,8 +326,42 @@ export const LocalhostProcessesPanel: React.FC<LocalhostProcessesPanelProps> = (
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  gap: '12px',
                 }}
               >
+                {/* Owner avatar — resolved from the matching Alexandria repo */}
+                {server.ownerAvatarUrl ? (
+                  <img
+                    src={server.ownerAvatarUrl}
+                    alt={server.ownerLogin ?? 'repo owner'}
+                    title={server.ownerLogin}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      display: 'block',
+                    }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '50%',
+                      backgroundColor: theme.colors.background,
+                    }}
+                  >
+                    <User size={22} color={theme.colors.textTertiary} />
+                  </div>
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
@@ -324,8 +378,30 @@ export const LocalhostProcessesPanel: React.FC<LocalhostProcessesPanelProps> = (
                         fontSize: theme.fontSizes[2],
                       }}
                     >
-                      {server.label || `localhost:${server.port}`}
+                      {server.repoName || server.label || `localhost:${server.port}`}
                     </span>
+                    {server.serviceType && (
+                      <span
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: theme.fontSizes[0],
+                          color:
+                            server.serviceType === 'storybook'
+                              ? STORYBOOK_BRAND
+                              : theme.colors.textSecondary,
+                          backgroundColor: theme.colors.background,
+                          padding: '2px 6px',
+                          borderRadius: theme.radii[0],
+                        }}
+                      >
+                        {server.serviceType === 'storybook' && (
+                          <StorybookIcon size={12} />
+                        )}
+                        {server.serviceType}
+                      </span>
+                    )}
                     <span
                       style={{
                         fontSize: theme.fontSizes[1],
@@ -342,19 +418,6 @@ export const LocalhostProcessesPanel: React.FC<LocalhostProcessesPanelProps> = (
                     >
                       :{server.port}
                     </span>
-                    {server.serviceType && (
-                      <span
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                          backgroundColor: theme.colors.background,
-                          padding: '2px 6px',
-                          borderRadius: theme.radii[0],
-                        }}
-                      >
-                        {server.serviceType}
-                      </span>
-                    )}
                     {server.responsive === false && (
                       <span
                         style={{
@@ -380,19 +443,6 @@ export const LocalhostProcessesPanel: React.FC<LocalhostProcessesPanelProps> = (
                       alignItems: 'center',
                     }}
                   >
-                    {server.pid && (
-                      <span
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <Terminal size={12} />
-                        PID: {server.pid}
-                      </span>
-                    )}
-                    {server.command && <span>{server.command}</span>}
                     {server.cwd && (
                       <span
                         style={{
@@ -408,7 +458,7 @@ export const LocalhostProcessesPanel: React.FC<LocalhostProcessesPanelProps> = (
                         title={server.cwd}
                       >
                         <Folder size={12} />
-                        {server.cwd}
+                        {tildifyPath(server.cwd)}
                       </span>
                     )}
                   </div>

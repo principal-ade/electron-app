@@ -7,10 +7,12 @@ import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls'
 import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
-import { Layers, FolderPlus, FilePlus2 } from 'lucide-react';
+import { Layers, FolderPlus, FilePlus2, Server } from 'lucide-react';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 import { CreateRepositoryInWorkspaceModal } from '../../../panels/components/CreateRepositoryInWorkspaceModal';
+import { LocalhostProcessesModal } from './LocalhostProcessesModal';
+import { LocalhostDetectionService } from '../../../main-process-api/LocalhostDetectionService';
 
 declare global {
   interface Window {
@@ -58,6 +60,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
     string | null
   >(null);
   const [showCreateRepoModal, setShowCreateRepoModal] = useState(false);
+  const [localhostServerCount, setLocalhostServerCount] = useState(0);
+  const [showLocalhostModal, setShowLocalhostModal] = useState(false);
   const { theme } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
@@ -66,6 +70,39 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       window.electronTitlebar.isMaximized().then(setIsMaximized);
       window.electronTitlebar.onMaximizeChange(setIsMaximized);
     }
+  }, []);
+
+  // Background watch for running localhost dev servers so the titlebar can
+  // surface an indicator (and the modal) only when there's something to view.
+  useEffect(() => {
+    let watchId: string | null = null;
+
+    const unsubscribe = LocalhostDetectionService.onServersUpdated((result) => {
+      setLocalhostServerCount(result.servers.length);
+    });
+
+    LocalhostDetectionService.detectRunningServers()
+      .then((result) => setLocalhostServerCount(result.servers.length))
+      .catch(() => {
+        /* detection unavailable — leave count at 0 */
+      });
+
+    LocalhostDetectionService.startWatching(undefined, 5000)
+      .then(({ watchId: id }) => {
+        watchId = id;
+      })
+      .catch(() => {
+        /* watch unavailable — initial scan still populated the count */
+      });
+
+    return () => {
+      unsubscribe();
+      if (watchId) {
+        LocalhostDetectionService.stopWatching(watchId).catch(() => {
+          /* best-effort cleanup */
+        });
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -191,6 +228,51 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         )}
         {/* Update — visible only when an update is pending; downloads in place. */}
         <TitlebarUpdateInlineButton />
+        {/* Localhost processes — visible only when dev servers are detected.
+            Opens the LocalhostProcessesView in a modal. */}
+        {localhostServerCount > 0 && (
+          <button
+            onClick={() => setShowLocalhostModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 10px',
+              borderRadius: '6px',
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              cursor: 'pointer',
+              fontSize: theme.fontSizes[1],
+              fontWeight: 500,
+              fontFamily: theme.fonts.body,
+              transition: 'all 0.2s',
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
+            }}
+            title={`${localhostServerCount} localhost ${
+              localhostServerCount === 1 ? 'process' : 'processes'
+            } running`}
+          >
+            <Server size={14} color={theme.colors.primary} />
+            <span
+              style={{
+                fontFamily: theme.fonts.monospace,
+                fontSize: theme.fontSizes[0],
+              }}
+            >
+              {localhostServerCount}
+            </span>
+          </button>
+        )}
         {/* Add a project — only rendered when the host view wires it up
             (currently TrailsView via a window-event bridge). */}
         {onAddProject && (
@@ -434,6 +516,11 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         onClose={() => setShowCreateRepoModal(false)}
         baseDefaultDirectory={baseDefaultDirectory}
         useOwnerSubdir
+      />
+
+      <LocalhostProcessesModal
+        isOpen={showLocalhostModal}
+        onClose={() => setShowLocalhostModal(false)}
       />
     </div>
   );
