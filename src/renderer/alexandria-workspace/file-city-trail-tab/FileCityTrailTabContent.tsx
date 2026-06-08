@@ -32,7 +32,7 @@ import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstract
 
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import { TrailNotesService } from '../../services/TrailNotesService';
-import { TrailShareModal } from '../../dev-workspace/trails-panel/TrailShareModal';
+import { ShareTrailModal } from '../../dev-workspace/trails-panel/ShareTrailModal';
 
 interface FileCityTrailTabContentProps {
   trailPayload: TrailPayload | null;
@@ -407,7 +407,7 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
         currentAuthor="You"
       />
       {shareModalTrail && repositoryPath && (
-        <TrailShareModal
+        <ShareTrailModal
           trail={shareModalTrail}
           repositoryPath={repositoryPath}
           onClose={() => setShareModalTrail(null)}

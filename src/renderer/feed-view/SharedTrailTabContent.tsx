@@ -37,7 +37,7 @@ import { findClonedGithubEntry } from '../utils/alexandriaIdentity';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { GithubService } from '../main-process-api/GithubService';
 import { FileCityTrailPanel } from '../dev-workspace/file-city-trail-panel';
-import { TrailShareModal } from '../dev-workspace/trails-panel/TrailShareModal';
+import { ShareTrailModal } from '../dev-workspace/trails-panel/ShareTrailModal';
 import { TrailShareService } from '../services/TrailShareService';
 import { TrailShareError } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 
@@ -275,7 +275,7 @@ export const SharedTrailViewer: React.FC<{
         />
       </div>
       {shareModalOpen && (
-        <TrailShareModal
+        <ShareTrailModal
           trail={shareTrailEntry}
           // Already published — open directly in success state so the modal
           // surfaces copy-link / open-in-browser / send-to-people instead of

@@ -103,7 +103,7 @@ type ModalState =
   | { kind: 'success'; url: string }
   | { kind: 'error'; message: string };
 
-export interface TrailShareModalProps {
+export interface ShareTrailModalProps {
   /**
    * Trail metadata. `BaseTrailIndexEntry` covers both local
    * (`TrailIndexEntry`) and remote (`SharedTrailIndexEntry`) entries —
@@ -137,7 +137,7 @@ export interface TrailShareModalProps {
   onShared?: (url: string) => void;
 }
 
-export const TrailShareModal: React.FC<TrailShareModalProps> = ({
+export const ShareTrailModal: React.FC<ShareTrailModalProps> = ({
   trail,
   repositoryPath,
   repoVisibility,

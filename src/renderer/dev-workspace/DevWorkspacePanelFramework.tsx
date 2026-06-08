@@ -141,7 +141,7 @@ import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
 import { TypeInformationSidebarButton } from '../components/Sidebar/TypeInformationSidebarButton';
 import { GitConfigPanel } from './git-config-panel';
 import { TrailsPanel } from './trails-panel';
-import { TrailShareModal } from './trails-panel/TrailShareModal';
+import { ShareTrailModal } from './trails-panel/ShareTrailModal';
 import { TrailService } from '../services/TrailService';
 import {
   TRAIL_EVENT,
@@ -554,7 +554,7 @@ const FileCityTrailTabContent: React.FC = () => {
         briefSide="leading"
       />
       {shareModalTrail && repositoryPath && (
-        <TrailShareModal
+        <ShareTrailModal
           trail={shareModalTrail}
           repositoryPath={repositoryPath}
           onClose={() => setShareModalTrail(null)}

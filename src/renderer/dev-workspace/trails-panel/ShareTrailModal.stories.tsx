@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React from 'react';
 import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
 import type { BaseTrailIndexEntry } from '@industry-theme/file-city-panel';
-import { TrailShareModal } from './TrailShareModal';
+import { ShareTrailModal } from './ShareTrailModal';
 import { TrailShareService } from '../../services/TrailShareService';
 import {
   TrailShareError,
@@ -62,9 +62,9 @@ const setSkipPref = () => {
   }
 };
 
-const meta: Meta<typeof TrailShareModal> = {
-  title: 'DevWorkspace/TrailsPanel/TrailShareModal',
-  component: TrailShareModal,
+const meta: Meta<typeof ShareTrailModal> = {
+  title: 'DevWorkspace/TrailsPanel/ShareTrailModal',
+  component: ShareTrailModal,
   parameters: { layout: 'fullscreen' },
   decorators: [
     (Story) => {
@@ -86,7 +86,7 @@ const meta: Meta<typeof TrailShareModal> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof TrailShareModal>;
+type Story = StoryObj<typeof ShareTrailModal>;
 
 /**
  * Pre-share confirmation for a **private** repo — the lock callout
@@ -96,7 +96,7 @@ export const IdlePrivateRepo: Story = {
   render: () => {
     activeShare = async () => ({ url: SHARE_URL });
     return (
-      <TrailShareModal
+      <ShareTrailModal
         trail={baseTrail}
         repositoryPath="/Users/fernando/Developer/desktop-app/electron-app"
         repoVisibility="private"
@@ -115,7 +115,7 @@ export const IdlePublicRepo: Story = {
   render: () => {
     activeShare = async () => ({ url: SHARE_URL });
     return (
-      <TrailShareModal
+      <ShareTrailModal
         trail={baseTrail}
         repositoryPath="/Users/fernando/Developer/desktop-app/electron-app"
         repoVisibility="public"
@@ -134,7 +134,7 @@ export const IdleUnknownVisibility: Story = {
   render: () => {
     activeShare = async () => ({ url: SHARE_URL });
     return (
-      <TrailShareModal
+      <ShareTrailModal
         trail={baseTrail}
         repositoryPath="/Users/fernando/Developer/desktop-app/electron-app"
         onClose={() => {}}
@@ -152,7 +152,7 @@ export const Sharing: Story = {
   render: () => {
     activeShare = () => new Promise<FileCityTrailShareResult>(() => {});
     return (
-      <TrailShareModal
+      <ShareTrailModal
         trail={baseTrail}
         repositoryPath="/Users/fernando/Developer/desktop-app/electron-app"
         onClose={() => {}}
@@ -188,7 +188,7 @@ export const MissingFilesConfirmation: Story = {
       return { url: SHARE_URL };
     };
     return (
-      <TrailShareModal
+      <ShareTrailModal
         trail={baseTrail}
         repositoryPath="/Users/fernando/Developer/desktop-app/electron-app"
         onClose={() => {}}
@@ -208,7 +208,7 @@ export const ErrorState: Story = {
       );
     };
     return (
-      <TrailShareModal
+      <ShareTrailModal
         trail={baseTrail}
         repositoryPath="/Users/fernando/Developer/desktop-app/electron-app"
         onClose={() => {}}
@@ -224,7 +224,7 @@ export const ErrorState: Story = {
  */
 export const AlreadyShared: Story = {
   render: () => (
-    <TrailShareModal
+    <ShareTrailModal
       trail={baseTrail}
       initialUrl={SHARE_URL}
       onClose={() => {}}
@@ -242,7 +242,7 @@ export const FreshPublishSuccess: Story = {
   render: () => {
     activeShare = async () => ({ url: SHARE_URL });
     return (
-      <TrailShareModal
+      <ShareTrailModal
         trail={baseTrail}
         repositoryPath="/Users/fernando/Developer/desktop-app/electron-app"
         onClose={() => {}}
@@ -262,7 +262,7 @@ export const AutoShareWhenSuppressed: Story = {
     setSkipPref();
     activeShare = async () => ({ url: SHARE_URL });
     return (
-      <TrailShareModal
+      <ShareTrailModal
         trail={baseTrail}
         repositoryPath="/Users/fernando/Developer/desktop-app/electron-app"
         onClose={() => {}}
@@ -277,7 +277,7 @@ export const LongTitleNoDiffs: Story = {
   render: () => {
     activeShare = async () => ({ url: SHARE_URL });
     return (
-      <TrailShareModal
+      <ShareTrailModal
         trail={{
           ...baseTrail,
           title:

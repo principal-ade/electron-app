@@ -56,7 +56,7 @@ import {
   FileCityTrailPanel,
   type TrailBriefLayoutState,
 } from '../../../dev-workspace/file-city-trail-panel';
-import { TrailShareModal } from '../../../dev-workspace/trails-panel/TrailShareModal';
+import { ShareTrailModal } from '../../../dev-workspace/trails-panel/ShareTrailModal';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { TrailsRecentList } from './TrailsRecentList';
@@ -2670,7 +2670,7 @@ const TrailsViewInner: React.FC<{
           TrailShareService.share call + sharing → success (copy / open in
           browser) UX. */}
       {shareModalTrail && (
-        <TrailShareModal
+        <ShareTrailModal
           trail={shareModalTrail}
           repositoryPath={shareModalTrail.repositoryPath ?? undefined}
           onClose={() => setShareModalTrail(null)}

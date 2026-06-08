@@ -8,7 +8,7 @@ import { useTrailLibrary } from './useTrailLibrary';
 import { useTrailShares } from './useTrailShares';
 import { TrailRow } from './TrailRow';
 import { SharedTrailRow } from './SharedTrailRow';
-import { TrailShareModal } from './TrailShareModal';
+import { ShareTrailModal } from './ShareTrailModal';
 import { TrailShareService } from '../../services/TrailShareService';
 import {
   TRAIL_EVENT,
@@ -302,7 +302,7 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
       </div>
 
       {shareModal && (
-        <TrailShareModal
+        <ShareTrailModal
           trail={shareModal.trail}
           repositoryPath={
             shareModal.source === 'local' ? repositoryPath : undefined
