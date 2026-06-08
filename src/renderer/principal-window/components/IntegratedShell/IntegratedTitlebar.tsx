@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ThemeDropdown } from './ThemeDropdown';
-import { ThemeCustomizationButton } from '../../../components/Titlebar/ThemeCustomizationButton';
+import { ThemeSelector } from './ThemeSelector';
 import { TitlebarUpdateInlineButton } from '../../../components/Titlebar/TitlebarUpdateInlineButton';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
 import { PullMailbox } from '../PullMailbox';
@@ -51,8 +50,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   onAddProject,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
-  const [showThemeButton, setShowThemeButton] = useState(false);
-  const [showCustomizeButton, setShowCustomizeButton] = useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
   const [showOpenThreadButton, setShowOpenThreadButton] = useState(false);
   const [showCreateRepoButton, setShowCreateRepoButton] = useState(false);
@@ -113,8 +110,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         return;
       }
 
-      setShowThemeButton(preferences.titlebarButtons?.theme ?? false);
-      setShowCustomizeButton(preferences.titlebarButtons?.customize ?? false);
       setShowPullMailbox(preferences.titlebarButtons?.pullMailbox ?? false);
       setShowOpenThreadButton(preferences.titlebarButtons?.openThread ?? false);
       setShowCreateRepoButton(
@@ -379,8 +374,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           </button>
         )}
         {showPullMailbox && <PullMailbox />}
-        {showThemeButton && <ThemeDropdown />}
-        {showCustomizeButton && <ThemeCustomizationButton />}
+        <ThemeSelector />
         {showSidebarControl && onToggleSidebar && (
           <ViewSidebarControls
             isCollapsed={sidebarCollapsed}

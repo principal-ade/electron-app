@@ -1,22 +1,27 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Palette } from 'lucide-react';
-import {
-  predefinedThemes,
-  getThemeNames,
-} from '../../../themes/predefinedThemes';
+import { Sun, Moon, Code2, Settings, type LucideIcon } from 'lucide-react';
 import { ThemeService } from '../../../services/ThemeService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
+import { ThemeCustomizationPanel } from '../themes/ThemeCustomizationPanel';
 
-export const ThemeDropdown: React.FC = () => {
-  const [selectedTheme, setSelectedTheme] = useState<string>('terminal');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+// The three themes this selector offers, each with its own label and icon.
+const THEME_OPTIONS: { themeName: string; label: string; Icon: LucideIcon }[] = [
+  { themeName: 'iceTangerine', label: 'Light', Icon: Sun },
+  { themeName: 'iceTangerineDark', label: 'Dark', Icon: Moon },
+  { themeName: 'slateNeon', label: 'Dev', Icon: Code2 },
+];
+
+export const ThemeSelector: React.FC = () => {
+  const [selectedTheme, setSelectedTheme] = useState<string>(
+    ThemeService.getCurrentThemeName(),
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const [showCustomization, setShowCustomization] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { theme, mode } = useTheme();
-  const availableThemes = getThemeNames();
 
   useEffect(() => {
-    // Load current theme preference
     UserPreferencesService.getPreferences()
       .then((prefs) => {
         if (prefs.selectedTheme) {
@@ -25,7 +30,6 @@ export const ThemeDropdown: React.FC = () => {
       })
       .catch(console.error);
 
-    // Listen for theme changes
     const unsubscribe = ThemeService.onThemeChange(({ themeName }) => {
       setSelectedTheme(themeName);
     });
@@ -34,47 +38,50 @@ export const ThemeDropdown: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Close dropdown when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
       ) {
-        setIsDropdownOpen(false);
+        setIsOpen(false);
       }
     };
 
-    if (isDropdownOpen) {
+    if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isDropdownOpen]);
+  }, [isOpen]);
 
-  const handleThemeChange = async (themeName: string) => {
+  const handleSelect = async (themeName: string) => {
     setSelectedTheme(themeName);
-    setIsDropdownOpen(false);
+    setIsOpen(false);
     await ThemeService.applyTheme(themeName, true);
   };
+
+  const handleCustomize = () => {
+    setIsOpen(false);
+    setShowCustomization(true);
+  };
+
+  const current =
+    THEME_OPTIONS.find((t) => t.themeName === selectedTheme) ?? THEME_OPTIONS[0];
+  const { label, Icon } = current;
 
   const backgroundColor =
     mode === 'dark' && theme.modes?.dark?.backgroundSecondary
       ? theme.modes.dark.backgroundSecondary
       : theme.colors.backgroundSecondary;
-
-  const accentColor =
-    mode === 'dark' && theme.modes?.dark?.accent
-      ? theme.modes.dark.accent
-      : theme.colors.accent;
-
   const hoverColor = theme.colors.backgroundHover || 'rgba(255, 255, 255, 0.1)';
 
   return (
+    <>
     <div
-      ref={dropdownRef}
-      className="titlebar-theme-dropdown"
+      ref={containerRef}
+      className="titlebar-theme-selector"
       style={{
         position: 'relative',
         WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
@@ -82,12 +89,12 @@ export const ThemeDropdown: React.FC = () => {
       }}
     >
       <button
-        className="titlebar-theme-button"
+        className="titlebar-theme-selector-button"
         onClick={(e) => {
           e.stopPropagation();
-          console.info('Theme button clicked, current state:', isDropdownOpen);
-          setIsDropdownOpen(!isDropdownOpen);
+          setIsOpen((open) => !open);
         }}
+        title="Select theme"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -96,14 +103,12 @@ export const ThemeDropdown: React.FC = () => {
           backgroundColor: 'transparent',
           border: `1px solid ${theme.colors.border}`,
           borderRadius: '6px',
-          color: accentColor,
+          color: theme.colors.accent,
           cursor: 'pointer',
           fontSize: '13px',
           fontFamily: theme.fonts.body,
           transition: 'all 0.2s ease',
           WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-          position: 'relative',
-          zIndex: 101,
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = hoverColor;
@@ -112,50 +117,49 @@ export const ThemeDropdown: React.FC = () => {
           e.currentTarget.style.backgroundColor = 'transparent';
         }}
       >
-        <Palette size={14} />
-        <span>{predefinedThemes[selectedTheme]?.name || 'Theme'}</span>
+        <Icon size={14} />
+        <span style={{ minWidth: '32px', textAlign: 'left' }}>{label}</span>
       </button>
 
-      {isDropdownOpen && (
+      {isOpen && (
         <div
-          className="theme-dropdown-menu"
+          className="theme-selector-menu"
           style={{
             position: 'absolute',
             top: '100%',
             right: 0,
             marginTop: '4px',
-            backgroundColor: backgroundColor,
+            backgroundColor,
             border: `1px solid ${theme.colors.border}`,
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-            minWidth: '220px',
+            minWidth: '140px',
             zIndex: 1000,
             overflow: 'hidden',
           }}
         >
-          {availableThemes.map((themeName) => {
-            const themeInfo = predefinedThemes[themeName];
+          {THEME_OPTIONS.map(({ themeName, label: optLabel, Icon: OptIcon }) => {
             const isSelected = themeName === selectedTheme;
             return (
               <button
                 key={themeName}
-                className="theme-dropdown-item"
-                onClick={() => handleThemeChange(themeName)}
+                className="theme-selector-item"
+                onClick={() => handleSelect(themeName)}
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
                   width: '100%',
                   padding: '10px 16px',
                   backgroundColor: isSelected ? hoverColor : 'transparent',
                   border: 'none',
-                  color: isSelected ? accentColor : theme.colors.text,
+                  color: isSelected ? theme.colors.accent : theme.colors.text,
                   cursor: 'pointer',
                   fontSize: '13px',
                   fontFamily: theme.fonts.body,
+                  fontWeight: isSelected ? 600 : 400,
                   textAlign: 'left',
                   transition: 'background-color 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  gap: '2px',
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
@@ -169,22 +173,59 @@ export const ThemeDropdown: React.FC = () => {
                   }
                 }}
               >
-                <div style={{ fontWeight: isSelected ? 600 : 400 }}>
-                  {themeInfo.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: '11px',
-                    opacity: 0.7,
-                  }}
-                >
-                  {themeInfo.description}
-                </div>
+                <OptIcon size={14} />
+                <span>{optLabel}</span>
               </button>
             );
           })}
+
+          <div
+            style={{
+              height: '1px',
+              backgroundColor: theme.colors.border,
+              margin: '4px 0',
+            }}
+          />
+
+          <button
+            className="theme-selector-item"
+            onClick={handleCustomize}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              width: '100%',
+              padding: '10px 16px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: theme.colors.text,
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontFamily: theme.fonts.body,
+              textAlign: 'left',
+              transition: 'background-color 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                'rgba(255, 255, 255, 0.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <Settings size={14} />
+            <span>Customize</span>
+          </button>
         </div>
       )}
     </div>
+
+    {showCustomization && (
+      <ThemeCustomizationPanel
+        themeName={selectedTheme}
+        onClose={() => setShowCustomization(false)}
+      />
+    )}
+    </>
   );
 };

@@ -18,8 +18,6 @@ export const GeneralSettings: React.FC = () => {
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
   const [enableGitWatchingOnStartup, setEnableGitWatchingOnStartup] =
     useState<boolean>(false);
-  const [showThemeButton, setShowThemeButton] = useState(false);
-  const [showCustomizeButton, setShowCustomizeButton] = useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
   const [showCreateRepoButton, setShowCreateRepoButton] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
@@ -51,8 +49,6 @@ export const GeneralSettings: React.FC = () => {
       setDefaultEditor(editor);
       setEnableVimMode(prefs.enableVimMode ?? false);
       setEnableGitWatchingOnStartup(prefs.enableGitWatchingOnStartup ?? false);
-      setShowThemeButton(prefs.titlebarButtons?.theme ?? false);
-      setShowCustomizeButton(prefs.titlebarButtons?.customize ?? false);
       setShowPullMailbox(prefs.titlebarButtons?.pullMailbox ?? false);
       setShowCreateRepoButton(
         prefs.titlebarButtons?.createRepository ?? false,
@@ -381,62 +377,6 @@ export const GeneralSettings: React.FC = () => {
                 color: theme.colors.text,
               }}
             >
-              <span>Show theme selector button</span>
-              <input
-                type="checkbox"
-                checked={showThemeButton}
-                onChange={async (e) => {
-                  const enabled = e.target.checked;
-                  setShowThemeButton(enabled);
-                  await UserPreferencesService.updatePreferences({
-                    titlebarButtons: {
-                      theme: enabled,
-                      customize: showCustomizeButton,
-                      pullMailbox: showPullMailbox,
-                    },
-                  });
-                }}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-            </label>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '16px',
-                fontSize: '14px',
-                color: theme.colors.text,
-              }}
-            >
-              <span>Show theme customization button</span>
-              <input
-                type="checkbox"
-                checked={showCustomizeButton}
-                onChange={async (e) => {
-                  const enabled = e.target.checked;
-                  setShowCustomizeButton(enabled);
-                  await UserPreferencesService.updatePreferences({
-                    titlebarButtons: {
-                      theme: showThemeButton,
-                      customize: enabled,
-                      pullMailbox: showPullMailbox,
-                    },
-                  });
-                }}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-            </label>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '16px',
-                fontSize: '14px',
-                color: theme.colors.text,
-              }}
-            >
               <span>Show pull mailbox (notifications)</span>
               <input
                 type="checkbox"
@@ -446,8 +386,6 @@ export const GeneralSettings: React.FC = () => {
                   setShowPullMailbox(enabled);
                   await UserPreferencesService.updatePreferences({
                     titlebarButtons: {
-                      theme: showThemeButton,
-                      customize: showCustomizeButton,
                       pullMailbox: enabled,
                     },
                   });

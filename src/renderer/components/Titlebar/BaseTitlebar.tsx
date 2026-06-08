@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import './Titlebar.css';
-import { ThemeDropdown } from './ThemeDropdown';
-import { ThemeCustomizationButton } from './ThemeCustomizationButton';
 
 declare global {
   interface Window {
@@ -20,8 +18,6 @@ declare global {
 export interface BaseTitlebarProps {
   title?: string | React.ReactNode;
   showWindowControls?: boolean;
-  showThemeDropdown?: boolean;
-  showCustomizeButton?: boolean;
   confirmBeforeClose?: boolean;
   children?: React.ReactNode;
   className?: string;
@@ -32,8 +28,6 @@ export interface BaseTitlebarProps {
 export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
   title,
   showWindowControls = true,
-  showThemeDropdown = false,
-  showCustomizeButton = false,
   confirmBeforeClose = false,
   children,
   className = '',
@@ -97,20 +91,6 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
             React.isValidElement(child) && (child.props as { position?: string }).position === 'left',
         )}
       </div>
-
-      {/* Theme dropdown after left content */}
-      {showThemeDropdown && (
-        <div style={{ marginLeft: '8px' }}>
-          <ThemeDropdown />
-        </div>
-      )}
-
-      {/* Customize button after theme dropdown */}
-      {showCustomizeButton && (
-        <div style={{ marginLeft: '8px' }}>
-          <ThemeCustomizationButton />
-        </div>
-      )}
 
       {/* Center content (replaces title) */}
       <div

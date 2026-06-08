@@ -26,8 +26,6 @@ export const ExtensionWindowTitlebar: React.FC<
         </div>
       }
       showWindowControls={true}
-      showThemeDropdown={false}
-      showCustomizeButton={false}
     >
       <button
         data-position="left"

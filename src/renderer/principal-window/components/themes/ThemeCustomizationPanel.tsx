@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Theme } from '@principal-ade/industry-theme';
 import { useTheme } from '@principal-ade/industry-theme';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, X, Sun, Moon, Code2, type LucideIcon } from 'lucide-react';
 import { ColorPickerInput } from './ColorPickerInput';
 import { ThemeService } from '../../../services/ThemeService';
 
@@ -50,6 +50,13 @@ const TAB_OPTIONS = [
   { id: 'colors', label: 'Colors' },
   { id: 'typography', label: 'Typography' },
 ] as const;
+
+// The three themes the in-panel switch offers, each with its own label/icon.
+const THEME_SWITCH: { themeName: string; label: string; Icon: LucideIcon }[] = [
+  { themeName: 'iceTangerine', label: 'Light', Icon: Sun },
+  { themeName: 'iceTangerineDark', label: 'Dark', Icon: Moon },
+  { themeName: 'slateNeon', label: 'Dev', Icon: Code2 },
+];
 
 type TabId = (typeof TAB_OPTIONS)[number]['id'];
 
@@ -212,6 +219,7 @@ export const ThemeCustomizationPanel: React.FC<
   ThemeCustomizationPanelProps
 > = ({ themeName, onClose }) => {
   const { theme } = useTheme();
+  const [activeThemeName, setActiveThemeName] = useState(themeName);
   const [currentTheme, setCurrentTheme] = useState<Theme | null>(null);
   const [baseTheme, setBaseTheme] = useState<Theme | null>(null);
   const snapshotRef = useRef<Theme | null>(null);
@@ -221,25 +229,25 @@ export const ThemeCustomizationPanel: React.FC<
   // Load theme on mount and capture snapshot
   useEffect(() => {
     const loadTheme = async () => {
-      const active = await ThemeService.getActiveTheme(themeName);
-      const base = ThemeService.getBaseTheme(themeName);
+      const active = await ThemeService.getActiveTheme(activeThemeName);
+      const base = ThemeService.getBaseTheme(activeThemeName);
 
       if (active) {
         setCurrentTheme(active);
         snapshotRef.current = JSON.parse(JSON.stringify(active)); // Deep clone
       } else {
-        console.error('Failed to load active theme:', themeName);
+        console.error('Failed to load active theme:', activeThemeName);
       }
 
       if (base) {
         setBaseTheme(base);
       } else {
-        console.error('Failed to load base theme:', themeName);
+        console.error('Failed to load base theme:', activeThemeName);
       }
     };
 
     loadTheme();
-  }, [themeName]);
+  }, [activeThemeName]);
 
   const getThemeValue = (themeToRead: Theme | null, path: string): string => {
     if (!themeToRead) return '';
@@ -282,16 +290,22 @@ export const ThemeCustomizationPanel: React.FC<
 
   const handleSettingChange = async (path: string, newValue: string) => {
     try {
-      await ThemeService.updateThemeSetting(themeName, path, newValue);
+      await ThemeService.updateThemeSetting(activeThemeName, path, newValue);
 
       // Reload theme to get updated values
-      const updatedTheme = await ThemeService.getActiveTheme(themeName);
+      const updatedTheme = await ThemeService.getActiveTheme(activeThemeName);
       if (updatedTheme) {
         setCurrentTheme(updatedTheme);
       }
     } catch (error) {
       console.error('Failed to update theme setting:', error);
     }
+  };
+
+  const handleThemeSwitch = async (name: string) => {
+    if (name === activeThemeName) return;
+    setActiveThemeName(name);
+    await ThemeService.applyTheme(name, true);
   };
 
   // Handle color change
@@ -336,7 +350,7 @@ export const ThemeCustomizationPanel: React.FC<
     if (!snapshotRef.current) return;
 
     try {
-      await ThemeService.clearThemeOverrides(themeName);
+      await ThemeService.clearThemeOverrides(activeThemeName);
       onClose();
     } catch (error) {
       console.error('Failed to revert theme:', error);
@@ -385,10 +399,44 @@ export const ThemeCustomizationPanel: React.FC<
         {/* Header */}
         <div
           style={{
+            position: 'relative',
             padding: '20px',
             borderBottom: `1px solid ${theme.colors.border}`,
           }}
         >
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            title="Close"
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px',
+              padding: 0,
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+          >
+            <X size={18} />
+          </button>
           <h3
             style={{
               margin: 0,
@@ -399,17 +447,62 @@ export const ThemeCustomizationPanel: React.FC<
           >
             Customize Theme
           </h3>
-          <p
+          {/* 3-way theme switch */}
+          <div
             style={{
-              margin: '4px 0 12px 0',
-              fontSize: '13px',
-              color: theme.colors.textSecondary,
+              display: 'inline-flex',
+              margin: '12px 0',
+              padding: '3px',
+              gap: '2px',
+              borderRadius: '999px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.backgroundSecondary,
             }}
           >
-            Editing: {themeName}
-          </p>
+            {THEME_SWITCH.map(({ themeName: name, label, Icon }) => {
+              const isActive = name === activeThemeName;
+              return (
+                <button
+                  key={name}
+                  onClick={() => handleThemeSwitch(name)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '999px',
+                    border: 'none',
+                    backgroundColor: isActive
+                      ? theme.colors.primary
+                      : 'transparent',
+                    color: isActive
+                      ? theme.colors.background
+                      : theme.colors.text,
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: isActive ? 600 : 400,
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.background;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  <Icon size={14} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {TAB_OPTIONS.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -449,6 +542,35 @@ export const ThemeCustomizationPanel: React.FC<
                 </button>
               );
             })}
+
+            <button
+              onClick={handleRevertAll}
+              title="Revert all changes"
+              style={{
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: '999px',
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                cursor: 'pointer',
+                fontSize: '13px',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }}
+            >
+              <RotateCcw size={14} />
+              Reset
+            </button>
           </div>
         </div>
 
@@ -686,67 +808,6 @@ export const ThemeCustomizationPanel: React.FC<
           )}
         </div>
 
-        {/* Footer */}
-        <div
-          style={{
-            padding: '16px 20px',
-            borderTop: `1px solid ${theme.colors.border}`,
-            display: 'flex',
-            gap: '12px',
-            justifyContent: 'flex-end',
-          }}
-        >
-          <button
-            onClick={handleRevertAll}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: `1px solid ${theme.colors.border}`,
-              backgroundColor: theme.colors.background,
-              color: theme.colors.text,
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundSecondary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.background;
-            }}
-          >
-            <RotateCcw size={16} />
-            Revert All Changes
-          </button>
-
-          <button
-            onClick={onClose}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: theme.colors.primary,
-              color: theme.colors.background,
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 500,
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.9';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1';
-            }}
-          >
-            Close
-          </button>
-        </div>
       </div>
 
       {/* CSS animation */}
