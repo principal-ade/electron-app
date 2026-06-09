@@ -10,6 +10,7 @@ import { createClient } from '@egoist/tipc/renderer';
 import type {
   AddTrailInput,
   AppendDescriptionInput,
+  AttachImageAssetInput,
   CreateTopicInput,
   DeleteTopicInput,
   FetchSharedTopicInput,
@@ -39,6 +40,8 @@ export interface TopicClient {
   updateTopic: (input: UpdateTopicInputArgs) => Promise<Topic>;
   /** Append text to the bottom of a topic's markdown description. */
   appendDescription: (input: AppendDescriptionInput) => Promise<Topic>;
+  /** Store a dropped image on the topic and append its `asset://` reference. */
+  attachImageAsset: (input: AttachImageAssetInput) => Promise<Topic>;
   deleteTopic: (input: DeleteTopicInput) => Promise<boolean>;
   addTrailToTopic: (input: AddTrailInput) => Promise<Topic>;
   removeTrailFromTopic: (input: RemoveTrailInput) => Promise<Topic>;
@@ -77,6 +80,7 @@ interface TipcTopicClient {
   topic_createTopic: (input: CreateTopicInput) => Promise<Topic>;
   topic_updateTopic: (input: UpdateTopicInputArgs) => Promise<Topic>;
   topic_appendDescription: (input: AppendDescriptionInput) => Promise<Topic>;
+  topic_attachImageAsset: (input: AttachImageAssetInput) => Promise<Topic>;
   topic_deleteTopic: (input: DeleteTopicInput) => Promise<boolean>;
   topic_addTrailToTopic: (input: AddTrailInput) => Promise<Topic>;
   topic_removeTrailFromTopic: (input: RemoveTrailInput) => Promise<Topic>;
@@ -116,6 +120,7 @@ export const topicClient: TopicClient = {
   createTopic: (input) => getTipcClient().topic_createTopic(input),
   updateTopic: (input) => getTipcClient().topic_updateTopic(input),
   appendDescription: (input) => getTipcClient().topic_appendDescription(input),
+  attachImageAsset: (input) => getTipcClient().topic_attachImageAsset(input),
   deleteTopic: (input) => getTipcClient().topic_deleteTopic(input),
   addTrailToTopic: (input) => getTipcClient().topic_addTrailToTopic(input),
   removeTrailFromTopic: (input) =>

@@ -52,6 +52,28 @@ export interface AppendDescriptionInput {
   text: string;
 }
 
+/**
+ * A content-hashed image attached to a topic, carried from the desktop
+ * drag-drop path. Mirrors the planned `TopicAsset` in alexandria-core-library
+ * (see docs/topic-images-feature.md) minus the fields the desktop path doesn't
+ * populate (`url`, `source`).
+ */
+export interface TopicImageAssetInput {
+  /** Content hash (SHA-256 hex) — dedup key + the `asset://` target. */
+  id: string;
+  /** e.g. "image/png". */
+  mime: string;
+  /** Base64-encoded bytes (no `data:` prefix). */
+  data: string;
+  /** Markdown alt text. */
+  alt?: string;
+}
+
+export interface AttachImageAssetInput {
+  topicId: string;
+  asset: TopicImageAssetInput;
+}
+
 export interface DeleteTopicInput {
   id: string;
 }
@@ -135,6 +157,12 @@ export type TopicRouterType = Record<
     action: (args: {
       context: ActionContext;
       input: AppendDescriptionInput;
+    }) => Promise<Topic>;
+  };
+  topic_attachImageAsset: {
+    action: (args: {
+      context: ActionContext;
+      input: AttachImageAssetInput;
     }) => Promise<Topic>;
   };
   topic_deleteTopic: {

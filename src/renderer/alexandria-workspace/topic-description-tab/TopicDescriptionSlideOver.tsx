@@ -20,8 +20,16 @@ import {
   useDropZone,
   type PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
-import type { TopicStatus } from '@principal-ai/alexandria-core-library';
+import type {
+  TopicAsset,
+  TopicStatus,
+} from '@principal-ai/alexandria-core-library';
 import { TopicService } from '../../main-process-api/TopicService';
+import {
+  describeRejection,
+  extractImageFiles,
+  prepareImageAsset,
+} from './topicImageDrop';
 import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
 import { useWorkspaceFileIndex } from '../../hooks/useWorkspaceFileIndex';
 import { MarkdownLinkNotice } from '../../components/MarkdownLinkNotice';
@@ -30,6 +38,8 @@ import {
   STATES,
   stateColor,
 } from './TopicStatusControl';
+
+const ASSET_SCHEME = 'asset://';
 
 export interface TopicDescriptionSlideOverProps {
   open: boolean;
@@ -81,11 +91,15 @@ export const TopicDescriptionSlideOver: React.FC<
       source: 'topic-notes',
     });
   const [description, setDescription] = useState<string | null>(null);
+  const [assets, setAssets] = useState<TopicAsset[]>([]);
   const [status, setStatus] = useState<TopicStatus | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   // The status editor is collapsed by default — the header pill reflects the
   // current state and toggles the full TopicStatusControl form open/closed.
   const [statusOpen, setStatusOpen] = useState(false);
+  // Transient banner for a rejected image drop (too large / wrong type / attach
+  // failure). Auto-clears so it doesn't linger over the notes.
+  const [dropError, setDropError] = useState<string | null>(null);
 
   // Load the description when opened, and refresh whenever this topic changes
   // while open — so edits made in the MDX tab flow into the preview live.
@@ -98,12 +112,14 @@ export const TopicDescriptionSlideOver: React.FC<
         const topic = await TopicService.getTopic(topicId);
         if (!cancelled) {
           setDescription(topic?.description ?? '');
+          setAssets(topic?.assets ?? []);
           setStatus(topic?.status);
         }
       } catch (err) {
         console.error('[TopicDescriptionSlideOver] load failed', err);
         if (!cancelled) {
           setDescription('');
+          setAssets([]);
           setStatus(undefined);
         }
       } finally {
@@ -120,6 +136,30 @@ export const TopicDescriptionSlideOver: React.FC<
       off();
     };
   }, [open, topicId]);
+
+  // Resolve `asset://<id>` references in the markdown to a renderable URL using
+  // the topic's inline assets (prefer a hosted `url`, else build a data-URL from
+  // the base64 bytes). Other schemes pass through untouched. Handed to
+  // IndustryMarkdownSlide's `transformImageUri`.
+  const resolveAssetUri = React.useCallback(
+    (src: string): string => {
+      if (!src.startsWith(ASSET_SCHEME)) return src;
+      const id = src.slice(ASSET_SCHEME.length);
+      const asset = assets.find((a) => a.id === id);
+      if (!asset) return src;
+      if (asset.url) return asset.url;
+      if (asset.data) return `data:${asset.mime};base64,${asset.data}`;
+      return src;
+    },
+    [assets],
+  );
+
+  // Auto-dismiss the drop-error banner a few seconds after it appears.
+  useEffect(() => {
+    if (!dropError) return;
+    const timer = setTimeout(() => setDropError(null), 4000);
+    return () => clearTimeout(timer);
+  }, [dropError]);
 
   // Append dropped text (e.g. a terminal selection dragged in via the
   // panel-framework drag protocol) to the bottom of the description. The
@@ -158,7 +198,35 @@ export const TopicDescriptionSlideOver: React.FC<
     [topicId],
   );
 
-  const { isDragOver, ...dropZoneProps } = useDropZone({
+  // Screenshots dragged from the OS arrive as `dataTransfer.files`, which
+  // useDropZone ignores (it only parses the panel protocol + text/plain). For
+  // each image: validate (mime + size cap), hash, and hand to main, which
+  // stores the bytes on the topic and appends the `asset://` reference. The
+  // TOPIC_UPDATED broadcast then refreshes the preview.
+  const handleImageDrop = React.useCallback(
+    async (files: File[]) => {
+      if (!topicId || files.length === 0) return;
+      const prepared = await Promise.all(files.map(prepareImageAsset));
+      const firstReject = prepared.find((p) => !p.ok);
+      if (firstReject && !firstReject.ok) {
+        setDropError(describeRejection(firstReject.reason));
+      }
+      for (const result of prepared) {
+        if (!result.ok) continue;
+        try {
+          await TopicService.attachImageAsset(topicId, result.asset);
+        } catch (err) {
+          console.error('[TopicDescriptionSlideOver] image attach failed', err);
+          setDropError(
+            err instanceof Error ? err.message : 'Could not attach image',
+          );
+        }
+      }
+    },
+    [topicId],
+  );
+
+  const { isDragOver, onDrop: panelOnDrop, ...dropZoneProps } = useDropZone({
     handlers: [
       {
         dataType: DATA_TYPES.TEXT_SELECTION,
@@ -172,6 +240,20 @@ export const TopicDescriptionSlideOver: React.FC<
     },
     showVisualFeedback: true,
   });
+
+  // Intercept image-file drops, then always delegate to the hook so it resets
+  // its drag-over state and handles panel/text drops. Image drops carry no
+  // text/plain payload, so the hook's text fallback no-ops for them.
+  const handleDrop = React.useCallback(
+    (e: React.DragEvent) => {
+      const images = extractImageFiles(e);
+      if (images.length > 0) {
+        void handleImageDrop(images);
+      }
+      panelOnDrop(e);
+    },
+    [handleImageDrop, panelOnDrop],
+  );
 
   const trimmed = (description ?? '').trim();
 
@@ -331,6 +413,7 @@ export const TopicDescriptionSlideOver: React.FC<
 
       <div
         {...dropZoneProps}
+        onDrop={handleDrop}
         style={{
           flex: 1,
           overflow: 'auto',
@@ -341,6 +424,23 @@ export const TopicDescriptionSlideOver: React.FC<
           transition: 'background 0.12s ease',
         }}
       >
+        {dropError && (
+          <div
+            role="alert"
+            style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 3,
+              padding: '8px 12px',
+              background: theme.colors.error || '#ef4444',
+              color: '#ffffff',
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights.medium,
+            }}
+          >
+            {dropError}
+          </div>
+        )}
         {isDragOver && (
           <div
             style={{
@@ -360,7 +460,7 @@ export const TopicDescriptionSlideOver: React.FC<
             }}
           >
             <ArrowDownToLine size={14} />
-            Drop to append to notes
+            Drop text or an image to add to notes
           </div>
         )}
         {loading && description === null ? (
@@ -394,6 +494,7 @@ export const TopicDescriptionSlideOver: React.FC<
             selectableBlocks
             deletionMode="text"
             onContentChange={handleContentChange}
+            transformImageUri={resolveAssetUri}
           />
         ) : (
           <div

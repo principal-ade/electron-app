@@ -57,6 +57,19 @@ export class TopicService {
     return topicClient.appendDescription({ id, text });
   }
 
+  /**
+   * Store a screenshot dragged into a topic's description. Main stores the
+   * bytes inline on the topic (deduped by content hash) and appends the
+   * `asset://<id>` reference to the description, broadcasting TOPIC_UPDATED.
+   * Rejects for already-published topics (publish support is pending).
+   */
+  static async attachImageAsset(
+    topicId: string,
+    asset: { id: string; mime: string; data: string; alt?: string },
+  ): Promise<Topic> {
+    return topicClient.attachImageAsset({ topicId, asset });
+  }
+
   static async deleteTopic(id: string): Promise<boolean> {
     return topicClient.deleteTopic({ id });
   }

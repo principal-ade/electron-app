@@ -8,7 +8,11 @@
  * the Topic; sync UIs ask for the full LocalTopicRecord.
  */
 
-import type { Topic, TopicStatus } from '@principal-ai/alexandria-core-library';
+import type {
+  Topic,
+  TopicAsset,
+  TopicStatus,
+} from '@principal-ai/alexandria-core-library';
 
 /**
  * Sync metadata layered on top of the canonical Topic. Local-only — never
@@ -118,6 +122,8 @@ export interface UpdateTopicInput {
    * that writes through to web-ade for published topics. See {@link TopicStatus}.
    */
   status?: TopicStatus;
+  /** Images attached to the topic (see {@link TopicAsset}). */
+  assets?: TopicAsset[];
 }
 
 export interface TopicAPI {

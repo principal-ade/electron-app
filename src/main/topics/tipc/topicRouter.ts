@@ -14,6 +14,7 @@ import { TopicAPIEvent } from '../../../shared/main-process-api-interfaces/Topic
 import type {
   AddTrailInput,
   AppendDescriptionInput,
+  AttachImageAssetInput,
   DeleteTopicInput,
   FetchSharedTopicInput,
   GetTopicInput,
@@ -139,6 +140,52 @@ export const topicRouter = {
       const description =
         prior.length > 0 ? `${prior}\n\n${text}` : text;
       const topic = await registryService.updateTopic(input.id, { description });
+      broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
+      return topic;
+    }),
+
+  // Attach a screenshot dragged into the description: store the bytes inline on
+  // the topic (deduped by content hash) and append the `asset://` reference the
+  // themed-markdown resolver swaps for an <img> at render. Atomic read-modify-
+  // write + broadcast, mirroring topic_appendDescription.
+  //
+  // Published topics are rejected for now: pushing assets to web-ade is Slice 2
+  // (see the feature doc), and the updateTopic write-through gate would send the
+  // `asset://` ref to the remote where it has no bytes to resolve.
+  topic_attachImageAsset: t.procedure
+    .input<AttachImageAssetInput>()
+    .action(async ({ input }) => {
+      const { topicId, asset } = input;
+      if (!asset?.id || !asset.data || !asset.mime) {
+        throw new Error('asset (id, mime, data) is required');
+      }
+
+      const record = await registryService.getRecord(topicId);
+      if (!record) {
+        throw new Error(`Unknown topic id: ${topicId}`);
+      }
+      if (record.sync.remoteId) {
+        throw new Error(
+          'Attaching images to a published topic is not supported yet',
+        );
+      }
+
+      const existing = record.topic;
+      // Content-hash dedup: the same screenshot dropped twice is stored once and
+      // referenced N times from the description.
+      const current = existing.assets ?? [];
+      const assets = current.some((a) => a.id === asset.id)
+        ? current
+        : [...current, asset];
+
+      const ref = `![${asset.alt ?? 'image'}](asset://${asset.id})`;
+      const prior = (existing.description ?? '').replace(/\s+$/, '');
+      const description = prior.length > 0 ? `${prior}\n\n${ref}` : ref;
+
+      const topic = await registryService.updateTopic(topicId, {
+        description,
+        assets,
+      });
       broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
       return topic;
     }),
