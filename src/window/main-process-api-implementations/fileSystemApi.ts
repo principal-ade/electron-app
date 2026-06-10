@@ -23,6 +23,13 @@ export const fileSystemAPI: FileSystemAPI = {
   writeFile: async (filePath: string, content: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.WRITE_FILE, filePath, content);
   },
+  saveDroppedFile: async (file: {
+    name: string;
+    mimeType: string;
+    dataBase64: string;
+  }) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.SAVE_DROPPED_FILE, file);
+  },
   deleteFile: async (filePath: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.DELETE_FILE, filePath);
   },

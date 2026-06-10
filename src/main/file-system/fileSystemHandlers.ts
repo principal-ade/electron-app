@@ -1,5 +1,6 @@
 import type { FSWatcher } from 'chokidar';
 import chokidar from 'chokidar';
+import { randomUUID } from 'crypto';
 import { dialog, ipcMain, BrowserWindow, app } from 'electron';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
@@ -18,6 +19,27 @@ import { RecentReposService } from '../services/RecentReposService';
 import { RecentReposAPIEvent } from '../../shared/main-process-api-interfaces/RecentReposAPI';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
+
+// Map common image MIME types to file extensions. Tools like Claude Code detect
+// images by extension, so a dropped screenshot must land on disk as e.g. .png.
+const DROPPED_FILE_MIME_EXTENSIONS: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/svg+xml': '.svg',
+  'image/bmp': '.bmp',
+  'image/tiff': '.tiff',
+};
+
+function extensionForDroppedFile(mimeType: string, name: string): string {
+  const fromMime = DROPPED_FILE_MIME_EXTENSIONS[(mimeType || '').toLowerCase()];
+  if (fromMime) return fromMime;
+  const fromName = path.extname(name || '');
+  if (fromName) return fromName;
+  return '.png';
+}
 import { GitRepositoryScannerService } from './gitRepositoryScannerService';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import os from 'os';
@@ -1245,6 +1267,33 @@ export function registerFileSystemIpcHandlers(
         `********** GLOBAL IPC HANDLER CALLED: ${FileSystemAPIEvent.WRITE_FILE} for window ${senderWindow.id} **********`,
       );
       return appWindow.fileSystemAdapter.writeFile(filePath, content);
+    },
+  );
+
+  ipcMain.handle(
+    FileSystemAPIEvent.SAVE_DROPPED_FILE,
+    async (
+      _event,
+      file: { name: string; mimeType: string; dataBase64: string },
+    ) => {
+      try {
+        const dir = path.join(app.getPath('temp'), 'principal-dropped-files');
+        await fsPromises.mkdir(dir, { recursive: true });
+        const ext = extensionForDroppedFile(file.mimeType, file.name);
+        const filePath = path.join(dir, `${randomUUID()}${ext}`);
+        await fsPromises.writeFile(
+          filePath,
+          Buffer.from(file.dataBase64, 'base64'),
+        );
+        console.log(`[FileSystem] Saved dropped file: ${filePath}`);
+        return { success: true, filePath };
+      } catch (error) {
+        console.error('[FileSystem] Failed to save dropped file:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
     },
   );
 

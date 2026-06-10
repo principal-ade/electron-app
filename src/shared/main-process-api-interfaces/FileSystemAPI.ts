@@ -3,6 +3,7 @@ export enum FileSystemAPIEvent {
   SELECT_DIRECTORY = 'file-system:select-directory',
   READ_FILE = 'file-system:read-file',
   WRITE_FILE = 'file-system:write-file',
+  SAVE_DROPPED_FILE = 'file-system:save-dropped-file',
   DELETE_FILE = 'file-system:delete-file',
   WATCH_DIRECTORY = 'file-system:watch-directory',
   WATCH_FILE = 'file-system:watch-file',
@@ -312,6 +313,17 @@ export interface FileSystemAPI {
     filePath: string,
     content: string,
   ) => Promise<{ success: boolean; filePath: string; error?: string } | null>;
+  /**
+   * Persist a file dropped/pasted onto the UI (e.g. a terminal screenshot) to a
+   * temporary scratch location and return its absolute path. The bytes arrive
+   * base64-encoded; the host writes them with an extension derived from the MIME
+   * type so downstream tools (e.g. Claude Code) detect the image.
+   */
+  saveDroppedFile: (file: {
+    name: string;
+    mimeType: string;
+    dataBase64: string;
+  }) => Promise<{ success: boolean; filePath?: string; error?: string }>;
   deleteFile: (
     filePath: string,
   ) => Promise<{ success: boolean; error?: string }>;

@@ -11,10 +11,12 @@ import React, {
 import { SpanStatusCode } from '@opentelemetry/api';
 import { getTracer } from '../telemetry';
 import { TerminalService } from '../main-process-api/TerminalService';
+import { FileSystemService } from '../main-process-api/FileSystemService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
 import type {
   TerminalPanelActions as BaseTerminalPanelActions,
   TerminalSessionInfo,
+  DroppedTerminalFile,
 } from '@industry-theme/xterm-terminal-panel';
 
 /**
@@ -26,6 +28,19 @@ interface TerminalPanelActions extends BaseTerminalPanelActions {
     context?: string;
     command?: string;
   }) => Promise<string>;
+}
+
+/**
+ * Base64-encode bytes for transport across the IPC bridge. Chunked to avoid
+ * blowing the call stack on large images via String.fromCharCode(...spread).
+ */
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 import {
   terminalClient,
@@ -299,6 +314,33 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       // Note: TerminalPanelActions expects void return, but we call async method
       writeToTerminal: (sessionId: string, data: string) => {
         TerminalService.write(sessionId, data);
+      },
+
+      // Persist files dropped onto the terminal (e.g. screenshots) to a temp
+      // scratch location and return their absolute paths, so the renderer can
+      // insert them at the prompt for a running CLI (e.g. Claude Code) to attach.
+      saveDroppedFiles: async (
+        files: DroppedTerminalFile[],
+        _sessionId: string,
+      ): Promise<string[]> => {
+        const results = await Promise.all(
+          files.map(async (file) => {
+            const result = await FileSystemService.saveDroppedFile({
+              name: file.name,
+              mimeType: file.mimeType,
+              dataBase64: uint8ToBase64(file.data),
+            });
+            if (!result.success || !result.filePath) {
+              console.error(
+                '[TerminalProvider] Failed to save dropped file:',
+                result.error,
+              );
+              return null;
+            }
+            return result.filePath;
+          }),
+        );
+        return results.filter((p): p is string => p !== null);
       },
 
       // Note: TerminalPanelActions expects void return, but we call async method

@@ -17,6 +17,19 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.writeFile(filePath, content);
   }
 
+  /**
+   * Persist a file dropped/pasted onto the UI (e.g. a terminal screenshot) to a
+   * temp scratch location and return its absolute path. Bytes are base64-encoded
+   * for transport across the IPC bridge.
+   */
+  static async saveDroppedFile(file: {
+    name: string;
+    mimeType: string;
+    dataBase64: string;
+  }): Promise<{ success: boolean; filePath?: string; error?: string }> {
+    return window.mainProcess.fileSystem.saveDroppedFile(file);
+  }
+
   static async deleteFile(
     filePath: string,
   ): Promise<{ success: boolean; error?: string }> {
