@@ -182,7 +182,7 @@
     "@industry-theme/localhost-panels": "^0.2.4",
     "@industry-theme/principal-view-panels": "^0.12.120",
     "@industry-theme/repository-composition-panels": "^0.7.80",
-    "@industry-theme/xterm-terminal-panel": "^0.8.2",
+    "@industry-theme/xterm-terminal-panel": "^0.8.3",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
     "@octokit/rest": "^22.0.1",
