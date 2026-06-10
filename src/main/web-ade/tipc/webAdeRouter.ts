@@ -27,6 +27,7 @@ import type {
   GetInboxInput,
   SendTrailInput,
   GetSentInput,
+  GetTopicInboxInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 
@@ -211,4 +212,18 @@ export const webAdeRouter = {
     .action(async ({ input }) => {
       return webAdeService.getSent(input);
     }),
+
+  // ===========================================================================
+  // Topic Inbox
+  // ===========================================================================
+
+  getTopicInbox: t.procedure
+    .input<GetTopicInboxInput>()
+    .action(async ({ input }) => {
+      return webAdeService.getTopicInbox(input);
+    }),
+
+  getTopicInboxUnreadCount: t.procedure.action(async () => {
+    return webAdeService.getTopicInboxUnreadCount();
+  }),
 };

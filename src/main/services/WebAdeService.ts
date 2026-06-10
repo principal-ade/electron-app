@@ -36,6 +36,8 @@ import type {
   SendTrailResponse,
   GetSentInput,
   ListSentResponse,
+  GetTopicInboxInput,
+  ListTopicInboxResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -1006,6 +1008,94 @@ export class WebAdeService {
       };
     } catch (error) {
       console.error('[WebADE] Failed to send trail:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch the signed-in user's topic inbox (topics sent to them). Mirrors
+   * {@link getInbox} on the topic side; the server resolves the recipient from
+   * the GitHub token and gates private topics to creator/recipient.
+   */
+  async getTopicInbox(
+    input: GetTopicInboxInput = {},
+  ): Promise<ListTopicInboxResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const params = new URLSearchParams();
+    if (input.limit != null) params.set('limit', String(input.limit));
+    if (input.cursor) params.set('cursor', input.cursor);
+    if (input.unreadOnly) params.set('unreadOnly', 'true');
+    const query = params.toString();
+    const url = `${this.baseUrl}/topics/inbox${query ? `?${query}` : ''}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        throw new Error(
+          `Failed to fetch topic inbox: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data = (await response.json()) as Partial<ListTopicInboxResponse>;
+      return {
+        entries: Array.isArray(data?.entries) ? data.entries : [],
+        unreadCount: typeof data?.unreadCount === 'number' ? data.unreadCount : 0,
+        ...(data?.cursor ? { cursor: data.cursor } : {}),
+      };
+    } catch (error) {
+      console.error('[WebADE] Failed to fetch topic inbox:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch just the unread topic-inbox count — cheap badge poll. Mirrors
+   * {@link getInboxUnreadCount}.
+   */
+  async getTopicInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/topics/inbox/unread-count`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        throw new Error(
+          `Failed to fetch topic inbox unread count: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data = (await response.json()) as Partial<InboxUnreadCountResponse>;
+      return { count: typeof data?.count === 'number' ? data.count : 0 };
+    } catch (error) {
+      console.error('[WebADE] Failed to fetch topic inbox unread count:', error);
       throw error;
     }
   }

@@ -1,18 +1,20 @@
 /**
  * InboxLeftPanel
  *
- * Left panel for the InboxView. Three lists behind a segmented control:
+ * Left panel for the InboxView. Lists behind a segmented control:
  * - Inbox: shared trails sent to the signed-in user (with unread markers).
+ * - Topics: topics sent to the signed-in user (with unread markers).
  * - Sent: trails the signed-in user has shared with others.
  * - Recently Visited: trails the user has opened, newest first.
  *
- * All are fetched from web-ade via the renderer WebAdeService. Clicking a row
- * opens the trail as a tab through InboxTabsContext.
+ * All are fetched from web-ade via the renderer WebAdeService. Clicking a trail
+ * row opens it through InboxTabsContext.openSharedTrail; a topic row opens
+ * through openTopic.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Inbox, Route, RefreshCw, Send } from 'lucide-react';
+import { Inbox, Route, RefreshCw, Send, Layers } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import { useInboxTabs } from '../principal-window/contexts/InboxTabsContext';
@@ -20,9 +22,10 @@ import type {
   InboxIndexEntry,
   OutboxIndexEntry,
   TrailRecentlyVisitedEntry,
+  TopicInboxIndexEntry,
 } from '../../shared/tipc/webAdeRouterTypes';
 
-type InboxMode = 'inbox' | 'sent' | 'recent';
+type InboxMode = 'inbox' | 'topics' | 'sent' | 'recent';
 
 /** "to @a", "to @a, @b", "to @a, @b +3" — compact recipient summary. */
 function formatRecipients(recipients: OutboxIndexEntry['recipients']): string {
@@ -51,27 +54,31 @@ function timeAgo(iso: string): string {
 
 export const InboxLeftPanel: React.FC = () => {
   const { theme } = useTheme();
-  const { openSharedTrail } = useInboxTabs();
+  const { openSharedTrail, openTopic } = useInboxTabs();
 
   const [mode, setMode] = useState<InboxMode>('inbox');
 
   const [inboxEntries, setInboxEntries] = useState<InboxIndexEntry[]>([]);
+  const [topicEntries, setTopicEntries] = useState<TopicInboxIndexEntry[]>([]);
   const [sentEntries, setSentEntries] = useState<OutboxIndexEntry[]>([]);
   const [recentEntries, setRecentEntries] = useState<
     TrailRecentlyVisitedEntry[]
   >([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [topicUnreadCount, setTopicUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [inboxResult, sentResult, recentResult] = await Promise.allSettled([
-      WebAdeService.getInbox({ limit: 100 }),
-      WebAdeService.getSent({ limit: 100 }),
-      WebAdeService.getRecentlyVisitedTrails(),
-    ]);
+    const [inboxResult, topicResult, sentResult, recentResult] =
+      await Promise.allSettled([
+        WebAdeService.getInbox({ limit: 100 }),
+        WebAdeService.getTopicInbox({ limit: 100 }),
+        WebAdeService.getSent({ limit: 100 }),
+        WebAdeService.getRecentlyVisitedTrails(),
+      ]);
 
     if (inboxResult.status === 'fulfilled') {
       setInboxEntries(inboxResult.value.entries);
@@ -80,6 +87,14 @@ export const InboxLeftPanel: React.FC = () => {
       // Most likely signed out — leave the inbox empty, not an error.
       setInboxEntries([]);
       setUnreadCount(0);
+    }
+
+    if (topicResult.status === 'fulfilled') {
+      setTopicEntries(topicResult.value.entries);
+      setTopicUnreadCount(topicResult.value.unreadCount);
+    } else {
+      setTopicEntries([]);
+      setTopicUnreadCount(0);
     }
 
     if (sentResult.status === 'fulfilled') {
@@ -96,6 +111,7 @@ export const InboxLeftPanel: React.FC = () => {
 
     if (
       inboxResult.status === 'rejected' &&
+      topicResult.status === 'rejected' &&
       sentResult.status === 'rejected' &&
       recentResult.status === 'rejected'
     ) {
@@ -214,6 +230,93 @@ export const InboxLeftPanel: React.FC = () => {
                 }}
               >
                 from @{entry.sender.githubLogin}
+              </span>
+              <span style={{ flexShrink: 0 }}>{timeAgo(entry.sentAt)}</span>
+            </div>
+          </div>
+        </button>
+      );
+    });
+  };
+
+  const renderTopicInbox = () => {
+    if (loading) return emptyState('Loading…');
+    if (error) return emptyState(error);
+    if (topicEntries.length === 0) {
+      return emptyState('No topics yet. Topics sent to you appear here.');
+    }
+    return topicEntries.map((entry) => {
+      const unread = entry.readAt === null;
+      const title = entry.snapshot?.title || 'Topic';
+      const trailCount = entry.snapshot?.trailCount ?? 0;
+      return (
+        <button
+          key={entry.topicId}
+          style={rowBaseStyle}
+          onClick={() => openTopic(entry.topicId, title)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          {/* Unread marker (or spacer to keep alignment) */}
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              marginTop: 6,
+              borderRadius: '50%',
+              flexShrink: 0,
+              backgroundColor: unread ? theme.colors.primary : 'transparent',
+            }}
+            title={unread ? 'Unread' : undefined}
+          />
+          <Layers
+            size={14}
+            color={theme.colors.textSecondary}
+            style={{ marginTop: 3, flexShrink: 0 }}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[2],
+                fontWeight: unread ? 700 : 500,
+                color: theme.colors.text,
+                marginBottom: 2,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {title}
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: spacing.sm,
+                fontFamily: theme.fonts.monospace,
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textMuted,
+              }}
+            >
+              <span
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                from @{entry.sender.githubLogin}
+                {trailCount > 0
+                  ? ` · ${trailCount} trail${trailCount === 1 ? '' : 's'}`
+                  : ''}
               </span>
               <span style={{ flexShrink: 0 }}>{timeAgo(entry.sentAt)}</span>
             </div>
@@ -463,6 +566,11 @@ export const InboxLeftPanel: React.FC = () => {
         <SegmentedControl
           options={[
             { value: 'inbox', label: 'Inbox' },
+            {
+              value: 'topics',
+              label:
+                topicUnreadCount > 0 ? `Topics ${topicUnreadCount}` : 'Topics',
+            },
             { value: 'sent', label: 'Sent' },
             { value: 'recent', label: 'Recently Visited' },
           ]}
@@ -477,9 +585,11 @@ export const InboxLeftPanel: React.FC = () => {
       <div style={{ flex: 1, overflow: 'auto' }}>
         {mode === 'inbox'
           ? renderInbox()
-          : mode === 'sent'
-            ? renderSent()
-            : renderRecent()}
+          : mode === 'topics'
+            ? renderTopicInbox()
+            : mode === 'sent'
+              ? renderSent()
+              : renderRecent()}
       </div>
     </div>
   );

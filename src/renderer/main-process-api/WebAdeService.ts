@@ -30,6 +30,8 @@ import type {
   SendTrailResponse,
   GetSentInput,
   ListSentResponse,
+  GetTopicInboxInput,
+  ListTopicInboxResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -225,5 +227,21 @@ export class WebAdeService {
    */
   static async getSent(input: GetSentInput = {}): Promise<ListSentResponse> {
     return webAdeClient.getSent(input);
+  }
+
+  /**
+   * Get the signed-in user's topic inbox (topics sent to them).
+   */
+  static async getTopicInbox(
+    input: GetTopicInboxInput = {},
+  ): Promise<ListTopicInboxResponse> {
+    return webAdeClient.getTopicInbox(input);
+  }
+
+  /**
+   * Get just the unread topic-inbox count.
+   */
+  static async getTopicInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
+    return webAdeClient.getTopicInboxUnreadCount();
   }
 }

@@ -483,6 +483,61 @@ export interface ListSentResponse {
 }
 
 // =============================================================================
+// Topic Inbox (web-ade per-user topic delivery feed)
+// =============================================================================
+
+/**
+ * Minimal snapshot of the underlying topic carried on a topic-inbox row, so
+ * the list renders without a per-row fetch. Mirrors web-ade's
+ * `TopicByUserEntry` (`src/lib/topics/types.ts`).
+ */
+export interface TopicInboxSnapshot {
+  id: string;
+  title: string;
+  /** First ~140 chars of the topic description, plaintext. */
+  descriptionPreview: string;
+  trailCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * One delivered topic in a recipient's topic inbox.
+ * Mirrors web-ade `src/lib/topics/types.ts` `TopicInboxIndexEntry`.
+ */
+export interface TopicInboxIndexEntry {
+  /** Topic id — foreign key into `/api/topics/by-id/{id}`. */
+  topicId: string;
+  /** Sender identity at send-time. */
+  sender: { githubId: number; githubLogin: string };
+  /** Optional sender note ("why I'm sharing this"). */
+  comment?: string;
+  /** ISO 8601 — server-stamped on send, refreshed on resend. */
+  sentAt: string;
+  /** ISO 8601 — server-stamped when the recipient marks the entry read. */
+  readAt: string | null;
+  /** Slim topic summary at send-time. */
+  snapshot: TopicInboxSnapshot;
+}
+
+export interface GetTopicInboxInput {
+  /** Page size (server clamps to 1..100, default 50). */
+  limit?: number;
+  /** Opaque pagination cursor from a prior response. */
+  cursor?: string;
+  /** Only return unread entries. */
+  unreadOnly?: boolean;
+}
+
+export interface ListTopicInboxResponse {
+  entries: TopicInboxIndexEntry[];
+  /** Total unread across the whole topic inbox (independent of filters/paging). */
+  unreadCount: number;
+  /** Present when more pages remain. */
+  cursor?: string;
+}
+
+// =============================================================================
 // Router Type Definition
 // =============================================================================
 
@@ -638,5 +693,17 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: GetSentInput;
     }) => Promise<ListSentResponse>;
+  };
+  getTopicInbox: {
+    action: (args: {
+      context: ActionContext;
+      input: GetTopicInboxInput;
+    }) => Promise<ListTopicInboxResponse>;
+  };
+  getTopicInboxUnreadCount: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<InboxUnreadCountResponse>;
   };
 };
