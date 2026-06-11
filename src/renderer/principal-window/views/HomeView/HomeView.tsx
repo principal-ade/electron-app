@@ -7,6 +7,7 @@ import {
   Footprints,
   Layers,
   Plus,
+  RefreshCw,
   Search,
   Share2,
 } from 'lucide-react';
@@ -139,6 +140,8 @@ export function HomeView() {
     null,
   );
   const [showSkillDetails, setShowSkillDetails] = useState(false);
+  const [skillUpdates, setSkillUpdates] = useState<Set<string>>(new Set());
+  const [updatingSkills, setUpdatingSkills] = useState<Set<string>>(new Set());
 
   // Dashboard data sources. Mirrors what TrailsView used to load.
   const [recentTrails, setRecentTrails] = useState<TrailIndexEntry[]>([]);
@@ -480,6 +483,29 @@ export function HomeView() {
     };
   }, []);
 
+  // Checks installed trail skills for available updates by comparing the
+  // recorded folder hash against the live GitHub tree SHA (via the cached
+  // skillUpdateService backend). Populates the set of skill names with updates.
+  const refreshSkillUpdates = useCallback(async () => {
+    try {
+      const tracked = new Set<string>(TRAIL_INSTALL_SKILL_NAMES);
+      const updates = await SkillLockService.checkUpdates();
+      setSkillUpdates(
+        new Set(
+          updates
+            .filter((u) => u.hasUpdate && tracked.has(u.name))
+            .map((u) => u.name),
+        ),
+      );
+    } catch (error) {
+      console.error('[HomeView] Failed to check skill updates:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshSkillUpdates();
+  }, [refreshSkillUpdates]);
+
   useEffect(() => {
     const tracked = new Set<string>(TRAIL_INSTALL_SKILL_NAMES);
     const recheck = async () => {
@@ -493,6 +519,7 @@ export function HomeView() {
         setInstalledSkillNames(
           new Set(TRAIL_INSTALL_SKILL_NAMES.filter((_, i) => checks[i])),
         );
+        void refreshSkillUpdates();
       } catch (error) {
         console.error('[HomeView] Failed to refresh skill state:', error);
       }
@@ -503,10 +530,36 @@ export function HomeView() {
     const offUninstalled = SkillLockService.onSkillUninstalled((payload) => {
       if (tracked.has(payload.skillName)) void recheck();
     });
+    const offUpdated = SkillLockService.onSkillUpdated((payload) => {
+      if (tracked.has(payload.skillName)) void recheck();
+    });
     return () => {
       offInstalled();
       offUninstalled();
+      offUpdated();
     };
+  }, [refreshSkillUpdates]);
+
+  const handleUpdateSkill = useCallback(async (name: string) => {
+    setUpdatingSkills((prev) => new Set(prev).add(name));
+    try {
+      await SkillLockService.updateSingleSkill(name);
+      // The SKILL_UPDATED broadcast drives recheck(), which refreshes both the
+      // installed set and the update flags. Clear optimistically as a fallback.
+      setSkillUpdates((prev) => {
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
+    } catch (error) {
+      console.error('[HomeView] Failed to update skill:', name, error);
+    } finally {
+      setUpdatingSkills((prev) => {
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
+    }
   }, []);
 
   const handleInstallSkill = useCallback(async () => {
@@ -1008,41 +1061,78 @@ export function HomeView() {
             >
               {installedSkillDetails.map((skill) => {
                 const SkillIcon = skill.Icon;
+                const hasUpdate = skillUpdates.has(skill.name);
+                const isUpdating = updatingSkills.has(skill.name);
+                const accent = hasUpdate
+                  ? theme.colors.warning
+                  : theme.colors.border;
                 return (
                   <button
                     key={skill.name}
                     type="button"
-                    onClick={() => void ShellService.openExternal(skill.url)}
-                    title={`${skill.title} is installed — open on GitHub`}
+                    disabled={isUpdating}
+                    onClick={() => {
+                      if (isUpdating) return;
+                      if (hasUpdate) {
+                        void handleUpdateSkill(skill.name);
+                      } else {
+                        void ShellService.openExternal(skill.url);
+                      }
+                    }}
+                    title={
+                      isUpdating
+                        ? `Updating ${skill.title}…`
+                        : hasUpdate
+                          ? `Update available for ${skill.title} — click to update`
+                          : `${skill.title} is installed — open on GitHub`
+                    }
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 8,
                       padding: '8px 12px',
                       borderRadius: 999,
-                      border: `1px solid ${theme.colors.border}`,
+                      border: `1px solid ${accent}`,
                       backgroundColor: theme.colors.backgroundSecondary,
                       color: theme.colors.text,
                       fontFamily: theme.fonts.body,
                       fontSize: theme.fontSizes[1],
-                      cursor: 'pointer',
+                      cursor: isUpdating ? 'default' : 'pointer',
+                      opacity: isUpdating ? 0.7 : 1,
                       transition: 'border-color 150ms ease',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.primary;
+                      e.currentTarget.style.borderColor = hasUpdate
+                        ? theme.colors.warning
+                        : theme.colors.primary;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.border;
+                      e.currentTarget.style.borderColor = accent;
                     }}
                   >
                     <SkillIcon size={16} color={theme.colors.primary} />
                     <span style={{ fontWeight: theme.fontWeights.medium }}>
                       {skill.title}
                     </span>
-                    <Check
-                      size={14}
-                      color={theme.colors.success ?? theme.colors.primary}
-                    />
+                    {hasUpdate || isUpdating ? (
+                      <span
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          color: theme.colors.warning,
+                          fontWeight: theme.fontWeights.medium,
+                        }}
+                      >
+                        <RefreshCw size={14} />
+                        {isUpdating ? 'Updating…' : 'Update'}
+                      </span>
+                    ) : (
+                      <Check
+                        size={14}
+                        color={theme.colors.success ?? theme.colors.primary}
+                      />
+                    )}
                   </button>
                 );
               })}
