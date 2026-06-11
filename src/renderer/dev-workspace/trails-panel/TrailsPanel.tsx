@@ -268,7 +268,7 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
                 theme={theme}
                 message={
                   shares.errorMessage ??
-                  'Could not load shared trails from web-ade.'
+                  'Could not load published trails from web-ade.'
                 }
                 onRetry={shares.refresh}
               />
@@ -283,7 +283,7 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
                     color: theme.colors.textSecondary,
                   }}
                 >
-                  No shares yet for this repo.
+                  No published trails yet for this repo.
                 </div>
               )}
             {!sharedLoading &&
@@ -326,8 +326,8 @@ const ViewToggle: React.FC<{
   onChange: (value: 'local' | 'shared') => void;
 }> = ({ theme, value, onChange }) => {
   const options: Array<{ key: 'local' | 'shared'; label: string }> = [
-    { key: 'local', label: 'Local' },
-    { key: 'shared', label: 'Shared' },
+    { key: 'local', label: 'Drafts' },
+    { key: 'shared', label: 'Published' },
   ];
   return (
     <div
