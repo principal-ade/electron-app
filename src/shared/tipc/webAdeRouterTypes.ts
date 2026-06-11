@@ -425,6 +425,15 @@ export interface InboxUnreadCountResponse {
 }
 
 /**
+ * Remove one delivered trail from the caller's inbox. Deletes only the inbox
+ * row — the underlying shared trail stays readable by id. `trailId` is the
+ * inbox entry's `trailId`.
+ */
+export interface DeleteInboxEntryInput {
+  trailId: string;
+}
+
+/**
  * Send a shared trail to one or more GitHub-login recipients.
  * `shareId` is the web-ade share id (parsed from the share URL), NOT the
  * local trail-index id.
@@ -681,6 +690,12 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input?: void;
     }) => Promise<InboxUnreadCountResponse>;
+  };
+  deleteInboxEntry: {
+    action: (args: {
+      context: ActionContext;
+      input: DeleteInboxEntryInput;
+    }) => Promise<void>;
   };
   sendTrail: {
     action: (args: {

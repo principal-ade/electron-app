@@ -25,6 +25,7 @@ import type {
   ExplainCommitsInput,
   ExplainWorkingChangesInput,
   GetInboxInput,
+  DeleteInboxEntryInput,
   SendTrailInput,
   GetSentInput,
   GetTopicInboxInput,
@@ -200,6 +201,12 @@ export const webAdeRouter = {
   getInboxUnreadCount: t.procedure.action(async () => {
     return webAdeService.getInboxUnreadCount();
   }),
+
+  deleteInboxEntry: t.procedure
+    .input<DeleteInboxEntryInput>()
+    .action(async ({ input }) => {
+      return webAdeService.deleteInboxEntry(input);
+    }),
 
   sendTrail: t.procedure
     .input<SendTrailInput>()

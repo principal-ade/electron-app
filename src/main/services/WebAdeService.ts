@@ -32,6 +32,7 @@ import type {
   GetInboxInput,
   ListInboxResponse,
   InboxUnreadCountResponse,
+  DeleteInboxEntryInput,
   SendTrailInput,
   SendTrailResponse,
   GetSentInput,
@@ -912,6 +913,45 @@ export class WebAdeService {
       return { count: typeof data?.count === 'number' ? data.count : 0 };
     } catch (error) {
       console.error('[WebADE] Failed to fetch inbox unread count:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove one delivered trail from the signed-in user's inbox. Deletes only
+   * the inbox row — the underlying shared trail stays readable by id. A 404
+   * (`INBOX_NOT_FOUND`) is treated as success: the entry is already gone.
+   */
+  async deleteInboxEntry(input: DeleteInboxEntryInput): Promise<void> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/trails/inbox/${encodeURIComponent(input.trailId)}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        if (response.status === 404) {
+          return; // Already gone — treat as success (idempotent).
+        }
+        throw new Error(
+          `Failed to delete inbox entry: ${response.status} ${response.statusText}`,
+        );
+      }
+    } catch (error) {
+      console.error('[WebADE] Failed to delete inbox entry:', error);
       throw error;
     }
   }

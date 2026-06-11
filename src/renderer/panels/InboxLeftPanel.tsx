@@ -14,7 +14,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Inbox, Route, RefreshCw, Send, Layers } from 'lucide-react';
+import { Inbox, Route, RefreshCw, Send, Layers, Trash2 } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import { useInboxTabs } from '../principal-window/contexts/InboxTabsContext';
@@ -68,6 +68,12 @@ export const InboxLeftPanel: React.FC = () => {
   const [topicUnreadCount, setTopicUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Which inbox row is hovered (reveals its delete control), plus rows with an
+  // in-flight delete so we can ignore repeat clicks.
+  const [hoveredInboxId, setHoveredInboxId] = useState<string | null>(null);
+  const [deletingInboxIds, setDeletingInboxIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -124,6 +130,40 @@ export const InboxLeftPanel: React.FC = () => {
     void load();
   }, [load]);
 
+  /**
+   * Remove a shared trail from the inbox. Optimistic: drop the row (and its
+   * unread tally) immediately, then call web-ade. On failure, reload to resync.
+   * Deletes only the inbox row — the underlying trail is untouched.
+   */
+  const handleDeleteInbox = useCallback(
+    async (entry: InboxIndexEntry, event: React.MouseEvent) => {
+      event.stopPropagation();
+      if (deletingInboxIds.has(entry.trailId)) return;
+
+      setDeletingInboxIds((prev) => new Set(prev).add(entry.trailId));
+      const wasUnread = entry.readAt === null;
+      setInboxEntries((prev) =>
+        prev.filter((e) => e.trailId !== entry.trailId),
+      );
+      if (wasUnread) setUnreadCount((c) => Math.max(0, c - 1));
+
+      try {
+        await WebAdeService.deleteInboxEntry({ trailId: entry.trailId });
+      } catch (err) {
+        console.error('[Inbox] Failed to delete entry:', err);
+        // Resync from the server — restores the row if the delete didn't land.
+        void load();
+      } finally {
+        setDeletingInboxIds((prev) => {
+          const next = new Set(prev);
+          next.delete(entry.trailId);
+          return next;
+        });
+      }
+    },
+    [deletingInboxIds, load],
+  );
+
   const spacing = {
     xs: theme.space?.[1] || 4,
     sm: theme.space?.[2] || 8,
@@ -168,22 +208,28 @@ export const InboxLeftPanel: React.FC = () => {
     return inboxEntries.map((entry) => {
       const unread = entry.readAt === null;
       const title = entry.snapshot?.title || `${entry.owner}/${entry.repo}`;
+      const hovered = hoveredInboxId === entry.trailId;
       return (
-        <button
+        <div
           key={entry.trailId}
-          style={rowBaseStyle}
-          onClick={() =>
-            openSharedTrail(entry.trailId, entry.owner, entry.repo)
-          }
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor =
-              theme.colors.backgroundSecondary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
+          style={{ position: 'relative' }}
+          onMouseEnter={() => setHoveredInboxId(entry.trailId)}
+          onMouseLeave={() => setHoveredInboxId(null)}
         >
-          {/* Unread marker (or spacer to keep alignment) */}
+          <button
+            style={{
+              ...rowBaseStyle,
+              backgroundColor: hovered
+                ? theme.colors.backgroundSecondary
+                : 'transparent',
+              // Make room for the delete control when it's revealed.
+              paddingRight: hovered ? spacing.sm * 5 : spacing.sm * 2,
+            }}
+            onClick={() =>
+              openSharedTrail(entry.trailId, entry.owner, entry.repo)
+            }
+          >
+            {/* Unread marker (or spacer to keep alignment) */}
           <div
             style={{
               width: 8,
@@ -234,7 +280,43 @@ export const InboxLeftPanel: React.FC = () => {
               <span style={{ flexShrink: 0 }}>{timeAgo(entry.sentAt)}</span>
             </div>
           </div>
-        </button>
+          </button>
+          {hovered && (
+            <button
+              onClick={(e) => handleDeleteInbox(entry, e)}
+              disabled={deletingInboxIds.has(entry.trailId)}
+              title="Remove from inbox"
+              style={{
+                position: 'absolute',
+                top: '50%',
+                right: spacing.sm * 1.5,
+                transform: 'translateY(-50%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                padding: 0,
+                borderRadius: 6,
+                border: 'none',
+                background: theme.colors.background,
+                color: theme.colors.textSecondary,
+                cursor: deletingInboxIds.has(entry.trailId)
+                  ? 'default'
+                  : 'pointer',
+                opacity: deletingInboxIds.has(entry.trailId) ? 0.5 : 1,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = theme.colors.error || '#ef4444';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
       );
     });
   };

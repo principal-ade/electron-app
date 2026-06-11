@@ -41,6 +41,7 @@ import type {
   GetInboxInput,
   ListInboxResponse,
   InboxUnreadCountResponse,
+  DeleteInboxEntryInput,
   SendTrailInput,
   SendTrailResponse,
   GetSentInput,
@@ -100,6 +101,7 @@ export interface WebAdeClient {
   getRecentlyVisitedTrails: () => Promise<ListRecentlyVisitedTrailsResponse>;
   getInbox: (input: GetInboxInput) => Promise<ListInboxResponse>;
   getInboxUnreadCount: () => Promise<InboxUnreadCountResponse>;
+  deleteInboxEntry: (input: DeleteInboxEntryInput) => Promise<void>;
   sendTrail: (input: SendTrailInput) => Promise<SendTrailResponse>;
   getSent: (input: GetSentInput) => Promise<ListSentResponse>;
 
@@ -195,6 +197,7 @@ export type {
   GetInboxInput,
   ListInboxResponse,
   InboxUnreadCountResponse,
+  DeleteInboxEntryInput,
   SendTrailInput,
   SendTrailResponse,
   GetSentInput,

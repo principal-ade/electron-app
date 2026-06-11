@@ -26,6 +26,7 @@ import type {
   GetInboxInput,
   ListInboxResponse,
   InboxUnreadCountResponse,
+  DeleteInboxEntryInput,
   SendTrailInput,
   SendTrailResponse,
   GetSentInput,
@@ -212,6 +213,14 @@ export class WebAdeService {
    */
   static async getInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
     return webAdeClient.getInboxUnreadCount();
+  }
+
+  /**
+   * Remove one delivered trail from the signed-in user's inbox. Deletes only
+   * the inbox row, not the underlying trail.
+   */
+  static async deleteInboxEntry(input: DeleteInboxEntryInput): Promise<void> {
+    return webAdeClient.deleteInboxEntry(input);
   }
 
   /**
