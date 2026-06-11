@@ -206,7 +206,19 @@ export const InboxLeftPanel: React.FC = () => {
       );
     }
     return inboxEntries.map((entry) => {
-      const unread = entry.readAt === null;
+      // Prefer the server-derived notification state; fall back to the bare
+      // read flag for pre-feature responses that don't carry it.
+      const notif = entry.notification;
+      const dot = notif?.dot ?? entry.readAt === null;
+      const noteCount = notif?.noteCount ?? entry.snapshot?.noteCount ?? 0;
+      const newNoteCount = notif?.newNoteCount ?? 0;
+      // Unopened ⇒ the whole "N notes" is orange; opened-with-new ⇒ only the
+      // "(N new)" suffix is.
+      const allNotesNew = notif?.unread ?? entry.readAt === null;
+      // When the dot is only about new notes (the trail itself was already
+      // opened), drop it to the notes line so it reads as "the notes are new,
+      // not the trail."
+      const notesOnlyDot = dot && !allNotesNew;
       const title = entry.snapshot?.title || `${entry.owner}/${entry.repo}`;
       const hovered = hoveredInboxId === entry.trailId;
       return (
@@ -229,57 +241,87 @@ export const InboxLeftPanel: React.FC = () => {
               openSharedTrail(entry.trailId, entry.owner, entry.repo)
             }
           >
-            {/* Unread marker (or spacer to keep alignment) */}
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              marginTop: 6,
-              borderRadius: '50%',
-              flexShrink: 0,
-              backgroundColor: unread ? theme.colors.primary : 'transparent',
-            }}
-            title={unread ? 'Unread' : undefined}
-          />
-          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Attention marker (or spacer to keep alignment). Sits by the
+                title for a new/unread trail, or drops to the notes line when
+                only the notes are new. */}
             <div
               style={{
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[2],
-                fontWeight: unread ? 700 : 500,
-                color: theme.colors.text,
-                marginBottom: 2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                width: 8,
+                height: 8,
+                marginTop: notesOnlyDot ? 26 : 6,
+                borderRadius: '50%',
+                flexShrink: 0,
+                backgroundColor: dot ? theme.colors.primary : 'transparent',
               }}
-            >
-              {title}
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: spacing.sm,
-                fontFamily: theme.fonts.monospace,
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.textMuted,
-              }}
-            >
-              <span
+              title={
+                dot
+                  ? notesOnlyDot
+                    ? 'New notes'
+                    : 'Needs attention'
+                  : undefined
+              }
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
                 style={{
-                  flex: 1,
-                  minWidth: 0,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: dot ? 700 : 500,
+                  color: theme.colors.text,
+                  marginBottom: 2,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}
               >
-                from @{entry.sender.githubLogin}
-              </span>
-              <span style={{ flexShrink: 0 }}>{timeAgo(entry.sentAt)}</span>
+                {title}
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: spacing.sm,
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.textMuted,
+                }}
+              >
+                <span
+                  style={{
+                    minWidth: 0,
+                    flexShrink: 1,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  from @{entry.sender.githubLogin}
+                </span>
+                {noteCount > 0 && (
+                  <span style={{ flexShrink: 0 }}>
+                    <span
+                      style={{
+                        color: allNotesNew
+                          ? theme.colors.primary
+                          : theme.colors.textMuted,
+                      }}
+                    >
+                      {noteCount} {noteCount === 1 ? 'note' : 'notes'}
+                    </span>
+                    {!allNotesNew && newNoteCount > 0 && (
+                      <span style={{ color: theme.colors.primary }}>
+                        {' '}
+                        ({newNoteCount} new)
+                      </span>
+                    )}
+                  </span>
+                )}
+                {/* Push the timestamp to the far right; notes stay next to the sender. */}
+                <span style={{ flexShrink: 0, marginLeft: 'auto' }}>
+                  {timeAgo(entry.sentAt)}
+                </span>
+              </div>
             </div>
-          </div>
           </button>
           {hovered && (
             <button

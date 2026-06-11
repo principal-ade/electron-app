@@ -379,6 +379,24 @@ export interface InboxTrailSnapshot {
   owner: string;
   repo: string;
   updatedAt: string;
+  /** Total notes on the trail (authored + anon) at snapshot time. */
+  noteCount?: number;
+}
+
+/**
+ * Server-derived notification state for an inbox row. Computed by web-ade so
+ * the dot and "(N new)" badge stay consistent across clients — render this,
+ * don't re-derive. Mirrors web-ade `src/lib/trails/notifications.ts`.
+ */
+export interface InboxNotification {
+  /** Whether to show the attention dot. */
+  dot: boolean;
+  /** Trail itself never opened (drives "whole row orange" vs just "(N new)"). */
+  unread: boolean;
+  /** Total notes on the trail. */
+  noteCount: number;
+  /** Notes added since the recipient last looked — the "(N new)" count. */
+  newNoteCount: number;
 }
 
 /**
@@ -396,8 +414,12 @@ export interface InboxIndexEntry {
   sentAt: string;
   /** ISO 8601 — server-stamped when the recipient marks the entry read. */
   readAt: string | null;
+  /** Notes seen at last open — watermark for the "(N new)" badge. */
+  notesSeenCount?: number;
   /** Snapshot of the live trail entry at send-time. */
   snapshot: InboxTrailSnapshot;
+  /** Server-derived dot / new-note state; absent on pre-feature responses. */
+  notification?: InboxNotification;
   /** Resolved owner/repo for the trail — duplicated for fast list rendering. */
   owner: string;
   repo: string;
@@ -557,7 +579,12 @@ export interface ListTopicInboxResponse {
  */
 export type WebAdeRouterType = Record<
   string,
-  { action: (args: { context: ActionContext; input: unknown }) => Promise<unknown> }
+  {
+    action: (args: {
+      context: ActionContext;
+      input: unknown;
+    }) => Promise<unknown>;
+  }
 > & {
   isAuthenticated: {
     action: (args: {

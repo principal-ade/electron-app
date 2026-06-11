@@ -8,15 +8,18 @@ import type {
   InboxIndexEntry,
   ListInboxResponse,
   ListRecentlyVisitedTrailsResponse,
+  ListSentResponse,
+  ListTopicInboxResponse,
   TrailRecentlyVisitedEntry,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // ---------- mock plumbing ----------
 //
-// InboxLeftPanel calls the static `WebAdeService.getInbox` /
-// `getRecentlyVisitedTrails` directly (no prop injection), so — mirroring the
-// TrailsView story — we rewire those methods once to read from a mutable
-// `activeMocks` cell and swap the cell per-story before returning the element.
+// InboxLeftPanel's load() fans out to four WebAdeService calls and awaits all
+// of them, so every one must resolve or the panel is stuck on "Loading…". We
+// rewire getInbox / getRecentlyVisitedTrails to read from a mutable
+// `activeMocks` cell (swapped per-story), and stub getTopicInbox / getSent to
+// empty — this story only exercises the inbox + recent lists.
 
 type MockState = {
   inbox: ListInboxResponse | 'reject' | 'pending';
@@ -39,22 +42,40 @@ const resolveMock = <T,>(value: T | 'reject' | 'pending'): Promise<T> => {
   return Promise.resolve(value);
 };
 
-(WebAdeService as unknown as { getInbox: typeof WebAdeService.getInbox }).getInbox =
-  async () => resolveMock(activeMocks.inbox);
+(
+  WebAdeService as unknown as { getInbox: typeof WebAdeService.getInbox }
+).getInbox = async () => resolveMock(activeMocks.inbox);
 (
   WebAdeService as unknown as {
     getRecentlyVisitedTrails: typeof WebAdeService.getRecentlyVisitedTrails;
   }
 ).getRecentlyVisitedTrails = async () => resolveMock(activeMocks.recent);
+// The Topics and Sent tabs aren't exercised here, but load() still awaits
+// them — stub to empty so the panel finishes loading.
+(
+  WebAdeService as unknown as {
+    getTopicInbox: typeof WebAdeService.getTopicInbox;
+  }
+).getTopicInbox = async (): Promise<ListTopicInboxResponse> => ({
+  entries: [],
+  unreadCount: 0,
+});
+(
+  WebAdeService as unknown as { getSent: typeof WebAdeService.getSent }
+).getSent = async (): Promise<ListSentResponse> => ({ entries: [] });
 
 // ---------- fixtures ----------
 
-const minutesAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
-const hoursAgo = (n: number) => new Date(Date.now() - n * 3_600_000).toISOString();
-const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+const minutesAgo = (n: number) =>
+  new Date(Date.now() - n * 60_000).toISOString();
+const hoursAgo = (n: number) =>
+  new Date(Date.now() - n * 3_600_000).toISOString();
+const daysAgo = (n: number) =>
+  new Date(Date.now() - n * 86_400_000).toISOString();
 
 const inboxEntry = (
-  over: Partial<InboxIndexEntry> & Pick<InboxIndexEntry, 'trailId' | 'owner' | 'repo'>,
+  over: Partial<InboxIndexEntry> &
+    Pick<InboxIndexEntry, 'trailId' | 'owner' | 'repo'>,
 ): InboxIndexEntry => ({
   sender: { githubId: 1, githubLogin: 'octocat' },
   sentAt: hoursAgo(3),
@@ -116,6 +137,85 @@ const inboxFixtures: InboxIndexEntry[] = [
       repo: 'typescript',
       updatedAt: daysAgo(2),
     },
+  }),
+];
+
+// The four notification states from the design, each with the server-derived
+// `notification` block the panel renders.
+const notificationFixtures: InboxIndexEntry[] = [
+  // 1 — never opened, no notes: dot, no note count.
+  inboxEntry({
+    trailId: 'n-1',
+    owner: 'principal-ade',
+    repo: 'logo-component',
+    readAt: null,
+    sentAt: daysAgo(3),
+    sender: { githubId: 9, githubLogin: 'fernando' },
+    snapshot: {
+      id: 'n-1',
+      title: 'How the File City logo animation works',
+      owner: 'principal-ade',
+      repo: 'logo-component',
+      updatedAt: daysAgo(3),
+      noteCount: 0,
+    },
+    notification: { dot: true, unread: true, noteCount: 0, newNoteCount: 0 },
+  }),
+  // 2 — never opened, has notes: dot + whole "N notes" orange.
+  inboxEntry({
+    trailId: 'n-2',
+    owner: 'principal-ade',
+    repo: 'codetrails',
+    readAt: null,
+    sentAt: minutesAgo(4),
+    sender: { githubId: 10, githubLogin: 'squall' },
+    snapshot: {
+      id: 'n-2',
+      title: 'Why does /blog return a 404?',
+      owner: 'principal-ade',
+      repo: 'codetrails',
+      updatedAt: minutesAgo(4),
+      noteCount: 2,
+    },
+    notification: { dot: true, unread: true, noteCount: 2, newNoteCount: 2 },
+  }),
+  // 3 — opened, all seen: no dot, notes shown muted.
+  inboxEntry({
+    trailId: 'n-3',
+    owner: 'principal-ade',
+    repo: 'logo-component',
+    readAt: daysAgo(1),
+    notesSeenCount: 3,
+    sentAt: daysAgo(2),
+    sender: { githubId: 9, githubLogin: 'fernando' },
+    snapshot: {
+      id: 'n-3',
+      title: 'How the File City logo animation works',
+      owner: 'principal-ade',
+      repo: 'logo-component',
+      updatedAt: daysAgo(1),
+      noteCount: 3,
+    },
+    notification: { dot: false, unread: false, noteCount: 3, newNoteCount: 0 },
+  }),
+  // 4 — opened, new notes since: dot + "(N new)" orange, total stays muted.
+  inboxEntry({
+    trailId: 'n-4',
+    owner: 'principal-ade',
+    repo: 'logo-component',
+    readAt: hoursAgo(6),
+    notesSeenCount: 3,
+    sentAt: minutesAgo(12),
+    sender: { githubId: 9, githubLogin: 'fernando' },
+    snapshot: {
+      id: 'n-4',
+      title: 'How the File City logo animation works',
+      owner: 'principal-ade',
+      repo: 'logo-component',
+      updatedAt: minutesAgo(12),
+      noteCount: 5,
+    },
+    notification: { dot: true, unread: false, noteCount: 5, newNoteCount: 2 },
   }),
 ];
 
@@ -182,6 +282,23 @@ export const Inbox: Story = {
   render: () => {
     withMocks({
       inbox: { entries: inboxFixtures, unreadCount: 2 },
+      recent: { entries: recentFixtures },
+    });
+    return <InboxLeftPanel />;
+  },
+};
+
+/**
+ * The four notification states, top to bottom: never-opened/no-notes (dot),
+ * never-opened/with-notes (dot + whole "2 notes" accented), opened/all-seen
+ * (no dot), and opened/new-notes-since (dot + "(2 new)" accented while the
+ * total stays muted). Three of the four carry a dot, so the header badge
+ * reads 3.
+ */
+export const NotificationStates: Story = {
+  render: () => {
+    withMocks({
+      inbox: { entries: notificationFixtures, unreadCount: 3 },
       recent: { entries: recentFixtures },
     });
     return <InboxLeftPanel />;
