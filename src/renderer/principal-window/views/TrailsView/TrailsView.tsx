@@ -649,13 +649,13 @@ const TrailsViewInner: React.FC<{
   // downstream filtering and highlight-color logic still reads cleanly.
   const purposeFilter: 'all' | 'investigation' | 'informative' = 'all';
 
-  // Recent-feed display mode. `'cards'` is the existing per-trail list; `'headers'`
+  // Recent-feed display mode. `'trails'` is the existing per-trail list; `'areas'`
   // pivots the same filtered set into an aggregate of top-level sequence-diagram
   // lane namespaces (one row per unique header) so the user can spot overlap
   // and candidate groupings across trails.
   const [recentDisplayMode, setRecentDisplayMode] = useState<
-    'cards' | 'headers' | 'files'
-  >('files');
+    'trails' | 'areas' | 'files'
+  >('trails');
 
   // File selection inside the files view. When set, the city spotlights just
   // this one file on top of the aggregate heat-map. Mutually exclusive with
@@ -1550,7 +1550,7 @@ const TrailsViewInner: React.FC<{
     recentHeaderRows: TrailHeaderRow[];
     areaFilesByHeader: Map<string, Set<string>>;
   }>(() => {
-    if (recentDisplayMode !== 'headers') {
+    if (recentDisplayMode !== 'areas') {
       return { recentHeaderRows: [], areaFilesByHeader: new Map() };
     }
     const headerToTrails = new Map<string, TrailIndexEntry[]>();
@@ -1788,7 +1788,7 @@ const TrailsViewInner: React.FC<{
   // so this layer never fights the panel's own per-trail layers — it only
   // shows when no trail is previewed yet.
   const hoveredTrailHighlightLayer = useMemo<HighlightLayer | null>(() => {
-    if (recentDisplayMode !== 'headers') return null;
+    if (recentDisplayMode !== 'areas') return null;
     if (!hoveredTrailId || !projectFileTree) return null;
     const payload = aggregatePayloads.get(hoveredTrailId);
     if (!payload) return null;
@@ -1836,7 +1836,7 @@ const TrailsViewInner: React.FC<{
   // (files span multiple top-level folders) since a root-level border
   // wouldn't tell the user anything new.
   const hoveredAreaBorderLayer = useMemo<HighlightLayer | null>(() => {
-    if (recentDisplayMode !== 'headers') return null;
+    if (recentDisplayMode !== 'areas') return null;
     if (!hoveredAreaHeader) return null;
     const row = recentHeaderRows.find((r) => r.header === hoveredAreaHeader);
     if (!row || !row.commonParent) return null;
@@ -1982,7 +1982,7 @@ const TrailsViewInner: React.FC<{
   // an area the user can no longer see in the list.
   useEffect(() => {
     if (!selectedAreaHeader) return;
-    if (recentDisplayMode !== 'headers') {
+    if (recentDisplayMode !== 'areas') {
       setSelectedAreaHeader(null);
       return;
     }
@@ -1997,7 +1997,7 @@ const TrailsViewInner: React.FC<{
   // fires, so the hover-border layer would stick.
   useEffect(() => {
     if (!hoveredAreaHeader) return;
-    if (recentDisplayMode !== 'headers') {
+    if (recentDisplayMode !== 'areas') {
       setHoveredAreaHeader(null);
       return;
     }
@@ -2012,7 +2012,7 @@ const TrailsViewInner: React.FC<{
   // the row unmounts mid-hover and `onMouseLeave` never fires.
   useEffect(() => {
     if (!hoveredTrailId) return;
-    if (recentDisplayMode !== 'headers') {
+    if (recentDisplayMode !== 'areas') {
       setHoveredTrailId(null);
     }
   }, [recentDisplayMode, hoveredTrailId]);
@@ -2051,7 +2051,7 @@ const TrailsViewInner: React.FC<{
   // How many filtered trails still need a payload load. Surfaces under the
   // headers list so users know rows may still reshuffle as IPC resolves.
   const recentHeaderPendingCount = useMemo(() => {
-    if (recentDisplayMode !== 'headers') return 0;
+    if (recentDisplayMode !== 'areas') return 0;
     let pending = 0;
     for (const trail of filteredRecentTrails) {
       if (!aggregatePayloads.has(trail.id)) pending++;
@@ -2169,7 +2169,7 @@ const TrailsViewInner: React.FC<{
                       marginBottom: 12,
                     }}
                   >
-                    Explored <span style={{ color: theme.colors.primary }}>Projects</span>
+                    Projects with <span style={{ color: theme.colors.primary }}>Trails</span>
                   </div>
                 </div>
                 <ExploredProjectsGrid
@@ -2470,8 +2470,8 @@ const TrailsViewInner: React.FC<{
                       {(
                         [
                           { value: 'files', label: 'Files' },
-                          { value: 'cards', label: 'Trails' },
-                          { value: 'headers', label: 'Areas' },
+                          { value: 'trails', label: 'Trails' },
+                          { value: 'areas', label: 'Areas' },
                         ] as const
                       ).map((option) => {
                         const active = recentDisplayMode === option.value;
@@ -2483,7 +2483,7 @@ const TrailsViewInner: React.FC<{
                             aria-selected={active}
                             onClick={() => setRecentDisplayMode(option.value)}
                             title={
-                              option.value === 'headers'
+                              option.value === 'areas'
                                 ? 'Aggregate top-level sequence-diagram areas across the filtered trails'
                                 : option.value === 'files'
                                   ? 'File tree of every file the filtered trails touch'
@@ -2550,7 +2550,7 @@ const TrailsViewInner: React.FC<{
                           }}
                           pendingCount={recentFilePendingCount}
                         />
-                      ) : recentDisplayMode === 'cards' ? (
+                      ) : recentDisplayMode === 'trails' ? (
                         <TrailsRecentList
                           groups={trailDayGroups.map((group) => ({
                             key: String(group.date.getTime()),

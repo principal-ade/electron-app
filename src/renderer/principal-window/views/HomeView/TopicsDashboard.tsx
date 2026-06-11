@@ -682,7 +682,7 @@ export const TopicsDashboard = React.forwardRef<
               eyebrowIcon={
                 <FolderGit2 size={12} color={theme.colors.primary} />
               }
-              eyebrow="Projects"
+              eyebrow="Trails"
               title="Projects with Trails"
               subtitle={
                 repoEntries.length === 0
@@ -698,7 +698,7 @@ export const TopicsDashboard = React.forwardRef<
                     icon={<ArrowRight size={14} />}
                     iconPosition="end"
                   >
-                    View All Projects
+                    View
                   </PillButton>
                 ) : null
               }
