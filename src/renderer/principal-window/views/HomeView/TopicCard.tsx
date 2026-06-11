@@ -12,6 +12,7 @@ import {
   Link2,
   Route,
   Share2,
+  Sparkles,
   Trash2,
 } from 'lucide-react';
 import type { TopicsDashboardTopicEntry } from './TopicsDashboard';
@@ -198,7 +199,7 @@ export function TopicCard({
           >
             {topic.title}
           </div>
-          {(showStatusPill || topic.isOpen || topic.shared) && (
+          {(showStatusPill || topic.isOpen || topic.shared || topic.isNew) && (
             <span
               style={{
                 display: 'inline-flex',
@@ -212,6 +213,26 @@ export function TopicCard({
                 transition: 'opacity 120ms ease',
               }}
             >
+              {topic.isNew && (
+                <span
+                  title="No local workspace yet — opening creates one"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    padding: '1px 6px',
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.info,
+                    border: `1px solid ${theme.colors.info}`,
+                    borderRadius: 5,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Sparkles size={10} />
+                  New
+                </span>
+              )}
               {showStatusPill && statusInfo && statusPres && (
                 <span
                   title={statusInfo.tooltip}

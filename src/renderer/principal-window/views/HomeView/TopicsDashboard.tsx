@@ -90,6 +90,12 @@ export interface TopicsDashboardTopicEntry {
    */
   isOpen?: boolean;
   /**
+   * Whether this topic has no local workspace yet — true for topics minted over
+   * the bridge or shared to us by someone else. Drives the "New" badge; opening
+   * the topic creates its workspace and the badge clears on the next refresh.
+   */
+  isNew?: boolean;
+  /**
    * Optional workflow status (mirrors the canonical `Topic.status`). Drives the
    * status pill on the card. Absent / `active` renders no pill so the common
    * case stays quiet.

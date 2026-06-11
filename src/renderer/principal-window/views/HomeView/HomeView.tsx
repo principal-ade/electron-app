@@ -433,6 +433,9 @@ export function HomeView() {
         shared: sharedTopicIds.has(t.id),
         trailCount: t.trailIds.length,
         isOpen: workspace ? openWorkspaceIds.has(workspace.id) : false,
+        // No local workspace yet — drives the "New" badge. Opening the topic
+        // materializes one (see onSelectTopic), at which point this flips off.
+        isNew: !workspace,
         status: t.status,
       };
     });
@@ -905,24 +908,35 @@ export function HomeView() {
                 })();
               }}
               onSelectTopic={(entry) => {
-                const target = workspaces.find((w) =>
-                  w.topicIds?.includes(entry.key),
-                );
-                if (!target) {
-                  console.warn(
-                    '[HomeView] No workspace found for topic:',
-                    entry.key,
-                  );
-                  return;
-                }
-                void WindowService.openAlexandriaWorkspace({
-                  workspaceId: target.id,
-                }).catch((err) => {
-                  console.error(
-                    '[HomeView] Failed to open topic workspace:',
-                    err,
-                  );
-                });
+                void (async () => {
+                  try {
+                    // A topic without a local workspace can't be opened as-is.
+                    // This happens for topics minted over the bridge (the
+                    // `POST /api/topics` route creates only the topic) and,
+                    // in future, topics shared to us by someone else. Open ==
+                    // first materialization: create the workspace from the
+                    // topic, then open it. From here on it behaves like an
+                    // in-app topic. The CREATE_WORKSPACE broadcast refreshes
+                    // the dashboard (dropping its "New" badge) on its own.
+                    let target = workspaces.find((w) =>
+                      w.topicIds?.includes(entry.key),
+                    );
+                    if (!target) {
+                      target = await WorkspaceService.createWorkspace({
+                        name: entry.title,
+                        topicIds: [entry.key],
+                      });
+                    }
+                    await WindowService.openAlexandriaWorkspace({
+                      workspaceId: target.id,
+                    });
+                  } catch (err) {
+                    console.error(
+                      '[HomeView] Failed to open topic workspace:',
+                      err,
+                    );
+                  }
+                })();
               }}
               onCreateTopic={() => setIsNewTopicOpen(true)}
               onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
