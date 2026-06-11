@@ -5,7 +5,7 @@ import {
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { Bot, FileText, FolderGit2, Plug, Route } from 'lucide-react';
+import { Bot, Brain, FolderGit2, Plug, Route } from 'lucide-react';
 import { WorkspaceInfoModal } from './WorkspaceInfoModal';
 import {
   PanelSelectorDropdown,
@@ -306,6 +306,78 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           />
         )}
 
+        {/* Topic Description — toggles the markdown slide-over over the left
+            column. Only shown when the workspace has a topic to describe. */}
+        {onToggleDescription && hasTopic && (
+          <button
+            onClick={onToggleDescription}
+            onContextMenu={
+              onOpenDescriptionInTab
+                ? (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onOpenDescriptionInTab();
+                  }
+                : undefined
+            }
+            title="Braindump (⌘D) — right-click to open in middle panel"
+            aria-label="Braindump"
+            aria-pressed={descriptionOpen ?? false}
+            style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '6px 10px',
+              minHeight: '34px',
+              boxSizing: 'border-box',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              background: descriptionOpen
+                ? theme.colors.background
+                : theme.colors.backgroundTertiary,
+              color: descriptionOpen
+                ? theme.colors.text
+                : theme.colors.textSecondary,
+              cursor: 'pointer',
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: descriptionOpen
+                ? theme.fontWeights.semibold
+                : theme.fontWeights.medium,
+              fontFamily: theme.fonts.body,
+              transition: 'all 0.15s',
+            }}
+          >
+            <Brain size={16} strokeWidth={1.75} />
+            <span>Braindump</span>
+            {modPressed && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -6,
+                  minWidth: 16,
+                  height: 16,
+                  padding: '0 4px',
+                  borderRadius: 8,
+                  background: theme.colors.primary,
+                  color: theme.colors.background,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[0],
+                  fontWeight: theme.fontWeights.semibold,
+                  lineHeight: '16px',
+                  textAlign: 'center',
+                  pointerEvents: 'none',
+                  boxShadow: `0 0 0 2px ${theme.colors.backgroundTertiary}`,
+                }}
+              >
+                D
+              </span>
+            )}
+          </button>
+        )}
+
         {/* Left Panel Switch — Projects ↔ Trails */}
         {layout && onLayoutChange && typeof layout.left === 'string' && (
           <div
@@ -390,78 +462,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
               );
             })}
           </div>
-        )}
-
-        {/* Topic Description — toggles the markdown slide-over over the left
-            column. Only shown when the workspace has a topic to describe. */}
-        {onToggleDescription && hasTopic && (
-          <button
-            onClick={onToggleDescription}
-            onContextMenu={
-              onOpenDescriptionInTab
-                ? (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onOpenDescriptionInTab();
-                  }
-                : undefined
-            }
-            title="Topic description (⌘D) — right-click to open in middle panel"
-            aria-label="Topic description"
-            aria-pressed={descriptionOpen ?? false}
-            style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              padding: '6px 10px',
-              minHeight: '34px',
-              boxSizing: 'border-box',
-              borderRadius: '6px',
-              border: `1px solid ${theme.colors.border}`,
-              background: descriptionOpen
-                ? theme.colors.background
-                : theme.colors.backgroundTertiary,
-              color: descriptionOpen
-                ? theme.colors.text
-                : theme.colors.textSecondary,
-              cursor: 'pointer',
-              fontSize: `${theme.fontSizes[1]}px`,
-              fontWeight: descriptionOpen
-                ? theme.fontWeights.semibold
-                : theme.fontWeights.medium,
-              fontFamily: theme.fonts.body,
-              transition: 'all 0.15s',
-            }}
-          >
-            <FileText size={16} strokeWidth={1.75} />
-            <span>Notes</span>
-            {modPressed && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: -6,
-                  right: -6,
-                  minWidth: 16,
-                  height: 16,
-                  padding: '0 4px',
-                  borderRadius: 8,
-                  background: theme.colors.primary,
-                  color: theme.colors.background,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[0],
-                  fontWeight: theme.fontWeights.semibold,
-                  lineHeight: '16px',
-                  textAlign: 'center',
-                  pointerEvents: 'none',
-                  boxShadow: `0 0 0 2px ${theme.colors.backgroundTertiary}`,
-                }}
-              >
-                D
-              </span>
-            )}
-          </button>
         )}
 
         {/* Cmd-held hint: shortcut to focus the terminal. Appears inline

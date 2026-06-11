@@ -448,7 +448,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       if (prev.some((t) => t.contentType === 'topic-description')) return prev;
       const newTab: TopicDescriptionTab = {
         id: 'topic-description',
-        label: 'Description',
+        label: 'Braindump',
         contentType: 'topic-description',
         filePath,
         closable: true,

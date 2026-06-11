@@ -14,7 +14,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
-import { ArrowDownToLine, FileText, Pencil, X } from 'lucide-react';
+import { ArrowDownToLine, Brain, Pencil, X } from 'lucide-react';
 import {
   DATA_TYPES,
   useDropZone,
@@ -311,7 +311,7 @@ export const TopicDescriptionSlideOver: React.FC<
           flexShrink: 0,
         }}
       >
-        <FileText size={14} color={theme.colors.textSecondary} />
+        <Brain size={14} color={theme.colors.textSecondary} />
         <span
           style={{
             flex: 1,
@@ -324,7 +324,7 @@ export const TopicDescriptionSlideOver: React.FC<
             whiteSpace: 'nowrap',
           }}
         >
-          Topic Notes
+          Braindump
         </span>
         {topicId && (
           <button
