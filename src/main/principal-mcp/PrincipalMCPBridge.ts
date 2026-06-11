@@ -18,6 +18,8 @@ import { registerDocumentNotesRoutes } from '../document-notes/documentNotesRout
 import { getDocumentNotesPersistence } from '../document-notes/documentNotesPersistence';
 import { registerTopicRoutes } from '../topics/topicRoutes';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
+import { registerRepoRoutes } from '../repos/repoRoutes';
+import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 
 // Tracer for Principal MCP Bridge instrumentation
 const tracer = getTracer('principal-ade-main');
@@ -167,6 +169,45 @@ export class PrincipalMCPBridge extends EventEmitter {
                   'Hydrate a private web-ade share by (owner, repo, id) using the main-process GitHub token. Use this instead of calling web-ade directly when the share is private.',
                 response:
                   '{ success, payload } | 404/502 { success: false, error, code }',
+              },
+            ],
+          },
+          {
+            name: 'repos',
+            description:
+              'Register and list Alexandria repositories. Registration is the programmatic analogue of the in-app "Add repository" affordance; the display name and remote are derived from the repo\'s git config.',
+            routes: [
+              {
+                method: 'GET',
+                path: '/api/repos',
+                summary:
+                  'List registered repositories (trimmed identity + provenance fields).',
+                response:
+                  '{ success, repos: Array<{ path, name, remoteUrl?, registeredAt, hasViews, viewCount, github? }> }',
+              },
+              {
+                method: 'POST',
+                path: '/api/repos',
+                summary:
+                  'Register a repository by absolute path. Re-registering an existing path is an idempotent no-op that returns the existing entry.',
+                body: {
+                  path: 'string (required) — absolute path to a git repository (must contain .git)',
+                  remoteUrl:
+                    'string (optional) — overrides the origin remote derived from git config',
+                },
+                response:
+                  '201 { success, alreadyRegistered: false, repo } (new) | 200 { success, alreadyRegistered: true, repo } (existing) | 400 { success: false, error }',
+              },
+              {
+                method: 'DELETE',
+                path: '/api/repos',
+                summary:
+                  'De-register a repository. Only drops the registry entry — local files are never deleted (the deleteLocal flag is not exposed over HTTP).',
+                query: {
+                  path: 'string — absolute path of the repo to de-register (or pass body.path)',
+                },
+                response:
+                  '{ success, removed } | 404 { success: false, error } | 400 { success: false, error }',
               },
             ],
           },
@@ -1116,6 +1157,11 @@ export class PrincipalMCPBridge extends EventEmitter {
       TopicRegistryService.getInstance(),
       getTrailStore(),
     );
+
+    // ============================================
+    // REPO REGISTRY ROUTES
+    // ============================================
+    registerRepoRoutes(this.app, AlexandriaRegistryService.getInstance());
   }
 
   public async start(): Promise<number> {
