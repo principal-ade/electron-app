@@ -1,40 +1,56 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Route, Share2, AlertTriangle, X } from 'lucide-react';
+import { Route, UploadCloud, AlertTriangle, Check, X } from 'lucide-react';
 
 /**
  * Confirmation shown before publishing a topic. A topic references trails by
  * id, and web-ade only accepts trails that are already shared — so publishing
  * a topic publishes its unshared trails too. This modal spells that out
  * before anything leaves the machine.
+ *
+ * It shows on every publish (even when there are no extra trails to share) so
+ * sharing is never silent — the user can opt out via "Don't show this again",
+ * which persists `topicSharing.skipPublishConfirm`.
  */
+/**
+ * One of the topic's trails, with its publish status:
+ *  - `shared`     — already on web-ade, nothing to do.
+ *  - `toPublish`  — local-only, will be published as part of this.
+ *  - `unresolved` — referenced by the topic but missing from the local
+ *                   library; blocks the publish until removed.
+ */
+export type TopicTrailStatus = 'shared' | 'toPublish' | 'unresolved';
+
+export interface TopicTrailPlan {
+  id: string;
+  title: string;
+  status: TopicTrailStatus;
+}
+
 export interface ShareTopicModalProps {
   topicTitle: string;
-  /** Titles of trails that will be newly published as part of this. */
-  toPublish: string[];
-  /** Count of the topic's trails already shared (no action needed). */
-  alreadySharedCount: number;
-  /** Titles of trails that can't be resolved locally — publishing will fail
-   *  until they're removed or recovered. */
-  unresolved: string[];
+  /** Every trail referenced by the topic, with its publish status. */
+  trails: TopicTrailPlan[];
   busy: boolean;
   error: string | null;
-  onConfirm: () => void;
+  /** Receives whether "Don't show this again" was checked at confirm time. */
+  onConfirm: (dontShowAgain: boolean) => void;
   onCancel: () => void;
 }
 
 export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
   topicTitle,
-  toPublish,
-  alreadySharedCount,
-  unresolved,
+  trails,
   busy,
   error,
   onConfirm,
   onCancel,
 }) => {
   const { theme } = useTheme();
-  const blocked = unresolved.length > 0;
+  const toPublishCount = trails.filter((t) => t.status === 'toPublish').length;
+  const unresolvedCount = trails.filter((t) => t.status === 'unresolved').length;
+  const blocked = unresolvedCount > 0;
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   return (
     <div
@@ -77,15 +93,15 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
             borderBottom: `1px solid ${theme.colors.border}`,
           }}
         >
-          <Share2 size={16} color={theme.colors.primary} />
+          <UploadCloud size={16} color={theme.colors.primary} />
           <span
             style={{
-              fontSize: theme.fontSizes[2],
+              fontSize: theme.fontSizes[3],
               fontWeight: theme.fontWeights.semibold,
               color: theme.colors.text,
             }}
           >
-            Share topic
+            Publish topic
           </span>
           <button
             type="button"
@@ -116,7 +132,7 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
-            fontSize: theme.fontSizes[1],
+            fontSize: theme.fontSizes[2],
             color: theme.colors.text,
             lineHeight: 1.5,
           }}
@@ -124,11 +140,22 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
           <div>
             Publishing{' '}
             <strong style={{ color: theme.colors.text }}>{topicTitle}</strong>{' '}
-            shares it to web-ade. A topic can only reference trails that are
+            will make it shareable. A topic can only reference trails that are
             shared, so its trails are published too.
           </div>
 
-          {toPublish.length > 0 && (
+          {trails.length === 0 && (
+            <div
+              style={{
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textSecondary,
+              }}
+            >
+              No trails attached to this topic.
+            </div>
+          )}
+
+          {trails.length > 0 && (
             <div
               style={{
                 display: 'flex',
@@ -138,15 +165,15 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
             >
               <div
                 style={{
-                  fontSize: theme.fontSizes[0],
+                  fontSize: theme.fontSizes[1],
                   fontWeight: theme.fontWeights.semibold,
                   color: theme.colors.textSecondary,
                   textTransform: 'uppercase',
                   letterSpacing: '0.04em',
                 }}
               >
-                {toPublish.length} trail{toPublish.length === 1 ? '' : 's'} will
-                be published
+                {trails.length} trail{trails.length === 1 ? '' : 's'} in this
+                topic
               </div>
               <ul
                 style={{
@@ -158,45 +185,59 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
                   gap: 4,
                 }}
               >
-                {toPublish.map((title) => (
-                  <li
-                    key={title}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      color: theme.colors.textSecondary,
-                    }}
-                  >
-                    <Route size={13} style={{ flexShrink: 0, opacity: 0.8 }} />
-                    <span
+                {trails.map((trail) => {
+                  // Per-status pill — green for shared, neutral-primary for
+                  // "will publish", error for the missing/blocking ones.
+                  const pill =
+                    trail.status === 'shared'
+                      ? { label: 'Shared', color: theme.colors.success ?? theme.colors.primary }
+                      : trail.status === 'toPublish'
+                        ? { label: 'Will publish', color: theme.colors.primary }
+                        : { label: 'Missing', color: theme.colors.error };
+                  return (
+                    <li
+                      key={trail.id}
                       style={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        color: theme.colors.textSecondary,
                       }}
                     >
-                      {title}
-                    </span>
-                  </li>
-                ))}
+                      <Route size={13} style={{ flexShrink: 0, opacity: 0.8 }} />
+                      <span
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {trail.title}
+                      </span>
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          fontSize: theme.fontSizes[1],
+                          fontWeight: theme.fontWeights.medium,
+                          color: pill.color,
+                          background: `color-mix(in srgb, ${pill.color} 14%, transparent)`,
+                          border: `1px solid color-mix(in srgb, ${pill.color} 35%, transparent)`,
+                        }}
+                      >
+                        {pill.label}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
 
-          {alreadySharedCount > 0 && (
-            <div
-              style={{
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.textSecondary,
-              }}
-            >
-              {alreadySharedCount} trail{alreadySharedCount === 1 ? ' is' : 's are'}{' '}
-              already shared.
-            </div>
-          )}
-
-          {unresolved.length > 0 && (
+          {blocked && (
             <div
               style={{
                 display: 'flex',
@@ -206,15 +247,15 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
                 background: `color-mix(in srgb, ${theme.colors.error} 12%, transparent)`,
                 border: `1px solid ${theme.colors.error}`,
                 color: theme.colors.error,
-                fontSize: theme.fontSizes[0],
+                fontSize: theme.fontSizes[1],
               }}
             >
               <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
               <span>
-                {unresolved.length} trail{unresolved.length === 1 ? '' : 's'} in
-                this topic {unresolved.length === 1 ? "isn't" : "aren't"} in your
+                {unresolvedCount} trail{unresolvedCount === 1 ? '' : 's'} in
+                this topic {unresolvedCount === 1 ? "isn't" : "aren't"} in your
                 local library and can't be published. Remove{' '}
-                {unresolved.length === 1 ? 'it' : 'them'} from the topic first.
+                {unresolvedCount === 1 ? 'it' : 'them'} from the topic first.
               </span>
             </div>
           )}
@@ -227,7 +268,7 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
                 background: `color-mix(in srgb, ${theme.colors.error} 12%, transparent)`,
                 border: `1px solid ${theme.colors.error}`,
                 color: theme.colors.error,
-                fontSize: theme.fontSizes[0],
+                fontSize: theme.fontSizes[1],
               }}
             >
               {error}
@@ -239,12 +280,58 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
         <div
           style={{
             display: 'flex',
-            justifyContent: 'flex-end',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             gap: 8,
             padding: '12px 16px',
             borderTop: `1px solid ${theme.colors.border}`,
           }}
         >
+          {/* Don't show again — only offered when the publish can actually go
+              through; a blocked publish must always surface its modal. */}
+          {!blocked ? (
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                cursor: busy ? 'default' : 'pointer',
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textSecondary,
+                userSelect: 'none',
+              }}
+            >
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={dontShowAgain}
+                disabled={busy}
+                onClick={() => setDontShowAgain((v) => !v)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 16,
+                  height: 16,
+                  flexShrink: 0,
+                  borderRadius: 4,
+                  border: `1px solid ${dontShowAgain ? theme.colors.primary : theme.colors.border}`,
+                  background: dontShowAgain
+                    ? theme.colors.primary
+                    : theme.colors.backgroundTertiary,
+                  color: theme.colors.background,
+                  cursor: busy ? 'default' : 'pointer',
+                  padding: 0,
+                }}
+              >
+                {dontShowAgain && <Check size={12} strokeWidth={3} />}
+              </button>
+              Don't show this again
+            </label>
+          ) : (
+            <span />
+          )}
+          <div style={{ display: 'flex', gap: 8 }}>
           <button
             type="button"
             onClick={onCancel}
@@ -256,7 +343,7 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
               background: theme.colors.backgroundTertiary,
               color: theme.colors.text,
               cursor: busy ? 'default' : 'pointer',
-              fontSize: theme.fontSizes[1],
+              fontSize: theme.fontSizes[2],
               fontFamily: theme.fonts.body,
               opacity: busy ? 0.6 : 1,
             }}
@@ -265,7 +352,7 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={() => onConfirm(dontShowAgain)}
             disabled={busy || blocked}
             style={{
               padding: '7px 14px',
@@ -274,7 +361,7 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
               background: theme.colors.primary,
               color: theme.colors.background,
               cursor: busy || blocked ? 'default' : 'pointer',
-              fontSize: theme.fontSizes[1],
+              fontSize: theme.fontSizes[2],
               fontWeight: theme.fontWeights.medium,
               fontFamily: theme.fonts.body,
               opacity: busy || blocked ? 0.6 : 1,
@@ -282,10 +369,11 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
           >
             {busy
               ? 'Publishing…'
-              : toPublish.length > 0
-                ? `Publish topic + ${toPublish.length} trail${toPublish.length === 1 ? '' : 's'}`
+              : toPublishCount > 0
+                ? `Publish topic + ${toPublishCount} trail${toPublishCount === 1 ? '' : 's'}`
                 : 'Publish topic'}
           </button>
+          </div>
         </div>
       </div>
     </div>

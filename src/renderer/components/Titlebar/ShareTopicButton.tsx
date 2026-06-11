@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Check, Loader2, Share2 } from 'lucide-react';
+import { Check, Loader2, UploadCloud } from 'lucide-react';
 import type { LocalTopicRecord } from '../../../shared/main-process-api-interfaces/TopicAPI';
 import { TrailShareError } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { TopicService } from '../../main-process-api/TopicService';
 import { TrailLibraryService } from '../../services/TrailLibraryService';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { ShareTopicModal } from './ShareTopicModal';
+import type { TopicTrailPlan } from './ShareTopicModal';
 
 /**
  * Titlebar action that publishes the workspace's topic to web-ade.
@@ -38,12 +40,33 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [plan, setPlan] = useState<{
-    toPublish: string[];
-    alreadyShared: number;
-    unresolved: string[];
-  }>({ toPublish: [], alreadyShared: 0, unresolved: [] });
+  const [plan, setPlan] = useState<{ trails: TopicTrailPlan[] }>({
+    trails: [],
+  });
+  // Mirrors `topicSharing.skipPublishConfirm` — when true, an unblocked publish
+  // skips the educational modal. Read once on mount and kept current via the
+  // preferences-updated event.
+  const skipConfirmRef = useRef(false);
   const revertRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    UserPreferencesService.getPreferences()
+      .then((prefs) => {
+        if (!cancelled)
+          skipConfirmRef.current = Boolean(prefs.topicSharing?.skipPublishConfirm);
+      })
+      .catch(() => {
+        /* default: don't skip */
+      });
+    const off = UserPreferencesService.onPreferencesUpdated((prefs) => {
+      skipConfirmRef.current = Boolean(prefs.topicSharing?.skipPublishConfirm);
+    });
+    return () => {
+      cancelled = true;
+      off();
+    };
+  }, []);
 
   // Load the topic record (canonical + sync) so the button knows whether the
   // topic is already shared. Refetch on any topic change — publishing fires
@@ -91,11 +114,18 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
   const shared = Boolean(remoteId);
   const armed = Boolean(topicId && record);
 
-  // The actual publish — shared by the direct path (no trails to pre-share)
-  // and the modal-confirm path. Keeps the modal open on error so its message
-  // shows there; closes + flashes "copied" on success.
-  const runPublish = useCallback(async () => {
+  // The actual publish — shared by the direct (opted-out) path and the
+  // modal-confirm path. Keeps the modal open on error so its message shows
+  // there; closes + flashes "copied" on success. `dontShowAgain` is only set
+  // from the modal's checkbox; persists the opt-out before publishing.
+  const runPublish = useCallback(async (dontShowAgain = false) => {
     if (!topicId) return;
+    if (dontShowAgain) {
+      skipConfirmRef.current = true;
+      void UserPreferencesService.updatePreferences({
+        topicSharing: { skipPublishConfirm: true },
+      });
+    }
     setStatus('publishing');
     setErrorMsg(null);
     try {
@@ -134,44 +164,49 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
       return;
     }
 
-    // Partition the topic's trails by shared state so the modal can explain
-    // which ones publishing will also share. A topic stores local trail ids;
-    // the library lookup gives titles + sharedAt.
+    // Resolve each of the topic's trails to its publish status so the modal
+    // can list them. A topic stores local trail ids; the library lookup gives
+    // titles + sharedAt. Trails missing from the library are 'unresolved' and
+    // block the publish.
     const { entries } = await TrailLibraryService.list();
     const byId = new Map(entries.map((e) => [e.id, e]));
-    const toPublish: string[] = [];
-    const unresolved: string[] = [];
-    let alreadyShared = 0;
-    for (const trailId of record.topic.trailIds) {
+    const trails: TopicTrailPlan[] = record.topic.trailIds.map((trailId) => {
       const entry = byId.get(trailId);
-      if (!entry) unresolved.push(trailId);
-      else if (entry.sharedAt) alreadyShared += 1;
-      else toPublish.push(entry.title || trailId);
-    }
+      if (!entry) return { id: trailId, title: trailId, status: 'unresolved' };
+      return {
+        id: trailId,
+        title: entry.title || trailId,
+        status: entry.sharedAt ? 'shared' : 'toPublish',
+      };
+    });
+    const hasUnresolved = trails.some((t) => t.status === 'unresolved');
 
-    // Nothing extra to publish and nothing broken → skip the modal.
-    if (toPublish.length === 0 && unresolved.length === 0) {
+    // The modal shows on every publish so sharing is never silent. The only
+    // exception is when the user has opted out *and* nothing is blocking —
+    // a blocked publish (unresolved trails) must always surface the modal so
+    // its explanation shows.
+    if (skipConfirmRef.current && !hasUnresolved) {
       await runPublish();
       return;
     }
-    setPlan({ toPublish, alreadyShared, unresolved });
+    setPlan({ trails });
     setErrorMsg(null);
     setModalOpen(true);
   }, [topicId, record, remoteId, status, flash, runPublish]);
 
   const label =
     status === 'publishing'
-      ? 'Sharing…'
+      ? 'Publishing…'
       : status === 'copied'
         ? 'Link copied'
         : status === 'error'
-          ? 'Share failed'
+          ? 'Publish failed'
           : shared
             ? 'Shared'
-            : 'Share topic';
+            : 'Publish topic';
 
   const Icon =
-    status === 'publishing' ? Loader2 : shared || status === 'copied' ? Check : Share2;
+    status === 'publishing' ? Loader2 : shared || status === 'copied' ? Check : UploadCloud;
 
   const title = !topicId
     ? 'Create a topic to enable sharing'
@@ -251,9 +286,7 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
     {modalOpen && record && (
       <ShareTopicModal
         topicTitle={record.topic.title}
-        toPublish={plan.toPublish}
-        alreadySharedCount={plan.alreadyShared}
-        unresolved={plan.unresolved}
+        trails={plan.trails}
         busy={status === 'publishing'}
         error={errorMsg}
         onConfirm={runPublish}

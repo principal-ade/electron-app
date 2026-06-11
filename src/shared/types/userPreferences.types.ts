@@ -262,6 +262,15 @@ export interface UserPreferences {
     topicsViewMode?: 'list' | 'kanban';
   };
 
+  // Topic sharing preferences
+  topicSharing?: {
+    // Skip the publish-confirmation modal shown before a topic is shared to
+    // web-ade. Set when the user checks "Don't show this again" in
+    // ShareTopicModal. Default false — the educational modal shows every
+    // time until the user opts out.
+    skipPublishConfirm?: boolean;
+  };
+
   // Onboarding state and completion tracking
   onboarding?: OnboardingState;
 
