@@ -18,6 +18,7 @@ import React, {
 import type {
   InboxTab,
   InboxHomeTab,
+  LocalTrailTab,
   SharedTrailTab,
   TopicTab,
 } from '../../inbox-view/InboxPanelFramework';
@@ -41,6 +42,8 @@ interface InboxTabsContextValue {
   openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
   /** Open a `topic-<topicId>` tab idempotently and focus it. */
   openTopic: (topicId: string, title?: string) => void;
+  /** Open a `local-trail-<trailId>` tab idempotently and focus it. */
+  openLocalTrail: (trailId: string, title?: string) => void;
 }
 
 const InboxTabsContext = createContext<InboxTabsContextValue | null>(null);
@@ -92,6 +95,23 @@ export const InboxTabsProvider: React.FC<{ children: React.ReactNode }> = ({
     setActiveTabId(tabId);
   }, []);
 
+  const openLocalTrail = useCallback((trailId: string, title?: string) => {
+    const tabId = `local-trail-${trailId}`;
+
+    setTabs((prev) => {
+      if (prev.some((t) => t.id === tabId)) return prev;
+      const newTab: LocalTrailTab = {
+        id: tabId,
+        label: title || 'Trail',
+        contentType: 'local-trail',
+        closable: true,
+        trailId,
+      };
+      return [...prev, newTab];
+    });
+    setActiveTabId(tabId);
+  }, []);
+
   const value = useMemo<InboxTabsContextValue>(
     () => ({
       tabs,
@@ -100,8 +120,9 @@ export const InboxTabsProvider: React.FC<{ children: React.ReactNode }> = ({
       setActiveTabId,
       openSharedTrail,
       openTopic,
+      openLocalTrail,
     }),
-    [tabs, activeTabId, openSharedTrail, openTopic],
+    [tabs, activeTabId, openSharedTrail, openTopic, openLocalTrail],
   );
 
   return (

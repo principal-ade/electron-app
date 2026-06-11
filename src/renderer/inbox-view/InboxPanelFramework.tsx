@@ -21,7 +21,7 @@ import React, {
   useEffect,
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Inbox, Route, Layers } from 'lucide-react';
+import { Inbox, Route, Layers, Footprints } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -45,6 +45,7 @@ import {
 } from '@industry-theme/xterm-terminal-panel';
 import { InboxLeftPanel } from '../panels/InboxLeftPanel';
 import { SharedTrailTabContent } from '../feed-view/SharedTrailTabContent';
+import { LocalTrailTabContent } from '../feed-view/LocalTrailTabContent';
 import { TopicTabContent } from './TopicTabContent';
 import { useInboxTabs } from '../principal-window/contexts/InboxTabsContext';
 
@@ -76,7 +77,23 @@ export interface TopicTab extends BaseTab {
   topicId: string;
 }
 
-export type InboxTab = TerminalTab | InboxHomeTab | SharedTrailTab | TopicTab;
+/**
+ * Local trail tab — a trail from the on-disk library, opened in-place when a
+ * freshly authored trail arrives while the user is on the Inbox view and no
+ * dev-workspace for its repo is open. Carries only the id; the panel
+ * self-fetches the payload + repositoryPath from the local library.
+ */
+export interface LocalTrailTab extends BaseTab {
+  contentType: 'local-trail';
+  trailId: string;
+}
+
+export type InboxTab =
+  | TerminalTab
+  | InboxHomeTab
+  | SharedTrailTab
+  | TopicTab
+  | LocalTrailTab;
 
 export interface InboxPanelFrameworkProps {
   /** Local repositories — used to resolve a clone for shared-trail file trees. */
@@ -247,6 +264,8 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
         return <Route size={14} />;
       case 'topic':
         return <Layers size={14} />;
+      case 'local-trail':
+        return <Footprints size={14} />;
       default:
         return null;
     }
@@ -276,6 +295,16 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
             topicId={topicTab.topicId}
             events={eventsRef.current}
             repositories={repositoriesRef.current}
+          />
+        );
+      }
+      case 'local-trail': {
+        const trailTab = tab as LocalTrailTab;
+        return (
+          <LocalTrailTabContent
+            key={trailTab.id}
+            trailId={trailTab.trailId}
+            events={eventsRef.current}
           />
         );
       }

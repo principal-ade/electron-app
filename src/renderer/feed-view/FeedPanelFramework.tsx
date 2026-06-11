@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, Users, Activity, FolderGit2, User, Building2, BookMarked, Radio, Wrench, Route } from 'lucide-react';
+import { GitCommit, Users, Activity, FolderGit2, User, Building2, BookMarked, Radio, Wrench, Route, Footprints } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -70,6 +70,7 @@ import { WebAdeService } from '../main-process-api/WebAdeService';
 import { ApiProxyService } from '../main-process-api/ApiProxyService';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { SharedTrailTabContent } from './SharedTrailTabContent';
+import { LocalTrailTabContent } from './LocalTrailTabContent';
 import { SecureAuthService } from '../services/SecureAuthService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
@@ -210,9 +211,20 @@ export interface SharedTrailTab extends BaseTab {
 }
 
 /**
+ * Local trail tab — a trail from the on-disk library, opened in-place when a
+ * freshly authored trail arrives while the user is on the Projects view and no
+ * dev-workspace for its repo is open. Carries only the id; the panel self-fetches
+ * the payload + repositoryPath from the local library.
+ */
+export interface LocalTrailTab extends BaseTab {
+  contentType: 'local-trail';
+  trailId: string;
+}
+
+/**
  * Union type of all supported tab types in FeedView
  */
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | WatchedOwnerActivityTab | WatchedRepoActivityTab | SharedTrailTab;
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | WatchedOwnerActivityTab | WatchedRepoActivityTab | SharedTrailTab | LocalTrailTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -1721,6 +1733,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         return <Radio size={14} />;
       case 'shared-trail':
         return <Route size={14} />;
+      case 'local-trail':
+        return <Footprints size={14} />;
       default:
         return null;
     }
@@ -1841,6 +1855,16 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               events={eventsRef.current}
               repositories={repositories}
               briefSide="leading"
+            />
+          );
+        }
+        case 'local-trail': {
+          const trailTab = tab as LocalTrailTab;
+          return (
+            <LocalTrailTabContent
+              key={trailTab.id}
+              trailId={trailTab.trailId}
+              events={eventsRef.current}
             />
           );
         }

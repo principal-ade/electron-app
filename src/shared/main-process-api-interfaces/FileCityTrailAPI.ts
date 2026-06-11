@@ -55,6 +55,9 @@ export enum FileCityTrailEvent {
  *  `#openTrailId=` URL hash instead; this event is for warm-start handoff. */
 export interface TrailShowInPrincipalEnvelope {
   trailId: string;
+  /** Trail title — used to label the tab when the principal window opens the
+   *  trail in-place (Projects/Inbox views) instead of switching to TrailsView. */
+  title?: string;
 }
 
 /**

@@ -44,6 +44,7 @@ type WindowOpened = 'focused' | 'created' | 'routed-to-principal' | 'none';
 async function ensureDevWorkspaceWindow(
   repositoryPath: string,
   openTrailId: string,
+  openTrailTitle?: string,
 ): Promise<WindowOpened> {
   const registry = AlexandriaRegistryService.getInstance();
   let entry = await registry.getRepositoryByPath(repositoryPath);
@@ -92,7 +93,10 @@ async function ensureDevWorkspaceWindow(
     // at mount, but a warm principal window never re-mounts, so push an
     // IPC asking it to switch to TrailsView. Cold starts also receive
     // this (harmlessly — the listener just re-sets activeView='trails').
-    const envelope: TrailShowInPrincipalEnvelope = { trailId: openTrailId };
+    const envelope: TrailShowInPrincipalEnvelope = {
+      trailId: openTrailId,
+      title: openTrailTitle,
+    };
     sendToPrincipalWindow(
       FileCityTrailEvent.SHOW_IN_PRINCIPAL,
       envelope,
@@ -400,6 +404,7 @@ export function registerTrailRoutes(
           windowOpened = await ensureDevWorkspaceWindow(
             result.repositoryPath,
             payload.id,
+            payload.title,
           );
         } catch (err) {
           console.error('[trailRoutes] ensure window failed', err);

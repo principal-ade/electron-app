@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { NavigationSidebar } from './NavigationSidebar';
 import { IntegratedTitlebar } from './IntegratedTitlebar';
 import { useTheme } from '@principal-ade/industry-theme';
@@ -25,6 +25,8 @@ import {
   useAgentCommandPalette,
 } from '@principal-ade/panel-layouts';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
+import { useFeedTabs } from '../../contexts/FeedTabsContext';
+import { useInboxTabs } from '../../contexts/InboxTabsContext';
 import { OnboardingWizard } from '../../../components/OnboardingWizard/OnboardingWizard';
 import './IntegratedShell.css';
 
@@ -129,6 +131,14 @@ export const IntegratedShell: React.FC = () => {
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const { theme, mode } = useTheme();
   const { events } = usePrincipalEvents();
+  const { openLocalTrail: openLocalTrailInFeed } = useFeedTabs();
+  const { openLocalTrail: openLocalTrailInInbox } = useInboxTabs();
+
+  // Live mirror of activeView so the SHOW_IN_PRINCIPAL listener — which
+  // subscribes once on mount — can read the view the user is currently on
+  // without re-subscribing (and risking a missed fire) on every switch.
+  const activeViewRef = useRef(activeView);
+  activeViewRef.current = activeView;
 
   // Store collapsed states per view to avoid animation glitches when switching
   const [viewCollapsedStates, setViewCollapsedStates] = useState<
@@ -206,15 +216,29 @@ export const IntegratedShell: React.FC = () => {
 
   // Warm-start handoff from the bridge: trailRoutes sends SHOW_IN_PRINCIPAL
   // after focusOrCreateMainWindow when the principal window was already
-  // open (cold starts ride the URL hash above instead). Force the Trails
-  // view and stash the trail id so TrailsView boots on the Recent grid.
+  // open (cold starts ride the URL hash above instead).
+  //
+  // Default: force the Trails view and stash the trail id so TrailsView boots
+  // on the Recent grid. BUT if the user is currently on the Projects (feed) or
+  // Inbox view, opening the trail there as a tab keeps them in place instead of
+  // yanking them over to Trails — both views own a tabbed panel that can host
+  // the trail.
   useEffect(() => {
-    const unsubscribe = TrailService.onShowInPrincipal(({ trailId }) => {
+    const unsubscribe = TrailService.onShowInPrincipal(({ trailId, title }) => {
+      const view = activeViewRef.current;
+      if (view === 'feed') {
+        openLocalTrailInFeed(trailId, title);
+        return;
+      }
+      if (view === 'inbox') {
+        openLocalTrailInInbox(trailId, title);
+        return;
+      }
       setActiveView('trails');
       setBootstrapTrailId(trailId);
     });
     return unsubscribe;
-  }, []);
+  }, [openLocalTrailInFeed, openLocalTrailInInbox]);
 
   // HomeView dashboard click → switch to TrailsView. A repo card sends a
   // `repoPath` and we pre-select that repo (opening its Recent grid). The

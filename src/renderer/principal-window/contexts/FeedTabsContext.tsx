@@ -24,6 +24,7 @@ import React, {
 import type {
   ActivityFeedTab,
   FeedTab,
+  LocalTrailTab,
   ProjectInfoTab,
   SharedTrailTab,
   UserProfileTab,
@@ -51,6 +52,8 @@ interface FeedTabsContextValue {
   openUserProfile: (username: string, email?: string) => void;
   /** Open a `shared-trail-<trailId>` tab idempotently and focus it. */
   openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
+  /** Open a `local-trail-<trailId>` tab idempotently and focus it. */
+  openLocalTrail: (trailId: string, title?: string) => void;
 }
 
 const FeedTabsContext = createContext<FeedTabsContextValue | null>(null);
@@ -127,6 +130,23 @@ export const FeedTabsProvider: React.FC<{ children: React.ReactNode }> = ({
     [],
   );
 
+  const openLocalTrail = useCallback((trailId: string, title?: string) => {
+    const tabId = `local-trail-${trailId}`;
+
+    setTabs((prev) => {
+      if (prev.some((t) => t.id === tabId)) return prev;
+      const newTab: LocalTrailTab = {
+        id: tabId,
+        label: title || 'Trail',
+        contentType: 'local-trail',
+        closable: true,
+        trailId,
+      };
+      return [...prev, newTab];
+    });
+    setActiveTabId(tabId);
+  }, []);
+
   const value = useMemo<FeedTabsContextValue>(
     () => ({
       tabs,
@@ -136,8 +156,16 @@ export const FeedTabsProvider: React.FC<{ children: React.ReactNode }> = ({
       openProjectInfo,
       openUserProfile,
       openSharedTrail,
+      openLocalTrail,
     }),
-    [tabs, activeTabId, openProjectInfo, openUserProfile, openSharedTrail],
+    [
+      tabs,
+      activeTabId,
+      openProjectInfo,
+      openUserProfile,
+      openSharedTrail,
+      openLocalTrail,
+    ],
   );
 
   return (
