@@ -644,7 +644,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
         <div style={{ marginLeft: -spacing.sm, marginRight: -spacing.sm }}>
           <SegmentedControl
             options={[
-              { value: 'my-activity', label: 'My Activity' },
+              { value: 'my-activity', label: 'My Projects' },
               { value: 'organizations', label: 'Team' },
               { value: 'collections', label: 'Social' },
             ]}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, Trash2 } from 'lucide-react';
+import { Circle, Cloud, Download, FolderGit2, Trash2 } from 'lucide-react';
 
 export interface OrgRepoItemCardData {
   name: string;
@@ -10,11 +10,24 @@ export interface OrgRepoItemCardData {
 export interface OrgRepoItemCardProps {
   repo: OrgRepoItemCardData;
   onClick?: () => void;
-  /** Hover-revealed action to remove the project from the local registry. */
+  /** Whether this project has a local clone on disk. */
+  isCloned?: boolean;
+  /** Whether the local clone has uncommitted changes. */
+  isDirty?: boolean;
+  /** Hover-revealed action to clone a not-yet-cloned project. */
+  onClone?: () => void;
+  /** Hover-revealed action to remove a cloned project from the local registry. */
   onRemove?: () => void;
 }
 
-export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({ repo, onClick, onRemove }) => {
+export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
+  repo,
+  onClick,
+  isCloned = false,
+  isDirty = false,
+  onClone,
+  onRemove,
+}) => {
   const { theme } = useTheme();
   const spacing = { xs: 4, sm: 8, md: 16 };
   const radius = theme.radii?.[1] || 4;
@@ -47,22 +60,46 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({ repo, onClick,
         borderRadius: radius,
         cursor: onClick ? 'pointer' : 'default',
         transition: 'all 0.15s ease',
+        // Not-yet-cloned projects read as lighter than the ones on disk.
+        opacity: isCloned ? 1 : 0.7,
       }}
     >
-      <FolderGit2 size={16} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
+      {/* On-disk clones get the repo icon; not-yet-cloned repos get a cloud. */}
+      {isCloned ? (
+        <FolderGit2 size={16} color={theme.colors.text} style={{ flexShrink: 0 }} />
+      ) : (
+        <Cloud size={16} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontFamily: theme.fonts?.body,
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.text,
-            lineHeight: 1.2,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.xs,
+            minWidth: 0,
           }}
         >
-          {repo.name}
+          <span
+            style={{
+              fontFamily: theme.fonts?.body,
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.text,
+              lineHeight: 1.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {repo.name}
+          </span>
+          {isDirty && (
+            <span
+              title="In Progress — has uncommitted changes"
+              style={{ flexShrink: 0, display: 'inline-flex' }}
+            >
+              <Circle size={8} fill={theme.colors.warning} color={theme.colors.warning} />
+            </span>
+          )}
         </div>
         {repo.description && (
           <div
@@ -81,7 +118,46 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({ repo, onClick,
           </div>
         )}
       </div>
-      {onRemove && (
+
+      {/* Clone action for projects that aren't on disk yet. */}
+      {!isCloned && onClone && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClone();
+          }}
+          title="Clone to disk"
+          aria-label={`Clone ${repo.name}`}
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 24,
+            height: 24,
+            padding: 0,
+            border: 'none',
+            borderRadius: 4,
+            background: 'transparent',
+            color: theme.colors.textSecondary,
+            cursor: 'pointer',
+            opacity: hovered ? 1 : 0,
+            transition: 'opacity 120ms, color 120ms',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = theme.colors.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = theme.colors.textSecondary;
+          }}
+        >
+          <Download size={14} />
+        </button>
+      )}
+
+      {/* Remove-from-registry action for cloned projects. */}
+      {isCloned && onRemove && (
         <button
           type="button"
           onClick={(e) => {

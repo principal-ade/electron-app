@@ -1,24 +1,27 @@
 /**
- * ProjectsList
+ * ProjectsList ("My Projects")
  *
- * Component showing a list of repositories sorted by recent activity.
- * Used in the FeedView panel layout.
+ * A single, unified list of every project the user can reach: their local
+ * clones plus every repository across their GitHub account and organizations.
+ * Instead of separate views, the list is narrowed with single-select filter
+ * chips (All / Cloned / In Progress) and ordered with a recency/name sort.
+ * Used in the FeedView left panel.
  */
 
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, Search, Trash2 } from 'lucide-react';
+import { ArrowUpDown, FolderGit2, Loader2, Search, Trash2 } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { payloadFromLocalEntry } from '../events/feedRepositorySelected';
+import { payloadFromGithub, payloadFromLocalEntry } from '../events/feedRepositorySelected';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
-import { GithubService } from '../main-process-api/GithubService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import { ProjectRepoCard } from './cards/ProjectRepoCard';
+import { useGithubProjects } from '../hooks/useGithubProjects';
 import { OrgSectionHeaderCard } from './cards/OrgSectionHeaderCard';
 import { OrgRepoItemCard } from './cards/OrgRepoItemCard';
+import { CloneFromGitHubModal } from './components/CloneFromGitHubModal';
 
 export interface CommitTimestamp {
   timestamp: Date | string;
@@ -26,35 +29,46 @@ export interface CommitTimestamp {
 }
 
 export interface ProjectsListProps {
-  /** Commit timestamps to aggregate by repository */
+  /** Commit timestamps (retained for API compatibility; not used by the list) */
   commits: CommitTimestamp[];
-  /** Repository data with GitHub information */
+  /** Locally registered repositories (clones on disk) */
   repositories?: AlexandriaEntry[];
   /** Event emitter for panel communication */
   events: PanelEventEmitter;
-  /** Currently selected time block (not used in repository list) */
+  /** Currently selected time block (unused) */
   selectedBlock?: string | null;
 }
 
-type ProjectsViewMode = 'in-progress' | 'recent' | 'by-org';
+/** Single-select filter applied to the unified list. */
+type ProjectFilter = 'all' | 'cloned' | 'in-progress';
+/** Sort order applied within each org group. */
+type ProjectSort = 'recent' | 'name';
 
-interface RepoSummaryWithEntry extends RepoSummary {
+/** A merged project: a GitHub repo, a local clone, or both. */
+interface UnifiedProject {
+  key: string;
+  owner: string;
+  name: string;
+  description?: string | null;
+  isCloned: boolean;
+  isDirty: boolean;
+  /** The local registry entry, when cloned. */
   entry?: AlexandriaEntry;
+  /** Epoch ms of the most recent activity, for the recency sort. */
+  lastActivity: number;
+  /** URL used to seed the clone flow, when known. */
+  cloneUrl?: string;
 }
 
-interface RepoSummary {
-  repoId: string;
-  repoName: string;
-  commitCount: number;
-  lastCommitTime: Date;
-  githubOwner?: string;
-}
+const toMs = (iso?: string): number => {
+  if (!iso) return 0;
+  const ms = new Date(iso).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+};
 
 export const ProjectsList: React.FC<ProjectsListProps> = ({
-  commits,
   repositories = [],
   events,
-  selectedBlock: _selectedBlock = null,
 }) => {
   const { theme } = useTheme();
 
@@ -64,41 +78,27 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     md: theme.space?.[3] || 16,
   };
 
-  // View mode state
-  const [viewMode, setViewMode] = useState<ProjectsViewMode>('in-progress');
+  // Filter + sort + search state
+  const [filter, setFilter] = useState<ProjectFilter>('all');
+  const [sort, setSort] = useState<ProjectSort>('recent');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Git status map for repositories
+  // Git status map for local repositories
   const [gitStatusMap, setGitStatusMap] = useState<Map<string, GitStatusWithFiles>>(new Map());
-
-  // User's GitHub username and organizations
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const [userOrgs, setUserOrgs] = useState<string[]>([]);
 
   // Collapsed state for org sections
   const [collapsedOrgs, setCollapsedOrgs] = useState<Set<string>>(new Set());
 
-  // Fetch user's GitHub username and organizations
-  useEffect(() => {
-    const fetchGitHubData = async () => {
-      try {
-        const [user, orgs] = await Promise.all([
-          GithubService.getCurrentUser(),
-          GithubService.getUserOrganizations(),
-        ]);
+  // Clone-to-disk flow
+  const [cloneUrl, setCloneUrl] = useState<string | null>(null);
 
-        if (user) {
-          setCurrentUser(user.login);
-        }
-        setUserOrgs(orgs.map(org => org.login));
-      } catch (error) {
-        console.error('[ProjectsList] Failed to fetch GitHub data:', error);
-        setCurrentUser(null);
-        setUserOrgs([]);
-      }
-    };
-
-    fetchGitHubData();
-  }, []);
+  // GitHub projects across the user's account + all their orgs
+  const {
+    repos: githubRepos,
+    currentUser,
+    userOrgs,
+    loading: githubLoading,
+  } = useGithubProjects();
 
   // Fetch git status for all repositories with local paths
   useEffect(() => {
@@ -109,9 +109,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
 
       await Promise.all(
         repositories
-          .filter(repo => repo.path) // Only check repos with local paths
+          .filter(repo => repo.path)
           .map(async (repo) => {
-            if (!repo.path) return; // Type guard, should never happen due to filter
+            if (!repo.path) return;
             try {
               const status = await RepositoryMonitoringService.getGitStatusWithFiles(repo.path);
               if (!cancelled && status) {
@@ -138,7 +138,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   // Subscribe to git status changes for real-time updates
   useEffect(() => {
     const unsubscribe = RepositoryMonitoringService.onGitStatusChanged((status) => {
-      // Update the status map when any repository's git status changes
       setGitStatusMap(prev => {
         const updated = new Map(prev);
         updated.set(status.repoPath, status);
@@ -149,42 +148,28 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     return unsubscribe;
   }, []);
 
-  // Format relative time
-  const formatRelativeTime = useCallback((date: Date): string => {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    const diffWeeks = Math.floor(diffDays / 7);
-    const diffMonths = Math.floor(diffDays / 30);
-    const diffYears = Math.floor(diffDays / 365);
-
-    if (diffMinutes < 1) return 'just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    if (diffWeeks < 4) return `${diffWeeks}w ago`;
-    if (diffMonths < 12) return `${diffMonths}mo ago`;
-    return `${diffYears}y ago`;
-  }, []);
-
-  // Handle repository click - open profile
-  const handleRepoClick = useCallback(
-    (entry: AlexandriaEntry) => {
+  // Handle project click — open the cloned entry, or the GitHub identity when not cloned
+  const handleProjectClick = useCallback(
+    (project: UnifiedProject) => {
+      const payload = project.entry
+        ? payloadFromLocalEntry(project.entry)
+        : payloadFromGithub({
+            owner: project.owner,
+            name: project.name,
+            description: project.description ?? undefined,
+          });
       events.emit({
         type: 'feed:repository-selected',
         source: 'projects-list-panel',
         timestamp: Date.now(),
-        payload: payloadFromLocalEntry(entry),
+        payload,
       });
     },
     [events]
   );
 
   // Remove-from-list confirmation state. This flow only unregisters the
-  // project from Alexandria; the clone on disk is untouched. To actually
-  // delete files, users open the project's profile tab.
+  // project from Alexandria; the clone on disk is untouched.
   const [removeConfirm, setRemoveConfirm] = useState<AlexandriaEntry | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [clearAllConfirm, setClearAllConfirm] = useState(false);
@@ -215,149 +200,121 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     }
   }, []);
 
-  // Create a map of repo paths to github owner info
-  const repoGithubMap = useMemo(() => {
-    const map = new Map<string, { owner: string; name: string }>();
-    for (const repo of repositories) {
-      if (repo.path && repo.github?.owner && repo.github?.name) {
-        map.set(repo.path, { owner: repo.github.owner, name: repo.github.name });
-      }
-    }
-    return map;
-  }, [repositories]);
+  // Merge GitHub repos and local clones into one project model keyed by owner/name.
+  const projects = useMemo<UnifiedProject[]>(() => {
+    const map = new Map<string, UnifiedProject>();
 
-  // Aggregate commits by repository (for timeline view)
-  const repoSummaries = useMemo<RepoSummaryWithEntry[]>(() => {
-    const repoMap = new Map<string, RepoSummaryWithEntry>();
-
-    for (const commit of commits) {
-      // Skip commits without repoId
-      if (!commit.repoId) continue;
-
-      const repoId = commit.repoId;
-      const timestamp = typeof commit.timestamp === 'string'
-        ? new Date(commit.timestamp)
-        : commit.timestamp;
-
-      let summary = repoMap.get(repoId);
-      if (!summary) {
-        // Extract repo name from path (last part after /)
-        const repoName = repoId.split('/').pop() || repoId;
-        const githubInfo = repoGithubMap.get(repoId);
-        const entry = repositories.find(r => r.path === repoId);
-        summary = {
-          repoId,
-          repoName,
-          commitCount: 0,
-          lastCommitTime: timestamp,
-          githubOwner: githubInfo?.owner,
-          entry,
-        };
-        repoMap.set(repoId, summary);
-      }
-      summary.commitCount++;
-      if (timestamp > summary.lastCommitTime) {
-        summary.lastCommitTime = timestamp;
-      }
-    }
-
-    // Get all summaries and sort by most recent commit first
-    let summaries = Array.from(repoMap.values()).sort(
-      (a, b) => b.lastCommitTime.getTime() - a.lastCommitTime.getTime()
-    );
-
-    // Apply filter based on view mode (only for timeline views)
-    if (viewMode === 'in-progress' || viewMode === 'recent') {
-      summaries = summaries.filter(summary => {
-        if (!summary.repoId) return false;
-        const gitStatus = gitStatusMap.get(summary.repoId);
-
-        if (viewMode === 'in-progress') {
-          // Show only dirty repos
-          return gitStatus && gitStatus.isDirty;
-        } else if (viewMode === 'recent') {
-          // Show only clean repos
-          return !gitStatus || !gitStatus.isDirty;
-        }
-
-        return true;
+    // 1) GitHub repos — start as not-cloned; local entries upgrade them below.
+    for (const repo of githubRepos) {
+      const owner = repo.owner.login;
+      const key = `${owner.toLowerCase()}/${repo.name.toLowerCase()}`;
+      map.set(key, {
+        key,
+        owner,
+        name: repo.name,
+        description: repo.description,
+        isCloned: false,
+        isDirty: false,
+        lastActivity: toMs(repo.pushed_at || repo.updated_at),
+        cloneUrl: repo.clone_url || repo.html_url,
       });
     }
 
-    return summaries;
-  }, [commits, repoGithubMap, repositories, viewMode, gitStatusMap]);
+    // 2) Local registry entries — every entry is a clone on disk.
+    for (const entry of repositories) {
+      const owner = entry.github?.owner || 'Untracked';
+      const name = entry.github?.name || entry.name;
+      const key = `${owner.toLowerCase()}/${name.toLowerCase()}`;
+      const gitStatus = entry.path ? gitStatusMap.get(entry.path) : undefined;
+      const localActivity = Math.max(
+        toMs(entry.github?.lastCommit),
+        toMs(entry.lastOpenedAt),
+        toMs(entry.registeredAt)
+      );
 
-  // Group repositories by organization (for by-org view)
-  const groupedRepos = useMemo(() => {
-    const groups = new Map<string, AlexandriaEntry[]>();
-
-    for (const repo of repositories) {
-      const orgName = repo.github?.owner || 'Untracked';
-      const existing = groups.get(orgName) || [];
-      existing.push(repo);
-      groups.set(orgName, existing);
+      const existing = map.get(key);
+      if (existing) {
+        existing.isCloned = true;
+        existing.entry = entry;
+        existing.isDirty = gitStatus?.isDirty ?? false;
+        existing.description = existing.description ?? entry.github?.description;
+        existing.lastActivity = Math.max(existing.lastActivity, localActivity);
+      } else {
+        map.set(key, {
+          key,
+          owner,
+          name,
+          description: entry.github?.description,
+          isCloned: true,
+          isDirty: gitStatus?.isDirty ?? false,
+          entry,
+          lastActivity: localActivity,
+          cloneUrl: entry.remoteUrl,
+        });
+      }
     }
 
-    // Sort repos within each group alphabetically
-    for (const [orgName, repos] of groups.entries()) {
-      repos.sort((a, b) => a.name.localeCompare(b.name));
-      groups.set(orgName, repos);
+    return Array.from(map.values());
+  }, [githubRepos, repositories, gitStatusMap]);
+
+  // Apply filter + search, then group by org and order the groups.
+  const { groups, sortedOrgNames } = useMemo(() => {
+    let filtered = projects;
+    if (filter === 'cloned') {
+      filtered = filtered.filter(p => p.isCloned);
+    } else if (filter === 'in-progress') {
+      filtered = filtered.filter(p => p.isCloned && p.isDirty);
     }
 
-    // Create sorted array of org names
-    const orgNames = Array.from(groups.keys());
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      filtered = filtered.filter(
+        p =>
+          p.name.toLowerCase().includes(q) ||
+          p.owner.toLowerCase().includes(q) ||
+          (p.description?.toLowerCase().includes(q) ?? false)
+      );
+    }
 
-    // Separate into user's own, member orgs, other orgs, and untracked
+    const grouped = new Map<string, UnifiedProject[]>();
+    for (const p of filtered) {
+      const arr = grouped.get(p.owner) || [];
+      arr.push(p);
+      grouped.set(p.owner, arr);
+    }
+
+    // Sort within each org group by the selected order.
+    for (const [owner, arr] of grouped.entries()) {
+      arr.sort((a, b) =>
+        sort === 'recent'
+          ? b.lastActivity - a.lastActivity
+          : a.name.localeCompare(b.name)
+      );
+      grouped.set(owner, arr);
+    }
+
+    // Order groups: the user's own org first, then member orgs, then others,
+    // with Untracked pinned to the bottom.
+    const orgNames = Array.from(grouped.keys());
     const userOwn = currentUser && orgNames.includes(currentUser) ? [currentUser] : [];
-    const memberOrgs = orgNames.filter(org =>
-      org !== 'Untracked' &&
-      org !== currentUser &&
-      userOrgs.includes(org)
-    );
-    const otherOrgs = orgNames.filter(org =>
-      org !== 'Untracked' &&
-      org !== currentUser &&
-      !userOrgs.includes(org)
-    );
+    const memberOrgs = orgNames
+      .filter(o => o !== 'Untracked' && o !== currentUser && userOrgs.includes(o))
+      .sort((a, b) => a.localeCompare(b));
+    const otherOrgs = orgNames
+      .filter(o => o !== 'Untracked' && o !== currentUser && !userOrgs.includes(o))
+      .sort((a, b) => a.localeCompare(b));
     const untracked = orgNames.includes('Untracked') ? ['Untracked'] : [];
 
-    // Sort member orgs and other orgs alphabetically
-    memberOrgs.sort((a, b) => a.localeCompare(b));
-    otherOrgs.sort((a, b) => a.localeCompare(b));
-
-    // Combine in order: user's own, member orgs, other orgs, untracked
-    const sortedOrgNames = [...userOwn, ...memberOrgs, ...otherOrgs, ...untracked];
-
     return {
-      groups,
-      sortedOrgNames,
+      groups: grouped,
+      sortedOrgNames: [...userOwn, ...memberOrgs, ...otherOrgs, ...untracked],
     };
-  }, [repositories, currentUser, userOrgs]);
+  }, [projects, filter, searchQuery, sort, currentUser, userOrgs]);
 
-  // Search query for the by-org (Cloned Projects) view
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Filtered grouped repos based on search query
-  const filteredGroupedRepos = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return groupedRepos;
-
-    const filteredGroups = new Map<string, AlexandriaEntry[]>();
-    for (const [orgName, repos] of groupedRepos.groups.entries()) {
-      const matched = repos.filter(
-        r =>
-          r.name.toLowerCase().includes(q) ||
-          r.github?.description?.toLowerCase().includes(q)
-      );
-      if (matched.length > 0) filteredGroups.set(orgName, matched);
-    }
-
-    const filteredOrgNames = groupedRepos.sortedOrgNames.filter(o =>
-      filteredGroups.has(o)
-    );
-
-    return { groups: filteredGroups, sortedOrgNames: filteredOrgNames };
-  }, [groupedRepos, searchQuery]);
+  const hasClonedProjects = useMemo(
+    () => repositories.some(r => r.path),
+    [repositories]
+  );
 
   // Toggle org collapsed state
   const toggleOrgCollapsed = useCallback((orgName: string) => {
@@ -372,6 +329,8 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     });
   }, []);
 
+  const isInitialLoading = githubLoading && projects.length === 0;
+
   return (
     <div
       style={{
@@ -383,39 +342,151 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         overflow: 'hidden',
       }}
     >
-      {/* View Mode Control */}
-      <div
-        style={{
-          padding: spacing.sm,
-          flexShrink: 0,
-        }}
-      >
+      {/* Filter chips */}
+      <div style={{ padding: spacing.sm, flexShrink: 0 }}>
         <SegmentedControl
           options={[
-            { value: 'recent', label: 'Recent' },
+            { value: 'all', label: 'All' },
+            { value: 'cloned', label: 'Cloned' },
             { value: 'in-progress', label: 'In Progress' },
-            { value: 'by-org', label: 'Cloned Projects' },
           ]}
-          value={viewMode}
-          onChange={(value) => setViewMode(value as ProjectsViewMode)}
+          value={filter}
+          onChange={(value) => setFilter(value as ProjectFilter)}
           theme={theme}
           variant="pill-flat"
         />
       </div>
 
-      {/* Timeline View (for In Progress and Recent modes) */}
-      {(viewMode === 'in-progress' || viewMode === 'recent') && (
+      {/* Search + sort + clear-all */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing.xs,
+          padding: `${spacing.xs}px ${spacing.md}px`,
+          borderBottom: `1px solid ${theme.colors.border}`,
+          flexShrink: 0,
+        }}
+      >
         <div
           style={{
             flex: 1,
-            overflow: 'auto',
             display: 'flex',
-            flexDirection: 'column',
-            gap: spacing.sm,
-            padding: spacing.md,
+            alignItems: 'center',
+            gap: spacing.xs,
+            backgroundColor: theme.colors.backgroundSecondary,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radii?.[1] || 4,
+            padding: `${spacing.xs}px ${spacing.sm}px`,
           }}
         >
-        {repoSummaries.length === 0 ? (
+          <Search size={13} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
+          <input
+            type="text"
+            placeholder="Filter projects..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              flex: 1,
+              background: 'none',
+              border: 'none',
+              outline: 'none',
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.text,
+              caretColor: theme.colors.primary,
+            }}
+          />
+        </div>
+
+        {/* Sort toggle: Recent <-> Name */}
+        <button
+          type="button"
+          onClick={() => setSort(prev => (prev === 'recent' ? 'name' : 'recent'))}
+          title={sort === 'recent' ? 'Sorting by recent activity' : 'Sorting by name'}
+          aria-label={`Sort by ${sort === 'recent' ? 'recent' : 'name'}`}
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.xs,
+            height: 28,
+            padding: `0 ${spacing.sm}px`,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radii?.[1] || 4,
+            background: 'transparent',
+            color: theme.colors.textSecondary,
+            fontFamily: theme.fonts?.body,
+            fontSize: theme.fontSizes[0],
+            cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = theme.colors.text; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textSecondary; }}
+        >
+          <ArrowUpDown size={13} />
+          {sort === 'recent' ? 'Recent' : 'Name'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setClearAllConfirm(true)}
+          disabled={!hasClonedProjects}
+          title="Remove all cloned projects from list (does not delete folders)"
+          aria-label="Remove all cloned projects from list"
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 28,
+            height: 28,
+            padding: 0,
+            border: 'none',
+            borderRadius: theme.radii?.[1] || 4,
+            background: 'transparent',
+            color: theme.colors.textSecondary,
+            cursor: hasClonedProjects ? 'pointer' : 'default',
+            opacity: hasClonedProjects ? 1 : 0.4,
+          }}
+          onMouseEnter={(e) => {
+            if (hasClonedProjects) {
+              e.currentTarget.style.color = theme.colors.text;
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = theme.colors.textSecondary;
+          }}
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+
+      {/* Grouped project list */}
+      <div
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: spacing.md,
+        }}
+      >
+        {isInitialLoading ? (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              color: theme.colors.textSecondary,
+              fontSize: theme.fontSizes[1],
+              gap: spacing.sm,
+            }}
+          >
+            <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+            <span>Loading projects…</span>
+          </div>
+        ) : sortedOrgNames.length === 0 ? (
           <div
             style={{
               display: 'flex',
@@ -429,198 +500,78 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             }}
           >
             <FolderGit2 size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
-            <span>No repositories</span>
+            <span>No projects</span>
           </div>
         ) : (
-          repoSummaries.map((summary) => {
-            const gitStatus = summary.repoId ? gitStatusMap.get(summary.repoId) : null;
-            const entry = summary.entry;
+          sortedOrgNames.map((orgName) => {
+            const repos = groups.get(orgName) || [];
+            const isCollapsed = collapsedOrgs.has(orgName);
+            const isUserOwn = currentUser === orgName;
+            const isMemberOrg = userOrgs.includes(orgName);
+            const badge: 'you' | 'member' | undefined = isUserOwn
+              ? 'you'
+              : isMemberOrg
+                ? 'member'
+                : undefined;
+
             return (
-              <div
-                key={summary.repoId}
-                style={{ opacity: entry ? 1 : 0.5 }}
-              >
-                <ProjectRepoCard
-                  repo={{
-                    repoName: summary.repoName,
-                    ownerLogin: summary.githubOwner,
-                    timeLabel: formatRelativeTime(summary.lastCommitTime),
-                    isDirty: gitStatus?.isDirty ?? false,
-                  }}
-                  onClick={entry ? () => handleRepoClick(entry) : undefined}
-                />
+              <div key={orgName} style={{ marginBottom: spacing.md }}>
+                <div style={{ marginBottom: spacing.xs }}>
+                  <OrgSectionHeaderCard
+                    header={{
+                      orgName,
+                      badge,
+                      repoCount: repos.length,
+                      isUntracked: orgName === 'Untracked',
+                    }}
+                    isCollapsed={isCollapsed}
+                    onToggle={() => toggleOrgCollapsed(orgName)}
+                  />
+                </div>
+
+                {!isCollapsed && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: spacing.xs,
+                      paddingLeft: spacing.md + spacing.sm,
+                    }}
+                  >
+                    {repos.map((project) => (
+                      <OrgRepoItemCard
+                        key={project.key}
+                        repo={{ name: project.name, description: project.description }}
+                        isCloned={project.isCloned}
+                        isDirty={project.isDirty}
+                        onClick={() => handleProjectClick(project)}
+                        onClone={
+                          !project.isCloned && project.cloneUrl
+                            ? () => setCloneUrl(project.cloneUrl ?? null)
+                            : undefined
+                        }
+                        onRemove={
+                          project.entry ? () => setRemoveConfirm(project.entry ?? null) : undefined
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })
         )}
-        </div>
-      )}
+      </div>
 
-      {/* By Organization View */}
-      {viewMode === 'by-org' && (
-        <div
-          style={{
-            flex: 1,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {/* Search bar + Remove all */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.xs,
-              padding: `${spacing.xs}px ${spacing.md}px`,
-              borderBottom: `1px solid ${theme.colors.border}`,
-              flexShrink: 0,
-            }}
-          >
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-                backgroundColor: theme.colors.backgroundSecondary,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: theme.radii?.[1] || 4,
-                padding: `${spacing.xs}px ${spacing.sm}px`,
-              }}
-            >
-              <Search size={13} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
-              <input
-                type="text"
-                placeholder="Filter repositories..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{
-                  flex: 1,
-                  background: 'none',
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: theme.fontSizes[1],
-                  color: theme.colors.text,
-                  caretColor: theme.colors.primary,
-                }}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => setClearAllConfirm(true)}
-              disabled={repositories.length === 0}
-              title="Remove all from list (does not delete folders)"
-              aria-label="Remove all from list"
-              style={{
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 28,
-                height: 28,
-                padding: 0,
-                border: 'none',
-                borderRadius: theme.radii?.[1] || 4,
-                background: 'transparent',
-                color: theme.colors.textSecondary,
-                cursor: repositories.length === 0 ? 'default' : 'pointer',
-                opacity: repositories.length === 0 ? 0.4 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (repositories.length > 0) {
-                  e.currentTarget.style.color = theme.colors.text;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = theme.colors.textSecondary;
-              }}
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
+      {/* Clone-to-disk modal, seeded with the selected repo's URL. The registry
+          change event refreshes the list so the project flips to "cloned". */}
+      <CloneFromGitHubModal
+        isOpen={cloneUrl !== null}
+        onClose={() => setCloneUrl(null)}
+        initialUrl={cloneUrl ?? undefined}
+      />
 
-          <div
-            style={{
-              flex: 1,
-              overflow: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              padding: spacing.md,
-            }}
-          >
-          {filteredGroupedRepos.sortedOrgNames.length === 0 ? (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                color: theme.colors.textSecondary,
-                fontSize: theme.fontSizes[1],
-                textAlign: 'center',
-              }}
-            >
-              <FolderGit2 size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
-              <span>No repositories</span>
-            </div>
-          ) : (
-            filteredGroupedRepos.sortedOrgNames.map((orgName) => {
-              const repos = filteredGroupedRepos.groups.get(orgName) || [];
-              const isCollapsed = collapsedOrgs.has(orgName);
-              const isUserOwn = currentUser === orgName;
-              const isMemberOrg = userOrgs.includes(orgName);
-              const badge: 'you' | 'member' | undefined = isUserOwn
-                ? 'you'
-                : isMemberOrg
-                  ? 'member'
-                  : undefined;
-
-              return (
-                <div key={orgName} style={{ marginBottom: spacing.md }}>
-                  <div style={{ marginBottom: spacing.xs }}>
-                    <OrgSectionHeaderCard
-                      header={{
-                        orgName,
-                        badge,
-                        repoCount: repos.length,
-                        isUntracked: orgName === 'Untracked',
-                      }}
-                      isCollapsed={isCollapsed}
-                      onToggle={() => toggleOrgCollapsed(orgName)}
-                    />
-                  </div>
-
-                  {!isCollapsed && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: spacing.xs,
-                        paddingLeft: spacing.md + spacing.sm,
-                      }}
-                    >
-                      {repos.map((repo) => (
-                        <OrgRepoItemCard
-                          key={repo.name}
-                          repo={{ name: repo.name, description: repo.github?.description }}
-                          onClick={() => handleRepoClick(repo)}
-                          onRemove={() => setRemoveConfirm(repo)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
-          </div>
-        </div>
-      )}
-
-      {/* Remove-from-list confirm. Does not touch files on disk — to actually
-          delete a clone, open its profile tab. */}
+      {/* Remove-from-list confirm. Does not touch files on disk. */}
       {removeConfirm && (
         <RemoveConfirmModal
           title="Remove from list?"
@@ -647,16 +598,12 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
 
       {clearAllConfirm && (
         <RemoveConfirmModal
-          title="Remove all from list?"
+          title="Remove all cloned projects from list?"
           body={
             <>
-              Removes all{' '}
-              <span style={{ color: theme.colors.text }}>
-                {repositories.length}
-              </span>{' '}
-              project{repositories.length === 1 ? '' : 's'} from this list. Your
-              folders on disk are not deleted. To delete clones on disk, open
-              each project and use its profile tab.
+              Removes all cloned projects from this list. Your folders on disk are
+              not deleted. To delete clones on disk, open each project and use its
+              profile tab.
             </>
           }
           confirmLabel="Remove all"
