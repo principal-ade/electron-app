@@ -1116,6 +1116,7 @@ function KanbanBoard({
                   theme={theme}
                   draggable={canDrag}
                   showStatus={false}
+                  boardMode
                   onSelect={onSelectTopic}
                   onDelete={onDeleteTopic}
                 />

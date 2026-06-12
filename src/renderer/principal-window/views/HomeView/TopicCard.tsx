@@ -6,7 +6,6 @@ import type { TopicStatus } from '@principal-ai/alexandria-core-library';
 /** The structured status axis — derived from the core lib's inline union. */
 type TopicStatusState = TopicStatus['state'];
 import {
-  AppWindow,
   Clock,
   FolderGit2,
   Link2,
@@ -87,6 +86,11 @@ export interface TopicCardProps {
    * status badge would be redundant.
    */
   showStatus?: boolean;
+  /**
+   * Whether the card is rendered in the kanban board view. The hover-reveal
+   * delete button is shown only here — the flat list keeps cards quiet.
+   */
+  boardMode?: boolean;
 }
 
 /**
@@ -102,6 +106,7 @@ export function TopicCard({
   onDelete,
   draggable = false,
   showStatus = true,
+  boardMode = false,
 }: TopicCardProps) {
   const [hovered, setHovered] = React.useState(false);
   // Dim the source card while it's mid-drag (kanban restatus). The drag image
@@ -110,7 +115,9 @@ export function TopicCard({
   // The trash button shares the card's top-right corner with the status
   // indicators, so fade the indicators out while it's revealed to avoid an
   // overlap (deletion is hidden for shared topics, matching the trash guard).
-  const trashVisible = hovered && !!onDelete && !topic.shared;
+  // Delete is a board-view affordance only — the flat list stays read-only on
+  // hover so cards don't flash a trash button during a casual scan.
+  const trashVisible = boardMode && hovered && !!onDelete && !topic.shared;
 
   // Status pill: color keys off the structured state, text off the custom
   // label (or a per-state default). An `active` topic with no label yields no
@@ -121,7 +128,138 @@ export function TopicCard({
     status && statusPres
       ? describeStatus(status, statusPres.defaultLabel)
       : null;
-  const showStatusPill = showStatus && !!(status && statusPres && statusInfo);
+  // An open window is itself a status, so the "Open" badge stands in for the
+  // status pill — suppress the pill while the topic is open to avoid doubling up.
+  const showStatusPill =
+    showStatus && !topic.isOpen && !!(status && statusPres && statusInfo);
+
+  // Badges live on the meta row (left of the trail count) rather than beside
+  // the title, so a long topic name no longer gets truncated to make room.
+  const hasBadges =
+    showStatusPill || topic.isOpen || topic.shared || topic.isNew;
+  const badges = hasBadges ? (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        flex: '0 0 auto',
+      }}
+    >
+      {topic.isNew && (
+        <span
+          title="No local workspace yet — opening creates one"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 3,
+            padding: '1px 6px',
+            fontSize: theme.fontSizes[0],
+            fontFamily: theme.fonts.body,
+            color: theme.colors.info,
+            border: `1px solid ${theme.colors.info}`,
+            borderRadius: 5,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <Sparkles size={10} />
+          New
+        </span>
+      )}
+      {showStatusPill && statusInfo && statusPres && (
+        <span
+          title={statusInfo.tooltip}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            maxWidth: 160,
+            padding: '1px 6px',
+            fontSize: theme.fontSizes[0],
+            fontFamily: theme.fonts.body,
+            color: statusPres.color,
+            border: `1px solid ${statusPres.color}`,
+            borderRadius: 5,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {status?.waitingOn?.until ? (
+            <Clock size={10} style={{ flex: '0 0 auto' }} />
+          ) : status?.waitingOn?.ref ? (
+            <Link2 size={10} style={{ flex: '0 0 auto' }} />
+          ) : null}
+          <span
+            style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {statusInfo.text}
+          </span>
+        </span>
+      )}
+      {(topic.isOpen || topic.shared) && (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            color: theme.colors.primary,
+          }}
+        >
+          {topic.isOpen && (
+            <span
+              title="Window open"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                padding: '1px 6px',
+                fontSize: theme.fontSizes[0],
+                fontFamily: theme.fonts.body,
+                border: `1px solid ${theme.colors.primary}`,
+                borderRadius: 5,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Open
+            </span>
+          )}
+          {topic.shared &&
+            // When a topic is open we already show an indicator, so the
+            // "Shared" badge collapses to just its icon to keep the row
+            // from getting crowded.
+            (topic.isOpen ? (
+              <span
+                title="Shared to web-ade"
+                style={{ display: 'inline-flex', alignItems: 'center' }}
+              >
+                <Share2 size={14} />
+              </span>
+            ) : (
+              <span
+                title="Shared to web-ade"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  padding: '1px 6px',
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts.body,
+                  border: `1px solid ${theme.colors.primary}`,
+                  borderRadius: 5,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <Share2 size={10} />
+                Shared
+              </span>
+            ))}
+        </span>
+      )}
+    </span>
+  ) : null;
 
   // Shared-layout animation: each card carries a stable `layoutId` (the topic
   // id). When the dashboard swaps between the flat list and the kanban board,
@@ -199,126 +337,11 @@ export function TopicCard({
           >
             {topic.title}
           </div>
-          {(showStatusPill || topic.isOpen || topic.shared || topic.isNew) && (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                flex: '0 0 auto',
-                marginLeft: 'auto',
-                // Crossfade with the hover trash button so they never collide
-                // in the corner.
-                opacity: trashVisible ? 0 : 1,
-                transition: 'opacity 120ms ease',
-              }}
-            >
-              {topic.isNew && (
-                <span
-                  title="No local workspace yet — opening creates one"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3,
-                    padding: '1px 6px',
-                    fontSize: theme.fontSizes[0],
-                    fontFamily: theme.fonts.body,
-                    color: theme.colors.info,
-                    border: `1px solid ${theme.colors.info}`,
-                    borderRadius: 5,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <Sparkles size={10} />
-                  New
-                </span>
-              )}
-              {showStatusPill && statusInfo && statusPres && (
-                <span
-                  title={statusInfo.tooltip}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    maxWidth: 160,
-                    padding: '1px 6px',
-                    fontSize: theme.fontSizes[0],
-                    fontFamily: theme.fonts.body,
-                    color: statusPres.color,
-                    border: `1px solid ${statusPres.color}`,
-                    borderRadius: 5,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {status?.waitingOn?.until ? (
-                    <Clock size={10} style={{ flex: '0 0 auto' }} />
-                  ) : status?.waitingOn?.ref ? (
-                    <Link2 size={10} style={{ flex: '0 0 auto' }} />
-                  ) : null}
-                  <span
-                    style={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {statusInfo.text}
-                  </span>
-                </span>
-              )}
-              {(topic.isOpen || topic.shared) && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    color: theme.colors.primary,
-                  }}
-                >
-                  {topic.isOpen && (
-                    <span
-                      title="Window open"
-                      style={{ display: 'inline-flex', alignItems: 'center' }}
-                    >
-                      <AppWindow size={14} />
-                    </span>
-                  )}
-                  {topic.shared &&
-                    // When a topic is open we already show an indicator, so the
-                    // "Shared" badge collapses to just its icon to keep the row
-                    // from getting crowded.
-                    (topic.isOpen ? (
-                      <span
-                        title="Shared to web-ade"
-                        style={{ display: 'inline-flex', alignItems: 'center' }}
-                      >
-                        <Share2 size={14} />
-                      </span>
-                    ) : (
-                      <span
-                        title="Shared to web-ade"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 3,
-                          padding: '1px 6px',
-                          fontSize: theme.fontSizes[0],
-                          fontFamily: theme.fonts.body,
-                          border: `1px solid ${theme.colors.primary}`,
-                          borderRadius: 5,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        <Share2 size={10} />
-                        Shared
-                      </span>
-                    ))}
-                </span>
-              )}
-            </span>
-          )}
         </div>
-        {topic.projectRepos?.length || topic.folderPath || topic.trailCount ? (
+        {topic.projectRepos?.length ||
+        topic.folderPath ||
+        topic.trailCount ||
+        hasBadges ? (
           <div
             style={{
               display: 'flex',
@@ -419,30 +442,42 @@ export function TopicCard({
                 </span>
               </div>
             ) : null}
-            {topic.trailCount ? (
-              <div
-                style={{
-                  marginLeft: 'auto',
-                  flex: '0 0 auto',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  color: theme.colors.textTertiary,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[0],
-                }}
-                title={`${topic.trailCount} ${
-                  topic.trailCount === 1 ? 'trail' : 'trails'
-                }`}
-              >
-                <Route size={12} />
-                {topic.trailCount}
-              </div>
-            ) : null}
+            {/* Badges + trail count share a right-aligned group so the badges
+                sit just left of the trail count, clear of the title above. */}
+            <div
+              style={{
+                marginLeft: 'auto',
+                flex: '0 0 auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              {badges}
+              {topic.trailCount ? (
+                <div
+                  style={{
+                    flex: '0 0 auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    color: theme.colors.textTertiary,
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[0],
+                  }}
+                  title={`${topic.trailCount} ${
+                    topic.trailCount === 1 ? 'trail' : 'trails'
+                  }`}
+                >
+                  <Route size={12} />
+                  {topic.trailCount}
+                </div>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </button>
-      {onDelete && !topic.shared && (
+      {boardMode && onDelete && !topic.shared && (
         <button
           type="button"
           aria-label={`Delete topic ${topic.title}`}
@@ -466,8 +501,8 @@ export function TopicCard({
             color: theme.colors.textTertiary,
             cursor: 'pointer',
             padding: 0,
-            opacity: hovered ? 1 : 0,
-            pointerEvents: hovered ? 'auto' : 'none',
+            opacity: trashVisible ? 1 : 0,
+            pointerEvents: trashVisible ? 'auto' : 'none',
             transition: 'opacity 120ms ease',
           }}
           onMouseEnter={(e) => {
