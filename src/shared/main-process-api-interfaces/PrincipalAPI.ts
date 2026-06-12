@@ -29,23 +29,6 @@ export interface DocumentLoadedEvent {
   };
 }
 
-export interface AgentDocumentRequest {
-  requestId: string;
-  agentName: string;
-  suggestedTitle?: string;
-  suggestedType?: 'markdown' | 'excalidraw';
-  message?: string;
-}
-
-export interface AgentDocumentResponse {
-  success: boolean;
-  documentSelected: boolean;
-  documentTitle?: string;
-  documentType?: 'markdown' | 'excalidraw';
-  filePath?: string | null;
-  cancelled?: boolean;
-}
-
 /**
  * Main PrincipalAPI interface
  * These are event listeners for principal MCP events sent from the main process
@@ -71,23 +54,4 @@ export interface PrincipalAPI {
    * @returns Cleanup function to remove the listener
    */
   onDocumentLoaded(callback: (data: DocumentLoadedEvent) => void): () => void;
-
-  /**
-   * Listen for agent document requests
-   * @param callback - Function to handle agent document requests
-   * @returns Cleanup function to remove the listener
-   */
-  onAgentDocumentRequest(
-    callback: (data: AgentDocumentRequest) => void,
-  ): () => void;
-
-  /**
-   * Send response to agent document request
-   * @param requestId - The request ID to respond to
-   * @param response - The response data
-   */
-  sendAgentDocumentResponse(
-    requestId: string,
-    response: AgentDocumentResponse,
-  ): Promise<void>;
 }

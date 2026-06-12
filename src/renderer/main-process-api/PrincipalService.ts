@@ -11,8 +11,6 @@ import type {
   SlideUpdatedEvent,
   SlideNavigatedEvent,
   DocumentLoadedEvent,
-  AgentDocumentRequest,
-  AgentDocumentResponse,
 } from '../../shared/main-process-api-interfaces/PrincipalAPI';
 
 /**
@@ -76,49 +74,6 @@ export class PrincipalService {
       );
       // Return a no-op cleanup function
       return () => {};
-    }
-  }
-
-  /**
-   * Subscribe to agent document request events
-   * @param callback - Function to handle agent document requests
-   * @returns Cleanup function to remove the listener
-   */
-  static onAgentDocumentRequest(
-    callback: (data: AgentDocumentRequest) => void,
-  ): () => void {
-    try {
-      return window.mainProcess.principal.onAgentDocumentRequest(callback);
-    } catch (error) {
-      console.error(
-        '[PrincipalService] Failed to subscribe to agent document requests:',
-        error,
-      );
-      // Return a no-op cleanup function
-      return () => {};
-    }
-  }
-
-  /**
-   * Send response to an agent document request
-   * @param requestId - The request ID to respond to
-   * @param response - The response data
-   */
-  static async sendAgentDocumentResponse(
-    requestId: string,
-    response: AgentDocumentResponse,
-  ): Promise<void> {
-    try {
-      await window.mainProcess.principal.sendAgentDocumentResponse(
-        requestId,
-        response,
-      );
-    } catch (error) {
-      console.error(
-        '[PrincipalService] Failed to send agent document response:',
-        error,
-      );
-      throw new Error('Failed to send agent document response');
     }
   }
 }

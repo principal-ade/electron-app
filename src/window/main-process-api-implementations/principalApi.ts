@@ -9,8 +9,6 @@ import type {
   SlideUpdatedEvent,
   SlideNavigatedEvent,
   DocumentLoadedEvent,
-  AgentDocumentRequest,
-  AgentDocumentResponse,
 } from '../../shared/main-process-api-interfaces/PrincipalAPI';
 import { PrincipalEvent } from '../../shared/ipc-events/PrincipalEvents';
 
@@ -53,35 +51,5 @@ export const principalAPI: PrincipalAPI = {
     ipcRenderer.on(PrincipalEvent.DOCUMENT_LOADED, subscription);
     return () =>
       ipcRenderer.removeListener(PrincipalEvent.DOCUMENT_LOADED, subscription);
-  },
-
-  /**
-   * Listen for agent document requests
-   */
-  onAgentDocumentRequest: (callback: (data: AgentDocumentRequest) => void) => {
-    const subscription = (
-      _event: IpcRendererEvent,
-      data: AgentDocumentRequest,
-    ) => callback(data);
-    ipcRenderer.on(PrincipalEvent.AGENT_DOCUMENT_REQUEST, subscription);
-    return () =>
-      ipcRenderer.removeListener(
-        PrincipalEvent.AGENT_DOCUMENT_REQUEST,
-        subscription,
-      );
-  },
-
-  /**
-   * Send response to agent document request
-   */
-  sendAgentDocumentResponse: async (
-    requestId: string,
-    response: AgentDocumentResponse,
-  ) => {
-    await ipcRenderer.invoke(
-      PrincipalEvent.AGENT_DOCUMENT_RESPONSE,
-      requestId,
-      response,
-    );
   },
 };
