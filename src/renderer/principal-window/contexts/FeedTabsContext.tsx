@@ -25,6 +25,7 @@ import type {
   ActivityFeedTab,
   FeedTab,
   LocalTrailTab,
+  MarkdownDocTab,
   ProjectInfoTab,
   SharedTrailTab,
   UserProfileTab,
@@ -54,6 +55,8 @@ interface FeedTabsContextValue {
   openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
   /** Open a `local-trail-<trailId>` tab idempotently and focus it. */
   openLocalTrail: (trailId: string, title?: string) => void;
+  /** Open a `markdown-doc-<filePath>` tab idempotently and focus it. */
+  openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
 }
 
 const FeedTabsContext = createContext<FeedTabsContextValue | null>(null);
@@ -147,6 +150,27 @@ export const FeedTabsProvider: React.FC<{ children: React.ReactNode }> = ({
     setActiveTabId(tabId);
   }, []);
 
+  const openMarkdownDoc = useCallback(
+    (filePath: string, repositoryPath?: string) => {
+      const tabId = `markdown-doc-${filePath}`;
+
+      setTabs((prev) => {
+        if (prev.some((t) => t.id === tabId)) return prev;
+        const newTab: MarkdownDocTab = {
+          id: tabId,
+          label: filePath.split('/').pop() || 'Document',
+          contentType: 'markdown-doc',
+          closable: true,
+          filePath,
+          repositoryPath,
+        };
+        return [...prev, newTab];
+      });
+      setActiveTabId(tabId);
+    },
+    [],
+  );
+
   const value = useMemo<FeedTabsContextValue>(
     () => ({
       tabs,
@@ -157,6 +181,7 @@ export const FeedTabsProvider: React.FC<{ children: React.ReactNode }> = ({
       openUserProfile,
       openSharedTrail,
       openLocalTrail,
+      openMarkdownDoc,
     }),
     [
       tabs,
@@ -165,6 +190,7 @@ export const FeedTabsProvider: React.FC<{ children: React.ReactNode }> = ({
       openUserProfile,
       openSharedTrail,
       openLocalTrail,
+      openMarkdownDoc,
     ],
   );
 

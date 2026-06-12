@@ -15,6 +15,7 @@ import {
 import { registerTrailRoutes } from '../file-city/trailRoutes';
 import { getTrailStore } from '../file-city/trailStore';
 import { registerDocumentNotesRoutes } from '../document-notes/documentNotesRoutes';
+import { registerDocumentRoutes } from './documentRoutes';
 import { getDocumentNotesPersistence } from '../document-notes/documentNotesPersistence';
 import { registerTopicRoutes } from '../topics/topicRoutes';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
@@ -208,6 +209,27 @@ export class PrincipalMCPBridge extends EventEmitter {
                 },
                 response:
                   '{ success, removed } | 404 { success: false, error } | 400 { success: false, error }',
+              },
+            ],
+          },
+          {
+            name: 'documents',
+            description:
+              "Open a document into the currently-focused window. Acts when that window is a doc-capable surface — the principal window's Inbox/Projects views, the dev-workspace, or the Alexandria-workspace. Within the principal window the active view decides renderer-side whether the doc lands; a focused non-terminal view or any other window is a no-op. There is no cold-start path — the route targets an already-open, already-focused window.",
+            routes: [
+              {
+                method: 'POST',
+                path: '/api/document/open',
+                summary:
+                  'Open (or focus) a tab for a document in the focused doc-tab window.',
+                body: {
+                  filePath:
+                    'string (required) — absolute path, or repo-relative when repositoryPath is supplied.',
+                  repositoryPath:
+                    'string (optional) — host repo; resolves a relative filePath and supplies tab context.',
+                },
+                response:
+                  '{ success, windowOpened } — windowOpened is false when no focused window hosts a tabbed terminal.',
               },
             ],
           },
@@ -1148,6 +1170,11 @@ export class PrincipalMCPBridge extends EventEmitter {
     // DOCUMENT NOTES ROUTES
     // ============================================
     registerDocumentNotesRoutes(this.app, getDocumentNotesPersistence());
+
+    // ============================================
+    // DOCUMENT (OPEN-IN-FOCUSED-WINDOW) ROUTES
+    // ============================================
+    registerDocumentRoutes(this.app);
 
     // ============================================
     // TOPIC ROUTES

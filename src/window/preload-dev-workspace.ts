@@ -39,6 +39,7 @@ import { gitAPI } from './main-process-api-implementations/gitApi';
 import { fileCityImageAPI } from './main-process-api-implementations/fileCityImageApi';
 import { fileCityTrailAPI } from './main-process-api-implementations/fileCityTrailApi';
 import { documentNotesAPI } from './main-process-api-implementations/documentNotesApi';
+import { documentAPI } from './main-process-api-implementations/documentApi';
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
 import { brunoAPI } from './main-process-api-implementations/brunoApi';
@@ -69,6 +70,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   fileCityImage: fileCityImageAPI,
   fileCityTrail: fileCityTrailAPI,
   documentNotes: documentNotesAPI,
+  document: documentAPI,
   skillLock: skillLockAPI,
   appVersionManager: appVersionManagerApi,
   bruno: brunoAPI,

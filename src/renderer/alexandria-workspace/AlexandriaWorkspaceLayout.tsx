@@ -50,6 +50,7 @@ import {
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { TerminalService } from '../main-process-api/TerminalService';
+import { DocumentService } from '../services/DocumentService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { WindowService } from '../main-process-api/WindowService';
@@ -1288,6 +1289,23 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     });
 
     return unsubscribe;
+  }, [events]);
+
+  // Bridge handoff: a doc pushed from the Principal MCP Bridge
+  // (POST /api/document/open) arrives as an OPEN_DOCUMENT IPC when this window
+  // is the focused, doc-tab-capable surface. Re-emit it onto the panel event
+  // bus as a `file:opened` event so the listener above opens the tab — the
+  // same path as clicking a doc in the Alexandria docs panel.
+  useEffect(() => {
+    return DocumentService.onOpenDocument(({ filePath, repositoryPath }) => {
+      if (!filePath) return;
+      events.emit({
+        type: 'file:opened',
+        source: 'bridge',
+        timestamp: Date.now(),
+        payload: { filePath, repositoryPath },
+      });
+    });
   }, [events]);
 
   // Listen for mermaid:open-in-tab events (from a markdown diagram's "open in

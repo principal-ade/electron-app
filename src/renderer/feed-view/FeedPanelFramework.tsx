@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, Users, Activity, FolderGit2, User, Building2, BookMarked, Radio, Wrench, Route, Footprints } from 'lucide-react';
+import { GitCommit, Users, Activity, FolderGit2, User, Building2, BookMarked, Radio, Wrench, Route, Footprints, FileText } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -82,6 +82,8 @@ import { InProgressActivityPanel } from '../panels/InProgressActivityPanel';
 import { inProgressActivityPanelActions } from '../panels/inProgressActivityPanelActions';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 import { useFeedTabs } from '../principal-window/contexts/FeedTabsContext';
+import { MarkdownDocTabContent } from './MarkdownDocTabContent';
+import { DocumentService } from '../services/DocumentService';
 
 /**
  * User activity response from Principal ADE API
@@ -224,7 +226,18 @@ export interface LocalTrailTab extends BaseTab {
 /**
  * Union type of all supported tab types in FeedView
  */
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | WatchedOwnerActivityTab | WatchedRepoActivityTab | SharedTrailTab | LocalTrailTab;
+/**
+ * Markdown document tab — a doc opened in-place from the Principal MCP Bridge
+ * (POST /api/document/open) while the user is on the Projects/feed view.
+ * Carries the absolute file path + host repo; renders via `MarkdownDocTabContent`.
+ */
+export interface MarkdownDocTab extends BaseTab {
+  contentType: 'markdown-doc';
+  filePath: string;
+  repositoryPath?: string;
+}
+
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | WatchedOwnerActivityTab | WatchedRepoActivityTab | SharedTrailTab | LocalTrailTab | MarkdownDocTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -1118,8 +1131,22 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     setActiveTabId,
     openProjectInfo,
     openUserProfile,
+    openMarkdownDoc,
   } = useFeedTabs();
   const didCheckInitialDirtyRef = useRef(false);
+
+  // Bridge handoff: a doc pushed from the Principal MCP Bridge
+  // (POST /api/document/open) arrives as an OPEN_DOCUMENT IPC when the
+  // principal window is focused on the Projects/feed view. Open (or focus) a
+  // markdown tab alongside the terminal. This listener only runs while the
+  // feed view is mounted — the renderer-side gate that keeps the doc from
+  // landing here unless the focused window is showing this surface.
+  useEffect(() => {
+    return DocumentService.onOpenDocument(({ filePath, repositoryPath }) => {
+      if (!filePath) return;
+      openMarkdownDoc(filePath, repositoryPath);
+    });
+  }, [openMarkdownDoc]);
 
   useEffect(() => {
     if (didCheckInitialDirtyRef.current) return;
@@ -1735,6 +1762,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         return <Route size={14} />;
       case 'local-trail':
         return <Footprints size={14} />;
+      case 'markdown-doc':
+        return <FileText size={14} />;
       default:
         return null;
     }
@@ -1864,6 +1893,17 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
             <LocalTrailTabContent
               key={trailTab.id}
               trailId={trailTab.trailId}
+              events={eventsRef.current}
+            />
+          );
+        }
+        case 'markdown-doc': {
+          const docTab = tab as MarkdownDocTab;
+          return (
+            <MarkdownDocTabContent
+              key={docTab.id}
+              filePath={docTab.filePath}
+              repositoryPath={docTab.repositoryPath}
               events={eventsRef.current}
             />
           );

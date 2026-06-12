@@ -143,6 +143,7 @@ import { GitConfigPanel } from './git-config-panel';
 import { TrailsPanel } from './trails-panel';
 import { ShareTrailModal } from './trails-panel/ShareTrailModal';
 import { TrailService } from '../services/TrailService';
+import { DocumentService } from '../services/DocumentService';
 import {
   TRAIL_EVENT,
   type TrailActivatedEvent,
@@ -2692,6 +2693,23 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     const unsubscribe = events.on('file-city-trail:open', openFileCityTrailTab);
     return unsubscribe;
   }, [events, openFileCityTrailTab]);
+
+  // Bridge handoff: a doc pushed from the Principal MCP Bridge
+  // (POST /api/document/open) arrives as an OPEN_DOCUMENT IPC when this
+  // dev-workspace window is focused. Re-emit it onto the panel event bus as a
+  // `file:opened` event so the handler above opens the markdown tab — the same
+  // path as clicking a doc.
+  useEffect(() => {
+    return DocumentService.onOpenDocument(({ filePath, repositoryPath }) => {
+      if (!filePath) return;
+      events.emit({
+        type: 'file:opened',
+        source: 'bridge',
+        timestamp: Date.now(),
+        payload: { filePath, repositoryPath },
+      });
+    });
+  }, [events]);
 
   // Auto-open the trail tab when this window was opened with a trail
   // id, and whenever a trail activation arrives for this window's repo

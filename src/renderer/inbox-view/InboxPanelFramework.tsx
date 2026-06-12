@@ -21,7 +21,7 @@ import React, {
   useEffect,
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Inbox, Route, Layers, Footprints } from 'lucide-react';
+import { Inbox, Route, Layers, Footprints, FileText } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -46,8 +46,10 @@ import {
 import { InboxLeftPanel } from '../panels/InboxLeftPanel';
 import { SharedTrailTabContent } from '../feed-view/SharedTrailTabContent';
 import { LocalTrailTabContent } from '../feed-view/LocalTrailTabContent';
+import { MarkdownDocTabContent } from '../feed-view/MarkdownDocTabContent';
 import { TopicTabContent } from './TopicTabContent';
 import { useInboxTabs } from '../principal-window/contexts/InboxTabsContext';
+import { DocumentService } from '../services/DocumentService';
 
 /**
  * Landing tab shown when the inbox view opens — a hint to pick something
@@ -88,12 +90,24 @@ export interface LocalTrailTab extends BaseTab {
   trailId: string;
 }
 
+/**
+ * Markdown document tab — a doc opened in-place from the Principal MCP Bridge
+ * (POST /api/document/open) while the user is on the Inbox view. Carries the
+ * absolute file path + host repo; renders via `MarkdownDocTabContent`.
+ */
+export interface MarkdownDocTab extends BaseTab {
+  contentType: 'markdown-doc';
+  filePath: string;
+  repositoryPath?: string;
+}
+
 export type InboxTab =
   | TerminalTab
   | InboxHomeTab
   | SharedTrailTab
   | TopicTab
-  | LocalTrailTab;
+  | LocalTrailTab
+  | MarkdownDocTab;
 
 export interface InboxPanelFrameworkProps {
   /** Local repositories — used to resolve a clone for shared-trail file trees. */
@@ -194,7 +208,8 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
 
   // Tab state lives in InboxTabsContext (above IntegratedShell's conditional
   // InboxView mount) so tabs survive view switches.
-  const { tabs, setTabs, activeTabId, setActiveTabId } = useInboxTabs();
+  const { tabs, setTabs, activeTabId, setActiveTabId, openMarkdownDoc } =
+    useInboxTabs();
 
   // Load base directory from user preferences
   useEffect(() => {
@@ -266,6 +281,8 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
         return <Layers size={14} />;
       case 'local-trail':
         return <Footprints size={14} />;
+      case 'markdown-doc':
+        return <FileText size={14} />;
       default:
         return null;
     }
@@ -308,6 +325,17 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
           />
         );
       }
+      case 'markdown-doc': {
+        const docTab = tab as MarkdownDocTab;
+        return (
+          <MarkdownDocTabContent
+            key={docTab.id}
+            filePath={docTab.filePath}
+            repositoryPath={docTab.repositoryPath}
+            events={eventsRef.current}
+          />
+        );
+      }
       default:
         return null;
     }
@@ -334,6 +362,19 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
       events.off('terminal:activity-changed', handleActivityChanged);
     };
   }, [events, activityActions]);
+
+  // Bridge handoff: a doc pushed from the Principal MCP Bridge
+  // (POST /api/document/open) arrives as an OPEN_DOCUMENT IPC when the
+  // principal window is focused on the Inbox view. Open (or focus) a markdown
+  // tab alongside the terminal. This listener only runs while the Inbox view
+  // is mounted, which is the renderer-side gate: the doc lands here only when
+  // the focused window is actually showing this tabbed-terminal surface.
+  useEffect(() => {
+    return DocumentService.onOpenDocument(({ filePath, repositoryPath }) => {
+      if (!filePath) return;
+      openMarkdownDoc(filePath, repositoryPath);
+    });
+  }, [openMarkdownDoc]);
 
   // Handle panel resize (detect left collapse)
   const handlePanelResize = useCallback(

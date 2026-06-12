@@ -64,6 +64,7 @@ import type { ExtensionAPI } from './ExtensionAPI';
 import type { FileCityImageAPI } from './FileCityImageAPI';
 import type { FileCityTrailAPI } from './FileCityTrailAPI';
 import type { DocumentNotesAPI } from './DocumentNotesAPI';
+import type { DocumentAPI } from './DocumentAPI';
 import type { OpenCodeConvertAPI } from './OpenCodeConvertAPI';
 import type { BrunoAPI } from './BrunoAPI';
 
@@ -144,6 +145,7 @@ export interface MainProcessAPI {
   fileCityImage: FileCityImageAPI;
   fileCityTrail: FileCityTrailAPI;
   documentNotes: DocumentNotesAPI;
+  document: DocumentAPI;
   openCodeConvert: OpenCodeConvertAPI;
   bruno: BrunoAPI;
   /** Only available in Remote Terminal Viewer window */
