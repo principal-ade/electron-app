@@ -59,6 +59,59 @@ const assetsEqual = (a: TopicAsset[], b: TopicAsset[]): boolean => {
   return true;
 };
 
+// Matches a GFM task-list line: indentation, a list marker (-, *, +, or an
+// ordered "1." / "1)"), then the `[ ]` / `[x]` checkbox. Groups 1 and 3 are the
+// untouched scaffolding; group 2 is the toggle character we flip.
+const CHECKBOX_LINE = /^(\s*(?:[-*+]|\d+[.)])\s+\[)([ xX])(\])/;
+
+// Mirror of IndustryMarkdownSlide's chunk split (parseMarkdownChunks): the
+// slide splits content on fenced ```mermaid blocks and renders each markdown
+// segment with its own ReactMarkdown, so the `lineNumber` onCheckboxChange
+// reports is 1-based *within that segment*, not the whole document. We replay
+// the same split, map the relative line back to an absolute document line, and
+// toggle it. The guard (only flip a line that is actually a checkbox in the
+// opposite-of-desired state) keeps a stale/misattributed line number from
+// corrupting unrelated content — worst case it no-ops.
+const toggleCheckboxAtLine = (
+  content: string,
+  lineNumber: number,
+  checked: boolean,
+): string | null => {
+  if (lineNumber < 1) return null;
+  const lines = content.split('\n');
+
+  // 0-based document line index where each rendered markdown segment begins.
+  const segmentStarts: number[] = [];
+  const mermaidBlock = /^```mermaid\n[\s\S]*?\n^```$/gm;
+  const newlinesBefore = (offset: number) =>
+    content.slice(0, offset).split('\n').length - 1;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = mermaidBlock.exec(content)) !== null) {
+    if (match.index > lastIndex && content.slice(lastIndex, match.index).trim()) {
+      segmentStarts.push(newlinesBefore(lastIndex));
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < content.length && content.slice(lastIndex).trim()) {
+    segmentStarts.push(newlinesBefore(lastIndex));
+  }
+  if (segmentStarts.length === 0) segmentStarts.push(0);
+
+  for (const start of segmentStarts) {
+    const idx = start + (lineNumber - 1);
+    const line = lines[idx];
+    if (line === undefined) continue;
+    const m = CHECKBOX_LINE.exec(line);
+    if (!m) continue;
+    const isChecked = m[2] !== ' ';
+    if (isChecked === checked) continue; // already in the desired state here
+    lines[idx] = line.replace(CHECKBOX_LINE, `$1${checked ? 'x' : ' '}$3`);
+    return lines.join('\n');
+  }
+  return null;
+};
+
 export interface TopicDescriptionSlideOverProps {
   open: boolean;
   /**
@@ -232,6 +285,32 @@ export const TopicDescriptionSlideOver: React.FC<
           );
         },
       );
+    },
+    [topicId],
+  );
+
+  // Inline checkbox toggles. IndustryMarkdownSlide tracks the checked state in
+  // its own internal `checkedItems`, which a background TOPIC_UPDATED refresh
+  // would discard — so we rewrite the `[ ]`/`[x]` marker in the source markdown
+  // and persist through the same sink as inline deletions.
+  const handleCheckboxChange = React.useCallback(
+    (_slideIndex: number, lineNumber: number, checked: boolean) => {
+      setDescription((current) => {
+        if (current == null) return current;
+        const next = toggleCheckboxAtLine(current, lineNumber, checked);
+        if (next == null || next === current) return current;
+        if (topicId) {
+          void TopicService.updateTopic(topicId, { description: next }).catch(
+            (err) => {
+              console.error(
+                '[TopicDescriptionSlideOver] checkbox update failed',
+                err,
+              );
+            },
+          );
+        }
+        return next;
+      });
     },
     [topicId],
   );
@@ -525,6 +604,8 @@ export const TopicDescriptionSlideOver: React.FC<
             selectableBlocks
             deletionMode="text"
             onContentChange={handleContentChange}
+            editable
+            onCheckboxChange={handleCheckboxChange}
             transformImageUri={resolveAssetUri}
           />
         ) : (

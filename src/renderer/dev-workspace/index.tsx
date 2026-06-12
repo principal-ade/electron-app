@@ -24,6 +24,7 @@ import 'themed-markdown/dist/index.css';
 
 import { AppErrorBoundary } from '../AppErrorBoundary';
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';
+import { ThemeService } from '../services/ThemeService';
 import { DevWorkspaceApp } from './DevWorkspaceApp';
 import '../styles/tailwind.css';
 import '../index.css';
@@ -84,6 +85,35 @@ window.addEventListener('error', (event) => {
     type: event.type,
   });
 });
+
+/**
+ * Resolve the repository path this window is for from the init hash
+ * (`#init/{encodedJSON}` where JSON is an AlexandriaEntry). Used to scope theme
+ * customization per-repo, with the global theme as the fallback.
+ */
+function getRepoScopeKey(): string | null {
+  try {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#init/')) {
+      return null;
+    }
+    const afterPrefix = hash.slice(6);
+    const qIdx = afterPrefix.indexOf('?');
+    const encoded = qIdx >= 0 ? afterPrefix.slice(0, qIdx) : afterPrefix;
+    const parsed = JSON.parse(decodeURIComponent(encoded)) as { path?: string };
+    return typeof parsed?.path === 'string' && parsed.path ? parsed.path : null;
+  } catch (error) {
+    console.error('[DevWorkspace] Failed to resolve repo theme scope:', error);
+    return null;
+  }
+}
+
+// Bind theme reads/writes to this repo BEFORE the first render, so
+// CustomThemeProvider loads the repo's theme (falling back to global).
+const repoScopeKey = getRepoScopeKey();
+if (repoScopeKey) {
+  ThemeService.setScope(repoScopeKey);
+}
 
 const container = document.getElementById('root');
 if (!container) {

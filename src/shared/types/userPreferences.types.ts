@@ -3,22 +3,6 @@ import { TerminalId } from './terminal.types';
 import type { RepositoryPanelVisibility } from './repositoryPanel.types';
 import type { PanelLayout } from '@principal-ade/panels';
 
-/**
- * WorkspaceLayout - A saved panel configuration preset
- */
-export interface WorkspaceLayout {
-  id: string;
-  name: string;
-  description?: string;
-  layout: PanelLayout;
-  // Optional: default sizes and collapse states
-  defaultSizes?: { left: number; middle: number; right: number };
-  defaultCollapsed?: { left?: boolean; right?: boolean };
-  createdAt: number;
-  updatedAt: number;
-  isBuiltIn?: boolean;
-}
-
 // Interactive shell navigation view types
 export type InteractiveShellNavigationView =
   | 'home'
@@ -210,6 +194,25 @@ export interface UserPreferences {
     };
   };
 
+  // Per-repository theme overrides (used by the dev-workspace window).
+  // Keyed by repository path. Each slice mirrors the global theme fields above;
+  // any field left unset falls back to the corresponding global value, so the
+  // global theme is always the fallback for an unconfigured repo.
+  repoThemeOverrides?: {
+    [repoKey: string]: {
+      selectedTheme?: string; // Theme selected for this repo
+      colorMode?: 'light' | 'dark'; // Color mode for this repo
+      customThemeOverrides?: {
+        [themeId: string]: {
+          baseTheme: string;
+          overrides: Record<string, unknown>;
+          customName?: string;
+          lastModified: number;
+        };
+      };
+    };
+  };
+
   // Markdown rendering preferences
   useCustomMarkdownTheme?: boolean; // If true, use customMarkdownTheme instead of app theme
   customMarkdownTheme?: Record<string, unknown>; // Custom theme object for markdown rendering
@@ -295,29 +298,6 @@ export interface UserPreferences {
       sizes?: { left: number; right: number };
       collapsed?: { left?: boolean };
     };
-  };
-
-  // Workspace layout presets
-  workspaceLayouts?: {
-    // Global workspace layouts (directory-agnostic)
-    presets: Record<string, WorkspaceLayout>;
-    // Per-repository state: which workspace + current sizes/collapsed
-    repositoryState?: Record<
-      string,
-      {
-        workspaceId: string | null; // null = custom layout
-        layout?: PanelLayout; // Only saved for custom layouts (no workspace)
-        sizes: { left: number; middle: number; right: number };
-        collapsed: { left?: boolean; right?: boolean };
-        activePanels?: {
-          left?: string; // Active panel ID for left tab group
-          middle?: string; // Active panel ID for middle tab group
-          right?: string; // Active panel ID for right tab group
-        };
-      }
-    >;
-    // Built-in workspace layout IDs that can't be deleted
-    builtInWorkspaceIds?: string[];
   };
 
   // Extension preferences

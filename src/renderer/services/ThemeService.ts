@@ -16,6 +16,15 @@ class ThemeServiceClass extends EventEmitter {
   private currentColorMode: 'light' | 'dark' = 'dark';
   private currentThemeCache: Theme | null = null;
 
+  /**
+   * Optional scope key (e.g. a repository path). When set, theme selection and
+   * customizations read/write a per-scope slice of user preferences
+   * (`repoThemeOverrides[scopeKey]`) and fall back to the global theme settings
+   * whenever a value is not set for the scope. When null (the default, used by
+   * the principal window) the global settings are read/written directly.
+   */
+  private scopeKey: string | null = null;
+
   private constructor() {
     super();
   }
@@ -25,6 +34,63 @@ class ThemeServiceClass extends EventEmitter {
       ThemeServiceClass.instance = new ThemeServiceClass();
     }
     return ThemeServiceClass.instance;
+  }
+
+  /**
+   * Bind this service to a per-repo/per-scope theme slice. Call once, before the
+   * first theme load, in windows that want scoped theming (e.g. dev-workspace).
+   * Pass null to use the global settings.
+   */
+  setScope(scopeKey: string | null): void {
+    this.scopeKey = scopeKey || null;
+  }
+
+  getScope(): string | null {
+    return this.scopeKey;
+  }
+
+  /**
+   * Set a dotted path (e.g. "colors.primary") on a nested object, creating
+   * intermediate objects as needed.
+   */
+  private setPath(
+    target: Record<string, unknown>,
+    propertyPath: string,
+    value: unknown,
+  ): void {
+    const parts = propertyPath.split('.');
+    let current = target;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!current[parts[i]]) {
+        current[parts[i]] = {};
+      }
+      current = current[parts[i]] as Record<string, unknown>;
+    }
+    current[parts[parts.length - 1]] = value;
+  }
+
+  /**
+   * Persist a top-level theme field (selectedTheme / colorMode), writing to the
+   * active scope slice when scoped, or to the global preferences otherwise.
+   */
+  private async persistScoped(patch: {
+    selectedTheme?: string;
+    colorMode?: 'light' | 'dark';
+  }): Promise<void> {
+    if (!this.scopeKey) {
+      await UserPreferencesService.updatePreferences(patch);
+      return;
+    }
+    const preferences = await UserPreferencesService.getPreferences();
+    const scopedSlice = preferences.repoThemeOverrides?.[this.scopeKey] || {};
+    await UserPreferencesService.updatePreferences({
+      repoThemeOverrides: {
+        [this.scopeKey]: {
+          ...scopedSlice,
+          ...patch,
+        },
+      },
+    });
   }
 
   /**
@@ -66,13 +132,28 @@ class ThemeServiceClass extends EventEmitter {
 
     try {
       const preferences = await UserPreferencesService.getPreferences();
-      const overrides = preferences.customThemeOverrides?.[name]?.overrides;
+      const globalOverrides = preferences.customThemeOverrides?.[name]?.overrides;
+      const scopedOverrides = this.scopeKey
+        ? preferences.repoThemeOverrides?.[this.scopeKey]?.customThemeOverrides?.[
+            name
+          ]?.overrides
+        : undefined;
 
-      if (!overrides) {
+      if (!globalOverrides && !scopedOverrides) {
         return baseTheme;
       }
 
-      return deepMerge(baseTheme, overrides) as Theme;
+      // Layer order: base theme -> global overrides (the fallback) -> scoped
+      // (per-repo) overrides on top. A scope only stores its own deltas, so the
+      // global customization remains visible for anything the repo hasn't changed.
+      let theme: Theme = baseTheme;
+      if (globalOverrides) {
+        theme = deepMerge(theme, globalOverrides) as Theme;
+      }
+      if (scopedOverrides) {
+        theme = deepMerge(theme, scopedOverrides) as Theme;
+      }
+      return theme;
     } catch (error) {
       console.error('[ThemeService] Failed to merge theme overrides:', error);
       return baseTheme;
@@ -86,36 +167,59 @@ class ThemeServiceClass extends EventEmitter {
   ): Promise<void> {
     try {
       const preferences = await UserPreferencesService.getPreferences();
-      const existingOverrides = preferences.customThemeOverrides || {};
-      const themeOverrides = existingOverrides[themeName] || {
-        baseTheme: themeName,
-        overrides: {},
-        lastModified: Date.now(),
-      };
 
-      // Parse property path (e.g., "colors.primary" or "fonts.body")
-      const parts = propertyPath.split('.');
-      let current: Record<string, unknown> = themeOverrides.overrides as Record<string, unknown>;
+      if (this.scopeKey) {
+        // Per-scope (e.g. per-repo) override. Stores only this scope's deltas;
+        // global overrides remain the fallback via getActiveTheme's merge order.
+        const scopedSlice =
+          preferences.repoThemeOverrides?.[this.scopeKey] || {};
+        const existingOverrides = scopedSlice.customThemeOverrides || {};
+        const themeOverrides = existingOverrides[themeName] || {
+          baseTheme: themeName,
+          overrides: {},
+          lastModified: Date.now(),
+        };
 
-      // Navigate/create nested structure
-      for (let i = 0; i < parts.length - 1; i++) {
-        if (!current[parts[i]]) {
-          current[parts[i]] = {};
-        }
-        current = current[parts[i]] as Record<string, unknown>;
+        this.setPath(
+          themeOverrides.overrides as Record<string, unknown>,
+          propertyPath,
+          newValue,
+        );
+        themeOverrides.lastModified = Date.now();
+
+        await UserPreferencesService.updatePreferences({
+          repoThemeOverrides: {
+            [this.scopeKey]: {
+              ...scopedSlice,
+              customThemeOverrides: {
+                ...existingOverrides,
+                [themeName]: themeOverrides,
+              },
+            },
+          },
+        });
+      } else {
+        const existingOverrides = preferences.customThemeOverrides || {};
+        const themeOverrides = existingOverrides[themeName] || {
+          baseTheme: themeName,
+          overrides: {},
+          lastModified: Date.now(),
+        };
+
+        this.setPath(
+          themeOverrides.overrides as Record<string, unknown>,
+          propertyPath,
+          newValue,
+        );
+        themeOverrides.lastModified = Date.now();
+
+        await UserPreferencesService.updatePreferences({
+          customThemeOverrides: {
+            ...existingOverrides,
+            [themeName]: themeOverrides,
+          },
+        });
       }
-
-      // Set the value
-      current[parts[parts.length - 1]] = newValue;
-      themeOverrides.lastModified = Date.now();
-
-      // Save back to preferences
-      await UserPreferencesService.updatePreferences({
-        customThemeOverrides: {
-          ...existingOverrides,
-          [themeName]: themeOverrides,
-        },
-      });
 
       // If this is the current theme, reload it
       if (themeName === this.currentThemeName) {
@@ -123,7 +227,9 @@ class ThemeServiceClass extends EventEmitter {
       }
 
       console.info(
-        `[ThemeService] Updated ${propertyPath} in ${themeName} theme`,
+        `[ThemeService] Updated ${propertyPath} in ${themeName} theme${
+          this.scopeKey ? ` (scope: ${this.scopeKey})` : ''
+        }`,
       );
     } catch (error) {
       console.error('[ThemeService] Failed to update theme override:', error);
@@ -159,12 +265,31 @@ class ThemeServiceClass extends EventEmitter {
   async clearThemeOverrides(themeName: string): Promise<void> {
     try {
       const preferences = await UserPreferencesService.getPreferences();
-      const existingOverrides = preferences.customThemeOverrides || {};
-      delete existingOverrides[themeName];
 
-      await UserPreferencesService.updatePreferences({
-        customThemeOverrides: existingOverrides,
-      });
+      if (this.scopeKey) {
+        const scopedSlice =
+          preferences.repoThemeOverrides?.[this.scopeKey] || {};
+        const existingOverrides = {
+          ...(scopedSlice.customThemeOverrides || {}),
+        };
+        delete existingOverrides[themeName];
+
+        await UserPreferencesService.updatePreferences({
+          repoThemeOverrides: {
+            [this.scopeKey]: {
+              ...scopedSlice,
+              customThemeOverrides: existingOverrides,
+            },
+          },
+        });
+      } else {
+        const existingOverrides = preferences.customThemeOverrides || {};
+        delete existingOverrides[themeName];
+
+        await UserPreferencesService.updatePreferences({
+          customThemeOverrides: existingOverrides,
+        });
+      }
 
       // If this is the current theme, reload it
       if (themeName === this.currentThemeName) {
@@ -200,12 +325,10 @@ class ThemeServiceClass extends EventEmitter {
       colorMode: this.currentColorMode,
     } as ThemeChangeEvent);
 
-    // Persist to preferences if requested
+    // Persist to preferences if requested (scoped or global)
     if (persist) {
       try {
-        await UserPreferencesService.updatePreferences({
-          selectedTheme: themeName,
-        });
+        await this.persistScoped({ selectedTheme: themeName });
         console.info('[ThemeService] Theme persisted to preferences');
       } catch (error) {
         console.error('[ThemeService] Failed to persist theme:', error);
@@ -233,12 +356,10 @@ class ThemeServiceClass extends EventEmitter {
       } as ThemeChangeEvent);
     }
 
-    // Persist to preferences if requested
+    // Persist to preferences if requested (scoped or global)
     if (persist) {
       try {
-        await UserPreferencesService.updatePreferences({
-          colorMode: mode,
-        });
+        await this.persistScoped({ colorMode: mode });
         console.info('[ThemeService] Color mode persisted to preferences');
       } catch (error) {
         console.error('[ThemeService] Failed to persist color mode:', error);
@@ -252,13 +373,20 @@ class ThemeServiceClass extends EventEmitter {
   async loadPreferences(): Promise<void> {
     try {
       const preferences = await UserPreferencesService.getPreferences();
+      const scopedSlice = this.scopeKey
+        ? preferences.repoThemeOverrides?.[this.scopeKey]
+        : undefined;
 
-      if (preferences.selectedTheme) {
-        this.currentThemeName = preferences.selectedTheme;
+      // Scope value first, then fall back to the global preference.
+      const selectedTheme =
+        scopedSlice?.selectedTheme ?? preferences.selectedTheme;
+      if (selectedTheme) {
+        this.currentThemeName = selectedTheme;
       }
 
-      if (preferences.colorMode) {
-        this.currentColorMode = preferences.colorMode;
+      const colorMode = scopedSlice?.colorMode ?? preferences.colorMode;
+      if (colorMode) {
+        this.currentColorMode = colorMode;
       } else {
         // Check system preference
         const prefersDark = window.matchMedia(
@@ -270,6 +398,7 @@ class ThemeServiceClass extends EventEmitter {
       console.info('[ThemeService] Loaded preferences:', {
         theme: this.currentThemeName,
         colorMode: this.currentColorMode,
+        scope: this.scopeKey ?? '(global)',
       });
     } catch (error) {
       console.error('[ThemeService] Failed to load preferences:', error);

@@ -3,7 +3,7 @@
 Snapshot of files reported by `npx knip --files`.
 
 **Last updated:** 2026-05-07
-**Total unused files:** 90
+**Total unused files:** 89
 
 ## How to refresh
 
@@ -15,7 +15,7 @@ npx knip --files
 
 | Directory          | Count |
 | ------------------ | ----: |
-| src/renderer       |    40 |
+| src/renderer       |    39 |
 | src/main           |    14 |
 | src/pty-daemon     |    14 |
 | src/shared         |    14 |
@@ -30,7 +30,7 @@ npx knip --files
 1. **`src/pty-daemon/` (14)** — entire directory appears orphaned (both `.ts` and built `.js` siblings). Likely a whole feature that was extracted/replaced; verify against `src/main/terminal/PtyDaemonClient.ts` (also unused) before bulk-deleting.
 2. **`src/titlebar/` (2) + `src/window/preload-*.ts` (2) + `src/renderer/{splash,goodbye}-screen/index.tsx`** — splash/goodbye/titlebar entry points. Check `electron-builder`/main-process `BrowserWindow` calls for dynamic refs first.
 3. **`src/renderer/main-process-api/` (6)** — `Clipboard`, `Docker`, `Links`, `PackageManager`, `Principal`, `TypeExtraction`. Service shims with no consumers.
-4. **`src/renderer/services/` (5)** — `CloneVisibility`, `DocumentSearch`, `SourceSelection`, `storage/CustomLayersStorage`, `WorkspaceLayout`.
+4. **`src/renderer/services/` (4)** — `CloneVisibility`, `DocumentSearch`, `SourceSelection`, `storage/CustomLayersStorage`.
 5. **`src/main/services/*IPC.ts` (5)** — `FastForward`, `GitSync`, `Orbit`, `Presence`, `SecureToken`. IPC handlers wired up to nothing.
 6. **`src/renderer/components/` modals (5)** — `AISummaryPanel`, `CreateWorkspaceModal`, `DeleteWorkspaceConfirmationModal`, `FileDeleteConfirmDialog`, `ThemedMonaco` + the `index.ts` barrels for `ActivityCities` and `OnboardingWizard`.
 7. **`src/renderer/utils/` (9)** — review one-by-one; utils sometimes get dynamic-imported.
@@ -100,13 +100,12 @@ npx knip --files
 - `src/renderer/main-process-api/PrincipalService.ts`
 - `src/renderer/main-process-api/TypeExtractionService.ts`
 
-### src/renderer/services (5)
+### src/renderer/services (4)
 
 - `src/renderer/services/CloneVisibilityService.ts`
 - `src/renderer/services/DocumentSearchService.ts`
 - `src/renderer/services/SourceSelectionService.ts`
 - `src/renderer/services/storage/CustomLayersStorageService.ts`
-- `src/renderer/services/WorkspaceLayoutService.ts`
 
 ### src/renderer/utils (9)
 

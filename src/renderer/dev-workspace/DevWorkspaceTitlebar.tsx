@@ -25,6 +25,7 @@ import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
 import { GitSyncStatusIndicator } from '../components/Titlebar/GitSyncStatusIndicator';
 import { StorybookHeaderButton } from '../components/Titlebar/StorybookHeaderButton';
 import { RepositoryAvatar } from '../components/repository-maps/RepositoryAvatar';
+import { ThemeSelector } from '../principal-window/components/IntegratedShell/ThemeSelector';
 import type { StorybookManager } from '../hooks/useStorybookManager';
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
@@ -849,6 +850,9 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
             WebkitAppRegion: 'no-drag',
           }}
         >
+          {/* Per-repo theme selector + customization (scoped via ThemeService) */}
+          <ThemeSelector />
+
           {/* Hover-reveal buttons: Notes, Git Config, Alexandria, Terminal toggle */}
           <div
             style={{
