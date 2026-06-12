@@ -1091,7 +1091,7 @@ export function HomeView() {
                       alignItems: 'center',
                       gap: 8,
                       padding: '8px 12px',
-                      borderRadius: 999,
+                      borderRadius: 12,
                       border: `1px solid ${accent}`,
                       backgroundColor: theme.colors.backgroundSecondary,
                       color: theme.colors.text,

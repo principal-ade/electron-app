@@ -129,7 +129,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({
               style={{
                 width: 16,
                 height: 16,
-                borderRadius: '50%',
+                borderRadius: 4,
                 flexShrink: 0,
               }}
             />

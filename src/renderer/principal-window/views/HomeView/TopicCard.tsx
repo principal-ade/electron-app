@@ -372,7 +372,7 @@ export function TopicCard({
                         width={14}
                         height={14}
                         style={{
-                          borderRadius: '50%',
+                          borderRadius: 4,
                           flex: '0 0 auto',
                           border: `1px solid ${theme.colors.border}`,
                         }}

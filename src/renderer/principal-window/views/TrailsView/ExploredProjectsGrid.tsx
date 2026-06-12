@@ -215,7 +215,7 @@ export function ExploredProjectsGrid({
                     width={64}
                     height={64}
                     style={{
-                      borderRadius: '50%',
+                      borderRadius: 12,
                       flex: '0 0 auto',
                       border: `1px solid ${theme.colors.border}`,
                     }}
