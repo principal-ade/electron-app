@@ -10,6 +10,7 @@ import {
   Footprints,
   Home,
   Inbox,
+  PenTool,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -185,6 +186,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     },
     { id: 'feed', icon: <GitIcon size={20} />, label: 'Projects' },
     { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },
+    { id: 'drawings', icon: <PenTool size={20} />, label: 'Drawings' },
     ...(showOnboardingButton
       ? [
           {

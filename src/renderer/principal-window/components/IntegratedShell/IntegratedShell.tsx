@@ -10,6 +10,7 @@ import { OnboardingView } from '../../views/OnboardingView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
+import { DrawingsView } from '../../views/DrawingsView';
 import { TrailsView } from '../../views/TrailsView';
 import { InboxView } from '../../views/InboxView';
 import { HomeView } from '../../views/HomeView';
@@ -45,6 +46,7 @@ const VIEW_OPTIONS = [
   'processes',
   'connections',
   'skills',
+  'drawings',
 ];
 
 // Quick commands for the command palette autocomplete
@@ -654,6 +656,7 @@ export const IntegratedShell: React.FC = () => {
             {activeView === 'processes' && <LocalhostProcessesView />}
             {activeView === 'connections' && <ConnectionsView />}
             {activeView === 'skills' && <SkillBrowserView />}
+            {activeView === 'drawings' && <DrawingsView />}
           </div>
         </div>
       </div>
