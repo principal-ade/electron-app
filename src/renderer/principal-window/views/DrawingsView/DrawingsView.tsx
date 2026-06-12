@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { PenTool, Plus, Trash2, Clock, Search, X } from 'lucide-react';
+import { PenTool, Plus, Trash2, Clock, Search, X, Copy, Check } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ExcalidrawWrapper } from '@industry-theme/excalidraw-panels';
 // Excalidraw's own styles. The published panel package emits its CSS as a
@@ -58,6 +58,8 @@ export const DrawingsView: React.FC = () => {
   const [active, setActive] = useState<ActiveDrawing | null>(null);
   const [filterText, setFilterText] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  // Id of the drawing whose path was just copied, for transient button feedback.
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Resolve the global drawings root once.
   useEffect(() => {
@@ -203,6 +205,24 @@ export const DrawingsView: React.FC = () => {
       }
     },
     [rescan],
+  );
+
+  // Copy a drawing's absolute path to the clipboard so it can be handed to an
+  // agent for collaboration. Shows a brief "copied" check on the button.
+  const handleCopyPath = useCallback(
+    async (item: DrawingItem, e: React.MouseEvent) => {
+      e.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(item.path);
+        setCopiedId(item.id);
+        setTimeout(() => {
+          setCopiedId((prev) => (prev === item.id ? null : prev));
+        }, 1500);
+      } catch (err) {
+        console.error('[DrawingsView] Failed to copy path:', err);
+      }
+    },
+    [],
   );
 
   const formatDate = (date?: Date) => {
@@ -485,24 +505,60 @@ export const DrawingsView: React.FC = () => {
                             {item.name}
                           </span>
                         </div>
-                        <button
-                          onClick={(e) => handleDelete(item, e)}
-                          title="Delete drawing"
+                        <div
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '4px',
-                            border: 'none',
-                            borderRadius: '4px',
-                            backgroundColor: 'transparent',
-                            color: theme.colors.textSecondary,
-                            cursor: 'pointer',
+                            gap: '2px',
                             flexShrink: 0,
                           }}
                         >
-                          <Trash2 size={14} />
-                        </button>
+                          <button
+                            onClick={(e) => handleCopyPath(item, e)}
+                            title={
+                              copiedId === item.id
+                                ? 'Path copied'
+                                : 'Copy file path'
+                            }
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '4px',
+                              border: 'none',
+                              borderRadius: '4px',
+                              backgroundColor: 'transparent',
+                              color:
+                                copiedId === item.id
+                                  ? theme.colors.primary
+                                  : theme.colors.textSecondary,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {copiedId === item.id ? (
+                              <Check size={14} />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                          <button
+                            onClick={(e) => handleDelete(item, e)}
+                            title="Delete drawing"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '4px',
+                              border: 'none',
+                              borderRadius: '4px',
+                              backgroundColor: 'transparent',
+                              color: theme.colors.textSecondary,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                       {item.lastModified && (
                         <div

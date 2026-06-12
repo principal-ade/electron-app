@@ -3,9 +3,11 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   BookOpen,
   Check,
+  Download,
   ExternalLink,
   Footprints,
   Layers,
+  PenTool,
   Plus,
   RefreshCw,
   Search,
@@ -109,6 +111,43 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
   },
 ];
 
+/** Display metadata shared by required and optional skill entries. */
+interface SkillDetail {
+  name: string;
+  title: string;
+  description: string;
+  url: string;
+  Icon: React.ComponentType<{ size?: number; color?: string }>;
+}
+
+// Optional skills are NOT installed as part of the required trail bundle. They
+// surface in the footer as individually installable add-ons, and show up among
+// the "Installed Skills" badges once present.
+const OPTIONAL_SKILL_NAMES = ['excalidraw-drawings'] as const;
+
+const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
+  {
+    name: 'excalidraw-drawings',
+    title: 'Excalidraw Drawings',
+    description:
+      "Find and edit the app's Excalidraw drawings on disk — locate the .excalidraw JSON under ~/.alexandria/drawings and edit a diagram directly so an agent can collaborate on it.",
+    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/excalidraw-drawings`,
+    Icon: PenTool,
+  },
+];
+
+/** Every skill the home view knows how to display or install. */
+const ALL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
+  ...TRAIL_SKILL_DETAILS,
+  ...OPTIONAL_SKILL_DETAILS,
+];
+
+/** Names whose install state the home view tracks (required + optional). */
+const TRACKED_SKILL_NAMES: ReadonlyArray<string> = [
+  ...TRAIL_INSTALL_SKILL_NAMES,
+  ...OPTIONAL_SKILL_NAMES,
+];
+
 export function HomeView() {
   const { theme } = useTheme();
 
@@ -138,6 +177,11 @@ export function HomeView() {
   const [installingSkill, setInstallingSkill] = useState(false);
   const [skillInstallError, setSkillInstallError] = useState<string | null>(
     null,
+  );
+  // Optional skills currently being installed, by name (independent of the
+  // required-bundle install above).
+  const [installingOptional, setInstallingOptional] = useState<Set<string>>(
+    new Set(),
   );
   const [showSkillDetails, setShowSkillDetails] = useState(false);
   const [skillUpdates, setSkillUpdates] = useState<Set<string>>(new Set());
@@ -454,7 +498,14 @@ export function HomeView() {
   const hasAnyTrail = recentTrails.length > 0;
 
   const installedSkillDetails = useMemo(
-    () => TRAIL_SKILL_DETAILS.filter((s) => installedSkillNames.has(s.name)),
+    () => ALL_SKILL_DETAILS.filter((s) => installedSkillNames.has(s.name)),
+    [installedSkillNames],
+  );
+
+  // Optional skills not yet installed — shown as install buttons in the footer.
+  const optionalSkillsToInstall = useMemo(
+    () =>
+      OPTIONAL_SKILL_DETAILS.filter((s) => !installedSkillNames.has(s.name)),
     [installedSkillNames],
   );
 
@@ -463,14 +514,18 @@ export function HomeView() {
     (async () => {
       try {
         const checks = await Promise.all(
-          TRAIL_INSTALL_SKILL_NAMES.map((name) =>
+          TRACKED_SKILL_NAMES.map((name) =>
             SkillLockService.isSkillInstalled(name),
           ),
         );
         if (!cancelled) {
-          setSkillInstalled(checks.every(Boolean));
-          setInstalledSkillNames(
-            new Set(TRAIL_INSTALL_SKILL_NAMES.filter((_, i) => checks[i])),
+          const installed = new Set(
+            TRACKED_SKILL_NAMES.filter((_, i) => checks[i]),
+          );
+          setInstalledSkillNames(installed);
+          // The trail dashboard gates on the required bundle only.
+          setSkillInstalled(
+            TRAIL_INSTALL_SKILL_NAMES.every((name) => installed.has(name)),
           );
         }
       } catch (error) {
@@ -488,7 +543,7 @@ export function HomeView() {
   // skillUpdateService backend). Populates the set of skill names with updates.
   const refreshSkillUpdates = useCallback(async () => {
     try {
-      const tracked = new Set<string>(TRAIL_INSTALL_SKILL_NAMES);
+      const tracked = new Set<string>(TRACKED_SKILL_NAMES);
       const updates = await SkillLockService.checkUpdates();
       setSkillUpdates(
         new Set(
@@ -507,17 +562,20 @@ export function HomeView() {
   }, [refreshSkillUpdates]);
 
   useEffect(() => {
-    const tracked = new Set<string>(TRAIL_INSTALL_SKILL_NAMES);
+    const tracked = new Set<string>(TRACKED_SKILL_NAMES);
     const recheck = async () => {
       try {
         const checks = await Promise.all(
-          TRAIL_INSTALL_SKILL_NAMES.map((name) =>
+          TRACKED_SKILL_NAMES.map((name) =>
             SkillLockService.isSkillInstalled(name),
           ),
         );
-        setSkillInstalled(checks.every(Boolean));
-        setInstalledSkillNames(
-          new Set(TRAIL_INSTALL_SKILL_NAMES.filter((_, i) => checks[i])),
+        const installed = new Set(
+          TRACKED_SKILL_NAMES.filter((_, i) => checks[i]),
+        );
+        setInstalledSkillNames(installed);
+        setSkillInstalled(
+          TRAIL_INSTALL_SKILL_NAMES.every((name) => installed.has(name)),
         );
         void refreshSkillUpdates();
       } catch (error) {
@@ -562,10 +620,13 @@ export function HomeView() {
     }
   }, []);
 
-  const handleInstallSkill = useCallback(async () => {
-    setInstallingSkill(true);
-    setSkillInstallError(null);
-    try {
+  // Fetch the skills repo tree once and install each named skill into both the
+  // canonical and Claude-specific skill directories. Returns the set of skills
+  // that installed at least once, plus any per-destination failures.
+  const installSkillsByName = useCallback(
+    async (
+      names: ReadonlyArray<string>,
+    ): Promise<{ fullyInstalled: Set<string>; failures: string[] }> => {
       const treeResult = await GithubService.getTree(
         TRAIL_SKILL_REPO_OWNER,
         TRAIL_SKILL_REPO_NAME,
@@ -584,7 +645,7 @@ export function HomeView() {
       const failures: string[] = [];
       const fullyInstalled = new Set<string>();
 
-      for (const skillName of TRAIL_INSTALL_SKILL_NAMES) {
+      for (const skillName of names) {
         const prefix = `${skillName}/`;
         const fileList = tree
           .filter(
@@ -622,6 +683,18 @@ export function HomeView() {
         }
       }
 
+      return { fullyInstalled, failures };
+    },
+    [],
+  );
+
+  const handleInstallSkill = useCallback(async () => {
+    setInstallingSkill(true);
+    setSkillInstallError(null);
+    try {
+      const { fullyInstalled, failures } = await installSkillsByName(
+        TRAIL_INSTALL_SKILL_NAMES,
+      );
       if (fullyInstalled.size === 0) {
         throw new Error(
           failures.length > 0
@@ -644,7 +717,40 @@ export function HomeView() {
     } finally {
       setInstallingSkill(false);
     }
-  }, []);
+  }, [installSkillsByName]);
+
+  // Install a single optional skill on demand. The skill:installed broadcast
+  // drives recheck(), which moves it from the install row into the installed
+  // badges; we update local state optimistically as a fallback.
+  const handleInstallOptionalSkill = useCallback(
+    async (name: string) => {
+      setInstallingOptional((prev) => new Set(prev).add(name));
+      setSkillInstallError(null);
+      try {
+        const { fullyInstalled, failures } = await installSkillsByName([name]);
+        if (!fullyInstalled.has(name)) {
+          throw new Error(
+            failures.length > 0
+              ? failures.join('; ')
+              : `Failed to install ${name}.`,
+          );
+        }
+        setInstalledSkillNames((prev) => new Set(prev).add(name));
+      } catch (error) {
+        console.error('[HomeView] Optional skill install failed:', error);
+        setSkillInstallError(
+          error instanceof Error ? error.message : 'Install failed.',
+        );
+      } finally {
+        setInstallingOptional((prev) => {
+          const next = new Set(prev);
+          next.delete(name);
+          return next;
+        });
+      }
+    },
+    [installSkillsByName],
+  );
 
   const welcomeHeader = (
     <div style={{ textAlign: 'center', maxWidth: 640 }}>
@@ -1133,6 +1239,70 @@ export function HomeView() {
                         color={theme.colors.success ?? theme.colors.primary}
                       />
                     )}
+                  </button>
+                );
+              })}
+              {optionalSkillsToInstall.map((skill) => {
+                const SkillIcon = skill.Icon;
+                const isInstalling = installingOptional.has(skill.name);
+                return (
+                  <button
+                    key={skill.name}
+                    type="button"
+                    disabled={isInstalling}
+                    onClick={() => {
+                      if (isInstalling) return;
+                      void handleInstallOptionalSkill(skill.name);
+                    }}
+                    title={
+                      isInstalling
+                        ? `Installing ${skill.title}…`
+                        : `${skill.description} — click to install`
+                    }
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      borderRadius: 12,
+                      // Dashed border marks an installable add-on, distinct from
+                      // the solid-bordered installed badges.
+                      border: `1px dashed ${theme.colors.primary}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      color: theme.colors.text,
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[1],
+                      cursor: isInstalling ? 'default' : 'pointer',
+                      opacity: isInstalling ? 0.7 : 1,
+                      transition: 'border-color 150ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                    }}
+                  >
+                    <SkillIcon size={16} color={theme.colors.primary} />
+                    <span style={{ fontWeight: theme.fontWeights.medium }}>
+                      {skill.title}
+                    </span>
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        color: theme.colors.primary,
+                        fontWeight: theme.fontWeights.medium,
+                      }}
+                    >
+                      {isInstalling ? (
+                        <RefreshCw size={14} />
+                      ) : (
+                        <Download size={14} />
+                      )}
+                      {isInstalling ? 'Installing…' : 'Install'}
+                    </span>
                   </button>
                 );
               })}
