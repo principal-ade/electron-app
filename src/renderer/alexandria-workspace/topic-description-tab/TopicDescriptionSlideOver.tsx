@@ -41,6 +41,24 @@ import {
 
 const ASSET_SCHEME = 'asset://';
 
+// Value-equality for the topic's inline assets. A background TOPIC_UPDATED
+// broadcast re-fetches the topic and hands us a fresh array even when nothing
+// changed; without this check `setAssets` would install a new reference, churn
+// `resolveAssetUri`'s identity, and force IndustryMarkdownSlide to re-render —
+// which collapses any live text selection in the preview.
+const assetsEqual = (a: TopicAsset[], b: TopicAsset[]): boolean => {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (x.id !== y.id || x.url !== y.url || x.mime !== y.mime || x.data !== y.data) {
+      return false;
+    }
+  }
+  return true;
+};
+
 export interface TopicDescriptionSlideOverProps {
   open: boolean;
   /**
@@ -106,15 +124,21 @@ export const TopicDescriptionSlideOver: React.FC<
   useEffect(() => {
     if (!open || !topicId) return;
     let cancelled = false;
-    const load = async () => {
-      setLoading(true);
+    // `initial` is the first open-time fetch; later calls come from the
+    // onTopicChange subscription. Only the initial load drives the loading
+    // spinner, and every setter below preserves the existing reference when the
+    // re-fetched value is unchanged — so a no-op broadcast doesn't re-render the
+    // markdown preview and wipe a text selection out from under the user.
+    const load = async (initial: boolean) => {
+      if (initial) setLoading(true);
       try {
         const topic = await TopicService.getTopic(topicId);
-        if (!cancelled) {
-          setDescription(topic?.description ?? '');
-          setAssets(topic?.assets ?? []);
-          setStatus(topic?.status);
-        }
+        if (cancelled) return;
+        const nextDescription = topic?.description ?? '';
+        const nextAssets = topic?.assets ?? [];
+        setDescription((prev) => (prev === nextDescription ? prev : nextDescription));
+        setAssets((prev) => (assetsEqual(prev, nextAssets) ? prev : nextAssets));
+        setStatus((prev) => (prev === topic?.status ? prev : topic?.status));
       } catch (err) {
         console.error('[TopicDescriptionSlideOver] load failed', err);
         if (!cancelled) {
@@ -123,13 +147,13 @@ export const TopicDescriptionSlideOver: React.FC<
           setStatus(undefined);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (initial && !cancelled) setLoading(false);
       }
     };
-    load();
+    load(true);
     const off = TopicService.onTopicChange((event) => {
       const changedId = event.topic?.id ?? event.id;
-      if (changedId === topicId) load();
+      if (changedId === topicId) load(false);
     });
     return () => {
       cancelled = true;
@@ -152,6 +176,20 @@ export const TopicDescriptionSlideOver: React.FC<
       return src;
     },
     [assets],
+  );
+
+  // Stable handler for "open this mermaid block in a tab". Hoisted out of the
+  // JSX so IndustryMarkdownSlide doesn't see a new `onOpenMermaidInTab` prop on
+  // every render (which would re-render the markdown and drop a selection).
+  const handleOpenMermaidInTab = React.useCallback(
+    (code: string, title?: string) =>
+      events.emit({
+        type: 'mermaid:open-in-tab',
+        source: 'topic-notes',
+        timestamp: Date.now(),
+        payload: { code, title: title ?? '' },
+      }),
+    [events],
   );
 
   // Auto-dismiss the drop-error banner a few seconds after it appears.
@@ -483,14 +521,7 @@ export const TopicDescriptionSlideOver: React.FC<
             transparentBackground
             enableKeyboardScrolling={false}
             onLinkClick={onLinkClick}
-            onOpenMermaidInTab={(code, title) =>
-              events.emit({
-                type: 'mermaid:open-in-tab',
-                source: 'topic-notes',
-                timestamp: Date.now(),
-                payload: { code, title },
-              })
-            }
+            onOpenMermaidInTab={handleOpenMermaidInTab}
             selectableBlocks
             deletionMode="text"
             onContentChange={handleContentChange}
