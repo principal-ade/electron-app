@@ -162,6 +162,14 @@ export const TopicDescriptionSlideOver: React.FC<
       source: 'topic-notes',
     });
   const [description, setDescription] = useState<string | null>(null);
+  // Latest description, readable synchronously from event handlers. Checkbox
+  // toggles need the current markdown to rewrite a `[ ]`/`[x]` marker, and may
+  // fire several times before a re-render flushes `description` — the ref keeps
+  // each toggle building on the previous one rather than a stale render value.
+  const descriptionRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    descriptionRef.current = description;
+  }, [description]);
   const [assets, setAssets] = useState<TopicAsset[]>([]);
   const [status, setStatus] = useState<TopicStatus | undefined>(undefined);
   const [loading, setLoading] = useState(false);
@@ -295,22 +303,20 @@ export const TopicDescriptionSlideOver: React.FC<
   // and persist through the same sink as inline deletions.
   const handleCheckboxChange = React.useCallback(
     (_slideIndex: number, lineNumber: number, checked: boolean) => {
-      setDescription((current) => {
-        if (current == null) return current;
-        const next = toggleCheckboxAtLine(current, lineNumber, checked);
-        if (next == null || next === current) return current;
-        if (topicId) {
-          void TopicService.updateTopic(topicId, { description: next }).catch(
-            (err) => {
-              console.error(
-                '[TopicDescriptionSlideOver] checkbox update failed',
-                err,
-              );
-            },
+      const current = descriptionRef.current;
+      if (current == null || !topicId) return;
+      const next = toggleCheckboxAtLine(current, lineNumber, checked);
+      if (next == null || next === current) return;
+      descriptionRef.current = next;
+      setDescription(next);
+      void TopicService.updateTopic(topicId, { description: next }).catch(
+        (err) => {
+          console.error(
+            '[TopicDescriptionSlideOver] checkbox update failed',
+            err,
           );
-        }
-        return next;
-      });
+        },
+      );
     },
     [topicId],
   );
