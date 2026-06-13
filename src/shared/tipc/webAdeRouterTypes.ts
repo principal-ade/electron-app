@@ -456,6 +456,21 @@ export interface DeleteInboxEntryInput {
 }
 
 /**
+ * Mark one delivered trail in the caller's inbox as read. Stamps `readAt` and
+ * advances the notes watermark (`notesSeenCount`) so the attention dot and
+ * "(N new)" badge clear. Idempotent: a re-read keeps the original `readAt`.
+ * `trailId` is the inbox entry's `trailId`.
+ */
+export interface MarkInboxEntryReadInput {
+  trailId: string;
+}
+
+export interface MarkInboxEntryReadResponse {
+  /** ISO 8601 timestamp the entry was (or had already been) marked read. */
+  readAt: string;
+}
+
+/**
  * Send a shared trail to one or more GitHub-login recipients.
  * `shareId` is the web-ade share id (parsed from the share URL), NOT the
  * local trail-index id.
@@ -723,6 +738,12 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: DeleteInboxEntryInput;
     }) => Promise<void>;
+  };
+  markInboxEntryRead: {
+    action: (args: {
+      context: ActionContext;
+      input: MarkInboxEntryReadInput;
+    }) => Promise<MarkInboxEntryReadResponse>;
   };
   sendTrail: {
     action: (args: {

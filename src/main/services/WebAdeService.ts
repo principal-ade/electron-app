@@ -33,6 +33,8 @@ import type {
   ListInboxResponse,
   InboxUnreadCountResponse,
   DeleteInboxEntryInput,
+  MarkInboxEntryReadInput,
+  MarkInboxEntryReadResponse,
   SendTrailInput,
   SendTrailResponse,
   GetSentInput,
@@ -952,6 +954,49 @@ export class WebAdeService {
       }
     } catch (error) {
       console.error('[WebADE] Failed to delete inbox entry:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark one delivered trail in the signed-in user's inbox as read. The server
+   * stamps `readAt` and advances the notes watermark so the attention dot and
+   * "(N new)" badge clear. Idempotent on the server (a re-read preserves the
+   * original timestamp). A 404 (`INBOX_NOT_FOUND`) means the entry is already
+   * gone — surfaced to the caller so it can resync.
+   */
+  async markInboxEntryRead(
+    input: MarkInboxEntryReadInput,
+  ): Promise<MarkInboxEntryReadResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/trails/inbox/${encodeURIComponent(input.trailId)}/read`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed - token may be invalid or expired');
+        }
+        throw new Error(
+          `Failed to mark inbox entry read: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data = (await response.json()) as Partial<MarkInboxEntryReadResponse>;
+      return { readAt: data.readAt ?? new Date().toISOString() };
+    } catch (error) {
+      console.error('[WebADE] Failed to mark inbox entry read:', error);
       throw error;
     }
   }

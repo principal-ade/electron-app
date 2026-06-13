@@ -27,6 +27,8 @@ import type {
   ListInboxResponse,
   InboxUnreadCountResponse,
   DeleteInboxEntryInput,
+  MarkInboxEntryReadInput,
+  MarkInboxEntryReadResponse,
   SendTrailInput,
   SendTrailResponse,
   GetSentInput,
@@ -221,6 +223,17 @@ export class WebAdeService {
    */
   static async deleteInboxEntry(input: DeleteInboxEntryInput): Promise<void> {
     return webAdeClient.deleteInboxEntry(input);
+  }
+
+  /**
+   * Mark one delivered trail in the signed-in user's inbox as read. Clears the
+   * attention dot / "(N new)" badge server-side by stamping `readAt` and
+   * advancing the notes watermark. Idempotent.
+   */
+  static async markInboxEntryRead(
+    input: MarkInboxEntryReadInput,
+  ): Promise<MarkInboxEntryReadResponse> {
+    return webAdeClient.markInboxEntryRead(input);
   }
 
   /**

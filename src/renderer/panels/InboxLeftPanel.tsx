@@ -164,6 +164,55 @@ export const InboxLeftPanel: React.FC = () => {
     [deletingInboxIds, load],
   );
 
+  /**
+   * Open a shared trail from the inbox and clear its attention dot. Optimistic:
+   * stamp the row read (and advance its notes watermark) locally so the dot and
+   * "(N new)" badge vanish immediately, then tell web-ade. On failure, reload to
+   * resync. The mark-read call is skipped when the row already had no dot.
+   */
+  const handleOpenInbox = useCallback(
+    (entry: InboxIndexEntry) => {
+      openSharedTrail(entry.trailId, entry.owner, entry.repo);
+
+      const hadDot = entry.notification?.dot ?? entry.readAt === null;
+      if (!hadDot) return;
+
+      const wasUnread = entry.readAt === null;
+      const noteCount = entry.snapshot?.noteCount ?? 0;
+      const readAt = entry.readAt ?? new Date().toISOString();
+
+      setInboxEntries((prev) =>
+        prev.map((e) =>
+          e.trailId === entry.trailId
+            ? {
+                ...e,
+                readAt,
+                notesSeenCount: noteCount,
+                notification: e.notification
+                  ? {
+                      ...e.notification,
+                      dot: false,
+                      unread: false,
+                      newNoteCount: 0,
+                    }
+                  : e.notification,
+              }
+            : e,
+        ),
+      );
+      if (wasUnread) setUnreadCount((c) => Math.max(0, c - 1));
+
+      void WebAdeService.markInboxEntryRead({ trailId: entry.trailId }).catch(
+        (err) => {
+          console.error('[Inbox] Failed to mark entry read:', err);
+          // Resync from the server — restores the dot if the mark didn't land.
+          void load();
+        },
+      );
+    },
+    [openSharedTrail, load],
+  );
+
   const spacing = {
     xs: theme.space?.[1] || 4,
     sm: theme.space?.[2] || 8,
@@ -237,9 +286,7 @@ export const InboxLeftPanel: React.FC = () => {
               // Make room for the delete control when it's revealed.
               paddingRight: hovered ? spacing.sm * 5 : spacing.sm * 2,
             }}
-            onClick={() =>
-              openSharedTrail(entry.trailId, entry.owner, entry.repo)
-            }
+            onClick={() => handleOpenInbox(entry)}
           >
             {/* Attention marker (or spacer to keep alignment). Sits by the
                 title for a new/unread trail, or drops to the notes line when
