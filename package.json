@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.758",
+  "version": "0.0.759",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -208,7 +208,7 @@
     "@principal-ade/dynamic-file-tree": "^0.2.45",
     "@principal-ade/industry-theme": "^0.1.22",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.10",
-    "@principal-ade/markdown-utils": "^0.3.1",
+    "@principal-ade/markdown-utils": "^0.3.2",
     "@principal-ade/panel-framework-core": "^0.5.1",
     "@principal-ade/panel-layouts": "^0.4.8",
     "@principal-ade/panels": "^1.0.88",
@@ -290,7 +290,7 @@
     "simple-git": "^3.30.0",
     "socket.io-client": "^4.8.1",
     "stream-browserify": "^3.0.0",
-    "themed-markdown": "^0.1.99",
+    "themed-markdown": "^0.1.100",
     "three": "^0.172.0",
     "ts-json-schema-generator": "^2.4.0",
     "uuid": "^11.1.0",
