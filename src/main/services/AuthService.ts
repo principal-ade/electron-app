@@ -611,7 +611,27 @@ class AuthService {
       const isExpired = expiresAt && expiresAt <= now;
       const isExpiringSoon = expiresAt && expiresAt <= now + fiveMinutes;
 
-      if ((isExpired || isExpiringSoon) && refreshToken) {
+      // The WorkOS session is the source of truth for being signed in. A valid
+      // session has an expiry comfortably in the future; without one, the
+      // long-lived GitHub token must NOT keep us authenticated on its own.
+      // Refresh the session when we can, otherwise sign out — the GitHub token
+      // is recoverable from a future WorkOS sign-in via token/current.
+      const hasValidWorkosSession = !!expiresAt && expiresAt > now + fiveMinutes;
+
+      if (!hasValidWorkosSession) {
+        if (!refreshToken) {
+          console.log(
+            '[AuthService] No valid WorkOS session and no refresh token — signing out',
+          );
+          await this.clearStoredAuth();
+          AuthStateManager.getInstance().clearAuthentication();
+          return {
+            success: false,
+            authenticated: false,
+            error: 'WorkOS session is no longer valid. Please log in again.',
+          };
+        }
+
         console.log(
           '[AuthService] WorkOS token expired or expiring soon, refreshing...',
           {
