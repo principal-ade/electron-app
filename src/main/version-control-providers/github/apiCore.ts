@@ -11,6 +11,7 @@
 import fetch from 'node-fetch';
 import { electronCLI } from '../../electron-cli-bridge';
 import { authService } from '../../services/AuthService';
+import { getGhCliToken } from './ghCliToken';
 import { UnifiedSecureStorage } from '../../services/UnifiedSecureStorage';
 import type {
   GitHubAPIRequestBody,
@@ -43,7 +44,13 @@ export class GitHubAPICore {
   async getGitHubToken(): Promise<string | null> {
     try {
       const token = await authService.getValidToken();
-      return token;
+      if (token) {
+        return token;
+      }
+      // No in-app (WorkOS-backed) token — fall back to the gh CLI token. This
+      // call targets api.github.com, which accepts a gh CLI token even when
+      // there's no WorkOS session.
+      return await getGhCliToken();
     } catch (error) {
       console.error('[GitHub] Failed to get GitHub token:', error);
       return null;

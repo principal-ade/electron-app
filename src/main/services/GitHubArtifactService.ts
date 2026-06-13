@@ -8,6 +8,7 @@
 import { Octokit } from '@octokit/rest';
 import JSZip from 'jszip';
 import { authService } from './AuthService';
+import { getGhCliToken } from '../version-control-providers/github/ghCliToken';
 import type {
   QualityHexagonMetrics,
   FormattedResults,
@@ -124,7 +125,11 @@ export class GitHubArtifactService {
    * Get an authenticated Octokit instance using the stored GitHub token
    */
   private async getOctokit(): Promise<Octokit> {
-    const token = await authService.getValidToken();
+    // Fall back to the gh CLI token when there's no in-app (WorkOS-backed)
+    // token — artifact lookups hit api.github.com, which a gh CLI token can
+    // authenticate even without a WorkOS session.
+    const token =
+      (await authService.getValidToken()) ?? (await getGhCliToken());
     if (!token) {
       throw new Error('Not authenticated with GitHub');
     }
