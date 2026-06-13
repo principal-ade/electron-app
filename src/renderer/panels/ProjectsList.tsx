@@ -363,8 +363,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: spacing.xs,
-          padding: `${spacing.xs}px ${spacing.md}px`,
-          borderBottom: `1px solid ${theme.colors.border}`,
+          padding: `${spacing.sm}px ${spacing.md}px`,
           flexShrink: 0,
         }}
       >
@@ -467,7 +466,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           overflow: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          padding: spacing.md,
+          padding: `${spacing.sm}px ${spacing.xs}px`,
         }}
       >
         {isInitialLoading ? (
@@ -516,26 +515,24 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
 
             return (
               <div key={orgName} style={{ marginBottom: spacing.md }}>
-                <div style={{ marginBottom: spacing.xs }}>
-                  <OrgSectionHeaderCard
-                    header={{
-                      orgName,
-                      badge,
-                      repoCount: repos.length,
-                      isUntracked: orgName === 'Untracked',
-                    }}
-                    isCollapsed={isCollapsed}
-                    onToggle={() => toggleOrgCollapsed(orgName)}
-                  />
-                </div>
+                <OrgSectionHeaderCard
+                  header={{
+                    orgName,
+                    badge,
+                    repoCount: repos.length,
+                    isUntracked: orgName === 'Untracked',
+                  }}
+                  isCollapsed={isCollapsed}
+                  onToggle={() => toggleOrgCollapsed(orgName)}
+                />
 
                 {!isCollapsed && (
                   <div
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: spacing.xs,
-                      paddingLeft: spacing.md + spacing.sm,
+                      gap: 1,
+                      marginTop: spacing.xs,
                     }}
                   >
                     {repos.map((project) => (

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ChevronDown, ChevronRight, FolderGit2 } from 'lucide-react';
 
@@ -16,120 +16,125 @@ export interface OrgSectionHeaderCardProps {
   onToggle?: () => void;
 }
 
+/**
+ * "Quiet list" section header: a lightweight, uppercase text label (avatar +
+ * org name + badge, with the repo count and a collapse chevron on the right)
+ * sitting above a hairline divider. No filled box or border of its own —
+ * hierarchy comes from type and whitespace, not nested rectangles.
+ */
 export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
   header,
   isCollapsed,
   onToggle,
 }) => {
   const { theme } = useTheme();
-  const spacing = { xs: 4, sm: 8, md: 16 };
-  const radius = theme.radii?.[1] || 4;
+  const [hover, setHover] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+
   const avatarSrc =
     header.avatarUrl ??
-    (!header.isUntracked ? `https://github.com/${header.orgName}.png?size=64` : undefined);
+    (!header.isUntracked ? `https://github.com/${header.orgName}.png?size=48` : undefined);
   const Chevron = isCollapsed ? ChevronRight : ChevronDown;
-  const badgeLabel = header.badge === 'you' ? '(you)' : header.badge === 'member' ? '(member)' : null;
+  const badgeLabel = header.badge === 'you' ? 'you' : header.badge === 'member' ? 'member' : null;
 
   return (
-    <div
-      onClick={onToggle}
-      role={onToggle ? 'button' : undefined}
-      aria-expanded={!isCollapsed}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: spacing.sm,
-        padding: spacing.md,
-        backgroundColor: theme.colors.backgroundSecondary,
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: radius,
-        cursor: onToggle ? 'pointer' : 'default',
-        transition: 'all 0.15s ease',
-      }}
-      onMouseEnter={(e) => {
-        if (!onToggle) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-        e.currentTarget.style.borderColor = theme.colors.primary;
-      }}
-      onMouseLeave={(e) => {
-        if (!onToggle) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-        e.currentTarget.style.borderColor = theme.colors.border;
-      }}
-    >
-      <Chevron size={16} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
-
+    <div>
       <div
+        onClick={onToggle}
+        role={onToggle ? 'button' : undefined}
+        aria-expanded={!isCollapsed}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
         style={{
-          width: 32,
-          height: 32,
-          flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: radius,
-          backgroundColor: theme.colors.backgroundTertiary,
-          overflow: 'hidden',
+          gap: 8,
+          padding: '5px 10px',
+          borderRadius: 6,
+          cursor: onToggle ? 'pointer' : 'default',
+          backgroundColor: hover ? theme.colors.backgroundSecondary : 'transparent',
+          transition: 'background-color 0.15s ease',
         }}
       >
-        {avatarSrc ? (
-          <img
-            src={avatarSrc}
-            alt={header.orgName}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-            }}
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        ) : (
-          <FolderGit2 size={16} color={theme.colors.textSecondary} />
-        )}
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Small circular org avatar, with a folder glyph fallback. */}
         <div
           style={{
-            fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
-            fontSize: theme.fontSizes[2],
-            fontWeight: 600,
-            color: theme.colors.text,
-            lineHeight: 1.2,
+            width: 18,
+            height: 18,
+            flexShrink: 0,
+            borderRadius: '50%',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme.colors.backgroundTertiary,
+          }}
+        >
+          {avatarSrc && !avatarBroken ? (
+            <img
+              src={avatarSrc}
+              alt={header.orgName}
+              width={18}
+              height={18}
+              style={{ objectFit: 'cover', display: 'block' }}
+              onError={() => setAvatarBroken(true)}
+            />
+          ) : (
+            <FolderGit2 size={11} color={theme.colors.textSecondary} />
+          )}
+        </div>
+
+        <span
+          style={{
+            fontFamily: theme.fonts?.body,
+            fontSize: theme.fontSizes[1],
+            fontWeight: theme.fontWeights?.semibold ?? 600,
+            letterSpacing: 0.5,
+            textTransform: 'uppercase',
+            color: theme.colors.textSecondary,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}
         >
           {header.orgName}
-          {badgeLabel && (
-            <span
-              style={{
-                marginLeft: spacing.xs,
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.primary,
-                fontWeight: 400,
-              }}
-            >
-              {badgeLabel}
-            </span>
-          )}
-        </div>
+        </span>
+
+        {badgeLabel && (
+          <span
+            style={{
+              flexShrink: 0,
+              fontFamily: theme.fonts?.body,
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.primary,
+            }}
+          >
+            · {badgeLabel}
+          </span>
+        )}
+
+        <span style={{ flex: 1 }} />
+
+        <span
+          style={{
+            flexShrink: 0,
+            fontFamily: theme.fonts?.body,
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textSecondary,
+          }}
+        >
+          {header.repoCount}
+        </span>
+        <Chevron size={13} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
       </div>
 
       <div
         style={{
-          fontFamily: theme.fonts?.body,
-          fontSize: theme.fontSizes[1],
-          color: theme.colors.textSecondary,
-          flexShrink: 0,
+          height: 1,
+          backgroundColor: theme.colors.border,
+          margin: '5px 10px 0',
         }}
-      >
-        {header.repoCount} {header.repoCount === 1 ? 'repo' : 'repos'}
-      </div>
+      />
     </div>
   );
 };

@@ -30,7 +30,6 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
 }) => {
   const { theme } = useTheme();
   const spacing = { xs: 4, sm: 8, md: 16 };
-  const radius = theme.radii?.[1] || 4;
 
   const [hovered, setHovered] = useState(false);
 
@@ -38,37 +37,28 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
     <div
       onClick={onClick}
       role={onClick ? 'button' : undefined}
-      onMouseEnter={(e) => {
-        setHovered(true);
-        if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-        e.currentTarget.style.borderColor = theme.colors.primary;
-      }}
-      onMouseLeave={(e) => {
-        setHovered(false);
-        if (!onClick) return;
-        e.currentTarget.style.backgroundColor = 'transparent';
-        e.currentTarget.style.borderColor = theme.colors.border;
-      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: spacing.sm,
-        padding: spacing.sm,
-        backgroundColor: 'transparent',
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: radius,
+        gap: spacing.sm + 2,
+        // "Quiet list" row: no border. A subtle background tint on hover is the
+        // only chrome; hierarchy is carried by the section header above.
+        padding: '6px 10px 6px 14px',
+        backgroundColor: hovered ? theme.colors.backgroundSecondary : 'transparent',
+        borderRadius: 6,
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 0.15s ease',
+        transition: 'background-color 0.15s ease',
         // Not-yet-cloned projects read as lighter than the ones on disk.
         opacity: isCloned ? 1 : 0.7,
       }}
     >
       {/* On-disk clones get the repo icon; not-yet-cloned repos get a cloud. */}
       {isCloned ? (
-        <FolderGit2 size={16} color={theme.colors.text} style={{ flexShrink: 0 }} />
+        <FolderGit2 size={15} color={theme.colors.text} style={{ flexShrink: 0 }} />
       ) : (
-        <Cloud size={16} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
+        <Cloud size={15} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
@@ -82,7 +72,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
           <span
             style={{
               fontFamily: theme.fonts?.body,
-              fontSize: theme.fontSizes[1],
+              fontSize: theme.fontSizes[2],
               color: theme.colors.text,
               lineHeight: 1.2,
               overflow: 'hidden',
@@ -97,7 +87,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
               title="In Progress — has uncommitted changes"
               style={{ flexShrink: 0, display: 'inline-flex' }}
             >
-              <Circle size={8} fill={theme.colors.warning} color={theme.colors.warning} />
+              <Circle size={7} fill={theme.colors.warning} color={theme.colors.warning} />
             </span>
           )}
         </div>
@@ -105,7 +95,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
           <div
             style={{
               fontFamily: theme.fonts?.body,
-              fontSize: theme.fontSizes[0],
+              fontSize: theme.fontSizes[1],
               color: theme.colors.textSecondary,
               lineHeight: 1.2,
               overflow: 'hidden',
