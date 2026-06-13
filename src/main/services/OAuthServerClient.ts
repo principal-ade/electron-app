@@ -335,18 +335,21 @@ export class OAuthServerClient {
   }
 
   /**
-   * Fetch the current valid GitHub token from the central token store
-   * This is used to sync the local token with the server after login from another surface
+   * Fetch the current valid GitHub token from the central token store.
+   * Used to sync the local token with the server after login from another
+   * surface. The endpoint requires a verified WorkOS access token (the
+   * GitHub-token auth path was removed), so callers authenticate with their
+   * WorkOS session rather than the GitHub token they already hold.
    *
-   * @param githubToken The local GitHub token to use for authentication
+   * @param workosAccessToken A valid WorkOS access token authorizing the lookup
    * @param githubUserId The user's GitHub ID
-   * @param deviceId Optional device ID for device-specific session tracking
+   * @param deviceId Device ID — required; the WorkOS path is device-session bound
    * @returns The current token data from the server, or null if not available
    */
   async fetchCurrentToken(
-    githubToken: string,
+    workosAccessToken: string,
     githubUserId: number,
-    deviceId?: string,
+    deviceId: string,
   ): Promise<{
     githubToken: string;
     githubLogin: string;
@@ -355,16 +358,12 @@ export class OAuthServerClient {
     try {
       const url = new URL(`${this.serverUrl}/api/auth/token/current`);
       url.searchParams.set('github_user_id', String(githubUserId));
-
-      // Add device ID if provided
-      if (deviceId) {
-        url.searchParams.set('device_id', deviceId);
-      }
+      url.searchParams.set('device_id', deviceId);
 
       const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${githubToken}`,
+          Authorization: `Bearer ${workosAccessToken}`,
           'Content-Type': 'application/json',
         },
       });

@@ -701,9 +701,12 @@ class AuthService {
         }
       }
 
-      // Sync token from server to get the latest (handles login from other surfaces)
+      // Sync token from server to get the latest (handles login from other
+      // surfaces). token/current requires a verified WorkOS access token, so
+      // this only runs when we hold a current WorkOS session token to present.
       let currentGithubToken = githubToken;
-      if (user.id) {
+      const workosAccessToken = workosTokenData?.token;
+      if (user.id && workosAccessToken) {
         try {
           const authClient = new OAuthServerClient({
             serverUrl:
@@ -715,7 +718,7 @@ class AuthService {
           const deviceId = await deviceIdService.getDeviceId();
 
           const serverToken = await authClient.fetchCurrentToken(
-            githubToken,
+            workosAccessToken,
             user.id,
             deviceId,
           );
