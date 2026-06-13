@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { LIST_AVATAR_SIZE } from './listCardLayout';
 
 export interface CoworkerCardData {
   login: string;
@@ -15,29 +16,25 @@ export interface CoworkerCardProps {
 
 export const CoworkerCard: React.FC<CoworkerCardProps> = ({ coworker, onClick }) => {
   const { theme } = useTheme();
-  const spacing = { xs: 4, sm: 8, md: 16 };
 
   return (
     <div
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       style={{
-        padding: spacing.md,
-        backgroundColor: theme.colors.backgroundSecondary,
-        border: `1px solid ${theme.colors.border}`,
+        padding: '8px 10px',
+        backgroundColor: 'transparent',
         borderRadius: theme.radii?.[1] || 4,
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 0.15s ease',
+        transition: 'background-color 0.15s ease',
       }}
       onMouseEnter={(e) => {
         if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-        e.currentTarget.style.borderColor = theme.colors.primary;
+        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
       }}
       onMouseLeave={(e) => {
         if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-        e.currentTarget.style.borderColor = theme.colors.border;
+        e.currentTarget.style.backgroundColor = 'transparent';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -45,7 +42,7 @@ export const CoworkerCard: React.FC<CoworkerCardProps> = ({ coworker, onClick })
           <img
             src={coworker.avatarUrl}
             alt={coworker.login}
-            style={{ width: 40, height: 40, borderRadius: '50%', display: 'block' }}
+            style={{ width: LIST_AVATAR_SIZE, height: LIST_AVATAR_SIZE, borderRadius: '50%', display: 'block' }}
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
@@ -71,7 +68,7 @@ export const CoworkerCard: React.FC<CoworkerCardProps> = ({ coworker, onClick })
           style={{
             flex: 1,
             minWidth: 0,
-            height: 40,
+            height: LIST_AVATAR_SIZE,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',

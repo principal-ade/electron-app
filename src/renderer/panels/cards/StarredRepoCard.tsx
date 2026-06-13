@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { LIST_AVATAR_SIZE } from './listCardLayout';
 import { Star } from 'lucide-react';
 
 export interface StarredRepoCardData {
@@ -24,22 +25,19 @@ export const StarredRepoCard: React.FC<StarredRepoCardProps> = ({ repo, onClick 
     <div
       onClick={onClick}
       style={{
-        padding: spacing.md,
-        backgroundColor: theme.colors.backgroundSecondary,
-        border: `1px solid ${theme.colors.border}`,
+        padding: '10px',
+        backgroundColor: 'transparent',
         borderRadius: theme.radii?.[1] || 4,
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 0.15s ease',
+        transition: 'background-color 0.15s ease',
       }}
       onMouseEnter={(e) => {
         if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-        e.currentTarget.style.borderColor = theme.colors.primary;
+        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
       }}
       onMouseLeave={(e) => {
         if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-        e.currentTarget.style.borderColor = theme.colors.border;
+        e.currentTarget.style.backgroundColor = 'transparent';
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
@@ -48,7 +46,7 @@ export const StarredRepoCard: React.FC<StarredRepoCardProps> = ({ repo, onClick 
             <img
               src={repo.ownerAvatarUrl}
               alt={repo.owner}
-              style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, display: 'block' }}
+              style={{ width: LIST_AVATAR_SIZE, height: LIST_AVATAR_SIZE, borderRadius: '50%', flexShrink: 0, display: 'block' }}
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
               }}
@@ -58,7 +56,7 @@ export const StarredRepoCard: React.FC<StarredRepoCardProps> = ({ repo, onClick 
             style={{
               flex: 1,
               minWidth: 0,
-              height: 40,
+              height: LIST_AVATAR_SIZE,
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',

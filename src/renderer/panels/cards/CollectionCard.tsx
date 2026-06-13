@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { LIST_AVATAR_SIZE } from './listCardLayout';
 import { FolderGit2 } from 'lucide-react';
 
 type IconComponent = React.ComponentType<{
@@ -40,30 +41,27 @@ export const CollectionCard: React.FC<CollectionCardProps> = ({ collection, onCl
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       style={{
-        padding: spacing.md,
-        backgroundColor: theme.colors.backgroundSecondary,
-        border: `1px solid ${theme.colors.border}`,
+        padding: '10px',
+        backgroundColor: 'transparent',
         borderRadius: radius,
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 0.15s ease',
+        transition: 'background-color 0.15s ease',
       }}
       onMouseEnter={(e) => {
         if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-        e.currentTarget.style.borderColor = theme.colors.primary;
+        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
       }}
       onMouseLeave={(e) => {
         if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-        e.currentTarget.style.borderColor = theme.colors.border;
+        e.currentTarget.style.backgroundColor = 'transparent';
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div
             style={{
-              width: 40,
-              height: 40,
+              width: LIST_AVATAR_SIZE,
+              height: LIST_AVATAR_SIZE,
               flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
@@ -72,14 +70,14 @@ export const CollectionCard: React.FC<CollectionCardProps> = ({ collection, onCl
               backgroundColor: theme.colors.backgroundTertiary,
             }}
           >
-            <Icon size={20} color={theme.colors.primary} />
+            <Icon size={16} color={theme.colors.primary} />
           </div>
 
           <div
             style={{
               flex: 1,
               minWidth: 0,
-              height: 40,
+              height: LIST_AVATAR_SIZE,
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',

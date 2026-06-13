@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { LIST_AVATAR_SIZE } from './cards/listCardLayout';
 import { Users, Loader2, AlertCircle, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { GithubService } from '../main-process-api/GithubService';
@@ -280,21 +281,21 @@ const FollowingUserCard: React.FC<FollowingUserCardProps> = ({ user, onClick }) 
         alignItems: 'center',
         gap: 10,
         width: '100%',
-        padding: 8,
+        padding: '8px 10px',
         background: hovered ? theme.colors.backgroundSecondary : 'transparent',
-        border: `1px solid ${hovered ? theme.colors.primary : theme.colors.border}`,
+        border: 'none',
         borderRadius: theme.radii?.[1] || 4,
         cursor: 'pointer',
         textAlign: 'left',
-        transition: 'all 0.15s ease',
+        transition: 'background-color 0.15s ease',
       }}
     >
       <img
         src={user.avatar_url}
         alt={user.login}
         style={{
-          width: 32,
-          height: 32,
+          width: LIST_AVATAR_SIZE,
+          height: LIST_AVATAR_SIZE,
           borderRadius: '50%',
           flexShrink: 0,
           objectFit: 'cover',

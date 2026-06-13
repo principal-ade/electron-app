@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { LIST_AVATAR_SIZE } from './listCardLayout';
 
 export interface OrganizationCardData {
   login: string;
@@ -15,7 +16,6 @@ export interface OrganizationCardProps {
 
 export const OrganizationCard: React.FC<OrganizationCardProps> = ({ organization, onClick }) => {
   const { theme } = useTheme();
-  const spacing = { xs: 4, sm: 8, md: 16 };
   const avatarRadius = theme.radii?.[1] || 4;
 
   return (
@@ -23,22 +23,19 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({ organization
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       style={{
-        padding: spacing.md,
-        backgroundColor: theme.colors.backgroundSecondary,
-        border: `1px solid ${theme.colors.border}`,
+        padding: '8px 10px',
+        backgroundColor: 'transparent',
         borderRadius: theme.radii?.[1] || 4,
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 0.15s ease',
+        transition: 'background-color 0.15s ease',
       }}
       onMouseEnter={(e) => {
         if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-        e.currentTarget.style.borderColor = theme.colors.primary;
+        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
       }}
       onMouseLeave={(e) => {
         if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-        e.currentTarget.style.borderColor = theme.colors.border;
+        e.currentTarget.style.backgroundColor = 'transparent';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -47,8 +44,8 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({ organization
             src={organization.avatarUrl}
             alt={organization.login}
             style={{
-              width: 40,
-              height: 40,
+              width: LIST_AVATAR_SIZE,
+              height: LIST_AVATAR_SIZE,
               borderRadius: avatarRadius,
               display: 'block',
             }}
@@ -77,7 +74,7 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({ organization
           style={{
             flex: 1,
             minWidth: 0,
-            height: 40,
+            height: LIST_AVATAR_SIZE,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',

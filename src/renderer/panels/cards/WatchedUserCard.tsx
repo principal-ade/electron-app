@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { LIST_AVATAR_SIZE } from './listCardLayout';
 
 export interface WatchedUserCardData {
   login: string;
@@ -14,7 +15,6 @@ export interface WatchedUserCardProps {
 
 export const WatchedUserCard: React.FC<WatchedUserCardProps> = ({ user, onClick }) => {
   const { theme } = useTheme();
-  const spacing = { md: 16 };
   const radius = theme.radii?.[1] || 4;
   const avatarRadius = user.isOrganization ? radius : '50%';
   const avatarSrc = user.avatarUrl ?? `https://github.com/${user.login}.png?size=120`;
@@ -24,22 +24,19 @@ export const WatchedUserCard: React.FC<WatchedUserCardProps> = ({ user, onClick 
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       style={{
-        padding: spacing.md,
-        backgroundColor: theme.colors.backgroundSecondary,
-        border: `1px solid ${theme.colors.border}`,
+        padding: '8px 10px',
+        backgroundColor: 'transparent',
         borderRadius: radius,
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 0.15s ease',
+        transition: 'background-color 0.15s ease',
       }}
       onMouseEnter={(e) => {
         if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-        e.currentTarget.style.borderColor = theme.colors.primary;
+        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
       }}
       onMouseLeave={(e) => {
         if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-        e.currentTarget.style.borderColor = theme.colors.border;
+        e.currentTarget.style.backgroundColor = 'transparent';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -47,8 +44,8 @@ export const WatchedUserCard: React.FC<WatchedUserCardProps> = ({ user, onClick 
           src={avatarSrc}
           alt={user.login}
           style={{
-            width: 40,
-            height: 40,
+            width: LIST_AVATAR_SIZE,
+            height: LIST_AVATAR_SIZE,
             borderRadius: avatarRadius,
             flexShrink: 0,
             display: 'block',
@@ -62,7 +59,7 @@ export const WatchedUserCard: React.FC<WatchedUserCardProps> = ({ user, onClick 
           style={{
             flex: 1,
             minWidth: 0,
-            height: 40,
+            height: LIST_AVATAR_SIZE,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',

@@ -12,7 +12,6 @@ import { Github, ChevronDown, ChevronUp, Settings, FolderOpen } from 'lucide-rea
 import { SegmentedControl } from '../components/SegmentedControl';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { WatchedItemsList } from './WatchedItemsList';
 import { StarredReposList } from './StarredReposList';
 import { CollectionsList } from './CollectionsList';
 import { FollowingList } from './FollowingList';
@@ -70,7 +69,15 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
   };
 
   // State for collections subtab
-  const [collectionsSubtab, setCollectionsSubtab] = useState<'watching' | 'starred' | 'following' | 'collections'>('watching');
+  const [collectionsSubtab, setCollectionsSubtab] = useState<'starred' | 'following' | 'collections'>('starred');
+
+  // Collections live on the OAuth backend, so the subtab is only available when
+  // signed in via OAuth (currentUser comes from useAuthState). When signed out,
+  // fall back to Starred so a previously-selected Collections tab doesn't leave
+  // the pane blank.
+  const isOAuthSignedIn = !!currentUser;
+  const effectiveSubtab =
+    !isOAuthSignedIn && collectionsSubtab === 'collections' ? 'starred' : collectionsSubtab;
 
   // Local git identity (shown when signed out)
   const [localGitName, setLocalGitName] = useState<string | null>(null);
@@ -696,13 +703,15 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
           >
             <SegmentedControl
               options={[
-                { value: 'watching', label: 'Watching' },
                 { value: 'starred', label: 'Starred' },
                 { value: 'following', label: 'Following' },
-                { value: 'collections', label: 'Collections' },
+                // Collections require an OAuth sign-in.
+                ...(isOAuthSignedIn
+                  ? [{ value: 'collections', label: 'Collections' }]
+                  : []),
               ]}
-              value={collectionsSubtab}
-              onChange={(value) => setCollectionsSubtab(value as 'watching' | 'starred' | 'following' | 'collections')}
+              value={effectiveSubtab}
+              onChange={(value) => setCollectionsSubtab(value as 'starred' | 'following' | 'collections')}
               theme={theme}
               variant="pill-flat"
             />
@@ -710,21 +719,10 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
 
           {/* Subtab content container - all mounted, only visibility changes */}
           <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-            {/* Watching subtab */}
-            <div
-              style={{
-                display: collectionsSubtab === 'watching' ? 'block' : 'none',
-                height: '100%',
-                width: '100%',
-              }}
-            >
-              <WatchedItemsList events={events} />
-            </div>
-
             {/* Starred subtab */}
             <div
               style={{
-                display: collectionsSubtab === 'starred' ? 'block' : 'none',
+                display: effectiveSubtab === 'starred' ? 'block' : 'none',
                 height: '100%',
                 width: '100%',
               }}
@@ -735,7 +733,7 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
             {/* Following subtab */}
             <div
               style={{
-                display: collectionsSubtab === 'following' ? 'block' : 'none',
+                display: effectiveSubtab === 'following' ? 'block' : 'none',
                 height: '100%',
                 width: '100%',
               }}
@@ -743,16 +741,18 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
               <FollowingList events={events} />
             </div>
 
-            {/* Collections subtab */}
-            <div
-              style={{
-                display: collectionsSubtab === 'collections' ? 'block' : 'none',
-                height: '100%',
-                width: '100%',
-              }}
-            >
-              <CollectionsList events={events} />
-            </div>
+            {/* Collections subtab — only mounted when signed in via OAuth */}
+            {isOAuthSignedIn && (
+              <div
+                style={{
+                  display: effectiveSubtab === 'collections' ? 'block' : 'none',
+                  height: '100%',
+                  width: '100%',
+                }}
+              >
+                <CollectionsList events={events} />
+              </div>
+            )}
           </div>
         </div>
 
