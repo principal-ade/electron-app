@@ -26,26 +26,32 @@ type ThemeShape = ReturnType<typeof useTheme>['theme'];
 export const TOPIC_STATUS_DND_MIME = 'application/x-alexandria-topic-status';
 
 /**
- * Per-state pill presentation. `active` has no default label — an active topic
- * shows a pill only when it carries a custom label, so the common (untriaged)
- * case stays visually quiet. The color keys off the structured `state`, never
- * the free-form label, so a topic reading "revisit after launch" still shows
- * in the `needs-attention` color.
+ * Per-state pill presentation, keyed off the "aliveness" axis. `new-thought`
+ * has no default label — an untriaged topic (the common default) shows a pill
+ * only when it carries a custom label, so it stays visually quiet. The color
+ * keys off the structured `state`, never the free-form label, so a topic
+ * reading "revisit after launch" still shows in its state's color.
  */
 function statusPresentation(
   state: TopicStatusState,
   theme: ThemeShape,
 ): { defaultLabel: string; color: string } {
   switch (state) {
-    case 'needs-attention':
-      return { defaultLabel: 'Needs attention', color: theme.colors.warning };
+    case 'working':
+      return { defaultLabel: 'Working', color: theme.colors.success };
+    case 'paused':
+      return { defaultLabel: 'Paused', color: theme.colors.warning };
     case 'waiting':
       return { defaultLabel: 'Waiting', color: theme.colors.info };
-    case 'done':
-      return { defaultLabel: 'Done', color: theme.colors.textTertiary };
-    case 'active':
+    case 'done-for-now':
+      return { defaultLabel: 'Done for now', color: theme.colors.textSecondary };
+    case 'deprecated':
+      return { defaultLabel: 'Deprecated', color: theme.colors.error };
+    case 'abandoned':
+      return { defaultLabel: 'Abandoned', color: theme.colors.textTertiary };
+    case 'new-thought':
     default:
-      return { defaultLabel: '', color: theme.colors.success };
+      return { defaultLabel: '', color: theme.colors.accent };
   }
 }
 

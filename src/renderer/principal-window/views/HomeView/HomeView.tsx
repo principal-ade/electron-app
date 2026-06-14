@@ -1102,7 +1102,8 @@ export function HomeView() {
               onChangeTopicStatus={(entry, nextState) => {
                 const topic = topics.find((t) => t.id === entry.key);
                 const prev = topic?.status;
-                if ((prev?.state ?? 'active') === nextState) return;
+                // Untriaged / legacy topics read as the nascent `new-thought`.
+                if ((prev?.state ?? 'new-thought') === nextState) return;
                 // Change only the column axis (state). Keep a custom label, but
                 // drop `waitingOn` when leaving the Waiting lane — that context
                 // is meaningless (and would show a stray clock) elsewhere.

@@ -16,6 +16,30 @@ import type { TopicStatus } from '@principal-ai/alexandria-core-library';
 
 /** The structured status axis — derived from the core lib's inline union. */
 type TopicStatusState = TopicStatus['state'];
+
+// Stored values we recognize. Anything else — including the legacy
+// `active` / `needs-attention` / `done` — reads as `new-thought`, the nascent
+// default, so the union rename needed no data migration.
+const KNOWN_STATES = new Set<TopicStatusState>([
+  'new-thought',
+  'working',
+  'paused',
+  'waiting',
+  'done-for-now',
+  'deprecated',
+  'abandoned',
+]);
+const normalizeTopicState = (raw: string | undefined): TopicStatusState =>
+  raw && KNOWN_STATES.has(raw as TopicStatusState)
+    ? (raw as TopicStatusState)
+    : 'new-thought';
+// Terminal "no longer live work" states — hidden from the default browse list
+// and from the board lanes (they keep their status and still show in search).
+const TERMINAL_STATES = new Set<TopicStatusState>([
+  'done-for-now',
+  'deprecated',
+  'abandoned',
+]);
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import {
   ExploredProjectsGrid,
@@ -379,12 +403,16 @@ export const TopicsDashboard = React.forwardRef<
     });
   }, [topicEntries, normalizedQuery]);
 
-  // The default list browse hides `done` topics so the view stays focused on
-  // live work; the board's Done column and search both still surface them, so
-  // they're never lost. Search runs against `filteredTopics` (every status),
-  // which is why the hide only applies to the non-searching browse list.
+  // The default browse list hides terminal topics (done-for-now / deprecated /
+  // abandoned) so the view stays focused on live work; the board lanes and
+  // search both still surface them, so they're never lost. Search runs against
+  // `filteredTopics` (every status), which is why the hide only applies to the
+  // non-searching browse list.
   const browseTopics = React.useMemo(
-    () => topicEntries.filter((t) => (t.status?.state ?? 'active') !== 'done'),
+    () =>
+      topicEntries.filter(
+        (t) => !TERMINAL_STATES.has(normalizeTopicState(t.status?.state)),
+      ),
     [topicEntries],
   );
 
@@ -889,15 +917,15 @@ function TopicList({
 
 /**
  * Kanban view: one column per status state, every topic bucketed by its
- * `status.state` (untriaged / `active` topics land in the Active column).
- * Columns read left→right toward completion. The cards are the same
- * {@link TopicCard}s the list renders — their shared `layoutId` is what lets
- * framer-motion animate each one from its sorted grid slot into its column
+ * `status.state` (untriaged topics land in the New Thought column). Columns
+ * read left→right along the aliveness axis toward completion. The cards are the
+ * same {@link TopicCard}s the list renders — their shared `layoutId` is what
+ * lets framer-motion animate each one from its sorted grid slot into its column
  * when the dashboard toggles into this view.
  */
-// Untriaged topics (no status) share the quiet `active` default.
+// Untriaged topics (no/legacy status) share the quiet `new-thought` default.
 const bucketOf = (t: TopicsDashboardTopicEntry): TopicStatusState =>
-  t.status?.state ?? 'active';
+  normalizeTopicState(t.status?.state);
 
 function KanbanBoard({
   topics,
@@ -950,21 +978,22 @@ function KanbanBoard({
     onChangeTopicStatus?.(topic, target);
   };
 
-  // The Waiting lane is hidden for now. Topics already in the `waiting` state
-  // keep that status (and still show their Waiting pill in List view) — they
-  // just don't surface on the board until the lane returns.
+  // The board shows the live aliveness lanes only. Waiting, Deprecated, and
+  // Abandoned are hidden for now: topics in those states keep their status (and
+  // still show their pill in List view) — they just don't surface on the board.
   const columns: Array<{
     state: TopicStatusState;
     label: string;
     color: string;
   }> = [
-    { state: 'active', label: 'Active', color: theme.colors.success },
+    { state: 'new-thought', label: 'New Thought', color: theme.colors.accent },
+    { state: 'working', label: 'Working', color: theme.colors.success },
+    { state: 'paused', label: 'Paused', color: theme.colors.warning },
     {
-      state: 'needs-attention',
-      label: 'Needs attention',
-      color: theme.colors.warning,
+      state: 'done-for-now',
+      label: 'Done for now',
+      color: theme.colors.textSecondary,
     },
-    { state: 'done', label: 'Done for now', color: theme.colors.textTertiary },
   ];
 
   return (
