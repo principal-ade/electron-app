@@ -1128,6 +1128,37 @@ export class GitService {
       return { byEmail, totalLines, totalLinesGlobal };
     }
 
+    // Drop binary files before blaming. Blaming a binary (e.g. a .mov) emits
+    // megabytes of porcelain metadata that overflow the bridge worker's buffer
+    // and surface as a noisy error log — and binary "lines" don't belong in an
+    // ownership count anyway. `git diff --numstat` against the empty tree marks
+    // binary paths with "-\t-" in its add/delete columns. Best-effort: if this
+    // fails we fall back to blaming everything.
+    try {
+      // The well-known SHA of git's empty tree object.
+      const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+      const numstat = await window.mainProcess.git.execCommand(directory, [
+        'diff',
+        '--numstat',
+        EMPTY_TREE,
+        'HEAD',
+      ]);
+      const binaryFiles = new Set<string>();
+      for (const line of numstat.stdout.split('\n')) {
+        // Format: "<added>\t<deleted>\t<path>"; binary files report "-\t-".
+        const match = /^-\t-\t(.+)$/.exec(line);
+        if (match) binaryFiles.add(match[1]);
+      }
+      if (binaryFiles.size > 0) {
+        files = files.filter((f) => !binaryFiles.has(f));
+      }
+    } catch (error) {
+      console.warn(
+        '[GitService] binary-file detection failed; blaming all files:',
+        error,
+      );
+    }
+
     let cursor = 0;
     const blameOne = async () => {
       while (true) {
