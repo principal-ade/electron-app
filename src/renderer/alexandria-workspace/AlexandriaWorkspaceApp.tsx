@@ -747,10 +747,6 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         }}
         descriptionOpen={descriptionOpen}
         descriptionInstant={descriptionInstant}
-        onCloseDescription={() => {
-          setDescriptionInstant(false);
-          setDescriptionOpen(false);
-        }}
       />
 
       {/* Agent Command Palette - Cmd+Shift+P to open */}

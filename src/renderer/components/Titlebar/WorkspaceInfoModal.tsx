@@ -2,17 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import { X, FolderOpen, Calendar, Star } from 'lucide-react';
-import { IndustryMarkdownSlide } from 'themed-markdown';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import type { Topic } from '../../tipc/topicClient';
 import { predefinedThemes, getThemeNames } from '../../themes/predefinedThemes';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { TopicService } from '../../main-process-api/TopicService';
+import { TopicStatusControl } from '../../alexandria-workspace/topic-description-tab/TopicStatusControl';
 
 export interface WorkspaceInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   workspace: Workspace;
+  /**
+   * When set, the modal is acting as the pre-dismiss prompt for a window
+   * close: it shows a banner inviting the user to set where they left off,
+   * and a primary action that confirms the close. `onClose` (X / Escape /
+   * backdrop) cancels the close and leaves the window open.
+   */
+  closingWindow?: boolean;
+  /** Invoked by the "Close window" action when `closingWindow` is set. */
+  onConfirmClose?: () => void;
 }
 
 const formatDate = (ts?: number) => {
@@ -32,6 +41,8 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
   isOpen,
   onClose,
   workspace,
+  closingWindow = false,
+  onConfirmClose,
 }) => {
   const { theme } = useTheme();
   const availableThemes = getThemeNames();
@@ -48,10 +59,10 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
-  // Load the workspace's topic only while the modal is open. The topic
-  // description can be large markdown; keeping the load gated on `isOpen`
-  // avoids paying for it on every workspace render. Subscribes to topic
-  // change broadcasts so an in-flight description edit reflects live.
+  // Load the workspace's topic only while the modal is open, so the status
+  // control reflects the live status. Gated on `isOpen` to avoid fetching on
+  // every workspace render; subscribes to topic-change broadcasts so an edit
+  // made elsewhere (or by the control itself) reflects here.
   useEffect(() => {
     if (!isOpen || !topicId) {
       setTopic(null);
@@ -206,29 +217,18 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
           </button>
         </div>
 
-        {/* Topic description — rendered as markdown so headings, lists, and
-            code blocks from the topic's `description` (e.g. a design doc
-            appended via `/api/topics/:id/description/append`, or a section
-            replaced in place via `/api/topics/:id/description/section`) read as
-            authored. Sits above the Details block so it reads as the main body
-            content; hidden when there's no topic or it has no description. */}
-        {topic?.description && topic.description.trim().length > 0 && (
+        {closingWindow && (
           <div
             style={{
-              padding: '16px 20px',
+              padding: '10px 20px',
               borderBottom: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.backgroundSecondary,
+              fontSize: `${theme.fontSizes[1]}px`,
+              color: theme.colors.textSecondary,
+              lineHeight: 1.4,
             }}
           >
-            <IndustryMarkdownSlide
-              content={topic.description}
-              slideIdPrefix={`workspace-info-topic-${topic.id}`}
-              slideIndex={0}
-              isVisible={isOpen}
-              theme={theme}
-              transparentBackground
-              disableScroll
-              enableKeyboardScrolling={false}
-            />
+            Set where you left off before closing this window.
           </div>
         )}
 
@@ -274,6 +274,13 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
           )}
         </div>
 
+        {/* Topic status — moved here from the braindump panel so the workflow
+            status is front-and-center whenever the workspace info is open, and
+            so it doubles as the pre-dismiss prompt on window close. Only shown
+            when the workspace has a topic to carry the status. */}
+        {topicId && (
+          <TopicStatusControl topicId={topicId} status={topic?.status} />
+        )}
 
         {/* Theme picker — native <select> for a compact dropdown. The
             selected theme's description (when present) renders below as a
@@ -326,6 +333,52 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
             </div>
           )}
         </div>
+
+        {closingWindow && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '8px',
+              padding: '12px 20px',
+              borderTop: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.border}`,
+                background: 'transparent',
+                color: theme.colors.textSecondary,
+                fontFamily: theme.fonts.body,
+                fontSize: `${theme.fontSizes[1]}px`,
+                cursor: 'pointer',
+              }}
+            >
+              Keep open
+            </button>
+            <button
+              type="button"
+              onClick={() => onConfirmClose?.()}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.primary}`,
+                background: theme.colors.primary,
+                color: theme.colors.background,
+                fontFamily: theme.fonts.body,
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                cursor: 'pointer',
+              }}
+            >
+              Close window
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

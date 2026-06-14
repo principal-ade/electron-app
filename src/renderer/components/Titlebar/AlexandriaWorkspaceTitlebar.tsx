@@ -16,6 +16,7 @@ import { ShareTopicButton } from './ShareTopicButton';
 import { PANEL_FOCUS_SEARCH_EVENT } from '../Sidebar/PanelIconSidebar';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import type { UserPreferences } from '../../../shared/types/userPreferences.types';
+import { WindowEvent } from '../../../shared/ipc-events/WindowEvents';
 
 // Available panels for Alexandria workspace
 // Ordered to match dev workspace panel options
@@ -84,6 +85,9 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
 }) => {
   const { theme } = useTheme();
   const [showInfoModal, setShowInfoModal] = useState(false);
+  // True while the info modal is acting as the pre-dismiss prompt for a window
+  // close (the user is being asked to set their status before the window goes).
+  const [closingWindow, setClosingWindow] = useState(false);
   // True while Cmd (macOS) or Ctrl (Win/Linux) is held — reveals the
   // numeric shortcut badges on the left-panel segment buttons.
   const [modPressed, setModPressed] = useState(false);
@@ -110,6 +114,25 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
       window.removeEventListener('user-preferences-updated', onPrefsUpdated);
     };
   }, []);
+
+  // Window-close interception. The main process holds the workspace window open
+  // and asks us to surface the info modal so the user can record where they
+  // left off (their topic status) before the window is dismissed. With no topic
+  // to carry a status there's nothing to prompt for — confirm the close at once.
+  const topicId = workspace.topicIds?.[0];
+  useEffect(() => {
+    const ipc = window.electron?.ipcRenderer;
+    if (!ipc) return;
+    const off = ipc.on(WindowEvent.WORKSPACE_BEFORE_CLOSE, () => {
+      if (topicId) {
+        setClosingWindow(true);
+        setShowInfoModal(true);
+      } else {
+        void ipc.invoke(WindowEvent.WORKSPACE_CONFIRM_CLOSE);
+      }
+    });
+    return off;
+  }, [topicId]);
 
   // Final list rendered in the segment switch and matched by the
   // keyboard-shortcut handler. The "Hooks" entry is conditional; the
@@ -639,8 +662,22 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
 
       <WorkspaceInfoModal
         isOpen={showInfoModal}
-        onClose={() => setShowInfoModal(false)}
+        onClose={() => {
+          // "Keep open" / Escape / backdrop: dismiss the modal. When this was
+          // the pre-dismiss prompt, leaving it open cancels the window close —
+          // the main process already prevented it and we never confirm.
+          setShowInfoModal(false);
+          setClosingWindow(false);
+        }}
         workspace={workspace}
+        closingWindow={closingWindow}
+        onConfirmClose={() => {
+          setShowInfoModal(false);
+          setClosingWindow(false);
+          void window.electron?.ipcRenderer?.invoke(
+            WindowEvent.WORKSPACE_CONFIRM_CLOSE,
+          );
+        }}
       />
     </div>
   );

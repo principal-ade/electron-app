@@ -14,16 +14,13 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
-import { ArrowDownToLine, Brain, Pencil, X } from 'lucide-react';
+import { ArrowDownToLine, Brain, Pencil } from 'lucide-react';
 import {
   DATA_TYPES,
   useDropZone,
   type PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
-import type {
-  TopicAsset,
-  TopicStatus,
-} from '@principal-ai/alexandria-core-library';
+import type { TopicAsset } from '@principal-ai/alexandria-core-library';
 import { TopicService } from '../../main-process-api/TopicService';
 import {
   describeRejection,
@@ -33,11 +30,6 @@ import {
 import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
 import { useWorkspaceFileIndex } from '../../hooks/useWorkspaceFileIndex';
 import { MarkdownLinkNotice } from '../../components/MarkdownLinkNotice';
-import {
-  TopicStatusControl,
-  STATES,
-  stateColor,
-} from './TopicStatusControl';
 
 const ASSET_SCHEME = 'asset://';
 
@@ -122,7 +114,6 @@ export interface TopicDescriptionSlideOverProps {
   instant?: boolean;
   /** Topic whose description is shown. The slide-over no-ops without one. */
   topicId?: string;
-  onClose: () => void;
   /** Opens the topic-description MDXEditor tab (current edit affordance). */
   onEdit: () => void;
   /** Event bus — used to open clicked doc links as tabs (`file:opened`). */
@@ -146,7 +137,6 @@ export const TopicDescriptionSlideOver: React.FC<
   open,
   instant,
   topicId,
-  onClose,
   onEdit,
   events,
   workspaceId,
@@ -171,11 +161,7 @@ export const TopicDescriptionSlideOver: React.FC<
     descriptionRef.current = description;
   }, [description]);
   const [assets, setAssets] = useState<TopicAsset[]>([]);
-  const [status, setStatus] = useState<TopicStatus | undefined>(undefined);
   const [loading, setLoading] = useState(false);
-  // The status editor is collapsed by default — the header pill reflects the
-  // current state and toggles the full TopicStatusControl form open/closed.
-  const [statusOpen, setStatusOpen] = useState(false);
   // Transient banner for a rejected image drop (too large / wrong type / attach
   // failure). Auto-clears so it doesn't linger over the notes.
   const [dropError, setDropError] = useState<string | null>(null);
@@ -199,13 +185,11 @@ export const TopicDescriptionSlideOver: React.FC<
         const nextAssets = topic?.assets ?? [];
         setDescription((prev) => (prev === nextDescription ? prev : nextDescription));
         setAssets((prev) => (assetsEqual(prev, nextAssets) ? prev : nextAssets));
-        setStatus((prev) => (prev === topic?.status ? prev : topic?.status));
       } catch (err) {
         console.error('[TopicDescriptionSlideOver] load failed', err);
         if (!cancelled) {
           setDescription('');
           setAssets([]);
-          setStatus(undefined);
         }
       } finally {
         if (initial && !cancelled) setLoading(false);
@@ -380,15 +364,6 @@ export const TopicDescriptionSlideOver: React.FC<
 
   const trimmed = (description ?? '').trim();
 
-  // Header status pill — color-coded by the structured state, labelled by the
-  // topic's custom label when set (otherwise the state's display name).
-  const pillState = status?.state ?? 'active';
-  const pillColor = stateColor(pillState, theme);
-  const pillLabel =
-    status?.label?.trim() ||
-    STATES.find((s) => s.value === pillState)?.label ||
-    'Active';
-
   const iconButtonStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
@@ -449,51 +424,6 @@ export const TopicDescriptionSlideOver: React.FC<
         >
           Braindump
         </span>
-        {topicId && (
-          <button
-            type="button"
-            onClick={() => setStatusOpen((v) => !v)}
-            title="Topic status"
-            aria-label="Topic status"
-            aria-expanded={statusOpen}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              height: 28,
-              maxWidth: 140,
-              flexShrink: 0,
-              padding: '0 10px',
-              borderRadius: 6,
-              border: `1px solid ${pillColor}`,
-              background: statusOpen ? pillColor : 'transparent',
-              color: statusOpen ? theme.colors.background : pillColor,
-              cursor: 'pointer',
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[0],
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                flexShrink: 0,
-                borderRadius: '50%',
-                background: statusOpen ? theme.colors.background : pillColor,
-              }}
-            />
-            <span
-              style={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {pillLabel}
-            </span>
-          </button>
-        )}
         <button
           type="button"
           onClick={onEdit}
@@ -511,28 +441,7 @@ export const TopicDescriptionSlideOver: React.FC<
         >
           <Pencil size={14} />
         </button>
-        <button
-          type="button"
-          onClick={onClose}
-          title="Close"
-          aria-label="Close description"
-          style={iconButtonStyle}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = theme.colors.text;
-            e.currentTarget.style.borderColor = theme.colors.primary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = theme.colors.textSecondary;
-            e.currentTarget.style.borderColor = theme.colors.border;
-          }}
-        >
-          <X size={14} />
-        </button>
       </div>
-
-      {topicId && statusOpen && (
-        <TopicStatusControl topicId={topicId} status={status} />
-      )}
 
       <div
         {...dropZoneProps}

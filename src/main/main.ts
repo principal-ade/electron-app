@@ -21,6 +21,7 @@ import {
   applicationWindows,
   getIsRestarting,
   handleAppRestart,
+  markAppQuitting,
 } from './window/modernWindowManager';
 // import { registerWindowHandlers } from './services/ipc/window/windowHandlers'; // Replaced by modernWindowHandlers
 import { initializeServices, shutdownServices } from './initialization';
@@ -372,6 +373,8 @@ app.on('before-quit', async (event) => {
         // User confirmed, proceed with quit
         // Remove this listener to avoid infinite loop
         app.removeAllListeners('before-quit');
+        // Let workspace windows close without re-prompting for a status update.
+        markAppQuitting();
         app.quit();
       } else {
         // User cancelled, reset the flag
@@ -380,6 +383,7 @@ app.on('before-quit', async (event) => {
     } else {
       // No window available, just quit
       app.removeAllListeners('before-quit');
+      markAppQuitting();
       app.quit();
     }
   } catch (error) {

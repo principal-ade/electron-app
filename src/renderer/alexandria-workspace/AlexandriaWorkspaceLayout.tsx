@@ -165,8 +165,6 @@ interface AlexandriaWorkspaceLayoutProps {
    * by default on window launch so they appear in place instead of sliding in.
    */
   descriptionInstant?: boolean;
-  /** Closes the topic-description slide-over. */
-  onCloseDescription?: () => void;
 }
 
 interface AlexandriaWorkspaceLayoutContentProps {
@@ -184,7 +182,6 @@ interface AlexandriaWorkspaceLayoutContentProps {
   onPanelControlReady?: (control: PanelControlHandle) => void;
   descriptionOpen?: boolean;
   descriptionInstant?: boolean;
-  onCloseDescription?: () => void;
 }
 
 /**
@@ -205,7 +202,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   onPanelControlReady,
   descriptionOpen,
   descriptionInstant,
-  onCloseDescription,
 }) => {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
@@ -1588,7 +1584,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               open={descriptionOpen ?? false}
               instant={descriptionInstant ?? false}
               topicId={workspace.topicIds?.[0]}
-              onClose={() => onCloseDescription?.()}
               onEdit={handleOpenTopicDescription}
               events={events}
               workspaceId={workspace.id}
@@ -1917,7 +1912,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               open={descriptionOpen ?? false}
               instant={descriptionInstant ?? false}
               topicId={workspace.topicIds?.[0]}
-              onClose={() => onCloseDescription?.()}
               onEdit={handleOpenTopicDescription}
               events={events}
               workspaceId={workspace.id}
@@ -1948,7 +1942,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               open={descriptionOpen ?? false}
               instant={descriptionInstant ?? false}
               topicId={workspace.topicIds?.[0]}
-              onClose={() => onCloseDescription?.()}
               onEdit={handleOpenTopicDescription}
               events={events}
               workspaceId={workspace.id}
@@ -2882,7 +2875,6 @@ export const AlexandriaWorkspaceLayout: React.FC<
   onPanelControlReady,
   descriptionOpen,
   descriptionInstant,
-  onCloseDescription,
 }) => {
   const { theme } = useTheme();
 
@@ -3000,7 +2992,6 @@ export const AlexandriaWorkspaceLayout: React.FC<
             onPanelControlReady={onPanelControlReady}
             descriptionOpen={descriptionOpen}
             descriptionInstant={descriptionInstant}
-            onCloseDescription={onCloseDescription}
           />
         </AgentHighlightProvider>
       </TerminalProvider>

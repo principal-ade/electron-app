@@ -79,6 +79,8 @@ export interface IModernApplicationWindow {
   fileSystemAdapter?: ElectronFileSystemAdapter;
   windowManagerAdapter?: ElectronWindowManagerAdapter;
   githubAdapter?: GitHubAdapter;
+  /** Allow the next close to proceed and trigger it (post status-prompt). */
+  confirmClose(): void;
 }
 
 /**

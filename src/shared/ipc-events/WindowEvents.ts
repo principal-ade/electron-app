@@ -24,4 +24,10 @@ export enum WindowEvent {
 
   // Navigation events (sent to principal window)
   NAVIGATE_TO_UPDATES = 'window:navigate-to-updates',
+
+  // Workspace-window close prompt. Main holds the close and sends
+  // BEFORE_CLOSE so the renderer can surface the status modal; the renderer
+  // replies with CONFIRM_CLOSE to let the window actually close.
+  WORKSPACE_BEFORE_CLOSE = 'window:workspace-before-close',
+  WORKSPACE_CONFIRM_CLOSE = 'window:workspace-confirm-close',
 }
