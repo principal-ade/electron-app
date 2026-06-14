@@ -488,6 +488,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   // State for showing path in cloned badge
   const [showPath, setShowPath] = useState(false);
 
+  // Feedback for copying the GitHub link from the repo name
+  const [copiedGithubLink, setCopiedGithubLink] = useState(false);
+
   // State for commit playback
   type PlayMode = 'today' | 'week' | 'year';
   const [isPlaying, setIsPlaying] = useState(false);
@@ -1133,6 +1136,17 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     }
   };
 
+  const handleCopyGithubLink = async () => {
+    if (!repositoryData?.htmlUrl) return;
+    try {
+      await navigator.clipboard.writeText(repositoryData.htmlUrl);
+      setCopiedGithubLink(true);
+      setTimeout(() => setCopiedGithubLink(false), 1500);
+    } catch (error) {
+      console.error('Failed to copy GitHub link:', error);
+    }
+  };
+
   // Handle playback toggle
   const handlePlayPause = async (mode: PlayMode) => {
     if (isPlaying) {
@@ -1723,7 +1737,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         {/* Profile Content */}
         <div style={{ padding: spacing.md, marginTop: -60, position: 'relative', display: 'flex', gap: spacing.lg, alignItems: 'stretch' }}>
         {/* Left column */}
-        <div style={{ flexShrink: 0 }}>
+        <div style={{ flexShrink: 0, minWidth: 0, maxWidth: !isNarrow && contributors.length > 0 ? 600 : undefined }}>
         {/* Avatar Section - positioned to overlap banner */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md, marginBottom: spacing.md }}>
           {/* Owner Avatar */}
@@ -2126,16 +2140,31 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               </button>
             )}
             <h2
+              onClick={repositoryData.htmlUrl ? handleCopyGithubLink : undefined}
+              title={repositoryData.htmlUrl ? 'Click to copy GitHub link' : undefined}
               style={{
                 margin: 0,
                 fontSize: theme.fontSizes[4],
                 fontWeight: theme.fontWeights?.semibold ?? 600,
                 fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
                 color: theme.colors.text,
+                cursor: repositoryData.htmlUrl ? 'pointer' : 'default',
               }}
             >
               {repositoryData.name}
             </h2>
+            {copiedGithubLink && (
+              <span
+                style={{
+                  flexShrink: 0,
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  color: theme.colors.primary,
+                }}
+              >
+                Link copied
+              </span>
+            )}
             {repositoryData.isPrivate !== undefined && (
               <span
                 style={{
@@ -2561,6 +2590,8 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               fontFamily: theme.fonts?.body,
               lineHeight: theme.lineHeights?.body ?? 1.5,
               color: theme.colors.text,
+              overflowWrap: 'break-word',
+              wordBreak: 'break-word',
             }}
           >
             {repositoryData.description}

@@ -4,19 +4,23 @@
  * A single, unified list of every project the user can reach: their local
  * clones plus every repository across their GitHub account and organizations.
  * Instead of separate views, the list is narrowed with single-select filter
- * chips (All / Cloned / In Progress) and ordered with a recency/name sort.
+ * chips (All / Cloned / In Progress). Projects sort alphabetically by name,
+ * except under the In Progress filter, where they order by most recent
+ * activity (the work you're actively in).
  * Used in the FeedView left panel.
  */
 
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ArrowUpDown, FolderGit2, Loader2, Search, Trash2 } from 'lucide-react';
+import { Eraser, FolderGit2, FolderSearch, Loader2, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { payloadFromGithub, payloadFromLocalEntry } from '../events/feedRepositorySelected';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { FileSystemService } from '../main-process-api/FileSystemService';
+import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { useGithubProjects } from '../hooks/useGithubProjects';
 import { OrgSectionHeaderCard } from './cards/OrgSectionHeaderCard';
@@ -41,8 +45,6 @@ export interface ProjectsListProps {
 
 /** Single-select filter applied to the unified list. */
 type ProjectFilter = 'all' | 'cloned' | 'in-progress';
-/** Sort order applied within each org group. */
-type ProjectSort = 'recent' | 'name';
 
 /** A merged project: a GitHub repo, a local clone, or both. */
 interface UnifiedProject {
@@ -78,9 +80,8 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     md: theme.space?.[3] || 16,
   };
 
-  // Filter + sort + search state
+  // Filter + search state
   const [filter, setFilter] = useState<ProjectFilter>('all');
-  const [sort, setSort] = useState<ProjectSort>('recent');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Git status map for local repositories
@@ -91,6 +92,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
 
   // Clone-to-disk flow
   const [cloneUrl, setCloneUrl] = useState<string | null>(null);
+
+  // Folder-scan flow: pick a folder, find every git repo inside, and register
+  // each one with Alexandria. The registry-change event refreshes the list.
+  const [scanning, setScanning] = useState(false);
 
   // GitHub projects across the user's account + all their orgs
   const {
@@ -188,6 +193,37 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     }
   }, [removeConfirm]);
 
+  // Pick a folder and register every git repo found inside it (max depth 3,
+  // matching the "Add a project" flow elsewhere). Re-registering already-tracked
+  // repos is harmless — the main service backfills any missing remoteUrl.
+  const handleScanFolder = useCallback(async () => {
+    if (scanning) return;
+    const picked = await FileSystemService.selectDirectory({
+      title: 'Scan folder for projects',
+      buttonLabel: 'Scan',
+      properties: ['openDirectory'],
+    });
+    if (!picked || ('canceled' in picked && picked.canceled)) return;
+    const rootPath = (picked as { filePaths?: string[] }).filePaths?.[0];
+    if (!rootPath) return;
+
+    setScanning(true);
+    try {
+      const repoPaths = await GitService.scanFolderForRepos(rootPath, 3);
+      for (const repoPath of repoPaths) {
+        try {
+          await AlexandriaService.registerRepository(repoPath);
+        } catch (error) {
+          console.error(`[ProjectsList] Failed to register ${repoPath}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error('[ProjectsList] Folder scan failed:', error);
+    } finally {
+      setScanning(false);
+    }
+  }, [scanning]);
+
   const handleConfirmClearAll = useCallback(async () => {
     setClearAllBusy(true);
     try {
@@ -283,10 +319,13 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       grouped.set(p.owner, arr);
     }
 
-    // Sort within each org group by the selected order.
+    // Sort within each org group. The In Progress filter shows the work the
+    // user is actively in, so order it by most recent activity; every other
+    // filter sorts alphabetically by name for a stable, predictable list.
+    const sortByRecent = filter === 'in-progress';
     for (const [owner, arr] of grouped.entries()) {
       arr.sort((a, b) =>
-        sort === 'recent'
+        sortByRecent
           ? b.lastActivity - a.lastActivity
           : a.name.localeCompare(b.name)
       );
@@ -309,7 +348,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       groups: grouped,
       sortedOrgNames: [...userOwn, ...memberOrgs, ...otherOrgs, ...untracked],
     };
-  }, [projects, filter, searchQuery, sort, currentUser, userOrgs]);
+  }, [projects, filter, searchQuery, currentUser, userOrgs]);
 
   const hasClonedProjects = useMemo(
     () => repositories.some(r => r.path),
@@ -397,32 +436,40 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           />
         </div>
 
-        {/* Sort toggle: Recent <-> Name */}
+        {/* Scan a folder for git repos and add them to the list */}
         <button
           type="button"
-          onClick={() => setSort(prev => (prev === 'recent' ? 'name' : 'recent'))}
-          title={sort === 'recent' ? 'Sorting by recent activity' : 'Sorting by name'}
-          aria-label={`Sort by ${sort === 'recent' ? 'recent' : 'name'}`}
+          onClick={() => void handleScanFolder()}
+          disabled={scanning}
+          title="Scan a folder for git repos and add them to your projects"
+          aria-label="Scan a folder for git repos"
           style={{
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
-            gap: spacing.xs,
+            justifyContent: 'center',
+            width: 28,
             height: 28,
-            padding: `0 ${spacing.sm}px`,
-            border: `1px solid ${theme.colors.border}`,
+            padding: 0,
+            border: 'none',
             borderRadius: theme.radii?.[1] || 4,
             background: 'transparent',
             color: theme.colors.textSecondary,
-            fontFamily: theme.fonts?.body,
-            fontSize: theme.fontSizes[0],
-            cursor: 'pointer',
+            cursor: scanning ? 'default' : 'pointer',
+            opacity: scanning ? 0.6 : 1,
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = theme.colors.text; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textSecondary; }}
+          onMouseEnter={(e) => {
+            if (!scanning) e.currentTarget.style.color = theme.colors.text;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = theme.colors.textSecondary;
+          }}
         >
-          <ArrowUpDown size={13} />
-          {sort === 'recent' ? 'Recent' : 'Name'}
+          {scanning ? (
+            <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+          ) : (
+            <FolderSearch size={14} />
+          )}
         </button>
 
         <button
@@ -455,7 +502,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             e.currentTarget.style.color = theme.colors.textSecondary;
           }}
         >
-          <Trash2 size={14} />
+          <Eraser size={14} />
         </button>
       </div>
 
@@ -538,7 +585,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                     {repos.map((project) => (
                       <OrgRepoItemCard
                         key={project.key}
-                        repo={{ name: project.name, description: project.description }}
+                        repo={{ name: project.name }}
                         isCloned={project.isCloned}
                         isDirty={project.isDirty}
                         onClick={() => handleProjectClick(project)}

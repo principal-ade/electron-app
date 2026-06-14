@@ -5,7 +5,6 @@ import { OrgRepoItemCard, type OrgRepoItemCardData } from './OrgRepoItemCard';
 
 const createMockRepo = (overrides: Partial<OrgRepoItemCardData> = {}): OrgRepoItemCardData => ({
   name: 'my-library',
-  description: 'A small utility library.',
   ...overrides,
 });
 
@@ -47,38 +46,12 @@ export const Default: Story = {
   ),
 };
 
-export const NoDescription: Story = {
-  render: () => (
-    <Wrapper>
-      <OrgRepoItemCard
-        repo={createMockRepo({ description: null })}
-        onClick={() => console.info('clicked')}
-      />
-    </Wrapper>
-  ),
-};
-
 export const LongName: Story = {
   render: () => (
     <Wrapper width={280}>
       <OrgRepoItemCard
         repo={createMockRepo({
           name: 'an-extraordinarily-long-repository-name-that-should-truncate',
-          description: 'Description',
-        })}
-        onClick={() => console.info('clicked')}
-      />
-    </Wrapper>
-  ),
-};
-
-export const LongDescription: Story = {
-  render: () => (
-    <Wrapper width={280}>
-      <OrgRepoItemCard
-        repo={createMockRepo({
-          description:
-            'A very long description that cannot fit in a single line and will truncate with ellipsis at the end of the available space.',
         })}
         onClick={() => console.info('clicked')}
       />
@@ -97,13 +70,10 @@ export const NonInteractive: Story = {
 export const List: Story = {
   render: () => {
     const repos: OrgRepoItemCardData[] = [
-      createMockRepo({ name: 'frontend-app', description: 'User-facing React app.' }),
-      createMockRepo({ name: 'backend-api', description: 'Go API server.' }),
-      createMockRepo({ name: 'infrastructure', description: null }),
-      createMockRepo({
-        name: 'docs',
-        description: 'Product and engineering documentation.',
-      }),
+      createMockRepo({ name: 'frontend-app' }),
+      createMockRepo({ name: 'backend-api' }),
+      createMockRepo({ name: 'infrastructure' }),
+      createMockRepo({ name: 'docs' }),
     ];
 
     return (

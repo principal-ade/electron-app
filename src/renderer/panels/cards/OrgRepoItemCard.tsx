@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Circle, Cloud, Download, FolderGit2, Trash2 } from 'lucide-react';
+import { Circle, Cloud, Download, Eraser, FolderGit2 } from 'lucide-react';
 
 export interface OrgRepoItemCardData {
   name: string;
-  description?: string | null;
 }
 
 export interface OrgRepoItemCardProps {
@@ -91,22 +90,6 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
             </span>
           )}
         </div>
-        {repo.description && (
-          <div
-            style={{
-              fontFamily: theme.fonts?.body,
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.textSecondary,
-              lineHeight: 1.2,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              marginTop: 2,
-            }}
-          >
-            {repo.description}
-          </div>
-        )}
       </div>
 
       {/* Clone action for projects that aren't on disk yet. */}
@@ -179,7 +162,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
             e.currentTarget.style.color = theme.colors.textSecondary;
           }}
         >
-          <Trash2 size={14} />
+          <Eraser size={14} />
         </button>
       )}
     </div>
