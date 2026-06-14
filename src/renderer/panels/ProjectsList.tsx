@@ -4,13 +4,14 @@
  * A single, unified list of every project the user can reach: their local
  * clones plus every repository across their GitHub account and organizations.
  * Instead of separate views, the list is narrowed with single-select filter
- * chips (All / Cloned / In Progress). Projects sort alphabetically by name,
- * except under the In Progress filter, where they order by most recent
- * activity (the work you're actively in).
+ * chips (All / Cloned / In Progress). Within each org, cloned (on-disk)
+ * projects sort first; the rest sort alphabetically by name, except under the
+ * In Progress filter, where they order by most recent activity (the work
+ * you're actively in). Orgs with more than 10 repos start collapsed.
  * Used in the FeedView left panel.
  */
 
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Eraser, FolderGit2, FolderSearch, Loader2, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
@@ -22,10 +23,12 @@ import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { useGithubProjects } from '../hooks/useGithubProjects';
 import { OrgSectionHeaderCard } from './cards/OrgSectionHeaderCard';
 import { OrgRepoItemCard } from './cards/OrgRepoItemCard';
 import { CloneFromGitHubModal } from './components/CloneFromGitHubModal';
+import { CreateRepositoryInWorkspaceModal } from './components/CreateRepositoryInWorkspaceModal';
 
 export interface CommitTimestamp {
   timestamp: Date | string;
@@ -89,9 +92,19 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
 
   // Collapsed state for org sections
   const [collapsedOrgs, setCollapsedOrgs] = useState<Set<string>>(new Set());
+  // Orgs we've already applied the default-collapse rule to, so a user's
+  // manual expand/collapse is never overridden on later re-renders.
+  const defaultedOrgsRef = useRef<Set<string>>(new Set());
 
   // Clone-to-disk flow
   const [cloneUrl, setCloneUrl] = useState<string | null>(null);
+
+  // Create-a-new-repo flow, scoped to a specific owner via the "+" on an
+  // owner line. Repos land under `{baseDefaultDirectory}/{owner}/{name}`.
+  const [createTarget, setCreateTarget] = useState<
+    { owner: string; isUser: boolean } | null
+  >(null);
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
 
   // Folder-scan flow: pick a folder, find every git repo inside, and register
   // each one with Alexandria. The registry-change event refreshes the list.
@@ -151,6 +164,31 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     });
 
     return unsubscribe;
+  }, []);
+
+  // Track the configured base clone directory. The "+" create-repo flow needs
+  // it to place new clones under `{baseDir}/{owner}/{name}`, and we only offer
+  // the button when it's set. Stay in sync with Settings changes.
+  useEffect(() => {
+    let mounted = true;
+
+    const apply = (prefs: { baseDefaultDirectory?: string | null }) => {
+      if (mounted) setBaseDefaultDirectory(prefs.baseDefaultDirectory || null);
+    };
+
+    void UserPreferencesService.getPreferences().then(apply);
+
+    const handlePreferencesUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ baseDefaultDirectory?: string | null }>).detail;
+      if (detail) apply(detail);
+    };
+
+    window.addEventListener('user-preferences-updated', handlePreferencesUpdated as EventListener);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('user-preferences-updated', handlePreferencesUpdated as EventListener);
+    };
   }, []);
 
   // Handle project click — open the cloned entry, or the GitHub identity when not cloned
@@ -324,11 +362,14 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     // filter sorts alphabetically by name for a stable, predictable list.
     const sortByRecent = filter === 'in-progress';
     for (const [owner, arr] of grouped.entries()) {
-      arr.sort((a, b) =>
-        sortByRecent
+      arr.sort((a, b) => {
+        // Cloned (on-disk) projects sort first within each org; the rest keep
+        // the usual order (recency under In Progress, otherwise alphabetical).
+        if (a.isCloned !== b.isCloned) return a.isCloned ? -1 : 1;
+        return sortByRecent
           ? b.lastActivity - a.lastActivity
-          : a.name.localeCompare(b.name)
-      );
+          : a.name.localeCompare(b.name);
+      });
       grouped.set(owner, arr);
     }
 
@@ -367,6 +408,25 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       return next;
     });
   }, []);
+
+  // Collapse busy orgs (more than 10 repos) by default. Applied once per org
+  // on first appearance; after that the user's own toggles win.
+  const DEFAULT_COLLAPSE_THRESHOLD = 10;
+  useEffect(() => {
+    const toCollapse: string[] = [];
+    groups.forEach((repos, orgName) => {
+      if (defaultedOrgsRef.current.has(orgName)) return;
+      defaultedOrgsRef.current.add(orgName);
+      if (repos.length > DEFAULT_COLLAPSE_THRESHOLD) toCollapse.push(orgName);
+    });
+    if (toCollapse.length) {
+      setCollapsedOrgs(prev => {
+        const next = new Set(prev);
+        toCollapse.forEach(o => next.add(o));
+        return next;
+      });
+    }
+  }, [groups]);
 
   const isInitialLoading = githubLoading && projects.length === 0;
 
@@ -560,6 +620,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                 ? 'member'
                 : undefined;
 
+            // We can add repos to an owner only when it's the user's own
+            // account or a member org, and a base clone directory is set.
+            const canAdd = !!baseDefaultDirectory && (isUserOwn || isMemberOrg);
+
             return (
               <div key={orgName} style={{ marginBottom: spacing.md }}>
                 <OrgSectionHeaderCard
@@ -571,6 +635,12 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                   }}
                   isCollapsed={isCollapsed}
                   onToggle={() => toggleOrgCollapsed(orgName)}
+                  onAdd={
+                    canAdd
+                      ? () => setCreateTarget({ owner: orgName, isUser: isUserOwn })
+                      : undefined
+                  }
+                  addLabel={`Add a repository to ${orgName}`}
                 />
 
                 {!isCollapsed && (
@@ -613,6 +683,17 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         isOpen={cloneUrl !== null}
         onClose={() => setCloneUrl(null)}
         initialUrl={cloneUrl ?? undefined}
+      />
+
+      {/* Create a new repo under a specific owner, seeded from the owner-line
+          "+". Skips destination/org selection; the registry-change event
+          refreshes the list once the clone lands. */}
+      <CreateRepositoryInWorkspaceModal
+        isOpen={createTarget !== null}
+        onClose={() => setCreateTarget(null)}
+        baseDefaultDirectory={baseDefaultDirectory}
+        presetOwner={createTarget?.owner}
+        presetOwnerIsUser={createTarget?.isUser ?? false}
       />
 
       {/* Remove-from-list confirm. Does not touch files on disk. */}

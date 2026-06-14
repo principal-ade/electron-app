@@ -38,6 +38,12 @@ interface CreateRepositoryInWorkspaceModalProps {
   // place the repo under `{baseDir}/{owner}/{repoName}` (GitHub-style).
   // For local-only repos the owner segment falls back to the current user.
   useOwnerSubdir?: boolean;
+  // When set, skip both destination and org selection: force the base
+  // directory and pre-select this owner (account or org), jumping straight
+  // to the create-repo form. Used by the Projects list "+" on an owner line.
+  presetOwner?: string;
+  // Whether `presetOwner` is the signed-in user's own account (vs an org).
+  presetOwnerIsUser?: boolean;
 }
 
 type ModalStep = 'select-destination' | 'select-org' | 'create-repo' | 'progress' | 'complete';
@@ -48,38 +54,47 @@ const LOCAL_ONLY_OPTION = 'LOCAL_ONLY';
 
 export const CreateRepositoryInWorkspaceModal: React.FC<
   CreateRepositoryInWorkspaceModalProps
-> = ({ isOpen, onClose, workspace, workspaces = [], baseDefaultDirectory = null, useOwnerSubdir = false }) => {
+> = ({ isOpen, onClose, workspace, workspaces = [], baseDefaultDirectory = null, useOwnerSubdir = false, presetOwner, presetOwnerIsUser = false }) => {
   const { theme } = useTheme();
 
   // In owner-subdir mode the destination is fixed to the base dir, so we
   // jump straight to org selection (or surface an error if no base dir is
   // configured).
   const ownerSubdirActive = useOwnerSubdir && !!baseDefaultDirectory;
+  // In preset mode the owner is already chosen, so we skip both destination
+  // and org selection and open directly on the create-repo form.
+  const presetActive = !!presetOwner && !!baseDefaultDirectory;
+  // Owner-grouped layout ({baseDir}/{owner}/{repoName}) applies to both the
+  // titlebar flow and the per-owner "+" flow.
+  const useOwnerLayout = ownerSubdirActive || presetActive;
 
   // Memoized so the reset effect's deps don't change on every render —
   // `initialDestination` is otherwise a fresh object literal each pass,
   // which would re-fire the effect → setState → render loop.
-  const initialStep: ModalStep = useMemo(
-    () => (workspace || ownerSubdirActive ? 'select-org' : 'select-destination'),
-    [workspace, ownerSubdirActive],
-  );
+  const initialStep: ModalStep = useMemo(() => {
+    if (presetActive) return 'create-repo';
+    if (workspace || ownerSubdirActive) return 'select-org';
+    return 'select-destination';
+  }, [presetActive, workspace, ownerSubdirActive]);
   const initialDestination = useMemo<
     { type: 'workspace' | 'base'; value: Workspace | string } | null
   >(() => {
     if (workspace) return { type: 'workspace', value: workspace };
-    if (ownerSubdirActive) {
+    if (useOwnerLayout) {
       return { type: 'base', value: baseDefaultDirectory as string };
     }
     return null;
-  }, [workspace, ownerSubdirActive, baseDefaultDirectory]);
+  }, [workspace, useOwnerLayout, baseDefaultDirectory]);
+  const initialOrg = useMemo(() => (presetActive ? (presetOwner as string) : null), [presetActive, presetOwner]);
+  const initialIsUser = useMemo(() => (presetActive ? presetOwnerIsUser : false), [presetActive, presetOwnerIsUser]);
 
   // Step state
   const [step, setStep] = useState<ModalStep>(initialStep);
   const [selectedDestination, setSelectedDestination] = useState<{ type: 'workspace' | 'base'; value: Workspace | string } | null>(
     initialDestination,
   );
-  const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
-  const [isSelectedOrgUser, setIsSelectedOrgUser] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState<string | null>(initialOrg);
+  const [isSelectedOrgUser, setIsSelectedOrgUser] = useState(initialIsUser);
 
   // Organization loading state
   const [currentUser, setCurrentUser] = useState<GitHubUser | null>(null);
@@ -122,8 +137,8 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
     if (!isOpen) {
       setStep(initialStep);
       setSelectedDestination(initialDestination);
-      setSelectedOrg(null);
-      setIsSelectedOrgUser(false);
+      setSelectedOrg(initialOrg);
+      setIsSelectedOrgUser(initialIsUser);
       setRepositoryName('');
       setDescription('');
       setIsPrivate(false);
@@ -135,7 +150,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       setProgressStep('creating');
       setIsCreating(false);
     }
-  }, [isOpen, initialStep, initialDestination]);
+  }, [isOpen, initialStep, initialDestination, initialOrg, initialIsUser]);
 
   const loadOrganizations = async () => {
     setIsLoadingOrgs(true);
@@ -247,7 +262,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       // ({baseDir}/{owner}/{repoName}). For the local-only flow the owner
       // segment falls back to the signed-in user's login.
       const ownerSegment =
-        ownerSubdirActive && selectedDestination.type === 'base'
+        useOwnerLayout && selectedDestination.type === 'base'
           ? selectedOrg === LOCAL_ONLY_OPTION
             ? currentUser?.login || ''
             : selectedOrg
@@ -1281,28 +1296,35 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
           borderTop: `1px solid ${theme.colors.border}`,
         }}
       >
-        <button
-          onClick={handleBack}
-          disabled={isCreating}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            border: `1px solid ${theme.colors.border}`,
-            backgroundColor: 'transparent',
-            color: theme.colors.text,
-            fontSize: `${theme.fontSizes[1]}px`,
-            fontWeight: theme.fontWeights.semibold,
-            fontFamily: theme.fonts.body,
-            cursor: isCreating ? 'not-allowed' : 'pointer',
-            opacity: isCreating ? 0.5 : 1,
-          }}
-        >
-          <ArrowLeft size={16} />
-          Back
-        </button>
+        {presetActive ? (
+          // In preset mode the owner is fixed and there are no prior steps,
+          // so there's nothing to go back to — keep an empty spacer so the
+          // footer's action buttons stay right-aligned.
+          <div />
+        ) : (
+          <button
+            onClick={handleBack}
+            disabled={isCreating}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: 'transparent',
+              color: theme.colors.text,
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: theme.fontWeights.semibold,
+              fontFamily: theme.fonts.body,
+              cursor: isCreating ? 'not-allowed' : 'pointer',
+              opacity: isCreating ? 0.5 : 1,
+            }}
+          >
+            <ArrowLeft size={16} />
+            Back
+          </button>
+        )}
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
             onClick={onClose}
