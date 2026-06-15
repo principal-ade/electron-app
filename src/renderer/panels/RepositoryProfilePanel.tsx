@@ -1659,7 +1659,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             style={{
               width: 120,
               height: 120,
-              borderRadius: repositoryData.ownerType === 'Organization' ? '12px' : '50%',
+              borderRadius: repositoryData.ownerType === 'User' ? '50%' : '12px',
               backgroundColor: theme.colors.backgroundSecondary,
               border: `4px solid ${theme.colors.background}`,
               overflow: 'hidden',
