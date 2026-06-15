@@ -76,8 +76,8 @@ import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { DeleteAlexandriaEntryModal } from '../panels/components/DeleteAlexandriaEntryModal';
 import { CollectionProfilePanel } from '../panels/CollectionProfilePanel';
-import { WatchedActivityPanel } from '../panels/WatchedActivityPanel';
-import { watchedActivityPanelActions } from '../panels/watchedActivityPanelActions';
+import { CommitActivityPanel } from '../panels/CommitActivityPanel';
+import { commitActivityPanelActions } from '../panels/commitActivityPanelActions';
 import { InProgressActivityPanel } from '../panels/InProgressActivityPanel';
 import { inProgressActivityPanelActions } from '../panels/inProgressActivityPanelActions';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
@@ -187,14 +187,14 @@ export interface CollectionProfileTab extends BaseTab {
   collection: StarredCollection;
 }
 
-export interface WatchedOwnerActivityTab extends BaseTab {
-  contentType: 'watched-owner-activity';
+export interface OwnerActivityTab extends BaseTab {
+  contentType: 'owner-activity';
   login: string;
   accountType: 'User' | 'Organization';
 }
 
-export interface WatchedRepoActivityTab extends BaseTab {
-  contentType: 'watched-repo-activity';
+export interface RepoActivityTab extends BaseTab {
+  contentType: 'repo-activity';
   owner: string;
   repo: string;
 }
@@ -237,7 +237,7 @@ export interface MarkdownDocTab extends BaseTab {
   repositoryPath?: string;
 }
 
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | WatchedOwnerActivityTab | WatchedRepoActivityTab | SharedTrailTab | LocalTrailTab | MarkdownDocTab;
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | OwnerActivityTab | RepoActivityTab | SharedTrailTab | LocalTrailTab | MarkdownDocTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -592,25 +592,6 @@ const RepositoryProfileTabContent: React.FC<{
       return {};
     },
 
-    isRepositoryWatched: async (owner: string, repo: string) => {
-      const watches = await WebAdeService.getWatches();
-      return watches.watchedRepos.some((r) => r.owner === owner && r.repo === repo);
-    },
-
-    watchRepository: async (owner: string, repo: string) => {
-      const response = await WebAdeService.watchRepo(owner, repo);
-      if (!response.success) {
-        throw new Error('Failed to watch repository');
-      }
-    },
-
-    unwatchRepository: async (owner: string, repo: string) => {
-      const response = await WebAdeService.unwatchRepo(owner, repo);
-      if (!response.success) {
-        throw new Error('Failed to unwatch repository');
-      }
-    },
-
     isRepositoryStarred: async (owner: string, repo: string) => {
       return GithubService.isRepositoryStarred(owner, repo);
     },
@@ -850,25 +831,6 @@ const UserProfileTabContent: React.FC<{
       }
     },
 
-    isUserWatched: async (username: string) => {
-      const watches = await WebAdeService.getWatches();
-      return watches.watchedUsers.some((u) => u.login === username);
-    },
-
-    watchUser: async (username: string) => {
-      const response = await WebAdeService.watchUser(username, 'User');
-      if (!response.success) {
-        throw new Error('Failed to watch user');
-      }
-    },
-
-    unwatchUser: async (username: string) => {
-      const response = await WebAdeService.unwatchUser(username);
-      if (!response.success) {
-        throw new Error('Failed to unwatch user');
-      }
-    },
-
     isFollowingUser: async (username: string) => {
       return GithubService.isFollowingUser(username);
     },
@@ -894,7 +856,7 @@ const UserProfileTabContent: React.FC<{
 
   return (
     <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
-      <UserProfilePanel context={userContext} actions={userActions} events={events} watchedActivityActions={watchedActivityPanelActions} />
+      <UserProfilePanel context={userContext} actions={userActions} events={events} commitActivityActions={commitActivityPanelActions} />
     </div>
   );
 };
@@ -1031,25 +993,6 @@ const OrgProfileTabContent: React.FC<{
       } catch (err) {
         console.error(`Failed to fetch file tree for ${owner}/${repoName}:`, err);
         return null;
-      }
-    },
-
-    isOrgWatched: async (orgName: string) => {
-      const watches = await WebAdeService.getWatches();
-      return watches.watchedUsers.some((u) => u.login === orgName);
-    },
-
-    watchOrg: async (orgName: string) => {
-      const response = await WebAdeService.watchUser(orgName, 'Organization');
-      if (!response.success) {
-        throw new Error('Failed to watch organization');
-      }
-    },
-
-    unwatchOrg: async (orgName: string) => {
-      const response = await WebAdeService.unwatchUser(orgName);
-      if (!response.success) {
-        throw new Error('Failed to unwatch organization');
       }
     },
 
@@ -1450,21 +1393,21 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, tabs]);
 
-  // Listen for watched owner activity tab requests
+  // Listen for owner activity tab requests
   useEffect(() => {
     const handleOwnerActivity = (event: {
       type: string;
       payload: { login: string; accountType: 'User' | 'Organization' };
     }) => {
-      if (event.type !== 'feed:watched-owner-activity-requested') return;
+      if (event.type !== 'feed:owner-activity-requested') return;
       const { login, accountType } = event.payload;
-      const tabId = `watched-owner-activity-${login}`;
+      const tabId = `owner-activity-${login}`;
       const existing = tabs.find(t => t.id === tabId);
       if (existing) { setActiveTabId(tabId); return; }
-      const newTab: WatchedOwnerActivityTab = {
+      const newTab: OwnerActivityTab = {
         id: tabId,
         label: `@${login}`,
-        contentType: 'watched-owner-activity',
+        contentType: 'owner-activity',
         closable: true,
         login,
         accountType,
@@ -1472,25 +1415,25 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       setTabs(prev => [...prev, newTab]);
       setActiveTabId(tabId);
     };
-    events.on('feed:watched-owner-activity-requested', handleOwnerActivity);
-    return () => { events.off('feed:watched-owner-activity-requested', handleOwnerActivity); };
+    events.on('feed:owner-activity-requested', handleOwnerActivity);
+    return () => { events.off('feed:owner-activity-requested', handleOwnerActivity); };
   }, [events, tabs]);
 
-  // Listen for watched repo activity tab requests
+  // Listen for repo activity tab requests
   useEffect(() => {
     const handleRepoActivity = (event: {
       type: string;
       payload: { owner: string; repo: string };
     }) => {
-      if (event.type !== 'feed:watched-repo-activity-requested') return;
+      if (event.type !== 'feed:repo-activity-requested') return;
       const { owner, repo } = event.payload;
-      const tabId = `watched-repo-activity-${owner}/${repo}`;
+      const tabId = `repo-activity-${owner}/${repo}`;
       const existing = tabs.find(t => t.id === tabId);
       if (existing) { setActiveTabId(tabId); return; }
-      const newTab: WatchedRepoActivityTab = {
+      const newTab: RepoActivityTab = {
         id: tabId,
         label: `${owner}/${repo}`,
-        contentType: 'watched-repo-activity',
+        contentType: 'repo-activity',
         closable: true,
         owner,
         repo,
@@ -1498,8 +1441,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       setTabs(prev => [...prev, newTab]);
       setActiveTabId(tabId);
     };
-    events.on('feed:watched-repo-activity-requested', handleRepoActivity);
-    return () => { events.off('feed:watched-repo-activity-requested', handleRepoActivity); };
+    events.on('feed:repo-activity-requested', handleRepoActivity);
+    return () => { events.off('feed:repo-activity-requested', handleRepoActivity); };
   }, [events, tabs]);
 
   // Handle user profile panel events
@@ -1755,8 +1698,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         return <Building2 size={14} />;
       case 'collection-profile':
         return <BookMarked size={14} />;
-      case 'watched-owner-activity':
-      case 'watched-repo-activity':
+      case 'owner-activity':
+      case 'repo-activity':
         return <Radio size={14} />;
       case 'shared-trail':
         return <Route size={14} />;
@@ -1853,25 +1796,25 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
             />
           );
         }
-        case 'watched-owner-activity': {
-          const ownerTab = tab as WatchedOwnerActivityTab;
+        case 'owner-activity': {
+          const ownerTab = tab as OwnerActivityTab;
           return (
-            <WatchedActivityPanel
+            <CommitActivityPanel
               key={ownerTab.id}
               source={{ kind: 'owner', login: ownerTab.login, accountType: ownerTab.accountType }}
               events={eventsRef.current}
-              actions={watchedActivityPanelActions}
+              actions={commitActivityPanelActions}
             />
           );
         }
-        case 'watched-repo-activity': {
-          const repoTab = tab as WatchedRepoActivityTab;
+        case 'repo-activity': {
+          const repoTab = tab as RepoActivityTab;
           return (
-            <WatchedActivityPanel
+            <CommitActivityPanel
               key={repoTab.id}
               source={{ kind: 'repo', owner: repoTab.owner, repo: repoTab.repo }}
               events={eventsRef.current}
-              actions={watchedActivityPanelActions}
+              actions={commitActivityPanelActions}
             />
           );
         }

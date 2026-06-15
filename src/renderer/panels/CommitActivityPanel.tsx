@@ -1,8 +1,9 @@
 /**
- * WatchedActivityPanel
+ * CommitActivityPanel
  *
- * Shows commit activity for a single watched owner (user/org) or repo.
- * Used when clicking a watched item in the feed left panel.
+ * Shows recent commit activity for a single owner (user/org) or repo,
+ * grouped by hour. Backed by the GitHub API (getOwnerActivity/getRepoActivity).
+ * Used by the user/org profile activity tab.
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -19,18 +20,18 @@ import type { CommitActivityCard } from '../../shared/tipc/webAdeRouterTypes';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { ExplainCommitsInput } from '../../shared/tipc/webAdeRouterTypes';
 
-export type WatchedActivitySource =
+export type CommitActivitySource =
   | { kind: 'owner'; login: string; accountType: 'User' | 'Organization' }
   | { kind: 'repo'; owner: string; repo: string };
 
 /**
- * Actions for WatchedActivityPanel.
+ * Actions for CommitActivityPanel.
  *
  * Extends RepoActivityCardActions so the panel can forward them to the
  * cards it renders, and adds the two activity-fetch calls the panel itself
  * needs. Host wires to real services; stories pass mocks.
  */
-export interface WatchedActivityPanelActions extends RepoActivityCardActions {
+export interface CommitActivityPanelActions extends RepoActivityCardActions {
   getOwnerActivity: (
     login: string,
     type: 'User' | 'Organization',
@@ -41,11 +42,11 @@ export interface WatchedActivityPanelActions extends RepoActivityCardActions {
   ) => Promise<CommitActivityCard[]>;
 }
 
-interface WatchedActivityPanelProps {
-  source: WatchedActivitySource;
+interface CommitActivityPanelProps {
+  source: CommitActivitySource;
   events: PanelEventEmitter;
   hideHeader?: boolean;
-  actions: WatchedActivityPanelActions;
+  actions: CommitActivityPanelActions;
 }
 
 function formatHourLabel(iso: string): string {
@@ -144,7 +145,7 @@ interface ExplainState {
   pendingCommits: ExplainCommitsInput['commits'] | null;
 }
 
-export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ source, events, hideHeader = false, actions }) => {
+export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source, events, hideHeader = false, actions }) => {
   const { theme } = useTheme();
   const [cards, setCards] = useState<CommitActivityCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,7 +205,7 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
         setLoading(false);
       }
     }).catch(err => {
-      console.error('[WatchedActivityPanel] Failed to load activity:', err);
+      console.error('[CommitActivityPanel] Failed to load activity:', err);
       if (!cancelled) setLoading(false);
     });
 
@@ -246,7 +247,7 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
         setExplain(prev => ({ ...prev, loading: false, markdown: result.text }));
       })
       .catch(err => {
-        console.error('[WatchedActivityPanel] explain failed:', err);
+        console.error('[CommitActivityPanel] explain failed:', err);
         if (cancelled) return;
         setExplain(prev => ({ ...prev, loading: false, markdown: 'Failed to generate explanation. Please try again.' }));
       });
@@ -316,7 +317,7 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
             const isOrg = source.kind === 'owner' && source.accountType === 'Organization';
             events.emit({
               type: 'feed:owner-selected',
-              source: 'watched-activity-panel',
+              source: 'commit-activity-panel',
               timestamp: Date.now(),
               payload: { owner, isOrg },
             });
@@ -422,4 +423,4 @@ export const WatchedActivityPanel: React.FC<WatchedActivityPanelProps> = ({ sour
   );
 };
 
-export default WatchedActivityPanel;
+export default CommitActivityPanel;

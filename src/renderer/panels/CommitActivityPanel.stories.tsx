@@ -6,10 +6,10 @@ import type {
   PanelEvent,
 } from '@principal-ade/panel-framework-core';
 import {
-  WatchedActivityPanel,
-  type WatchedActivityPanelActions,
-  type WatchedActivitySource,
-} from './WatchedActivityPanel';
+  CommitActivityPanel,
+  type CommitActivityPanelActions,
+  type CommitActivitySource,
+} from './CommitActivityPanel';
 import type {
   CommitActivityCard,
   CommitInfo,
@@ -158,7 +158,7 @@ const makeCard = (
 
 // ---- Mock actions factory --------------------------------------------------
 
-const makeMockActions = (cards: CommitActivityCard[]): WatchedActivityPanelActions => ({
+const makeMockActions = (cards: CommitActivityCard[]): CommitActivityPanelActions => ({
   getFileTreeForLocalRepo: async () => null,
   getGithubTree: async () => ({
     sha: 'mock-sha',
@@ -176,7 +176,7 @@ const makeMockActions = (cards: CommitActivityCard[]): WatchedActivityPanelActio
   getRepoActivity: async () => cards,
 });
 
-const makeNeverResolvingActions = (): WatchedActivityPanelActions => ({
+const makeNeverResolvingActions = (): CommitActivityPanelActions => ({
   ...makeMockActions([]),
   getOwnerActivity: () => new Promise(() => {}),
   getRepoActivity: () => new Promise(() => {}),
@@ -185,8 +185,8 @@ const makeNeverResolvingActions = (): WatchedActivityPanelActions => ({
 // ---- Story wrapper ---------------------------------------------------------
 
 const PanelStory: React.FC<{
-  source: WatchedActivitySource;
-  actions: WatchedActivityPanelActions;
+  source: CommitActivitySource;
+  actions: CommitActivityPanelActions;
   hideHeader?: boolean;
 }> = ({ source, actions, hideHeader }) => {
   const events = React.useMemo(() => new MockEventEmitter(), []);
@@ -201,7 +201,7 @@ const PanelStory: React.FC<{
         }}
       >
         <div style={{ width: 480, borderRight: '1px solid #333', height: '100%' }}>
-          <WatchedActivityPanel
+          <CommitActivityPanel
             source={source}
             events={events}
             actions={actions}
@@ -213,9 +213,9 @@ const PanelStory: React.FC<{
   );
 };
 
-const meta: Meta<typeof WatchedActivityPanel> = {
-  title: 'Panels/WatchedActivityPanel',
-  component: WatchedActivityPanel,
+const meta: Meta<typeof CommitActivityPanel> = {
+  title: 'Panels/CommitActivityPanel',
+  component: CommitActivityPanel,
   parameters: {
     layout: 'fullscreen',
     backgrounds: {
@@ -232,8 +232,8 @@ const meta: Meta<typeof WatchedActivityPanel> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Watched user with activity spread across several hourly groups
-export const WatchedUser: Story = {
+// User with activity spread across several hourly groups
+export const User: Story = {
   render: () => (
     <PanelStory
       source={{ kind: 'owner', login: 'octocat', accountType: 'User' }}
@@ -247,8 +247,8 @@ export const WatchedUser: Story = {
   ),
 };
 
-// Watched organization — multiple repos under one owner
-export const WatchedOrganization: Story = {
+// Organization — multiple repos under one owner
+export const Organization: Story = {
   render: () => (
     <PanelStory
       source={{ kind: 'owner', login: 'acme-corp', accountType: 'Organization' }}
@@ -263,8 +263,8 @@ export const WatchedOrganization: Story = {
   ),
 };
 
-// Watched single repo
-export const WatchedRepo: Story = {
+// Single repo
+export const SingleRepo: Story = {
   render: () => (
     <PanelStory
       source={{ kind: 'repo', owner: 'facebook', repo: 'react' }}

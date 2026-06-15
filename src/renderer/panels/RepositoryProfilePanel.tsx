@@ -129,21 +129,6 @@ export interface RepositoryProfilePanelActions extends PanelActions {
   openRepository: (path: string, remoteUrl?: string) => Promise<void>;
 
   /**
-   * Check if repository is watched
-   */
-  isRepositoryWatched?: (owner: string, repo: string) => Promise<boolean>;
-
-  /**
-   * Watch a GitHub repository (optional)
-   */
-  watchRepository?: (owner: string, repo: string) => Promise<void>;
-
-  /**
-   * Unwatch a GitHub repository (optional)
-   */
-  unwatchRepository?: (owner: string, repo: string) => Promise<void>;
-
-  /**
    * Check if repository is starred
    */
   isRepositoryStarred?: (owner: string, repo: string) => Promise<boolean>;
@@ -508,10 +493,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [panelWidth, setPanelWidth] = useState<number>(0);
 
-  // Watch state
-  const [isWatched, setIsWatched] = useState(false);
-  const [isWatchLoading, setIsWatchLoading] = useState(false);
-
   // Star state
   const [isStarred, setIsStarred] = useState(false);
   const [isStarLoading, setIsStarLoading] = useState(false);
@@ -784,39 +765,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
     console.info('[RepositoryProfilePanel] Total highlight layers:', layers.length);
   }, [gitStatusMap, isPlaying, repositoryData?.localClones, theme.colors, cityData, showSuffixLayers, hoveredAuthorEmail, ownershipVersion]);
-
-  // Load watch status when repository changes
-  useEffect(() => {
-    if (!repositoryData?.github || !actions.isRepositoryWatched) {
-      setIsWatched(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadWatchStatus = async () => {
-      try {
-        if (!actions.isRepositoryWatched || !repositoryData.github) {
-          return;
-        }
-        const watched = await actions.isRepositoryWatched(
-          repositoryData.github.owner,
-          repositoryData.github.name
-        );
-        if (!cancelled) {
-          setIsWatched(watched);
-        }
-      } catch (err) {
-        console.error('Failed to load watch status:', err);
-      }
-    };
-
-    loadWatchStatus();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [repositoryData, actions]);
 
   // Load star status when repository changes
   useEffect(() => {
@@ -1402,60 +1350,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     setShowContributors((prev) => !prev);
   };
 
-  // Handle watch/unwatch repository
-  const handleToggleWatch = async () => {
-    if (!repositoryData?.github) return;
-
-    // Check if actions are available
-    if (!actions.watchRepository || !actions.unwatchRepository) {
-      console.warn('Watch actions not available');
-      return;
-    }
-
-    setIsWatchLoading(true);
-    try {
-      if (isWatched) {
-        await actions.unwatchRepository(
-          repositoryData.github.owner,
-          repositoryData.github.name
-        );
-        setIsWatched(false);
-        // Emit specific event for watch toggle
-        events.emit({
-          type: 'watch:repo-toggled',
-          source: 'repository-profile-panel',
-          timestamp: Date.now(),
-          payload: {
-            owner: repositoryData.github.owner,
-            repo: repositoryData.github.name,
-            watched: false,
-          },
-        });
-      } else {
-        await actions.watchRepository(
-          repositoryData.github.owner,
-          repositoryData.github.name
-        );
-        setIsWatched(true);
-        // Emit specific event for watch toggle
-        events.emit({
-          type: 'watch:repo-toggled',
-          source: 'repository-profile-panel',
-          timestamp: Date.now(),
-          payload: {
-            owner: repositoryData.github.owner,
-            repo: repositoryData.github.name,
-            watched: true,
-          },
-        });
-      }
-    } catch (err) {
-      console.error('Failed to toggle watch:', err);
-    } finally {
-      setIsWatchLoading(false);
-    }
-  };
-
   // Handle star/unstar repository
   const handleToggleStar = async () => {
     if (!repositoryData?.github) return;
@@ -1880,39 +1774,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 </div>
               </div>
 
-              {/* Watch Button */}
-              {repositoryData.github && (
-                <div
-                  style={{
-                    textAlign: 'center',
-                    cursor: isWatchLoading ? 'not-allowed' : 'pointer',
-                    opacity: isWatchLoading ? 0.6 : 1,
-                    transition: 'opacity 0.2s ease',
-                    minWidth: '65px',
-                  }}
-                  onClick={isWatchLoading ? undefined : handleToggleWatch}
-                >
-                  <div style={{
-                    fontSize: theme.fontSizes[3],
-                    fontWeight: theme.fontWeights?.semibold ?? 600,
-                    fontFamily: theme.fonts?.body,
-                    color: isWatched ? theme.colors.primary : theme.colors.text,
-                    display: 'flex',
-                    justifyContent: 'center',
-                  }}>
-                    {isWatched ? <Eye size={24} /> : <EyeClosed size={24} />}
-                  </div>
-                  <div style={{
-                    fontSize: theme.fontSizes[0],
-                    fontFamily: theme.fonts?.body,
-                    color: theme.colors.textSecondary,
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {isWatched ? 'watching' : 'watch'}
-                  </div>
-                </div>
-              )}
-
               {/* Star Button */}
               {repositoryData.github && (
                 <div
@@ -2186,7 +2047,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               return (
               <button
                 onClick={() => events.emit({
-                  type: 'feed:watched-repo-activity-requested',
+                  type: 'feed:repo-activity-requested',
                   source: 'repo-profile-panel',
                   timestamp: Date.now(),
                   payload: { owner: github.owner, repo: github.name },

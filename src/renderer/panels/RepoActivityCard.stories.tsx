@@ -355,7 +355,7 @@ export const OrganizationRepo: Story = {
   ),
 };
 
-// Header hidden (used inside WatchedActivityPanel where owner/repo is shown above)
+// Header hidden (used inside CommitActivityPanel where owner/repo is shown above)
 export const HiddenRepoHeader: Story = {
   render: () => {
     const repos = [

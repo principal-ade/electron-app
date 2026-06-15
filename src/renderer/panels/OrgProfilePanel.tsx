@@ -16,8 +16,6 @@ import {
   Building2,
   Twitter,
   Github,
-  Eye,
-  EyeClosed,
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
 import { OwnerCollectionsTab } from './OwnerCollectionsTab';
@@ -93,21 +91,6 @@ export interface OrgProfilePanelActions extends PanelActions {
    * Get organization's members (optional)
    */
   getOrgMembers?: (orgName: string) => Promise<GitHubOrgMember[]>;
-
-  /**
-   * Check if organization is watched (orgs are watched as users)
-   */
-  isOrgWatched?: (orgName: string) => Promise<boolean>;
-
-  /**
-   * Watch a GitHub organization (optional)
-   */
-  watchOrg?: (orgName: string) => Promise<void>;
-
-  /**
-   * Unwatch a GitHub organization (optional)
-   */
-  unwatchOrg?: (orgName: string) => Promise<void>;
 
   /**
    * Get pinned repositories for the organization (optional)
@@ -277,10 +260,6 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
 
   // File trees for repositories (lazy loaded)
   const [fileTrees, setFileTrees] = useState<Map<string, FileTree | null>>(new Map());
-
-  // Watch state
-  const [isWatched, setIsWatched] = useState(false);
-  const [isWatchLoading, setIsWatchLoading] = useState(false);
 
   // Member avatars
   const [members, setMembers] = useState<GitHubOrgMember[]>([]);
@@ -473,36 +452,6 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
     };
   }, [org, actions]);
 
-  // Load watch status when org changes
-  useEffect(() => {
-    if (!org || !actions.isOrgWatched) {
-      setIsWatched(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadWatchStatus = async () => {
-      try {
-        if (!actions.isOrgWatched) {
-          return;
-        }
-        const watched = await actions.isOrgWatched(org.orgName);
-        if (!cancelled) {
-          setIsWatched(watched);
-        }
-      } catch (err) {
-        console.error('Failed to load watch status:', err);
-      }
-    };
-
-    loadWatchStatus();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [org, actions]);
-
   // Handle open in browser - emit event instead
   const handleOpenUrl = (url: string, type: 'website' | 'twitter' | 'github' | 'email') => {
     events.emit({
@@ -511,46 +460,6 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
       timestamp: Date.now(),
       payload: { url, type },
     });
-  };
-
-  // Handle watch/unwatch organization
-  const handleToggleWatch = async () => {
-    if (!org) return;
-
-    // Check if actions are available
-    if (!actions.watchOrg || !actions.unwatchOrg) {
-      console.warn('Watch actions not available');
-      return;
-    }
-
-    setIsWatchLoading(true);
-    try {
-      if (isWatched) {
-        await actions.unwatchOrg(org.orgName);
-        setIsWatched(false);
-        // Emit specific event for watch toggle
-        events.emit({
-          type: 'watch:user-toggled',
-          source: 'org-profile-panel',
-          timestamp: Date.now(),
-          payload: { username: org.orgName, watched: false, accountType: 'Organization' as const },
-        });
-      } else {
-        await actions.watchOrg(org.orgName);
-        setIsWatched(true);
-        // Emit specific event for watch toggle
-        events.emit({
-          type: 'watch:user-toggled',
-          source: 'org-profile-panel',
-          timestamp: Date.now(),
-          payload: { username: org.orgName, watched: true, accountType: 'Organization' as const },
-        });
-      }
-    } catch (err) {
-      console.error('Failed to toggle watch:', err);
-    } finally {
-      setIsWatchLoading(false);
-    }
   };
 
   // Empty state - no org selected
@@ -739,37 +648,6 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                   color: theme.colors.textSecondary
                 }}>
                   commits
-                </div>
-              </div>
-
-              {/* Watch Button */}
-              <div
-                style={{
-                  textAlign: 'center',
-                  cursor: isWatchLoading ? 'not-allowed' : 'pointer',
-                  opacity: isWatchLoading ? 0.6 : 1,
-                  transition: 'opacity 0.2s ease',
-                  minWidth: '65px',
-                }}
-                onClick={isWatchLoading ? undefined : handleToggleWatch}
-              >
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: isWatched ? theme.colors.primary : theme.colors.text,
-                  display: 'flex',
-                  justifyContent: 'center',
-                }}>
-                  {isWatched ? <Eye size={24} /> : <EyeClosed size={24} />}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary,
-                  whiteSpace: 'nowrap',
-                }}>
-                  {isWatched ? 'watching' : 'watch'}
                 </div>
               </div>
             </div>

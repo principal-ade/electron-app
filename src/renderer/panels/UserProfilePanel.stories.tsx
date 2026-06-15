@@ -14,11 +14,11 @@ import {
   type ContributedRepository,
 } from './UserProfilePanel';
 import type { RepoCardData, Contributor } from './RepoCard';
-import type { WatchedActivityPanelActions } from './WatchedActivityPanel';
+import type { CommitActivityPanelActions } from './CommitActivityPanel';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
 import type { GitHubOrganization } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
-const mockWatchedActivityActions: WatchedActivityPanelActions = {
+const mockCommitActivityActions: CommitActivityPanelActions = {
   getFileTreeForLocalRepo: async () => null,
   getGithubTree: async () => ({
     sha: 'mock-sha',
@@ -361,9 +361,6 @@ const MockUserProfilePanel: React.FC<{
   username?: string;
   pinnedRepos?: string[];
 }> = ({ userData, username = 'octocat', pinnedRepos = [] }) => {
-  // Track watched users in component state for interactive demo
-  const [watchedUsers, setWatchedUsers] = React.useState<Set<string>>(new Set());
-
   const mockContext: UserProfilePanelContext = {
     currentScope: {
       type: 'workspace' as const,
@@ -412,27 +409,6 @@ const MockUserProfilePanel: React.FC<{
       await new Promise((resolve) => setTimeout(resolve, 300));
       return createMockFileTree(repoName);
     },
-    isUserWatched: async (user: string) => {
-      // Simulate async delay
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      return watchedUsers.has(user);
-    },
-    watchUser: async (user: string) => {
-      // Simulate async delay
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      console.info('[Mock] Watching user:', user);
-      setWatchedUsers((prev) => new Set([...prev, user]));
-    },
-    unwatchUser: async (user: string) => {
-      // Simulate async delay
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      console.info('[Mock] Unwatching user:', user);
-      setWatchedUsers((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(user);
-        return newSet;
-      });
-    },
     getUserOrgs: async () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
       return mockUserOrgs;
@@ -451,7 +427,7 @@ const MockUserProfilePanel: React.FC<{
       context={mockContext}
       actions={mockActions}
       events={mockEvents}
-      watchedActivityActions={mockWatchedActivityActions}
+      commitActivityActions={mockCommitActivityActions}
     />
   );
 };
@@ -601,7 +577,7 @@ export const Loading: Story = {
 
     return (
       <ThemeProvider>
-        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} watchedActivityActions={mockWatchedActivityActions} />
+        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} commitActivityActions={mockCommitActivityActions} />
       </ThemeProvider>
     );
   },
@@ -635,7 +611,7 @@ export const Error: Story = {
 
     return (
       <ThemeProvider>
-        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} watchedActivityActions={mockWatchedActivityActions} />
+        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} commitActivityActions={mockCommitActivityActions} />
       </ThemeProvider>
     );
   },
@@ -666,7 +642,7 @@ export const Empty: Story = {
 
     return (
       <ThemeProvider>
-        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} watchedActivityActions={mockWatchedActivityActions} />
+        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} commitActivityActions={mockCommitActivityActions} />
       </ThemeProvider>
     );
   },

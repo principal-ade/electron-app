@@ -76,7 +76,7 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
       }
       const [owner, name] = repo.full_name.split('/');
 
-      // Emit event to open repository profile (following WatchedItemsList pattern)
+      // Emit event to open repository profile
       events.emit({
         type: 'feed:repository-selected',
         source: 'starred-repos-list',

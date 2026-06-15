@@ -16,17 +16,15 @@ import {
   User,
   Twitter,
   Github,
-  Eye,
-  EyeClosed,
   UserPlus,
   UserCheck,
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
 import { OwnerCollectionsTab } from './OwnerCollectionsTab';
 import {
-  WatchedActivityPanel,
-  type WatchedActivityPanelActions,
-} from './WatchedActivityPanel';
+  CommitActivityPanel,
+  type CommitActivityPanelActions,
+} from './CommitActivityPanel';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import {
   payloadFromGithub,
@@ -160,21 +158,6 @@ export interface UserProfilePanelActions extends PanelActions {
   isFollowingUser?: (username: string) => Promise<boolean>;
 
   /**
-   * Check if user is watched
-   */
-  isUserWatched?: (username: string) => Promise<boolean>;
-
-  /**
-   * Watch a GitHub user (optional)
-   */
-  watchUser?: (username: string) => Promise<void>;
-
-  /**
-   * Unwatch a GitHub user (optional)
-   */
-  unwatchUser?: (username: string) => Promise<void>;
-
-  /**
    * Get organizations a user belongs to (optional)
    */
   getUserOrgs?: (username: string) => Promise<GitHubOrganization[]>;
@@ -191,11 +174,11 @@ interface UserProfilePanelProps {
   actions: UserProfilePanelActions;
   events: PanelEventEmitter;
   /**
-   * Actions forwarded to the embedded WatchedActivityPanel (and its
+   * Actions forwarded to the embedded CommitActivityPanel (and its
    * RepoActivityCards). Kept as a separate prop so the panel itself doesn't
    * import renderer main-process-api services — that keeps it Storybook-safe.
    */
-  watchedActivityActions: WatchedActivityPanelActions;
+  commitActivityActions: CommitActivityPanelActions;
 }
 
 /**
@@ -380,7 +363,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   context,
   actions,
   events,
-  watchedActivityActions,
+  commitActivityActions,
 }) => {
   const { theme } = useTheme();
   const user = context.currentScope?.user;
@@ -397,10 +380,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
   // Hover state for commits this year stat
   const [isCommitsStatHovered, setIsCommitsStatHovered] = useState(false);
-
-  // Watch state
-  const [isWatched, setIsWatched] = useState(false);
-  const [isWatchLoading, setIsWatchLoading] = useState(false);
 
   // Follow state
   const [isFollowing, setIsFollowing] = useState(false);
@@ -538,36 +517,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     };
   }, [user, actions]);
 
-  // Load watch status when user changes
-  useEffect(() => {
-    if (!user || !actions.isUserWatched) {
-      setIsWatched(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadWatchStatus = async () => {
-      try {
-        if (!actions.isUserWatched) {
-          return;
-        }
-        const watched = await actions.isUserWatched(user.username);
-        if (!cancelled) {
-          setIsWatched(watched);
-        }
-      } catch (err) {
-        console.error('Failed to load watch status:', err);
-      }
-    };
-
-    loadWatchStatus();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, actions]);
-
   // Load follow status when user changes
   useEffect(() => {
     if (!user || !actions.isFollowingUser) {
@@ -683,46 +632,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
       timestamp: Date.now(),
       payload: { url, type },
     });
-  };
-
-  // Handle watch/unwatch user
-  const handleToggleWatch = async () => {
-    if (!user) return;
-
-    // Check if actions are available
-    if (!actions.watchUser || !actions.unwatchUser) {
-      console.warn('Watch actions not available');
-      return;
-    }
-
-    setIsWatchLoading(true);
-    try {
-      if (isWatched) {
-        await actions.unwatchUser(user.username);
-        setIsWatched(false);
-        // Emit specific event for watch toggle
-        events.emit({
-          type: 'watch:user-toggled',
-          source: 'user-profile-panel',
-          timestamp: Date.now(),
-          payload: { username: user.username, watched: false, accountType: 'User' as const },
-        });
-      } else {
-        await actions.watchUser(user.username);
-        setIsWatched(true);
-        // Emit specific event for watch toggle
-        events.emit({
-          type: 'watch:user-toggled',
-          source: 'user-profile-panel',
-          timestamp: Date.now(),
-          payload: { username: user.username, watched: true, accountType: 'User' as const },
-        });
-      }
-    } catch (err) {
-      console.error('Failed to toggle watch:', err);
-    } finally {
-      setIsWatchLoading(false);
-    }
   };
 
   // Handle follow/unfollow user
@@ -976,37 +885,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                     </div>
                     <div style={{ fontSize: theme.fontSizes[0], fontFamily: theme.fonts?.body, color: theme.colors.textSecondary }}>
                       following
-                    </div>
-                  </div>
-
-                  {/* Watch Button */}
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      cursor: isWatchLoading ? 'not-allowed' : 'pointer',
-                      opacity: isWatchLoading ? 0.6 : 1,
-                      transition: 'opacity 0.2s ease',
-                      minWidth: '65px',
-                    }}
-                    onClick={isWatchLoading ? undefined : handleToggleWatch}
-                  >
-                    <div style={{
-                      fontSize: theme.fontSizes[3],
-                      fontWeight: theme.fontWeights?.semibold ?? 600,
-                      fontFamily: theme.fonts?.body,
-                      color: isWatched ? theme.colors.primary : theme.colors.text,
-                      display: 'flex',
-                      justifyContent: 'center',
-                    }}>
-                      {isWatched ? <Eye size={24} /> : <EyeClosed size={24} />}
-                    </div>
-                    <div style={{
-                      fontSize: theme.fontSizes[0],
-                      fontFamily: theme.fonts?.body,
-                      color: theme.colors.textSecondary,
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {isWatched ? 'watching' : 'watch'}
                     </div>
                   </div>
 
@@ -1412,11 +1290,11 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         {/* Activity Tab */}
         {activeTab === 'activity' && userData && (
           <div style={{ marginTop: spacing.md, height: 600, display: 'flex', flexDirection: 'column' }}>
-            <WatchedActivityPanel
+            <CommitActivityPanel
               source={{ kind: 'owner', login: userData.username, accountType: 'User' }}
               events={events}
               hideHeader
-              actions={watchedActivityActions}
+              actions={commitActivityActions}
             />
           </div>
         )}

@@ -7,20 +7,7 @@
 
 import { createClient } from '@egoist/tipc/renderer';
 import type {
-  GetCommitQueueInput,
-  GetActivityHeatmapInput,
   WebAdeRouterType,
-  CommitActivityCard,
-  FeedWatches,
-  ActivityHeatmapResponse,
-  WatchUserInput,
-  UnwatchUserInput,
-  WatchRepoInput,
-  UnwatchRepoInput,
-  WatchUserResponse,
-  UnwatchUserResponse,
-  WatchRepoResponse,
-  UnwatchRepoResponse,
   GetTreeInput,
   GetTreeResponse,
   GetRepoContributionsInput,
@@ -63,17 +50,6 @@ import type {
 export interface WebAdeClient {
   // Authentication
   isAuthenticated: () => Promise<boolean>;
-
-  // Watched Activity Feed
-  getCommitQueue: (input: GetCommitQueueInput) => Promise<CommitActivityCard[]>;
-  getWatches: () => Promise<FeedWatches>;
-  getActivityHeatmap: (input: GetActivityHeatmapInput) => Promise<ActivityHeatmapResponse>;
-
-  // Watch/Unwatch Operations
-  watchUser: (input: WatchUserInput) => Promise<WatchUserResponse>;
-  unwatchUser: (input: UnwatchUserInput) => Promise<UnwatchUserResponse>;
-  watchRepo: (input: WatchRepoInput) => Promise<WatchRepoResponse>;
-  unwatchRepo: (input: UnwatchRepoInput) => Promise<UnwatchRepoResponse>;
 
   // GitHub Tree API (via web-ade)
   getGithubTree: (input: GetTreeInput) => Promise<GetTreeResponse>;
@@ -164,18 +140,9 @@ export const webAdeClient: WebAdeClient = new Proxy({} as WebAdeClient, {
 // =============================================================================
 
 export type {
-  GetCommitQueueInput,
-  GetActivityHeatmapInput,
   CommitActivityCard,
-  FeedWatches,
-  ActivityHeatmapResponse,
   CommitInfo,
   CommitAuthor,
-  WatchedUser,
-  WatchedRepo,
-  HeatmapCommit,
-  HeatmapAuthor,
-  HeatmapRepo,
   GetTreeInput,
   GetTreeResponse,
   TreeEntry,

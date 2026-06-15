@@ -7,12 +7,6 @@
 
 import { tipc } from '@egoist/tipc/main';
 import type {
-  GetCommitQueueInput,
-  GetActivityHeatmapInput,
-  WatchUserInput,
-  UnwatchUserInput,
-  WatchRepoInput,
-  UnwatchRepoInput,
   GetTreeInput,
   GetRepoContributionsInput,
   GetStarredCollectionsInput,
@@ -46,54 +40,6 @@ export const webAdeRouter = {
   isAuthenticated: t.procedure.action(async () => {
     return webAdeService.isAuthenticated();
   }),
-
-  // ===========================================================================
-  // Watched Activity Feed
-  // ===========================================================================
-
-  getCommitQueue: t.procedure
-    .input<GetCommitQueueInput>()
-    .action(async ({ input }) => {
-      return webAdeService.getCommitQueue(input.limit);
-    }),
-
-  getWatches: t.procedure.action(async () => {
-    return webAdeService.getWatches();
-  }),
-
-  getActivityHeatmap: t.procedure
-    .input<GetActivityHeatmapInput>()
-    .action(async ({ input }) => {
-      return webAdeService.getActivityHeatmap(input);
-    }),
-
-  // ===========================================================================
-  // Watch/Unwatch Operations
-  // ===========================================================================
-
-  watchUser: t.procedure
-    .input<WatchUserInput>()
-    .action(async ({ input }) => {
-      return webAdeService.watchUser(input.login, input.type);
-    }),
-
-  unwatchUser: t.procedure
-    .input<UnwatchUserInput>()
-    .action(async ({ input }) => {
-      return webAdeService.unwatchUser(input.login);
-    }),
-
-  watchRepo: t.procedure
-    .input<WatchRepoInput>()
-    .action(async ({ input }) => {
-      return webAdeService.watchRepo(input.owner, input.repo);
-    }),
-
-  unwatchRepo: t.procedure
-    .input<UnwatchRepoInput>()
-    .action(async ({ input }) => {
-      return webAdeService.unwatchRepo(input.owner, input.repo);
-    }),
 
   // ===========================================================================
   // GitHub Tree API (via web-ade's cached endpoint)
