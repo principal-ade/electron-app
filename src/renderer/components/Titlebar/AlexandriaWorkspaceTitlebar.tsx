@@ -416,6 +416,10 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           >
             {visibleSegments.map(({ id, label, Icon, shortcut }, index) => {
               const isActive = layout.left === id;
+              // Suppress the "selected" look while Braindump covers the
+              // panel — otherwise a segment reads as active even though the
+              // panel it points at is hidden behind the slide-over.
+              const showActive = isActive && !descriptionOpen;
               const shortcutLabel = shortcut.toUpperCase();
               // Decreasing z-index left→right so each segment's corner
               // badge (which overflows into the next sibling's area at
@@ -437,22 +441,33 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
                     padding: '4px 10px',
                     border: 'none',
                     borderRadius: '4px',
-                    background: isActive
+                    background: showActive
                       ? theme.colors.background
                       : 'transparent',
-                    color: isActive
+                    color: showActive
                       ? theme.colors.text
                       : theme.colors.textSecondary,
                     cursor: 'pointer',
                     fontSize: `${theme.fontSizes[1]}px`,
-                    fontWeight: isActive
+                    fontWeight: showActive
                       ? theme.fontWeights.semibold
                       : theme.fontWeights.medium,
                     fontFamily: theme.fonts.body,
                     transition: 'all 0.15s',
-                    boxShadow: isActive
+                    boxShadow: showActive
                       ? theme.shadows[1]
                       : 'none',
+                    // Dim while Braindump covers the panel; each segment
+                    // lifts back on hover so it reads as individually live.
+                    opacity: descriptionOpen ? 0.5 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = descriptionOpen
+                      ? '0.5'
+                      : '1';
                   }}
                 >
                   <Icon size={14} strokeWidth={1.75} />
