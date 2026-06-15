@@ -31,6 +31,7 @@ import {
   Star,
   FolderPlus,
   Check,
+  Copy,
   Loader2,
   Download,
   GitFork,
@@ -472,6 +473,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // State for showing path in cloned badge
   const [showPath, setShowPath] = useState(false);
+
+  // Feedback for copying a local clone path (keyed by the path just copied).
+  const [copiedClonePath, setCopiedClonePath] = useState<string | null>(null);
 
   // Feedback for copying the GitHub link from the repo name
   const [copiedGithubLink, setCopiedGithubLink] = useState(false);
@@ -1092,6 +1096,20 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       setTimeout(() => setCopiedGithubLink(false), 1500);
     } catch (error) {
       console.error('Failed to copy GitHub link:', error);
+    }
+  };
+
+  // Copy a local clone's full (unshortened) path to the clipboard.
+  const handleCopyClonePath = async (clonePath: string) => {
+    try {
+      await navigator.clipboard.writeText(clonePath);
+      setCopiedClonePath(clonePath);
+      setTimeout(
+        () => setCopiedClonePath((prev) => (prev === clonePath ? null : prev)),
+        1500,
+      );
+    } catch (error) {
+      console.error('Failed to copy clone path:', error);
     }
   };
 
@@ -2203,39 +2221,93 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
                   return (
                     <div key={clone.path} style={{ display: 'flex', gap: spacing.xs, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {/* Clone Path Badge */}
-                      <button
-                        onClick={() => setShowPath(!showPath)}
-                        title={showPath ? 'Click to show "cloned"' : `Click to show path\n${clone.path}`}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: spacing.xs,
-                          padding: `${spacing.xs}px ${spacing.sm}px`,
-                          backgroundColor: `${theme.colors.success}15`,
-                          border: `1px solid ${theme.colors.success}30`,
-                          borderRadius: 6,
-                          fontSize: theme.fontSizes[0],
-                          fontFamily: theme.fonts?.body,
-                          fontWeight: theme.fontWeights?.medium ?? 500,
-                          color: theme.colors.success,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = `${theme.colors.success}25`;
-                          e.currentTarget.style.borderColor = `${theme.colors.success}50`;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = `${theme.colors.success}15`;
-                          e.currentTarget.style.borderColor = `${theme.colors.success}30`;
-                        }}
-                      >
-                        <FolderGit2 size={12} />
-                        {showPath
-                          ? shortenPath(clone.path)
-                          : index === 0 ? 'cloned' : `clone ${index + 1}`}
-                      </button>
+                      {/* Clone path badge + attached "Copy Path" segment */}
+                      <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        <button
+                          onClick={() => setShowPath(!showPath)}
+                          title={showPath ? 'Click to show "cloned"' : `Click to show path\n${clone.path}`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: spacing.xs,
+                            padding: `${spacing.xs}px ${spacing.sm}px`,
+                            backgroundColor: `${theme.colors.success}15`,
+                            border: `1px solid ${theme.colors.success}30`,
+                            // Square off the right edge when the copy segment
+                            // is attached so the two read as one control.
+                            borderRadius: showPath ? '6px 0 0 6px' : 6,
+                            fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts?.body,
+                            fontWeight: theme.fontWeights?.medium ?? 500,
+                            color: theme.colors.success,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = `${theme.colors.success}25`;
+                            e.currentTarget.style.borderColor = `${theme.colors.success}50`;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = `${theme.colors.success}15`;
+                            e.currentTarget.style.borderColor = `${theme.colors.success}30`;
+                          }}
+                        >
+                          <FolderGit2 size={12} />
+                          {showPath
+                            ? shortenPath(clone.path)
+                            : index === 0 ? 'cloned' : `clone ${index + 1}`}
+                        </button>
+
+                        {/* Copy Path — shown only when the path is expanded */}
+                        {showPath && (
+                          <button
+                            onClick={() => void handleCopyClonePath(clone.path)}
+                            title={
+                              copiedClonePath === clone.path
+                                ? 'Copied'
+                                : `Copy path\n${clone.path}`
+                            }
+                            aria-label="Copy clone path"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: spacing.xs,
+                              padding: `${spacing.xs}px ${spacing.sm}px`,
+                              // Overlap the seam so the shared edge is one line.
+                              marginLeft: -1,
+                              backgroundColor: `${theme.colors.success}15`,
+                              border: `1px solid ${theme.colors.success}30`,
+                              borderRadius: '0 6px 6px 0',
+                              fontSize: theme.fontSizes[0],
+                              fontFamily: theme.fonts?.body,
+                              fontWeight: theme.fontWeights?.medium ?? 500,
+                              color: theme.colors.success,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = `${theme.colors.success}25`;
+                              e.currentTarget.style.borderColor = `${theme.colors.success}50`;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = `${theme.colors.success}15`;
+                              e.currentTarget.style.borderColor = `${theme.colors.success}30`;
+                            }}
+                          >
+                            {copiedClonePath === clone.path ? (
+                              <>
+                                <Check size={12} />
+                                Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={12} />
+                                Copy Path
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
 
                       {/* Branch and Status Badge for this clone */}
                       {branchStatus && (
