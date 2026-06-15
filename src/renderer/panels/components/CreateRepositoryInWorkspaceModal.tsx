@@ -25,8 +25,8 @@ import type {
   GitHubOrganization,
   GitHubUser,
 } from '../../../shared/main-process-api-interfaces/GitHubAPI';
-import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import path from 'path';
+import type { AlexandriaEntry, Workspace } from '@principal-ai/alexandria-core-library/types';
+import * as path from 'path-browserify';
 
 interface CreateRepositoryInWorkspaceModalProps {
   isOpen: boolean;
@@ -44,6 +44,9 @@ interface CreateRepositoryInWorkspaceModalProps {
   presetOwner?: string;
   // Whether `presetOwner` is the signed-in user's own account (vs an org).
   presetOwnerIsUser?: boolean;
+  // Fired once the new repo is registered with Alexandria, with its entry —
+  // lets the caller open the repo's profile after creation.
+  onCreated?: (repo: AlexandriaEntry) => void;
 }
 
 type ModalStep = 'select-destination' | 'select-org' | 'create-repo' | 'progress' | 'complete';
@@ -54,7 +57,7 @@ const LOCAL_ONLY_OPTION = 'LOCAL_ONLY';
 
 export const CreateRepositoryInWorkspaceModal: React.FC<
   CreateRepositoryInWorkspaceModalProps
-> = ({ isOpen, onClose, workspace, workspaces = [], baseDefaultDirectory = null, useOwnerSubdir = false, presetOwner, presetOwnerIsUser = false }) => {
+> = ({ isOpen, onClose, workspace, workspaces = [], baseDefaultDirectory = null, useOwnerSubdir = false, presetOwner, presetOwnerIsUser = false, onCreated }) => {
   const { theme } = useTheme();
 
   // In owner-subdir mode the destination is fixed to the base dir, so we
@@ -106,6 +109,9 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
 
   // Repository form state
   const [repositoryName, setRepositoryName] = useState('');
+  // When set, overrides the parent directory the repo is cloned into (the
+  // user picked a custom location on the create form). Null = default layout.
+  const [clonePathOverride, setClonePathOverride] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [autoInit, setAutoInit] = useState(true);
@@ -127,10 +133,19 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
   // Load organizations when modal opens
   useEffect(() => {
     if (isOpen) {
+      // Apply the initial step/destination/org on open. The component stays
+      // mounted while closed, so its state was seeded at first mount (before
+      // any preset owner existed) — re-seed here now that the props reflect
+      // the owner the user clicked.
+      setStep(initialStep);
+      setSelectedDestination(initialDestination);
+      setSelectedOrg(initialOrg);
+      setIsSelectedOrgUser(initialIsUser);
+      setClonePathOverride(null);
       loadOrganizations();
       loadTemplates();
     }
-  }, [isOpen]);
+  }, [isOpen, initialStep, initialDestination, initialOrg, initialIsUser]);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -140,6 +155,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       setSelectedOrg(initialOrg);
       setIsSelectedOrgUser(initialIsUser);
       setRepositoryName('');
+      setClonePathOverride(null);
       setDescription('');
       setIsPrivate(false);
       setAutoInit(true);
@@ -212,6 +228,36 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
     setError(null);
   }, [step, workspace, ownerSubdirActive]);
 
+  // The parent directory the repo folder will be created in, for display on
+  // the create form. Mirrors the path logic in handleCreate.
+  const resolvedParentDir = useMemo(() => {
+    if (clonePathOverride) return clonePathOverride;
+    const base =
+      selectedDestination?.type === 'workspace'
+        ? (selectedDestination.value as Workspace).suggestedClonePath || ''
+        : (selectedDestination?.value as string) || '';
+    if (!base) return '';
+    const ownerSegment =
+      useOwnerLayout && selectedDestination?.type === 'base'
+        ? selectedOrg === LOCAL_ONLY_OPTION
+          ? currentUser?.login || ''
+          : selectedOrg || ''
+        : '';
+    return ownerSegment ? path.join(base, ownerSegment) : base;
+  }, [clonePathOverride, selectedDestination, useOwnerLayout, selectedOrg, currentUser]);
+
+  // Let the user pick a different parent directory for this clone.
+  const handleChangeLocation = useCallback(async () => {
+    const picked = await FileSystemService.selectDirectory({
+      title: 'Choose clone location',
+      buttonLabel: 'Use folder',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (!picked || ('canceled' in picked && picked.canceled)) return;
+    const chosen = (picked as { filePaths?: string[] }).filePaths?.[0];
+    if (chosen) setClonePathOverride(chosen);
+  }, []);
+
   const handleCreate = async () => {
     if (!repositoryName.trim()) {
       setError('Repository name is required');
@@ -234,16 +280,16 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
 
     if (selectedDestination.type === 'workspace') {
       targetWorkspace = selectedDestination.value as Workspace;
-      if (!targetWorkspace.suggestedClonePath) {
+      if (!clonePathOverride && !targetWorkspace.suggestedClonePath) {
         setError(
           'This workspace has no clone directory configured. Please set a home directory for the workspace first.',
         );
         return;
       }
-      clonePath = targetWorkspace.suggestedClonePath;
+      clonePath = clonePathOverride || (targetWorkspace.suggestedClonePath as string);
     } else {
-      // Using base default directory
-      const basePath = selectedDestination.value as string;
+      // Using base default directory (or a custom location the user picked).
+      const basePath = clonePathOverride || (selectedDestination.value as string);
       if (!basePath) {
         setError('Base default directory is not set. Please configure it first.');
         return;
@@ -261,8 +307,10 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       // group repos by their owner under the base dir
       // ({baseDir}/{owner}/{repoName}). For the local-only flow the owner
       // segment falls back to the signed-in user's login.
+      // A user-picked location is used verbatim; otherwise base destinations
+      // use the owner-grouped layout ({baseDir}/{owner}/{repoName}).
       const ownerSegment =
-        useOwnerLayout && selectedDestination.type === 'base'
+        !clonePathOverride && useOwnerLayout && selectedDestination.type === 'base'
           ? selectedOrg === LOCAL_ONLY_OPTION
             ? currentUser?.login || ''
             : selectedOrg
@@ -331,6 +379,9 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
         setProgressStep('done');
         setStep('complete');
 
+        // Hand the new repo to the caller so it can open its profile.
+        onCreated?.(registeredRepo);
+
         // Auto-close after a delay
         setTimeout(() => {
           onClose();
@@ -391,6 +442,9 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
         // Done!
         setProgressStep('done');
         setStep('complete');
+
+        // Hand the new repo to the caller so it can open its profile.
+        onCreated?.(registeredRepo);
 
         // Auto-close after a delay
         setTimeout(() => {
@@ -1055,6 +1109,101 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
             Organization:{' '}
             <strong style={{ color: theme.colors.text }}>{selectedOrg}</strong>
           </p>
+        </div>
+
+        {/* Clone location — shown so the user can see and change where the
+            repo lands before creating it. */}
+        <div style={{ marginBottom: '20px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '8px',
+            }}
+          >
+            <label
+              style={{
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                fontFamily: theme.fonts.body,
+                color: theme.colors.text,
+              }}
+            >
+              Location
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {clonePathOverride && (
+                <button
+                  type="button"
+                  onClick={() => setClonePathOverride(null)}
+                  disabled={isCreating}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    fontSize: `${theme.fontSizes[0]}px`,
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.textSecondary,
+                    cursor: isCreating ? 'not-allowed' : 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Reset to default
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void handleChangeLocation()}
+                disabled={isCreating}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: 'transparent',
+                  color: theme.colors.text,
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
+                  cursor: isCreating ? 'not-allowed' : 'pointer',
+                  opacity: isCreating ? 0.5 : 1,
+                }}
+              >
+                <FolderOpen size={14} />
+                Change…
+              </button>
+            </div>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.backgroundSecondary,
+            }}
+          >
+            <Folder size={14} style={{ color: theme.colors.textSecondary, flexShrink: 0 }} />
+            <span
+              style={{
+                fontSize: `${theme.fontSizes[0]}px`,
+                fontFamily: theme.fonts.monospace,
+                color: theme.colors.text,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                direction: 'rtl',
+                textAlign: 'left',
+              }}
+              title={path.join(resolvedParentDir || '', repositoryName.trim() || 'repository-name')}
+            >
+              {path.join(resolvedParentDir || '', repositoryName.trim() || 'repository-name')}
+            </span>
+          </div>
         </div>
 
         {/* Repository name input */}

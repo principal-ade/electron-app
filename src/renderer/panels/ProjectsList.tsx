@@ -611,7 +611,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         ) : (
           sortedOrgNames.map((orgName) => {
             const repos = groups.get(orgName) || [];
-            const isCollapsed = collapsedOrgs.has(orgName);
+            // While searching, force every matching section open so results
+            // aren't hidden behind a collapsed (or auto-collapsed) org.
+            const isCollapsed = searchQuery.trim() ? false : collapsedOrgs.has(orgName);
             const isUserOwn = currentUser === orgName;
             const isMemberOrg = userOrgs.includes(orgName);
             const badge: 'you' | 'member' | undefined = isUserOwn
@@ -694,6 +696,20 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         baseDefaultDirectory={baseDefaultDirectory}
         presetOwner={createTarget?.owner}
         presetOwnerIsUser={createTarget?.isUser ?? false}
+        onCreated={(repo) => {
+          // Open the freshly created repo's profile, same as a normal click.
+          // A local-only repo may not have a derivable purl yet; skip silently.
+          try {
+            events.emit({
+              type: 'feed:repository-selected',
+              source: 'projects-list-panel',
+              timestamp: Date.now(),
+              payload: payloadFromLocalEntry(repo),
+            });
+          } catch (error) {
+            console.error('[ProjectsList] Could not open new repo profile:', error);
+          }
+        }}
       />
 
       {/* Remove-from-list confirm. Does not touch files on disk. */}
