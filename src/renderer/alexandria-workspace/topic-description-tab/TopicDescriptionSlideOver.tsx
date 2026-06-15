@@ -512,7 +512,6 @@ export const TopicDescriptionSlideOver: React.FC<
             slideIndex={0}
             isVisible={open}
             theme={theme}
-            transparentBackground
             enableKeyboardScrolling={false}
             onLinkClick={onLinkClick}
             onOpenMermaidInTab={handleOpenMermaidInTab}

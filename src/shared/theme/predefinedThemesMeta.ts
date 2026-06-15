@@ -18,8 +18,6 @@ import {
   defaultMarkdownTheme,
   defaultEditorTheme,
   defaultTerminalTheme,
-  landingPageTheme,
-  landingPageLightTheme,
   iceTangerineTheme,
   iceTangerineDarkTheme,
 } from '@principal-ade/industry-theme';
@@ -35,18 +33,6 @@ export interface ThemeMetadata {
  * Predefined themes with metadata
  */
 export const predefinedThemesMeta: Record<string, ThemeMetadata> = {
-  principalAI: {
-    name: 'principalAI',
-    displayName: 'Principal AI',
-    description: 'Modern AI-inspired theme with vibrant indigo and cyan accents',
-    theme: landingPageTheme,
-  },
-  principalAILight: {
-    name: 'principalAILight',
-    displayName: 'Principal AI Light',
-    description: 'Light variant of the Principal AI theme',
-    theme: landingPageLightTheme,
-  },
   iceTangerine: {
     name: 'iceTangerine',
     displayName: 'Ice Tangerine',

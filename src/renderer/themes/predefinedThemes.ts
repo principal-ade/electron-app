@@ -10,8 +10,6 @@ import {
   defaultMarkdownTheme,
   defaultEditorTheme,
   defaultTerminalTheme,
-  landingPageTheme,
-  landingPageLightTheme,
   iceTangerineTheme,
   iceTangerineDarkTheme,
 } from '@principal-ade/industry-theme';
@@ -174,17 +172,6 @@ export const predefinedThemes: Record<
     name: 'Transparent',
     description: 'Transparent theme used during loading',
     theme: transparentTheme,
-  },
-  principalAI: {
-    name: 'Principal AI',
-    description:
-      'Modern AI-inspired theme with vibrant indigo and cyan accents',
-    theme: landingPageTheme,
-  },
-  principalAILight: {
-    name: 'Principal AI Light',
-    description: 'Light variant of the Principal AI theme',
-    theme: landingPageLightTheme,
   },
   iceTangerine: {
     name: 'Ice Tangerine',
