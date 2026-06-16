@@ -67,13 +67,13 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
           transition: 'background-color 0.15s ease',
         }}
       >
-        {/* Small circular org avatar, with a folder glyph fallback. */}
+        {/* Small rounded-square org avatar, with a folder glyph fallback. */}
         <div
           style={{
-            width: 18,
-            height: 18,
+            width: 22,
+            height: 22,
             flexShrink: 0,
-            borderRadius: '50%',
+            borderRadius: 6,
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
@@ -85,23 +85,21 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
             <img
               src={avatarSrc}
               alt={header.orgName}
-              width={18}
-              height={18}
+              width={22}
+              height={22}
               style={{ objectFit: 'cover', display: 'block' }}
               onError={() => setAvatarBroken(true)}
             />
           ) : (
-            <FolderGit2 size={11} color={theme.colors.textSecondary} />
+            <FolderGit2 size={13} color={theme.colors.textSecondary} />
           )}
         </div>
 
         <span
           style={{
             fontFamily: theme.fonts?.body,
-            fontSize: theme.fontSizes[1],
+            fontSize: theme.fontSizes[2],
             fontWeight: theme.fontWeights?.semibold ?? 600,
-            letterSpacing: 0.5,
-            textTransform: 'uppercase',
             color: theme.colors.textSecondary,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
