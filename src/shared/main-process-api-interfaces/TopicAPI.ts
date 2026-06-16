@@ -62,6 +62,22 @@ export interface PublishTopicResult {
   record: LocalTopicRecord;
 }
 
+/**
+ * Outcome of migrating topics from the legacy `~/.alexandria/topics.json` blob
+ * to the file-per-topic store. Mirrors core's `MigrationResult`; kept here so
+ * the IPC/renderer surface doesn't import the node-only store entry.
+ */
+export interface TopicMigrationResult {
+  /** Topics written to the file-per-topic store. */
+  migrated: number;
+  /** Legacy entries skipped (missing id or write failure). */
+  skipped: number;
+  /** Absolute path of the `.bak` the legacy blob was renamed to, if any. */
+  backupPath?: string;
+  /** True when there was no legacy blob to migrate. */
+  noLegacyBlob: boolean;
+}
+
 export enum TopicEventType {
   ADDED = 'added',
   UPDATED = 'updated',
@@ -159,4 +175,10 @@ export interface TopicAPI {
 
   /** Find topics that include the given trail. */
   getTopicsForTrail(trailId: string): Promise<Topic[]>;
+
+  /**
+   * Migrate topics from the legacy `~/.alexandria/topics.json` blob to the
+   * file-per-topic store. Explicit, user-triggered, idempotent.
+   */
+  migrateTopics(): Promise<TopicMigrationResult>;
 }

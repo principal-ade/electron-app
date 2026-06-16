@@ -31,6 +31,7 @@ export type {
 export type {
   TopicChangeEvent,
   TopicEventType,
+  TopicMigrationResult,
 } from '../main-process-api-interfaces/TopicAPI';
 
 // =============================================================================

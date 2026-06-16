@@ -3,13 +3,19 @@
  *
  * Two-layer store:
  *
- * 1. Canonical Topic shape lives in the alexandria-core-library's TopicManager,
- *    persisted at `~/.alexandria/topics.json`. This matches what web-ade ships
- *    so the same payload publishes cleanly.
+ * 1. Canonical topic payload. The source of truth is migrating from a single
+ *    `~/.alexandria/topics.json` blob (alexandria-core's `TopicManager`) to a
+ *    file-per-topic `TopicStore` at `~/.principal/topics/` owned by
+ *    `@principal-ai/principal-view-core`. Both expose the same canonical shape
+ *    (alexandria `Topic` / core `DraftTopic` — structurally identical), so the
+ *    registry routes through {@link canonical}, selecting the backend by
+ *    {@link useNewStore}. The migration is explicit ({@link migrateTopics},
+ *    wired to a Settings action), never automatic.
  *
  * 2. Desktop-only sync metadata (origin, remoteId, visibility, timestamps)
  *    lives in a sidecar file `~/.alexandria/topics-sync.json` keyed by
- *    topic id. Joined at read time to produce LocalTopicRecord.
+ *    topic id. Joined at read time to produce LocalTopicRecord. Backend-
+ *    agnostic — it rides on top of whichever canonical store is live.
  *
  * Consumers that only need the canonical payload use {@link getTopic}/
  * {@link getTopics}; sync/publish UIs use {@link getRecord}/{@link getRecords}.
@@ -18,11 +24,14 @@
 import {
   AlexandriaOutpostManager,
   type Topic,
+  type TopicAsset,
+  type TopicStatus,
 } from '@principal-ai/alexandria-core-library';
 import {
   NodeFileSystemAdapter,
   NodeGlobAdapter,
 } from '@principal-ai/alexandria-core-library/node';
+import { TopicStore } from '@principal-ai/principal-view-core/node';
 import { homedir } from 'os';
 import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
@@ -31,8 +40,45 @@ import type {
   LocalTopicRecord,
   LocalTopicSync,
   PublishTopicResult,
+  TopicMigrationResult,
   UpdateTopicInput,
 } from '../../shared/main-process-api-interfaces/TopicAPI';
+
+/**
+ * The canonical-topic surface the registry drives, satisfied by BOTH the
+ * legacy `AlexandriaOutpostManager.topics` (blob) and the new file-per-topic
+ * `TopicStore`. The two backends use nominally-distinct topic types
+ * (alexandria `Topic` vs core `DraftTopic`) that are structurally identical,
+ * so the registry selects between them through this shared shape — see
+ * {@link TopicRegistryService.canonical}.
+ */
+interface CanonicalTopicStore {
+  getTopics(): Promise<Topic[]>;
+  getTopic(id: string): Promise<Topic | null>;
+  createTopic(input: {
+    id?: string;
+    title: string;
+    description?: string;
+    trailIds: string[];
+    createdBy?: { githubId: number; githubLogin: string };
+    status?: TopicStatus;
+  }): Promise<Topic>;
+  updateTopic(
+    id: string,
+    updates: {
+      title?: string;
+      description?: string;
+      status?: TopicStatus;
+      createdBy?: { githubId: number; githubLogin: string };
+      assets?: TopicAsset[];
+    },
+  ): Promise<Topic>;
+  deleteTopic(id: string): Promise<boolean>;
+  addTrailToTopic(topicId: string, trailId: string): Promise<Topic>;
+  removeTrailFromTopic(topicId: string, trailId: string): Promise<Topic>;
+  reorderTopicTrails(topicId: string, trailIds: string[]): Promise<Topic>;
+  getTopicsForTrail(trailId: string): Promise<Topic[]>;
+}
 import {
   addTrailOnWebAde,
   patchTopicOnWebAde,
@@ -71,8 +117,10 @@ const SYNC_FILE_VERSION = '1.0.0';
 export class TopicRegistryService {
   private static instance: TopicRegistryService;
   private outpostManager: AlexandriaOutpostManager;
+  private topicStore: TopicStore;
   private syncFilePath: string;
   private registryDir: string;
+  private legacyBlobPath: string;
 
   private constructor() {
     const fsAdapter = new NodeFileSystemAdapter();
@@ -83,8 +131,49 @@ export class TopicRegistryService {
       globAdapter,
       homeDir,
     );
+    this.topicStore = new TopicStore();
     this.registryDir = join(homeDir, '.alexandria');
     this.syncFilePath = join(this.registryDir, 'topics-sync.json');
+    this.legacyBlobPath = join(this.registryDir, 'topics.json');
+  }
+
+  /**
+   * Which canonical backend is live. The file-per-topic `TopicStore` is the
+   * source of truth once the legacy `~/.alexandria/topics.json` blob is gone —
+   * either renamed to `.bak` by {@link migrateTopics}, or never present (a
+   * fresh install). While the blob still exists, reads/writes stay on the
+   * legacy `AlexandriaOutpostManager.topics` so nothing is stranded until the
+   * user runs the migration. The desktop-private `topics-sync.json` sidecar is
+   * keyed by topic id and rides on top of whichever backend is selected.
+   */
+  private useNewStore(): boolean {
+    return !existsSync(this.legacyBlobPath);
+  }
+
+  /**
+   * The selected canonical backend. Both `TopicStore` and
+   * `AlexandriaOutpostManager.topics` satisfy {@link CanonicalTopicStore}
+   * structurally; the cast bridges their nominally-distinct topic types
+   * (core `DraftTopic` vs alexandria `Topic`), which share every field.
+   */
+  private get canonical(): CanonicalTopicStore {
+    const backend = this.useNewStore()
+      ? this.topicStore
+      : this.canonical;
+    return backend as unknown as CanonicalTopicStore;
+  }
+
+  /**
+   * Migrate topics from the legacy single-blob `~/.alexandria/topics.json`
+   * into the file-per-topic `TopicStore` at `~/.principal/topics/`. Explicit
+   * and user-triggered (the Settings action) — never run on load. Fans the
+   * blob's `topics[]` out to `<id>.json`, rebuilds the private index, and
+   * renames the blob to `.bak`; once renamed, {@link useNewStore} flips and
+   * subsequent reads/writes come from the file-per-topic store. Idempotent: a
+   * second run reports `noLegacyBlob`.
+   */
+  async migrateTopics(): Promise<TopicMigrationResult> {
+    return this.topicStore.migrateFromLegacyBlob();
   }
 
   static getInstance(): TopicRegistryService {
@@ -97,15 +186,15 @@ export class TopicRegistryService {
   // ===== Topic CRUD =====
 
   async getTopics(): Promise<Topic[]> {
-    return this.outpostManager.topics.getTopics();
+    return this.canonical.getTopics();
   }
 
   async getTopic(id: string): Promise<Topic | null> {
-    return this.outpostManager.topics.getTopic(id);
+    return this.canonical.getTopic(id);
   }
 
   async createTopic(input: CreateTopicInput): Promise<Topic> {
-    const topic = await this.outpostManager.topics.createTopic({
+    const topic = await this.canonical.createTopic({
       id: input.id,
       title: input.title,
       description: input.description,
@@ -150,7 +239,7 @@ export class TopicRegistryService {
           ? { status: topicUpdates.status }
           : {}),
       });
-      const local = await this.outpostManager.topics.updateTopic(id, {
+      const local = await this.canonical.updateTopic(id, {
         title: remote.title,
         description: remote.description,
         status: remote.status,
@@ -165,7 +254,7 @@ export class TopicRegistryService {
       return local;
     }
 
-    const topic = await this.outpostManager.topics.updateTopic(id, topicUpdates);
+    const topic = await this.canonical.updateTopic(id, topicUpdates);
 
     // Patch sync metadata: visibility may have changed; locallyModifiedAt
     // always bumps when the canonical payload changes.
@@ -180,7 +269,7 @@ export class TopicRegistryService {
   }
 
   async deleteTopic(id: string): Promise<boolean> {
-    const removed = await this.outpostManager.topics.deleteTopic(id);
+    const removed = await this.canonical.deleteTopic(id);
     if (removed) {
       this.deleteSync(id);
     }
@@ -201,14 +290,14 @@ export class TopicRegistryService {
         shareIfNeeded: true,
       });
       await addTrailOnWebAde(existing.remoteId, remoteTrailId);
-      const local = await this.outpostManager.topics.addTrailToTopic(
+      const local = await this.canonical.addTrailToTopic(
         topicId,
         trailId,
       );
       this.touchSynced(topicId, local.updatedAt);
       return local;
     }
-    const topic = await this.outpostManager.topics.addTrailToTopic(
+    const topic = await this.canonical.addTrailToTopic(
       topicId,
       trailId,
     );
@@ -228,14 +317,14 @@ export class TopicRegistryService {
         shareIfNeeded: false,
       });
       await removeTrailOnWebAde(existing.remoteId, remoteTrailId);
-      const local = await this.outpostManager.topics.removeTrailFromTopic(
+      const local = await this.canonical.removeTrailFromTopic(
         topicId,
         trailId,
       );
       this.touchSynced(topicId, local.updatedAt);
       return local;
     }
-    const topic = await this.outpostManager.topics.removeTrailFromTopic(
+    const topic = await this.canonical.removeTrailFromTopic(
       topicId,
       trailId,
     );
@@ -255,14 +344,14 @@ export class TopicRegistryService {
         shareIfNeeded: false,
       });
       await reorderTrailsOnWebAde(existing.remoteId, remoteOrder);
-      const local = await this.outpostManager.topics.reorderTopicTrails(
+      const local = await this.canonical.reorderTopicTrails(
         topicId,
         trailIds,
       );
       this.touchSynced(topicId, local.updatedAt);
       return local;
     }
-    const topic = await this.outpostManager.topics.reorderTopicTrails(
+    const topic = await this.canonical.reorderTopicTrails(
       topicId,
       trailIds,
     );
@@ -367,7 +456,7 @@ export class TopicRegistryService {
   }
 
   async getTopicsForTrail(trailId: string): Promise<Topic[]> {
-    return this.outpostManager.topics.getTopicsForTrail(trailId);
+    return this.canonical.getTopicsForTrail(trailId);
   }
 
   // ===== Agent session links =====

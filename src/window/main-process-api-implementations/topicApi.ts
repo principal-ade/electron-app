@@ -13,6 +13,7 @@ import {
   type CreateTopicInput,
   type TopicAPI,
   type TopicChangeEvent,
+  type TopicMigrationResult,
   type UpdateTopicInput,
 } from '../../shared/main-process-api-interfaces/TopicAPI';
 
@@ -74,4 +75,6 @@ export const topicAPI: TopicAPI = {
 
   getTopicsForTrail: (trailId: string) =>
     tipcInvoke('getTopicsForTrail', { trailId }),
+
+  migrateTopics: () => tipcInvoke<TopicMigrationResult>('migrateTopics'),
 };

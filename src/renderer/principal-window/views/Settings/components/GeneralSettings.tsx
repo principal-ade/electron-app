@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Trash2, AlertTriangle, FolderTree } from 'lucide-react';
 import { FileCityLogo } from '@principal-ai/logo-component';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
+import { TopicService } from '../../../../main-process-api/TopicService';
 import type { EditorId } from '../../../../../shared/types/editor.types';
 import { EDITOR_LABELS } from '../../../../../shared/types/editor.types';
 import type { UserPreferences } from '../../../../../shared/types/userPreferences.types';
@@ -30,6 +31,8 @@ export const GeneralSettings: React.FC = () => {
   const [showAlexandriaHookDebug, setShowAlexandriaHookDebug] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<string | null>(null);
 
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
@@ -93,6 +96,31 @@ export const GeneralSettings: React.FC = () => {
     };
   }, []);
 
+  const handleMigrateTopics = async () => {
+    setIsMigrating(true);
+    setMigrationStatus(null);
+    try {
+      const result = await TopicService.migrateTopics();
+      if (result.noLegacyBlob) {
+        setMigrationStatus(
+          'Already migrated — no legacy topics.json blob found. Topics load from the file-per-topic store.',
+        );
+      } else {
+        const skipped =
+          result.skipped > 0 ? `, ${result.skipped} skipped` : '';
+        setMigrationStatus(
+          `Migrated ${result.migrated} topic${result.migrated === 1 ? '' : 's'}${skipped} to the file-per-topic store. Reopen the topics view to load them.`,
+        );
+      }
+    } catch (error) {
+      setMigrationStatus(
+        `Migration failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   const handleClearAllData = async () => {
     if (!showClearConfirm) {
       setShowClearConfirm(true);
@@ -115,6 +143,77 @@ export const GeneralSettings: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '800px' }}>
+      {/* Topic Storage Section */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Topic storage
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <p
+            style={{
+              fontSize: '13px',
+              color: theme.colors.textSecondary,
+              margin: '0 0 16px 0',
+              lineHeight: 1.5,
+            }}
+          >
+            Move topics from the legacy single <code>topics.json</code> file to
+            one file per topic under <code>~/.principal/topics/</code>, making
+            them locally greppable. The legacy file is backed up as{' '}
+            <code>.bak</code>; this is safe to run once and does nothing if
+            already migrated.
+          </p>
+          <button
+            type="button"
+            onClick={handleMigrateTopics}
+            disabled={isMigrating}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: 500,
+              color: theme.colors.text,
+              backgroundColor: theme.colors.background,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '8px',
+              cursor: isMigrating ? 'default' : 'pointer',
+              opacity: isMigrating ? 0.6 : 1,
+            }}
+          >
+            <FolderTree size={16} />
+            {isMigrating ? 'Migrating…' : 'Migrate topics to file-per-topic'}
+          </button>
+          {migrationStatus && (
+            <p
+              style={{
+                fontSize: '13px',
+                color: theme.colors.textSecondary,
+                margin: '16px 0 0 0',
+                lineHeight: 1.5,
+              }}
+            >
+              {migrationStatus}
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* About Section */}
       <div style={{ marginBottom: '32px' }}>
         <h4
