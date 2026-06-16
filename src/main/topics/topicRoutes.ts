@@ -43,6 +43,16 @@ function trailHref(id: string): string {
   return `/api/file-city/trail/${encodeURIComponent(id)}`;
 }
 
+const DESCRIPTION_PREVIEW_MAX = 200;
+
+/** First ~200 chars of a topic description, for the payload-free list route. */
+function descriptionPreview(description?: string): string {
+  if (!description) return '';
+  const trimmed = description.trim();
+  if (trimmed.length <= DESCRIPTION_PREVIEW_MAX) return trimmed;
+  return `${trimmed.slice(0, DESCRIPTION_PREVIEW_MAX - 1)}…`;
+}
+
 async function resolveTopicTrails(
   topic: Topic,
   trailStore: TrailStore,
@@ -130,6 +140,41 @@ export function registerTopicRoutes(
       res
         .status(500)
         .json({ success: false, error: 'failed to create topic' });
+    }
+  });
+
+  // List all local topics as lightweight summaries so a briefed agent can
+  // *discover* topics, not just fetch one it was handed by id. Deliberately
+  // payload-free (no description body, no trail resolution) — it's a directory,
+  // not a detail view; callers GET /api/topics/:id for the full topic + trails.
+  // Sorted newest-updated first. Supports `?q=` for a case-insensitive
+  // substring filter over title + description.
+  app.get('/api/topics', async (req: Request, res: Response) => {
+    try {
+      const topics = await registry.getTopics();
+      const q =
+        typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
+      const summaries = topics
+        .filter((t) => {
+          if (!q) return true;
+          const hay = `${t.title}\n${t.description ?? ''}`.toLowerCase();
+          return hay.includes(q);
+        })
+        .map((t) => ({
+          id: t.id,
+          href: `/api/topics/${encodeURIComponent(t.id)}`,
+          title: t.title,
+          descriptionPreview: descriptionPreview(t.description),
+          trailCount: t.trailIds.length,
+          state: t.status?.state,
+          createdAt: t.createdAt,
+          updatedAt: t.updatedAt,
+        }))
+        .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+      res.json({ success: true, topics: summaries, count: summaries.length });
+    } catch (err) {
+      console.error('[topicRoutes] list failed', err);
+      res.status(500).json({ success: false, error: 'failed to list topics' });
     }
   });
 

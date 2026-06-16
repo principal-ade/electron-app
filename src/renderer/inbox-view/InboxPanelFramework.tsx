@@ -416,7 +416,6 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
               events={events}
               terminalContext={terminalCtx.terminalContext}
               directory={terminalDirectory}
-              defaultScrollLocked={false}
               workingStates={workingStates}
               initialTabs={tabs}
               onTabsChange={setTabs}

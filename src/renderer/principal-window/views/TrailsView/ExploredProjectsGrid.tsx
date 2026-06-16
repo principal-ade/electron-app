@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { CityData } from '@principal-ai/file-city-react';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
+import { buildCityDataFromContext } from '../../../dev-workspace/file-city-panel/buildCityDataFromContext';
+import { RepoTrailCoverageCard } from './RepoTrailCoverageCard';
 
 /**
  * One repo card in the "Explored Projects" grid. Carries the repo identity
@@ -16,35 +17,41 @@ export interface ExploredProjectRepoEntry {
 }
 
 /**
- * Resolved per-repo coverage. `undefined` = still resolving (card shimmers);
- * `null` = resolved but the repo tree wasn't cached, so the metric is hidden.
+ * Resolved per-repo city + coverage. `undefined` = still resolving (card shows
+ * a skeleton body); `null` = resolved but the repo tree wasn't cached (repo
+ * never opened in the app), so we can't build a city.
  */
-type RepoCoverage = { covered: number; total: number; pct: number };
+type RepoCoverageCity = {
+  cityData: CityData;
+  /** Repo-relative path → number of trails touching it (heat-map input). */
+  coverageByPath: Map<string, number>;
+};
 
 /**
- * Per-repo "percentage explored" for the landing cards: distinct files
- * touched by *every* saved trail in the repo, over the repo's total file
- * count. `undefined` = still resolving (card shimmers); `null` = resolved
- * but the repo tree wasn't cached, so we can't compute a denominator.
+ * Per-repo coverage city for the landing cards. For each repo: pull its file
+ * tree (cache-only), build the city once, load every saved trail in the repo,
+ * and fold the markers' source paths into a touch-count map. The map and city
+ * feed {@link RepoTrailCoverageCard}; stale marker paths are dropped at render
+ * time by the minimap, so no tree intersection is needed here.
  */
-function useRepoCardCoverage(
+function useRepoCoverageCities(
   entries: ExploredProjectRepoEntry[],
   recentTrails: TrailIndexEntry[],
-): Map<string, RepoCoverage | null> {
-  const [coverage, setCoverage] = useState<Map<string, RepoCoverage | null>>(
+): Map<string, RepoCoverageCity | null> {
+  const [result, setResult] = useState<Map<string, RepoCoverageCity | null>>(
     () => new Map(),
   );
   useEffect(() => {
     if (entries.length === 0) {
-      setCoverage(new Map());
+      setResult(new Map());
       return;
     }
     let cancelled = false;
     void (async () => {
       for (const { repo } of entries) {
         if (cancelled) return;
-        // Total files — cache-only; null when the repo has never been
-        // opened in the app (tree isn't warm).
+        // Total files — cache-only; null when the repo has never been opened
+        // in the app (tree isn't warm).
         let tree;
         try {
           tree = await RepositoryMonitoringService.getFileTree(repo.path);
@@ -53,14 +60,16 @@ function useRepoCardCoverage(
         }
         if (cancelled) return;
         if (!tree) {
-          setCoverage((prev) => {
-            const next = new Map(prev);
-            next.set(repo.path, null);
-            return next;
-          });
+          setResult((prev) => new Map(prev).set(repo.path, null));
           continue;
         }
-        const treePaths = new Set(tree.allFiles.map((f) => f.relativePath));
+        // Build the city once per repo. Repo-relative building paths line up
+        // with the trail markers' repo-relative source paths.
+        const cityData = await buildCityDataFromContext({
+          fileTree: tree,
+          repositoryPath: repo.path,
+        });
+        if (cancelled) return;
         const trailIds = recentTrails
           .filter((t) => t.repositoryPath === repo.path)
           .map((t) => t.id);
@@ -68,40 +77,37 @@ function useRepoCardCoverage(
           trailIds.map((id) => TrailLibraryService.load(id).catch(() => null)),
         );
         if (cancelled) return;
-        // Union of marker source paths across all the repo's trails,
-        // intersected with the tree so stale paths from renamed/deleted
-        // files don't inflate the count.
-        const covered = new Set<string>();
+        // path → number of trails touching it, deduped per trail so a trail
+        // touching a path twice still counts once (mirrors useTrailFilePaths).
+        const coverageByPath = new Map<string, number>();
         for (const payload of payloads) {
           if (!payload) continue;
+          const seen = new Set<string>();
           for (const marker of payload.markers) {
-            if (marker.sourcePath && treePaths.has(marker.sourcePath)) {
-              covered.add(marker.sourcePath);
-            }
+            const p = marker.sourcePath;
+            if (!p || seen.has(p)) continue;
+            seen.add(p);
+            coverageByPath.set(p, (coverageByPath.get(p) ?? 0) + 1);
           }
         }
-        const total = tree.stats.totalFiles;
-        const pct = total > 0 ? (covered.size / total) * 100 : 0;
-        setCoverage((prev) => {
-          const next = new Map(prev);
-          next.set(repo.path, { covered: covered.size, total, pct });
-          return next;
-        });
+        setResult((prev) =>
+          new Map(prev).set(repo.path, { cityData, coverageByPath }),
+        );
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [entries, recentTrails]);
-  return coverage;
+  return result;
 }
 
 export interface ExploredProjectsGridProps {
   /** One entry per distinct repo, in display order. */
   entries: ExploredProjectRepoEntry[];
   /**
-   * Full recent-trail list — used to compute each repo's file coverage
-   * (union of marker source paths across all the repo's trails).
+   * Full recent-trail list — used to compute each repo's coverage (union of
+   * marker source paths across all the repo's trails).
    */
   recentTrails: TrailIndexEntry[];
   /** Fired when a repo card is clicked or activated via keyboard. */
@@ -109,224 +115,72 @@ export interface ExploredProjectsGridProps {
 }
 
 /**
- * The "Explored Projects" repo-card grid. Each card shows the repo's
- * avatar/icon, its trail count, a hover-revealed "N of M files explored"
- * sub-label, and an always-visible coverage progress bar. Self-contained:
- * it resolves coverage internally from {@link recentTrails}. Used on both
- * the Trails landing screen and the Home dashboard so the cards stay in sync.
+ * The "Explored Projects" repo-card grid. Each card is a consistent square: an
+ * owner/name header, a non-interactive File City minimap heat-mapping the
+ * repo's all-trails coverage, and a footer with the trail count and the number
+ * of files covered. Self-contained: it resolves each repo's city + coverage
+ * internally from {@link recentTrails}. Used on both the Trails landing screen
+ * and the Home dashboard so the cards stay in sync.
  */
 export function ExploredProjectsGrid({
   entries,
   recentTrails,
   onOpenRepo,
 }: ExploredProjectsGridProps) {
-  const { theme } = useTheme();
-  const coverageByRepo = useRepoCardCoverage(entries, recentTrails);
+  const coverageByRepo = useRepoCoverageCities(entries, recentTrails);
+
+  // Order by coverage fraction (covered ÷ total files), most-covered first.
+  // Repos still resolving or without a cached tree score -1 so they fall to
+  // the bottom, keeping their incoming recency order (Array.sort is stable).
+  // The grid reorders as each repo's coverage resolves, then settles.
+  const sortedEntries = useMemo(() => {
+    const scoreByPath = new Map<string, number>();
+    for (const entry of entries) {
+      const resolved = coverageByRepo.get(entry.repo.path);
+      if (!resolved) {
+        scoreByPath.set(entry.repo.path, -1);
+        continue;
+      }
+      const buildings = new Set(resolved.cityData.buildings.map((b) => b.path));
+      let covered = 0;
+      for (const [path, n] of resolved.coverageByPath) {
+        if (n > 0 && buildings.has(path)) covered += 1;
+      }
+      const total = buildings.size;
+      scoreByPath.set(entry.repo.path, total > 0 ? covered / total : 0);
+    }
+    return [...entries].sort(
+      (a, b) =>
+        (scoreByPath.get(b.repo.path) ?? -1) -
+        (scoreByPath.get(a.repo.path) ?? -1),
+    );
+  }, [entries, coverageByRepo]);
 
   return (
-    <>
-      {/* Hover styles for the repo cards below — render once. */}
-      <style>{`
-        .trail-idea-card {
-          border-color: transparent !important;
-          transition: border-color 150ms ease;
-        }
-        .trail-idea-card:hover {
-          border-color: ${theme.colors.primary} !important;
-        }
-        .trail-card-sub {
-          opacity: 0;
-          transition: opacity 150ms ease;
-        }
-        .trail-idea-card:hover .trail-card-sub {
-          opacity: 1;
-        }
-        .trail-card-shimmer {
-          background: linear-gradient(
-            90deg,
-            ${theme.colors.border} 25%,
-            ${theme.colors.backgroundSecondary} 50%,
-            ${theme.colors.border} 75%
-          );
-          background-size: 200% 100%;
-          animation: trail-card-shimmer 1.4s ease infinite;
-          border-radius: 4px;
-        }
-        @keyframes trail-card-shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
-
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: 24,
-          justifyContent: 'center',
-        }}
-      >
-        {entries.map((entry) => {
-          const coverage = coverageByRepo.get(entry.repo.path);
-          return (
-            <div
-              key={entry.repo.path}
-              role="button"
-              tabIndex={0}
-              className="trail-idea-card"
-              title={`Open the most recent trail in ${entry.repo.label}`}
-              onClick={() => onOpenRepo(entry)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onOpenRepo(entry);
-                }
-              }}
-              style={{
-                position: 'relative',
-                flex: '0 1 300px',
-                width: '100%',
-                maxWidth: 300,
-                minHeight: 100,
-                padding: '24px 20px',
-                borderRadius: 10,
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.backgroundSecondary,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                gap: 12,
-                cursor: 'pointer',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                }}
-              >
-                {entry.repo.ownerLogin ? (
-                  <img
-                    src={`https://github.com/${entry.repo.ownerLogin}.png?size=128`}
-                    alt={entry.repo.ownerLogin}
-                    width={64}
-                    height={64}
-                    style={{
-                      borderRadius: 12,
-                      flex: '0 0 auto',
-                      border: `1px solid ${theme.colors.border}`,
-                    }}
-                  />
-                ) : (
-                  <FolderGit2 size={52} color={theme.colors.primary} />
-                )}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                    minWidth: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      color: theme.colors.text,
-                      fontFamily: theme.fonts.body,
-                      fontSize: theme.fontSizes[2],
-                      fontWeight: theme.fontWeights.semibold,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {entry.repo.label}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: theme.fonts.body,
-                      fontSize: theme.fontSizes[0],
-                      color: theme.colors.textTertiary,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {entry.trailCount}{' '}
-                    {entry.trailCount === 1 ? 'trail' : 'trails'}
-                  </div>
-                </div>
-              </div>
-              {/* Coverage sub-label — overlaid just above the bottom
-                  line, revealed on hover. Absolute so the avatar +
-                  repo name stay vertically centered in the card. */}
-              {coverage === undefined ? (
-                <div
-                  className="trail-card-shimmer trail-card-sub"
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    bottom: 10,
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                    height: 12,
-                    width: 96,
-                  }}
-                />
-              ) : coverage === null ? null : (
-                <div
-                  className="trail-card-sub"
-                  style={{
-                    position: 'absolute',
-                    left: 20,
-                    right: 20,
-                    bottom: 8,
-                    textAlign: 'center',
-                    fontFamily: theme.fonts.body,
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.textTertiary,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {coverage.covered} of {coverage.total} files explored
-                </div>
-              )}
-              {/* Always-visible explored-progress line pinned to the
-                  card's bottom edge. */}
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: 3,
-                  backgroundColor: theme.colors.border,
-                }}
-              >
-                {coverage === undefined ? (
-                  <div
-                    className="trail-card-shimmer"
-                    style={{ height: '100%', width: '100%' }}
-                  />
-                ) : coverage === null ? null : (
-                  <div
-                    style={{
-                      width: `${Math.min(100, coverage.pct)}%`,
-                      height: '100%',
-                      backgroundColor: theme.colors.primary,
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 24,
+        justifyContent: 'center',
+      }}
+    >
+      {sortedEntries.map((entry) => {
+        const resolved = coverageByRepo.get(entry.repo.path);
+        return (
+          <RepoTrailCoverageCard
+            key={entry.repo.path}
+            repoLabel={entry.repo.label}
+            ownerLogin={entry.repo.ownerLogin}
+            cityData={resolved ? resolved.cityData : null}
+            coverageByPath={resolved ? resolved.coverageByPath : undefined}
+            trailCount={entry.trailCount}
+            loading={resolved === undefined}
+            onClick={() => onOpenRepo(entry)}
+          />
+        );
+      })}
+    </div>
   );
 }

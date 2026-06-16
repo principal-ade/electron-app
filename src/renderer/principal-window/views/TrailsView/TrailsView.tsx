@@ -2083,7 +2083,6 @@ const TrailsViewInner: React.FC<{
             events={events}
             terminalContext={terminalCtx.terminalContext}
             directory={selectedProject?.path ?? process.env.HOME ?? '/'}
-            defaultScrollLocked={false}
             workingStates={workingStates}
             initialTabs={tabs}
             onTabsChange={setTabs}
@@ -2136,28 +2135,26 @@ const TrailsViewInner: React.FC<{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'flex-start',
               backgroundColor: overlayBg,
-              padding: 32,
-              overflowY: 'auto',
+              overflow: 'hidden',
             }}
           >
             {/* Repo cards — one per distinct repo in the Recent feed,
                 showing the repo identity and its newest trail. Only
                 rendered once the user has at least one saved trail. */}
             {hasRecentTrails ? (
-              <div
-                style={{
-                  flex: '0 0 auto',
-                  marginTop: 64,
-                  width: '100%',
-                  maxWidth: 960,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 24,
-                }}
-              >
-                <div style={{ textAlign: 'center', maxWidth: 640, alignSelf: 'center' }}>
+              <>
+                {/* Fixed heading — sits above the scroll region so it stays
+                    put while only the repo grid below it scrolls. */}
+                <div
+                  style={{
+                    flex: '0 0 auto',
+                    width: '100%',
+                    maxWidth: 960,
+                    padding: '48px 32px 0',
+                    textAlign: 'center',
+                  }}
+                >
                   <div
                     style={{
                       color: theme.colors.text,
@@ -2166,20 +2163,46 @@ const TrailsViewInner: React.FC<{
                       fontWeight: theme.fontWeights.bold,
                       letterSpacing: '-0.02em',
                       lineHeight: 1.05,
-                      marginBottom: 12,
+                      maxWidth: 640,
+                      margin: '0 auto 24px',
                     }}
                   >
                     Projects with <span style={{ color: theme.colors.primary }}>Trails</span>
                   </div>
                 </div>
-                <ExploredProjectsGrid
-                  entries={repoCardEntries}
-                  recentTrails={recentTrails}
-                  onOpenRepo={openTrailFromRepoCard}
-                />
-              </div>
+                {/* Scroller — only the repo grid scrolls. */}
+                <div
+                  style={{
+                    flex: 1,
+                    minHeight: 0,
+                    width: '100%',
+                    overflowY: 'auto',
+                    padding: '24px 32px 32px',
+                  }}
+                >
+                  <div style={{ width: '100%', maxWidth: 960, margin: '0 auto' }}>
+                    <ExploredProjectsGrid
+                      entries={repoCardEntries}
+                      recentTrails={recentTrails}
+                      onOpenRepo={openTrailFromRepoCard}
+                    />
+                  </div>
+                </div>
+              </>
             ) : (
-              <TrailPromptIdeas />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  width: '100%',
+                  overflowY: 'auto',
+                  padding: 32,
+                  display: 'flex',
+                  justifyContent: 'center',
+                }}
+              >
+                <TrailPromptIdeas />
+              </div>
             )}
           </div>
         )}

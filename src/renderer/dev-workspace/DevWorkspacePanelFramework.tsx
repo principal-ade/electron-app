@@ -3454,7 +3454,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               renderTabContent={renderTabContent}
               renderTabIcon={renderTabIcon}
               renderTabLabel={renderTabLabel}
-              defaultScrollLocked={false}
               width={terminalPanelWidth}
               requestFocusTabId={focusTabId}
               onFocusTabHandled={handleFocusTabHandled}

@@ -1931,7 +1931,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               events={events}
               terminalContext={terminalCtx.terminalContext}
               directory={terminalDirectory}
-              defaultScrollLocked={false}
               workingStates={workingStates}
               initialTabs={tabs}
               onTabsChange={setTabs}

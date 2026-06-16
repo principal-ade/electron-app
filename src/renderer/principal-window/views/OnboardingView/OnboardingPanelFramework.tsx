@@ -353,7 +353,6 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
             events={events}
             terminalContext={terminalCtx.terminalContext}
             directory={terminalDirectory}
-            defaultScrollLocked={false}
             workingStates={workingStates}
             initialTabs={tabs}
             onTabsChange={handleTabsChange}
