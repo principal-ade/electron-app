@@ -48,6 +48,9 @@ const ALWAYS_ON_SEGMENT_IDS = new Set<LeftPanelSegmentId>([
   'sessions',
 ]);
 
+// How long Cmd/Ctrl must be held before the shortcut hint badges appear.
+const MOD_HINT_DELAY_MS = 2000;
+
 export interface AlexandriaWorkspaceTitlebarProps {
   workspace: Workspace;
   selectedRepository?: { name: string; path: string };
@@ -88,9 +91,14 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   // True while the info modal is acting as the pre-dismiss prompt for a window
   // close (the user is being asked to set their status before the window goes).
   const [closingWindow, setClosingWindow] = useState(false);
-  // True while Cmd (macOS) or Ctrl (Win/Linux) is held — reveals the
-  // numeric shortcut badges on the left-panel segment buttons.
+  // True once Cmd (macOS) or Ctrl (Win/Linux) has been held for
+  // MOD_HINT_DELAY_MS — reveals the numeric shortcut badges on the
+  // left-panel segment buttons. Delayed so the badges don't flash on
+  // every transient ⌘ press; the shortcuts themselves fire immediately
+  // regardless of this flag.
   const [modPressed, setModPressed] = useState(false);
+  // Pending timer that flips `modPressed` true after the hold delay.
+  const modHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Whether to render the "Hooks" segment. Gated by the
   // `alexandriaWorkspace.titlebar.hookDebug` user preference; false until
   // we've loaded prefs so a stale toggle doesn't flash on cold start.
@@ -223,7 +231,15 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (isModKey(e)) {
-        setModPressed(true);
+        // Reveal the hint badges only after the modifier has been held
+        // for MOD_HINT_DELAY_MS. keydown repeats while the key is held,
+        // so don't restart the timer if one is already pending.
+        if (modHintTimerRef.current === null) {
+          modHintTimerRef.current = setTimeout(() => {
+            modHintTimerRef.current = null;
+            setModPressed(true);
+          }, MOD_HINT_DELAY_MS);
+        }
         return;
       }
       if (!(e.metaKey || e.ctrlKey)) return;
@@ -267,10 +283,17 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         }
       }
     };
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (isModKey(e) || (!e.metaKey && !e.ctrlKey)) setModPressed(false);
+    const clearModHint = () => {
+      if (modHintTimerRef.current !== null) {
+        clearTimeout(modHintTimerRef.current);
+        modHintTimerRef.current = null;
+      }
+      setModPressed(false);
     };
-    const onBlur = () => setModPressed(false);
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (isModKey(e) || (!e.metaKey && !e.ctrlKey)) clearModHint();
+    };
+    const onBlur = () => clearModHint();
 
     window.addEventListener('keydown', onKeyDown, true);
     window.addEventListener('keyup', onKeyUp, true);
@@ -279,6 +302,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
       window.removeEventListener('keydown', onKeyDown, true);
       window.removeEventListener('keyup', onKeyUp, true);
       window.removeEventListener('blur', onBlur);
+      clearModHint();
     };
   }, []);
 
