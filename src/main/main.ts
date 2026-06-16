@@ -137,6 +137,15 @@ async function handleDeepLink(url: string): Promise<void> {
 // Security: Disable remote module
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 
+// Workaround for Electron 38 / Chromium Skia Graphite (Metal) backend on macOS.
+// Graphite is enabled by default and has an out-of-order recording bug that floods
+// the logs with "[graphite] ** ERROR ** Recordings are expected to be replayed in
+// order" and eventually wedges the GPU compositor, freezing/crashing the UI.
+// Forcing the legacy Ganesh backend avoids it. Remove once Electron ships a fix.
+if (process.platform === 'darwin') {
+  app.commandLine.appendSwitch('disable-features', 'SkiaGraphite');
+}
+
 // Dev-only: enable Chrome DevTools Protocol so memory/CPU can be inspected via curl/CDP.
 // Renderer side uses Chromium's remote-debugging-port; main process uses Node's inspector.
 // Set ELECTRON_DEBUG_PORT / ELECTRON_INSPECT_PORT to override.
