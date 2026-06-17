@@ -202,7 +202,7 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
               background: 'transparent',
               cursor: 'pointer',
               color: iconActive
-                ? theme.colors.primary
+                ? theme.colors.accent
                 : theme.colors.textSecondary,
               transition: 'all 0.2s ease',
               position: 'relative',
@@ -217,10 +217,10 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
                 justifyContent: 'center',
                 borderRadius: '8px',
                 background: iconActive
-                  ? `${theme.colors.primary}20`
+                  ? `${theme.colors.accent}20`
                   : 'transparent',
                 outline: isOverlayActive
-                  ? `1px dashed ${theme.colors.primary}`
+                  ? `1px dashed ${theme.colors.accent}`
                   : 'none',
                 outlineOffset: '2px',
                 transition: 'all 0.2s ease',
@@ -253,7 +253,7 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
                 color: isActive
-                  ? theme.colors.primary
+                  ? theme.colors.accent
                   : theme.colors.textSecondary,
               }}
             >
