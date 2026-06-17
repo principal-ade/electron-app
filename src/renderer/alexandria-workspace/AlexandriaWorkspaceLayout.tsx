@@ -25,7 +25,7 @@ import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { LocalProjectsPanel } from '@industry-theme/alexandria-panels';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { localhostProcessesPanels, RecentRepositoriesPanel } from '../panels';
-import { AlexandriaFilesPanel } from './files-panel/AlexandriaFilesPanel';
+import { FilesPanel } from '../dev-workspace/files-panel/FilesPanel';
 import {
   EventBusPanel,
   AgentToolsPanel,
@@ -1548,7 +1548,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   const GitHubIssuesPanelComponent = GitHubIssuesPanel;
   const GitHubIssueDetailPanelComponent = GitHubIssueDetailPanel;
   const GitChangesPanelComponent = GitChangesPanel;
-  const FilesPanelComponent = AlexandriaFilesPanel;
+  const FilesPanelComponent = FilesPanel;
   const PackageCompositionPanelComponent = PackageCompositionPanel;
   const CodeQualityPanelComponent = codeQualityPanels.find(
     (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',

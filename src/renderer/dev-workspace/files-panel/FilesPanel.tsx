@@ -1,7 +1,8 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FileTree, useFileTree } from '@pierre/trees/react';
+import { useFileTree } from '@pierre/trees/react';
 import type { GitStatusEntry } from '@pierre/trees';
+import { ThemedFileTree } from '../../components/shared/ThemedFileTree';
 import type {
   PanelActions,
   PanelContextValue,
@@ -258,7 +259,7 @@ export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {
                   borderLeft:
                     i === 0 ? 'none' : `1px solid ${theme.colors.border}`,
                   color: active
-                    ? '#ffffff'
+                    ? theme.colors.textOnPrimary
                     : disabled
                       ? theme.colors.textSecondary
                       : theme.colors.text,
@@ -278,7 +279,7 @@ export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {
                 <span
                   style={{
                     fontSize: 10,
-                    color: active ? '#ffffff' : theme.colors.textSecondary,
+                    color: active ? theme.colors.textOnPrimary : theme.colors.textSecondary,
                     fontWeight: 400,
                   }}
                 >
@@ -290,29 +291,7 @@ export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {
         </div>
       </div>
 
-      <FileTree
-        model={model}
-        style={
-          {
-            flex: 1,
-            minHeight: 0,
-            paddingTop: 8,
-            '--trees-bg-override': 'transparent',
-            '--trees-search-bg-override': theme.colors.backgroundSecondary,
-            '--trees-theme-list-active-selection-bg': `color-mix(in oklab, ${theme.colors.accent} 28%, transparent)`,
-            '--trees-theme-list-hover-bg': `color-mix(in oklab, ${theme.colors.accent} 14%, transparent)`,
-            // Pin git-status colors to theme tokens. The library otherwise
-            // derives them via CSS light-dark(), which needs an inherited
-            // color-scheme that doesn't reach this panel — leaving changed
-            // files visually unstyled. Overriding makes them deterministic.
-            '--trees-git-modified-color-override': theme.colors.warning,
-            '--trees-git-added-color-override': theme.colors.success,
-            '--trees-git-untracked-color-override': theme.colors.success,
-            '--trees-git-deleted-color-override': theme.colors.error,
-            '--trees-git-renamed-color-override': theme.colors.info,
-          } as React.CSSProperties
-        }
-      />
+      <ThemedFileTree model={model} gitStatusColors style={{ paddingTop: 8 }} />
     </div>
   );
 };

@@ -1,7 +1,8 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FileTree, useFileTree } from '@pierre/trees/react';
+import { useFileTree } from '@pierre/trees/react';
 import { makeSectionLabelStyle, withAlpha } from './styles';
+import { ThemedFileTree } from '../../../components/shared/ThemedFileTree';
 
 interface TouchedFilesCardProps {
   /** Repo-relative paths of every file touched by at least one trail. */
@@ -190,18 +191,14 @@ export const TouchedFilesCard: React.FC<TouchedFilesCardProps> = ({
             No trail has touched a file yet.
           </div>
         ) : (
-          <FileTree
+          <ThemedFileTree
             model={model}
+            accentColor={theme.colors.info}
             style={
               {
-                flex: 1,
-                minHeight: 0,
                 display: 'block',
-                '--trees-bg-override': 'transparent',
                 '--trees-padding-inline-override': '4px',
                 '--trees-item-margin-x-override': '0px',
-                '--trees-theme-list-active-selection-bg': `color-mix(in oklab, ${theme.colors.info} 28%, transparent)`,
-                '--trees-theme-list-hover-bg': `color-mix(in oklab, ${theme.colors.info} 14%, transparent)`,
               } as React.CSSProperties
             }
           />

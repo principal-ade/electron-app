@@ -2,7 +2,6 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { GitCommit, GitCompareArrows, Route } from 'lucide-react';
 import {
-  FileTree,
   useFileTree,
   useFileTreeSelector,
   type UseFileTreeResult,
@@ -54,6 +53,7 @@ import {
   type ScopeTreeSelection,
 } from './scopeTreePaths';
 import { makeSectionLabelStyle, withAlpha } from './styles';
+import { ThemedFileTree } from '../../../components/shared/ThemedFileTree';
 
 type FileTreeModel = UseFileTreeResult['model'];
 
@@ -2087,17 +2087,13 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                   </div>
                 ) : (
                   <div style={{ height: 640, display: 'flex', flexDirection: 'column' }}>
-                    <FileTree
+                    <ThemedFileTree
                       model={panelFolderContentsTreeModel}
+                      accentColor={theme.colors.primary}
+                      searchBg="rgba(0, 0, 0, 0.25)"
                       style={
                         {
-                          flex: 1,
-                          minHeight: 0,
-                          '--trees-bg-override': 'transparent',
-                          '--trees-search-bg-override': 'rgba(0, 0, 0, 0.25)',
                           '--trees-padding-inline-override': '0',
-                          '--trees-theme-list-active-selection-bg': withAlpha(theme.colors.primary, 28),
-                          '--trees-theme-list-hover-bg': withAlpha(theme.colors.primary, 14),
                         } as React.CSSProperties
                       }
                     />

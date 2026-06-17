@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FileTree, useFileTree } from '@pierre/trees/react';
+import { useFileTree } from '@pierre/trees/react';
+import { ThemedFileTree } from '../../../components/shared/ThemedFileTree';
 
 /**
  * One touched file in the Files view: a repo-relative path plus how many of
@@ -155,19 +156,7 @@ export const TrailsRecentFiles: React.FC<TrailsRecentFilesProps> = ({
         flex: 1,
       }}
     >
-      <FileTree
-        model={model}
-        style={
-          {
-            flex: 1,
-            minHeight: 0,
-            '--trees-bg-override': 'transparent',
-            '--trees-search-bg-override': theme.colors.backgroundSecondary,
-            '--trees-theme-list-active-selection-bg': `color-mix(in oklab, ${theme.colors.accent} 28%, transparent)`,
-            '--trees-theme-list-hover-bg': `color-mix(in oklab, ${theme.colors.accent} 14%, transparent)`,
-          } as React.CSSProperties
-        }
-      />
+      <ThemedFileTree model={model} />
       {pendingCount > 0 && (
         <div
           style={{
