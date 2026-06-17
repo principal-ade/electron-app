@@ -5,6 +5,7 @@ import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
 import { PrincipalEventProvider } from './PrincipalEventContext';
 import { FeedTabsProvider } from './contexts/FeedTabsContext';
 import { InboxTabsProvider } from './contexts/InboxTabsContext';
+import { TopicsTabsProvider } from './contexts/TopicsTabsContext';
 import { IntegratedShell } from './components/IntegratedShell/IntegratedShell';
 import { KeychainConsentModal } from '../components/KeychainConsentModal';
 import {
@@ -42,7 +43,9 @@ export const PrincipalApp: React.FC = () => {
             <PrincipalEventProvider>
               <FeedTabsProvider>
                 <InboxTabsProvider>
-                  <IntegratedShell />
+                  <TopicsTabsProvider>
+                    <IntegratedShell />
+                  </TopicsTabsProvider>
                 </InboxTabsProvider>
               </FeedTabsProvider>
             </PrincipalEventProvider>

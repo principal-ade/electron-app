@@ -13,6 +13,7 @@ import { SkillBrowserView } from '../../views/SkillBrowserView';
 import { DrawingsView } from '../../views/DrawingsView';
 import { TrailsView } from '../../views/TrailsView';
 import { InboxView } from '../../views/InboxView';
+import { TopicsView } from '../../views/TopicsView';
 import { HomeView } from '../../views/HomeView';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { PresenceService } from '../../../main-process-api/PresenceService';
@@ -38,6 +39,7 @@ const VIEW_OPTIONS = [
   'home',
   'trails',
   'inbox',
+  'topics',
   'feed',
   'onboarding',
   'settings',
@@ -148,6 +150,7 @@ export const IntegratedShell: React.FC = () => {
   >({
     trails: { left: false, right: false },
     inbox: { left: false, right: false },
+    topics: { left: false, right: false },
     feed: { left: false, right: false },
     onboarding: { left: false, right: false },
     auth: { left: false, right: false },
@@ -644,6 +647,7 @@ export const IntegratedShell: React.FC = () => {
               />
             )}
             {activeView === 'inbox' && <InboxView />}
+            {activeView === 'topics' && <TopicsView />}
             {activeView === 'feed' && <FeedView />}
             {activeView === 'onboarding' && (
               <OnboardingView onComplete={() => handleViewChange('feed')} />

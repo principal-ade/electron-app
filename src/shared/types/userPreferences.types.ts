@@ -8,6 +8,7 @@ export type InteractiveShellNavigationView =
   | 'home'
   | 'trails'
   | 'inbox'
+  | 'topics'
   | 'feed'
   | 'onboarding'
   | 'settings'

@@ -10,6 +10,7 @@ import {
   Footprints,
   Home,
   Inbox,
+  Layers,
   PenTool,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
@@ -184,6 +185,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       label: 'Inbox',
       badgeCount: inboxUnread,
     },
+    { id: 'topics', icon: <Layers size={20} />, label: 'Topics' },
     { id: 'feed', icon: <GitIcon size={20} />, label: 'Projects' },
     { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },
     { id: 'drawings', icon: <PenTool size={20} />, label: 'Drawings' },
