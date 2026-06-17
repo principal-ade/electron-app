@@ -2976,6 +2976,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                   contextRef.current?.currentScope?.repository?.path
                 }
                 width={width}
+                showEditButton
               />
             </div>
           );
@@ -3926,6 +3927,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 repositoryPath={
                   context?.currentScope?.repository?.path
                 }
+                showEditButton
               />
             </div>
           </div>

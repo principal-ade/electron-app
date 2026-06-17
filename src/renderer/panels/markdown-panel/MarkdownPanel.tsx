@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Pencil } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { DocumentView } from 'themed-markdown';
 import type { AnnotationSelection } from 'themed-markdown';
@@ -62,6 +62,14 @@ export interface MarkdownPanelProps
   repositoryPath?: string;
   width?: number;
   onContentChange?: (change: ContentChangeInfo) => void;
+  /**
+   * When true, renders an "Edit" button in the top-right toolbar that opens
+   * the current file in the MDX editor. Clicking it emits a
+   * `file:openInMdxEditor` event; the hosting framework (currently the dev
+   * workspace) listens for it and opens/focuses an editor tab. Defaults to
+   * false so surfaces without that listener don't show a dead button.
+   */
+  showEditButton?: boolean;
 }
 
 export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
@@ -71,6 +79,7 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
   repositoryPath: repositoryPathProp,
   width,
   onContentChange,
+  showEditButton = false,
 }) => {
   const { theme } = useTheme();
   const [fontSizeScale, setFontSizeScale] = useState<number>(1.0);
@@ -441,6 +450,20 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
   }, [noteKey, editing]);
   // -----------------------------------------------------------------------
 
+  // Open the current file in the MDX editor. We don't manage tabs here — we
+  // just announce intent and let the hosting framework create/focus the
+  // editor tab. Source is set to the panel (not 'tab') so the dev-workspace
+  // listener doesn't treat it as a re-emitted tab event and ignore it.
+  const handleOpenInEditor = useCallback(() => {
+    if (!currentFilePath) return;
+    events.emit({
+      type: 'file:openInMdxEditor',
+      source: 'markdown-panel',
+      timestamp: Date.now(),
+      payload: { filePath: currentFilePath },
+    });
+  }, [events, currentFilePath]);
+
   const handleFontSizeIncrease = () => {
     setFontSizeScale((prev) => {
       const newScale = Math.min(prev + 0.1, 3.0);
@@ -649,6 +672,40 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
           >
             <Plus size={14} />
           </button>
+
+          {showEditButton && (
+            <>
+              <span
+                style={{
+                  width: '1px',
+                  alignSelf: 'stretch',
+                  backgroundColor: theme.colors.border,
+                }}
+              />
+
+              <button
+                onClick={handleOpenInEditor}
+                title="Edit in MDX editor"
+                style={{
+                  background: 'none',
+                  border: `1px solid ${theme.colors.border}`,
+                  padding: '4px 6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  color: theme.colors.textSecondary,
+                  borderRadius: '4px',
+                  transition: 'all 0.2s',
+                  fontFamily: theme.fonts.body,
+                  fontSize: '12px',
+                }}
+              >
+                <Pencil size={14} />
+                Edit
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
