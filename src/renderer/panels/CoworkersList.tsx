@@ -44,7 +44,7 @@ export const CoworkersList: React.FC<CoworkersListProps> = ({
 
   const handleCoworkerClick = (username: string) => {
     events.emit({
-      type: 'feed:owner-activity-requested',
+      type: 'owner:activity-requested',
       source: 'coworkers-list-panel',
       timestamp: Date.now(),
       payload: { login: username, accountType: 'User' },

@@ -3,7 +3,7 @@
  *
  * Renders a GitHub user/org's public starred collections. Used inside
  * UserProfilePanel and OrgProfilePanel as a tab body. Clicking a card
- * emits feed:collection-selected so the FeedPanelFramework can open
+ * emits collection:selected so the ProjectsPanelFramework can open
  * the CollectionProfilePanel for that collection.
  */
 
@@ -68,7 +68,7 @@ export const OwnerCollectionsTab: React.FC<OwnerCollectionsTabProps> = ({ ownerL
   const handleCollectionClick = useCallback(
     (collection: StarredCollection) => {
       events.emit({
-        type: 'feed:collection-selected',
+        type: 'collection:selected',
         source: 'owner-collections-tab',
         timestamp: Date.now(),
         payload: { collection },

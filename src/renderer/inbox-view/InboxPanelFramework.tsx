@@ -1,7 +1,7 @@
 /**
  * InboxPanelFramework
  *
- * Panel framework for the InboxView, mirroring FeedPanelFramework but trimmed
+ * Panel framework for the InboxView, mirroring ProjectsPanelFramework but trimmed
  * to the inbox's needs.
  *
  * Layout:
@@ -44,9 +44,9 @@ import {
   type BaseTab,
 } from '@industry-theme/xterm-terminal-panel';
 import { InboxLeftPanel } from '../panels/InboxLeftPanel';
-import { SharedTrailTabContent } from '../feed-view/SharedTrailTabContent';
-import { LocalTrailTabContent } from '../feed-view/LocalTrailTabContent';
-import { MarkdownDocTabContent } from '../feed-view/MarkdownDocTabContent';
+import { SharedTrailTabContent } from '../projects-view/SharedTrailTabContent';
+import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
+import { MarkdownDocTabContent } from '../projects-view/MarkdownDocTabContent';
 import { TopicTabContent } from './TopicTabContent';
 import { useInboxTabs } from '../principal-window/contexts/InboxTabsContext';
 import { DocumentService } from '../services/DocumentService';

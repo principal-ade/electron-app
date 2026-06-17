@@ -40,7 +40,7 @@ import {
 } from '@industry-theme/xterm-terminal-panel';
 import { TopicsLeftPanel } from '../panels/TopicsLeftPanel';
 import { LocalTopicTabContent } from './LocalTopicTabContent';
-import { LocalTrailTabContent } from '../feed-view/LocalTrailTabContent';
+import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
 import { useTopicsTabs } from '../principal-window/contexts/TopicsTabsContext';
 
 /**

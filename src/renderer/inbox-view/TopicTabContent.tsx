@@ -33,7 +33,7 @@ import type { TrailPayload } from '@industry-theme/file-city-panel';
 import { TopicService } from '../main-process-api/TopicService';
 import { TrailShareService } from '../services/TrailShareService';
 import { TrailShareError } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
-import { SharedTrailViewer } from '../feed-view/SharedTrailTabContent';
+import { SharedTrailViewer } from '../projects-view/SharedTrailTabContent';
 
 /** Per-trail fetch state, keyed by trail id. */
 type TrailState =

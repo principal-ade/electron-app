@@ -1,7 +1,7 @@
 /**
  * ActivityFeedCardPanel
  *
- * Right panel for FeedView showing compact activity cards.
+ * Right panel for ProjectsView showing compact activity cards.
  * Cards display repo info and File City image, with expandable commit details.
  */
 
@@ -82,28 +82,28 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
   // Listen for time filter events from heatmap
   useEffect(() => {
     const handleTimeFilter = (event: { type: string; payload: { start: Date; end: Date } | null }) => {
-      if (event.type === 'feed:time-filter-changed') {
+      if (event.type === 'activity:time-filter-changed') {
         setTimeFilter(event.payload);
       }
     };
 
-    events.on('feed:time-filter-changed', handleTimeFilter);
+    events.on('activity:time-filter-changed', handleTimeFilter);
     return () => {
-      events.off('feed:time-filter-changed', handleTimeFilter);
+      events.off('activity:time-filter-changed', handleTimeFilter);
     };
   }, [events]);
 
   // Listen for repository filter events from repository list
   useEffect(() => {
     const handleRepoFilter = (event: { type: string; payload: { repoId: string } | null }) => {
-      if (event.type === 'feed:repository-filter-changed') {
+      if (event.type === 'repository:filter-changed') {
         setRepoFilter(event.payload?.repoId ?? null);
       }
     };
 
-    events.on('feed:repository-filter-changed', handleRepoFilter);
+    events.on('repository:filter-changed', handleRepoFilter);
     return () => {
-      events.off('feed:repository-filter-changed', handleRepoFilter);
+      events.off('repository:filter-changed', handleRepoFilter);
     };
   }, [events]);
 

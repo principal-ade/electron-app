@@ -27,7 +27,7 @@ export const OrganizationsList: React.FC<OrganizationsListProps> = ({
 
   const handleOrgClick = (orgLogin: string) => {
     events.emit({
-      type: 'feed:owner-selected',
+      type: 'owner:selected',
       source: 'organizations-list-panel',
       timestamp: Date.now(),
       payload: { owner: orgLogin, isOrg: true },

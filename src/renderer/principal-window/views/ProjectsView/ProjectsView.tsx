@@ -1,5 +1,5 @@
 /**
- * FeedView
+ * ProjectsView
  *
  * The default view showing cross-repository activity feed with
  * integrated search for local, GitHub, and starred repositories.
@@ -22,11 +22,11 @@ import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { GithubService } from '../../../main-process-api/GithubService';
 import { FileCityImageService } from '../../../main-process-api/FileCityImageService';
 import { WindowService } from '../../../main-process-api/WindowService';
-import { FeedPanelFramework } from '../../../feed-view/FeedPanelFramework';
+import { ProjectsPanelFramework } from '../../../projects-view/ProjectsPanelFramework';
 import {
   payloadFromLocalEntry,
-  type FeedRepositorySelectedPayload,
-} from '../../../events/feedRepositorySelected';
+  type RepositorySelectedPayload,
+} from '../../../events/repositorySelected';
 
 // Keep SearchResult type for backwards compatibility
 export type SearchResultSource = 'local' | 'github' | 'starred';
@@ -93,11 +93,11 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   // Bridge feed events from the principal event bus into the local feed bus
   useEffect(() => {
-    const unsubRepoSelected = principalEvents.on<FeedRepositorySelectedPayload>(
-      'feed:repository-selected',
+    const unsubRepoSelected = principalEvents.on<RepositorySelectedPayload>(
+      'repository:selected',
       (event) => {
         events.emit({
-          type: 'feed:repository-selected',
+          type: 'repository:selected',
           source: event.source,
           timestamp: event.timestamp,
           payload: event.payload,
@@ -285,8 +285,8 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
       selectRepository: async (entry: AlexandriaEntry) => {
         events.emit({
-          type: 'feed:repository-selected',
-          source: 'feed-view',
+          type: 'repository:selected',
+          source: 'projects-view',
           timestamp: Date.now(),
           payload: payloadFromLocalEntry(entry),
         });
@@ -298,7 +298,7 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         });
         events.emit({
           type: 'repository:opened',
-          source: 'feed-view',
+          source: 'projects-view',
           timestamp: Date.now(),
           payload: { repositoryId: entry.name, repository: entry },
         });
@@ -344,9 +344,9 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 export type FeedMode = 'my-activity' | 'collections' | 'organizations';
 
 /**
- * FeedViewContent - inner content that uses the provider
+ * ProjectsViewContent - inner content that uses the provider
  */
-const FeedViewContent: React.FC = () => {
+const ProjectsViewContent: React.FC = () => {
   const { theme } = useTheme();
   const {
     context,
@@ -391,7 +391,7 @@ const FeedViewContent: React.FC = () => {
         backgroundColor: theme.colors.background,
       }}
     >
-      <FeedPanelFramework
+      <ProjectsPanelFramework
         repositories={repositories}
         collapsed={collapsed}
         onCollapsedChange={setCollapsed}
@@ -409,12 +409,12 @@ const FeedViewContent: React.FC = () => {
 };
 
 /**
- * FeedView - the main exported component
+ * ProjectsView - the main exported component
  */
-export const FeedView: React.FC = () => {
+export const ProjectsView: React.FC = () => {
   return (
     <FeedPanelProvider>
-      <FeedViewContent />
+      <ProjectsViewContent />
     </FeedPanelProvider>
   );
 };

@@ -1,7 +1,7 @@
 /**
- * FeedLeftPanel
+ * ProjectsLeftPanel
  *
- * Left panel for the FeedView that contains the feed mode selector
+ * Left panel for the ProjectsView that contains the feed mode selector
  * and different list views (my activity, collections with subtabs, team with organizations and coworkers).
  * All sub-components stay mounted to avoid reloading data on mode switch.
  */
@@ -34,7 +34,7 @@ const GitLogo: React.FC<{ size?: number }> = ({ size = 24 }) => (
   </svg>
 );
 
-export interface FeedLeftPanelProps {
+export interface ProjectsLeftPanelProps {
   /** List of repositories */
   repositories: AlexandriaEntry[];
   /** Event bus for panel communication */
@@ -51,7 +51,7 @@ export interface FeedLeftPanelProps {
   activityCommits?: ActivityCommit[];
 }
 
-export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
+export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
   repositories,
   events,
   feedMode,
@@ -786,4 +786,4 @@ export const FeedLeftPanel: React.FC<FeedLeftPanelProps> = ({
   );
 };
 
-export default FeedLeftPanel;
+export default ProjectsLeftPanel;

@@ -316,7 +316,7 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
             const owner = source.kind === 'owner' ? source.login : source.owner;
             const isOrg = source.kind === 'owner' && source.accountType === 'Organization';
             events.emit({
-              type: 'feed:owner-selected',
+              type: 'owner:selected',
               source: 'commit-activity-panel',
               timestamp: Date.now(),
               payload: { owner, isOrg },

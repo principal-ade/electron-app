@@ -12,7 +12,7 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { GithubService } from '../main-process-api/GithubService';
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { StarredRepoCard } from './cards/StarredRepoCard';
-import { payloadFromGithub } from '../events/feedRepositorySelected';
+import { payloadFromGithub } from '../events/repositorySelected';
 
 export interface StarredReposListProps {
   /** Event emitter for panel communication */
@@ -78,7 +78,7 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
 
       // Emit event to open repository profile
       events.emit({
-        type: 'feed:repository-selected',
+        type: 'repository:selected',
         source: 'starred-repos-list',
         timestamp: Date.now(),
         payload: payloadFromGithub({

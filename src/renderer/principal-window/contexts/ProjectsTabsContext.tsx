@@ -1,17 +1,17 @@
 /**
- * FeedTabsContext
+ * ProjectsTabsContext
  *
- * Owns the Feed view's tab state ABOVE IntegratedShell's conditional
- * `{activeView === 'feed' && <FeedView />}` mount. This means:
+ * Owns the Projects view's tab state ABOVE IntegratedShell's conditional
+ * `{activeView === 'projects' && <ProjectsView />}` mount. This means:
  *
- *  - Tabs survive when the user toggles away from the feed view and back.
- *  - The titlebar (which lives outside FeedView) can open tabs directly,
+ *  - Tabs survive when the user toggles away from the Projects view and back.
+ *  - The titlebar (which lives outside ProjectsView) can open tabs directly,
  *    without relying on a transient event landing on a mounted listener —
- *    fixing the bug where picking a repo from the titlebar while the feed
- *    view was hidden dropped the `feed:repository-selected` event into the
+ *    fixing the bug where picking a repo from the titlebar while the Projects
+ *    view was hidden dropped the `repository:selected` event into the
  *    void.
  *
- * FeedPanelFramework reads `tabs` / `activeTabId` from here in place of
+ * ProjectsPanelFramework reads `tabs` / `activeTabId` from here in place of
  * the local useState it used to own.
  */
 import React, {
@@ -29,8 +29,8 @@ import type {
   ProjectInfoTab,
   SharedTrailTab,
   UserProfileTab,
-} from '../../feed-view/FeedPanelFramework';
-import type { FeedRepositorySelectedPayload } from '../../events/feedRepositorySelected';
+} from '../../projects-view/ProjectsPanelFramework';
+import type { RepositorySelectedPayload } from '../../events/repositorySelected';
 
 const INITIAL_TABS: FeedTab[] = [
   {
@@ -42,13 +42,13 @@ const INITIAL_TABS: FeedTab[] = [
 
 const INITIAL_ACTIVE_TAB_ID = 'activity-feed';
 
-interface FeedTabsContextValue {
+interface ProjectsTabsContextValue {
   tabs: FeedTab[];
   setTabs: React.Dispatch<React.SetStateAction<FeedTab[]>>;
   activeTabId: string | null;
   setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
   /** Open a `project-info-<purl>` tab idempotently and focus it. */
-  openProjectInfo: (payload: FeedRepositorySelectedPayload) => void;
+  openProjectInfo: (payload: RepositorySelectedPayload) => void;
   /** Open a `user-profile-<username>` tab idempotently and focus it. */
   openUserProfile: (username: string, email?: string) => void;
   /** Open a `shared-trail-<trailId>` tab idempotently and focus it. */
@@ -59,9 +59,9 @@ interface FeedTabsContextValue {
   openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
 }
 
-const FeedTabsContext = createContext<FeedTabsContextValue | null>(null);
+const ProjectsTabsContext = createContext<ProjectsTabsContextValue | null>(null);
 
-export const FeedTabsProvider: React.FC<{ children: React.ReactNode }> = ({
+export const ProjectsTabsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [tabs, setTabs] = useState<FeedTab[]>(INITIAL_TABS);
@@ -70,7 +70,7 @@ export const FeedTabsProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const openProjectInfo = useCallback(
-    (payload: FeedRepositorySelectedPayload) => {
+    (payload: RepositorySelectedPayload) => {
       const { purl, github, localEntry } = payload;
       const tabId = `project-info-${purl}`;
       const label = github ? `${github.owner}/${github.name}` : String(purl);
@@ -171,7 +171,7 @@ export const FeedTabsProvider: React.FC<{ children: React.ReactNode }> = ({
     [],
   );
 
-  const value = useMemo<FeedTabsContextValue>(
+  const value = useMemo<ProjectsTabsContextValue>(
     () => ({
       tabs,
       setTabs,
@@ -195,16 +195,16 @@ export const FeedTabsProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   return (
-    <FeedTabsContext.Provider value={value}>
+    <ProjectsTabsContext.Provider value={value}>
       {children}
-    </FeedTabsContext.Provider>
+    </ProjectsTabsContext.Provider>
   );
 };
 
-export function useFeedTabs(): FeedTabsContextValue {
-  const ctx = useContext(FeedTabsContext);
+export function useProjectsTabs(): ProjectsTabsContextValue {
+  const ctx = useContext(ProjectsTabsContext);
   if (!ctx) {
-    throw new Error('useFeedTabs must be used within FeedTabsProvider');
+    throw new Error('useProjectsTabs must be used within ProjectsTabsProvider');
   }
   return ctx;
 }

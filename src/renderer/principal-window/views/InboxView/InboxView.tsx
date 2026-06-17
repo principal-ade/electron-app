@@ -2,7 +2,7 @@
  * InboxView
  *
  * Surfaces the web-ade trail inbox + recently-visited trails inside the
- * principal window. Modeled on FeedView (Projects): a left list panel and a
+ * principal window. Modeled on ProjectsView (Projects): a left list panel and a
  * right tabbed terminal panel where selected trails open as tabs.
  *
  * Tab state lives in InboxTabsContext (mounted above IntegratedShell), so this

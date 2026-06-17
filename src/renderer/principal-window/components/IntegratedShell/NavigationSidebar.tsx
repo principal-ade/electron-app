@@ -186,7 +186,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       badgeCount: inboxUnread,
     },
     { id: 'topics', icon: <Layers size={20} />, label: 'Topics' },
-    { id: 'feed', icon: <GitIcon size={20} />, label: 'Projects' },
+    { id: 'projects', icon: <GitIcon size={20} />, label: 'Projects' },
     { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },
     { id: 'drawings', icon: <PenTool size={20} />, label: 'Drawings' },
     ...(showOnboardingButton

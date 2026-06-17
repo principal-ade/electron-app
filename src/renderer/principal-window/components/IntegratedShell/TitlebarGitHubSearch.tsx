@@ -4,14 +4,14 @@ import { ExternalLink, Search, Star, User } from 'lucide-react';
 import { githubClient } from '../../../tipc/githubClient';
 import type { GitHubRepository, GitHubUser } from '../../../../shared/tipc/githubRouterTypes';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
-import { useFeedTabs } from '../../contexts/FeedTabsContext';
+import { useProjectsTabs } from '../../contexts/ProjectsTabsContext';
 import { useInboxTabs } from '../../contexts/InboxTabsContext';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { findClonedGithubEntry } from '../../../utils/alexandriaIdentity';
 import {
   payloadFromGithub,
   payloadFromLocalEntry,
-} from '../../../events/feedRepositorySelected';
+} from '../../../events/repositorySelected';
 
 type ParsedTitlebarUrl =
   | { type: 'user'; username: string }
@@ -73,7 +73,7 @@ const formatStars = (n?: number): string => {
 export const TitlebarGitHubSearch: React.FC = () => {
   const { theme } = useTheme();
   const { events } = usePrincipalEvents();
-  const { openProjectInfo, openUserProfile, openSharedTrail } = useFeedTabs();
+  const { openProjectInfo, openUserProfile, openSharedTrail } = useProjectsTabs();
   const { openTopic } = useInboxTabs();
   const [query, setQuery] = useState('');
   const [repoResults, setRepoResults] = useState<GitHubRepository[]>([]);
@@ -169,10 +169,10 @@ export const TitlebarGitHubSearch: React.FC = () => {
         type: 'panel:switch',
         source: 'titlebar-search',
         timestamp: Date.now(),
-        payload: { view: 'feed' },
+        payload: { view: 'projects' },
       });
-      // Call FeedTabsContext directly. Going through principalEvents would
-      // drop on the floor when FeedView is not yet mounted — the bridge in
+      // Call ProjectsTabsContext directly. Going through principalEvents would
+      // drop on the floor when ProjectsView is not yet mounted — the bridge in
       // FeedPanelProvider isn't subscribed until after this tick.
       openProjectInfo(
         payloadFromGithub({
@@ -196,7 +196,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
         type: 'panel:switch',
         source: 'titlebar-search',
         timestamp: Date.now(),
-        payload: { view: 'feed' },
+        payload: { view: 'projects' },
       });
       openUserProfile(user.login);
       clearSearch();
@@ -210,7 +210,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
         type: 'panel:switch',
         source: 'titlebar-search',
         timestamp: Date.now(),
-        payload: { view: 'feed' },
+        payload: { view: 'projects' },
       });
       openUserProfile(username);
       clearSearch();
@@ -226,7 +226,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
         type: 'panel:switch',
         source: 'titlebar-search',
         timestamp: Date.now(),
-        payload: { view: 'feed' },
+        payload: { view: 'projects' },
       });
       openProjectInfo(
         existing
@@ -245,12 +245,12 @@ export const TitlebarGitHubSearch: React.FC = () => {
       // self-fetches the payload and conveys its remote-ness. Switch to the
       // feed view first; openSharedTrail is called directly on the context
       // (not via principal events) for the same reason the repo openers are —
-      // FeedView may not be mounted yet to receive an event.
+      // ProjectsView may not be mounted yet to receive an event.
       events.emit({
         type: 'panel:switch',
         source: 'titlebar-search',
         timestamp: Date.now(),
-        payload: { view: 'feed' },
+        payload: { view: 'projects' },
       });
       openSharedTrail(id);
       clearSearch();

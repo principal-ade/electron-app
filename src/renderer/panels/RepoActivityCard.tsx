@@ -20,7 +20,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import {
   payloadFromGithub,
   payloadFromLocalEntry,
-} from '../events/feedRepositorySelected';
+} from '../events/repositorySelected';
 import type {
   ExplainCommitsInput,
   ExplainCommitsResponse,
@@ -580,7 +580,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
     if (entry) {
       events.emit({
-        type: 'feed:repository-selected',
+        type: 'repository:selected',
         source: 'repo-activity-card',
         timestamp: Date.now(),
         payload: payloadFromLocalEntry(entry),
@@ -590,7 +590,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
     if (summary.githubOwner && summary.githubRepoName) {
       events.emit({
-        type: 'feed:repository-selected',
+        type: 'repository:selected',
         source: 'repo-activity-card',
         timestamp: Date.now(),
         payload: payloadFromGithub({
@@ -605,7 +605,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   const handleOpenOwnerProfile = useCallback(() => {
     if (summary.githubOwner && events) {
       events.emit({
-        type: 'feed:owner-selected',
+        type: 'owner:selected',
         source: 'repo-activity-card',
         timestamp: Date.now(),
         payload: {

@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
 import { PrincipalEventProvider } from './PrincipalEventContext';
-import { FeedTabsProvider } from './contexts/FeedTabsContext';
+import { ProjectsTabsProvider } from './contexts/ProjectsTabsContext';
 import { InboxTabsProvider } from './contexts/InboxTabsContext';
 import { TopicsTabsProvider } from './contexts/TopicsTabsContext';
 import { IntegratedShell } from './components/IntegratedShell/IntegratedShell';
@@ -41,13 +41,13 @@ export const PrincipalApp: React.FC = () => {
         <KeychainConsentWrapper>
           <MemoryRouter>
             <PrincipalEventProvider>
-              <FeedTabsProvider>
+              <ProjectsTabsProvider>
                 <InboxTabsProvider>
                   <TopicsTabsProvider>
                     <IntegratedShell />
                   </TopicsTabsProvider>
                 </InboxTabsProvider>
-              </FeedTabsProvider>
+              </ProjectsTabsProvider>
             </PrincipalEventProvider>
           </MemoryRouter>
         </KeychainConsentWrapper>

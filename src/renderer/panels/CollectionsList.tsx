@@ -64,7 +64,7 @@ export const CollectionsList: React.FC<CollectionsListProps> = ({ events }) => {
   const handleCollectionClick = useCallback(
     (collection: StarredCollection) => {
       events.emit({
-        type: 'feed:collection-selected',
+        type: 'collection:selected',
         source: 'collections-list',
         timestamp: Date.now(),
         payload: { collection },

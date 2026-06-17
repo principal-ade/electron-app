@@ -8,7 +8,7 @@ import type {
   Purl,
 } from '@principal-ai/alexandria-core-library';
 
-export interface FeedRepositorySelectedPayload {
+export interface RepositorySelectedPayload {
   /** Canonical identity. Always present. */
   purl: Purl;
   /** GitHub display metadata, when known. Independent of clone state. */
@@ -44,7 +44,7 @@ export function buildGithubMetadata(input: GithubIdentityInput): GithubRepositor
   };
 }
 
-export function payloadFromLocalEntry(entry: AlexandriaEntry): FeedRepositorySelectedPayload {
+export function payloadFromLocalEntry(entry: AlexandriaEntry): RepositorySelectedPayload {
   const purl =
     entry.purl ??
     entry.github?.purl ??
@@ -63,7 +63,7 @@ export function payloadFromLocalEntry(entry: AlexandriaEntry): FeedRepositorySel
 export function payloadFromGithub(
   identity: GithubIdentityInput,
   localEntry?: AlexandriaEntry,
-): FeedRepositorySelectedPayload {
+): RepositorySelectedPayload {
   return {
     purl: createPurl({ type: 'github', namespace: identity.owner, name: identity.name }),
     github: buildGithubMetadata(identity),

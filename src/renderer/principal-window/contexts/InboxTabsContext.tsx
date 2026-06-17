@@ -2,7 +2,7 @@
  * InboxTabsContext
  *
  * Owns the Inbox view's tab state ABOVE IntegratedShell's conditional
- * `{activeView === 'inbox' && <InboxView />}` mount, mirroring FeedTabsContext.
+ * `{activeView === 'inbox' && <InboxView />}` mount, mirroring ProjectsTabsContext.
  * Tabs survive when the user toggles away from the inbox view and back.
  *
  * InboxPanelFramework reads `tabs` / `activeTabId` from here; InboxLeftPanel

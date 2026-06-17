@@ -29,8 +29,8 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import {
   payloadFromGithub,
   payloadFromLocalEntry,
-  type FeedRepositorySelectedPayload,
-} from '../events/feedRepositorySelected';
+  type RepositorySelectedPayload,
+} from '../events/repositorySelected';
 import type { GitHubOrganization } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 /**
@@ -337,7 +337,7 @@ function formatNumber(num: number | undefined): string {
   return String(num);
 }
 
-function payloadFromRepoCard(repo: RepoCardData): FeedRepositorySelectedPayload {
+function payloadFromRepoCard(repo: RepoCardData): RepositorySelectedPayload {
   if (repo.alexandriaEntry) return payloadFromLocalEntry(repo.alexandriaEntry);
   return payloadFromGithub({
     owner: repo.githubOwner ?? '',
@@ -1012,7 +1012,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                           onMouseEnter={() => setHoveredOrgIndex(i)}
                           onMouseLeave={() => setHoveredOrgIndex(null)}
                           onClick={() => events.emit({
-                            type: 'feed:owner-selected',
+                            type: 'owner:selected',
                             source: 'user-profile-panel',
                             timestamp: Date.now(),
                             payload: { owner: org.login, isOrg: true },
@@ -1094,7 +1094,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                       key={nameWithOwner}
                       onClick={() => {
                         events.emit({
-                          type: 'feed:repository-selected',
+                          type: 'repository:selected',
                           source: 'UserProfilePanel',
                           timestamp: Date.now(),
                           payload: repoData
@@ -1339,7 +1339,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                     fileTree={fileTree}
                     onClick={() => {
                       events.emit({
-                        type: 'feed:repository-selected',
+                        type: 'repository:selected',
                         source: 'UserProfilePanel',
                         timestamp: Date.now(),
                         payload: payloadFromRepoCard(repo),
@@ -1389,7 +1389,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                     fileTree={fileTree}
                     onClick={() => {
                       events.emit({
-                        type: 'feed:repository-selected',
+                        type: 'repository:selected',
                         source: 'UserProfilePanel',
                         timestamp: Date.now(),
                         payload: payloadFromRepoCard(repo),

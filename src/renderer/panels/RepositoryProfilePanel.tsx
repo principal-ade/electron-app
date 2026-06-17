@@ -46,7 +46,7 @@ import {
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { DocumentView } from 'themed-markdown';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { payloadFromGithub } from '../events/feedRepositorySelected';
+import { payloadFromGithub } from '../events/repositorySelected';
 import type { LocalClone } from '../../shared/types/repository.types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import * as LucideIcons from 'lucide-react';
@@ -1231,7 +1231,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       const isOrg = repositoryData.ownerType === 'Organization';
       console.info('[RepositoryProfilePanel] Owner clicked:', repositoryData.owner, 'isOrg:', isOrg);
       events.emit({
-        type: 'feed:owner-selected',
+        type: 'owner:selected',
         source: 'repository-profile-panel',
         timestamp: Date.now(),
         payload: {
@@ -2065,7 +2065,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               return (
               <button
                 onClick={() => events.emit({
-                  type: 'feed:repo-activity-requested',
+                  type: 'repository:activity-requested',
                   source: 'repo-profile-panel',
                   timestamp: Date.now(),
                   payload: { owner: github.owner, repo: github.name },
@@ -2139,7 +2139,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     if (!github) return;
                     const forkName = github.name;
                     events.emit({
-                      type: 'feed:repository-selected',
+                      type: 'repository:selected',
                       source: 'repository-profile-panel',
                       timestamp: Date.now(),
                       payload: payloadFromGithub({ owner: forkedRepoOwner, name: forkName }),

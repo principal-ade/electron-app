@@ -23,8 +23,8 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import {
   payloadFromGithub,
   payloadFromLocalEntry,
-  type FeedRepositorySelectedPayload,
-} from '../events/feedRepositorySelected';
+  type RepositorySelectedPayload,
+} from '../events/repositorySelected';
 import type { GitHubOrgMember } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 /**
@@ -221,7 +221,7 @@ function formatNumber(num: number): string {
   return String(num);
 }
 
-function payloadFromRepoCard(repo: RepoCardData): FeedRepositorySelectedPayload {
+function payloadFromRepoCard(repo: RepoCardData): RepositorySelectedPayload {
   if (repo.alexandriaEntry) return payloadFromLocalEntry(repo.alexandriaEntry);
   return payloadFromGithub({
     owner: repo.githubOwner ?? '',
@@ -831,7 +831,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                     key={nameWithOwner}
                     onClick={() => {
                       events.emit({
-                        type: 'feed:repository-selected',
+                        type: 'repository:selected',
                         source: 'OrgProfilePanel',
                         timestamp: Date.now(),
                         payload: repoData
@@ -982,7 +982,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                   key={nameWithOwner}
                   onClick={() => {
                     events.emit({
-                      type: 'feed:repository-selected',
+                      type: 'repository:selected',
                       source: 'OrgProfilePanel',
                       timestamp: Date.now(),
                       payload: repoData
@@ -1086,7 +1086,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                     fileTree={fileTree}
                     onClick={() => {
                       events.emit({
-                        type: 'feed:repository-selected',
+                        type: 'repository:selected',
                         source: 'OrgProfilePanel',
                         timestamp: Date.now(),
                         payload: payloadFromRepoCard(repo),

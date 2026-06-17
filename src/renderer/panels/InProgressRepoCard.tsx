@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { payloadFromLocalEntry } from '../events/feedRepositorySelected';
+import { payloadFromLocalEntry } from '../events/repositorySelected';
 import {
   ArchitectureMapHighlightLayers,
   MultiVersionCityBuilder,
@@ -421,7 +421,7 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
     if (!events) return;
     if (entry) {
       events.emit({
-        type: 'feed:repository-selected',
+        type: 'repository:selected',
         source: 'in-progress-repo-card',
         timestamp: Date.now(),
         payload: payloadFromLocalEntry(entry),
@@ -432,7 +432,7 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
   const handleOpenOwnerProfile = useCallback(() => {
     if (summary.githubOwner && events) {
       events.emit({
-        type: 'feed:owner-selected',
+        type: 'owner:selected',
         source: 'in-progress-repo-card',
         timestamp: Date.now(),
         payload: {

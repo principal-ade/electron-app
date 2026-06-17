@@ -1,11 +1,11 @@
 /**
- * FeedPanelFramework
+ * ProjectsPanelFramework
  *
- * Panel framework for the FeedView, using ConfigurablePanelLayout
+ * Panel framework for the ProjectsView, using ConfigurablePanelLayout
  * similar to DevWorkspacePanelFramework but simplified for the feed context.
  *
  * Layout:
- * - Left: FeedLeftPanel (feed mode selector and activity lists)
+ * - Left: ProjectsLeftPanel (feed mode selector and activity lists)
  * - Middle: TabbedTerminalPanel (terminal in HOME directory)
  * - Right: Placeholder panel (collapsed by default)
  */
@@ -28,8 +28,8 @@ import {
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { findClonedGithubEntry, githubRepoPurl } from '../utils/alexandriaIdentity';
 import {
-  type FeedRepositorySelectedPayload,
-} from '../events/feedRepositorySelected';
+  type RepositorySelectedPayload,
+} from '../events/repositorySelected';
 import {
   TerminalProvider,
   useTerminalProvider,
@@ -45,7 +45,7 @@ import {
   type TerminalPanelActions,
   type BaseTab,
 } from '@industry-theme/xterm-terminal-panel';
-import { FeedLeftPanel } from '../panels/FeedLeftPanel';
+import { ProjectsLeftPanel } from '../panels/ProjectsLeftPanel';
 import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
 import { RepositoryProfilePanel, type RepositoryProfileData } from '../panels/RepositoryProfilePanel';
@@ -81,7 +81,7 @@ import { commitActivityPanelActions } from '../panels/commitActivityPanelActions
 import { InProgressActivityPanel } from '../panels/InProgressActivityPanel';
 import { inProgressActivityPanelActions } from '../panels/inProgressActivityPanelActions';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
-import { useFeedTabs } from '../principal-window/contexts/FeedTabsContext';
+import { useProjectsTabs } from '../principal-window/contexts/ProjectsTabsContext';
 import { MarkdownDocTabContent } from './MarkdownDocTabContent';
 import { DocumentService } from '../services/DocumentService';
 
@@ -224,7 +224,7 @@ export interface LocalTrailTab extends BaseTab {
 }
 
 /**
- * Union type of all supported tab types in FeedView
+ * Union type of all supported tab types in ProjectsView
  */
 /**
  * Markdown document tab — a doc opened in-place from the Principal MCP Bridge
@@ -239,7 +239,7 @@ export interface MarkdownDocTab extends BaseTab {
 
 export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | OwnerActivityTab | RepoActivityTab | SharedTrailTab | LocalTrailTab | MarkdownDocTab;
 
-export interface FeedPanelFrameworkProps {
+export interface ProjectsPanelFrameworkProps {
   /** List of repositories */
   repositories: AlexandriaEntry[];
   /** Collapsed state for left/right panels */
@@ -264,7 +264,7 @@ export interface FeedPanelFrameworkProps {
   onFeedModeChange?: (mode: 'my-activity' | 'collections' | 'organizations') => void;
 }
 
-interface FeedPanelFrameworkInnerProps {
+interface ProjectsPanelFrameworkInnerProps {
   repositories: AlexandriaEntry[];
   collapsed: { left: boolean; right: boolean };
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
@@ -564,7 +564,7 @@ const RepositoryProfileTabContent: React.FC<{
         // Get latest commit
         const latestCommit = await GithubService.getLatestCommit(owner, name);
         if (!latestCommit) {
-          console.warn('[FeedPanelFramework] No commits found for', owner, name);
+          console.warn('[ProjectsPanelFramework] No commits found for', owner, name);
           return null;
         }
 
@@ -580,7 +580,7 @@ const RepositoryProfileTabContent: React.FC<{
 
         return fileTree;
       } catch (error) {
-        console.error('[FeedPanelFramework] Failed to fetch remote file tree:', error);
+        console.error('[ProjectsPanelFramework] Failed to fetch remote file tree:', error);
         return null;
       }
     },
@@ -1017,7 +1017,7 @@ const OrgProfileTabContent: React.FC<{
 /**
  * Inner component that uses TerminalProvider context
  */
-const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
+const ProjectsPanelFrameworkInner: React.FC<ProjectsPanelFrameworkInnerProps> = ({
   repositories,
   collapsed,
   onCollapsedChange,
@@ -1064,9 +1064,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // Time filter state for heatmap selection
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
 
-  // Tab state lives in FeedTabsContext (above IntegratedShell's conditional
-  // FeedView mount) so tabs survive view switches and so producers outside
-  // FeedView (e.g. the titlebar repo picker) can mutate them directly.
+  // Tab state lives in ProjectsTabsContext (above IntegratedShell's conditional
+  // ProjectsView mount) so tabs survive view switches and so producers outside
+  // ProjectsView (e.g. the titlebar repo picker) can mutate them directly.
   const {
     tabs,
     setTabs,
@@ -1075,7 +1075,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     openProjectInfo,
     openUserProfile,
     openMarkdownDoc,
-  } = useFeedTabs();
+  } = useProjectsTabs();
   const didCheckInitialDirtyRef = useRef(false);
 
   // Bridge handoff: a doc pushed from the Principal MCP Bridge
@@ -1119,7 +1119,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         }
       }
     })().catch((err) => {
-      console.warn('[FeedPanelFramework] initial dirty-check failed:', err);
+      console.warn('[ProjectsPanelFramework] initial dirty-check failed:', err);
     });
 
     return () => {
@@ -1183,7 +1183,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           debouncedRefresh();
           // Emit event to notify all panels that activity should refresh
           events.emit({
-            type: 'feed:activity-refresh-requested',
+            type: 'activity:refresh-requested',
             source: 'feed-panel-framework',
             timestamp: Date.now(),
             payload: { repoPath: repoPathStr },
@@ -1232,14 +1232,14 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // Listen for time filter events to update selected block
   useEffect(() => {
     const handleTimeFilter = (event: { type: string; payload: { start: Date; end: Date } | null }) => {
-      if (event.type === 'feed:time-filter-changed') {
+      if (event.type === 'activity:time-filter-changed') {
         setSelectedBlock(event.payload?.start.toISOString() ?? null);
       }
     };
 
-    events.on('feed:time-filter-changed', handleTimeFilter);
+    events.on('activity:time-filter-changed', handleTimeFilter);
     return () => {
-      events.off('feed:time-filter-changed', handleTimeFilter);
+      events.off('activity:time-filter-changed', handleTimeFilter);
     };
   }, [events]);
 
@@ -1281,16 +1281,16 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   useEffect(() => {
     const handleRepositorySelected = (event: {
       type: string;
-      payload: FeedRepositorySelectedPayload;
+      payload: RepositorySelectedPayload;
     }) => {
-      if (event.type === 'feed:repository-selected') {
+      if (event.type === 'repository:selected') {
         openProjectInfo(event.payload);
       }
     };
 
-    events.on('feed:repository-selected', handleRepositorySelected);
+    events.on('repository:selected', handleRepositorySelected);
     return () => {
-      events.off('feed:repository-selected', handleRepositorySelected);
+      events.off('repository:selected', handleRepositorySelected);
     };
   }, [events, openProjectInfo]);
 
@@ -1316,7 +1316,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       type: string;
       payload: { owner: string; isOrg: boolean }
     }) => {
-      if (event.type === 'feed:owner-selected') {
+      if (event.type === 'owner:selected') {
         const { owner, isOrg } = event.payload;
         const tabId = isOrg ? `org-profile-${owner}` : `user-profile-${owner}`;
 
@@ -1352,9 +1352,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       }
     };
 
-    events.on('feed:owner-selected', handleOwnerSelected);
+    events.on('owner:selected', handleOwnerSelected);
     return () => {
-      events.off('feed:owner-selected', handleOwnerSelected);
+      events.off('owner:selected', handleOwnerSelected);
     };
   }, [events, tabs]);
 
@@ -1364,7 +1364,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       type: string;
       payload: { collection: StarredCollection }
     }) => {
-      if (event.type === 'feed:collection-selected') {
+      if (event.type === 'collection:selected') {
         const { collection } = event.payload;
         const tabId = `collection-profile-${collection.id}`;
 
@@ -1387,9 +1387,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       }
     };
 
-    events.on('feed:collection-selected', handleCollectionSelected);
+    events.on('collection:selected', handleCollectionSelected);
     return () => {
-      events.off('feed:collection-selected', handleCollectionSelected);
+      events.off('collection:selected', handleCollectionSelected);
     };
   }, [events, tabs]);
 
@@ -1399,7 +1399,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       type: string;
       payload: { login: string; accountType: 'User' | 'Organization' };
     }) => {
-      if (event.type !== 'feed:owner-activity-requested') return;
+      if (event.type !== 'owner:activity-requested') return;
       const { login, accountType } = event.payload;
       const tabId = `owner-activity-${login}`;
       const existing = tabs.find(t => t.id === tabId);
@@ -1415,8 +1415,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       setTabs(prev => [...prev, newTab]);
       setActiveTabId(tabId);
     };
-    events.on('feed:owner-activity-requested', handleOwnerActivity);
-    return () => { events.off('feed:owner-activity-requested', handleOwnerActivity); };
+    events.on('owner:activity-requested', handleOwnerActivity);
+    return () => { events.off('owner:activity-requested', handleOwnerActivity); };
   }, [events, tabs]);
 
   // Listen for repo activity tab requests
@@ -1425,7 +1425,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       type: string;
       payload: { owner: string; repo: string };
     }) => {
-      if (event.type !== 'feed:repo-activity-requested') return;
+      if (event.type !== 'repository:activity-requested') return;
       const { owner, repo } = event.payload;
       const tabId = `repo-activity-${owner}/${repo}`;
       const existing = tabs.find(t => t.id === tabId);
@@ -1441,8 +1441,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       setTabs(prev => [...prev, newTab]);
       setActiveTabId(tabId);
     };
-    events.on('feed:repo-activity-requested', handleRepoActivity);
-    return () => { events.off('feed:repo-activity-requested', handleRepoActivity); };
+    events.on('repository:activity-requested', handleRepoActivity);
+    return () => { events.off('repository:activity-requested', handleRepoActivity); };
   }, [events, tabs]);
 
   // Handle user profile panel events
@@ -1510,7 +1510,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
                 currentBranch: branchStatus.branch,
               };
             } catch (error) {
-              console.warn('[FeedPanelFramework] Failed to check git status:', error);
+              console.warn('[ProjectsPanelFramework] Failed to check git status:', error);
             }
           }
 
@@ -1518,7 +1518,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           setDeleteGitStatus(gitStatus);
           setIsDeleteModalOpen(true);
         } else {
-          console.warn('[FeedPanelFramework] Could not find repository to delete:', repository.name);
+          console.warn('[ProjectsPanelFramework] Could not find repository to delete:', repository.name);
         }
       }
     };
@@ -1568,14 +1568,14 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               currentBranch: branchStatus.branch,
             };
           } catch (error) {
-            console.warn('[FeedPanelFramework] Failed to check git status:', error);
+            console.warn('[ProjectsPanelFramework] Failed to check git status:', error);
           }
 
           setEntryToDelete(entry);
           setDeleteGitStatus(gitStatus);
           setIsDeleteModalOpen(true);
         } else {
-          console.warn('[FeedPanelFramework] Could not find repository clone to delete:', repository.name, clonePath);
+          console.warn('[ProjectsPanelFramework] Could not find repository clone to delete:', repository.name, clonePath);
         }
       }
     };
@@ -1623,13 +1623,13 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         // Refresh would happen automatically via Alexandria service events
         // but we can emit an event to notify other panels
         events.emit({
-          type: 'feed:repository-deleted',
+          type: 'repository:deleted',
           source: 'feed-panel-framework',
           timestamp: Date.now(),
           payload: { repositoryName: entryToDelete.name },
         });
       } catch (error) {
-        console.error('[FeedPanelFramework] Failed to delete repository:', error);
+        console.error('[ProjectsPanelFramework] Failed to delete repository:', error);
         throw error; // Re-throw so modal knows it failed
       }
     },
@@ -1901,7 +1901,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         label: feedMode === 'collections' ? 'Social' :
                feedMode === 'organizations' ? 'Team' : 'Activity',
         content: (
-          <FeedLeftPanel
+          <ProjectsLeftPanel
             repositories={repositories}
             events={events}
             feedMode={feedMode}
@@ -2018,9 +2018,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
 };
 
 /**
- * FeedPanelFramework - Main component with TerminalProvider wrapper
+ * ProjectsPanelFramework - Main component with TerminalProvider wrapper
  */
-export const FeedPanelFramework: React.FC<FeedPanelFrameworkProps> = ({
+export const ProjectsPanelFramework: React.FC<ProjectsPanelFrameworkProps> = ({
   repositories,
   collapsed,
   onCollapsedChange,
@@ -2039,7 +2039,7 @@ export const FeedPanelFramework: React.FC<FeedPanelFrameworkProps> = ({
       terminalContext="terminal:feed"
       repoName="Feed"
     >
-      <FeedPanelFrameworkInner
+      <ProjectsPanelFrameworkInner
         repositories={repositories}
         collapsed={collapsed}
         onCollapsedChange={onCollapsedChange}
@@ -2056,4 +2056,4 @@ export const FeedPanelFramework: React.FC<FeedPanelFrameworkProps> = ({
   );
 };
 
-export default FeedPanelFramework;
+export default ProjectsPanelFramework;

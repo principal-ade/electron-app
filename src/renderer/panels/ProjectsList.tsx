@@ -8,7 +8,7 @@
  * projects sort first; the rest sort alphabetically by name, except under the
  * In Progress filter, where they order by most recent activity (the work
  * you're actively in). Orgs with more than 10 repos start collapsed.
- * Used in the FeedView left panel.
+ * Used in the ProjectsView left panel.
  */
 
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
@@ -16,7 +16,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Eraser, FolderGit2, FolderSearch, Loader2, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { payloadFromGithub, payloadFromLocalEntry } from '../events/feedRepositorySelected';
+import { payloadFromGithub, payloadFromLocalEntry } from '../events/repositorySelected';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
@@ -202,7 +202,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             description: project.description ?? undefined,
           });
       events.emit({
-        type: 'feed:repository-selected',
+        type: 'repository:selected',
         source: 'projects-list-panel',
         timestamp: Date.now(),
         payload,
@@ -701,7 +701,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           // A local-only repo may not have a derivable purl yet; skip silently.
           try {
             events.emit({
-              type: 'feed:repository-selected',
+              type: 'repository:selected',
               source: 'projects-list-panel',
               timestamp: Date.now(),
               payload: payloadFromLocalEntry(repo),

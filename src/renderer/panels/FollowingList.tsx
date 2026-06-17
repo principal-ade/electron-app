@@ -66,7 +66,7 @@ export const FollowingList: React.FC<FollowingListProps> = ({ events }) => {
   const handleUserClick = useCallback(
     (login: string) => {
       events.emit({
-        type: 'feed:owner-selected',
+        type: 'owner:selected',
         source: 'following-list',
         timestamp: Date.now(),
         payload: { owner: login, isOrg: false },

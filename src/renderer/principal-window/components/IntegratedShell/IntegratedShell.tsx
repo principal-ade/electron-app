@@ -5,7 +5,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Settings, type SettingsCategory } from '../../views/Settings';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
-import { FeedView } from '../../views/FeedView';
+import { ProjectsView } from '../../views/ProjectsView';
 import { OnboardingView } from '../../views/OnboardingView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
@@ -27,7 +27,7 @@ import {
   useAgentCommandPalette,
 } from '@principal-ade/panel-layouts';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
-import { useFeedTabs } from '../../contexts/FeedTabsContext';
+import { useProjectsTabs } from '../../contexts/ProjectsTabsContext';
 import { useInboxTabs } from '../../contexts/InboxTabsContext';
 import { OnboardingWizard } from '../../../components/OnboardingWizard/OnboardingWizard';
 import './IntegratedShell.css';
@@ -40,7 +40,7 @@ const VIEW_OPTIONS = [
   'trails',
   'inbox',
   'topics',
-  'feed',
+  'projects',
   'onboarding',
   'settings',
   'monitoring',
@@ -135,7 +135,7 @@ export const IntegratedShell: React.FC = () => {
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const { theme, mode } = useTheme();
   const { events } = usePrincipalEvents();
-  const { openLocalTrail: openLocalTrailInFeed } = useFeedTabs();
+  const { openLocalTrail: openLocalTrailInFeed } = useProjectsTabs();
   const { openLocalTrail: openLocalTrailInInbox } = useInboxTabs();
 
   // Live mirror of activeView so the SHOW_IN_PRINCIPAL listener — which
@@ -151,7 +151,7 @@ export const IntegratedShell: React.FC = () => {
     trails: { left: false, right: false },
     inbox: { left: false, right: false },
     topics: { left: false, right: false },
-    feed: { left: false, right: false },
+    projects: { left: false, right: false },
     onboarding: { left: false, right: false },
     auth: { left: false, right: false },
     monitoring: { left: false, right: false },
@@ -181,9 +181,10 @@ export const IntegratedShell: React.FC = () => {
         } else if (prefs.interactiveShell?.activeNavigationView) {
           // Cast to string to handle legacy values from storage
           const savedView = prefs.interactiveShell.activeNavigationView as string;
-          // Migrate removed views to 'feed' (removed 2026-04-19 in commit b742f44b2)
-          const legacyViews = ['local-projects', 'remote-projects', 'starred-projects', 'network'];
-          const view = legacyViews.includes(savedView) ? 'feed' : savedView;
+          // Migrate removed views to 'projects' (removed 2026-04-19 in commit b742f44b2).
+          // 'feed' is the former id for the Projects view, renamed 2026-06-17.
+          const legacyViews = ['local-projects', 'remote-projects', 'starred-projects', 'network', 'feed'];
+          const view = legacyViews.includes(savedView) ? 'projects' : savedView;
           setActiveView(view as NavigationView);
         }
 
@@ -231,7 +232,7 @@ export const IntegratedShell: React.FC = () => {
   useEffect(() => {
     const unsubscribe = TrailService.onShowInPrincipal(({ trailId, title }) => {
       const view = activeViewRef.current;
-      if (view === 'feed') {
+      if (view === 'projects') {
         openLocalTrailInFeed(trailId, title);
         return;
       }
@@ -467,7 +468,7 @@ export const IntegratedShell: React.FC = () => {
           setActiveView('home');
           setViewCollapsedStates({
             trails: { left: false, right: false },
-            feed: { left: false, right: false },
+            projects: { left: false, right: false },
             onboarding: { left: false, right: false },
             auth: { left: false, right: false },
             monitoring: { left: false, right: false },
@@ -526,7 +527,7 @@ export const IntegratedShell: React.FC = () => {
         setActiveView('home');
         setViewCollapsedStates({
           trails: { left: false, right: false },
-          feed: { left: false, right: false },
+          projects: { left: false, right: false },
           onboarding: { left: false, right: false },
           auth: { left: false, right: false },
           monitoring: { left: false, right: false },
@@ -555,7 +556,7 @@ export const IntegratedShell: React.FC = () => {
     quickCommands: QUICK_COMMANDS,
     agentAvailable: false,
     initialSuggestions: [
-      '/switch feed',
+      '/switch projects',
       '/switch settings',
       '/collapse',
       '/reset',
@@ -648,9 +649,9 @@ export const IntegratedShell: React.FC = () => {
             )}
             {activeView === 'inbox' && <InboxView />}
             {activeView === 'topics' && <TopicsView />}
-            {activeView === 'feed' && <FeedView />}
+            {activeView === 'projects' && <ProjectsView />}
             {activeView === 'onboarding' && (
-              <OnboardingView onComplete={() => handleViewChange('feed')} />
+              <OnboardingView onComplete={() => handleViewChange('projects')} />
             )}
             {activeView === 'monitoring' && (
               <SystemMonitor sidebarCollapsed={sidebarCollapsed} />

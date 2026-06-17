@@ -9,7 +9,7 @@
  * `FileCityTrailPanel` with the same context shape TrailsView's preview pane uses.
  * A banner marks it as remote so it never reads as one of your local trails.
  *
- * Extracted from FeedPanelFramework so both the Projects (feed) view and the
+ * Extracted from ProjectsPanelFramework so both the Projects (feed) view and the
  * Inbox view can reuse it. The presentational half (`SharedTrailViewer`) is
  * split out so callers that already hold a payload — e.g. the inbox's topic
  * tab, which fetches a topic's trails up front — can render the city without
