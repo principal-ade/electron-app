@@ -12,12 +12,13 @@
  * through openTopic.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Inbox, Route, RefreshCw, Send, Layers, Trash2 } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import { useInboxTabs } from '../principal-window/contexts/InboxTabsContext';
+import { useAuth } from '../hooks/useAuthState';
 import type {
   InboxIndexEntry,
   OutboxIndexEntry,
@@ -55,6 +56,7 @@ function timeAgo(iso: string): string {
 export const InboxLeftPanel: React.FC = () => {
   const { theme } = useTheme();
   const { openSharedTrail, openTopic } = useInboxTabs();
+  const { isAuthenticated, user } = useAuth();
 
   const [mode, setMode] = useState<InboxMode>('inbox');
 
@@ -75,8 +77,8 @@ export const InboxLeftPanel: React.FC = () => {
     () => new Set(),
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     setError(null);
     const [inboxResult, topicResult, sentResult, recentResult] =
       await Promise.allSettled([
@@ -116,6 +118,7 @@ export const InboxLeftPanel: React.FC = () => {
     }
 
     if (
+      !opts?.silent &&
       inboxResult.status === 'rejected' &&
       topicResult.status === 'rejected' &&
       sentResult.status === 'rejected' &&
@@ -129,6 +132,29 @@ export const InboxLeftPanel: React.FC = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Keep the inbox current without a manual refresh: re-fetch on a 60s tick and
+  // on window focus, silently (no loading spinner). A note added to a trail
+  // already loaded here lands in the participant's row server-side, but the
+  // dot only appears once the list is re-read — this is that re-read. Skipped
+  // while a delete is in flight so an optimistic removal isn't resurrected by a
+  // stale read.
+  const deletingRef = useRef(deletingInboxIds);
+  useEffect(() => {
+    deletingRef.current = deletingInboxIds;
+  }, [deletingInboxIds]);
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const refresh = () => {
+      if (deletingRef.current.size === 0) void load({ silent: true });
+    };
+    const intervalId = setInterval(refresh, 60_000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [isAuthenticated, load]);
 
   /**
    * Remove a shared trail from the inbox. Optimistic: drop the row (and its
@@ -270,6 +296,10 @@ export const InboxLeftPanel: React.FC = () => {
       const notesOnlyDot = dot && !allNotesNew;
       const title = entry.snapshot?.title || `${entry.owner}/${entry.repo}`;
       const hovered = hoveredInboxId === entry.trailId;
+      // A trail the viewer shared surfaces here once it has note activity; its
+      // `sender` is the viewer themselves, so label it "shared by you" rather
+      // than "from @<your-own-login>".
+      const isOwn = !!user && entry.sender.githubLogin === user.login;
       return (
         <div
           key={entry.trailId}
@@ -342,7 +372,7 @@ export const InboxLeftPanel: React.FC = () => {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  from @{entry.sender.githubLogin}
+                  {isOwn ? 'shared by you' : `from @${entry.sender.githubLogin}`}
                 </span>
                 {noteCount > 0 && (
                   <span style={{ flexShrink: 0 }}>
