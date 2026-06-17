@@ -148,6 +148,49 @@ export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {
   });
   modelRef.current = model;
 
+  // Re-clicking a file that is already selected must still (re)open it — but the
+  // tree only fires onSelectionChange when the selection *changes*, so clicking
+  // the already-selected row is silent. This bites after a tab is closed: the
+  // tree is never told the tab went away, so the file's row stays selected and
+  // its row becomes un-clickable. We keep the selection highlight (it marks the
+  // last-opened file) and patch only the gap: remember what was selected when
+  // the pointer went down, and if the click lands on that same file row, emit
+  // file:open ourselves. New-file clicks and keyboard nav still flow through
+  // onSelectionChange (selection genuinely changes), so this never double-fires.
+  const selectedAtPointerDown = React.useRef<string | null>(null);
+
+  const handlePointerDownCapture = React.useCallback(() => {
+    selectedAtPointerDown.current =
+      modelRef.current?.getSelectedPaths()[0] ?? null;
+  }, []);
+
+  const handleClickCapture = React.useCallback(
+    (e: React.MouseEvent) => {
+      // Rows live in the FileTree web component's shadow DOM; click events are
+      // composed, so composedPath() exposes the row element and its
+      // `data-item-path` / `data-item-type` attributes (set by @pierre/trees).
+      const row = e.nativeEvent
+        .composedPath()
+        .find(
+          (el): el is HTMLElement =>
+            el instanceof HTMLElement &&
+            el.getAttribute('data-item-path') != null,
+        );
+      if (!row || row.getAttribute('data-item-type') !== 'file') return;
+      const path = row.getAttribute('data-item-path');
+      // Only the re-click-on-the-selected-row case; everything else is a real
+      // selection change that onSelectionChange already handles.
+      if (!path || path !== selectedAtPointerDown.current) return;
+      events.emit({
+        type: 'file:open',
+        source: 'files-panel',
+        timestamp: Date.now(),
+        payload: { path: stripRoot(path, rootPath) },
+      });
+    },
+    [events, rootPath],
+  );
+
   const isFirstSync = React.useRef(true);
   React.useEffect(() => {
     if (isFirstSync.current) {
@@ -291,7 +334,18 @@ export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {
         </div>
       </div>
 
-      <ThemedFileTree model={model} gitStatusColors style={{ paddingTop: 8 }} />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+        }}
+        onPointerDownCapture={handlePointerDownCapture}
+        onClickCapture={handleClickCapture}
+      >
+        <ThemedFileTree model={model} gitStatusColors style={{ paddingTop: 8 }} />
+      </div>
     </div>
   );
 };
