@@ -1,0 +1,72 @@
+/**
+ * PrincipalPortal
+ *
+ * The persistent base layer of the principal window: the swappable
+ * left-panel + tabbed-terminal workspace surfaces (Projects / Inbox / Topics /
+ * Trails). It is mounted *underneath* the standalone views (Home, Settings,
+ * Monitor, …), which `IntegratedShell` renders as overlays on top of it.
+ *
+ * Because the portal stays mounted while an overlay is up, switching to Home
+ * and back is a pure visibility flip — open tabs, terminals, and scroll state
+ * survive with no hoisting required.
+ *
+ * SLICE #1 SCOPE: the four workspace surfaces still swap among *themselves*
+ * via the conditional below (so e.g. Projects→Inbox still unmounts Projects).
+ * Collapsing them onto one persistent `PortalTabsContext` + a single swappable
+ * left-panel slot is a deliberately deferred later slice — see the topic
+ * "Unify principal-window views into one shell".
+ */
+import React from 'react';
+import { ProjectsView } from '../../views/ProjectsView';
+import { InboxView } from '../../views/InboxView';
+import { TopicsView } from '../../views/TopicsView';
+import { TrailsView } from '../../views/TrailsView';
+
+/** The workspace surfaces hosted by the portal (vs. standalone overlays). */
+export type WorkspaceView = 'projects' | 'inbox' | 'topics' | 'trails';
+
+export const WORKSPACE_VIEWS: WorkspaceView[] = [
+  'projects',
+  'inbox',
+  'topics',
+  'trails',
+];
+
+/** Type guard: is this navigation view a portal-hosted workspace surface? */
+export const isWorkspaceView = (view: string): view is WorkspaceView =>
+  (WORKSPACE_VIEWS as string[]).includes(view);
+
+export interface PrincipalPortalProps {
+  /** Which workspace surface to show in the portal. */
+  workspaceView: WorkspaceView;
+  /** Trail id this window booted with / was routed to (forwarded to Trails). */
+  bootstrapTrailId: string | null;
+  /** Repo path a HomeView card asked Trails to pre-select on mount. */
+  bootstrapProjectPath: string | null;
+  /** Called once Trails has consumed `bootstrapProjectPath`. */
+  onBootstrapProjectPathConsumed: () => void;
+}
+
+export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
+  workspaceView,
+  bootstrapTrailId,
+  bootstrapProjectPath,
+  onBootstrapProjectPathConsumed,
+}) => {
+  return (
+    <div style={{ height: '100%', width: '100%' }}>
+      {workspaceView === 'projects' && <ProjectsView />}
+      {workspaceView === 'inbox' && <InboxView />}
+      {workspaceView === 'topics' && <TopicsView />}
+      {workspaceView === 'trails' && (
+        <TrailsView
+          bootstrapTrailId={bootstrapTrailId}
+          bootstrapProjectPath={bootstrapProjectPath}
+          onBootstrapProjectPathConsumed={onBootstrapProjectPathConsumed}
+        />
+      )}
+    </div>
+  );
+};
+
+export default PrincipalPortal;

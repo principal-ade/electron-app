@@ -178,15 +178,15 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const navItems: NavItem[] = [
     { id: 'home', icon: <Home size={20} />, label: 'Home' },
-    { id: 'trails', icon: <Footprints size={20} />, label: 'Trails' },
     {
       id: 'inbox',
       icon: <Inbox size={20} />,
       label: 'Inbox',
       badgeCount: inboxUnread,
     },
-    { id: 'topics', icon: <Layers size={20} />, label: 'Topics' },
     { id: 'projects', icon: <GitIcon size={20} />, label: 'Projects' },
+    { id: 'trails', icon: <Footprints size={20} />, label: 'Trails' },
+    { id: 'topics', icon: <Layers size={20} />, label: 'Topics' },
     { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },
     { id: 'drawings', icon: <PenTool size={20} />, label: 'Drawings' },
     ...(showOnboardingButton

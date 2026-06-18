@@ -5,16 +5,17 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Settings, type SettingsCategory } from '../../views/Settings';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
-import { ProjectsView } from '../../views/ProjectsView';
 import { OnboardingView } from '../../views/OnboardingView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
 import { DrawingsView } from '../../views/DrawingsView';
-import { TrailsView } from '../../views/TrailsView';
-import { InboxView } from '../../views/InboxView';
-import { TopicsView } from '../../views/TopicsView';
 import { HomeView } from '../../views/HomeView';
+import {
+  PrincipalPortal,
+  isWorkspaceView,
+  type WorkspaceView,
+} from '../PrincipalPortal';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { WindowService } from '../../../main-process-api/WindowService';
@@ -130,6 +131,14 @@ export const IntegratedShell: React.FC = () => {
   const [bootstrapProjectPath, setBootstrapProjectPath] = useState<
     string | null
   >(null);
+  // The workspace surface (projects/inbox/topics/trails) shown in the
+  // persistent PrincipalPortal beneath any standalone overlay. Stays `null`
+  // until the user first visits a workspace view, so a cold start that lands
+  // on Home doesn't eagerly mount a workspace (and its terminals). Once set it
+  // stays mounted under overlays, so returning from Home/Settings/etc. is a
+  // pure visibility flip with no tab/terminal/scroll state to reconstruct.
+  const [lastWorkspaceView, setLastWorkspaceView] =
+    useState<WorkspaceView | null>(null);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | undefined>(undefined);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
@@ -143,6 +152,16 @@ export const IntegratedShell: React.FC = () => {
   // without re-subscribing (and risking a missed fire) on every switch.
   const activeViewRef = useRef(activeView);
   activeViewRef.current = activeView;
+
+  // Remember the most recent workspace surface so the portal keeps showing it
+  // beneath standalone overlays. Standalone views (home, settings, …) leave
+  // this untouched — that's what makes them feel like overlays you pop back
+  // out of rather than full navigations.
+  useEffect(() => {
+    if (isWorkspaceView(activeView)) {
+      setLastWorkspaceView(activeView);
+    }
+  }, [activeView]);
 
   // Store collapsed states per view to avoid animation glitches when switching
   const [viewCollapsedStates, setViewCollapsedStates] = useState<
@@ -568,6 +587,10 @@ export const IntegratedShell: React.FC = () => {
       ? theme.modes.dark.background
       : theme.colors.background;
 
+  // The active view is either a portal-hosted workspace surface (rendered as
+  // the persistent base) or a standalone view (rendered as an overlay on top).
+  const overlayView = isWorkspaceView(activeView) ? null : activeView;
+
   return (
     <div
       className="integrated-shell"
@@ -620,6 +643,7 @@ export const IntegratedShell: React.FC = () => {
           <div
             className="view-container"
             style={{
+              position: 'relative', // Positioning context for the portal overlay
               marginTop: '56px', // Space for titlebar
               marginLeft: '0',
               marginRight: '6px',
@@ -636,10 +660,18 @@ export const IntegratedShell: React.FC = () => {
               pointerEvents: 'auto', // Re-enable pointer events for content
             }}
           >
-            {/* Views will be rendered here based on activeView */}
-            {activeView === 'home' && <HomeView />}
-            {activeView === 'trails' && (
-              <TrailsView
+            {/*
+              Persistent base layer. The active workspace surface stays mounted
+              beneath standalone overlays, so switching to Home/Settings/etc.
+              and back is a pure visibility flip — no tab/terminal/scroll state
+              to reconstruct. (Workspace surfaces still swap among themselves
+              via activeView for now; the single-tab-host merge is a later
+              slice.) Null until the user first opens a workspace view, so a
+              cold start on Home doesn't eagerly boot a workspace.
+            */}
+            {lastWorkspaceView && (
+              <PrincipalPortal
+                workspaceView={lastWorkspaceView}
                 bootstrapTrailId={bootstrapTrailId}
                 bootstrapProjectPath={bootstrapProjectPath}
                 onBootstrapProjectPathConsumed={() =>
@@ -647,21 +679,38 @@ export const IntegratedShell: React.FC = () => {
                 }
               />
             )}
-            {activeView === 'inbox' && <InboxView />}
-            {activeView === 'topics' && <TopicsView />}
-            {activeView === 'projects' && <ProjectsView />}
-            {activeView === 'onboarding' && (
-              <OnboardingView onComplete={() => handleViewChange('projects')} />
+
+            {/* Standalone views render as an opaque overlay on top of the portal. */}
+            {overlayView && (
+              <div
+                className="portal-overlay"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  overflow: 'auto',
+                  backgroundColor,
+                  zIndex: 2,
+                }}
+              >
+                {overlayView === 'home' && <HomeView />}
+                {overlayView === 'onboarding' && (
+                  <OnboardingView
+                    onComplete={() => handleViewChange('projects')}
+                  />
+                )}
+                {overlayView === 'monitoring' && (
+                  <SystemMonitor sidebarCollapsed={sidebarCollapsed} />
+                )}
+                {overlayView === 'settings' && (
+                  <Settings initialCategory={settingsCategory} />
+                )}
+                {overlayView === 'auth' && <AuthView />}
+                {overlayView === 'processes' && <LocalhostProcessesView />}
+                {overlayView === 'connections' && <ConnectionsView />}
+                {overlayView === 'skills' && <SkillBrowserView />}
+                {overlayView === 'drawings' && <DrawingsView />}
+              </div>
             )}
-            {activeView === 'monitoring' && (
-              <SystemMonitor sidebarCollapsed={sidebarCollapsed} />
-            )}
-            {activeView === 'settings' && <Settings initialCategory={settingsCategory} />}
-            {activeView === 'auth' && <AuthView />}
-            {activeView === 'processes' && <LocalhostProcessesView />}
-            {activeView === 'connections' && <ConnectionsView />}
-            {activeView === 'skills' && <SkillBrowserView />}
-            {activeView === 'drawings' && <DrawingsView />}
           </div>
         </div>
       </div>
