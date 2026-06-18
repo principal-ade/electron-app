@@ -57,6 +57,8 @@ interface UnifiedProject {
   description?: string | null;
   isCloned: boolean;
   isDirty: boolean;
+  /** Repository visibility: `true` private, `false` public, `undefined` unknown. */
+  isPrivate?: boolean;
   /** The local registry entry, when cloned. */
   entry?: AlexandriaEntry;
   /** Epoch ms of the most recent activity, for the recency sort. */
@@ -70,6 +72,10 @@ const toMs = (iso?: string): number => {
   const ms = new Date(iso).getTime();
   return Number.isNaN(ms) ? 0 : ms;
 };
+
+/** Local registry metadata tracks `isPublic`; invert to our `isPrivate`. */
+const toIsPrivate = (isPublic?: boolean): boolean | undefined =>
+  isPublic === undefined ? undefined : !isPublic;
 
 export const ProjectsList: React.FC<ProjectsListProps> = ({
   repositories = [],
@@ -289,6 +295,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         description: repo.description,
         isCloned: false,
         isDirty: false,
+        isPrivate: repo.private,
         lastActivity: toMs(repo.pushed_at || repo.updated_at),
         cloneUrl: repo.clone_url || repo.html_url,
       });
@@ -312,6 +319,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         existing.entry = entry;
         existing.isDirty = gitStatus?.isDirty ?? false;
         existing.description = existing.description ?? entry.github?.description;
+        existing.isPrivate = existing.isPrivate ?? toIsPrivate(entry.github?.isPublic);
         existing.lastActivity = Math.max(existing.lastActivity, localActivity);
       } else {
         map.set(key, {
@@ -321,6 +329,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           description: entry.github?.description,
           isCloned: true,
           isDirty: gitStatus?.isDirty ?? false,
+          isPrivate: toIsPrivate(entry.github?.isPublic),
           entry,
           lastActivity: localActivity,
           cloneUrl: entry.remoteUrl,
@@ -660,6 +669,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                         repo={{ name: project.name }}
                         isCloned={project.isCloned}
                         isDirty={project.isDirty}
+                        isPrivate={project.isPrivate}
                         onClick={() => handleProjectClick(project)}
                         onClone={
                           !project.isCloned && project.cloneUrl

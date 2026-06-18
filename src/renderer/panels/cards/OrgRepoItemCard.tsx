@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Circle, Cloud, Download, Eraser, FolderGit2 } from 'lucide-react';
+import { Circle, Cloud, Download, Eraser, FolderGit2, Lock } from 'lucide-react';
 
 export interface OrgRepoItemCardData {
   name: string;
@@ -13,6 +13,11 @@ export interface OrgRepoItemCardProps {
   isCloned?: boolean;
   /** Whether the local clone has uncommitted changes. */
   isDirty?: boolean;
+  /**
+   * Repository visibility. `true` = private, `false` = public, `undefined` =
+   * unknown (no GitHub metadata available, e.g. an untracked local clone).
+   */
+  isPrivate?: boolean;
   /** Hover-revealed action to clone a not-yet-cloned project. */
   onClone?: () => void;
   /** Hover-revealed action to remove a cloned project from the local registry. */
@@ -24,6 +29,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   onClick,
   isCloned = false,
   isDirty = false,
+  isPrivate,
   onClone,
   onRemove,
 }) => {
@@ -54,11 +60,33 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
       }}
     >
       {/* On-disk clones get the repo icon; not-yet-cloned repos get a cloud. */}
-      {isCloned ? (
-        <FolderGit2 size={15} color={theme.colors.text} style={{ flexShrink: 0 }} />
-      ) : (
-        <Cloud size={15} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
-      )}
+      <div style={{ position: 'relative', flexShrink: 0, display: 'inline-flex' }}>
+        {isCloned ? (
+          <FolderGit2 size={15} color={theme.colors.text} />
+        ) : (
+          <Cloud size={15} color={theme.colors.textSecondary} />
+        )}
+        {/* Dirty badge: an "in progress" dot tucked over the icon's corner. */}
+        {isDirty && (
+          <span
+            title="In Progress — has uncommitted changes"
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: -1,
+              display: 'inline-flex',
+              // Ring the dot in the row's background so it reads as a badge,
+              // not part of the icon's own linework.
+              borderRadius: '50%',
+              boxShadow: `0 0 0 1.5px ${
+                hovered ? theme.colors.backgroundSecondary : theme.colors.background
+              }`,
+            }}
+          >
+            <Circle size={7} fill={theme.colors.warning} color={theme.colors.warning} />
+          </span>
+        )}
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -81,12 +109,13 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
           >
             {repo.name}
           </span>
-          {isDirty && (
+          {/* Private repos get a lock; public repos are unmarked (the default). */}
+          {isPrivate === true && (
             <span
-              title="In Progress — has uncommitted changes"
-              style={{ flexShrink: 0, display: 'inline-flex' }}
+              title="Private repository"
+              style={{ flexShrink: 0, display: 'inline-flex', position: 'relative', top: 1 }}
             >
-              <Circle size={7} fill={theme.colors.warning} color={theme.colors.warning} />
+              <Lock size={11} color={theme.colors.textSecondary} />
             </span>
           )}
         </div>
