@@ -276,10 +276,13 @@ export const WorkspaceInfoModal: React.FC<WorkspaceInfoModalProps> = ({
 
         {/* Topic status — moved here from the braindump panel so the workflow
             status is front-and-center whenever the workspace info is open, and
-            so it doubles as the pre-dismiss prompt on window close. Only shown
-            when the workspace has a topic to carry the status. */}
-        {topicId && (
-          <TopicStatusControl topicId={topicId} status={topic?.status} />
+            so it doubles as the pre-dismiss prompt on window close. Gated on
+            the loaded `topic` (not just `topicId`) so the control mounts with
+            the real status in hand — it seeds its draft from the prop on mount
+            only, so mounting before the fetch resolves would stick it on the
+            `new-thought` default. */}
+        {topicId && topic && (
+          <TopicStatusControl topicId={topicId} status={topic.status} />
         )}
 
         {/* Theme picker — native <select> for a compact dropdown. The
