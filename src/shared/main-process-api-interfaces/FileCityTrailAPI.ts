@@ -46,6 +46,7 @@ export enum FileCityTrailEvent {
   LIST_SHARED = 'file-city:trail:list-shared',
   FETCH_SHARED = 'file-city:trail:fetch-shared',
   FETCH_SHARED_BY_ID = 'file-city:trail:fetch-shared-by-id',
+  SHARED_NOTE_CREATE = 'file-city:trail:shared-note-create',
   SET_TRANSIENT = 'file-city:trail:set-transient',
   SHOW_IN_PRINCIPAL = 'file-city:trail:show-in-principal',
 }
@@ -355,6 +356,17 @@ export interface FileCityTrailAPI {
    * 404 / no-access.
    */
   fetchSharedById: (id: string) => Promise<FileCityTrailFetchSharedByIdResult>;
+
+  /**
+   * Create a note on a published trail via web-ade. Used for inbox/shared
+   * trails whose payloads aren't in the local disk store, so `createNote`
+   * (local) can't host them. Returns the persisted note (server-assigned id
+   * + timestamps). Throws `TrailShareError` for typed failures.
+   */
+  createSharedNote: (
+    id: string,
+    draft: TrailNoteDraft,
+  ) => Promise<TrailNote>;
 
   /**
    * Push a payload to renderer trail panels for a specific repo via

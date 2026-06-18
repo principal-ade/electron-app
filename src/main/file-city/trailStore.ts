@@ -32,6 +32,7 @@ import type {
 } from '@industry-theme/file-city-panel';
 import { TrailPersistence } from './trailPersistence';
 import {
+  createSharedTrailNote,
   fetchSharedTrail,
   fetchSharedTrailById,
   listSharedTrails,
@@ -239,6 +240,15 @@ export class TrailStore {
   }
 
   /**
+   * Create a note on a published trail via web-ade. The remote counterpart to
+   * `createNote`, for inbox/shared trails whose payloads aren't in the local
+   * disk store. Persistence + id/timestamp assignment happen server-side.
+   */
+  createSharedNote(id: string, draft: TrailNoteDraft): Promise<TrailNote> {
+    return createSharedTrailNote(id, draft);
+  }
+
+  /**
    * Render a payload via PAYLOAD_SET targeted at a specific repo's
    * windows, without persisting locally. Renderer flow uses this to
    * preview a fetched-but-unsaved shared trail without writing through.
@@ -412,6 +422,11 @@ export function registerTrailHandlers(): void {
     FileCityTrailEvent.FETCH_SHARED_BY_ID,
     (_event, id: string) =>
       shareEnvelope(() => store.fetchSharedById(id)),
+  );
+  ipcMain.handle(
+    FileCityTrailEvent.SHARED_NOTE_CREATE,
+    (_event, id: string, draft: TrailNoteDraft) =>
+      shareEnvelope(() => store.createSharedNote(id, draft)),
   );
   ipcMain.handle(
     FileCityTrailEvent.SET_TRANSIENT,

@@ -15,7 +15,11 @@ import {
   type TrailListSharedResult,
   type TrailShareOptions,
 } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
-import type { TrailPayload } from '@industry-theme/file-city-panel';
+import type {
+  TrailPayload,
+  TrailNote,
+  TrailNoteDraft,
+} from '@industry-theme/file-city-panel';
 
 const missingApiError = (): TrailShareError =>
   new TrailShareError(
@@ -62,6 +66,21 @@ export class TrailShareService {
     const api = window.mainProcess?.fileCityTrail;
     if (!api) throw missingApiError();
     return api.fetchSharedById(id);
+  }
+
+  /**
+   * Create a note on a published trail via web-ade. The remote counterpart to
+   * `TrailNotesService.create` (local disk), used for inbox/shared trails
+   * whose payloads aren't in the local store. Re-throws so the caller can
+   * surface a user-meaningful error.
+   */
+  static async createSharedNote(
+    id: string,
+    draft: TrailNoteDraft,
+  ): Promise<TrailNote> {
+    const api = window.mainProcess?.fileCityTrail;
+    if (!api) throw missingApiError();
+    return api.createSharedNote(id, draft);
   }
 
   /**

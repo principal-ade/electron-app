@@ -171,6 +171,18 @@ export const fileCityTrailAPI: FileCityTrailAPI = {
     return unwrapShare(envelope);
   },
 
+  createSharedNote: async (
+    id: string,
+    draft: TrailNoteDraft,
+  ): Promise<TrailNote> => {
+    const envelope: TrailShareEnvelope<TrailNote> = await ipcRenderer.invoke(
+      FileCityTrailEvent.SHARED_NOTE_CREATE,
+      id,
+      draft,
+    );
+    return unwrapShare(envelope);
+  },
+
   setTransient: async (
     payload: TrailPayload,
     repositoryPath: string | undefined,

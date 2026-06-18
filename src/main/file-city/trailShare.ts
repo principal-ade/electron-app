@@ -34,7 +34,11 @@ import {
   type TrailListSharedResult,
   type TrailShareOptions,
 } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
-import type { TrailPayload } from '@industry-theme/file-city-panel';
+import type {
+  TrailPayload,
+  TrailNote,
+  TrailNoteDraft,
+} from '@industry-theme/file-city-panel';
 
 const SLUG_REGEX = /^[A-Za-z0-9._-]+$/;
 const MAX_PAYLOAD_BYTES = 10 * 1024 * 1024;
@@ -480,4 +484,51 @@ export async function fetchSharedTrailById(
 ): Promise<FileCityTrailFetchSharedByIdResult> {
   const token = await getGithubToken();
   return fetchByIdFromWebAde(id, token);
+}
+
+async function createNoteOnWebAde(
+  id: string,
+  draft: TrailNoteDraft,
+  token: string,
+): Promise<TrailNote> {
+  const url = `${apiBase()}/trails/by-id/${encodeURIComponent(id)}/notes`;
+  let res: import('node-fetch').Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(draft),
+    });
+  } catch (err) {
+    throw new TrailShareError(
+      'NETWORK_ERROR',
+      'Could not reach web-ade to add the note.',
+      { cause: err instanceof Error ? err.message : String(err) },
+    );
+  }
+  if (!res.ok) {
+    const body = await readErrorBody(res);
+    throw shareErrorFromResponse(res, body, 'note');
+  }
+  const json = (await res.json()) as { note: TrailNote };
+  return json.note;
+}
+
+/**
+ * Create a note on a published trail via web-ade's
+ * `POST /api/trails/by-id/{id}/notes`. Used for inbox/shared trails, whose
+ * payloads live only in memory locally — the local disk store can't host
+ * their notes (see `trailStore.createNote` → `applyToPayload`). The note is
+ * persisted server-side on `payload.notes` and comes back on the next
+ * `fetchSharedById`.
+ */
+export async function createSharedTrailNote(
+  id: string,
+  draft: TrailNoteDraft,
+): Promise<TrailNote> {
+  const token = await getGithubToken();
+  return createNoteOnWebAde(id, draft, token);
 }

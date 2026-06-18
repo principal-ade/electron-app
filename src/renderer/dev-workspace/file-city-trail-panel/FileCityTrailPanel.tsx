@@ -32,6 +32,7 @@ import type { TrailNote, TrailPayload } from '@industry-theme/file-city-panel';
 import type { HighlightLayer } from '@principal-ai/file-city-react';
 
 import { TrailNotesService } from '../../services/TrailNotesService';
+import { TrailShareService } from '../../services/TrailShareService';
 
 interface FileCityTrailPanelContext extends PanelContextValue {
   fileTree?: DataSlice<RepoFileTree | null>;
@@ -94,6 +95,16 @@ export interface FileCityTrailPanelProps {
    * global) and feed it back via `briefLayout` / `defaultHideMap`.
    */
   onBriefLayoutChange?: (state: TrailBriefLayoutState) => void;
+  /**
+   * Route note writes to web-ade instead of the local disk store. Set for
+   * inbox/shared trails, whose payloads are hydrated in memory and never
+   * persisted locally — the local `TrailNotesService` can't host their notes
+   * (its `applyToPayload` requires the trail on disk). When true,
+   * `createTrailNote` posts to web-ade via `TrailShareService.createSharedNote`.
+   * Defaults to local. Currently scoped to create; edit/delete still use the
+   * local backend.
+   */
+  remoteNotes?: boolean;
 }
 
 const emptyRoot = {
@@ -143,6 +154,7 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
   briefSide,
   defaultHideMap,
   onBriefLayoutChange,
+  remoteNotes = false,
 }) => {
   const repositoryPath = context.repository?.path ?? null;
   const repoOwner = context.repository?.owner ?? null;
@@ -273,7 +285,23 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
         return result.content;
       },
       createTrailNote: async (payloadId, draft) => {
-        const note = await TrailNotesService.create(payloadId, draft);
+        // Inbox/shared trails live only in memory locally, so their notes go
+        // to web-ade; saved local trails go to the on-disk store. The remote
+        // service re-throws on failure (unlike the local one, which returns
+        // null) — normalize to null so the upstream contract holds and the
+        // markdown-note path (which doesn't catch) can't hit an unhandled
+        // rejection. The composer surfaces null as a "couldn't save" error.
+        let note: TrailNote | null;
+        if (remoteNotes) {
+          try {
+            note = await TrailShareService.createSharedNote(payloadId, draft);
+          } catch (err) {
+            console.error('[FileCityTrailPanel] createSharedNote failed', err);
+            note = null;
+          }
+        } else {
+          note = await TrailNotesService.create(payloadId, draft);
+        }
         if (note) {
           setNotesOverride((prev) => {
             const base =
@@ -323,7 +351,7 @@ export const FileCityTrailPanel: React.FC<FileCityTrailPanelProps> = ({
       closeTrail: onCloseTrail,
       shareTrail: onShareTrail,
     }),
-    [repositoryPath, events, onCloseTrail, onShareTrail, baseTrail],
+    [repositoryPath, events, onCloseTrail, onShareTrail, baseTrail, remoteNotes],
   );
 
   return (

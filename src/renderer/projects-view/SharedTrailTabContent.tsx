@@ -272,6 +272,9 @@ export const SharedTrailViewer: React.FC<{
           events={events}
           briefSide={briefSide}
           onShareTrail={() => setShareModalOpen(true)}
+          // This is a published trail fetched from web-ade; its payload isn't
+          // in the local disk store, so notes must be created against web-ade.
+          remoteNotes
         />
       </div>
       {shareModalOpen && (
