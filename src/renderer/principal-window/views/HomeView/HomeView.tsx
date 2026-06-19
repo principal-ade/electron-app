@@ -8,6 +8,7 @@ import {
   Footprints,
   Layers,
   PenTool,
+  Plug,
   Plus,
   RefreshCw,
   Search,
@@ -123,7 +124,10 @@ interface SkillDetail {
 // Optional skills are NOT installed as part of the required trail bundle. They
 // surface in the footer as individually installable add-ons, and show up among
 // the "Installed Skills" badges once present.
-const OPTIONAL_SKILL_NAMES = ['excalidraw-drawings'] as const;
+const OPTIONAL_SKILL_NAMES = [
+  'excalidraw-drawings',
+  'principal-ai-desktop-app-tools',
+] as const;
 
 const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
   {
@@ -133,6 +137,14 @@ const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
       "Find and edit the app's Excalidraw drawings on disk — locate the .excalidraw JSON under ~/.alexandria/drawings and edit a diagram directly so an agent can collaborate on it.",
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/excalidraw-drawings`,
     Icon: PenTool,
+  },
+  {
+    name: 'principal-ai-desktop-app-tools',
+    title: 'Principal Desktop App Tools',
+    description:
+      "Canonical reference for the app's local bridge — the HTTP surface at localhost:3044 that agents use to push trails, create topics, and leave notes on documents, plus the conventions every call shares.",
+    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/principal-ai-desktop-app-tools`,
+    Icon: Plug,
   },
 ];
 
