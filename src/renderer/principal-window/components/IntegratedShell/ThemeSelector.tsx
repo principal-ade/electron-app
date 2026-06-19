@@ -83,9 +83,15 @@ export const ThemeSelector: React.FC = () => {
       ref={containerRef}
       className="titlebar-theme-selector"
       style={{
+        // position: relative anchors the absolutely-positioned dropdown below.
+        // Deliberately NO z-index here: the titlebar ancestors don't establish a
+        // stacking context, so any z-index on this container leaks into the
+        // window's root stacking context and paints the (closed) button over body
+        // modals — which live inside panel stacking contexts and so can't out-rank
+        // it despite their high z-index values. The dropdown carries its own
+        // zIndex below for when it's open.
         position: 'relative',
         WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-        zIndex: 100,
       }}
     >
       <button
