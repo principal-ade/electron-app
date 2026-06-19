@@ -26,17 +26,19 @@ export interface BriefAgentDragPayload {
 
 /**
  * Build the prompt that gets pasted into the agent's terminal. The agent
- * fetches the topic URL to learn what it's working on. Session linking is
- * handled out-of-band by the event server parsing the hook payload — the
- * agent can't observe it, so we don't mention it in the prompt.
+ * fetches the topic URL to learn what it's working on. We keep this short and
+ * defer the read/append/section mechanics to the `topic-context` skill, which
+ * auto-fires on this exact "Fetch …/api/topics/<id> to begin working on topic"
+ * phrasing. The only thing no skill covers is attaching an authored trail, so
+ * that's the one instruction we keep inline. Session linking is handled
+ * out-of-band by the event server parsing the hook payload — the agent can't
+ * observe it, so we don't mention it in the prompt.
  */
 export function buildBriefingText(payload: BriefAgentDragPayload): string {
   return [
-    `Fetch http://localhost:3044/api/topics/${payload.topicId} to begin working on topic "${payload.topicTitle}". The response returns its description and trails — continue with that context in mind.`,
+    `Fetch http://localhost:3044/api/topics/${payload.topicId} to begin working on topic "${payload.topicTitle}". The response returns its description and trails.`,
     '',
-    `If you author a trail during this task, include "topicId": "${payload.topicId}" in the POST body so it attaches to this topic.`,
-    '',
-    `To leave context on the topic, POST to http://localhost:3044/api/topics/${payload.topicId}/description/append with {"text": "..."} to add a paragraph, or POST to .../description/section with {"heading": "...", "body": "..."} to replace one section in place (match the heading text exactly — GET the topic first to read it). Section upsert keeps a status section truthful instead of stacking duplicates.`,
+    `Use the topic-context skill to read this brief and leave context as you work. If you author a trail, include "topicId": "${payload.topicId}" in the POST body to attach it here.`,
     '',
   ].join('\n');
 }
