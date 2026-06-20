@@ -20,6 +20,7 @@ import { payloadFromGithub, payloadFromLocalEntry } from '../events/repositorySe
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
@@ -27,6 +28,8 @@ import { UserPreferencesService } from '../main-process-api/UserPreferencesServi
 import { useGithubProjects } from '../hooks/useGithubProjects';
 import { OrgSectionHeaderCard } from './cards/OrgSectionHeaderCard';
 import { OrgRepoItemCard } from './cards/OrgRepoItemCard';
+import { RelocateToConventionModal } from './components/RelocateToConventionModal';
+import { getOffConventionTarget } from '../../shared/utils/clonePath';
 import { CloneFromGitHubModal } from './components/CloneFromGitHubModal';
 import { CreateRepositoryInWorkspaceModal } from './components/CreateRepositoryInWorkspaceModal';
 
@@ -65,6 +68,13 @@ interface UnifiedProject {
   lastActivity: number;
   /** URL used to seed the clone flow, when known. */
   cloneUrl?: string;
+  /**
+   * Set when the local clone is under the base dir but not in the canonical
+   * `{baseDir}/{owner}/{repo}` layout and a known owner is derivable. Drives the
+   * off-convention row icon + relocate modal. `null`/absent = on convention or
+   * not evaluable.
+   */
+  offConvention?: { expectedPath: string; owner: string } | null;
 }
 
 const toMs = (iso?: string): number => {
@@ -220,6 +230,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   // Remove-from-list confirmation state. This flow only unregisters the
   // project from Alexandria; the clone on disk is untouched.
   const [removeConfirm, setRemoveConfirm] = useState<AlexandriaEntry | null>(null);
+  const [relocateTarget, setRelocateTarget] = useState<UnifiedProject | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [clearAllConfirm, setClearAllConfirm] = useState(false);
   const [clearAllBusy, setClearAllBusy] = useState(false);
@@ -313,6 +324,8 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         toMs(entry.registeredAt)
       );
 
+      const offConvention = getOffConventionTarget(entry, baseDefaultDirectory);
+
       const existing = map.get(key);
       if (existing) {
         existing.isCloned = true;
@@ -321,6 +334,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         existing.description = existing.description ?? entry.github?.description;
         existing.isPrivate = existing.isPrivate ?? toIsPrivate(entry.github?.isPublic);
         existing.lastActivity = Math.max(existing.lastActivity, localActivity);
+        existing.offConvention = offConvention;
       } else {
         map.set(key, {
           key,
@@ -333,12 +347,13 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           entry,
           lastActivity: localActivity,
           cloneUrl: entry.remoteUrl,
+          offConvention,
         });
       }
     }
 
     return Array.from(map.values());
-  }, [githubRepos, repositories, gitStatusMap]);
+  }, [githubRepos, repositories, gitStatusMap, baseDefaultDirectory]);
 
   // Apply filter + search, then group by org and order the groups.
   const { groups, sortedOrgNames } = useMemo(() => {
@@ -679,6 +694,12 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                         onRemove={
                           project.entry ? () => setRemoveConfirm(project.entry ?? null) : undefined
                         }
+                        offConvention={!!project.offConvention}
+                        onRelocate={
+                          project.offConvention && project.entry
+                            ? () => setRelocateTarget(project)
+                            : undefined
+                        }
                       />
                     ))}
                   </div>
@@ -696,6 +717,26 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         onClose={() => setCloneUrl(null)}
         initialUrl={cloneUrl ?? undefined}
       />
+
+      {/* Relocate an off-convention clone into `{baseDir}/{owner}/{repo}`. The
+          move re-keys the registry and broadcasts REPOSITORY_UPDATED, so the
+          list refreshes and the off-convention icon clears automatically. */}
+      {relocateTarget?.entry && relocateTarget.offConvention && (
+        <RelocateToConventionModal
+          isOpen
+          repoName={relocateTarget.name}
+          owner={relocateTarget.offConvention.owner}
+          currentPath={String(relocateTarget.entry.path)}
+          expectedPath={relocateTarget.offConvention.expectedPath}
+          onRelocate={() =>
+            WorkspaceService.moveRepositoryToConventionalPath(
+              relocateTarget.entry as AlexandriaEntry,
+              (relocateTarget.offConvention as { owner: string }).owner,
+            )
+          }
+          onClose={() => setRelocateTarget(null)}
+        />
+      )}
 
       {/* Create a new repo under a specific owner, seeded from the owner-line
           "+". Skips destination/org selection; the registry-change event

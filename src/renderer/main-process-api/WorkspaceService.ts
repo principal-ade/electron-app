@@ -139,4 +139,14 @@ export class WorkspaceService {
       repository,
     );
   }
+
+  static async moveRepositoryToConventionalPath(
+    repository: AlexandriaEntry,
+    owner: string,
+  ): Promise<string> {
+    return window.mainProcess.workspace.moveRepositoryToConventionalPath(
+      repository,
+      owner,
+    );
+  }
 }

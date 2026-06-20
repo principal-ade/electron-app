@@ -161,4 +161,15 @@ export const workspaceApi: WorkspaceAPI = {
       repository,
     );
   },
+
+  moveRepositoryToConventionalPath(
+    repository: AlexandriaEntry,
+    owner: string,
+  ): Promise<string> {
+    return ipcRenderer.invoke(
+      WorkspaceAPIEvent.MOVE_REPOSITORY_TO_CONVENTIONAL_PATH,
+      repository,
+      owner,
+    );
+  },
 };

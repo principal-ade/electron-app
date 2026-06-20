@@ -35,6 +35,7 @@ export enum WorkspaceAPIEvent {
   IS_REPOSITORY_IN_WORKSPACE_DIRECTORY = 'workspace:is-repository-in-directory',
   MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY = 'workspace:move-repository-to-directory',
   MOVE_REPOSITORY_TO_DEFAULT_DIRECTORY = 'workspace:move-repository-to-default-directory',
+  MOVE_REPOSITORY_TO_CONVENTIONAL_PATH = 'workspace:move-repository-to-conventional-path',
 
   // Events
   WORKSPACE_ADDED = 'workspace:added',
@@ -178,4 +179,15 @@ export interface WorkspaceAPI {
    * @throws Error if baseDefaultDirectory is not set or if move fails
    */
   moveRepositoryToDefaultDirectory(repository: AlexandriaEntry): Promise<string>;
+
+  /**
+   * Move a repository into the canonical `{baseDir}/{owner}/{repo}` layout,
+   * preserving its folder name and entry metadata.
+   * @returns The new path of the repository after moving
+   * @throws Error if no owner/baseDefaultDirectory is set or if move fails
+   */
+  moveRepositoryToConventionalPath(
+    repository: AlexandriaEntry,
+    owner: string,
+  ): Promise<string>;
 }

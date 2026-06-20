@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Circle, Cloud, Download, Eraser, FolderGit2, Lock } from 'lucide-react';
+import { Circle, Cloud, Download, Eraser, FolderGit2, FolderTree, Lock } from 'lucide-react';
 
 export interface OrgRepoItemCardData {
   name: string;
@@ -22,6 +22,13 @@ export interface OrgRepoItemCardProps {
   onClone?: () => void;
   /** Hover-revealed action to remove a cloned project from the local registry. */
   onRemove?: () => void;
+  /**
+   * Whether this clone is off the `{baseDir}/{owner}/{repo}` convention. When
+   * true, a clickable folder-tree glyph appears next to the name.
+   */
+  offConvention?: boolean;
+  /** Opens the relocate modal for an off-convention clone. */
+  onRelocate?: () => void;
 }
 
 export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
@@ -32,6 +39,8 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   isPrivate,
   onClone,
   onRemove,
+  offConvention = false,
+  onRelocate,
 }) => {
   const { theme } = useTheme();
   const spacing = { xs: 4, sm: 8, md: 16 };
@@ -155,6 +164,44 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
           }}
         >
           <Download size={14} />
+        </button>
+      )}
+
+      {/* Relocate action for off-convention clones — move into the
+          {base}/{owner}/{repo} layout. Sits next to the remove action. */}
+      {isCloned && offConvention && onRelocate && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRelocate();
+          }}
+          title="Not in {owner}/{repo} layout — move to standard location"
+          aria-label={`Move ${repo.name} to standard location`}
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 24,
+            height: 24,
+            padding: 0,
+            border: 'none',
+            borderRadius: 4,
+            background: 'transparent',
+            color: theme.colors.textSecondary,
+            cursor: 'pointer',
+            opacity: hovered ? 1 : 0,
+            transition: 'opacity 120ms, color 120ms',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = theme.colors.warning;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = theme.colors.textSecondary;
+          }}
+        >
+          <FolderTree size={14} />
         </button>
       )}
 
