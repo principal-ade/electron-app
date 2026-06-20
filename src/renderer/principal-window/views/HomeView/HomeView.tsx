@@ -3,6 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   BookOpen,
   Check,
+  Compass,
   Download,
   ExternalLink,
   Footprints,
@@ -31,6 +32,7 @@ import { DeleteTopicConfirmDialog } from '../../../components/DeleteTopicConfirm
 import { TrailPromptIdeas } from '../../components/TrailPromptIdeas';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
+import type { SkillLockFile } from '../../../../shared/main-process-api-interfaces/SkillLockAPI';
 import type {
   AlexandriaEntry,
   Topic,
@@ -55,6 +57,11 @@ const TRAIL_SKILL_REPO_OWNER = 'principal-ai';
 const TRAIL_SKILL_REPO_NAME = 'skills';
 const TRAIL_SKILL_BRANCH = 'main';
 const TRAIL_SKILL_GITHUB_URL = `https://github.com/${TRAIL_SKILL_REPO_OWNER}/${TRAIL_SKILL_REPO_NAME}`;
+// Normalized "owner/repo" source recorded in the skill lock file for skills that
+// ship from the shared principal-ai/skills repo. Used to confirm an installed
+// skill came from the expected repo, not just that *some* skill of the same name
+// is present — see matchInstalledFromLock.
+const TRAIL_SKILL_SOURCE = `${TRAIL_SKILL_REPO_OWNER}/${TRAIL_SKILL_REPO_NAME}`;
 
 const TRAIL_INSTALL_SKILL_NAMES = [
   'convert-investigation',
@@ -69,6 +76,7 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
   title: string;
   description: string;
   url: string;
+  source: string;
   Icon: React.ComponentType<{ size?: number; color?: string }>;
 }> = [
   {
@@ -77,6 +85,7 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
     description:
       'Capture an investigation as you debug — records the files, calls, and findings you walked through so the chain of reasoning is preserved.',
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/author-investigation-trail`,
+    source: TRAIL_SKILL_SOURCE,
     Icon: Search,
   },
   {
@@ -85,6 +94,7 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
     description:
       'Lay a guided tour through the code to explain how a feature or system works, so a teammate can follow the path without reverse-engineering it.',
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/author-informative-trail`,
+    source: TRAIL_SKILL_SOURCE,
     Icon: BookOpen,
   },
   {
@@ -93,6 +103,7 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
     description:
       'Turn a raw investigation trail into a polished, shareable spec — cleans up the trail and forwards it through the convert pipeline.',
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/convert-investigation`,
+    source: TRAIL_SKILL_SOURCE,
     Icon: Share2,
   },
   {
@@ -101,6 +112,7 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
     description:
       'Create a topic — a curated bundle of trails on one subject, with a description that doubles as the working brief for agents pointed at it.',
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/create-topic`,
+    source: TRAIL_SKILL_SOURCE,
     Icon: Plus,
   },
   {
@@ -109,6 +121,7 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
     description:
       'Read the topic an agent was briefed on and keep its description current — fetch the topic and its trails, append discovered context, or replace a status section in place.',
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/topic-context`,
+    source: TRAIL_SKILL_SOURCE,
     Icon: Layers,
   },
 ];
@@ -119,6 +132,13 @@ interface SkillDetail {
   title: string;
   description: string;
   url: string;
+  /**
+   * Normalized "owner/repo" the skill ships from. A lock entry only counts as
+   * *this* skill when its recorded `source` matches — the lock file keys by bare
+   * name, so a same-named skill from another repo would otherwise read as
+   * installed. See matchInstalledFromLock.
+   */
+  source: string;
   Icon: React.ComponentType<{ size?: number; color?: string }>;
 }
 
@@ -128,6 +148,7 @@ interface SkillDetail {
 const OPTIONAL_SKILL_NAMES = [
   'excalidraw-drawings',
   'principal-ai-desktop-app-tools',
+  'file-city-tours',
 ] as const;
 
 const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
@@ -137,6 +158,7 @@ const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
     description:
       "Find and edit the app's Excalidraw drawings on disk — locate the .excalidraw JSON under ~/.alexandria/drawings and edit a diagram directly so an agent can collaborate on it.",
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/excalidraw-drawings`,
+    source: TRAIL_SKILL_SOURCE,
     Icon: PenTool,
   },
   {
@@ -145,7 +167,19 @@ const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
     description:
       "Canonical reference for the app's local bridge — the HTTP surface at localhost:3044 that agents use to push trails, create topics, and leave notes on documents, plus the conventions every call shares.",
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/principal-ai-desktop-app-tools`,
+    source: TRAIL_SKILL_SOURCE,
     Icon: Plug,
+  },
+  {
+    name: 'file-city-tours',
+    title: 'File City Tours',
+    description:
+      'Create and validate guided introduction tours for File City visualizations — build onboarding walkthroughs that highlight a codebase\'s architecture with interactive highlights, actions, and color modes.',
+    // file-city-tours ships from the principal-ai/file-city repo (under
+    // skills/), NOT principal-ai/skills like the trail skills above.
+    url: 'https://github.com/principal-ai/file-city/tree/main/skills/file-city-tours',
+    source: 'principal-ai/file-city',
+    Icon: Compass,
   },
 ];
 
@@ -160,6 +194,26 @@ const TRACKED_SKILL_NAMES: ReadonlyArray<string> = [
   ...TRAIL_INSTALL_SKILL_NAMES,
   ...OPTIONAL_SKILL_NAMES,
 ];
+
+/**
+ * Resolve which tracked skills are installed *from the repo we advertise*.
+ *
+ * The lock file keys entries by bare skill name, so presence-of-key alone can't
+ * tell our `file-city-tours` (principal-ai/skills … or principal-ai/file-city)
+ * apart from a same-named skill installed from somewhere else. We additionally
+ * require the recorded `entry.source` to equal the catalog entry's `source`, so
+ * the badge reflects *our* skill rather than any skill that happens to share the
+ * name. Identity here is (name, source), even though storage still keys by name.
+ */
+function matchInstalledFromLock(lockFile: SkillLockFile | null): Set<string> {
+  if (!lockFile) return new Set();
+  return new Set(
+    ALL_SKILL_DETAILS.filter((skill) => {
+      const entry = lockFile.skills[skill.name];
+      return entry != null && entry.source === skill.source;
+    }).map((skill) => skill.name),
+  );
+}
 
 export function HomeView() {
   const { theme } = useTheme();
@@ -514,15 +568,9 @@ export function HomeView() {
     let cancelled = false;
     (async () => {
       try {
-        const checks = await Promise.all(
-          TRACKED_SKILL_NAMES.map((name) =>
-            SkillLockService.isSkillInstalled(name),
-          ),
-        );
+        const lockFile = await SkillLockService.getLockFile();
         if (!cancelled) {
-          const installed = new Set(
-            TRACKED_SKILL_NAMES.filter((_, i) => checks[i]),
-          );
+          const installed = matchInstalledFromLock(lockFile);
           setInstalledSkillNames(installed);
           // The trail dashboard gates on the required bundle only.
           setSkillInstalled(
@@ -566,14 +614,8 @@ export function HomeView() {
     const tracked = new Set<string>(TRACKED_SKILL_NAMES);
     const recheck = async () => {
       try {
-        const checks = await Promise.all(
-          TRACKED_SKILL_NAMES.map((name) =>
-            SkillLockService.isSkillInstalled(name),
-          ),
-        );
-        const installed = new Set(
-          TRACKED_SKILL_NAMES.filter((_, i) => checks[i]),
-        );
+        const lockFile = await SkillLockService.getLockFile();
+        const installed = matchInstalledFromLock(lockFile);
         setInstalledSkillNames(installed);
         setSkillInstalled(
           TRAIL_INSTALL_SKILL_NAMES.every((name) => installed.has(name)),
