@@ -124,6 +124,43 @@ function greet(name: string): string {
 
 const NON_MARKDOWN_CONTENT = 'console.log("not markdown");\n';
 
+// A real `---`-separated slide deck (Marp / reveal.js convention). The panel
+// detects the separators and offers a "Slideshow" toggle in the toolbar.
+const SAMPLE_SLIDES = `---
+title: Quarterly Review
+---
+
+# Quarterly Review
+
+A markdown deck rendered as a slideshow.
+
+Use the **Slideshow** toggle in the top-right toolbar.
+
+---
+
+## Highlights
+
+- Shipped the markdown panel
+- \`---\` separators split the deck into slides
+- The code fence below must NOT split the deck:
+
+\`\`\`md
+# not a new slide
+---
+still the same slide
+\`\`\`
+
+---
+
+## Next Quarter
+
+1. Slide search
+2. Speaker notes
+3. Export to PDF
+
+> Thanks for reading.
+`;
+
 const SAMPLE_MARKDOWN_WITH_LINKS = `# Links
 
 The doc lives at \`/mock/mock-repo/docs/getting-started.md\`, so its directory
@@ -286,6 +323,21 @@ export const Default: Story = {
       description: {
         story:
           'Panel reads the file via `actions.readFile`. Select a phrase inside a single paragraph to draft a note, or copy with Cmd+C / the Copy button.',
+      },
+    },
+  },
+};
+
+export const Slideshow: Story = {
+  args: {
+    content: SAMPLE_SLIDES,
+    filePath: '/mock/mock-repo/docs/quarterly-review.md',
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A `---`-separated deck. The toolbar shows a **Slideshow** toggle (absent for non-slide docs like Default); clicking it swaps `DocumentView` for `SlidePresentation` with prev/next nav and a slide counter. The `---` inside the fenced code block does not create an extra slide.',
       },
     },
   },

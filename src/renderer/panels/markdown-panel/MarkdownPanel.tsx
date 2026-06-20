@@ -5,9 +5,9 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import { Plus, Minus, Pencil } from 'lucide-react';
+import { Plus, Minus, Pencil, Presentation, FileText } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { DocumentView } from 'themed-markdown';
+import { DocumentView, SlidePresentation } from 'themed-markdown';
 import type { AnnotationSelection } from 'themed-markdown';
 import 'themed-markdown/dist/index.css';
 import type {
@@ -26,6 +26,7 @@ import { MarkdownSelectionPill } from '../../dev-workspace/file-city-panel/Markd
 import { NotePopover } from './NotePopover';
 import { parseFrontmatter } from './frontmatter';
 import { MarkdownFrontmatterHeader } from './MarkdownFrontmatterHeader';
+import { splitIntoSlides } from './slides';
 
 export interface MarkdownPanelActions extends PanelActions {
   readFile: (path: string) => Promise<string>;
@@ -187,6 +188,18 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
     () => parseFrontmatter(markdownContent),
     [markdownContent],
   );
+
+  // Slideshow detection: a doc authored as `---`-separated slides can be
+  // presented as a deck. We split the body ourselves (not the heading-based
+  // parser) so only real decks light up the toggle.
+  const slides = useMemo(() => splitIntoSlides(markdownBody), [markdownBody]);
+  const canPresent = slides.length > 1;
+  const [viewMode, setViewMode] = useState<'document' | 'slides'>('document');
+
+  // Never leave a non-deck file (or a freshly opened file) stuck in slide view.
+  useEffect(() => {
+    if (!canPresent) setViewMode('document');
+  }, [canPresent, currentFilePath]);
 
   // Link handling -----------------------------------------------------------
   // The panel renders a real on-disk doc, so `./sibling.md` should resolve
@@ -623,26 +636,39 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
         }}
       >
         <MarkdownFrontmatterHeader data={frontmatter} />
-        {/* Remaining space; DocumentView keeps its own internal scroll. */}
+        {/* Remaining space; the view keeps its own internal scroll. */}
         <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-          <DocumentView
-            content={markdownBody}
-            theme={theme}
-            fontSizeScale={fontSizeScale}
-            onCheckboxChange={() => {}}
-            slideIdPrefix="markdown-panel"
-            maxWidth="100%"
-            width={width}
-            annotations={annotationsForView}
-            activeAnnotationId={activeAnnotationId}
-            onSelectionChange={handleSelectionChange}
-            onAnnotationClick={handleAnnotationClick}
-            onLinkClick={onLinkClick}
-          />
+          {viewMode === 'slides' && canPresent ? (
+            <SlidePresentation
+              slides={slides}
+              theme={theme}
+              fontSizeScale={fontSizeScale}
+              slideIdPrefix="markdown-panel"
+              showNavigation
+              showSlideCounter
+              showFullscreenButton
+              onLinkClick={onLinkClick}
+            />
+          ) : (
+            <DocumentView
+              content={markdownBody}
+              theme={theme}
+              fontSizeScale={fontSizeScale}
+              onCheckboxChange={() => {}}
+              slideIdPrefix="markdown-panel"
+              maxWidth="100%"
+              width={width}
+              annotations={annotationsForView}
+              activeAnnotationId={activeAnnotationId}
+              onSelectionChange={handleSelectionChange}
+              onAnnotationClick={handleAnnotationClick}
+              onLinkClick={onLinkClick}
+            />
+          )}
         </div>
       </div>
 
-      {!draft && !editing && pendingSelection && (
+      {viewMode === 'document' && !draft && !editing && pendingSelection && (
         <MarkdownSelectionPill
           rect={{
             left: pendingSelection.rect.left,
@@ -656,7 +682,7 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
         />
       )}
 
-      {draft && (
+      {viewMode === 'document' && draft && (
         <NotePopover
           rect={draft.rect}
           onSave={handleSaveDraft}
@@ -664,7 +690,7 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
         />
       )}
 
-      {editing && (
+      {viewMode === 'document' && editing && (
         <NotePopover
           rect={editing.rect}
           initialBody={editing.note.metadata.body}
@@ -746,6 +772,57 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
           >
             <Plus size={14} />
           </button>
+
+          {canPresent && (
+            <>
+              <span
+                style={{
+                  width: '1px',
+                  alignSelf: 'stretch',
+                  backgroundColor: theme.colors.border,
+                }}
+              />
+
+              <button
+                onClick={() =>
+                  setViewMode((mode) =>
+                    mode === 'slides' ? 'document' : 'slides',
+                  )
+                }
+                title={
+                  viewMode === 'slides'
+                    ? 'Back to document view'
+                    : 'Present as slideshow'
+                }
+                style={{
+                  background: 'none',
+                  border: `1px solid ${theme.colors.border}`,
+                  padding: '4px 6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  color: theme.colors.textSecondary,
+                  borderRadius: '4px',
+                  transition: 'all 0.2s',
+                  fontFamily: theme.fonts.body,
+                  fontSize: '12px',
+                }}
+              >
+                {viewMode === 'slides' ? (
+                  <>
+                    <FileText size={14} />
+                    Document
+                  </>
+                ) : (
+                  <>
+                    <Presentation size={14} />
+                    Slideshow
+                  </>
+                )}
+              </button>
+            </>
+          )}
 
           {showEditButton && (
             <>
