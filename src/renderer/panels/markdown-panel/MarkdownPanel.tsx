@@ -16,6 +16,8 @@ import { DocumentNotesService } from '../../main-process-api/DocumentNotesServic
 import { useFileWatch } from '../../hooks/useFileWatch';
 import { MarkdownSelectionPill } from '../../dev-workspace/file-city-panel/MarkdownNotes';
 import { NotePopover } from './NotePopover';
+import { parseFrontmatter } from './frontmatter';
+import { MarkdownFrontmatterHeader } from './MarkdownFrontmatterHeader';
 
 export interface MarkdownPanelActions extends PanelActions {
   readFile: (path: string) => Promise<string>;
@@ -162,6 +164,15 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
   const currentFilePath = fileState?.path ?? '';
   const markdownContent = fileState?.content ?? '';
   const isMarkdown = !!currentFilePath.match(/\.(md|mdx|markdown)$/i);
+
+  // Split YAML front matter off the document: `frontmatter` drives the styled
+  // header, `markdownBody` (front matter stripped) is what we render below.
+  // Note anchoring is text-quote based, so stripping the fence doesn't break
+  // existing notes — none are ever anchored inside the front matter.
+  const { data: frontmatter, body: markdownBody } = useMemo(
+    () => parseFrontmatter(markdownContent),
+    [markdownContent]
+  );
 
   useEffect(() => {
     const prev = previousContentRef.current;
@@ -562,19 +573,32 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
         position: 'relative',
       }}
     >
-      <DocumentView
-        content={markdownContent}
-        theme={theme}
-        fontSizeScale={fontSizeScale}
-        onCheckboxChange={() => {}}
-        slideIdPrefix="markdown-panel"
-        maxWidth="100%"
-        width={width}
-        annotations={annotationsForView}
-        activeAnnotationId={activeAnnotationId}
-        onSelectionChange={handleSelectionChange}
-        onAnnotationClick={handleAnnotationClick}
-      />
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <MarkdownFrontmatterHeader data={frontmatter} />
+        {/* Remaining space; DocumentView keeps its own internal scroll. */}
+        <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+          <DocumentView
+            content={markdownBody}
+            theme={theme}
+            fontSizeScale={fontSizeScale}
+            onCheckboxChange={() => {}}
+            slideIdPrefix="markdown-panel"
+            maxWidth="100%"
+            width={width}
+            annotations={annotationsForView}
+            activeAnnotationId={activeAnnotationId}
+            onSelectionChange={handleSelectionChange}
+            onAnnotationClick={handleAnnotationClick}
+          />
+        </div>
+      </div>
 
       {!draft && !editing && pendingSelection && (
         <MarkdownSelectionPill
