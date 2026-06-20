@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import { Plus, Minus, Pencil } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { DocumentView } from 'themed-markdown';
@@ -14,6 +20,8 @@ import type {
 } from '../../../shared/types/document-notes.types';
 import { DocumentNotesService } from '../../main-process-api/DocumentNotesService';
 import { useFileWatch } from '../../hooks/useFileWatch';
+import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
+import { MarkdownLinkNotice } from '../../components/MarkdownLinkNotice';
 import { MarkdownSelectionPill } from '../../dev-workspace/file-city-panel/MarkdownNotes';
 import { NotePopover } from './NotePopover';
 import { parseFrontmatter } from './frontmatter';
@@ -53,8 +61,7 @@ export interface ContentChangeInfo {
   timestamp: number;
 }
 
-export interface MarkdownPanelProps
-  extends PanelComponentProps<MarkdownPanelActions> {
+export interface MarkdownPanelProps extends PanelComponentProps<MarkdownPanelActions> {
   filePath?: string | null;
   /**
    * Absolute path of the repository the file belongs to. Used to key notes
@@ -87,7 +94,9 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
   const [fontSizeScale, setFontSizeScale] = useState<number>(1.0);
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
-  const previousContentRef = useRef<{ path: string; content: string } | null>(null);
+  const previousContentRef = useRef<{ path: string; content: string } | null>(
+    null,
+  );
 
   // The panel owns its file load. We re-read whenever `filePath` changes
   // or the file watcher reports a change on disk.
@@ -111,7 +120,12 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
     }));
     try {
       const content = await actions.readFile(filePathProp);
-      setFileState({ path: filePathProp, content, loading: false, error: null });
+      setFileState({
+        path: filePathProp,
+        content,
+        loading: false,
+        error: null,
+      });
     } catch (err) {
       console.error('[MarkdownPanel] Failed to load file:', err);
       setFileState({
@@ -171,8 +185,29 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
   // existing notes — none are ever anchored inside the front matter.
   const { data: frontmatter, body: markdownBody } = useMemo(
     () => parseFrontmatter(markdownContent),
-    [markdownContent]
+    [markdownContent],
   );
+
+  // Link handling -----------------------------------------------------------
+  // The panel renders a real on-disk doc, so `./sibling.md` should resolve
+  // against the doc's own directory; repo-root-relative links (`/docs/x.md`)
+  // resolve against `repositoryPath`. We have no workspace file index here, so
+  // the handler uses its basePath/repositoryPath join fallback and opens
+  // optimistically — external links go to the OS browser, `#anchors` scroll,
+  // and resolved docs emit `file:opened` for the host framework to open as a tab.
+  const docDir = useMemo(() => {
+    const i = currentFilePath.lastIndexOf('/');
+    return i > 0 ? currentFilePath.slice(0, i) : undefined;
+  }, [currentFilePath]);
+
+  const { onLinkClick, notice, dismissNotice, openCandidate } =
+    useMarkdownLinkHandler({
+      events,
+      repositoryPath: repositoryPathProp,
+      basePath: docDir,
+      source: 'markdown-panel',
+    });
+  // -----------------------------------------------------------------------
 
   useEffect(() => {
     const prev = previousContentRef.current;
@@ -181,7 +216,11 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
       return;
     }
 
-    if (prev && prev.path === currentFilePath && prev.content !== markdownContent) {
+    if (
+      prev &&
+      prev.path === currentFilePath &&
+      prev.content !== markdownContent
+    ) {
       const changeInfo: ContentChangeInfo = {
         path: currentFilePath,
         previousContent: prev.content,
@@ -202,7 +241,10 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
       });
     }
 
-    previousContentRef.current = { path: currentFilePath, content: markdownContent };
+    previousContentRef.current = {
+      path: currentFilePath,
+      content: markdownContent,
+    };
   }, [markdownContent, currentFilePath, onContentChange, events]);
 
   // Notes wiring -----------------------------------------------------------
@@ -217,7 +259,10 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
     if (repositoryPathProp) {
       return {
         repositoryPath: repositoryPathProp,
-        relativeFilePath: relativizeIfPrefix(currentFilePath, repositoryPathProp),
+        relativeFilePath: relativizeIfPrefix(
+          currentFilePath,
+          repositoryPathProp,
+        ),
       };
     }
     return { repositoryPath: undefined, relativeFilePath: currentFilePath };
@@ -344,11 +389,7 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
       // the user might be copying from an input or textarea.
       if (target) {
         const tag = target.tagName;
-        if (
-          tag === 'INPUT' ||
-          tag === 'TEXTAREA' ||
-          target.isContentEditable
-        ) {
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) {
           return;
         }
       }
@@ -596,6 +637,7 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
             activeAnnotationId={activeAnnotationId}
             onSelectionChange={handleSelectionChange}
             onAnnotationClick={handleAnnotationClick}
+            onLinkClick={onLinkClick}
           />
         </div>
       </div>
@@ -629,6 +671,14 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
           onSave={handleSaveEdit}
           onDelete={handleDeleteEdit}
           onCancel={() => setEditing(null)}
+        />
+      )}
+
+      {notice && (
+        <MarkdownLinkNotice
+          notice={notice}
+          onDismiss={dismissNotice}
+          onChoose={openCandidate}
         />
       )}
 

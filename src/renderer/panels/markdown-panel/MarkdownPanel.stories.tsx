@@ -15,7 +15,8 @@ import { MarkdownPanel } from './MarkdownPanel';
 // crash when the panel mounts. Stories don't exercise persistence; we just
 // keep notes in an in-memory map keyed by `${repoPath ?? ''}::${relPath}`.
 const noteStore = new Map<string, DocumentNote[]>();
-const noteKey = (repo: string | undefined, rel: string) => `${repo ?? ''}::${rel}`;
+const noteKey = (repo: string | undefined, rel: string) =>
+  `${repo ?? ''}::${rel}`;
 
 if (typeof window !== 'undefined') {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,6 +30,15 @@ if (typeof window !== 'undefined') {
       watchFile: async () => true,
       onFileChange: () => () => {},
       stopWatchingFile: async () => true,
+    },
+    shell: {
+      ...w.mainProcess?.shell,
+      // External link clicks route through ShellService.openExternal → here.
+      // Log instead of shelling out so the Links story is observable.
+      openExternal: async (url: string) => {
+        console.info('[MarkdownPanel story] shell.openExternal', url);
+        return { success: true };
+      },
     },
     documentNotes: {
       list: async (repo: string | undefined, rel: string) =>
@@ -114,6 +124,33 @@ function greet(name: string): string {
 
 const NON_MARKDOWN_CONTENT = 'console.log("not markdown");\n';
 
+const SAMPLE_MARKDOWN_WITH_LINKS = `# Links
+
+The doc lives at \`/mock/mock-repo/docs/getting-started.md\`, so its directory
+(\`/mock/mock-repo/docs\`) is the base for relative links.
+
+## External (open in OS browser)
+
+- [Anthropic](https://www.anthropic.com) — \`https:\` → \`ShellService.openExternal\`
+- [Email us](mailto:hi@example.com) — \`mailto:\` → \`ShellService.openExternal\`
+
+## In-document anchor (renderer scrolls, handler ignores)
+
+- [Jump to relative links](#relative-resolve-against-the-docs-directory)
+
+## Relative — resolve against the doc's directory
+
+- [Sibling: configuration](./configuration.md) — resolves to \`/mock/mock-repo/docs/configuration.md\`
+- [Parent: project README](../README.md) — resolves to \`/mock/mock-repo/README.md\`
+
+## Repo-root-relative — resolve against repositoryPath
+
+- [Architecture doc](/docs/architecture.md) — resolves to \`/mock/mock-repo/docs/architecture.md\`
+
+Clicking a relative/root link emits a \`file:opened\` event (logged in the
+overlay below); external links log a \`shell.openExternal\` call to the console.
+`;
+
 interface HarnessArgs {
   /** Content the mocked `actions.readFile` returns. */
   content?: string;
@@ -127,6 +164,8 @@ interface HarnessArgs {
   readFileError?: Error;
   /** When true, no `filePath` is passed (empty-state). */
   noFile?: boolean;
+  /** When true, overlay the captured `file:opened` events (Links story). */
+  showEventLog?: boolean;
 }
 
 const MarkdownPanelHarness: React.FC<HarnessArgs> = ({
@@ -136,8 +175,24 @@ const MarkdownPanelHarness: React.FC<HarnessArgs> = ({
   readFileDelayMs = 0,
   readFileError,
   noFile = false,
+  showEventLog = false,
 }) => {
   const events = useMemo(() => new PanelEventBus(), []);
+
+  // Capture `file:opened` so the Links story shows what relative/root links
+  // resolve to — in the real app the host framework turns these into tabs.
+  const [opened, setOpened] = React.useState<
+    { key: number; filePath: string; repositoryPath?: string }[]
+  >([]);
+  React.useEffect(() => {
+    return events.on('file:opened', (event) => {
+      const payload = event.payload as {
+        filePath: string;
+        repositoryPath?: string;
+      };
+      setOpened((prev) => [...prev, { key: event.timestamp, ...payload }]);
+    });
+  }, [events]);
 
   const context = useMemo<PanelContextValue>(
     () => ({
@@ -175,6 +230,36 @@ const MarkdownPanelHarness: React.FC<HarnessArgs> = ({
         filePath={noFile ? null : filePath}
         repositoryPath={repositoryPath}
       />
+      {showEventLog && (
+        <div
+          style={{
+            position: 'fixed',
+            left: 12,
+            bottom: 12,
+            maxWidth: 520,
+            padding: '10px 12px',
+            background: 'rgba(0,0,0,0.8)',
+            color: '#e6e6e6',
+            font: '12px/1.5 ui-monospace, monospace',
+            borderRadius: 6,
+            zIndex: 1000,
+          }}
+        >
+          <strong>file:opened events</strong>
+          {opened.length === 0 ? (
+            <div style={{ opacity: 0.7 }}>
+              (click a relative or repo-root link)
+            </div>
+          ) : (
+            opened.map((o) => (
+              <div key={o.key}>
+                → {o.filePath}
+                {o.repositoryPath ? `  [repo: ${o.repositoryPath}]` : ''}
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -231,6 +316,23 @@ export const NoFileSelected: Story = {
     docs: {
       description: {
         story: 'Empty state when no `filePath` is provided.',
+      },
+    },
+  },
+};
+
+export const Links: Story = {
+  args: {
+    content: SAMPLE_MARKDOWN_WITH_LINKS,
+    filePath: '/mock/mock-repo/docs/getting-started.md',
+    repositoryPath: '/mock/mock-repo',
+    showEventLog: true,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Exercises `useMarkdownLinkHandler` wired into the panel. External (`https:`/`mailto:`) links log a `shell.openExternal` call; `#anchors` scroll without firing the handler; relative links resolve against the doc directory and repo-root (`/…`) links against `repositoryPath`, both emitting `file:opened` (shown in the overlay).',
       },
     },
   },
