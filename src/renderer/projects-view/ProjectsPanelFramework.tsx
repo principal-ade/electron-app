@@ -26,7 +26,7 @@ import {
   type Purl,
 } from '@principal-ai/alexandria-core-library';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
-import { findClonedGithubEntry, githubRepoPurl } from '../utils/alexandriaIdentity';
+import { findClonedGithubEntry, findEntriesByPurl, githubRepoPurl } from '../utils/alexandriaIdentity';
 import {
   type RepositorySelectedPayload,
 } from '../events/repositorySelected';
@@ -292,6 +292,30 @@ function extractLocalClones(
   return entry.path ? [{ path: entry.path, addedAt: Date.now() }] : undefined;
 }
 
+// Aggregates local clones across every AlexandriaEntry that shares a repo's
+// purl, deduped by path. Each clone is its own path-keyed entry, so a repo with
+// N clones surfaces as N entries here — flatten them into one clone list and
+// keep the earliest `addedAt` per path. Returns undefined when nothing is local.
+function collectLocalClones(
+  entries: readonly AlexandriaEntry[],
+): Array<{ path: string; addedAt: number }> | undefined {
+  const byPath = new Map<string, { path: string; addedAt: number }>();
+  for (const entry of entries) {
+    const clones = extractLocalClones(entry);
+    if (!clones) continue;
+    for (const clone of clones) {
+      const existing = byPath.get(clone.path);
+      if (!existing || clone.addedAt < existing.addedAt) {
+        byPath.set(clone.path, clone);
+      }
+    }
+  }
+  if (byPath.size === 0) return undefined;
+  return Array.from(byPath.values()).sort(
+    (a, b) => a.addedAt - b.addedAt || a.path.localeCompare(b.path),
+  );
+}
+
 /**
  * Wrapper component for repository profile tab content
  * Extracted to prevent remounting when switching tabs
@@ -311,6 +335,19 @@ const RepositoryProfileTabContent: React.FC<{
   // without the parent re-mounting us with a new prop.
   const [resolvedEntry, setResolvedEntry] = React.useState<AlexandriaEntry | undefined>(localEntry);
   React.useEffect(() => { setResolvedEntry(localEntry); }, [localEntry]);
+  // Every registered clone sharing this repo's purl, aggregated from the registry.
+  // The tab is seeded with a single `localEntry`, but clones are stored as
+  // separate path-keyed entries — gather the siblings so all clones are listed.
+  const [aggregatedClones, setAggregatedClones] = React.useState<
+    Array<{ path: string; addedAt: number }> | undefined
+  >(undefined);
+  // Mirror of `aggregatedClones` for the change subscription: REMOVED events
+  // carry only a path (no purl), so the handler matches the deleted path against
+  // the clones currently shown without resubscribing on every aggregation.
+  const aggregatedClonesRef = React.useRef(aggregatedClones);
+  React.useEffect(() => {
+    aggregatedClonesRef.current = aggregatedClones;
+  }, [aggregatedClones]);
 
   const heatMapData = useCommitHeatMap(resolvedEntry?.path ?? null);
 
@@ -321,18 +358,33 @@ const RepositoryProfileTabContent: React.FC<{
       setLoading(true);
 
       try {
-        // Re-fetch on refresh to pick up updated localClones (e.g. after cloning).
         let entry: AlexandriaEntry | undefined = resolvedEntry;
         let gh: GithubRepository | undefined = github;
-        if (refreshTrigger > 0 && resolvedEntry?.path) {
-          const freshEntry = await AlexandriaService.getRepositoryByPath(resolvedEntry.path);
-          if (freshEntry) {
-            entry = freshEntry;
-            gh = freshEntry.github ?? gh;
+
+        // Read the whole registry and match by purl. Clones live as separate
+        // path-keyed entries, so a single entry only knows about its own path —
+        // matching by purl is what surfaces every clone of this repo.
+        const allEntries = await AlexandriaService.getRepositories();
+        if (cancelled) return;
+        const matchingEntries = findEntriesByPurl(allEntries, purl);
+
+        // On refresh (a clone was added or removed), re-resolve the entry we
+        // render from against the live registry: keep the same path if it still
+        // exists, otherwise fall back to any surviving clone, or drop to
+        // remote-only when the last local clone is gone. Without this, deleting
+        // the rendered clone would leave a stale entry pointing at a dead path.
+        if (refreshTrigger > 0) {
+          const survivor =
+            matchingEntries.find((e) => e.path === entry?.path) ?? matchingEntries[0];
+          entry = survivor;
+          gh = survivor?.github ?? gh;
+          if (survivor?.path !== resolvedEntry?.path) {
+            setResolvedEntry(survivor);
           }
         }
 
-        if (cancelled) return;
+        const localClones = collectLocalClones(matchingEntries);
+        setAggregatedClones(localClones);
 
         const displayName = gh ? `${gh.owner}/${gh.name}` : (entry?.name ?? purl);
 
@@ -356,7 +408,7 @@ const RepositoryProfileTabContent: React.FC<{
             htmlUrl: `https://github.com/${gh.owner}/${gh.name}`,
             isPrivate: undefined,
             isLocal: !!entry?.path,
-            localClones: extractLocalClones(entry),
+            localClones,
             github: { ...gh },
           }));
         }
@@ -445,7 +497,7 @@ const RepositoryProfileTabContent: React.FC<{
           htmlUrl: gh ? `https://github.com/${gh.owner}/${gh.name}` : undefined,
           isPrivate: githubIsPrivate,
           isLocal: !!entry?.path,
-          localClones: extractLocalClones(entry),
+          localClones,
           github: gh ? {
             ...gh,
             defaultBranch: githubDefaultBranch || gh.defaultBranch || undefined,
@@ -476,6 +528,17 @@ const RepositoryProfileTabContent: React.FC<{
   // Subscribe to Alexandria repository changes to update profile in real-time
   React.useEffect(() => {
     const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
+      // A clone was deleted. REMOVED events carry only the path, so re-aggregate
+      // when the removed path is one of the clones this profile is showing.
+      if (event.type === AlexandriaEventType.REMOVED) {
+        const removedPath = event.path;
+        if (removedPath && aggregatedClonesRef.current?.some((c) => c.path === removedPath)) {
+          console.info('[RepositoryProfileTab] Clone removed, refreshing profile data:', removedPath);
+          setRefreshTrigger((prev) => prev + 1);
+        }
+        return;
+      }
+
       if ((event.type !== AlexandriaEventType.UPDATED && event.type !== AlexandriaEventType.ADDED) || !event.repository) {
         return;
       }
@@ -530,9 +593,9 @@ const RepositoryProfileTabContent: React.FC<{
     updatedAt: resolvedEntry?.lastOpenedAt || new Date().toISOString(),
     htmlUrl: github ? `https://github.com/${github.owner}/${github.name}` : undefined,
     isLocal: !!resolvedEntry?.path,
-    localClones: extractLocalClones(resolvedEntry),
+    localClones: aggregatedClones ?? extractLocalClones(resolvedEntry),
     github,
-  }), [purl, github, resolvedEntry]);
+  }), [purl, github, resolvedEntry, aggregatedClones]);
 
   const projectContext = React.useMemo(() => ({
     currentScope: {
