@@ -27,6 +27,22 @@ export interface WorkspaceWindowState {
 }
 
 /**
+ * Identity broadcast on {@link WindowEvent.WINDOW_READY} when a window first
+ * paints. Carries enough to correlate the ready signal back to whatever
+ * triggered the open (e.g. an "opening…" affordance keyed on a workspaceId).
+ */
+export interface WindowReadyState {
+  /** Electron window id. */
+  windowId: number;
+  /** Window's primary type (e.g. 'workspace', 'main'); see PrimaryWindowType. */
+  primaryType: string;
+  /** Workspace id, when this is a workspace window. */
+  workspaceId?: string;
+  /** Topics hosted by the window, when applicable. */
+  topicIds: string[];
+}
+
+/**
  * Options for opening a dev workspace window
  */
 export interface DevWorkspaceOptions {
@@ -134,6 +150,13 @@ export interface WindowAPI {
   onWorkspaceWindowsChanged(
     callback: (workspaceWindows: WorkspaceWindowState[]) => void,
   ): () => void;
+
+  /**
+   * Listen for any window reaching first paint (`ready-to-show`).
+   * @param callback - Called with the ready window's identity
+   * @returns Unsubscribe function
+   */
+  onWindowReady(callback: (state: WindowReadyState) => void): () => void;
 
   /**
    * Open a dev workspace window with the panel framework

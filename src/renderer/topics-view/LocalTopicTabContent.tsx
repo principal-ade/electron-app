@@ -18,12 +18,15 @@
 
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Footprints } from 'lucide-react';
+import { Check, Footprints, PanelsTopLeft } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from '../alexandria-workspace/topic-description-tab/TopicDescriptionBody';
 import { TopicService } from '../main-process-api/TopicService';
+import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { TrailLibraryService } from '../services/TrailLibraryService';
+import { useOpenWorkspaceWindow } from '../hooks/useOpenWorkspaceWindow';
 import { useTopicsTabs } from '../principal-window/contexts/TopicsTabsContext';
+import '../styles/window-open-feedback.css';
 
 /** A topic trail resolved against the local library for its title. */
 interface TrailEntry {
@@ -74,6 +77,27 @@ export const LocalTopicTabContent: React.FC<{
 
   const hasTrails = trails.length > 0;
 
+  // Promote this topic to a full Alexandria workspace window — the same path
+  // HomeView's topic card uses, but routed through the shared open-with-feedback
+  // hook. The resolver (find-or-create the topic's workspace) runs inside the
+  // hook's `opening` phase, and `openTopicIds` tells us when a window for this
+  // topic is already open so the button can show a persistent state.
+  const { open, status, openTopicIds } = useOpenWorkspaceWindow();
+  const isWorkspaceOpen = openTopicIds.has(topicId);
+  const openInWorkspace = React.useCallback(() => {
+    void open(async () => {
+      const workspaces = await WorkspaceService.getWorkspaces();
+      const existing = workspaces.find((w) => w.topicIds?.includes(topicId));
+      if (existing) return existing.id;
+      const topic = await TopicService.getTopic(topicId);
+      const created = await WorkspaceService.createWorkspace({
+        name: title || topic?.title || 'Topic',
+        topicIds: [topicId],
+      });
+      return created.id;
+    });
+  }, [open, topicId, title]);
+
   return (
     <div
       style={{
@@ -84,30 +108,96 @@ export const LocalTopicTabContent: React.FC<{
         backgroundColor: theme.colors.background,
       }}
     >
-      {title && (
-        <div
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '14px 20px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          flexShrink: 0,
+        }}
+      >
+        <h1
           style={{
-            padding: '14px 20px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-            flexShrink: 0,
+            flex: 1,
+            minWidth: 0,
+            margin: 0,
+            fontSize: theme.fontSizes[3],
+            fontWeight: 700,
+            color: theme.colors.primary,
+            lineHeight: 1.2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           }}
         >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: theme.fontSizes[3],
-              fontWeight: 700,
-              color: theme.colors.primary,
-              lineHeight: 1.2,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {title}
-          </h1>
-        </div>
-      )}
+          {title || 'Topic'}
+        </h1>
+        <button
+          type="button"
+          onClick={openInWorkspace}
+          disabled={status === 'opening'}
+          title={
+            isWorkspaceOpen
+              ? 'This topic has a workspace window open — click to focus it'
+              : 'Open this topic in an Alexandria workspace window'
+          }
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            flexShrink: 0,
+            padding: '6px 12px',
+            borderRadius: 6,
+            border: `1px solid ${
+              isWorkspaceOpen || status === 'opened'
+                ? theme.colors.primary
+                : theme.colors.border
+            }`,
+            background: theme.colors.backgroundSecondary,
+            color:
+              isWorkspaceOpen || status === 'opened'
+                ? theme.colors.primary
+                : theme.colors.text,
+            cursor: status === 'opening' ? 'default' : 'pointer',
+            opacity: status === 'opening' ? 0.8 : 1,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            transition: 'color 0.15s ease, border-color 0.15s ease',
+          }}
+        >
+          {status === 'opening' ? (
+            <>
+              <span
+                className="wof-pulse-dot"
+                style={{ background: theme.colors.primary }}
+              />
+              Opening…
+            </>
+          ) : status === 'opened' ? (
+            <>
+              <Check size={14} />
+              Opened
+            </>
+          ) : isWorkspaceOpen ? (
+            <>
+              <span
+                className="wof-open-dot"
+                style={{ background: theme.colors.primary }}
+              />
+              Workspace open
+            </>
+          ) : (
+            <>
+              <PanelsTopLeft size={14} />
+              Open in Workspace
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Body: description on the left, trails rail on the right. */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>

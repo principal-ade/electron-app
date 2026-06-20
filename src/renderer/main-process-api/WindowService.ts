@@ -10,6 +10,7 @@
 import type {
   RepositoryWindowState,
   WorkspaceWindowState,
+  WindowReadyState,
   DevWorkspaceOptions,
   ExtensionWindowOptions,
   AlexandriaWorkspaceOptions,
@@ -17,7 +18,7 @@ import type {
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 // Re-export for convenience
-export type { RepositoryWindowState, WorkspaceWindowState };
+export type { RepositoryWindowState, WorkspaceWindowState, WindowReadyState };
 
 /**
  * Service for managing application windows
@@ -168,6 +169,28 @@ export class WindowService {
     } catch (error) {
       console.error(
         '[WindowService] Failed to register workspace windows listener:',
+        error,
+      );
+      return () => {};
+    }
+  }
+
+  /**
+   * Listen for any window reaching first paint (`ready-to-show`). The true
+   * "the window is now visible" confirmation — fires after the IPC open call
+   * resolves and after the window is created, so it's what an "opening…"
+   * affordance should wait on before clearing.
+   * @param callback - Called with the ready window's identity
+   * @returns Unsubscribe function
+   */
+  static onWindowReady(
+    callback: (state: WindowReadyState) => void,
+  ): () => void {
+    try {
+      return window.mainProcess.window.onWindowReady(callback);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to register window-ready listener:',
         error,
       );
       return () => {};

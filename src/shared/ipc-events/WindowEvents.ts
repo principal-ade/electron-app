@@ -16,6 +16,11 @@ export enum WindowEvent {
   REPOSITORY_WINDOWS_CHANGED = 'window:repository-windows-changed',
   GET_OPEN_WORKSPACE_WINDOWS = 'window:get-open-workspace-windows',
   WORKSPACE_WINDOWS_CHANGED = 'window:workspace-windows-changed',
+  // Fired once per window when it reaches `ready-to-show` (first paint).
+  // Unlike WORKSPACE_WINDOWS_CHANGED (which fires at window *creation*, before
+  // the renderer paints), this confirms the window is actually visible — the
+  // signal an "opening…" affordance should wait on before clearing.
+  WINDOW_READY = 'window:window-ready',
 
   // Thread operations (ephemeral multi-repository sessions)
   ADD_REPOSITORY_TO_THREAD = 'window:add-repository-to-thread',

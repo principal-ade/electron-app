@@ -23,6 +23,7 @@ import { TopicService } from '../../../main-process-api/TopicService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
+import { useOpenWorkspaceWindow } from '../../../hooks/useOpenWorkspaceWindow';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { NewTopicModal } from '../../../components/NewTopicModal';
@@ -213,11 +214,17 @@ export function HomeView() {
   const [defaultBaseDirectory, setDefaultBaseDirectory] = useState<
     string | null
   >(null);
-  // Workspace ids that currently have a window open. Drives the "open"
-  // indicator on topic cards (a topic is open when its workspace window is).
-  const [openWorkspaceIds, setOpenWorkspaceIds] = useState<Set<string>>(
-    new Set(),
-  );
+  // Open-a-workspace flow + feedback, shared with the topic tab's button via
+  // the same hook. `openWorkspaceIds` (live) drives the persistent "open"
+  // indicator; `openStatus` + `openingTopicId` drive the transient "Opening…"
+  // indicator on the card being opened; `openTopicWorkspace` is the action
+  // onSelectTopic fires.
+  const {
+    open: openTopicWorkspace,
+    status: openStatus,
+    activeKey: openingTopicId,
+    openWorkspaceIds,
+  } = useOpenWorkspaceWindow();
 
   // Topic modal state.
   const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
@@ -373,28 +380,6 @@ export function HomeView() {
 
   useEffect(() => {
     let cancelled = false;
-    const apply = (
-      windowsList: { workspaceId?: string }[],
-    ) => {
-      if (cancelled) return;
-      setOpenWorkspaceIds(
-        new Set(
-          windowsList
-            .map((w) => w.workspaceId)
-            .filter((id): id is string => !!id),
-        ),
-      );
-    };
-    void WindowService.getOpenWorkspaceWindows().then(apply);
-    const unsubscribe = WindowService.onWorkspaceWindowsChanged(apply);
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
     const targetIds = workspaces
       .filter((w) => (w.topicIds?.length ?? 0) > 0)
       .map((w) => w.id);
@@ -492,6 +477,8 @@ export function HomeView() {
         shared: sharedTopicIds.has(t.id),
         trailCount: t.trailIds.length,
         isOpen: workspace ? openWorkspaceIds.has(workspace.id) : false,
+        // Transient: this card's workspace is mid-open (click → first paint).
+        isOpening: openStatus === 'opening' && openingTopicId === t.id,
         // No local workspace yet — drives the "New" badge. Opening the topic
         // materializes one (see onSelectTopic), at which point this flips off.
         isNew: !workspace,
@@ -505,6 +492,8 @@ export function HomeView() {
     defaultBaseDirectory,
     sharedTopicIds,
     openWorkspaceIds,
+    openStatus,
+    openingTopicId,
   ]);
 
   const hasAnyTrail = recentTrails.length > 0;
@@ -1079,35 +1068,24 @@ export function HomeView() {
                 })();
               }}
               onSelectTopic={(entry) => {
-                void (async () => {
-                  try {
-                    // A topic without a local workspace can't be opened as-is.
-                    // This happens for topics minted over the bridge (the
-                    // `POST /api/topics` route creates only the topic) and,
-                    // in future, topics shared to us by someone else. Open ==
-                    // first materialization: create the workspace from the
-                    // topic, then open it. From here on it behaves like an
-                    // in-app topic. The CREATE_WORKSPACE broadcast refreshes
-                    // the dashboard (dropping its "New" badge) on its own.
-                    let target = workspaces.find((w) =>
-                      w.topicIds?.includes(entry.key),
-                    );
-                    if (!target) {
-                      target = await WorkspaceService.createWorkspace({
-                        name: entry.title,
-                        topicIds: [entry.key],
-                      });
-                    }
-                    await WindowService.openAlexandriaWorkspace({
-                      workspaceId: target.id,
-                    });
-                  } catch (err) {
-                    console.error(
-                      '[HomeView] Failed to open topic workspace:',
-                      err,
-                    );
-                  }
-                })();
+                // Routed through the shared open-with-feedback hook (keyed by
+                // topic id so only this card shows "Opening…"). The resolver
+                // materializes a workspace on first open: topics minted over
+                // the bridge (the `POST /api/topics` route creates only the
+                // topic) — and, in future, topics shared to us — have no local
+                // workspace until now. The CREATE_WORKSPACE broadcast refreshes
+                // the dashboard (dropping its "New" badge) on its own.
+                void openTopicWorkspace(async () => {
+                  const existing = workspaces.find((w) =>
+                    w.topicIds?.includes(entry.key),
+                  );
+                  if (existing) return existing.id;
+                  const created = await WorkspaceService.createWorkspace({
+                    name: entry.title,
+                    topicIds: [entry.key],
+                  });
+                  return created.id;
+                }, entry.key);
               }}
               onCreateTopic={() => setIsNewTopicOpen(true)}
               onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}

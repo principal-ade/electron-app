@@ -114,6 +114,12 @@ export interface TopicsDashboardTopicEntry {
    */
   isOpen?: boolean;
   /**
+   * Whether this topic's workspace window is currently being opened (the
+   * transient phase between the user clicking and the window first painting).
+   * Drives the "Opening…" indicator on the card.
+   */
+  isOpening?: boolean;
+  /**
    * Whether this topic has no local workspace yet — true for topics minted over
    * the bridge or shared to us by someone else. Drives the "New" badge; opening
    * the topic creates its workspace and the badge clears on the next refresh.

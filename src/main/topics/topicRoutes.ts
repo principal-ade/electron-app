@@ -15,7 +15,9 @@ import type { TopicRegistryService } from '../stores/TopicRegistryService';
 import type { TrailStore } from '../file-city/trailStore';
 import type { TrailIndexEntry } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { TopicAPIEvent } from '../../shared/main-process-api-interfaces/TopicAPI';
+import type { TopicActivateEvent } from '../../shared/main-process-api-interfaces/TopicAPI';
 import { broadcastTopicEvent } from './tipc/topicRouter';
+import { focusedOrMainWindow } from '../window/modernWindowManager';
 
 /**
  * Lightweight summary of a trail attached to a topic. Mirrors the index
@@ -315,4 +317,43 @@ export function registerTopicRoutes(
       }
     },
   );
+
+  // Open a topic in the running app. The topic analogue of the trail activate
+  // route (`POST /api/file-city/trail/activate`): a briefed terminal can ask
+  // the app to surface a topic it just authored or linked. Unlike the
+  // `TOPIC_*` registry broadcasts (which fan out to every window), this targets
+  // a single window — whichever one the user currently has focused — and asks
+  // its renderer to open the topic as a tab. The Topics-view handler lives in
+  // the principal window, so when the focused window can't host it the resolver
+  // falls back to focusing/creating the principal window.
+  app.post('/api/topics/:id/activate', async (req: Request, res: Response) => {
+    const id = String(req.params.id);
+    if (!id) {
+      res.status(400).json({ success: false, error: 'topic id is required' });
+      return;
+    }
+    try {
+      const topic = await registry.getTopic(id);
+      if (!topic) {
+        res.status(404).json({ success: false, error: 'unknown topic id' });
+        return;
+      }
+      const target = await focusedOrMainWindow();
+      if (!target || target.window.isDestroyed()) {
+        res.json({ success: true, delivered: 0, windowOpened: 'none' });
+        return;
+      }
+      const payload: TopicActivateEvent = {
+        topicId: topic.id,
+        title: topic.title,
+      };
+      target.window.webContents.send(TopicAPIEvent.TOPIC_ACTIVATE, payload);
+      res.json({ success: true, delivered: 1, windowOpened: 'focused' });
+    } catch (err) {
+      console.error('[topicRoutes] activate failed', err);
+      res
+        .status(500)
+        .json({ success: false, error: 'failed to activate topic' });
+    }
+  });
 }

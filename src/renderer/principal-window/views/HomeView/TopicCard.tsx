@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { TopicsDashboardTopicEntry } from './TopicsDashboard';
 import { tildifyPath } from '../../../utils/tildifyPath';
+import '../../../styles/window-open-feedback.css';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
 
@@ -137,12 +138,27 @@ export function TopicCard({
   // An open window is itself a status, so the "Open" badge stands in for the
   // status pill — suppress the pill while the topic is open to avoid doubling up.
   const showStatusPill =
-    showStatus && !topic.isOpen && !!(status && statusPres && statusInfo);
+    showStatus &&
+    !topic.isOpen &&
+    !topic.isOpening &&
+    !!(status && statusPres && statusInfo);
+
+  // The "Open" badge and the transient "Opening…" badge are mutually exclusive:
+  // `isOpen` (window created) flips true a beat before `isOpening` (window
+  // first paint) clears, so without this they'd briefly show together. Opening
+  // takes precedence. The "Shared" badge collapses to its icon whenever either
+  // indicator already occupies the row.
+  const showOpen = !!topic.isOpen && !topic.isOpening;
+  const collapseShared = showOpen || !!topic.isOpening;
 
   // Badges live on the meta row (left of the trail count) rather than beside
   // the title, so a long topic name no longer gets truncated to make room.
   const hasBadges =
-    showStatusPill || topic.isOpen || topic.shared || topic.isNew;
+    showStatusPill ||
+    topic.isOpen ||
+    topic.isOpening ||
+    topic.shared ||
+    topic.isNew;
   const badges = hasBadges ? (
     <span
       style={{
@@ -152,7 +168,30 @@ export function TopicCard({
         flex: '0 0 auto',
       }}
     >
-      {topic.isNew && (
+      {topic.isOpening && (
+        <span
+          title="Opening workspace window…"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '1px 6px',
+            fontSize: theme.fontSizes[0],
+            fontFamily: theme.fonts.body,
+            color: theme.colors.primary,
+            border: `1px solid ${theme.colors.primary}`,
+            borderRadius: 5,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <span
+            className="wof-pulse-dot"
+            style={{ background: theme.colors.primary }}
+          />
+          Opening…
+        </span>
+      )}
+      {topic.isNew && !topic.isOpening && (
         <span
           title="No local workspace yet — opening creates one"
           style={{
@@ -205,7 +244,7 @@ export function TopicCard({
           </span>
         </span>
       )}
-      {(topic.isOpen || topic.shared) && (
+      {(showOpen || topic.shared) && (
         <span
           style={{
             display: 'inline-flex',
@@ -214,7 +253,7 @@ export function TopicCard({
             color: theme.colors.primary,
           }}
         >
-          {topic.isOpen && (
+          {showOpen && (
             <span
               title="Window open"
               style={{
@@ -233,10 +272,10 @@ export function TopicCard({
             </span>
           )}
           {topic.shared &&
-            // When a topic is open we already show an indicator, so the
-            // "Shared" badge collapses to just its icon to keep the row
-            // from getting crowded.
-            (topic.isOpen ? (
+            // When an open/opening indicator is already present we collapse the
+            // "Shared" badge to just its icon to keep the row from getting
+            // crowded.
+            (collapseShared ? (
               <span
                 title="Shared to web-ade"
                 style={{ display: 'inline-flex', alignItems: 'center' }}

@@ -105,12 +105,24 @@ export enum TopicAPIEvent {
   TOPIC_REMOVED = 'topic:topic-removed',
   /** Fired after a sessionId → topicId entry is written to disk. */
   SESSION_LINKED = 'topic:session-linked',
+  /**
+   * Sent to a single window's webContents (the focused one, resolved by the
+   * bridge's activate route) asking its renderer to surface a topic. Unlike
+   * the `TOPIC_*` broadcasts above, this is point-to-point, not fan-out.
+   */
+  TOPIC_ACTIVATE = 'topic:activate',
 }
 
 /** Payload broadcast on {@link TopicAPIEvent.SESSION_LINKED}. */
 export interface SessionLinkedEvent {
   sessionId: string;
   topicId: string;
+}
+
+/** Payload sent on {@link TopicAPIEvent.TOPIC_ACTIVATE}. */
+export interface TopicActivateEvent {
+  topicId: string;
+  title?: string;
 }
 
 /** Input to {@link TopicAPI.createTopic} — id/timestamps generated when omitted. */

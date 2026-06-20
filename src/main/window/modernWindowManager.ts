@@ -637,6 +637,16 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       this.window.show();
       showSpan.end();
 
+      // Confirm first paint to any renderer waiting on this window to open
+      // (e.g. an "opening…" affordance). Fired for every window type; the
+      // payload carries workspace/topic identity so listeners can correlate.
+      sendToAllWindows(WindowEvent.WINDOW_READY, {
+        windowId: this.window.id,
+        primaryType: this.metadata.primaryType,
+        workspaceId: this.metadata.workspaceId,
+        topicIds: this.metadata.topicIds ?? [],
+      });
+
       // Close splash screen when main window is ready
       if (splashScreen.isShowing()) {
         splashScreen.close();
@@ -1013,6 +1023,32 @@ export async function focusOrCreateMainWindow(
   // No main window exists, create one
   console.log('[ModernWindow] No main window exists, creating new one');
   return await createWindow(undefined, options);
+}
+
+/**
+ * Resolve the window a "show this in front of me" action should target.
+ *
+ * Prefers the OS-focused window when it maps to a tracked app window (read
+ * `BrowserWindow.getFocusedWindow()` → look it up in `applicationWindows` by
+ * id), restoring/showing/focusing it so the caller can immediately target its
+ * `webContents`. When nothing focused is tracked — app backgrounded, all
+ * windows minimized, or focus belongs to an untracked window — falls back to
+ * `focusOrCreateMainWindow`, which focuses the principal window or spawns one.
+ */
+export async function focusedOrMainWindow(): Promise<IModernApplicationWindow | null> {
+  const focused = BrowserWindow.getFocusedWindow();
+  if (focused && !focused.isDestroyed()) {
+    const appWindow = applicationWindows.get(focused.id);
+    if (appWindow && !appWindow.window.isDestroyed()) {
+      if (appWindow.window.isMinimized()) {
+        appWindow.window.restore();
+      }
+      appWindow.window.show();
+      appWindow.window.focus();
+      return appWindow;
+    }
+  }
+  return focusOrCreateMainWindow();
 }
 
 // Export compatibility functions

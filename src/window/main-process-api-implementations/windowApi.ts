@@ -8,6 +8,7 @@ import type {
   WindowAPI,
   RepositoryWindowState,
   WorkspaceWindowState,
+  WindowReadyState,
   DevWorkspaceOptions,
   ExtensionWindowOptions,
   AlexandriaWorkspaceOptions,
@@ -86,6 +87,22 @@ export const windowAPI: WindowAPI = {
         WindowEvent.WORKSPACE_WINDOWS_CHANGED,
         handler,
       );
+    };
+  },
+
+  /**
+   * Listen for any window reaching first paint (`ready-to-show`).
+   */
+  onWindowReady: (callback: (state: WindowReadyState) => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      state: WindowReadyState,
+    ) => {
+      callback(state);
+    };
+    ipcRenderer.on(WindowEvent.WINDOW_READY, handler);
+    return () => {
+      ipcRenderer.removeListener(WindowEvent.WINDOW_READY, handler);
     };
   },
 

@@ -32,6 +32,7 @@ import type {
 import {
   TopicAPIEvent,
   type SessionLinkedEvent,
+  type TopicActivateEvent,
 } from '../../shared/main-process-api-interfaces/TopicAPI';
 
 export interface TopicClient {
@@ -74,6 +75,16 @@ export interface TopicClient {
    */
   onSessionLinked: (
     callback: (event: SessionLinkedEvent) => void,
+  ) => () => void;
+  /**
+   * Subscribe to topic-activate requests. Fired when the bridge's
+   * `POST /api/topics/:id/activate` route targets this window, asking the
+   * renderer to surface the topic (switch to the Topics view and open a tab).
+   * Point-to-point: only the targeted window receives it.
+   * @returns Unsubscribe function.
+   */
+  onTopicActivate: (
+    callback: (event: TopicActivateEvent) => void,
   ) => () => void;
 }
 
@@ -144,6 +155,16 @@ export const topicClient: TopicClient = {
       TopicAPIEvent.SESSION_LINKED,
       (...args: unknown[]) => {
         const event = args[0] as SessionLinkedEvent | undefined;
+        if (!event) return;
+        callback(event);
+      },
+    );
+  },
+  onTopicActivate: (callback) => {
+    return window.electron.ipcRenderer.on(
+      TopicAPIEvent.TOPIC_ACTIVATE,
+      (...args: unknown[]) => {
+        const event = args[0] as TopicActivateEvent | undefined;
         if (!event) return;
         callback(event);
       },

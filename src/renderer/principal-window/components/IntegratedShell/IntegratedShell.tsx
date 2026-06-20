@@ -30,6 +30,8 @@ import {
 import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { useProjectsTabs } from '../../contexts/ProjectsTabsContext';
 import { useInboxTabs } from '../../contexts/InboxTabsContext';
+import { useTopicsTabs } from '../../contexts/TopicsTabsContext';
+import { topicClient } from '../../../tipc/topicClient';
 import { OnboardingWizard } from '../../../components/OnboardingWizard/OnboardingWizard';
 import './IntegratedShell.css';
 
@@ -146,6 +148,7 @@ export const IntegratedShell: React.FC = () => {
   const { events } = usePrincipalEvents();
   const { openLocalTrail: openLocalTrailInFeed } = useProjectsTabs();
   const { openLocalTrail: openLocalTrailInInbox } = useInboxTabs();
+  const { openTopic: openTopicInTopicsView } = useTopicsTabs();
 
   // Live mirror of activeView so the SHOW_IN_PRINCIPAL listener — which
   // subscribes once on mount — can read the view the user is currently on
@@ -264,6 +267,18 @@ export const IntegratedShell: React.FC = () => {
     });
     return unsubscribe;
   }, [openLocalTrailInFeed, openLocalTrailInInbox]);
+
+  // Topic activate from the bridge: topicRoutes' POST /api/topics/:id/activate
+  // targeted this (focused) window. Switch to the Topics view and open the
+  // topic as a tab. Mirrors the SHOW_IN_PRINCIPAL handoff above, but topics
+  // only live in the Topics view so there's no per-view branching.
+  useEffect(() => {
+    const unsubscribe = topicClient.onTopicActivate(({ topicId, title }) => {
+      setActiveView('topics');
+      openTopicInTopicsView(topicId, title);
+    });
+    return unsubscribe;
+  }, [openTopicInTopicsView]);
 
   // HomeView dashboard click → switch to TrailsView. A repo card sends a
   // `repoPath` and we pre-select that repo (opening its Recent grid). The
