@@ -124,7 +124,7 @@ export function TopicCard({
   // overlap (deletion is hidden for shared topics, matching the trash guard).
   // Delete is a board-view affordance only — the flat list stays read-only on
   // hover so cards don't flash a trash button during a casual scan.
-  const trashVisible = boardMode && hovered && !!onDelete && !topic.shared;
+  const trashVisible = boardMode && hovered && !!onDelete && !topic.published;
 
   // Status pill: color keys off the structured state, text off the custom
   // label (or a per-state default). An `active` topic with no label yields no
@@ -157,7 +157,7 @@ export function TopicCard({
     showStatusPill ||
     topic.isOpen ||
     topic.isOpening ||
-    topic.shared ||
+    topic.published ||
     topic.isNew;
   const badges = hasBadges ? (
     <span
@@ -244,7 +244,7 @@ export function TopicCard({
           </span>
         </span>
       )}
-      {(showOpen || topic.shared) && (
+      {(showOpen || topic.published) && (
         <span
           style={{
             display: 'inline-flex',
@@ -271,20 +271,19 @@ export function TopicCard({
               Open
             </span>
           )}
-          {topic.shared &&
+          {topic.published &&
             // When an open/opening indicator is already present we collapse the
             // "Shared" badge to just its icon to keep the row from getting
             // crowded.
             (collapseShared ? (
               <span
-                title="Shared to web-ade"
+                aria-label="Shared"
                 style={{ display: 'inline-flex', alignItems: 'center' }}
               >
                 <Share2 size={14} />
               </span>
             ) : (
               <span
-                title="Shared to web-ade"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -522,7 +521,7 @@ export function TopicCard({
           </div>
         ) : null}
       </button>
-      {boardMode && onDelete && !topic.shared && (
+      {boardMode && onDelete && !topic.published && (
         <button
           type="button"
           aria-label={`Delete topic ${topic.title}`}

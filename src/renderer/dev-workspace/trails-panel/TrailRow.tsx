@@ -27,17 +27,17 @@ export interface TrailRowProps {
   onActivate: (id: string) => void;
   onRemove: (id: string) => void;
   /**
-   * Per-session shared URL for this id, set by the panel after a successful
-   * share. Drives the "shared" pill on the row; the modal handles the
+   * Per-session publish URL for this id, set by the panel after a successful
+   * publish. Drives the "shared" pill on the row; the modal handles the
    * actual copy-link affordance.
    */
-  shareUrl?: string | null;
+  publishUrl?: string | null;
   /**
-   * If supplied, renders the share button on this row. Clicking it opens
-   * the share modal (handled by the parent panel); this row doesn't run
+   * If supplied, renders the publish button on this row. Clicking it opens
+   * the publish modal (handled by the parent panel); this row doesn't run
    * the IPC itself.
    */
-  onShare?: (id: string) => void | Promise<void>;
+  onPublish?: (id: string) => void | Promise<void>;
 }
 
 export const TrailRow: React.FC<TrailRowProps> = ({
@@ -45,14 +45,14 @@ export const TrailRow: React.FC<TrailRowProps> = ({
   isActive,
   onActivate,
   onRemove,
-  shareUrl,
-  onShare,
+  publishUrl,
+  onPublish,
 }) => {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
-  // `entry.sharedAt` is the durable lock marker (survives reload); `shareUrl`
-  // covers the just-shared-this-session window before the list refresh lands.
-  const isShared = Boolean(entry.sharedAt) || Boolean(shareUrl);
+  // `entry.sharedAt` is the durable lock marker (survives reload); `publishUrl`
+  // covers the just-published-this-session window before the list refresh lands.
+  const isPublished = Boolean(entry.sharedAt) || Boolean(publishUrl);
 
   // Always re-activate. Re-activating a current active trail is a cheap
   // idempotent re-broadcast that surfaces the trail tab in case the user
@@ -80,12 +80,12 @@ export const TrailRow: React.FC<TrailRowProps> = ({
     [entry, onRemove],
   );
 
-  const handleShare = useCallback(
+  const handlePublish = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      onShare?.(entry.id);
+      onPublish?.(entry.id);
     },
-    [entry.id, onShare],
+    [entry.id, onPublish],
   );
 
   const title =
@@ -103,10 +103,8 @@ export const TrailRow: React.FC<TrailRowProps> = ({
     },
     [entry.id, title],
   );
-  const shareButtonTitle = isShared
-    ? 'Open share dialog (copy link)'
-    : 'Share to web-ade';
-  const shareButtonColor = theme.colors.primary;
+  const publishButtonLabel = isPublished ? 'Copy link' : 'Publish';
+  const publishButtonColor = theme.colors.primary;
   const deleteButtonColor = theme.colors.error ?? '#e5484d';
 
   return (
@@ -190,9 +188,8 @@ export const TrailRow: React.FC<TrailRowProps> = ({
           >
             {title}
           </span>
-          {isShared && (
+          {isPublished && (
             <span
-              title="Shared to web-ade — locked"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -264,35 +261,34 @@ export const TrailRow: React.FC<TrailRowProps> = ({
               gap: '8px',
             }}
           >
-            {onShare && (
+            {onPublish && (
               <button
                 type="button"
-                onClick={handleShare}
-                title={shareButtonTitle}
-                aria-label={shareButtonTitle}
+                onClick={handlePublish}
+                aria-label={publishButtonLabel}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = shareButtonColor;
+                  e.currentTarget.style.backgroundColor = publishButtonColor;
                   e.currentTarget.style.color = theme.colors.background;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = shareButtonColor;
+                  e.currentTarget.style.color = publishButtonColor;
                 }}
                 style={{
                   padding: '3px 10px',
                   borderRadius: '6px',
-                  border: `1px solid ${shareButtonColor}`,
+                  border: `1px solid ${publishButtonColor}`,
                   background: 'transparent',
-                  color: shareButtonColor,
+                  color: publishButtonColor,
                   cursor: 'pointer',
-                  opacity: hovered || isActive || isShared ? 1 : 0,
+                  opacity: hovered || isActive || isPublished ? 1 : 0,
                   transition: 'opacity 120ms, background 120ms, color 120ms',
                   fontFamily: theme.fonts.body,
                   fontSize: theme.fontSizes[1],
                   fontWeight: theme.fontWeights.medium,
                 }}
               >
-                Share
+                {publishButtonLabel}
               </button>
             )}
             <button

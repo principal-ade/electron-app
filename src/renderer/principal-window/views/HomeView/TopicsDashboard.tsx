@@ -100,7 +100,7 @@ export interface TopicsDashboardTopicEntry {
    * Whether this topic has been published to web-ade (its sync record carries
    * a `remoteId`). Drives the "Shared" badge on the card.
    */
-  shared?: boolean;
+  published?: boolean;
   /**
    * Number of trails curated into this topic (`topic.trailIds.length`).
    * Drives the trail-count glyph in the card's bottom-right corner. Omitted

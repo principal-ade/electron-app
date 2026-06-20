@@ -15,10 +15,10 @@ import { TrailShareService } from '../../services/TrailShareService';
  * `error` — listing reached the network/web-ade layer and failed (e.g.
  * `NO_REPO_ACCESS`). The panel shows the section header with a retry.
  */
-export type SharedAvailability = 'pending' | 'unavailable' | 'available' | 'error';
+export type PublishedAvailability = 'pending' | 'unavailable' | 'available' | 'error';
 
-export interface UseTrailSharesResult {
-  availability: SharedAvailability;
+export interface UsePublishedTrailsResult {
+  availability: PublishedAvailability;
   entries: SharedTrailIndexEntry[];
   origin: TrailListSharedResult['origin'] | null;
   errorMessage: string | null;
@@ -26,24 +26,24 @@ export interface UseTrailSharesResult {
   refresh: () => Promise<void>;
   hydrate: (id: string) => Promise<FileCityTrailFetchSharedResult | null>;
   /**
-   * Per-session map from local trail id → web-ade share URL. Populated by
-   * `recordShare` after a local share succeeds.
+   * Per-session map from local trail id → web-ade publish URL. Populated by
+   * `recordPublish` after a local publish succeeds.
    */
-  sharedUrlByLocalId: Map<string, string>;
-  recordShare: (localId: string, url: string) => void;
+  publishedUrlByLocalId: Map<string, string>;
+  recordPublish: (localId: string, url: string) => void;
 }
 
-export function useTrailShares(
+export function usePublishedTrails(
   repositoryPath: string | null,
-): UseTrailSharesResult {
-  const [availability, setAvailability] = useState<SharedAvailability>('pending');
+): UsePublishedTrailsResult {
+  const [availability, setAvailability] = useState<PublishedAvailability>('pending');
   const [entries, setEntries] = useState<SharedTrailIndexEntry[]>([]);
   const [origin, setOrigin] = useState<
     TrailListSharedResult['origin'] | null
   >(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [sharedUrlByLocalId, setSharedUrlByLocalId] = useState<
+  const [publishedUrlByLocalId, setPublishedUrlByLocalId] = useState<
     Map<string, string>
   >(() => new Map());
   const seqRef = useRef(0);
@@ -91,7 +91,7 @@ export function useTrailShares(
   }, [repositoryPath]);
 
   useEffect(() => {
-    setSharedUrlByLocalId(new Map());
+    setPublishedUrlByLocalId(new Map());
     refresh();
   }, [refresh]);
 
@@ -105,15 +105,15 @@ export function useTrailShares(
           id,
         );
       } catch (err) {
-        console.error('[useTrailShares] fetchShared failed', err);
+        console.error('[usePublishedTrails] fetchShared failed', err);
         throw err;
       }
     },
     [origin],
   );
 
-  const recordShare = useCallback((localId: string, url: string) => {
-    setSharedUrlByLocalId((prev) => {
+  const recordPublish = useCallback((localId: string, url: string) => {
+    setPublishedUrlByLocalId((prev) => {
       const next = new Map(prev);
       next.set(localId, url);
       return next;
@@ -128,7 +128,7 @@ export function useTrailShares(
     loading,
     refresh,
     hydrate,
-    sharedUrlByLocalId,
-    recordShare,
+    publishedUrlByLocalId,
+    recordPublish,
   };
 }

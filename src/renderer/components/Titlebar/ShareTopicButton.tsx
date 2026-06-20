@@ -111,7 +111,7 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
   }, []);
 
   const remoteId = record?.sync.remoteId;
-  const shared = Boolean(remoteId);
+  const published = Boolean(remoteId);
   const armed = Boolean(topicId && record);
 
   // The actual publish — shared by the direct (opted-out) path and the
@@ -201,20 +201,18 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
         ? 'Link copied'
         : status === 'error'
           ? 'Publish failed'
-          : shared
+          : published
             ? 'Shared'
             : 'Publish topic';
 
   const Icon =
-    status === 'publishing' ? Loader2 : shared || status === 'copied' ? Check : UploadCloud;
+    status === 'publishing' ? Loader2 : published || status === 'copied' ? Check : UploadCloud;
 
   const title = !topicId
-    ? 'Create a topic to enable sharing'
+    ? 'Create a topic first'
     : status === 'error' && errorMsg
       ? errorMsg
-      : shared
-        ? 'Copy this topic’s web-ade link'
-        : 'Publish this topic to web-ade and copy its link';
+      : undefined;
 
   // Shared topics get a quiet "primary outline" resting state so the shared
   // status reads at a glance; unshared use the neutral titlebar-button look.
@@ -222,7 +220,7 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
   const restingBorder =
     status === 'error'
       ? theme.colors.error
-      : shared
+      : published
         ? theme.colors.primary
         : theme.colors.border;
 
@@ -252,7 +250,7 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
             ? theme.colors.error
             : showActive
               ? theme.colors.background
-              : shared || status === 'copied'
+              : published || status === 'copied'
                 ? theme.colors.primary
                 : theme.colors.textSecondary,
         cursor: armed ? 'pointer' : 'not-allowed',
@@ -268,16 +266,16 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
     >
       <Icon
         size={16}
-        className={status === 'publishing' ? 'share-topic-spin' : undefined}
+        className={status === 'publishing' ? 'publish-topic-spin' : undefined}
         style={
           status === 'publishing'
-            ? { animation: 'share-topic-spin 0.8s linear infinite' }
+            ? { animation: 'publish-topic-spin 0.8s linear infinite' }
             : undefined
         }
       />
       <span>{label}</span>
       <style>{`
-        @keyframes share-topic-spin {
+        @keyframes publish-topic-spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }

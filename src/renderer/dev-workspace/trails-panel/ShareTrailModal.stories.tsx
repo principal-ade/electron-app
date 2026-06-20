@@ -145,7 +145,7 @@ export const IdleUnknownVisibility: Story = {
 };
 
 /**
- * Click Share to drive the modal into the in-flight state — the share
+ * Click Publish to drive the modal into the in-flight state — the share
  * promise never resolves so the spinner stays visible.
  */
 export const Sharing: Story = {
@@ -163,8 +163,8 @@ export const Sharing: Story = {
 };
 
 /**
- * Click Share to surface the "some referenced files are missing on disk"
- * confirmation. Share again confirms with `allowMissing: true` and lands
+ * Click Publish to surface the "some referenced files are missing on disk"
+ * confirmation. Publish again confirms with `allowMissing: true` and lands
  * in success.
  */
 export const MissingFilesConfirmation: Story = {
@@ -198,7 +198,7 @@ export const MissingFilesConfirmation: Story = {
   },
 };
 
-/** Click Share to land on a typed `TrailShareError` (no GitHub token). */
+/** Click Publish to land on a typed `TrailShareError` (no GitHub token). */
 export const ErrorState: Story = {
   render: () => {
     activeShare = async () => {

@@ -260,7 +260,7 @@ export function HomeView() {
   const [topics, setTopics] = useState<Topic[]>([]);
   // Ids of topics published to web-ade (sync.remoteId present), from the
   // sync-aware records endpoint. Drives the "Shared" badge on topic cards.
-  const [sharedTopicIds, setSharedTopicIds] = useState<Set<string>>(new Set());
+  const [publishedTopicIds, setPublishedTopicIds] = useState<Set<string>>(new Set());
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceRepos, setWorkspaceRepos] = useState<
     Map<string, AlexandriaEntry[]>
@@ -368,14 +368,14 @@ export function HomeView() {
         console.error('[HomeView] Failed to load topics:', err);
       });
 
-    // Sync metadata isn't on the plain Topic, so the shared set comes from
+    // Sync metadata isn't on the plain Topic, so the published set comes from
     // the records endpoint. Refetched on every topic change — publishing
     // fires TOPIC_UPDATED, and remoteId only appears on a reread.
-    const refreshSharedIds = () => {
+    const refreshPublishedIds = () => {
       TopicService.getRecords()
         .then((records) => {
           if (cancelled) return;
-          setSharedTopicIds(
+          setPublishedTopicIds(
             new Set(
               records
                 .filter((r) => r.sync.remoteId)
@@ -387,10 +387,10 @@ export function HomeView() {
           console.error('[HomeView] Failed to load topic records:', err);
         });
     };
-    refreshSharedIds();
+    refreshPublishedIds();
 
     const unsubscribe = TopicService.onTopicChange((event) => {
-      refreshSharedIds();
+      refreshPublishedIds();
       if (event.type === 'added' && event.topic) {
         const topic = event.topic;
         setTopics((prev) =>
@@ -528,7 +528,7 @@ export function HomeView() {
         folderPath:
           workspace?.suggestedClonePath ?? defaultBaseDirectory ?? undefined,
         projectRepos: projectRepos.length > 0 ? projectRepos : undefined,
-        shared: sharedTopicIds.has(t.id),
+        published: publishedTopicIds.has(t.id),
         trailCount: t.trailIds.length,
         isOpen: workspace ? openWorkspaceIds.has(workspace.id) : false,
         // Transient: this card's workspace is mid-open (click → first paint).
@@ -544,7 +544,7 @@ export function HomeView() {
     workspaces,
     workspaceRepos,
     defaultBaseDirectory,
-    sharedTopicIds,
+    publishedTopicIds,
     openWorkspaceIds,
     openStatus,
     openingTopicId,

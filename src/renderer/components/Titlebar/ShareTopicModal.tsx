@@ -140,8 +140,8 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
           <div>
             Publishing{' '}
             <strong style={{ color: theme.colors.text }}>{topicTitle}</strong>{' '}
-            will make it shareable. A topic can only reference trails that are
-            shared, so its trails are published too.
+            will make it public. A topic can only reference trails that are
+            published, so its trails are published too.
           </div>
 
           {trails.length === 0 && (

@@ -363,7 +363,7 @@ export const ShareTrailModal: React.FC<ShareTrailModalProps> = ({
               flex: 1,
             }}
           >
-            Share trail
+            Publish trail
           </h3>
           <button
             type="button"
@@ -521,7 +521,7 @@ const IdleBody: React.FC<{
           }}
         >
           This repo is <strong>private</strong> on GitHub — the trail stays
-          private to people with read access there. web-ade never serves it
+          visible only to people with read access there, and is never served
           publicly.
         </div>
       </div>
@@ -544,7 +544,7 @@ const IdleBody: React.FC<{
         textUnderlineOffset: '2px',
       }}
     >
-      {detailsOpen ? 'Hide details' : 'Learn more about sharing'}
+      {detailsOpen ? 'Hide details' : 'Learn more about publishing'}
     </button>
     {detailsOpen && (
       <>
@@ -556,8 +556,8 @@ const IdleBody: React.FC<{
             color: theme.colors.textSecondary,
           }}
         >
-          Sharing publishes this trail to <strong>web-ade</strong> so the
-          people who can already read this repo on GitHub can view it.
+          Publishing puts this trail <strong>online</strong> so the people who
+          can already read this repo on GitHub can view it.
         </p>
         <ul
           style={{
@@ -577,7 +577,7 @@ const IdleBody: React.FC<{
             stay private to your machine.
           </li>
           <li>
-            You can delete the share later with the trash icon on web-ade.
+            You can delete the published trail later from your browser.
           </li>
         </ul>
       </>
@@ -608,7 +608,7 @@ const IdleBody: React.FC<{
       </SecondaryButton>
       <PrimaryButton theme={theme} onClick={onConfirm}>
         <Share2 size={14} />
-        Share
+        Publish
       </PrimaryButton>
     </ButtonRow>
   </>

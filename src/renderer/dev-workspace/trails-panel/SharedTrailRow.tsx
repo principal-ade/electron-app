@@ -23,7 +23,7 @@ export interface SharedTrailRowProps {
   entry: SharedTrailIndexEntry;
   /**
    * Hydrate + render the shared trail. The panel implements this by calling
-   * `useTrailShares.hydrate(id)` and pushing the payload through
+   * `usePublishedTrails.hydrate(id)` and pushing the payload through
    * `TrailShareService.setTransient`.
    */
   onActivate: (id: string) => Promise<void>;
@@ -145,7 +145,7 @@ export const SharedTrailRow: React.FC<SharedTrailRowProps> = ({
           <Share2
             size={12}
             color={theme.colors.primary}
-            aria-label="Shared on web-ade"
+            aria-label="Shared"
           />
           <span
             style={{

@@ -5,7 +5,7 @@ import type { BaseTrailIndexEntry } from '@industry-theme/file-city-panel';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { APP_BRANDING } from '../../../shared/config/appBranding';
 import { useTrailLibrary } from './useTrailLibrary';
-import { useTrailShares } from './useTrailShares';
+import { usePublishedTrails } from './useTrailShares';
 import { TrailRow } from './TrailRow';
 import { SharedTrailRow } from './SharedTrailRow';
 import { ShareTrailModal } from './ShareTrailModal';
@@ -50,7 +50,7 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const library = useTrailLibrary(repositoryPath ?? null);
-  const shares = useTrailShares(repositoryPath ?? null);
+  const shares = usePublishedTrails(repositoryPath ?? null);
   const [shareModal, setShareModal] = useState<ShareModalState | null>(null);
   const [view, setView] = useState<'local' | 'shared'>('local');
 
@@ -105,11 +105,11 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
         // session map and re-shares, forking the id and orphaning the first
         // publication's inbox deliveries and anon notes.
         initialUrl:
-          shares.sharedUrlByLocalId.get(id) ?? entry.sharedUrl ?? null,
+          shares.publishedUrlByLocalId.get(id) ?? entry.sharedUrl ?? null,
         source: 'local',
       });
     },
-    [library.entries, shares.sharedUrlByLocalId],
+    [library.entries, shares.publishedUrlByLocalId],
   );
 
   const handleCopyLinkForShared = useCallback(
@@ -127,7 +127,7 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
 
   const handleShareCompleted = useCallback(
     async (id: string, url: string) => {
-      shares.recordShare(id, url);
+      shares.recordPublish(id, url);
       // The local copy is kept but locked once published: main stamps
       // `sharedAt` on the index entry and rejects content re-authoring of
       // the id. Refresh the local list so the row picks up its locked
@@ -253,8 +253,8 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
                   isActive={entry.id === library.activeId}
                   onActivate={handleActivateLocal}
                   onRemove={handleRemoveLocal}
-                  shareUrl={shares.sharedUrlByLocalId.get(entry.id) ?? null}
-                  onShare={handleOpenShareModal}
+                  publishUrl={shares.publishedUrlByLocalId.get(entry.id) ?? null}
+                  onPublish={handleOpenShareModal}
                 />
               ))}
           </Section>
@@ -268,7 +268,7 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
                 theme={theme}
                 message={
                   shares.errorMessage ??
-                  'Could not load published trails from web-ade.'
+                  'Could not load published trails.'
                 }
                 onRetry={shares.refresh}
               />
