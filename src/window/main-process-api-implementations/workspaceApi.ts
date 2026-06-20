@@ -133,35 +133,6 @@ export const workspaceApi: WorkspaceAPI = {
   },
 
   // Repository Location Management
-  isRepositoryInWorkspaceDirectory(
-    repository: AlexandriaEntry,
-    workspaceId: string,
-  ): Promise<boolean | null> {
-    return ipcRenderer.invoke(
-      WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE_DIRECTORY,
-      repository,
-      workspaceId,
-    );
-  },
-
-  moveRepositoryToWorkspaceDirectory(
-    repository: AlexandriaEntry,
-    workspaceId: string,
-  ): Promise<string> {
-    return ipcRenderer.invoke(
-      WorkspaceAPIEvent.MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY,
-      repository,
-      workspaceId,
-    );
-  },
-
-  moveRepositoryToDefaultDirectory(repository: AlexandriaEntry): Promise<string> {
-    return ipcRenderer.invoke(
-      WorkspaceAPIEvent.MOVE_REPOSITORY_TO_DEFAULT_DIRECTORY,
-      repository,
-    );
-  },
-
   moveRepositoryToConventionalPath(
     repository: AlexandriaEntry,
     owner: string,

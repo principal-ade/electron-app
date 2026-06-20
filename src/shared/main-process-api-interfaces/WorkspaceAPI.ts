@@ -32,9 +32,6 @@ export enum WorkspaceAPIEvent {
   SET_DEFAULT_WORKSPACE = 'workspace:set-default',
 
   // Repository Location
-  IS_REPOSITORY_IN_WORKSPACE_DIRECTORY = 'workspace:is-repository-in-directory',
-  MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY = 'workspace:move-repository-to-directory',
-  MOVE_REPOSITORY_TO_DEFAULT_DIRECTORY = 'workspace:move-repository-to-default-directory',
   MOVE_REPOSITORY_TO_CONVENTIONAL_PATH = 'workspace:move-repository-to-conventional-path',
 
   // Events
@@ -152,33 +149,6 @@ export interface WorkspaceAPI {
   setDefaultWorkspace(workspaceId: string): Promise<void>;
 
   // ===== Repository Location Management =====
-
-  /**
-   * Check if a repository is located under the workspace's suggestedClonePath
-   * @returns true if in directory, false if not, null if workspace has no suggestedClonePath
-   */
-  isRepositoryInWorkspaceDirectory(
-    repository: AlexandriaEntry,
-    workspaceId: string,
-  ): Promise<boolean | null>;
-
-  /**
-   * Move a repository to the workspace's suggestedClonePath
-   * @returns The new path of the repository after moving
-   * @throws Error if workspace has no suggestedClonePath or if move fails
-   */
-  moveRepositoryToWorkspaceDirectory(
-    repository: AlexandriaEntry,
-    workspaceId: string,
-  ): Promise<string>;
-
-  /**
-   * Move a repository from a workspace directory to the base default directory
-   * Used when removing a repository from a workspace to relocate it
-   * @returns The new path of the repository after moving
-   * @throws Error if baseDefaultDirectory is not set or if move fails
-   */
-  moveRepositoryToDefaultDirectory(repository: AlexandriaEntry): Promise<string>;
 
   /**
    * Move a repository into the canonical `{baseDir}/{owner}/{repo}` layout,

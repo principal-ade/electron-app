@@ -55,7 +55,6 @@ import { UserPreferencesService } from '../main-process-api/UserPreferencesServi
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { WindowService } from '../main-process-api/WindowService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
-import { RemoveFromWorkspaceModal } from '../panels/components/RemoveFromWorkspaceModal';
 import {
   PanelIconSidebar,
   ALEXANDRIA_LEFT_PANEL_ICONS,
@@ -696,26 +695,11 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     [context, activeTerminalRepoPath],
   );
 
-  // State for remove from workspace modal
-  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
-  const [entryToRemove, setEntryToRemove] = useState<AlexandriaEntry | null>(
-    null,
-  );
-  const [workspaceForRemoval, setWorkspaceForRemoval] =
-    useState<Workspace | null>(null);
-
   // Currently displayed markdown file in the right panel. The MarkdownPanel
   // owns its own read + watch — we just feed it the path.
   const [activeMarkdownPath, setActiveMarkdownPath] = useState<string | null>(
     null,
   );
-
-  // Handle removal modal close
-  const handleCloseRemoveModal = useCallback(() => {
-    setIsRemoveModalOpen(false);
-    setEntryToRemove(null);
-    setWorkspaceForRemoval(null);
-  }, []);
 
   // Brief Agent: handle a topic-briefing drop on the terminal panel. Picks a
   // target session by matching the selected repo's context, falling back to
@@ -847,39 +831,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       window.removeEventListener(BRIEF_AGENT_CLICK_EVENT, onBriefAgentClick);
     };
   }, [briefAgent]);
-
-  // Handle removal confirmation
-  const handleConfirmRemove = useCallback(
-    async (moveToDefault: boolean) => {
-      if (!entryToRemove || !workspaceForRemoval) return;
-
-      try {
-        // Remove from workspace first (while entry still has original path)
-        // Pass full entry so core library can extract github.id for matching
-        await WorkspaceService.removeRepositoryFromWorkspace(
-          entryToRemove,
-          workspaceForRemoval.id,
-        );
-
-        // Refresh the workspace repositories in context
-        context.refresh('workspace', 'workspaceRepositories');
-
-        // Then move to default directory if requested
-        if (moveToDefault) {
-          await WorkspaceService.moveRepositoryToDefaultDirectory(
-            entryToRemove,
-          );
-        }
-      } catch (error) {
-        console.error(
-          '[AlexandriaWorkspaceLayout] Failed to remove from workspace:',
-          error,
-        );
-        throw error;
-      }
-    },
-    [entryToRemove, workspaceForRemoval, context],
-  );
 
   // Panel focus management for keyboard shortcuts
   const { focusedPanel, setFocus, isFocused } = usePanelFocus({
@@ -2836,15 +2787,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           />
         )}
       </div>
-
-      {/* Remove from Workspace Modal */}
-      <RemoveFromWorkspaceModal
-        isOpen={isRemoveModalOpen}
-        entry={entryToRemove}
-        workspace={workspaceForRemoval}
-        onClose={handleCloseRemoveModal}
-        onConfirm={handleConfirmRemove}
-      />
     </>
   );
 };
