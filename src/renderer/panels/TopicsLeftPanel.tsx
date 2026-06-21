@@ -27,8 +27,10 @@ import {
   ChevronDown,
   Check,
   ListFilter,
+  Plus,
 } from 'lucide-react';
 import type { Topic } from '@principal-ai/alexandria-core-library/types';
+import { NewTopicModal } from '../components/NewTopicModal';
 import { TopicService } from '../main-process-api/TopicService';
 import { useTopicsTabs } from '../principal-window/contexts/TopicsTabsContext';
 import {
@@ -72,6 +74,7 @@ export const TopicsLeftPanel: React.FC = () => {
   );
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const statusMenuRef = useRef<HTMLDivElement>(null);
+  const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -297,6 +300,22 @@ export const TopicsLeftPanel: React.FC = () => {
         >
           Topics
         </span>
+        <button
+          onClick={() => setIsNewTopicOpen(true)}
+          title="New topic"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: spacing.xs,
+            background: 'transparent',
+            border: 'none',
+            color: theme.colors.textSecondary,
+            cursor: 'pointer',
+          }}
+        >
+          <Plus size={16} />
+        </button>
         <button
           onClick={() => void load()}
           title="Refresh"
@@ -534,6 +553,11 @@ export const TopicsLeftPanel: React.FC = () => {
 
       {/* List */}
       <div style={{ flex: 1, overflow: 'auto' }}>{renderList()}</div>
+
+      <NewTopicModal
+        isOpen={isNewTopicOpen}
+        onClose={() => setIsNewTopicOpen(false)}
+      />
     </div>
   );
 };
