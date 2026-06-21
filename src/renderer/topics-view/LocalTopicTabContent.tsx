@@ -18,7 +18,7 @@
 
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Check, PanelsTopLeft } from 'lucide-react';
+import { Check, List, PanelsTopLeft } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from '../alexandria-workspace/topic-description-tab/TopicDescriptionBody';
 import { TopicTrailsRail } from '../alexandria-workspace/topic-description-tab/TopicTrailsRail';
@@ -35,6 +35,13 @@ export const LocalTopicTabContent: React.FC<{
 }> = ({ topicId, title, events }) => {
   const { theme } = useTheme();
   const { openLocalTrail, activeTabId } = useTopicsTabs();
+
+  // Table-of-contents drawer: the body reports whether the description has
+  // headings (`hasToc`), this owns the open-state, and the body renders the
+  // outline overlay (it has the heading DOM).
+  const [tocOpen, setTocOpen] = React.useState(false);
+  const [hasToc, setHasToc] = React.useState(false);
+  const closeToc = React.useCallback(() => setTocOpen(false), []);
 
   // Promote this topic to a full Alexandria workspace window — the same path
   // HomeView's topic card uses, but routed through the shared open-with-feedback
@@ -93,6 +100,34 @@ export const LocalTopicTabContent: React.FC<{
         >
           {title || 'Topic'}
         </h1>
+        {hasToc && (
+          <button
+            type="button"
+            onClick={() => setTocOpen((o) => !o)}
+            title="Table of contents"
+            aria-label="Table of contents"
+            aria-expanded={tocOpen}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              flexShrink: 0,
+              padding: 0,
+              borderRadius: 6,
+              border: `1px solid ${
+                tocOpen ? theme.colors.primary : theme.colors.border
+              }`,
+              background: theme.colors.backgroundSecondary,
+              color: tocOpen ? theme.colors.primary : theme.colors.text,
+              cursor: 'pointer',
+              transition: 'color 0.15s ease, border-color 0.15s ease',
+            }}
+          >
+            <List size={16} />
+          </button>
+        )}
         <button
           type="button"
           onClick={openInWorkspace}
@@ -169,7 +204,13 @@ export const LocalTopicTabContent: React.FC<{
             overflow: 'hidden',
           }}
         >
-          <TopicDescriptionBody topicId={topicId} events={events} />
+          <TopicDescriptionBody
+            topicId={topicId}
+            events={events}
+            tocOpen={tocOpen}
+            onCloseToc={closeToc}
+            onTocAvailableChange={setHasToc}
+          />
         </div>
 
         <TopicTrailsRail
