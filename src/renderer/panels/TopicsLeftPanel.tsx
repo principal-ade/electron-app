@@ -188,9 +188,20 @@ export const TopicsLeftPanel: React.FC = () => {
       const active = activeTabId === `local-topic-${topic.id}`;
       const trailText = `${trailCount} ${trailCount === 1 ? 'trail' : 'trails'}`;
       const statusName = topic.status?.label || stateLabel(state);
+      // Drag the topic into a terminal as an agent prompt that hydrates it
+      // from the local bridge — mirrors the dev-workspace Topics panel.
+      const handleDragStart = (e: React.DragEvent) => {
+        if (!e.dataTransfer) return;
+        const title = topic.title || 'Untitled topic';
+        const payload = `Use topic "${title}" (id: ${topic.id}) as context — fetch via:\ncurl -s http://localhost:3054/api/topics/${topic.id}`;
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('text/plain', payload);
+      };
       return (
         <button
           key={topic.id}
+          draggable
+          onDragStart={handleDragStart}
           onClick={() => openTopic(topic.id, topic.title)}
           onMouseEnter={() => setHoveredId(topic.id)}
           onMouseLeave={() => setHoveredId(null)}
