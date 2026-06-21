@@ -51,11 +51,16 @@ interface AuthResult {
   error?: string;
 }
 
-class AuthService {
+export class AuthService {
   private store: Store;
   private storage: UnifiedSecureStorage;
   private isAuthenticating = false;
   private currentAuthController: AbortController | null = null;
+  // Single-flighted WorkOS refresh. WorkOS rotates refresh tokens, so two
+  // concurrent refreshes would each spend the same token — the loser 401s with
+  // invalid_grant and would wipe a session the winner just renewed. Concurrent
+  // getStoredAuth callers share this one promise instead.
+  private refreshInFlight: Promise<AuthResult> | null = null;
 
   constructor() {
     // Use electron-store for persistent storage
@@ -632,93 +637,13 @@ class AuthService {
           };
         }
 
-        console.log(
-          '[AuthService] WorkOS token expired or expiring soon, refreshing...',
-          {
-            expiresAt: expiresAt
-              ? new Date(expiresAt).toISOString()
-              : 'unknown',
-            isExpired,
-            isExpiringSoon,
-          },
-        );
-
-        try {
-          // Attempt to refresh the token
-          const authClient = new OAuthServerClient({
-            serverUrl:
-              process.env.AUTH_SERVER_URL ||
-              APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
-          });
-
-          // Get device ID for device-specific session tracking
-          const deviceId = await deviceIdService.getDeviceId();
-
-          const refreshedAuth = await authClient.refreshAccessToken(
-            refreshToken,
-            deviceId,
-            user.id,
-          );
-
-          // ✅ CRITICAL: Only update WorkOS token, preserve GitHub token
-          console.log('[AuthService] Token refresh response received:', {
-            receivedNewGithubToken: !!refreshedAuth.token,
-            githubTokenPrefix: refreshedAuth.token?.substring(0, 4),
-            willPreserveExisting:
-              !refreshedAuth.token || !refreshedAuth.token.startsWith('gh'),
-          });
-
-          // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
-          // refreshedAuth.token may be null/undefined if server doesn't return a new GitHub token
-          const newGithubToken =
-            refreshedAuth.token && refreshedAuth.token.startsWith('gh')
-              ? refreshedAuth.token
-              : githubToken;
-
-          console.log('[AuthService] Using GitHub token:', {
-            tokenPrefix: newGithubToken?.substring(0, 4),
-            isNewToken: newGithubToken === refreshedAuth.token,
-            isPreservedToken: newGithubToken === githubToken,
-          });
-
-          // Use stored user data - refresh endpoint only returns WorkOS tokens
-          // The electron app already has the user data from initial login
-          await this.storeAuth(
-            newGithubToken,
-            user,
-            refreshedAuth.workosToken,
-            refreshedAuth.refreshToken,
-            refreshedAuth.expiresAt,
-          );
-
-          // Update AuthStateManager with GitHub token (not WorkOS token!)
-          AuthStateManager.getInstance().setAuthenticated(user, newGithubToken);
-
-          console.log(
-            '[AuthService] Token refreshed successfully, GitHub token preserved',
-          );
-
-          return {
-            success: true,
-            authenticated: true,
-            token: newGithubToken, // ✅ Return GitHub token for API calls
-            user: user,
-          };
-        } catch (refreshError: unknown) {
-          const errorMessage = refreshError instanceof Error ? refreshError.message : 'Unknown error';
-          console.error(
-            '[AuthService] Token refresh failed:',
-            errorMessage,
-          );
-          // If refresh fails, clear auth and require re-login
-          await this.clearStoredAuth();
-          AuthStateManager.getInstance().clearAuthentication();
-          return {
-            success: false,
-            authenticated: false,
-            error: 'Token expired and refresh failed. Please log in again.',
-          };
-        }
+        // Single-flight: concurrent callers share one refresh instead of each
+        // spending the rotating refresh token (see refreshSession).
+        return this.refreshSession(refreshToken, user, githubToken, {
+          expiresAt,
+          isExpired,
+          isExpiringSoon,
+        });
       }
 
       // Sync token from server to get the latest (handles login from other
@@ -834,6 +759,150 @@ class AuthService {
         success: false,
         authenticated: false,
         error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * Refresh the WorkOS session, single-flighted. Concurrent getStoredAuth
+   * callers share one in-flight refresh so the rotating refresh token is spent
+   * exactly once — otherwise the losing call 401s with invalid_grant and wipes
+   * a session the winner just renewed (the "logged out often" symptom).
+   */
+  private async refreshSession(
+    refreshToken: string,
+    user: NonNullable<AuthResult['user']>,
+    githubToken: string,
+    diag: { expiresAt?: number; isExpired?: unknown; isExpiringSoon?: unknown },
+  ): Promise<AuthResult> {
+    if (!this.refreshInFlight) {
+      this.refreshInFlight = this.performRefresh(
+        refreshToken,
+        user,
+        githubToken,
+        diag,
+      ).finally(() => {
+        this.refreshInFlight = null;
+      });
+    }
+    return this.refreshInFlight;
+  }
+
+  private async performRefresh(
+    refreshToken: string,
+    user: NonNullable<AuthResult['user']>,
+    githubToken: string,
+    diag: { expiresAt?: number; isExpired?: unknown; isExpiringSoon?: unknown },
+  ): Promise<AuthResult> {
+    console.log(
+      '[AuthService] WorkOS token expired or expiring soon, refreshing...',
+      {
+        expiresAt: diag.expiresAt
+          ? new Date(diag.expiresAt).toISOString()
+          : 'unknown',
+        isExpired: diag.isExpired,
+        isExpiringSoon: diag.isExpiringSoon,
+      },
+    );
+
+    try {
+      // Attempt to refresh the token
+      const authClient = new OAuthServerClient({
+        serverUrl:
+          process.env.AUTH_SERVER_URL ||
+          APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
+      });
+
+      // Get device ID for device-specific session tracking
+      const deviceId = await deviceIdService.getDeviceId();
+
+      const refreshedAuth = await authClient.refreshAccessToken(
+        refreshToken,
+        deviceId,
+        user.id,
+      );
+
+      // ✅ CRITICAL: Only update WorkOS token, preserve GitHub token
+      console.log('[AuthService] Token refresh response received:', {
+        receivedNewGithubToken: !!refreshedAuth.token,
+        githubTokenPrefix: refreshedAuth.token?.substring(0, 4),
+        willPreserveExisting:
+          !refreshedAuth.token || !refreshedAuth.token.startsWith('gh'),
+      });
+
+      // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
+      // refreshedAuth.token may be null/undefined if server doesn't return a new GitHub token
+      const newGithubToken =
+        refreshedAuth.token && refreshedAuth.token.startsWith('gh')
+          ? refreshedAuth.token
+          : githubToken;
+
+      console.log('[AuthService] Using GitHub token:', {
+        tokenPrefix: newGithubToken?.substring(0, 4),
+        isNewToken: newGithubToken === refreshedAuth.token,
+        isPreservedToken: newGithubToken === githubToken,
+      });
+
+      // Use stored user data - refresh endpoint only returns WorkOS tokens
+      // The electron app already has the user data from initial login
+      await this.storeAuth(
+        newGithubToken,
+        user,
+        refreshedAuth.workosToken,
+        refreshedAuth.refreshToken,
+        refreshedAuth.expiresAt,
+      );
+
+      // Update AuthStateManager with GitHub token (not WorkOS token!)
+      AuthStateManager.getInstance().setAuthenticated(user, newGithubToken);
+
+      console.log(
+        '[AuthService] Token refreshed successfully, GitHub token preserved',
+      );
+
+      return {
+        success: true,
+        authenticated: true,
+        token: newGithubToken, // ✅ Return GitHub token for API calls
+        user: user,
+      };
+    } catch (refreshError: unknown) {
+      const errorMessage =
+        refreshError instanceof Error ? refreshError.message : 'Unknown error';
+
+      // Only a definitive invalid_grant means the refresh token is truly dead
+      // (revoked, or already consumed and no longer accepted) — sign out. Every
+      // other failure is transient: a network blip, a 5xx, or a 403
+      // token_mismatch from a refresh-token rotation race. Wiping credentials on
+      // those would log the user out on every hiccup, so keep the existing
+      // session and let the next call retry. This preserves the intent of the
+      // "require a valid WorkOS session" change (a session that is genuinely
+      // gone still signs out) without thrashing on transient errors.
+      const isInvalidGrant = /invalid_grant/i.test(errorMessage);
+
+      if (isInvalidGrant) {
+        console.error(
+          '[AuthService] Refresh token rejected (invalid_grant) — signing out:',
+          errorMessage,
+        );
+        await this.clearStoredAuth();
+        AuthStateManager.getInstance().clearAuthentication();
+        return {
+          success: false,
+          authenticated: false,
+          error: 'Token expired and refresh failed. Please log in again.',
+        };
+      }
+
+      console.warn(
+        '[AuthService] Token refresh failed transiently, keeping current session:',
+        errorMessage,
+      );
+      return {
+        success: true,
+        authenticated: true,
+        token: githubToken, // keep the user on the existing token; retry next call
+        user,
       };
     }
   }
