@@ -175,10 +175,10 @@ const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
     title: 'File City Tours',
     description:
       'Create and validate guided introduction tours for File City visualizations — build onboarding walkthroughs that highlight a codebase\'s architecture with interactive highlights, actions, and color modes.',
-    // file-city-tours ships from the principal-ai/file-city repo (under
-    // skills/), NOT principal-ai/skills like the trail skills above.
-    url: 'https://github.com/principal-ai/file-city/tree/main/skills/file-city-tours',
-    source: 'principal-ai/file-city',
+    // file-city-tours ships from the shared principal-ai/skills repo, same as the
+    // trail skills above — installSkillsByName fetches every skill from there.
+    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/file-city-tours`,
+    source: TRAIL_SKILL_SOURCE,
     Icon: Compass,
   },
 ];
@@ -199,8 +199,9 @@ const TRACKED_SKILL_NAMES: ReadonlyArray<string> = [
  * Resolve which tracked skills are installed *from the repo we advertise*.
  *
  * The lock file keys entries by bare skill name, so presence-of-key alone can't
- * tell our `file-city-tours` (principal-ai/skills … or principal-ai/file-city)
- * apart from a same-named skill installed from somewhere else. We additionally
+ * tell our `file-city-tours` (principal-ai/skills) apart from a same-named skill
+ * installed from somewhere else (e.g. a stale principal-ai/file-city install). We
+ * additionally
  * require the recorded `entry.source` to equal the catalog entry's `source`, so
  * the badge reflects *our* skill rather than any skill that happens to share the
  * name. Identity here is (name, source), even though storage still keys by name.
