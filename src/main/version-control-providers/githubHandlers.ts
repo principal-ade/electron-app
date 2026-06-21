@@ -1180,9 +1180,20 @@ export class GitHubAdapter {
   async getUserRepositories(
     options?: RepositoryFetchOptions,
   ): Promise<GitHubRepository[]> {
-    // Build query parameters
+    // Build query parameters. `/user/repos` defaults to only the repos GitHub
+    // feels like returning; without an explicit `affiliation` the caller's own
+    // personal repos can be dropped, which is why the "My Projects" panel showed
+    // org repos but no "you" section. Mirror the proven JWTService call and ask
+    // for owner + collaborator + org-member repos. GitHub returns a 422 if
+    // `affiliation` is combined with `type`, so only one is sent.
     const params: string[] = [];
-    if (options?.type) params.push(`type=${options.type}`);
+    if (options?.type) {
+      params.push(`type=${options.type}`);
+    } else {
+      params.push(
+        `affiliation=${options?.affiliation || 'owner,collaborator,organization_member'}`,
+      );
+    }
     if (options?.sort) params.push(`sort=${options.sort}`);
     if (options?.direction) params.push(`direction=${options.direction}`);
     params.push(`per_page=${options?.perPage || 100}`);

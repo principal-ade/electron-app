@@ -295,6 +295,12 @@ export interface SSHKeysResponse {
 
 export interface RepositoryFetchOptions {
   type?: 'all' | 'owner' | 'public' | 'private' | 'member';
+  /**
+   * Comma-separated affiliations for `GET /user/repos`
+   * (owner, collaborator, organization_member). GitHub rejects this with a 422
+   * if combined with `type`, so callers should set one or the other.
+   */
+  affiliation?: string;
   sort?: 'created' | 'updated' | 'pushed' | 'full_name';
   direction?: 'asc' | 'desc';
   perPage?: number;

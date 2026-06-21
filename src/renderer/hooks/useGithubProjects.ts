@@ -31,10 +31,20 @@ export function useGithubProjects(): UseGithubProjectsResult {
     setError(null);
 
     try {
-      const [user, orgs, userRepos] = await Promise.all([
+      const [user, orgs, userRepos, ownedRepos] = await Promise.all([
         GithubService.getCurrentUser(),
         GithubService.getUserOrganizations(),
         GithubService.getUserRepositories({ perPage: 100, sort: 'updated', direction: 'desc' }),
+        // The broad affiliation list above is capped at 100 and sorted by
+        // recent activity, so for users with many collaborator/org repos their
+        // own repos can fall past the cutoff and the "you" section disappears.
+        // Fetch owned repos explicitly so they're always present.
+        GithubService.getUserRepositories({
+          type: 'owner',
+          perPage: 100,
+          sort: 'updated',
+          direction: 'desc',
+        }),
       ]);
 
       setCurrentUser(user?.login ?? null);
@@ -56,9 +66,10 @@ export function useGithubProjects(): UseGithubProjectsResult {
         })
       );
 
-      // Dedupe by full_name (owner/name), keeping first occurrence.
+      // Dedupe by full_name (owner/name), keeping first occurrence. Owned repos
+      // go first so they're never crowded out by the capped affiliation list.
       const byFullName = new Map<string, GitHubRepository>();
-      for (const repo of [userRepos, ...orgRepoLists].flat()) {
+      for (const repo of [ownedRepos, userRepos, ...orgRepoLists].flat()) {
         if (!byFullName.has(repo.full_name)) {
           byFullName.set(repo.full_name, repo);
         }
