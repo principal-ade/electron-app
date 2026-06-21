@@ -13,6 +13,7 @@ import React, {
 import { useTheme } from '@principal-ade/industry-theme';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { getTracer } from '../telemetry';
+import { ShellService } from '../main-process-api/ShellService';
 import {
   Sparkles,
   FileText,
@@ -30,6 +31,8 @@ import {
   Image,
   Film,
   Layers,
+  ExternalLink,
+  AlertCircle,
 } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
@@ -884,6 +887,23 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   type DetailModal = { panelId: 'githubIssueDetail'; data: unknown };
 
   const [detailModal, setDetailModal] = useState<DetailModal | null>(null);
+
+  // Transient notice shown when a non-previewable file is handed off to the
+  // OS default application — educates the user about what's happening since
+  // the handoff opens an external window with no in-app feedback otherwise.
+  const [nativeOpenNotice, setNativeOpenNotice] = useState<{
+    fileName: string;
+    error?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!nativeOpenNotice) return;
+    const timer = setTimeout(
+      () => setNativeOpenNotice(null),
+      nativeOpenNotice.error ? 5000 : 3000,
+    );
+    return () => clearTimeout(timer);
+  }, [nativeOpenNotice]);
 
   // Right-click overlay: shows a panel as a floating column flush against
   // its sidebar without disturbing the docked layout.
@@ -2051,6 +2071,32 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         const fileName = filePath.split('/').pop() || 'File';
+
+        // Non-previewable binaries (office docs, PDFs, archives, fonts, …)
+        // can't be shown in any in-app viewer — hand them to the OS default
+        // application instead of opening an editor full of binary garbage.
+        const isNativeOpen =
+          /\.(doc|docx|dot|dotx|xls|xlsx|xlsm|xlsb|ppt|pptx|pps|ppsx|odt|ods|odp|rtf|pages|numbers|key|pdf|zip|rar|7z|tar|gz|tgz|bz2|xz|dmg|iso|exe|msi|pkg|app|deb|rpm|mp3|wav|flac|aac|m4a|ttf|otf|woff|woff2|psd|ai|sketch|fig)$/i.test(
+            filePath,
+          );
+        if (isNativeOpen) {
+          setNativeOpenNotice({ fileName });
+          void ShellService.openPath(filePath).then((result) => {
+            if (!result.success) {
+              // No native handler available, or the OS refused the open.
+              setNativeOpenNotice({
+                fileName,
+                error:
+                  result.error || 'No application available to open this file.',
+              });
+              console.error(
+                `[DevWorkspace] Couldn't open ${fileName} in a native app:`,
+                result.error,
+              );
+            }
+          });
+          return;
+        }
 
         // Check file type
         const isMarkdown =
@@ -4673,6 +4719,85 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               </>
             }
           />
+        </div>
+      )}
+
+      {/* Transient native-open notice (auto-dismisses) */}
+      {nativeOpenNotice && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 4000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            maxWidth: 560,
+            padding: '22px 28px',
+            borderRadius: 14,
+            background: theme.colors.background,
+            border: `1px solid ${
+              nativeOpenNotice.error ? theme.colors.error : theme.colors.border
+            }`,
+            boxShadow: '0 10px 36px rgba(0, 0, 0, 0.4)',
+            color: theme.colors.text,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[2],
+            animation: 'devWorkspaceNoticeIn 180ms ease-out',
+          }}
+        >
+          <style>{`
+            @keyframes devWorkspaceNoticeIn {
+              from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); }
+              to { opacity: 1; transform: translate(-50%, -50%); }
+            }
+          `}</style>
+          {nativeOpenNotice.error ? (
+            <AlertCircle
+              size={26}
+              style={{ color: theme.colors.error, flexShrink: 0 }}
+            />
+          ) : (
+            <ExternalLink
+              size={26}
+              style={{ color: theme.colors.primary, flexShrink: 0 }}
+            />
+          )}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+              minWidth: 0,
+            }}
+          >
+            <span
+              style={{
+                fontWeight: 600,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {nativeOpenNotice.error
+                ? `Couldn't open ${nativeOpenNotice.fileName}`
+                : `Opening ${nativeOpenNotice.fileName}`}
+            </span>
+            <span
+              style={{
+                color: theme.colors.textSecondary,
+                fontSize: theme.fontSizes[1],
+              }}
+            >
+              {nativeOpenNotice.error
+                ? nativeOpenNotice.error
+                : 'Launching in your default application…'}
+            </span>
+          </div>
         </div>
       )}
     </div>
