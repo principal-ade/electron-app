@@ -8,7 +8,10 @@
 
 import { ipcMain, shell } from 'electron';
 import Store from 'electron-store';
-import { OAuthServerClient } from './OAuthServerClient';
+import {
+  OAuthServerClient,
+  InvalidWorkosTokenError,
+} from './OAuthServerClient';
 import { deviceIdService } from './DeviceIdService';
 import AuthStateManager from './AuthStateManager';
 import {
@@ -684,7 +687,37 @@ export class AuthService {
             );
           }
         } catch (syncError) {
-          // Non-fatal: if sync fails, continue with local token
+          // The server rejected our WorkOS access token even though its stored
+          // expiry hasn't elapsed (clock skew, out-of-band rotation, or the
+          // server's token lifetime being shorter than the expires_in we cached).
+          // Re-presenting it would loop forever ("WorkOS token verification
+          // failed" flood), so treat the session as stale and refresh — same
+          // recovery as the expired branch above. Without a refresh token there
+          // is nothing to recover with, so sign out.
+          if (syncError instanceof InvalidWorkosTokenError) {
+            if (!refreshToken) {
+              console.log(
+                '[AuthService] WorkOS token rejected and no refresh token — signing out',
+              );
+              await this.clearStoredAuth();
+              AuthStateManager.getInstance().clearAuthentication();
+              return {
+                success: false,
+                authenticated: false,
+                error: 'WorkOS session is no longer valid. Please log in again.',
+              };
+            }
+            console.log(
+              '[AuthService] WorkOS token rejected by server — refreshing session',
+            );
+            return this.refreshSession(refreshToken, user, githubToken, {
+              expiresAt,
+              isExpired,
+              isExpiringSoon,
+            });
+          }
+
+          // Non-fatal: if sync fails for any other reason, continue with local token
           console.log(
             '[AuthService] Token sync failed, using local token:',
             syncError,

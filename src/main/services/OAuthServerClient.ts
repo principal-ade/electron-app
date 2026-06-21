@@ -43,6 +43,21 @@ interface TokenResponse {
   };
 }
 
+/**
+ * Thrown by fetchCurrentToken when the server rejects the WorkOS access token
+ * itself (401 / invalid_token / "WorkOS token verification failed") — as opposed
+ * to "no token stored yet" (404) or "token store unavailable" (503), which both
+ * resolve to null. This is a distinct, recoverable condition: the local WorkOS
+ * session is dead even though its stored expiry hasn't elapsed, so the caller
+ * should refresh rather than keep re-presenting the same rejected token.
+ */
+export class InvalidWorkosTokenError extends Error {
+  constructor(message = 'WorkOS token verification failed') {
+    super(message);
+    this.name = 'InvalidWorkosTokenError';
+  }
+}
+
 export interface AuthResult {
   token: string | undefined; // GitHub token for API calls (may be undefined on refresh)
   workosToken?: string; // WorkOS token for session management
@@ -391,6 +406,16 @@ export class OAuthServerClient {
           return null;
         }
 
+        // 401 / invalid_token means the WorkOS access token we presented is no
+        // longer accepted, even though its stored expiry may not have elapsed.
+        // Surface this so the caller can refresh instead of looping on the same
+        // rejected token (the "WorkOS token verification failed" log flood).
+        if (response.status === 401 || error?.error === 'invalid_token') {
+          throw new InvalidWorkosTokenError(
+            error?.error_description || 'WorkOS token verification failed',
+          );
+        }
+
         return null;
       }
 
@@ -406,6 +431,10 @@ export class OAuthServerClient {
         updatedAt: data.updated_at,
       };
     } catch (error: unknown) {
+      // A rejected WorkOS token is recoverable via refresh — let it propagate.
+      if (error instanceof InvalidWorkosTokenError) {
+        throw error;
+      }
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(
         '[OAuthServerClient] Error fetching current token:',

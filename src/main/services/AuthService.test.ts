@@ -62,6 +62,12 @@ jest.mock('./OAuthServerClient', () => ({
     fetchCurrentToken: mockFetchCurrentToken,
     authenticate: jest.fn(),
   })),
+  InvalidWorkosTokenError: class InvalidWorkosTokenError extends Error {
+    constructor(message = 'WorkOS token verification failed') {
+      super(message);
+      this.name = 'InvalidWorkosTokenError';
+    }
+  },
 }));
 jest.mock('./UnifiedSecureStorage', () => ({
   UnifiedSecureStorage: { getInstance: () => mockStorage },
@@ -205,6 +211,41 @@ describe('AuthService refresh path', () => {
 
   it('D. signs out when the session is expired and there is no refresh token', async () => {
     seedStore({ expiresAt: PAST(), refreshToken: null });
+
+    const token = await service.getValidToken();
+
+    expect(token).toBeNull();
+    expect(mockRefreshAccessToken).not.toHaveBeenCalled();
+    expect(mockAuthState.clearAuthentication).toHaveBeenCalled();
+  });
+
+  it('E. refreshes when the server rejects a not-yet-expired WorkOS token', async () => {
+    // Stored expiry is comfortably in the future, so getStoredAuth takes the
+    // sync path — but the server rejects the WorkOS token. Without recovery this
+    // loops forever ("WorkOS token verification failed" flood); the fix is to
+    // refresh instead.
+    const { InvalidWorkosTokenError } = require('./OAuthServerClient');
+    seedStore({ expiresAt: FUTURE(), refreshToken: 'r1' });
+    mockFetchCurrentToken.mockRejectedValue(new InvalidWorkosTokenError());
+    mockRefreshAccessToken.mockResolvedValue({
+      token: undefined,
+      workosToken: 'wos_new',
+      refreshToken: 'r2',
+      expiresAt: FUTURE(),
+    });
+
+    const token = await service.getValidToken();
+
+    expect(mockRefreshAccessToken).toHaveBeenCalledTimes(1);
+    expect(mockRefreshAccessToken).toHaveBeenCalledWith('r1', 'dev-1', USER.id);
+    expect(token).toBe('gho_old'); // GitHub token preserved across refresh
+    expect(mockAuthState.clearAuthentication).not.toHaveBeenCalled();
+  });
+
+  it('F. signs out when the server rejects the token and there is no refresh token', async () => {
+    const { InvalidWorkosTokenError } = require('./OAuthServerClient');
+    seedStore({ expiresAt: FUTURE(), refreshToken: null });
+    mockFetchCurrentToken.mockRejectedValue(new InvalidWorkosTokenError());
 
     const token = await service.getValidToken();
 
