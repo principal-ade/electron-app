@@ -54,7 +54,11 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
   onBootstrapProjectPathConsumed,
 }) => {
   return (
-    <div style={{ height: '100%', width: '100%' }}>
+    // `isolation: isolate` keeps each workspace surface's internal z-indexes
+    // (e.g. TrailsView's full-bleed landing/recent overlays at zIndex 10)
+    // contained to this base layer, so they can't bleed above the standalone
+    // overlay (zIndex 2) and hide views like Settings.
+    <div style={{ height: '100%', width: '100%', isolation: 'isolate' }}>
       {workspaceView === 'projects' && <ProjectsView />}
       {workspaceView === 'inbox' && <InboxView />}
       {workspaceView === 'topics' && <TopicsView />}
