@@ -19,7 +19,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
-import { ArrowDownToLine, Pencil } from 'lucide-react';
+import { ArrowDownToLine, Pencil, X } from 'lucide-react';
 import {
   DATA_TYPES,
   useDropZone,
@@ -117,6 +117,16 @@ const toggleCheckboxAtLine = (
   return null;
 };
 
+// One entry in the description's table of contents, read straight off a
+// rendered heading element. `id` is rehype-slug's anchor id (so clicking it can
+// scrollIntoView the real node), `level` is the heading depth (1–6) used to
+// indent the outline.
+interface TocEntry {
+  id: string;
+  text: string;
+  level: number;
+}
+
 export interface TopicDescriptionBodyProps {
   /** Topic whose description is shown. The body no-ops without one. */
   topicId?: string;
@@ -148,6 +158,20 @@ export interface TopicDescriptionBodyProps {
   onEdit?: () => void;
   /** Source tag for the link/mermaid handlers. Defaults to `topic-notes`. */
   linkSource?: string;
+  /**
+   * Controlled open-state for the table-of-contents overlay. A wrapper (e.g. the
+   * Braindump slide-over) owns the toggle button and renders the panel here,
+   * since only this body has the live heading DOM to outline. Omit to keep the
+   * TOC hidden.
+   */
+  tocOpen?: boolean;
+  /** Close the TOC overlay — called when a heading is clicked or the panel's X. */
+  onCloseToc?: () => void;
+  /**
+   * Reports whether the current description has any headings, so a wrapper can
+   * show/enable its "Contents" button only when there's an outline to jump to.
+   */
+  onTocAvailableChange?: (available: boolean) => void;
 }
 
 export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
@@ -158,6 +182,9 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
   repositoryPath,
   onEdit,
   linkSource = 'topic-notes',
+  tocOpen = false,
+  onCloseToc,
+  onTocAvailableChange,
 }) => {
   const { theme } = useTheme();
   const { resolve } = useWorkspaceFileIndex(workspaceId);
@@ -179,6 +206,12 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
   }, [description]);
   const [assets, setAssets] = useState<TopicAsset[]>([]);
   const [loading, setLoading] = useState(false);
+  // Only surface the "Loading…" placeholder once a load has been running long
+  // enough to be worth acknowledging. The topic is a fast local file read that
+  // usually resolves in a few ms, so binding the placeholder straight to
+  // `loading` flashes "Loading…" for a single frame — more jarring than showing
+  // nothing. Delaying reveal means fast loads (the common case) never flash.
+  const [showLoadingDelay, setShowLoadingDelay] = useState(false);
   // Transient banner for a rejected image drop (too large / wrong type / attach
   // failure). Auto-clears so it doesn't linger over the notes.
   const [dropError, setDropError] = useState<string | null>(null);
@@ -226,6 +259,19 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
       off();
     };
   }, [visible, topicId]);
+
+  // Reveal the loading placeholder only if `loading` stays true past a short
+  // grace period; a load that finishes first clears the timer and nothing
+  // flashes. Resetting to false the moment loading clears keeps a later refresh
+  // from inheriting a stale "show" flag.
+  useEffect(() => {
+    if (!loading) {
+      setShowLoadingDelay(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowLoadingDelay(true), 200);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   // Resolve `asset://<id>` references in the markdown to a renderable URL using
   // the topic's inline assets (prefer a hosted `url`, else build a data-URL from
@@ -384,12 +430,66 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
     [handleImageDrop, panelOnDrop],
   );
 
+  // The scrollable description region. We read rendered headings out of it to
+  // build the outline and to scrollIntoView a clicked entry.
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+  const [toc, setToc] = useState<TocEntry[]>([]);
+
+  // Build the outline from the rendered heading nodes (rather than re-parsing
+  // the markdown) so each entry's id is exactly rehype-slug's anchor id — that's
+  // what lets a click scrollIntoView the real node. Recompute a frame after the
+  // markdown (re)paints; keep the same array reference when nothing changed so
+  // the availability effect below doesn't churn.
+  React.useEffect(() => {
+    if (!visible) return;
+    const root = wrapperRef.current;
+    if (!root) return;
+    const raf = requestAnimationFrame(() => {
+      const nodes = root.querySelectorAll<HTMLElement>(
+        '.markdown-slide :is(h1, h2, h3, h4, h5, h6)[id]',
+      );
+      const next: TocEntry[] = [];
+      nodes.forEach((node) => {
+        const text = (node.textContent ?? '').trim();
+        if (text) {
+          next.push({ id: node.id, text, level: Number(node.tagName[1]) });
+        }
+      });
+      setToc((prev) =>
+        prev.length === next.length &&
+        prev.every((p, i) => p.id === next[i].id && p.text === next[i].text)
+          ? prev
+          : next,
+      );
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [description, visible]);
+
+  // Let a wrapper show/enable its "Contents" button only when there's an
+  // outline. Parents should pass a stable callback so this fires only on change.
+  React.useEffect(() => {
+    onTocAvailableChange?.(toc.length > 0);
+  }, [toc.length, onTocAvailableChange]);
+
+  const scrollToHeading = React.useCallback(
+    (id: string) => {
+      const root = wrapperRef.current;
+      // CSS.escape: slug ids can contain characters that need escaping in a
+      // selector (digits-first, punctuation from non-ASCII headings, etc.).
+      const target = root?.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      onCloseToc?.();
+    },
+    [onCloseToc],
+  );
+
   const trimmed = (description ?? '').trim();
 
   return (
     <>
       <div
         {...dropZoneProps}
+        ref={wrapperRef}
         onDrop={handleDrop}
         style={{
           flex: 1,
@@ -440,7 +540,122 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
             Drop text or an image to add to notes
           </div>
         )}
-        {loading && description === null ? (
+        {toc.length > 0 && (
+          <nav
+            aria-label="Table of contents"
+            aria-hidden={!tocOpen}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              bottom: 0,
+              width: '100%',
+              zIndex: 4,
+              display: 'flex',
+              flexDirection: 'column',
+              background: theme.colors.background,
+              borderRight: `1px solid ${theme.colors.border}`,
+              boxShadow: tocOpen ? '4px 0 16px rgba(0,0,0,0.25)' : 'none',
+              transform: tocOpen ? 'translateX(0)' : 'translateX(-100%)',
+              transition: 'transform 0.2s ease',
+              pointerEvents: tocOpen ? 'auto' : 'none',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 8px 8px 12px',
+                borderBottom: `1px solid ${theme.colors.border}`,
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  flex: 1,
+                  fontSize: theme.fontSizes[0],
+                  fontWeight: theme.fontWeights.semibold,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                Contents
+              </span>
+              <button
+                type="button"
+                onClick={onCloseToc}
+                title="Close"
+                aria-label="Close table of contents"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 22,
+                  height: 22,
+                  padding: 0,
+                  border: 'none',
+                  background: 'transparent',
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  borderRadius: 4,
+                }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div style={{ overflowY: 'auto', padding: '4px 0' }}>
+              {toc.map((entry) => (
+                <button
+                  key={`${entry.level}:${entry.id}:${entry.text}`}
+                  type="button"
+                  onClick={() => scrollToHeading(entry.id)}
+                  title={entry.text}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    textAlign: 'left',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    color:
+                      entry.level <= 1
+                        ? theme.colors.text
+                        : theme.colors.textSecondary,
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[1],
+                    fontWeight:
+                      entry.level <= 1
+                        ? theme.fontWeights.medium
+                        : theme.fontWeights.body,
+                    padding: '6px 16px',
+                    paddingLeft: 16 + (entry.level - 1) * 14,
+                    lineHeight: theme.lineHeights.body,
+                    whiteSpace: 'normal',
+                    overflowWrap: 'anywhere',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background =
+                      theme.colors.backgroundSecondary;
+                    e.currentTarget.style.color = theme.colors.text;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color =
+                      entry.level <= 1
+                        ? theme.colors.text
+                        : theme.colors.textSecondary;
+                  }}
+                >
+                  {entry.text}
+                </button>
+              ))}
+            </div>
+          </nav>
+        )}
+        {showLoadingDelay && description === null ? (
           <div
             style={{
               padding: '12px 16px',
@@ -450,6 +665,11 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
           >
             Loading…
           </div>
+        ) : description === null ? (
+          // Load in flight but still inside the grace period — render nothing
+          // rather than briefly flashing the "no description yet" empty state
+          // before the real content arrives.
+          null
         ) : trimmed ? (
           <IndustryMarkdownSlide
             content={description as string}

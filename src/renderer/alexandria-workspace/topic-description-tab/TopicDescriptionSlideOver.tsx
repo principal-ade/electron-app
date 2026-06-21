@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Brain, Pencil } from 'lucide-react';
+import { Brain, List, Pencil } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from './TopicDescriptionBody';
 
@@ -56,6 +56,17 @@ export const TopicDescriptionSlideOver: React.FC<
   repositoryPath,
 }) => {
   const { theme } = useTheme();
+
+  // The TOC button + panel: the body reports whether the current description has
+  // headings (`hasToc`), this owns the open-state, and the body renders the
+  // actual outline overlay (it has the heading DOM). Collapse the panel whenever
+  // the slide-over itself closes so it isn't left open behind the scenes.
+  const [tocOpen, setTocOpen] = React.useState(false);
+  const [hasToc, setHasToc] = React.useState(false);
+  const closeToc = React.useCallback(() => setTocOpen(false), []);
+  React.useEffect(() => {
+    if (!open) setTocOpen(false);
+  }, [open]);
 
   const iconButtonStyle: React.CSSProperties = {
     display: 'inline-flex',
@@ -117,6 +128,36 @@ export const TopicDescriptionSlideOver: React.FC<
         >
           Braindump
         </span>
+        {hasToc && (
+          <button
+            type="button"
+            onClick={() => setTocOpen((o) => !o)}
+            title="Table of contents"
+            aria-label="Table of contents"
+            aria-expanded={tocOpen}
+            style={{
+              ...iconButtonStyle,
+              color: tocOpen ? theme.colors.primary : theme.colors.textSecondary,
+              borderColor: tocOpen
+                ? theme.colors.primary
+                : theme.colors.border,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = theme.colors.text;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = tocOpen
+                ? theme.colors.primary
+                : theme.colors.textSecondary;
+              e.currentTarget.style.borderColor = tocOpen
+                ? theme.colors.primary
+                : theme.colors.border;
+            }}
+          >
+            <List size={14} />
+          </button>
+        )}
         <button
           type="button"
           onClick={onEdit}
@@ -143,6 +184,9 @@ export const TopicDescriptionSlideOver: React.FC<
         workspaceId={workspaceId}
         repositoryPath={repositoryPath}
         onEdit={onEdit}
+        tocOpen={tocOpen}
+        onCloseToc={closeToc}
+        onTocAvailableChange={setHasToc}
       />
     </div>
   );
