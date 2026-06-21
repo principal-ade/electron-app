@@ -18,21 +18,15 @@
 
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Check, Footprints, PanelsTopLeft } from 'lucide-react';
+import { Check, PanelsTopLeft } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from '../alexandria-workspace/topic-description-tab/TopicDescriptionBody';
+import { TopicTrailsRail } from '../alexandria-workspace/topic-description-tab/TopicTrailsRail';
 import { TopicService } from '../main-process-api/TopicService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
-import { TrailLibraryService } from '../services/TrailLibraryService';
 import { useOpenWorkspaceWindow } from '../hooks/useOpenWorkspaceWindow';
 import { useTopicsTabs } from '../principal-window/contexts/TopicsTabsContext';
 import '../styles/window-open-feedback.css';
-
-/** A topic trail resolved against the local library for its title. */
-interface TrailEntry {
-  id: string;
-  title: string;
-}
 
 export const LocalTopicTabContent: React.FC<{
   topicId: string;
@@ -41,41 +35,6 @@ export const LocalTopicTabContent: React.FC<{
 }> = ({ topicId, title, events }) => {
   const { theme } = useTheme();
   const { openLocalTrail, activeTabId } = useTopicsTabs();
-  const [trails, setTrails] = React.useState<TrailEntry[]>([]);
-
-  // Resolve the topic's trail ids to titles via the local trail library. Kept
-  // live on `onTopicChange` so a trail added to the topic shows up here.
-  React.useEffect(() => {
-    let cancelled = false;
-    const loadTrails = async () => {
-      try {
-        const [topic, listing] = await Promise.all([
-          TopicService.getTopic(topicId),
-          TrailLibraryService.list(),
-        ]);
-        if (cancelled) return;
-        const byId = new Map(listing.entries.map((e) => [e.id, e.title]));
-        const ids = topic?.trailIds ?? [];
-        setTrails(
-          ids.map((id) => ({ id, title: byId.get(id) ?? 'Untitled trail' })),
-        );
-      } catch (err) {
-        console.error('[LocalTopicTabContent] failed to load trails', err);
-        if (!cancelled) setTrails([]);
-      }
-    };
-    void loadTrails();
-    const off = TopicService.onTopicChange((event) => {
-      const changedId = event.topic?.id ?? event.id;
-      if (changedId === topicId) void loadTrails();
-    });
-    return () => {
-      cancelled = true;
-      off();
-    };
-  }, [topicId]);
-
-  const hasTrails = trails.length > 0;
 
   // Promote this topic to a full Alexandria workspace window — the same path
   // HomeView's topic card uses, but routed through the shared open-with-feedback
@@ -213,104 +172,11 @@ export const LocalTopicTabContent: React.FC<{
           <TopicDescriptionBody topicId={topicId} events={events} />
         </div>
 
-        {hasTrails && (
-          <aside
-            style={{
-              width: 280,
-              flexShrink: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              borderLeft: `1px solid ${theme.colors.border}`,
-              backgroundColor: theme.colors.background,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '12px 16px',
-                borderBottom: `1px solid ${theme.colors.border}`,
-                flexShrink: 0,
-                color: theme.colors.textSecondary,
-              }}
-            >
-              <Footprints size={14} />
-              <span
-                style={{
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[0],
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                Trails ({trails.length})
-              </span>
-            </div>
-
-            <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
-              {trails.map((trail) => {
-                const active = activeTabId === `local-trail-${trail.id}`;
-                return (
-                  <button
-                    key={trail.id}
-                    type="button"
-                    onClick={() => openLocalTrail(trail.id, trail.title)}
-                    title={trail.title}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 8,
-                      width: '100%',
-                      padding: '8px 10px',
-                      marginBottom: 2,
-                      borderRadius: 6,
-                      border: `1px solid ${
-                        active ? theme.colors.primary : 'transparent'
-                      }`,
-                      background: active
-                        ? theme.colors.backgroundSecondary
-                        : 'transparent',
-                      color: theme.colors.text,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontFamily: theme.fonts.body,
-                      fontSize: theme.fontSizes[1],
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.background =
-                          theme.colors.backgroundSecondary;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.background = 'transparent';
-                      }
-                    }}
-                  >
-                    <Footprints
-                      size={14}
-                      style={{ flexShrink: 0, opacity: 0.8, marginTop: 2 }}
-                    />
-                    <span
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        overflowWrap: 'anywhere',
-                        lineHeight: 1.35,
-                      }}
-                    >
-                      {trail.title}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
-        )}
+        <TopicTrailsRail
+          topicId={topicId}
+          onOpenTrail={openLocalTrail}
+          isTrailActive={(id) => activeTabId === `local-trail-${id}`}
+        />
       </div>
     </div>
   );

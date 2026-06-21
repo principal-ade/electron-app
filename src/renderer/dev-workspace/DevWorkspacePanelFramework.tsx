@@ -29,6 +29,7 @@ import {
   Building2,
   Image,
   Film,
+  Layers,
 } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
@@ -149,6 +150,9 @@ import {
   type TrailActivatedEvent,
   type TrailClearedEvent,
 } from './trail-events';
+import { TopicsPanel } from './topics-panel/TopicsPanel';
+import { DevWorkspaceTopicTab } from './topics-panel/DevWorkspaceTopicTab';
+import { TOPIC_EVENT, type TopicOpenEvent } from './topics-panel/topic-events';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -329,6 +333,16 @@ interface FileCityTrailTab extends BaseTab {
 }
 
 /**
+ * Topic tab. Renders a curated trail bundle's description + trails rail
+ * (`DevWorkspaceTopicTab`), opened from the Topics sidebar panel.
+ */
+interface TopicTab extends BaseTab {
+  contentType: 'topic';
+  topicId: string;
+  title?: string;
+}
+
+/**
  * Props for the Bruno RequestPanel including optional selected request
  */
 interface BrunoRequestPanelProps {
@@ -361,7 +375,8 @@ type DevWorkspaceTab =
   | BrunoRequestTab
   | DashboardTab
   | FileCity3DTab
-  | FileCityTrailTab;
+  | FileCityTrailTab
+  | TopicTab;
 
 /**
  * History item for right panel document viewing
@@ -2694,6 +2709,39 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return unsubscribe;
   }, [events, openFileCityTrailTab]);
 
+  // Open (or focus) a topic tab when a row is clicked in the Topics sidebar
+  // panel. One tab per topic id, deduped on re-open.
+  const openTopicTab = useCallback((topicId: string, title?: string) => {
+    setTabs((prevTabs) => {
+      const tabId = `topic-${topicId}`;
+      const existing = prevTabs.find(
+        (t) => t.contentType === 'topic' && (t as TopicTab).topicId === topicId,
+      );
+      if (existing) {
+        setFocusTabId(existing.id);
+        return prevTabs;
+      }
+      const newTab: TopicTab = {
+        id: tabId,
+        label: title || 'Topic',
+        contentType: 'topic',
+        topicId,
+        title,
+        closable: true,
+      };
+      setFocusTabId(newTab.id);
+      return [...prevTabs, newTab];
+    });
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = events.on<TopicOpenEvent>(TOPIC_EVENT.open, (event) => {
+      const { topicId, title } = event.payload;
+      if (topicId) openTopicTab(topicId, title);
+    });
+    return unsubscribe;
+  }, [events, openTopicTab]);
+
   // Bridge handoff: a doc pushed from the Principal MCP Bridge
   // (POST /api/document/open) arrives as an OPEN_DOCUMENT IPC when this
   // dev-workspace window is focused. Re-emit it onto the panel event bus as a
@@ -2825,6 +2873,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return <Building2 size={14} />;
       case 'file-city-trail':
         return <Building2 size={14} />;
+      case 'topic':
+        return <Layers size={14} />;
       case 'media': {
         const mediaTab = tab as MediaTab;
         const isVideo = /\.(mp4|webm|mov|avi|mkv|ogv)$/i.test(
@@ -3357,6 +3407,20 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         case 'file-city-trail': {
           return <FileCityTrailTabContent />;
+        }
+
+        case 'topic': {
+          const topicTab = tab as TopicTab;
+          return (
+            <DevWorkspaceTopicTab
+              topicId={topicTab.topicId}
+              isActive={isActive}
+              events={eventsRef.current}
+              repositoryPath={
+                contextRef.current?.currentScope?.repository?.path
+              }
+            />
+          );
         }
 
         case 'media': {
@@ -4021,6 +4085,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         label: 'Trails',
         content: (
           <TrailsPanel
+            repositoryPath={context.currentScope?.repository?.path}
+            events={events}
+          />
+        ),
+      },
+      {
+        id: 'topics',
+        label: 'Topics',
+        content: (
+          <TopicsPanel
             repositoryPath={context.currentScope?.repository?.path}
             events={events}
           />
