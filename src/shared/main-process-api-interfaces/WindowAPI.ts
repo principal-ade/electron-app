@@ -129,12 +129,20 @@ export interface WindowAPI {
   isRepositoryWindowOpen(repository: AlexandriaEntry): Promise<boolean>;
 
   /**
+   * Get the currently open repository / dev-workspace windows.
+   * @returns One entry per live repository window (dev-workspace entries carry
+   * a `localPath`)
+   */
+  getOpenRepositoryWindows(): Promise<RepositoryWindowState[]>;
+
+  /**
    * Listen for repository windows state changes
    * @param callback - Called with array of repository window states when state changes
+   * @returns Unsubscribe function
    */
   onRepositoryWindowsChanged(
     callback: (repoWindows: RepositoryWindowState[]) => void,
-  ): void;
+  ): () => void;
 
   /**
    * Get the currently open Alexandria workspace windows.

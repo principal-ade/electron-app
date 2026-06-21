@@ -30,7 +30,9 @@ export class WindowService {
    * Can open with a specific workspace, or create a temporary workspace for a single repository
    * @param options - Options for opening the workspace (workspaceId, repositoryPath, etc.)
    */
-  static async openAlexandriaWorkspace(options: AlexandriaWorkspaceOptions): Promise<void> {
+  static async openAlexandriaWorkspace(
+    options: AlexandriaWorkspaceOptions,
+  ): Promise<void> {
     try {
       await window.mainProcess.window.openAlexandriaWorkspace(options);
     } catch (error) {
@@ -58,7 +60,10 @@ export class WindowService {
     try {
       return await window.mainProcess.window.focusOrCreateMainWindow();
     } catch (error) {
-      console.error('[WindowService] Failed to focus/create main window:', error);
+      console.error(
+        '[WindowService] Failed to focus/create main window:',
+        error,
+      );
       return false;
     }
   }
@@ -85,7 +90,10 @@ export class WindowService {
     try {
       return window.mainProcess.window.onNavigateToUpdates(callback);
     } catch (error) {
-      console.error('[WindowService] Failed to register navigate to updates listener:', error);
+      console.error(
+        '[WindowService] Failed to register navigate to updates listener:',
+        error,
+      );
       return () => {};
     }
   }
@@ -124,19 +132,37 @@ export class WindowService {
   }
 
   /**
+   * Get the currently open repository / dev-workspace windows
+   * @returns One entry per live repository window (empty array on failure)
+   */
+  static async getOpenRepositoryWindows(): Promise<RepositoryWindowState[]> {
+    try {
+      return await window.mainProcess.window.getOpenRepositoryWindows();
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to get open repository windows:',
+        error,
+      );
+      return [];
+    }
+  }
+
+  /**
    * Listen for repository windows state changes
    * @param callback - Called with array of repository window states when state changes
+   * @returns Unsubscribe function
    */
   static onRepositoryWindowsChanged(
     callback: (repoWindows: RepositoryWindowState[]) => void,
-  ): void {
+  ): () => void {
     try {
-      window.mainProcess.window.onRepositoryWindowsChanged(callback);
+      return window.mainProcess.window.onRepositoryWindowsChanged(callback);
     } catch (error) {
       console.error(
         '[WindowService] Failed to register repository windows listener:',
         error,
       );
+      return () => {};
     }
   }
 
@@ -257,9 +283,14 @@ export class WindowService {
     repositoryPath: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      return await window.mainProcess.window.addRepositoryToThread(repositoryPath);
+      return await window.mainProcess.window.addRepositoryToThread(
+        repositoryPath,
+      );
     } catch (error) {
-      console.error('[WindowService] Failed to add repository to thread:', error);
+      console.error(
+        '[WindowService] Failed to add repository to thread:',
+        error,
+      );
       return { success: false, error: 'Failed to add repository to thread' };
     }
   }
@@ -273,10 +304,18 @@ export class WindowService {
     repositoryPath: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      return await window.mainProcess.window.removeRepositoryFromThread(repositoryPath);
+      return await window.mainProcess.window.removeRepositoryFromThread(
+        repositoryPath,
+      );
     } catch (error) {
-      console.error('[WindowService] Failed to remove repository from thread:', error);
-      return { success: false, error: 'Failed to remove repository from thread' };
+      console.error(
+        '[WindowService] Failed to remove repository from thread:',
+        error,
+      );
+      return {
+        success: false,
+        error: 'Failed to remove repository from thread',
+      };
     }
   }
 
@@ -295,7 +334,10 @@ export class WindowService {
     try {
       return window.mainProcess.window.onThreadRepositoriesChanged(callback);
     } catch (error) {
-      console.error('[WindowService] Failed to register thread repositories listener:', error);
+      console.error(
+        '[WindowService] Failed to register thread repositories listener:',
+        error,
+      );
       return () => {};
     }
   }

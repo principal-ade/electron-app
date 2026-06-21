@@ -25,6 +25,7 @@ import { UserPreferencesService } from '../../../main-process-api/UserPreference
 import { WindowService } from '../../../main-process-api/WindowService';
 import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import { useOpenWorkspaceWindow } from '../../../hooks/useOpenWorkspaceWindow';
+import { useOpenRepositoryWindows } from '../../../hooks/useOpenRepositoryWindows';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { NewTopicModal } from '../../../components/NewTopicModal';
@@ -38,13 +39,11 @@ import type {
   Topic,
   Workspace,
 } from '@principal-ai/alexandria-core-library/types';
-import type { TopicStatus } from '@principal-ai/alexandria-core-library';
 import {
   TopicsDashboard,
-  type TopicsDashboardHandle,
-  type TopicsDashboardRepoEntry,
   type TopicsDashboardTopicEntry,
 } from './TopicsDashboard';
+import { OpenProjectCard, type OpenProjectEntry } from './OpenProjectCard';
 
 const trailRepoLabel = (repositoryPath: string | undefined): string => {
   if (!repositoryPath) return 'No repo';
@@ -174,7 +173,7 @@ const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
     name: 'file-city-tours',
     title: 'File City Tours',
     description:
-      'Create and validate guided introduction tours for File City visualizations — build onboarding walkthroughs that highlight a codebase\'s architecture with interactive highlights, actions, and color modes.',
+      "Create and validate guided introduction tours for File City visualizations — build onboarding walkthroughs that highlight a codebase's architecture with interactive highlights, actions, and color modes.",
     // file-city-tours ships from the shared principal-ai/skills repo, same as the
     // trail skills above — installSkillsByName fetches every skill from there.
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/file-city-tours`,
@@ -224,10 +223,11 @@ export function HomeView() {
 
   const loadGitUserName = useCallback(async () => {
     try {
-      const result = await GitService.execCommand(
-        process.env.HOME || '/',
-        ['config', '--global', 'user.name'],
-      );
+      const result = await GitService.execCommand(process.env.HOME || '/', [
+        'config',
+        '--global',
+        'user.name',
+      ]);
       setGitUserName(result.stdout.trim() || null);
     } catch {
       // No global git identity — leave gitUserName null and fall back.
@@ -261,7 +261,9 @@ export function HomeView() {
   const [topics, setTopics] = useState<Topic[]>([]);
   // Ids of topics published to web-ade (sync.remoteId present), from the
   // sync-aware records endpoint. Drives the "Shared" badge on topic cards.
-  const [publishedTopicIds, setPublishedTopicIds] = useState<Set<string>>(new Set());
+  const [publishedTopicIds, setPublishedTopicIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceRepos, setWorkspaceRepos] = useState<
     Map<string, AlexandriaEntry[]>
@@ -284,22 +286,13 @@ export function HomeView() {
   // Topic modal state.
   const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
 
-  // Drives keyboard-triggered focus of the dashboard's topic search field.
-  const dashboardRef = React.useRef<TopicsDashboardHandle>(null);
-
-  // Home-view keyboard shortcuts:
-  //   Cmd/Ctrl+T → open the create topic modal
-  //   Cmd/Ctrl+L → focus the topics search field
+  // Home-view keyboard shortcut: Cmd/Ctrl+T → open the create topic modal.
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
-      const key = e.key.toLowerCase();
-      if (key === 't') {
+      if (e.key.toLowerCase() === 't') {
         e.preventDefault();
         setIsNewTopicOpen(true);
-      } else if (key === 'l') {
-        e.preventDefault();
-        dashboardRef.current?.focusSearch();
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
@@ -308,17 +301,44 @@ export function HomeView() {
   const [pendingDeleteTopic, setPendingDeleteTopic] =
     useState<TopicsDashboardTopicEntry | null>(null);
   const [deletingTopic, setDeletingTopic] = useState(false);
-  // Mirrors the dashboard's Topics view toggle so this view can switch the
-  // dashboard wrapper to a flex-fill layout in board mode (keeps the footer
-  // visible without scrolling).
-  const [dashboardBoardMode, setDashboardBoardMode] = useState(false);
-  // Set when the list-view topics grid is showing a long list ("All topics" or
-  // an active search). Like board mode, this flex-fills the wrapper so the grid
-  // scrolls its own overflow and the footer stays pinned, rather than the whole
-  // page scrolling.
-  const [dashboardListScroll, setDashboardListScroll] = useState(false);
-  // Either path wants the wrapper bounded so the dashboard scrolls internally.
-  const dashboardFill = dashboardBoardMode || dashboardListScroll;
+
+  // Projects that currently have a window open. Mapped from the live
+  // repository-window list to repo identity + label/owner for the cards.
+  const openRepoWindows = useOpenRepositoryWindows();
+  const openProjects = useMemo<OpenProjectEntry[]>(() => {
+    const seen = new Set<string>();
+    const out: OpenProjectEntry[] = [];
+    for (const win of openRepoWindows) {
+      const path = win.localPath;
+      if (!path || seen.has(path)) continue;
+      seen.add(path);
+      const repo = repositories.find((r) => r.path === path);
+      out.push({
+        key: path,
+        label: repo?.github?.name ?? repo?.name ?? trailRepoLabel(path),
+        ownerLogin: repo?.github?.owner,
+      });
+    }
+    return out;
+  }, [openRepoWindows, repositories]);
+
+  // Open the dev workspace for a project path, registering it first if it isn't
+  // a known Alexandria repo. Shared by the open-projects cards; opening an
+  // already-open workspace focuses the existing window.
+  const openProject = useCallback(async (path: string) => {
+    try {
+      const existing = await AlexandriaService.getRepositoryByPath(path);
+      const alexandriaEntry =
+        existing ?? (await AlexandriaService.registerRepository(path));
+      await WindowService.openDevWorkspace({ alexandriaEntry });
+    } catch (err) {
+      console.error(
+        '[HomeView] Failed to open dev workspace for project:',
+        path,
+        err,
+      );
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -378,9 +398,7 @@ export function HomeView() {
           if (cancelled) return;
           setPublishedTopicIds(
             new Set(
-              records
-                .filter((r) => r.sync.remoteId)
-                .map((r) => r.topic.id),
+              records.filter((r) => r.sync.remoteId).map((r) => r.topic.id),
             ),
           );
         })
@@ -399,9 +417,7 @@ export function HomeView() {
         );
       } else if (event.type === 'updated' && event.topic) {
         const topic = event.topic;
-        setTopics((prev) =>
-          prev.map((t) => (t.id === topic.id ? topic : t)),
-        );
+        setTopics((prev) => prev.map((t) => (t.id === topic.id ? topic : t)));
       } else if (event.type === 'removed' && event.id) {
         const id = event.id;
         setTopics((prev) => prev.filter((t) => t.id !== id));
@@ -481,36 +497,6 @@ export function HomeView() {
     };
   }, []);
 
-  const dashboardRepoEntries = useMemo<TopicsDashboardRepoEntry[]>(() => {
-    const byRepo = new Map<
-      string,
-      { entry: TopicsDashboardRepoEntry; count: number }
-    >();
-    for (const trail of recentTrails) {
-      if (!trail.repositoryPath) continue;
-      const existing = byRepo.get(trail.repositoryPath);
-      if (existing) {
-        existing.count += 1;
-        continue;
-      }
-      const repo = repositories.find((r) => r.path === trail.repositoryPath);
-      byRepo.set(trail.repositoryPath, {
-        count: 1,
-        entry: {
-          key: trail.repositoryPath,
-          label: trailRepoLabel(trail.repositoryPath),
-          ownerLogin: repo?.github?.owner,
-          trailCount: 1,
-          latestTrail: trail,
-        },
-      });
-    }
-    return Array.from(byRepo.values()).map(({ entry, count }) => ({
-      ...entry,
-      trailCount: count,
-    }));
-  }, [recentTrails, repositories]);
-
   const dashboardTopicEntries = useMemo<TopicsDashboardTopicEntry[]>(() => {
     const sorted = [...topics].sort((a, b) =>
       b.updatedAt.localeCompare(a.updatedAt),
@@ -551,7 +537,10 @@ export function HomeView() {
     openingTopicId,
   ]);
 
-  const hasAnyTrail = recentTrails.length > 0;
+  // Show the dashboard once the user has any content to land on — a topic, an
+  // open project, or trails. Otherwise fall back to the prompt-idea cards.
+  const hasDashboardContent =
+    topics.length > 0 || openProjects.length > 0 || recentTrails.length > 0;
 
   const installedSkillDetails = useMemo(
     () => ALL_SKILL_DETAILS.filter((s) => installedSkillNames.has(s.name)),
@@ -796,6 +785,199 @@ export function HomeView() {
     [installSkillsByName],
   );
 
+  // Small uppercase eyebrow shared by the right-rail section headings.
+  const railHeadingStyle: React.CSSProperties = {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSizes[0],
+    fontWeight: theme.fontWeights.semibold,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    color: theme.colors.textSecondary,
+  };
+
+  // The installed-skill + installable-add-on badges. Rendered in the right rail
+  // (the normal home state, `rail`) and as a centered bottom footer (the
+  // pre-install welcome state).
+  const installedSkillsBlock = (rail: boolean): React.ReactNode => {
+    if (installedSkillDetails.length === 0) return null;
+    return (
+      <div
+        style={
+          rail
+            ? {
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+              }
+            : {
+                flex: '0 0 auto',
+                marginTop: 'auto',
+                paddingTop: 32,
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 10,
+              }
+        }
+      >
+        <div style={railHeadingStyle}>Installed Skills</div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: rail ? 'flex-start' : 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+            maxWidth: rail ? undefined : 900,
+          }}
+        >
+          {installedSkillDetails.map((skill) => {
+            const SkillIcon = skill.Icon;
+            const hasUpdate = skillUpdates.has(skill.name);
+            const isUpdating = updatingSkills.has(skill.name);
+            const accent = hasUpdate
+              ? theme.colors.warning
+              : theme.colors.border;
+            return (
+              <button
+                key={skill.name}
+                type="button"
+                disabled={isUpdating}
+                onClick={() => {
+                  if (isUpdating) return;
+                  if (hasUpdate) {
+                    void handleUpdateSkill(skill.name);
+                  } else {
+                    void ShellService.openExternal(skill.url);
+                  }
+                }}
+                title={
+                  isUpdating
+                    ? `Updating ${skill.title}…`
+                    : hasUpdate
+                      ? `Update available for ${skill.title} — click to update`
+                      : `${skill.title} is installed — open on GitHub`
+                }
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 12px',
+                  borderRadius: 12,
+                  border: `1px solid ${accent}`,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  cursor: isUpdating ? 'default' : 'pointer',
+                  opacity: isUpdating ? 0.7 : 1,
+                  transition: 'border-color 150ms ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = hasUpdate
+                    ? theme.colors.warning
+                    : theme.colors.primary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = accent;
+                }}
+              >
+                <SkillIcon size={16} color={theme.colors.primary} />
+                <span style={{ fontWeight: theme.fontWeights.medium }}>
+                  {skill.title}
+                </span>
+                {hasUpdate || isUpdating ? (
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      color: theme.colors.warning,
+                      fontWeight: theme.fontWeights.medium,
+                    }}
+                  >
+                    <RefreshCw size={14} />
+                    {isUpdating ? 'Updating…' : 'Update'}
+                  </span>
+                ) : (
+                  <Check
+                    size={14}
+                    color={theme.colors.success ?? theme.colors.primary}
+                  />
+                )}
+              </button>
+            );
+          })}
+          {optionalSkillsToInstall.map((skill) => {
+            const SkillIcon = skill.Icon;
+            const isInstalling = installingOptional.has(skill.name);
+            return (
+              <button
+                key={skill.name}
+                type="button"
+                disabled={isInstalling}
+                onClick={() => {
+                  if (isInstalling) return;
+                  void handleInstallOptionalSkill(skill.name);
+                }}
+                title={
+                  isInstalling
+                    ? `Installing ${skill.title}…`
+                    : `${skill.description} — click to install`
+                }
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 12px',
+                  borderRadius: 12,
+                  // Dashed border marks an installable add-on, distinct from
+                  // the solid-bordered installed badges.
+                  border: `1px dashed ${theme.colors.primary}`,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  cursor: isInstalling ? 'default' : 'pointer',
+                  opacity: isInstalling ? 0.7 : 1,
+                  transition: 'border-color 150ms ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                }}
+              >
+                <SkillIcon size={16} color={theme.colors.primary} />
+                <span style={{ fontWeight: theme.fontWeights.medium }}>
+                  {skill.title}
+                </span>
+                <span
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    color: theme.colors.primary,
+                    fontWeight: theme.fontWeights.medium,
+                  }}
+                >
+                  {isInstalling ? (
+                    <RefreshCw size={14} />
+                  ) : (
+                    <Download size={14} />
+                  )}
+                  {isInstalling ? 'Installing…' : 'Install'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const welcomeHeader = (
     <div style={{ textAlign: 'center', maxWidth: 640 }}>
       <div
@@ -816,8 +998,8 @@ export function HomeView() {
             onClick={() => setGitConfigOpen(true)}
             title={
               gitUserName
-                ? "This name comes from your global git config (user.name). Click to view or edit."
-                : "No global git identity is configured. Click to set one."
+                ? 'This name comes from your global git config (user.name). Click to view or edit.'
+                : 'No global git identity is configured. Click to set one.'
             }
             style={{
               background: 'transparent',
@@ -1005,7 +1187,8 @@ export function HomeView() {
                         transition: 'border-color 150ms ease',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = theme.colors.primary;
+                        e.currentTarget.style.borderColor =
+                          theme.colors.primary;
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.borderColor = theme.colors.border;
@@ -1064,285 +1247,122 @@ export function HomeView() {
           </div>
         )}
 
-        {skillInstalled === true && hasAnyTrail && (
+        {skillInstalled === true && (
           <div
             style={{
+              display: 'grid',
+              // Symmetric 3 columns: an empty left spacer the same width as the
+              // rail, the topics in the middle, and the rail on the right — so
+              // the topics column is centered on the page. The center track uses
+              // minmax(0, 1fr) so it can shrink and scroll its list internally.
+              gridTemplateColumns: '300px minmax(0, 1fr) 300px',
+              columnGap: 32,
               width: '100%',
               marginTop: 24,
-              // Board mode and a long topics list both fill the space between
-              // the header and the footer so the dashboard scrolls its own
-              // content and the "Installed Skills" footer stays pinned/visible.
-              // The short list keeps its natural height and lets the page flow.
-              ...(dashboardFill
-                ? {
-                    flex: '1 1 auto',
-                    minHeight: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                  }
-                : { flex: '0 0 auto' }),
+              alignItems: 'stretch',
+              flex: '1 1 auto',
+              minHeight: 0,
             }}
           >
-            <TopicsDashboard
-              ref={dashboardRef}
-              onViewModeChange={(mode) =>
-                setDashboardBoardMode(mode === 'kanban')
-              }
-              onListScrollChange={setDashboardListScroll}
-              repoEntries={dashboardRepoEntries}
-              recentTrails={recentTrails}
-              topicEntries={dashboardTopicEntries}
-              onSelectRepo={(entry) => {
-                void (async () => {
-                  try {
-                    const existing =
-                      await AlexandriaService.getRepositoryByPath(entry.key);
-                    const alexandriaEntry =
-                      existing ??
-                      (await AlexandriaService.registerRepository(entry.key));
-                    await WindowService.openDevWorkspace({ alexandriaEntry });
-                  } catch (err) {
-                    console.error(
-                      '[HomeView] Failed to open dev workspace for repo:',
-                      entry.key,
-                      err,
-                    );
-                  }
-                })();
-              }}
-              onSelectTopic={(entry) => {
-                // Routed through the shared open-with-feedback hook (keyed by
-                // topic id so only this card shows "Opening…"). The resolver
-                // materializes a workspace on first open: topics minted over
-                // the bridge (the `POST /api/topics` route creates only the
-                // topic) — and, in future, topics shared to us — have no local
-                // workspace until now. The CREATE_WORKSPACE broadcast refreshes
-                // the dashboard (dropping its "New" badge) on its own.
-                void openTopicWorkspace(async () => {
-                  const existing = workspaces.find((w) =>
-                    w.topicIds?.includes(entry.key),
-                  );
-                  if (existing) return existing.id;
-                  const created = await WorkspaceService.createWorkspace({
-                    name: entry.title,
-                    topicIds: [entry.key],
-                  });
-                  return created.id;
-                }, entry.key);
-              }}
-              onCreateTopic={() => setIsNewTopicOpen(true)}
-              onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
-              onChangeTopicStatus={(entry, nextState) => {
-                const topic = topics.find((t) => t.id === entry.key);
-                const prev = topic?.status;
-                // Untriaged / legacy topics read as the nascent `new-thought`.
-                if ((prev?.state ?? 'new-thought') === nextState) return;
-                // Change only the column axis (state). Keep a custom label, but
-                // drop `waitingOn` when leaving the Waiting lane — that context
-                // is meaningless (and would show a stray clock) elsewhere.
-                const next: TopicStatus = { state: nextState };
-                if (prev?.label) next.label = prev.label;
-                if (nextState === 'waiting' && prev?.waitingOn) {
-                  next.waitingOn = prev.waitingOn;
-                }
-                void TopicService.updateTopic(entry.key, {
-                  status: next,
-                }).catch((err) => {
-                  console.error(
-                    '[HomeView] Failed to update topic status:',
-                    err,
-                  );
-                });
-              }}
-              onViewAllProjects={() =>
-                window.dispatchEvent(
-                  new CustomEvent('home:open-in-trails', { detail: {} }),
-                )
-              }
-            />
-          </div>
-        )}
+            {/* Left spacer — intentionally empty; it balances the rail so the
+                topics column sits centered on the page. */}
+            <div aria-hidden />
 
-        {skillInstalled === true && !hasAnyTrail && <TrailPromptIdeas />}
-
-        {installedSkillDetails.length > 0 && (
-          <div
-            style={{
-              flex: '0 0 auto',
-              marginTop: 'auto',
-              paddingTop: 32,
-              width: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 10,
-            }}
-          >
+            {/* Center column: the prioritized topics dashboard (or the prompt
+                ideas for a brand-new user with nothing to land on yet). */}
             <div
               style={{
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[0],
-                fontWeight: theme.fontWeights.semibold,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-                color: theme.colors.textSecondary,
-              }}
-            >
-              Installed Skills
-            </div>
-            <div
-              style={{
+                minWidth: 0,
+                minHeight: 0,
                 display: 'flex',
-                justifyContent: 'center',
-                gap: 10,
-                flexWrap: 'wrap',
-                maxWidth: 900,
+                flexDirection: 'column',
               }}
             >
-              {installedSkillDetails.map((skill) => {
-                const SkillIcon = skill.Icon;
-                const hasUpdate = skillUpdates.has(skill.name);
-                const isUpdating = updatingSkills.has(skill.name);
-                const accent = hasUpdate
-                  ? theme.colors.warning
-                  : theme.colors.border;
-                return (
-                  <button
-                    key={skill.name}
-                    type="button"
-                    disabled={isUpdating}
-                    onClick={() => {
-                      if (isUpdating) return;
-                      if (hasUpdate) {
-                        void handleUpdateSkill(skill.name);
-                      } else {
-                        void ShellService.openExternal(skill.url);
-                      }
-                    }}
-                    title={
-                      isUpdating
-                        ? `Updating ${skill.title}…`
-                        : hasUpdate
-                          ? `Update available for ${skill.title} — click to update`
-                          : `${skill.title} is installed — open on GitHub`
-                    }
+              {hasDashboardContent ? (
+                <TopicsDashboard
+                  topicEntries={dashboardTopicEntries}
+                  onSelectTopic={(entry) => {
+                    // Routed through the shared open-with-feedback hook (keyed
+                    // by topic id so only this card shows "Opening…"). The
+                    // resolver materializes a workspace on first open: topics
+                    // minted over the bridge (the `POST /api/topics` route
+                    // creates only the topic) — and, in future, topics shared
+                    // to us — have no local workspace until now. The
+                    // CREATE_WORKSPACE broadcast refreshes the dashboard
+                    // (dropping its "New" badge) on its own.
+                    void openTopicWorkspace(async () => {
+                      const existing = workspaces.find((w) =>
+                        w.topicIds?.includes(entry.key),
+                      );
+                      if (existing) return existing.id;
+                      const created = await WorkspaceService.createWorkspace({
+                        name: entry.title,
+                        topicIds: [entry.key],
+                      });
+                      return created.id;
+                    }, entry.key);
+                  }}
+                  onCreateTopic={() => setIsNewTopicOpen(true)}
+                  onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
+                />
+              ) : (
+                <TrailPromptIdeas />
+              )}
+            </div>
+
+            {/* Right rail: open projects and installed skills share this space.
+                Rendered only when there's something to put in it. */}
+            {(openProjects.length > 0 || installedSkillDetails.length > 0) && (
+              <aside
+                style={{
+                  // Width comes from the grid's 300px right track.
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 28,
+                  // Align the rail's first heading with the dashboard's
+                  // section heading (its section has a 40px top padding).
+                  paddingTop: 40,
+                  // Scroll the rail's own overflow rather than the page.
+                  minHeight: 0,
+                  overflowY: 'auto',
+                }}
+              >
+                {openProjects.length > 0 && (
+                  <div
                     style={{
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '8px 12px',
-                      borderRadius: 12,
-                      border: `1px solid ${accent}`,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      color: theme.colors.text,
-                      fontFamily: theme.fonts.body,
-                      fontSize: theme.fontSizes[1],
-                      cursor: isUpdating ? 'default' : 'pointer',
-                      opacity: isUpdating ? 0.7 : 1,
-                      transition: 'border-color 150ms ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = hasUpdate
-                        ? theme.colors.warning
-                        : theme.colors.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = accent;
+                      flexDirection: 'column',
+                      gap: 10,
                     }}
                   >
-                    <SkillIcon size={16} color={theme.colors.primary} />
-                    <span style={{ fontWeight: theme.fontWeights.medium }}>
-                      {skill.title}
-                    </span>
-                    {hasUpdate || isUpdating ? (
-                      <span
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          color: theme.colors.warning,
-                          fontWeight: theme.fontWeights.medium,
-                        }}
-                      >
-                        <RefreshCw size={14} />
-                        {isUpdating ? 'Updating…' : 'Update'}
-                      </span>
-                    ) : (
-                      <Check
-                        size={14}
-                        color={theme.colors.success ?? theme.colors.primary}
-                      />
-                    )}
-                  </button>
-                );
-              })}
-              {optionalSkillsToInstall.map((skill) => {
-                const SkillIcon = skill.Icon;
-                const isInstalling = installingOptional.has(skill.name);
-                return (
-                  <button
-                    key={skill.name}
-                    type="button"
-                    disabled={isInstalling}
-                    onClick={() => {
-                      if (isInstalling) return;
-                      void handleInstallOptionalSkill(skill.name);
-                    }}
-                    title={
-                      isInstalling
-                        ? `Installing ${skill.title}…`
-                        : `${skill.description} — click to install`
-                    }
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '8px 12px',
-                      borderRadius: 12,
-                      // Dashed border marks an installable add-on, distinct from
-                      // the solid-bordered installed badges.
-                      border: `1px dashed ${theme.colors.primary}`,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      color: theme.colors.text,
-                      fontFamily: theme.fonts.body,
-                      fontSize: theme.fontSizes[1],
-                      cursor: isInstalling ? 'default' : 'pointer',
-                      opacity: isInstalling ? 0.7 : 1,
-                      transition: 'border-color 150ms ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = theme.colors.primary;
-                    }}
-                  >
-                    <SkillIcon size={16} color={theme.colors.primary} />
-                    <span style={{ fontWeight: theme.fontWeights.medium }}>
-                      {skill.title}
-                    </span>
-                    <span
+                    <div style={railHeadingStyle}>Open Projects</div>
+                    <div
                       style={{
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        color: theme.colors.primary,
-                        fontWeight: theme.fontWeights.medium,
+                        flexDirection: 'column',
+                        gap: 10,
                       }}
                     >
-                      {isInstalling ? (
-                        <RefreshCw size={14} />
-                      ) : (
-                        <Download size={14} />
-                      )}
-                      {isInstalling ? 'Installing…' : 'Install'}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                      {openProjects.map((p) => (
+                        <OpenProjectCard
+                          key={p.key}
+                          entry={p}
+                          theme={theme}
+                          onClick={() => void openProject(p.key)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {installedSkillsBlock(true)}
+              </aside>
+            )}
           </div>
         )}
+
+        {/* Pre-install welcome state keeps the skills as a centered bottom
+            footer; once installed they move into the right rail above. */}
+        {skillInstalled === false && installedSkillsBlock(false)}
       </div>
 
       <GitGlobalConfigModal

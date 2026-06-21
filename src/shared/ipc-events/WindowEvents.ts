@@ -13,6 +13,7 @@ export enum WindowEvent {
   FOCUS_WINDOW_BY_ID = 'window:focus-by-id',
   GET_WINDOW_ID = 'window:get-window-id',
   IS_REPOSITORY_WINDOW_OPEN = 'window:is-repository-window-open',
+  GET_OPEN_REPOSITORY_WINDOWS = 'window:get-open-repository-windows',
   REPOSITORY_WINDOWS_CHANGED = 'window:repository-windows-changed',
   GET_OPEN_WORKSPACE_WINDOWS = 'window:get-open-workspace-windows',
   WORKSPACE_WINDOWS_CHANGED = 'window:workspace-windows-changed',

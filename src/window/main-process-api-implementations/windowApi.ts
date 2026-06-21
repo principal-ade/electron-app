@@ -50,17 +50,30 @@ export const windowAPI: WindowAPI = {
     ipcRenderer.invoke(WindowEvent.IS_REPOSITORY_WINDOW_OPEN, repository),
 
   /**
+   * Get the currently open repository / dev-workspace windows
+   */
+  getOpenRepositoryWindows: () =>
+    ipcRenderer.invoke(WindowEvent.GET_OPEN_REPOSITORY_WINDOWS),
+
+  /**
    * Listen for repository windows state changes
    */
   onRepositoryWindowsChanged: (
     callback: (repoWindows: RepositoryWindowState[]) => void,
   ) => {
-    ipcRenderer.on(
-      WindowEvent.REPOSITORY_WINDOWS_CHANGED,
-      (_event, repoWindows: RepositoryWindowState[]) => {
-        callback(repoWindows);
-      },
-    );
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      repoWindows: RepositoryWindowState[],
+    ) => {
+      callback(repoWindows);
+    };
+    ipcRenderer.on(WindowEvent.REPOSITORY_WINDOWS_CHANGED, handler);
+    return () => {
+      ipcRenderer.removeListener(
+        WindowEvent.REPOSITORY_WINDOWS_CHANGED,
+        handler,
+      );
+    };
   },
 
   /**
@@ -160,21 +173,27 @@ export const windowAPI: WindowAPI = {
   ) => {
     const handler = (
       _event: Electron.IpcRendererEvent,
-      data: { repositoryPaths: string[]; addedPath?: string; removedPath?: string },
+      data: {
+        repositoryPaths: string[];
+        addedPath?: string;
+        removedPath?: string;
+      },
     ) => {
       callback(data);
     };
     ipcRenderer.on(WindowEvent.THREAD_REPOSITORIES_CHANGED, handler);
     return () => {
-      ipcRenderer.removeListener(WindowEvent.THREAD_REPOSITORIES_CHANGED, handler);
+      ipcRenderer.removeListener(
+        WindowEvent.THREAD_REPOSITORIES_CHANGED,
+        handler,
+      );
     };
   },
 
   /**
    * Focus the main window and navigate to updates settings
    */
-  navigateToUpdates: () =>
-    ipcRenderer.invoke(WindowEvent.NAVIGATE_TO_UPDATES),
+  navigateToUpdates: () => ipcRenderer.invoke(WindowEvent.NAVIGATE_TO_UPDATES),
 
   /**
    * Listen for navigate to updates events

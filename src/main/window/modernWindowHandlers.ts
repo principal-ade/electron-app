@@ -140,8 +140,23 @@ export function registerModernWindowHandlers(): void {
   // Alexandria Workspace Window
   ipcMain.handle(
     WindowEvent.OPEN_ALEXANDRIA_WORKSPACE,
-    async (_event, options: { workspaceId?: string; repositoryPath?: string; repositoryId?: string; additionalRepositoryPaths?: string[]; openEmptyThread?: boolean }) => {
-      const { workspaceId, repositoryPath, repositoryId, additionalRepositoryPaths, openEmptyThread } = options;
+    async (
+      _event,
+      options: {
+        workspaceId?: string;
+        repositoryPath?: string;
+        repositoryId?: string;
+        additionalRepositoryPaths?: string[];
+        openEmptyThread?: boolean;
+      },
+    ) => {
+      const {
+        workspaceId,
+        repositoryPath,
+        repositoryId,
+        additionalRepositoryPaths,
+        openEmptyThread,
+      } = options;
 
       // Thread mode: repositoryPath without workspaceId, or explicitly opening empty thread
       const isThread = !workspaceId && (!!repositoryPath || openEmptyThread);
@@ -177,7 +192,8 @@ export function registerModernWindowHandlers(): void {
         }
       } else if (repositoryPath || repositoryId) {
         // Temp workspace mode (single repository)
-        const repoIdentifier = repositoryId || repositoryPath || `temp-${Date.now()}`;
+        const repoIdentifier =
+          repositoryId || repositoryPath || `temp-${Date.now()}`;
         // Sanitize for window name (remove special characters)
         const sanitized = repoIdentifier.replace(/[^a-zA-Z0-9-_]/g, '-');
         windowName = `alexandria-workspace-temp-${sanitized}`;
@@ -185,7 +201,8 @@ export function registerModernWindowHandlers(): void {
         // Extract repo name from path or ID for display
         if (repositoryPath) {
           const pathParts = repositoryPath.split('/');
-          workspaceName = pathParts[pathParts.length - 1] || 'Repository Workspace';
+          workspaceName =
+            pathParts[pathParts.length - 1] || 'Repository Workspace';
         } else if (repositoryId) {
           const idParts = repositoryId.split('/');
           workspaceName = idParts[idParts.length - 1] || 'Repository Workspace';
@@ -285,15 +302,19 @@ export function registerModernWindowHandlers(): void {
 
             // Filter repos with valid paths
             const reposWithPaths = repositories.filter(
-              (repo: AlexandriaEntry): repo is AlexandriaEntry & { path: string } =>
-                !!repo.path,
+              (
+                repo: AlexandriaEntry,
+              ): repo is AlexandriaEntry & { path: string } => !!repo.path,
             );
 
             // Acquire watches in parallel (acquireWatch auto-registers if needed)
             const results = await Promise.allSettled(
               reposWithPaths.map(async (repo: { path: string }) => {
                 const repoPath = repo.path;
-                await monitoringManager.acquireWatch(repoPath, watchReferenceId);
+                await monitoringManager.acquireWatch(
+                  repoPath,
+                  watchReferenceId,
+                );
                 return repoPath;
               }),
             );
@@ -320,7 +341,10 @@ export function registerModernWindowHandlers(): void {
             // Thread mode - watch all repositories in the thread
             const results = await Promise.allSettled(
               allRepositoryPaths.map(async (repoPath: string) => {
-                await monitoringManager.acquireWatch(repoPath, watchReferenceId);
+                await monitoringManager.acquireWatch(
+                  repoPath,
+                  watchReferenceId,
+                );
                 return repoPath;
               }),
             );
@@ -382,7 +406,10 @@ export function registerModernWindowHandlers(): void {
       }
       // Pass additional repository paths for thread mode
       if (additionalRepositoryPaths && additionalRepositoryPaths.length > 0) {
-        urlParams.set('additionalRepositoryPaths', additionalRepositoryPaths.join(','));
+        urlParams.set(
+          'additionalRepositoryPaths',
+          additionalRepositoryPaths.join(','),
+        );
       }
       // Mark as empty thread if opened without repositories
       if (openEmptyThread) {
@@ -440,10 +467,13 @@ export function registerModernWindowHandlers(): void {
       }
 
       // Notify renderer of change
-      appWindow.window.webContents.send(WindowEvent.THREAD_REPOSITORIES_CHANGED, {
-        repositoryPaths: currentPaths,
-        addedPath: repositoryPath,
-      });
+      appWindow.window.webContents.send(
+        WindowEvent.THREAD_REPOSITORIES_CHANGED,
+        {
+          repositoryPaths: currentPaths,
+          addedPath: repositoryPath,
+        },
+      );
 
       return { success: true };
     },
@@ -475,7 +505,10 @@ export function registerModernWindowHandlers(): void {
 
       // Don't allow removing the last repository
       if (currentPaths.length <= 1) {
-        return { success: false, error: 'Cannot remove last repository from thread' };
+        return {
+          success: false,
+          error: 'Cannot remove last repository from thread',
+        };
       }
 
       // Update metadata
@@ -498,10 +531,13 @@ export function registerModernWindowHandlers(): void {
       }
 
       // Notify renderer of change
-      appWindow.window.webContents.send(WindowEvent.THREAD_REPOSITORIES_CHANGED, {
-        repositoryPaths: currentPaths,
-        removedPath: repositoryPath,
-      });
+      appWindow.window.webContents.send(
+        WindowEvent.THREAD_REPOSITORIES_CHANGED,
+        {
+          repositoryPaths: currentPaths,
+          removedPath: repositoryPath,
+        },
+      );
 
       return { success: true };
     },
@@ -555,6 +591,11 @@ export function registerModernWindowHandlers(): void {
   // Get list of open Alexandria workspace windows
   ipcMain.handle(WindowEvent.GET_OPEN_WORKSPACE_WINDOWS, async () => {
     return getOpenWorkspaceWindows();
+  });
+
+  // Get list of open repository / dev-workspace windows
+  ipcMain.handle(WindowEvent.GET_OPEN_REPOSITORY_WINDOWS, async () => {
+    return getOpenRepositoryWindows();
   });
 
   // Focus or create main window
