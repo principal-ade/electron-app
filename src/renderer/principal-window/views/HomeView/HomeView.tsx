@@ -1271,9 +1271,28 @@ export function HomeView() {
               minHeight: 0,
             }}
           >
-            {/* Left spacer — intentionally empty; it balances the rail so the
-                topics column sits centered on the page. */}
-            <div aria-hidden />
+            {/* Left rail: installed skills. Falls back to an empty spacer so
+                the topics column stays centered when there are no skills. */}
+            {installedSkillDetails.length > 0 ? (
+              <aside
+                style={{
+                  // Width comes from the grid's 300px left track.
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 28,
+                  // Align the rail's first heading with the dashboard's
+                  // section heading (its section has a 40px top padding).
+                  paddingTop: 40,
+                  // Scroll the rail's own overflow rather than the page.
+                  minHeight: 0,
+                  overflowY: 'auto',
+                }}
+              >
+                {installedSkillsBlock(true)}
+              </aside>
+            ) : (
+              <div aria-hidden />
+            )}
 
             {/* Center column: the prioritized topics dashboard (or the prompt
                 ideas for a brand-new user with nothing to land on yet). */}
@@ -1317,10 +1336,9 @@ export function HomeView() {
               )}
             </div>
 
-            {/* Right rail: open projects and installed skills share this space.
-                Rendered only when there's something to put in it. */}
-            {(openProjects.length > 0 ||
-              installedSkillDetails.length > 0) && (
+            {/* Right rail: open projects. Rendered only when there's
+                something to put in it. */}
+            {openProjects.length > 0 && (
               <aside
                 style={{
                   // Width comes from the grid's 300px right track.
@@ -1335,7 +1353,14 @@ export function HomeView() {
                   overflowY: 'auto',
                 }}
               >
-                {openProjects.length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  <div style={railHeadingStyle}>Open Projects</div>
                   <div
                     style={{
                       display: 'flex',
@@ -1343,26 +1368,16 @@ export function HomeView() {
                       gap: 10,
                     }}
                   >
-                    <div style={railHeadingStyle}>Open Projects</div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 10,
-                      }}
-                    >
-                      {openProjects.map((p) => (
-                        <OpenProjectCard
-                          key={p.key}
-                          entry={p}
-                          theme={theme}
-                          onClick={() => void openProject(p.key)}
-                        />
-                      ))}
-                    </div>
+                    {openProjects.map((p) => (
+                      <OpenProjectCard
+                        key={p.key}
+                        entry={p}
+                        theme={theme}
+                        onClick={() => void openProject(p.key)}
+                      />
+                    ))}
                   </div>
-                )}
-                {installedSkillsBlock(true)}
+                </div>
               </aside>
             )}
           </div>
