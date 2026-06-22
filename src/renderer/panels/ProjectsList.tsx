@@ -13,7 +13,7 @@
 
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Eraser, FolderGit2, FolderSearch, Loader2, Search } from 'lucide-react';
+import { Eraser, FolderGit2, FolderSearch, Loader2, Lock, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { payloadFromGithub, payloadFromLocalEntry } from '../events/repositorySelected';
@@ -102,6 +102,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   // Filter + search state
   const [filter, setFilter] = useState<ProjectFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  // When on, the list is narrowed to private repos only; otherwise all repos
+  // (public, private, and unknown-visibility) are shown.
+  const [privateOnly, setPrivateOnly] = useState(false);
 
   // Git status map for local repositories
   const [gitStatusMap, setGitStatusMap] = useState<Map<string, GitStatusWithFiles>>(new Map());
@@ -364,6 +367,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       filtered = filtered.filter(p => p.isCloned && p.isDirty);
     }
 
+    if (privateOnly) {
+      filtered = filtered.filter(p => p.isPrivate === true);
+    }
+
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       filtered = filtered.filter(
@@ -413,7 +420,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       groups: grouped,
       sortedOrgNames: [...userOwn, ...memberOrgs, ...otherOrgs, ...untracked],
     };
-  }, [projects, filter, searchQuery, currentUser, userOrgs]);
+  }, [projects, filter, privateOnly, searchQuery, currentUser, userOrgs]);
 
   const hasClonedProjects = useMemo(
     () => repositories.some(r => r.path),
@@ -519,6 +526,39 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             }}
           />
         </div>
+
+        {/* Toggle: show private repos only (off = show all) */}
+        <button
+          type="button"
+          onClick={() => setPrivateOnly(prev => !prev)}
+          aria-pressed={privateOnly}
+          title={privateOnly ? 'Showing private repos only — click to show all' : 'Show private repos only'}
+          aria-label="Toggle private repos only"
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 28,
+            height: 28,
+            padding: 0,
+            border: 'none',
+            borderRadius: theme.radii?.[1] || 4,
+            background: privateOnly ? theme.colors.backgroundSecondary : 'transparent',
+            color: privateOnly ? theme.colors.primary : theme.colors.textSecondary,
+            cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => {
+            if (!privateOnly) e.currentTarget.style.color = theme.colors.text;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = privateOnly
+              ? theme.colors.primary
+              : theme.colors.textSecondary;
+          }}
+        >
+          <Lock size={14} />
+        </button>
 
         {/* Scan a folder for git repos and add them to the list */}
         <button
