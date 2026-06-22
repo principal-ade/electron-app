@@ -1193,12 +1193,10 @@ const ProjectsPanelFrameworkInner: React.FC<ProjectsPanelFrameworkInnerProps> = 
   // Delete modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<AlexandriaEntry | null>(null);
-  const [deleteGitStatus, setDeleteGitStatus] = useState<{
-    hasUncommittedChanges: boolean;
-    uncommittedCount: number;
-    unpushedCommits: number;
-    currentBranch: string;
-  } | null>(null);
+  // Path of the clone whose git status the delete modal should check. The modal
+  // fetches the status itself so opening it stays instant (no blocking git calls
+  // between the delete click and the modal appearing).
+  const [deleteClonePath, setDeleteClonePath] = useState<string | null>(null);
 
   // Activity feed data
   const activityFeed = useActivityFeed(repositories, 20, 10, 100);
@@ -1550,35 +1548,10 @@ const ProjectsPanelFrameworkInner: React.FC<ProjectsPanelFrameworkInnerProps> = 
         const entry = repositories.find(r => r.name === repository.name && r.path === repository.localClones?.[0]?.path);
 
         if (entry) {
-          // Check git status if this is a local repository
-          let gitStatus = null;
-          if (entry.path) {
-            try {
-              // Get branch status for unpushed commits
-              const branchStatus = await GitService.getBranchStatus(entry.path);
-
-              // Get working directory status for uncommitted changes
-              const statusResult = await GitService.execCommand(entry.path, [
-                'status',
-                '--porcelain',
-              ]);
-
-              const hasUncommittedChanges = statusResult.stdout.trim().length > 0;
-              const uncommittedCount = statusResult.stdout.trim().split('\n').filter(Boolean).length;
-
-              gitStatus = {
-                hasUncommittedChanges,
-                uncommittedCount,
-                unpushedCommits: branchStatus.ahead,
-                currentBranch: branchStatus.branch,
-              };
-            } catch (error) {
-              console.warn('[ProjectsPanelFramework] Failed to check git status:', error);
-            }
-          }
-
+          // Open the modal immediately; it checks git status itself (async) so
+          // the click stays responsive even on large/slow repos.
           setEntryToDelete(entry);
-          setDeleteGitStatus(gitStatus);
+          setDeleteClonePath(entry.path ?? null);
           setIsDeleteModalOpen(true);
         } else {
           console.warn('[ProjectsPanelFramework] Could not find repository to delete:', repository.name);
@@ -1609,33 +1582,10 @@ const ProjectsPanelFrameworkInner: React.FC<ProjectsPanelFrameworkInnerProps> = 
         );
 
         if (entry) {
-          // Check git status for the specific clone path
-          let gitStatus = null;
-          try {
-            // Get branch status for unpushed commits
-            const branchStatus = await GitService.getBranchStatus(clonePath);
-
-            // Get working directory status for uncommitted changes
-            const statusResult = await GitService.execCommand(clonePath, [
-              'status',
-              '--porcelain',
-            ]);
-
-            const hasUncommittedChanges = statusResult.stdout.trim().length > 0;
-            const uncommittedCount = statusResult.stdout.trim().split('\n').filter(Boolean).length;
-
-            gitStatus = {
-              hasUncommittedChanges,
-              uncommittedCount,
-              unpushedCommits: branchStatus.ahead,
-              currentBranch: branchStatus.branch,
-            };
-          } catch (error) {
-            console.warn('[ProjectsPanelFramework] Failed to check git status:', error);
-          }
-
+          // Open the modal immediately; it checks the clone's git status itself
+          // (async) so the click stays responsive even on large/slow repos.
           setEntryToDelete(entry);
-          setDeleteGitStatus(gitStatus);
+          setDeleteClonePath(clonePath);
           setIsDeleteModalOpen(true);
         } else {
           console.warn('[ProjectsPanelFramework] Could not find repository clone to delete:', repository.name, clonePath);
@@ -1653,7 +1603,7 @@ const ProjectsPanelFrameworkInner: React.FC<ProjectsPanelFrameworkInnerProps> = 
   const handleCloseDeleteModal = useCallback(() => {
     setIsDeleteModalOpen(false);
     setEntryToDelete(null);
-    setDeleteGitStatus(null);
+    setDeleteClonePath(null);
   }, []);
 
   // Handle delete confirmation
@@ -2074,7 +2024,7 @@ const ProjectsPanelFrameworkInner: React.FC<ProjectsPanelFrameworkInnerProps> = 
         entry={entryToDelete}
         onClose={handleCloseDeleteModal}
         onConfirm={handleConfirmDelete}
-        gitStatus={deleteGitStatus}
+        clonePath={deleteClonePath}
       />
     </>
   );

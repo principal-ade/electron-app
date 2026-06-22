@@ -12,24 +12,32 @@ import type {
 } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { ShellService } from '../../main-process-api/ShellService';
+import { GitService } from '../../main-process-api/GitService';
 import { getWorkspaceThemeColor } from '../../themes/predefinedThemes';
+
+interface GitStatusSummary {
+  hasUncommittedChanges: boolean;
+  uncommittedCount: number;
+  unpushedCommits: number;
+  currentBranch: string;
+}
 
 interface DeleteAlexandriaEntryModalProps {
   isOpen: boolean;
   entry: (AlexandriaEntry & { isTracked?: boolean; isDiscovered?: boolean }) | null;
   onClose: () => void;
   onConfirm: (deleteLocal: boolean) => Promise<void>;
-  gitStatus?: {
-    hasUncommittedChanges: boolean;
-    uncommittedCount: number;
-    unpushedCommits: number;
-    currentBranch: string;
-  } | null;
+  /**
+   * Absolute path of the local clone whose git status should be checked.
+   * The modal fetches the status itself (async) so opening it is instant —
+   * the git commands no longer block the click that triggers the modal.
+   */
+  clonePath?: string | null;
 }
 
 export const DeleteAlexandriaEntryModal: React.FC<
   DeleteAlexandriaEntryModalProps
-> = ({ isOpen, entry, onClose, onConfirm, gitStatus }) => {
+> = ({ isOpen, entry, onClose, onConfirm, clonePath }) => {
   const { theme } = useTheme();
 
   // Check if this is a real Alexandria entry (not just a discovered repo)
@@ -39,6 +47,8 @@ export const DeleteAlexandriaEntryModal: React.FC<
   const [isDeleting, setIsDeleting] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
+  const [gitStatus, setGitStatus] = useState<GitStatusSummary | null>(null);
+  const [loadingGitStatus, setLoadingGitStatus] = useState(false);
 
   // Always delete local files
   const deleteLocal = true;
@@ -85,6 +95,54 @@ export const DeleteAlexandriaEntryModal: React.FC<
 
     fetchWorkspaces();
   }, [isOpen, entry]);
+
+  // Check git status when the modal opens. Runs here (async, non-blocking) so
+  // the click that opens the modal stays instant — the user sees the dialog
+  // immediately and the uncommitted-work warning fills in when git returns.
+  useEffect(() => {
+    if (!isOpen || !clonePath) {
+      setGitStatus(null);
+      setLoadingGitStatus(false);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchGitStatus = async () => {
+      try {
+        setLoadingGitStatus(true);
+        // Branch tracking info (unpushed commits) + working-tree status.
+        const branchStatus = await GitService.getBranchStatus(clonePath);
+        const statusResult = await GitService.execCommand(clonePath, [
+          'status',
+          '--porcelain',
+        ]);
+        if (cancelled) return;
+
+        const uncommittedCount = statusResult.stdout
+          .trim()
+          .split('\n')
+          .filter(Boolean).length;
+
+        setGitStatus({
+          hasUncommittedChanges: statusResult.stdout.trim().length > 0,
+          uncommittedCount,
+          unpushedCommits: branchStatus.ahead,
+          currentBranch: branchStatus.branch,
+        });
+      } catch (error) {
+        if (cancelled) return;
+        console.warn('[DeleteAlexandriaEntryModal] Failed to check git status:', error);
+        setGitStatus(null);
+      } finally {
+        if (!cancelled) setLoadingGitStatus(false);
+      }
+    };
+
+    fetchGitStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, clonePath]);
 
   // Handle ESC key
   useEffect(() => {
@@ -222,8 +280,40 @@ export const DeleteAlexandriaEntryModal: React.FC<
             </div>
           </div>
 
+          {/* Git Status — checking for uncommitted/unpushed work */}
+          {loadingGitStatus && (
+            <div
+              style={{
+                padding: '10px 16px',
+                borderRadius: '8px',
+                backgroundColor: theme.colors.backgroundSecondary,
+                border: `1px solid ${theme.colors.border}`,
+                marginBottom: '20px',
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts.body,
+                color: theme.colors.textSecondary,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  border: `2px solid ${theme.colors.border}`,
+                  borderTopColor: theme.colors.textSecondary,
+                  animation: 'spin 0.7s linear infinite',
+                  display: 'inline-block',
+                }}
+              />
+              Checking for uncommitted work…
+            </div>
+          )}
+
           {/* Git Status Warning */}
-          {gitStatus && (gitStatus.hasUncommittedChanges || gitStatus.unpushedCommits > 0) && (
+          {!loadingGitStatus && gitStatus && (gitStatus.hasUncommittedChanges || gitStatus.unpushedCommits > 0) && (
             <div
               style={{
                 padding: '12px 16px',
