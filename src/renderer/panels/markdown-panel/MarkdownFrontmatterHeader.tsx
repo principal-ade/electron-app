@@ -1,5 +1,11 @@
-import React, { useMemo } from 'react';
-import { Calendar, Link as LinkIcon, Tag } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import {
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  Link as LinkIcon,
+  Tag,
+} from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { fmString, fmStringList } from './frontmatter';
 
@@ -34,7 +40,7 @@ interface MarkdownFrontmatterHeaderProps {
 /** Map a volatility value to a semantic theme color. */
 const volatilityColor = (
   volatility: string,
-  theme: ReturnType<typeof useTheme>['theme']
+  theme: ReturnType<typeof useTheme>['theme'],
 ): string => {
   switch (volatility.toLowerCase()) {
     case 'perishable':
@@ -103,7 +109,10 @@ export const MarkdownFrontmatterHeader: React.FC<
   const date = fmString(data.as_of) ?? fmString(data.timestamp);
   const tags = fmStringList(data.tags);
   // `resource` is a single canonical link; `sources` is a citation list.
-  const sources = [...fmStringList(data.resource), ...fmStringList(data.sources)];
+  const sources = [
+    ...fmStringList(data.resource),
+    ...fmStringList(data.sources),
+  ];
 
   // Surface any front matter keys we don't render explicitly so nothing is
   // silently hidden from the reader.
@@ -112,7 +121,9 @@ export const MarkdownFrontmatterHeader: React.FC<
       Object.entries(data)
         .filter(([key, value]) => {
           if (KNOWN_KEYS.has(key)) return false;
-          return fmString(value) !== undefined || fmStringList(value).length > 0;
+          return (
+            fmString(value) !== undefined || fmStringList(value).length > 0
+          );
         })
         .map(([key, value]) => {
           const list = fmStringList(value);
@@ -122,24 +133,26 @@ export const MarkdownFrontmatterHeader: React.FC<
           ];
         })
         .filter((entry): entry is [string, string] => !!entry[1]),
-    [data]
+    [data],
   );
 
-  const hasContent =
-    title || description || type || volatility || date || tags.length || sources.length || extras.length;
-  if (!hasContent) return null;
+  // Everything other than the title collapses beneath it. Collapsed by default
+  // so the reader sees a clean document title and opts into the metadata.
+  const [expanded, setExpanded] = useState(false);
 
-  return (
-    <header
-      style={{
-        padding: '20px 24px 16px',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        backgroundColor: theme.colors.backgroundSecondary,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-      }}
-    >
+  const hasMetadata = !!(
+    type ||
+    volatility ||
+    date ||
+    description ||
+    tags.length ||
+    sources.length ||
+    extras.length
+  );
+  if (!title && !hasMetadata) return null;
+
+  const metadataBody = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {/* Badge row */}
       {(type || volatility || date) && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -152,29 +165,11 @@ export const MarkdownFrontmatterHeader: React.FC<
             </Badge>
           )}
           {date && (
-            <Badge
-              color={theme.colors.textMuted}
-              icon={<Calendar size={11} />}
-            >
+            <Badge color={theme.colors.textMuted} icon={<Calendar size={11} />}>
               {date}
             </Badge>
           )}
         </div>
-      )}
-
-      {title && (
-        <h1
-          style={{
-            margin: 0,
-            fontFamily: theme.fonts.heading,
-            fontSize: theme.fontSizes[SIZE_TITLE],
-            fontWeight: theme.fontWeights.bold,
-            lineHeight: theme.lineHeights.heading,
-            color: theme.colors.text,
-          }}
-        >
-          {title}
-        </h1>
       )}
 
       {description && (
@@ -194,7 +189,12 @@ export const MarkdownFrontmatterHeader: React.FC<
 
       {tags.length > 0 && (
         <div
-          style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 6,
+            alignItems: 'center',
+          }}
         >
           <Tag size={12} color={theme.colors.textTertiary} />
           {tags.map((tag) => (
@@ -219,7 +219,12 @@ export const MarkdownFrontmatterHeader: React.FC<
 
       {sources.length > 0 && (
         <div
-          style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+            marginTop: 2,
+          }}
         >
           {sources.map((source) => {
             const url = source.match(/https?:\/\/\S+/)?.[0];
@@ -308,6 +313,74 @@ export const MarkdownFrontmatterHeader: React.FC<
           ))}
         </dl>
       )}
+    </div>
+  );
+
+  const titleStyle: React.CSSProperties = {
+    margin: 0,
+    fontFamily: theme.fonts.heading,
+    fontSize: theme.fontSizes[SIZE_TITLE],
+    fontWeight: theme.fontWeights.bold,
+    lineHeight: theme.lineHeights.heading,
+    color: theme.colors.text,
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
+
+  return (
+    <header
+      style={{
+        padding: '20px 24px 16px',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        backgroundColor: theme.colors.backgroundSecondary,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+      }}
+    >
+      {title ? (
+        hasMetadata ? (
+          // Title doubles as the toggle for the rest of the front matter.
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              width: '100%',
+              padding: 0,
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            <h1 style={titleStyle}>{title}</h1>
+            {expanded ? (
+              <ChevronDown
+                size={20}
+                color={theme.colors.textTertiary}
+                style={{ flexShrink: 0 }}
+              />
+            ) : (
+              <ChevronRight
+                size={20}
+                color={theme.colors.textTertiary}
+                style={{ flexShrink: 0 }}
+              />
+            )}
+          </button>
+        ) : (
+          <h1 style={titleStyle}>{title}</h1>
+        )
+      ) : null}
+
+      {/* No title to collapse under → show the metadata inline. */}
+      {(!title || expanded) && metadataBody}
     </header>
   );
 };

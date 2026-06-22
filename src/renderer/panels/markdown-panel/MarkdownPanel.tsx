@@ -24,7 +24,11 @@ import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
 import { MarkdownLinkNotice } from '../../components/MarkdownLinkNotice';
 import { MarkdownSelectionPill } from '../../dev-workspace/file-city-panel/MarkdownNotes';
 import { NotePopover } from './NotePopover';
-import { parseFrontmatter } from './frontmatter';
+import {
+  fmString,
+  parseFrontmatter,
+  stripRedundantTitleHeading,
+} from './frontmatter';
 import { MarkdownFrontmatterHeader } from './MarkdownFrontmatterHeader';
 import { splitIntoSlides } from './slides';
 
@@ -187,6 +191,14 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
   const { data: frontmatter, body: markdownBody } = useMemo(
     () => parseFrontmatter(markdownContent),
     [markdownContent],
+  );
+
+  // For the document view, drop a leading H1 that just repeats the front
+  // matter title (the styled header already shows it). Slides keep their full
+  // body so a title slide isn't lost.
+  const documentBody = useMemo(
+    () => stripRedundantTitleHeading(markdownBody, fmString(frontmatter.title)),
+    [markdownBody, frontmatter],
   );
 
   // Slideshow detection: a doc authored as `---`-separated slides can be
@@ -651,7 +663,7 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
             />
           ) : (
             <DocumentView
-              content={markdownBody}
+              content={documentBody}
               theme={theme}
               fontSizeScale={fontSizeScale}
               onCheckboxChange={() => {}}

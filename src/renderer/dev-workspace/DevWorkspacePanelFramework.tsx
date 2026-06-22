@@ -103,6 +103,7 @@ import {
   MarkdownPanel,
   type MarkdownPanelProps,
 } from '../panels/markdown-panel';
+import { MdxEditorWithFrontmatter } from './MdxEditorWithFrontmatter';
 import {
   FileEditorPanel,
   GitDiffPanel,
@@ -593,8 +594,12 @@ const FileCityWithHighlights: React.FC<{
 
   // Create merged context for File City panel (includes agent highlight layers)
   const fileCityPanelContext = useMemo(() => {
-    const sc = (context as { storyboardContext?: { data: unknown } }).storyboardContext;
-    console.info('[FileCityWithHighlights] building context — storyboardContext.data:', sc?.data ?? 'null/undefined');
+    const sc = (context as { storyboardContext?: { data: unknown } })
+      .storyboardContext;
+    console.info(
+      '[FileCityWithHighlights] building context — storyboardContext.data:',
+      sc?.data ?? 'null/undefined',
+    );
     return {
       ...context,
       // Add agent highlight layers as a typed slice property
@@ -1037,8 +1042,20 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Sync tabs to parent whenever they change (for RepositoryPanelProvider)
   useEffect(() => {
     const customTabs = tabs.filter((t) => t.contentType !== 'terminal');
-    const canvasTabs = customTabs.filter((t) => t.contentType === 'canvas-detail' || t.contentType === 'canvas-editor');
-    console.info('[DevWorkspace] syncing tabs to provider — total custom:', customTabs.length, 'canvas tabs:', canvasTabs.length, canvasTabs.map((t) => ({ contentType: t.contentType, canvasPath: (t as { canvasPath?: string }).canvasPath })));
+    const canvasTabs = customTabs.filter(
+      (t) =>
+        t.contentType === 'canvas-detail' || t.contentType === 'canvas-editor',
+    );
+    console.info(
+      '[DevWorkspace] syncing tabs to provider — total custom:',
+      customTabs.length,
+      'canvas tabs:',
+      canvasTabs.length,
+      canvasTabs.map((t) => ({
+        contentType: t.contentType,
+        canvasPath: (t as { canvasPath?: string }).canvasPath,
+      })),
+    );
     onTabsChange?.(customTabs);
   }, [tabs, onTabsChange]);
 
@@ -1160,34 +1177,29 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   }, []);
 
   // Stable onTabsChange that prevents infinite loops
-  const handleTabsChange = useCallback(
-    (newTabs: DevWorkspaceTab[]) => {
-      setTabs((prevTabs) => {
-        // Only keep custom tabs from the update (filter out terminal tabs)
-        // Terminal tabs are managed by TabbedTerminalPanel, we only care about custom tabs
-        const newCustomTabs = newTabs.filter(
-          (t) => t.contentType !== 'terminal',
+  const handleTabsChange = useCallback((newTabs: DevWorkspaceTab[]) => {
+    setTabs((prevTabs) => {
+      // Only keep custom tabs from the update (filter out terminal tabs)
+      // Terminal tabs are managed by TabbedTerminalPanel, we only care about custom tabs
+      const newCustomTabs = newTabs.filter((t) => t.contentType !== 'terminal');
+      const prevCustomTabs = prevTabs.filter(
+        (t) => t.contentType !== 'terminal',
+      );
+
+      // Check if custom tabs actually changed
+      const customTabsChanged =
+        newCustomTabs.length !== prevCustomTabs.length ||
+        !newCustomTabs.every((tab) =>
+          prevCustomTabs.some((prev) => prev.id === tab.id),
         );
-        const prevCustomTabs = prevTabs.filter(
-          (t) => t.contentType !== 'terminal',
-        );
 
-        // Check if custom tabs actually changed
-        const customTabsChanged =
-          newCustomTabs.length !== prevCustomTabs.length ||
-          !newCustomTabs.every((tab) =>
-            prevCustomTabs.some((prev) => prev.id === tab.id),
-          );
+      if (!customTabsChanged) {
+        return prevTabs; // No change
+      }
 
-        if (!customTabsChanged) {
-          return prevTabs; // No change
-        }
-
-        return newCustomTabs; // Only store custom tabs
-      });
-    },
-    [],
-  );
+      return newCustomTabs; // Only store custom tabs
+    });
+  }, []);
 
   // Direct imports instead of array access to avoid type inference issues
   const CanvasEditorPanelComponent =
@@ -2709,9 +2721,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   useEffect(() => {
     const unsubscribe = events.on('file-city-3d:open', () => {
       setTabs((prevTabs) => {
-        const existing = prevTabs.find(
-          (t) => t.contentType === 'file-city-3d',
-        );
+        const existing = prevTabs.find((t) => t.contentType === 'file-city-3d');
         if (existing) {
           setFocusTabId(existing.id);
           return prevTabs;
@@ -3288,12 +3298,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 flexDirection: 'column',
               }}
             >
-              <MDXEditorPanelComponent
-                context={contextRef.current}
-                actions={actionsRef.current}
-                events={eventsRef.current}
+              <MdxEditorWithFrontmatter
                 filePath={mdxEditorTab.filePath}
-                showCloseButton={false}
+                actions={actionsRef.current}
+                renderEditor={(editorActions) => (
+                  <MDXEditorPanelComponent
+                    context={contextRef.current}
+                    actions={editorActions}
+                    events={eventsRef.current}
+                    filePath={mdxEditorTab.filePath}
+                    showCloseButton={false}
+                  />
+                )}
               />
             </div>
           );
@@ -3705,11 +3721,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <FilesPanel
-              context={context}
-              actions={actions}
-              events={events}
-            />
+            <FilesPanel context={context} actions={actions} events={events} />
           </div>
         ),
       },
@@ -4034,9 +4046,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 actions={actions}
                 events={events}
                 filePath={activeMarkdownPath}
-                repositoryPath={
-                  context?.currentScope?.repository?.path
-                }
+                repositoryPath={context?.currentScope?.repository?.path}
                 showEditButton
               />
             </div>
@@ -4107,10 +4117,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <MDXEditorPanelComponent
-              context={context}
+            <MdxEditorWithFrontmatter
               actions={actions}
-              events={events}
+              renderEditor={(editorActions) => (
+                <MDXEditorPanelComponent
+                  context={context}
+                  actions={editorActions}
+                  events={events}
+                />
+              )}
             />
           </div>
         ) : (
@@ -4160,15 +4175,25 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <MDXEditorPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
+            <MdxEditorWithFrontmatter
               filePath={
                 context.currentScope?.repository?.path
                   ? `${context.currentScope.repository.path}/.principal/notes.md`
                   : undefined
               }
+              actions={actions}
+              renderEditor={(editorActions) => (
+                <MDXEditorPanelComponent
+                  context={context}
+                  actions={editorActions}
+                  events={events}
+                  filePath={
+                    context.currentScope?.repository?.path
+                      ? `${context.currentScope.repository.path}/.principal/notes.md`
+                      : undefined
+                  }
+                />
+              )}
             />
           </div>
         ) : (
@@ -4665,7 +4690,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       {!sidebarsHidden && (
         <div ref={rightSidebarRef} style={{ display: 'contents' }}>
           <PanelIconSidebar
-            currentPanelId={typeof layout.right === 'string' ? layout.right : ''}
+            currentPanelId={
+              typeof layout.right === 'string' ? layout.right : ''
+            }
             onPanelChange={(panelId) =>
               onLayoutChange({ ...layout, right: panelId })
             }
