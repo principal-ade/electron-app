@@ -292,7 +292,6 @@
     "stream-browserify": "^3.0.0",
     "themed-markdown": "^0.1.103",
     "three": "^0.172.0",
-    "ts-json-schema-generator": "^2.4.0",
     "uuid": "^11.1.0",
     "ws": "^8.18.3",
     "zod": "3.25.17"

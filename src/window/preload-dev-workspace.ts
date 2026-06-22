@@ -9,7 +9,6 @@
  * - gitSync: Git-sync room connections
  * - authentication: Authentication status
  * - githubArtifact: GitHub Actions artifact fetching for quality metrics
- * - typeSchema: TypeScript type extraction and schema generation
  *
  * When adding new APIs, update DevWorkspaceMainProcessAPI in
  * src/shared/main-process-api-interfaces/DevWorkspaceAPI.ts
@@ -43,7 +42,6 @@ import { documentAPI } from './main-process-api-implementations/documentApi';
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
 import { brunoAPI } from './main-process-api-implementations/brunoApi';
-import { typeSchemaApi } from './main-process-api-implementations/typeSchemaApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -74,7 +72,6 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   skillLock: skillLockAPI,
   appVersionManager: appVersionManagerApi,
   bruno: brunoAPI,
-  typeSchema: typeSchemaApi,
 };
 
 // Expose the mainProcess API

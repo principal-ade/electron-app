@@ -10,7 +10,6 @@ console.info('[Preload] Type imports successful');
 
 import { terminalAPI } from './main-process-api-implementations/terminalApi';
 import { typeExtractionApi } from './main-process-api-implementations/typeExtractionApi';
-import { typeSchemaApi } from './main-process-api-implementations/typeSchemaApi';
 import { packageManagerApi } from './main-process-api-implementations/packageManagerApi';
 import { agentConfigAPI } from './main-process-api-implementations/agentConfigApi';
 import { agentSessionApi } from './main-process-api-implementations/agentSessionApi';
@@ -125,7 +124,6 @@ const mainProcessExposure: MainProcessAPI = {
   orbit: orbitAPI,
   packageManager: packageManagerApi,
   typeExtraction: typeExtractionApi,
-  typeSchema: typeSchemaApi,
   docker: dockerAPI,
   gitSync: gitSyncAPI,
   fastForward: fastForwardAPI,

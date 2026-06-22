@@ -126,7 +126,6 @@ import {
   GitHubIssuesPanel,
   GitHubIssueDetailPanel,
 } from '@industry-theme/github-panels';
-import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
 import { TerminalSessionsPanel } from '../panels/terminal-sessions';
 import { MediaViewerPanel } from '../panels/MediaViewerPanel';
 import { FilesPanel } from './files-panel';
@@ -143,7 +142,6 @@ import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarBu
 import type { StorybookManager } from '../hooks/useStorybookManager';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
-import { TypeInformationSidebarButton } from '../components/Sidebar/TypeInformationSidebarButton';
 import { GitConfigPanel } from './git-config-panel';
 import { TrailsPanel } from './trails-panel';
 import { ShareTrailModal } from './trails-panel/ShareTrailModal';
@@ -1262,10 +1260,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const BrunoRequestPanelComponent = brunoPanels.find(
     (p) => p.metadata?.id === 'principal-ade.bruno-request',
   )?.component as React.ComponentType<BrunoRequestPanelProps> | undefined;
-
-  const TypeInformationPanelComponent = typeInformationPanels.find(
-    (p) => p.metadata?.id === 'principal-ade.type-information',
-  )?.component; // Cannot convert - local panel, component not exported
 
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {
@@ -4393,30 +4387,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         ),
       },
       {
-        id: 'typeInformation',
-        label: 'Type Information',
-        content: TypeInformationPanelComponent ? (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <TypeInformationPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          </div>
-        ) : (
-          <div>Type Information panel not available</div>
-        ),
-      },
-      {
         id: 'bruno',
         label: 'Bruno Collection',
         content: BrunoCollectionPanelComponent ? (
@@ -4490,7 +4460,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       AgentDetailPanelComponent,
       GitHubIssuesPanelComponent,
       GitHubIssueDetailPanelComponent,
-      TypeInformationPanelComponent,
       BrunoCollectionPanelComponent,
       BrunoRequestPanelComponent,
       context,
@@ -4731,16 +4700,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                   }
                   onLayoutChange={onLayoutChange}
                   onPanelSizesChange={onPanelSizesChange}
-                  events={events}
-                />
-                <TypeInformationSidebarButton
-                  theme={theme}
-                  packages={context.packages?.data?.packages}
-                  repositoryPath={context.currentScope?.repository?.path}
-                  currentLayout={
-                    layout as { left: string; middle: string; right: string }
-                  }
-                  onLayoutChange={onLayoutChange}
                   events={events}
                 />
               </>

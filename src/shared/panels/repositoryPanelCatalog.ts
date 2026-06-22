@@ -194,13 +194,6 @@ export const repositoryPanelCatalog = [
     slices: ['fileTree'] as const,
     surfaces: ['viewer', 'agent'] as const,
   },
-  {
-    id: 'typeInformation',
-    label: 'Type Information',
-    description: 'Browse and search TypeScript types in your project.',
-    slices: [] as const,
-    surfaces: ['explorer', 'manager', 'principal'] as const,
-  },
 ] as const satisfies readonly RepositoryPanelDefinitionBase[];
 
 export type RepositoryPanelCatalogEntry =

@@ -44,7 +44,6 @@ import type { OrbitAPI } from './OrbitAPI';
 import type { ApiProxyAPI } from './ApiProxyAPI';
 import type { PackageManagerAPI } from './PackageManagerAPI';
 import type { TypeExtractionAPI } from './TypeExtractionAPI';
-import type { TypeSchemaAPI } from './TypeSchemaAPI';
 import type { DockerAPI } from './DockerAPI';
 import type { GitSyncAPI } from './GitSyncAPI';
 import type { FastForwardAPI } from './FastForwardAPI';
@@ -126,7 +125,6 @@ export interface MainProcessAPI {
   apiProxy: ApiProxyAPI;
   packageManager: PackageManagerAPI;
   typeExtraction: TypeExtractionAPI;
-  typeSchema: TypeSchemaAPI;
   docker: DockerAPI;
   gitSync: GitSyncAPI;
   fastForward: FastForwardAPI;

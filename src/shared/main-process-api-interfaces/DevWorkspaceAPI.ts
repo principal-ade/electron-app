@@ -37,7 +37,6 @@ import type { DocumentAPI } from './DocumentAPI';
 import type { SkillLockAPI } from './SkillLockAPI';
 import type { AppVersionManagerAPI } from './AppVersionManagerAPI';
 import type { BrunoAPI } from './BrunoAPI';
-import type { TypeSchemaAPI } from './TypeSchemaAPI';
 
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
@@ -62,7 +61,6 @@ export interface DevWorkspaceMainProcessAPI {
   skillLock: SkillLockAPI;
   appVersionManager: AppVersionManagerAPI;
   bruno: BrunoAPI;
-  typeSchema: TypeSchemaAPI;
 }
 
 // Re-export the individual API types for convenience
@@ -87,4 +85,3 @@ export type { DocumentAPI } from './DocumentAPI';
 export type { SkillLockAPI } from './SkillLockAPI';
 export type { AppVersionManagerAPI } from './AppVersionManagerAPI';
 export type { BrunoAPI } from './BrunoAPI';
-export type { TypeSchemaAPI } from './TypeSchemaAPI';

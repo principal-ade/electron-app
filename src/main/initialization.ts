@@ -35,7 +35,6 @@ import { registerGitHandlers } from './file-system/gitHandlers';
 import { registerSSHSetupHandlers } from './services/ipc/git/sshSetupHandlers';
 import { setupShellHandlers } from './file-system/shellHandlers';
 import { setupTypeExtractionHandlers } from './services/ipc/typeExtractionHandlers';
-import { setupTypeSchemaHandlers } from './services/ipc/type-schema/typeSchemaHandlers';
 import { registerPackageManagerHandlers } from './services/ipc/packageManager/packageManagerHandlers';
 import { registerSystemHandlers } from './system/systemHandlers';
 import { registerFeedbackHandlers } from './services/ipc/feedback/feedbackHandlers';
@@ -292,7 +291,6 @@ const registerAllIpcHandlers = async () => {
   await extensionDiscoveryService.initialize();
   extensionDiscoveryService.registerHandlers();
 
-  setupTypeSchemaHandlers();
   setupTypeExtractionHandlers();
   registerPackageManagerHandlers();
   registerSystemHandlers();
