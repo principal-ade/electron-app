@@ -822,10 +822,12 @@ export function HomeView() {
               }
         }
       >
-        <div style={railHeadingStyle}>Installed Skills</div>
+        <div style={railHeadingStyle}>Suggested Skills</div>
         <div
           style={{
             display: 'flex',
+            flexDirection: rail ? 'column' : 'row',
+            alignItems: rail ? 'stretch' : undefined,
             justifyContent: rail ? 'flex-start' : 'center',
             gap: 10,
             flexWrap: 'wrap',
@@ -863,6 +865,7 @@ export function HomeView() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
+                  width: rail ? '100%' : undefined,
                   padding: '8px 12px',
                   borderRadius: 12,
                   border: `1px solid ${accent}`,
@@ -893,6 +896,7 @@ export function HomeView() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
+                      marginLeft: rail ? 'auto' : undefined,
                       color: theme.colors.warning,
                       fontWeight: theme.fontWeights.medium,
                     }}
@@ -904,6 +908,7 @@ export function HomeView() {
                   <Check
                     size={14}
                     color={theme.colors.success ?? theme.colors.primary}
+                    style={{ marginLeft: rail ? 'auto' : undefined }}
                   />
                 )}
               </button>
@@ -930,6 +935,7 @@ export function HomeView() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
+                  width: rail ? '100%' : undefined,
                   padding: '8px 12px',
                   borderRadius: 12,
                   // Dashed border marks an installable add-on, distinct from
@@ -959,6 +965,7 @@ export function HomeView() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 4,
+                    marginLeft: rail ? 'auto' : undefined,
                     color: theme.colors.primary,
                     fontWeight: theme.fontWeights.medium,
                   }}
@@ -1312,7 +1319,8 @@ export function HomeView() {
 
             {/* Right rail: open projects and installed skills share this space.
                 Rendered only when there's something to put in it. */}
-            {(openProjects.length > 0 || installedSkillDetails.length > 0) && (
+            {(openProjects.length > 0 ||
+              installedSkillDetails.length > 0) && (
               <aside
                 style={{
                   // Width comes from the grid's 300px right track.

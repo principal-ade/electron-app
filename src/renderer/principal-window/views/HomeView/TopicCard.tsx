@@ -394,6 +394,7 @@ export function TopicCard({
               minWidth: 0,
             }}
           >
+            {badges}
             {topic.projectRepos && topic.projectRepos.length > 0 ? (
               <div
                 style={{
@@ -486,38 +487,28 @@ export function TopicCard({
                 </span>
               </div>
             ) : null}
-            {/* Badges + trail count share a right-aligned group so the badges
-                sit just left of the trail count, clear of the title above. */}
-            <div
-              style={{
-                marginLeft: 'auto',
-                flex: '0 0 auto',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              {badges}
-              {topic.trailCount ? (
-                <div
-                  style={{
-                    flex: '0 0 auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    color: theme.colors.textTertiary,
-                    fontFamily: theme.fonts.body,
-                    fontSize: theme.fontSizes[0],
-                  }}
-                  title={`${topic.trailCount} ${
-                    topic.trailCount === 1 ? 'trail' : 'trails'
-                  }`}
-                >
-                  <Route size={12} />
-                  {topic.trailCount}
-                </div>
-              ) : null}
-            </div>
+            {/* Trail count stays right-aligned; the status badges sit on the
+                left, just before the repos/directory. */}
+            {topic.trailCount ? (
+              <div
+                style={{
+                  marginLeft: 'auto',
+                  flex: '0 0 auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  color: theme.colors.textTertiary,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[0],
+                }}
+                title={`${topic.trailCount} ${
+                  topic.trailCount === 1 ? 'trail' : 'trails'
+                }`}
+              >
+                <Route size={12} />
+                {topic.trailCount}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </button>
