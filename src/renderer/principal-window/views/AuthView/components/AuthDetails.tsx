@@ -297,9 +297,15 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     }
   }, [loginError]);
 
-  // Fetch token info when authenticated
+  // Fetch token info when authenticated. Key this on the stable user login,
+  // NOT the `authUser` object: useAuthState hands down a fresh object on every
+  // auth-state broadcast, so depending on the object re-ran this effect (and
+  // its token reads, which can themselves trigger a session refresh + another
+  // broadcast) in an infinite loop. The login string only changes on a real
+  // sign-in/out.
+  const authUserLogin = authUser?.login ?? null;
   useEffect(() => {
-    if (isAuthenticated && authUser) {
+    if (isAuthenticated && authUserLogin) {
       fetchTokenInfo();
       fetchSSHKeyInfo();
       fetchTokenMetadata();
@@ -314,7 +320,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     fetchKeychainStatus();
   }, [
     isAuthenticated,
-    authUser,
+    authUserLogin,
     fetchTokenInfo,
     fetchSSHKeyInfo,
     fetchTokenMetadata,

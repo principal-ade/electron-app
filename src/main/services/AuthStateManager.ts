@@ -109,18 +109,58 @@ class AuthStateManager extends EventEmitter {
       lastChecked: Date.now(),
     };
 
+    // Decide whether the renderer-visible state actually changed before
+    // broadcasting. `lastChecked` ticks on every auth read (presence
+    // heartbeat, token-info fetch, startup check, …) and a session refresh
+    // rotates the WorkOS/GitHub tokens without changing *who* is signed in —
+    // neither is visible to renderers. Broadcasting auth-state:changed on
+    // those no-op updates causes a feedback loop: useAuthState hands its
+    // consumers a brand-new `user` object, an effect keyed on that object
+    // re-reads the token, which can refresh the session again, which
+    // broadcasts again… (the AuthDetails "looping" profile page). Only notify
+    // when isAuthenticated or a public user field differs.
+    const changed = !AuthStateManager.publicStateEquals(oldState, this.state);
+
     console.log('[AuthStateManager] State updated:', {
       wasAuthenticated: oldState.isAuthenticated,
       isAuthenticated: this.state.isAuthenticated,
       user: this.state.user?.login,
       hasAvatarUrl: !!this.state.user?.avatarUrl,
+      broadcasting: changed,
     });
+
+    if (!changed) {
+      // Internal state (incl. token + lastChecked) is up to date; just skip
+      // notifying renderers since nothing they can see has changed.
+      return;
+    }
 
     // Emit internal event
     this.emit('stateChanged', this.state);
 
     // Broadcast to all renderer processes
     this.broadcastStateChange();
+  }
+
+  /**
+   * Compare the renderer-visible portion of two auth states (auth flag + the
+   * public user fields). Deliberately ignores `lastChecked` and the token,
+   * which change on routine reads/refreshes without representing a real change.
+   */
+  private static publicStateEquals(a: AuthState, b: AuthState): boolean {
+    if (a.isAuthenticated !== b.isAuthenticated) return false;
+
+    const ua = a.user;
+    const ub = b.user;
+    if (!ua || !ub) return ua === ub; // both null → equal; exactly one → changed
+
+    return (
+      ua.login === ub.login &&
+      ua.id === ub.id &&
+      ua.email === ub.email &&
+      ua.name === ub.name &&
+      ua.avatarUrl === ub.avatarUrl
+    );
   }
 
   /**
