@@ -60,6 +60,10 @@ export const fileCityTrailAPI: FileCityTrailAPI = {
     return ipcRenderer.invoke(FileCityTrailEvent.LOAD, id);
   },
 
+  getFilePath: async (id: string): Promise<string | null> => {
+    return ipcRenderer.invoke(FileCityTrailEvent.FILE_PATH, id);
+  },
+
   activate: async (
     id: string,
   ): Promise<{ payload: TrailPayload; repositoryPath?: string } | null> => {

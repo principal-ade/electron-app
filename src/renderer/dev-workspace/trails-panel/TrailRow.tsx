@@ -1,9 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Check, GitCompare, Share2 } from 'lucide-react';
+import { Check, Copy, GitCompare, Share2 } from 'lucide-react';
 import type { TrailIndexEntry } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
+import { TrailLibraryService } from '../../services/TrailLibraryService';
 
 const RECENT_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+const COPY_FEEDBACK_MS = 1500;
 
 const relativeTime = (iso: string): string => {
   const then = new Date(iso).getTime();
@@ -50,6 +52,8 @@ export const TrailRow: React.FC<TrailRowProps> = ({
 }) => {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
+  const [copiedPath, setCopiedPath] = useState(false);
+  const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // `entry.sharedAt` is the durable lock marker (survives reload); `publishUrl`
   // covers the just-published-this-session window before the list refresh lands.
   const isPublished = Boolean(entry.sharedAt) || Boolean(publishUrl);
@@ -86,6 +90,26 @@ export const TrailRow: React.FC<TrailRowProps> = ({
       onPublish?.(entry.id);
     },
     [entry.id, onPublish],
+  );
+
+  const handleCopyPath = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const filePath = await TrailLibraryService.getFilePath(entry.id);
+      if (!filePath) return;
+      try {
+        await navigator.clipboard.writeText(filePath);
+        setCopiedPath(true);
+        if (copyResetRef.current) clearTimeout(copyResetRef.current);
+        copyResetRef.current = setTimeout(
+          () => setCopiedPath(false),
+          COPY_FEEDBACK_MS,
+        );
+      } catch {
+        // navigator.clipboard can reject in restricted webviews; no-op.
+      }
+    },
+    [entry.id],
   );
 
   const title =
@@ -261,6 +285,42 @@ export const TrailRow: React.FC<TrailRowProps> = ({
               gap: '8px',
             }}
           >
+            <button
+              type="button"
+              onClick={handleCopyPath}
+              title="Copy local file path"
+              aria-label={`Copy local file path for ${title}`}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
+                e.currentTarget.style.color = theme.colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                border: `1px solid ${theme.colors.border}`,
+                background: 'transparent',
+                color: copiedPath
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary,
+                cursor: 'pointer',
+                opacity: hovered ? 1 : 0,
+                transition: 'opacity 120ms, background 120ms, color 120ms',
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.medium,
+              }}
+            >
+              {copiedPath ? <Check size={12} /> : <Copy size={12} />}
+              {copiedPath ? 'Copied' : 'Copy path'}
+            </button>
             {onPublish && (
               <button
                 type="button"
@@ -281,7 +341,7 @@ export const TrailRow: React.FC<TrailRowProps> = ({
                   background: 'transparent',
                   color: publishButtonColor,
                   cursor: 'pointer',
-                  opacity: hovered || isActive || isPublished ? 1 : 0,
+                  opacity: hovered ? 1 : 0,
                   transition: 'opacity 120ms, background 120ms, color 120ms',
                   fontFamily: theme.fonts.body,
                   fontSize: theme.fontSizes[1],
@@ -311,7 +371,7 @@ export const TrailRow: React.FC<TrailRowProps> = ({
                 background: 'transparent',
                 color: deleteButtonColor,
                 cursor: 'pointer',
-                opacity: hovered || isActive ? 1 : 0,
+                opacity: hovered ? 1 : 0,
                 transition: 'opacity 120ms, background 120ms, color 120ms',
                 fontFamily: theme.fonts.body,
                 fontSize: theme.fontSizes[1],

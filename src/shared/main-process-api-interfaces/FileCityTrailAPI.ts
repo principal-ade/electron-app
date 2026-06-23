@@ -49,6 +49,7 @@ export enum FileCityTrailEvent {
   SHARED_NOTE_CREATE = 'file-city:trail:shared-note-create',
   SET_TRANSIENT = 'file-city:trail:set-transient',
   SHOW_IN_PRINCIPAL = 'file-city:trail:show-in-principal',
+  FILE_PATH = 'file-city:trail:file-path',
 }
 
 /** Envelope for `SHOW_IN_PRINCIPAL` IPC — tells the principal window to
@@ -269,6 +270,15 @@ export interface FileCityTrailAPI {
 
   /** Read a saved trail by id without activating it. */
   load: (id: string) => Promise<TrailPayload | null>;
+
+  /**
+   * Resolve the absolute on-disk path of a saved trail's payload JSON
+   * (under `~/.principal/trails/`). The path is host-private — it's derived
+   * from the index entry's `cachePath`, which never reaches the renderer
+   * via the portable index. Returns `null` if the id is unknown. Used by
+   * the trails panel's "copy local path" affordance.
+   */
+  getFilePath: (id: string) => Promise<string | null>;
 
   /**
    * Resolve a saved trail by id, returning the payload + repo path so the

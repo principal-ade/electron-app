@@ -37,6 +37,21 @@ export class TrailLibraryService {
   }
 
   /**
+   * Resolve the absolute on-disk path of a saved trail's payload JSON.
+   * Returns `null` if the bridge is unavailable or the id is unknown.
+   */
+  static async getFilePath(id: string): Promise<string | null> {
+    const api = window.mainProcess?.fileCityTrail;
+    if (!api) return null;
+    try {
+      return await api.getFilePath(id);
+    } catch (err) {
+      console.error('[TrailLibraryService] getFilePath failed', err);
+      return null;
+    }
+  }
+
+  /**
    * Resolve a saved trail by id and return the payload + its host-private
    * `repositoryPath`. The caller updates its own state from the return
    * value and emits a renderer event for in-window coordination. No

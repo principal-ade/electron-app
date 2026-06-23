@@ -254,6 +254,19 @@ export class TrailPersistence {
     return entry ? stripCachePath(entry) : null;
   }
 
+  /**
+   * Resolve the absolute filesystem path of a trail's payload JSON. Built
+   * from the host-private `cachePath` (stripped before entries reach the
+   * renderer), so the renderer can't derive it itself. Returns `null` for
+   * an unknown id.
+   */
+  async getFilePathById(id: string): Promise<string | null> {
+    const idx = await this.getIndex();
+    const entry = idx.entries.find((e) => e.id === id);
+    if (!entry) return null;
+    return path.join(this.baseDir, entry.cachePath);
+  }
+
   async save(
     incoming: TrailPayload,
     options: { repositoryPath?: string; derivedFrom?: string },

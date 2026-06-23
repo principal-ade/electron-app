@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCompare, Link2, Loader2, Share2 } from 'lucide-react';
+import { GitCompare, Link2, Loader2 } from 'lucide-react';
 import type { SharedTrailIndexEntry } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 
 const relativeTime = (iso: string): string => {
@@ -142,15 +142,10 @@ export const SharedTrailRow: React.FC<SharedTrailRowProps> = ({
             minWidth: 0,
           }}
         >
-          <Share2
-            size={12}
-            color={theme.colors.primary}
-            aria-label="Shared"
-          />
           <span
             style={{
-              fontSize: theme.fontSizes[1],
-              fontWeight: theme.fontWeights.medium,
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.semibold,
               color: theme.colors.text,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -218,21 +213,6 @@ export const SharedTrailRow: React.FC<SharedTrailRowProps> = ({
             </>
           )}
         </div>
-        {entry.summaryPreview && (
-          <div
-            style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-            }}
-          >
-            {entry.summaryPreview}
-          </div>
-        )}
         {error && (
           <div
             title={error}

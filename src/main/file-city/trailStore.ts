@@ -99,6 +99,11 @@ export class TrailStore {
     return this.persistence.loadById(id);
   }
 
+  /** Absolute on-disk path of a saved trail's payload JSON, or null. */
+  getFilePath(id: string): Promise<string | null> {
+    return this.persistence.getFilePathById(id);
+  }
+
   list(repositoryPath?: string): Promise<{
     entries: TrailIndexEntry[];
   }> {
@@ -375,6 +380,9 @@ export function registerTrailHandlers(): void {
   );
   ipcMain.handle(FileCityTrailEvent.LOAD, (_event, id: string) =>
     store.loadById(id),
+  );
+  ipcMain.handle(FileCityTrailEvent.FILE_PATH, (_event, id: string) =>
+    store.getFilePath(id),
   );
   // ACTIVATE is now a "show this trail in the calling window" op — it
   // resolves the payload + repo for the caller to update local state and
