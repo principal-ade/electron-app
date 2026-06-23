@@ -151,8 +151,8 @@ export function TopicCard({
   const showOpen = !!topic.isOpen && !topic.isOpening;
   const collapseShared = showOpen || !!topic.isOpening;
 
-  // Badges live on the meta row (left of the trail count) rather than beside
-  // the title, so a long topic name no longer gets truncated to make room.
+  // Badges sit in the top-right corner of the card, on the title row. A long
+  // topic name truncates with an ellipsis to make room for them.
   const hasBadges =
     showStatusPill ||
     topic.isOpen ||
@@ -381,11 +381,26 @@ export function TopicCard({
           >
             {topic.title}
           </div>
+          {badges && (
+            // Pinned to the top-right of the card. Fades out while the board
+            // view's hover-reveal trash button occupies the same corner.
+            <span
+              style={{
+                marginLeft: 'auto',
+                flex: '0 0 auto',
+                display: 'inline-flex',
+                opacity: trashVisible ? 0 : 1,
+                pointerEvents: trashVisible ? 'none' : 'auto',
+                transition: 'opacity 120ms ease',
+              }}
+            >
+              {badges}
+            </span>
+          )}
         </div>
         {topic.projectRepos?.length ||
         topic.folderPath ||
-        topic.trailCount ||
-        hasBadges ? (
+        topic.trailCount ? (
           <div
             style={{
               display: 'flex',
@@ -394,7 +409,6 @@ export function TopicCard({
               minWidth: 0,
             }}
           >
-            {badges}
             {topic.projectRepos && topic.projectRepos.length > 0 ? (
               <div
                 style={{
@@ -487,8 +501,8 @@ export function TopicCard({
                 </span>
               </div>
             ) : null}
-            {/* Trail count stays right-aligned; the status badges sit on the
-                left, just before the repos/directory. */}
+            {/* Trail count stays right-aligned on the meta row; the status
+                badges now live in the card's top-right corner. */}
             {topic.trailCount ? (
               <div
                 style={{
