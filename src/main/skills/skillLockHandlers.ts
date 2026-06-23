@@ -4,9 +4,11 @@
  * Registers handlers for skill lock file CRUD operations and update checking.
  */
 
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
+import * as path from 'path';
 import { getSkillLockFileService, initializeSkillLockFileService } from './skillLockFile';
-import { fetchMultipleSkillFolderHashes } from './githubTreeSha';
+import { fetchMultipleSkillTrees } from './githubTreeSha';
+import { readLocalSkillBlobs, blobMapsEqual } from './localSkillHash';
 import {
   SkillLockAPIEvent,
   AddSkillToLockOptions,
@@ -158,34 +160,57 @@ export async function registerSkillLockHandlers(): Promise<void> {
           .map((s) => s.skillPath)
           .filter((p): p is string => !!p);
 
-        const hashResults = await fetchMultipleSkillFolderHashes({
+        const treeResults = await fetchMultipleSkillTrees({
           owner,
           repo,
           branch: branch || 'main',
           skillPaths,
         });
 
-        for (const skill of sourceSkills) {
-          const hashResult = skill.skillPath ? hashResults.get(skill.skillPath) : undefined;
+        const homeDir = app.getPath('home');
 
-          if (!hashResult || !hashResult.success || !hashResult.sha) {
+        for (const skill of sourceSkills) {
+          const treeResult = skill.skillPath ? treeResults.get(skill.skillPath) : undefined;
+
+          if (!treeResult || !treeResult.success || !treeResult.folderSha) {
             results.push({
               name: skill.name,
               installedHash: skill.skillFolderHash,
               latestHash: skill.skillFolderHash,
               hasUpdate: false,
               sourceUrl: skill.sourceUrl,
-              error: hashResult?.error || 'Failed to fetch current hash',
+              error: treeResult?.error || 'Failed to fetch current tree',
             });
-          } else {
-            results.push({
-              name: skill.name,
-              installedHash: skill.skillFolderHash,
-              latestHash: hashResult.sha,
-              hasUpdate: skill.skillFolderHash !== hashResult.sha,
-              sourceUrl: skill.sourceUrl,
-            });
+            continue;
           }
+
+          // Detect staleness from what's actually on disk, not the recorded
+          // hash. A past no-op "Update" could advance skillFolderHash to the
+          // latest SHA without re-downloading files; comparing the on-disk blob
+          // SHAs against the source's current blobs surfaces that drift (and any
+          // manual edits or missing/partial installs) so the existing Update
+          // badge can offer the fix.
+          const localDir =
+            skill.canonicalPath ||
+            path.join(homeDir, '.agents', 'skills', skill.name);
+
+          let hasUpdate: boolean;
+          if (treeResult.blobs) {
+            const localBlobs = await readLocalSkillBlobs(localDir);
+            // Missing files on disk => needs reinstall.
+            hasUpdate = localBlobs === null || !blobMapsEqual(localBlobs, treeResult.blobs);
+          } else {
+            // Truncated tree: fall back to folder-SHA comparison.
+            hasUpdate = skill.skillFolderHash !== treeResult.folderSha;
+          }
+
+          results.push({
+            name: skill.name,
+            installedHash: skill.skillFolderHash,
+            latestHash: treeResult.folderSha,
+            hasUpdate,
+            sourceUrl: skill.sourceUrl,
+          });
         }
       }
 
