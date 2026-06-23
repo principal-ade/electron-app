@@ -406,7 +406,15 @@ export class GitHubAdapter {
     }
     args.push(endpoint);
 
-    const result = await this.executeCommand(args);
+    const isRaw =
+      !!accept &&
+      (accept.includes('application/vnd.github.v3.raw') ||
+        accept.includes('application/vnd.github.v3.diff') ||
+        accept.includes('application/vnd.github.v3.patch'));
+
+    // Raw content (file bodies, diffs, patches) must keep exact bytes; trimming
+    // would drop trailing newlines. JSON/other responses still want trimming.
+    const result = await this.executeCommand(args, { raw: isRaw });
     if (!result.success) {
       const stderr = result.stderr || '';
       const looksUnauthed =
@@ -420,12 +428,6 @@ export class GitHubAdapter {
       console.error('[GitHub] gh fallback failed:', error);
       return { success: false, error };
     }
-
-    const isRaw =
-      !!accept &&
-      (accept.includes('application/vnd.github.v3.raw') ||
-        accept.includes('application/vnd.github.v3.diff') ||
-        accept.includes('application/vnd.github.v3.patch'));
 
     let data: GitHubAPIResponseData;
     if (isRaw) {
@@ -674,13 +676,16 @@ export class GitHubAdapter {
       });
       // Remote-first: try gh CLI without relying on local cwd
       const refSuffix = ref ? `?ref=${encodeURIComponent(ref)}` : '';
-      const ghResult = await this.executeCommand([
-        'gh',
-        'api',
-        `/repos/${owner}/${repo}/contents/${path}${refSuffix}`,
-        '-H',
-        'Accept: application/vnd.github.v3.raw',
-      ]);
+      const ghResult = await this.executeCommand(
+        [
+          'gh',
+          'api',
+          `/repos/${owner}/${repo}/contents/${path}${refSuffix}`,
+          '-H',
+          'Accept: application/vnd.github.v3.raw',
+        ],
+        { raw: true },
+      );
 
       if (ghResult.success && ghResult.stdout) {
         console.debug('[GitHub:getFileContent] gh api success', {
@@ -1113,7 +1118,7 @@ export class GitHubAdapter {
 
   private async executeCommand(
     args: string[],
-    options: { cwd?: string } = {},
+    options: { cwd?: string; raw?: boolean } = {},
   ): Promise<CommandResult> {
     try {
       // Ensure CLI is initialized
@@ -1133,7 +1138,10 @@ export class GitHubAdapter {
 
       return {
         success: result.success,
-        stdout: result.stdout.trim(),
+        // Preserve exact stdout bytes for raw fetches (e.g. file content), where
+        // trimming would drop the trailing newline and corrupt the written file.
+        // Other callers parse SHAs/JSON/status and rely on the trimmed form.
+        stdout: options.raw ? result.stdout : result.stdout.trim(),
         stderr: result.stderr.trim(),
         exitCode: result.exitCode,
       };
