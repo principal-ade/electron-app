@@ -631,28 +631,6 @@ export function HomeView() {
     };
   }, [refreshSkillUpdates]);
 
-  const handleUpdateSkill = useCallback(async (name: string) => {
-    setUpdatingSkills((prev) => new Set(prev).add(name));
-    try {
-      await SkillLockService.updateSingleSkill(name);
-      // The SKILL_UPDATED broadcast drives recheck(), which refreshes both the
-      // installed set and the update flags. Clear optimistically as a fallback.
-      setSkillUpdates((prev) => {
-        const next = new Set(prev);
-        next.delete(name);
-        return next;
-      });
-    } catch (error) {
-      console.error('[HomeView] Failed to update skill:', name, error);
-    } finally {
-      setUpdatingSkills((prev) => {
-        const next = new Set(prev);
-        next.delete(name);
-        return next;
-      });
-    }
-  }, []);
-
   // Fetch the skills repo tree once and install each named skill into both the
   // canonical and Claude-specific skill directories. Returns the set of skills
   // that installed at least once, plus any per-destination failures.
@@ -719,6 +697,39 @@ export function HomeView() {
       return { fullyInstalled, failures };
     },
     [],
+  );
+
+  // Update re-runs the install path so the skill's files are actually
+  // re-downloaded. The old updateSingleSkill only advanced the lock hash,
+  // leaving the on-disk files stale while clearing the update badge.
+  const handleUpdateSkill = useCallback(
+    async (name: string) => {
+      setUpdatingSkills((prev) => new Set(prev).add(name));
+      try {
+        const { fullyInstalled, failures } = await installSkillsByName([name]);
+        if (!fullyInstalled.has(name)) {
+          throw new Error(
+            failures.length > 0 ? failures.join('; ') : `Failed to update ${name}.`,
+          );
+        }
+        // INSTALL_SKILL's skill:installed broadcast drives recheck(), which
+        // refreshes the update flags. Clear optimistically as a fallback.
+        setSkillUpdates((prev) => {
+          const next = new Set(prev);
+          next.delete(name);
+          return next;
+        });
+      } catch (error) {
+        console.error('[HomeView] Failed to update skill:', name, error);
+      } finally {
+        setUpdatingSkills((prev) => {
+          const next = new Set(prev);
+          next.delete(name);
+          return next;
+        });
+      }
+    },
+    [installSkillsByName],
   );
 
   const handleInstallSkill = useCallback(async () => {

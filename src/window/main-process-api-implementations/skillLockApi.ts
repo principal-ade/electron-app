@@ -6,7 +6,6 @@ import type {
   UpdateSkillInLockOptions,
   SkillUpdateCheckResult,
   InstalledSkillInfo,
-  SkillUpdateResult,
   SkillInstalledPayload,
   SkillUninstalledPayload,
   SkillUpdatedPayload,
@@ -45,14 +44,6 @@ export const skillLockAPI: SkillLockAPI = {
 
   getInstalledSkills: async (): Promise<InstalledSkillInfo[]> => {
     return ipcRenderer.invoke(SkillLockAPIEvent.GET_INSTALLED_SKILLS);
-  },
-
-  updateSkill: async (name: string): Promise<SkillUpdateResult> => {
-    return ipcRenderer.invoke(SkillLockAPIEvent.UPDATE_SKILL, name);
-  },
-
-  updateAllSkills: async (): Promise<SkillUpdateResult[]> => {
-    return ipcRenderer.invoke(SkillLockAPIEvent.UPDATE_ALL_SKILLS);
   },
 
   // Event listeners for broadcasts from main process

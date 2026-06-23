@@ -21,10 +21,6 @@ export enum SkillLockAPIEvent {
   CHECK_SKILL_UPDATES = 'skill-lock:check-updates',
   GET_INSTALLED_SKILLS = 'skill-lock:get-installed',
 
-  // Update operations
-  UPDATE_SKILL = 'skill-lock:update-skill',
-  UPDATE_ALL_SKILLS = 'skill-lock:update-all',
-
   // Skill editing
   CHECK_SKILL_EDIT_PERMISSION = 'skill-lock:check-edit-permission',
   GET_SKILL_FILES = 'skill-lock:get-files',
@@ -155,17 +151,6 @@ export interface UpdateSkillInLockOptions {
 }
 
 /**
- * Result of a skill update operation
- */
-export interface SkillUpdateResult {
-  success: boolean;
-  name: string;
-  previousHash?: string;
-  newHash?: string;
-  error?: string;
-}
-
-/**
  * Broadcast payload for skill installation events
  */
 export interface SkillInstalledPayload {
@@ -264,12 +249,6 @@ export interface SkillLockAPI {
 
   /** Get list of all installed skills from lock file */
   getInstalledSkills: () => Promise<InstalledSkillInfo[]>;
-
-  /** Update a single skill to latest version */
-  updateSkill: (name: string) => Promise<SkillUpdateResult>;
-
-  /** Update all skills with available updates */
-  updateAllSkills: () => Promise<SkillUpdateResult[]>;
 
   /** Check if user can edit a skill */
   checkEditPermission: (skillName: string) => Promise<SkillEditPermissionResult>;

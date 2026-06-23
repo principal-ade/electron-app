@@ -10,7 +10,6 @@ import type {
   UpdateSkillInLockOptions,
   SkillUpdateCheckResult,
   InstalledSkillInfo,
-  SkillUpdateResult,
   SkillLockEntry,
   SkillInstalledPayload,
   SkillUninstalledPayload,
@@ -61,20 +60,6 @@ export class SkillLockService {
    */
   static async getInstalledSkills(): Promise<InstalledSkillInfo[]> {
     return window.mainProcess.skillLock.getInstalledSkills();
-  }
-
-  /**
-   * Update a single skill to latest version
-   */
-  static async updateSingleSkill(name: string): Promise<SkillUpdateResult> {
-    return window.mainProcess.skillLock.updateSkill(name);
-  }
-
-  /**
-   * Update all skills with available updates
-   */
-  static async updateAllSkills(): Promise<SkillUpdateResult[]> {
-    return window.mainProcess.skillLock.updateAllSkills();
   }
 
   /**
