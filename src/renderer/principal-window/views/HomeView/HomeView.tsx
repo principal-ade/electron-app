@@ -577,9 +577,9 @@ export function HomeView() {
     };
   }, []);
 
-  // Checks installed trail skills for available updates by comparing the
-  // recorded folder hash against the live GitHub tree SHA (via the cached
-  // skillUpdateService backend). Populates the set of skill names with updates.
+  // Checks installed trail skills for available updates by comparing each
+  // skill's on-disk files against the source's current blobs (CHECK_SKILL_UPDATES).
+  // Populates the set of skill names with updates.
   const refreshSkillUpdates = useCallback(async () => {
     try {
       const tracked = new Set<string>(TRACKED_SKILL_NAMES);
