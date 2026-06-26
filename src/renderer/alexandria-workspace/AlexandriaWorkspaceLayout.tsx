@@ -85,12 +85,16 @@ import {
 import type {
   AlexandriaTab,
   FileCityTrailTab,
+  LocalTrailTab,
   MarkdownDocTab,
   MediaTab,
   MermaidDiagramTab,
   SourceFileTab,
   TopicDescriptionTab,
+  TopicTab,
 } from './tab-types';
+import { AlexandriaTopicTabContent } from './topic-tab/AlexandriaTopicTabContent';
+import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
 import { IndustryZoomableMermaidDiagram } from 'themed-markdown';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
 
@@ -110,6 +114,8 @@ export interface PanelControlHandle {
   expandRight: () => void;
   /** Open the topic-description ("Notes") editor as a middle-panel tab. */
   openTopicDescription: () => void;
+  /** Open an arbitrary topic (by id) as a read-only middle-panel tab. */
+  openTopic: (topicId: string, title?: string) => void;
 }
 
 interface AlexandriaWorkspaceLayoutProps {
@@ -261,6 +267,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   // Lets the once-mounted panel-control handle reach the latest
   // `handleOpenTopicDescription` (defined below) without re-subscribing.
   const openTopicDescriptionRef = useRef<() => void>(() => {});
+  // Same indirection for opening an arbitrary topic tab (bridge activation).
+  const openTopicRef = useRef<(topicId: string, title?: string) => void>(
+    () => {},
+  );
   // Read inside the once-mounted file:opened listener so newly opened doc tabs
   // carry the currently selected repo without re-subscribing on every change.
   const selectedRepositoryRef = useRef(selectedRepository);
@@ -331,6 +341,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         },
         openTopicDescription: () => {
           openTopicDescriptionRef.current();
+        },
+        openTopic: (topicId: string, title?: string) => {
+          openTopicRef.current(topicId, title);
         },
       };
       onPanelControlReady(control);
@@ -455,6 +468,58 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   }, [workspace.topicIds]);
   openTopicDescriptionRef.current = handleOpenTopicDescription;
 
+  // Open (or focus) an arbitrary topic as a middle-panel tab. One tab per
+  // topic id, deduped on re-open. Drives the bridge's `TOPIC_ACTIVATE` path
+  // when this window is focused.
+  const handleOpenTopic = useCallback((topicId: string, title?: string) => {
+    if (!topicId) return;
+    const tabId = `topic-${topicId}`;
+    setTabs((prev) => {
+      if (
+        prev.some(
+          (t) => t.contentType === 'topic' && (t as TopicTab).topicId === topicId,
+        )
+      ) {
+        return prev;
+      }
+      const newTab: TopicTab = {
+        id: tabId,
+        label: title || 'Topic',
+        contentType: 'topic',
+        topicId,
+        title,
+        closable: true,
+      };
+      return [...prev, newTab];
+    });
+    setFocusTabId(tabId);
+  }, []);
+  openTopicRef.current = handleOpenTopic;
+
+  // Open (or focus) a single trail (read-only) as a middle-panel tab, from a
+  // topic tab's trails rail. One tab per trail id, deduped on re-open. Mirrors
+  // dev-workspace's `openLocalTrailTab` and the Topics view's `openLocalTrail`.
+  const handleOpenLocalTrail = useCallback(
+    (trailId: string, title?: string) => {
+      if (!trailId) return;
+      const tabId = `local-trail-${trailId}`;
+      setTabs((prev) => {
+        if (prev.some((t) => t.id === tabId)) return prev;
+        const newTab: LocalTrailTab = {
+          id: tabId,
+          label: title || 'Trail',
+          contentType: 'local-trail',
+          trailId,
+          title,
+          closable: true,
+        };
+        return [...prev, newTab];
+      });
+      setFocusTabId(tabId);
+    },
+    [],
+  );
+
   // File actions handed to the topic-description MDXEditorPanel. Sentinel paths
   // route reads/writes to TopicService; everything else is delegated to the
   // host's live actions.
@@ -575,6 +640,45 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           </div>
         );
       }
+      if (tab.contentType === 'topic') {
+        return (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <AlexandriaTopicTabContent
+              topicId={tab.topicId}
+              title={tab.title}
+              events={events}
+              onOpenTrail={handleOpenLocalTrail}
+              isTrailActive={(id) => focusTabId === `local-trail-${id}`}
+              currentWorkspaceTopicId={workspace.topicIds?.[0]}
+            />
+          </div>
+        );
+      }
+      if (tab.contentType === 'local-trail') {
+        return (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <LocalTrailTabContent trailId={tab.trailId} events={events} />
+          </div>
+        );
+      }
       if (tab.contentType === 'markdown-doc') {
         return (
           <div
@@ -651,7 +755,15 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       // Terminal tabs: return null → TabbedTerminalPanel renders its default.
       return null;
     },
-    [activeTrailPayload, activeTrailRepoPath, events, theme],
+    [
+      activeTrailPayload,
+      activeTrailRepoPath,
+      events,
+      theme,
+      handleOpenLocalTrail,
+      focusTabId,
+      workspace.topicIds,
+    ],
   );
 
   // Get terminal context and directory from TerminalProvider

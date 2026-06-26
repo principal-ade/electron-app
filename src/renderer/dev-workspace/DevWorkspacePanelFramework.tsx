@@ -156,6 +156,7 @@ import {
 import { TopicsPanel } from './topics-panel/TopicsPanel';
 import { DevWorkspaceTopicTab } from './topics-panel/DevWorkspaceTopicTab';
 import { TOPIC_EVENT, type TopicOpenEvent } from './topics-panel/topic-events';
+import { topicClient } from '../tipc/topicClient';
 import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
 import type {
   DocumentSelectedPayload,
@@ -2807,6 +2808,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     });
     return unsubscribe;
   }, [events, openTopicTab]);
+
+  // Cross-window bridge activation (`POST /api/topics/:id/activate` →
+  // `TopicAPIEvent.TOPIC_ACTIVATE`). When this dev-workspace window is the one
+  // the bridge targeted (the focused window), open the topic in our own tab
+  // host — the same surface a Topics-sidebar click uses. Without this the IPC
+  // would land on a channel no renderer here listens to and silently drop.
+  useEffect(() => {
+    return topicClient.onTopicActivate(({ topicId, title }) => {
+      if (topicId) openTopicTab(topicId, title);
+    });
+  }, [openTopicTab]);
 
   // Open (or focus) a single trail as its own tab when a trail row is clicked
   // in a topic tab's trails rail. One tab per trail id, deduped on re-open —

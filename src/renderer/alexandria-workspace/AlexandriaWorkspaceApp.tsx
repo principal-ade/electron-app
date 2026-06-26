@@ -66,6 +66,7 @@ import type {
 } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { TopicService } from '../main-process-api/TopicService';
+import { topicClient } from '../tipc/topicClient';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import type { Topic } from '@principal-ai/alexandria-core-library/types';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
@@ -497,6 +498,17 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       panelControlRef.current?.openTopicDescription();
     }
   }, [topic, panelControlReady, collapsed.left]);
+
+  // Cross-window bridge activation (`POST /api/topics/:id/activate` →
+  // `TopicAPIEvent.TOPIC_ACTIVATE`). When this window is the one the bridge
+  // targeted (the focused window), open the requested topic as a tab — any
+  // topic, not just the workspace's bound one. Without this the IPC would land
+  // on a channel no renderer here listens to and silently drop.
+  useEffect(() => {
+    return topicClient.onTopicActivate(({ topicId, title }) => {
+      if (topicId) panelControlRef.current?.openTopic(topicId, title);
+    });
+  }, []);
 
   // Fetch git status for workspace repositories
   // Watch lifecycle is managed by main process window handlers

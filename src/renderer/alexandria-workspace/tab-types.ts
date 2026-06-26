@@ -89,10 +89,43 @@ export interface MermaidDiagramTab {
   closable?: boolean;
 }
 
+/**
+ * A topic opened in the workspace — e.g. when the bridge's
+ * `POST /api/topics/:id/activate` targets this (focused) window. Unlike
+ * {@link TopicDescriptionTab} (which edits the workspace's own bound topic's
+ * notes), this hosts an arbitrary topic by id, read-only, in the shared
+ * `LocalTopicTabContent`. Multi-instance, keyed by `topicId`.
+ */
+export interface TopicTab {
+  id: string;
+  label: string;
+  contentType: 'topic';
+  topicId: string;
+  title?: string;
+  closable?: boolean;
+}
+
+/**
+ * A single trail opened (read-only) from a topic tab's trails rail, rendered
+ * with the shared `LocalTrailTabContent`. Distinct from {@link FileCityTrailTab}
+ * (the singleton 3D explorer): multi-instance, keyed by `trailId`. Mirrors
+ * dev-workspace's `LocalTrailTab`.
+ */
+export interface LocalTrailTab {
+  id: string;
+  label: string;
+  contentType: 'local-trail';
+  trailId: string;
+  title?: string;
+  closable?: boolean;
+}
+
 export type AlexandriaTab =
   | TerminalTab
   | FileCityTrailTab
   | TopicDescriptionTab
+  | TopicTab
+  | LocalTrailTab
   | MarkdownDocTab
   | SourceFileTab
   | MediaTab
