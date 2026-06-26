@@ -93,6 +93,15 @@ export const topicRouter = {
       return registryService.getRecord(input.id);
     }),
 
+  // Absolute on-disk path of the topic's JSON in the file-per-topic store.
+  // Returns null for an unknown topic or while the legacy blob is still the
+  // backend. Backs the topic header's "Copy path" action.
+  topic_getTopicFilePath: t.procedure
+    .input<GetTopicInput>()
+    .action(async ({ input }) => {
+      return registryService.getTopicFilePath(input.id);
+    }),
+
   topic_getRecords: t.procedure.action(async () => {
     return registryService.getRecords();
   }),

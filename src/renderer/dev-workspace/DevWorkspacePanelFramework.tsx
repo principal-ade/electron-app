@@ -151,10 +151,12 @@ import {
   TRAIL_EVENT,
   type TrailActivatedEvent,
   type TrailClearedEvent,
+  type TrailOpenEvent,
 } from './trail-events';
 import { TopicsPanel } from './topics-panel/TopicsPanel';
 import { DevWorkspaceTopicTab } from './topics-panel/DevWorkspaceTopicTab';
 import { TOPIC_EVENT, type TopicOpenEvent } from './topics-panel/topic-events';
+import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -345,6 +347,19 @@ interface TopicTab extends BaseTab {
 }
 
 /**
+ * Local trail tab. Renders a single trail from the local library as its own
+ * tab (`LocalTrailTabContent`), opened from a topic tab's trails rail — the
+ * same per-trail-tab pattern the Topics view uses. Distinct from the
+ * `file-city-trail` singleton explorer, which shows whichever trail is
+ * currently activated in File City.
+ */
+interface LocalTrailTab extends BaseTab {
+  contentType: 'local-trail';
+  trailId: string;
+  title?: string;
+}
+
+/**
  * Props for the Bruno RequestPanel including optional selected request
  */
 interface BrunoRequestPanelProps {
@@ -378,7 +393,8 @@ type DevWorkspaceTab =
   | DashboardTab
   | FileCity3DTab
   | FileCityTrailTab
-  | TopicTab;
+  | TopicTab
+  | LocalTrailTab;
 
 /**
  * History item for right panel document viewing
@@ -2792,6 +2808,38 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return unsubscribe;
   }, [events, openTopicTab]);
 
+  // Open (or focus) a single trail as its own tab when a trail row is clicked
+  // in a topic tab's trails rail. One tab per trail id, deduped on re-open —
+  // mirrors `openTopicTab` and the Topics view's `openLocalTrail`.
+  const openLocalTrailTab = useCallback((trailId: string, title?: string) => {
+    setTabs((prevTabs) => {
+      const tabId = `local-trail-${trailId}`;
+      const existing = prevTabs.find((t) => t.id === tabId);
+      if (existing) {
+        setFocusTabId(existing.id);
+        return prevTabs;
+      }
+      const newTab: LocalTrailTab = {
+        id: tabId,
+        label: title || 'Trail',
+        contentType: 'local-trail',
+        trailId,
+        title,
+        closable: true,
+      };
+      setFocusTabId(newTab.id);
+      return [...prevTabs, newTab];
+    });
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = events.on<TrailOpenEvent>(TRAIL_EVENT.open, (event) => {
+      const { trailId, title } = event.payload;
+      if (trailId) openLocalTrailTab(trailId, title);
+    });
+    return unsubscribe;
+  }, [events, openLocalTrailTab]);
+
   // Bridge handoff: a doc pushed from the Principal MCP Bridge
   // (POST /api/document/open) arrives as an OPEN_DOCUMENT IPC when this
   // dev-workspace window is focused. Re-emit it onto the panel event bus as a
@@ -3470,11 +3518,22 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return (
             <DevWorkspaceTopicTab
               topicId={topicTab.topicId}
+              title={topicTab.title}
               isActive={isActive}
               events={eventsRef.current}
               repositoryPath={
                 contextRef.current?.currentScope?.repository?.path
               }
+            />
+          );
+        }
+
+        case 'local-trail': {
+          const trailTab = tab as LocalTrailTab;
+          return (
+            <LocalTrailTabContent
+              trailId={trailTab.trailId}
+              events={eventsRef.current}
             />
           );
         }

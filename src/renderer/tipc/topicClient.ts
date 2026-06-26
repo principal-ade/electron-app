@@ -51,6 +51,11 @@ export interface TopicClient {
   getTopicsForTrail: (input: GetTopicsForTrailInput) => Promise<Topic[]>;
   getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
   getRecords: () => Promise<LocalTopicRecord[]>;
+  /**
+   * Absolute on-disk path of a topic's JSON (`~/.principal/topics/<id>.json`).
+   * `null` for an unknown topic or while the legacy blob is still the backend.
+   */
+  getTopicFilePath: (input: GetTopicInput) => Promise<string | null>;
   /** Migrate topics from the legacy blob to the file-per-topic store. */
   migrateTopics: () => Promise<TopicMigrationResult>;
   /** Hydrate a topic published to web-ade by id. Throws on 404 / no-access. */
@@ -102,6 +107,7 @@ interface TipcTopicClient {
   topic_getTopicsForTrail: (input: GetTopicsForTrailInput) => Promise<Topic[]>;
   topic_getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
   topic_getRecords: () => Promise<LocalTopicRecord[]>;
+  topic_getTopicFilePath: (input: GetTopicInput) => Promise<string | null>;
   topic_migrateTopics: () => Promise<TopicMigrationResult>;
   topic_fetchSharedById: (
     input: FetchSharedTopicInput,
@@ -145,6 +151,7 @@ export const topicClient: TopicClient = {
   getTopicsForTrail: (input) => getTipcClient().topic_getTopicsForTrail(input),
   getRecord: (input) => getTipcClient().topic_getRecord(input),
   getRecords: () => getTipcClient().topic_getRecords(),
+  getTopicFilePath: (input) => getTipcClient().topic_getTopicFilePath(input),
   migrateTopics: () => getTipcClient().topic_migrateTopics(),
   fetchSharedById: (input) => getTipcClient().topic_fetchSharedById(input),
   publishTopic: (input) => getTipcClient().topic_publishTopic(input),

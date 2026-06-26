@@ -129,6 +129,16 @@ export class TopicService {
   }
 
   /**
+   * Absolute on-disk path of a topic's JSON file
+   * (`~/.principal/topics/<id>.json`), for the header's "Copy path" action.
+   * Returns `null` when the topic is unknown or while the legacy
+   * `~/.alexandria/topics.json` blob is still the backend (no per-topic file).
+   */
+  static async getFilePath(id: string): Promise<string | null> {
+    return topicClient.getTopicFilePath({ id });
+  }
+
+  /**
    * Migrate topics from the legacy `~/.alexandria/topics.json` blob to the
    * file-per-topic store. Explicit (Settings action) and idempotent — a
    * second run reports `noLegacyBlob`. Returns the migration summary.

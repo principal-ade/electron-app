@@ -16,11 +16,24 @@ export const TRAIL_EVENT = {
   activated: 'file-city-trail:activated',
   cleared: 'file-city-trail:cleared',
   libraryChanged: 'file-city-trail:library-changed',
+  open: 'file-city-trail:open-tab',
 } as const;
 
 export interface TrailActivatedEvent {
   payload: TrailPayload;
   repositoryPath: string | undefined;
+}
+
+/**
+ * Open a single trail as its own tab in the center editor area. Mirrors
+ * {@link TopicOpenEvent}: a surface (e.g. a topic tab's trails rail) emits the
+ * trail id + title, the panel framework opens or focuses a `local-trail` tab.
+ * Distinct from {@link TRAIL_EVENT.activated}, which drives the File City
+ * explorer's active-trail highlight rather than opening a tab.
+ */
+export interface TrailOpenEvent {
+  trailId: string;
+  title?: string;
 }
 
 export interface TrailClearedEvent {

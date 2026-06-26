@@ -214,6 +214,12 @@ export type TopicRouterType = Record<
       input: GetTopicInput;
     }) => Promise<LocalTopicRecord | null>;
   };
+  topic_getTopicFilePath: {
+    action: (args: {
+      context: ActionContext;
+      input: GetTopicInput;
+    }) => Promise<string | null>;
+  };
   topic_getRecords: {
     action: (args: {
       context: ActionContext;

@@ -31,7 +31,7 @@ import {
   NodeFileSystemAdapter,
   NodeGlobAdapter,
 } from '@principal-ai/alexandria-core-library/node';
-import { TopicStore } from '@principal-ai/principal-view-core/node';
+import { TopicStore, TOPICS_DIR } from '@principal-ai/principal-view-core/node';
 import { homedir } from 'os';
 import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
@@ -191,6 +191,23 @@ export class TopicRegistryService {
 
   async getTopic(id: string): Promise<Topic | null> {
     return this.canonical.getTopic(id);
+  }
+
+  /**
+   * Absolute on-disk path of a topic's JSON in the file-per-topic store
+   * (`~/.principal/topics/<id>.json`). Returns `null` when the topic is
+   * unknown, or while the legacy `~/.alexandria/topics.json` blob is still the
+   * backend ({@link useNewStore} false) — in that mode no per-topic file
+   * exists. Mirrors the trail store's `getFilePath`, backing the topic
+   * header's "Copy path" action.
+   */
+  async getTopicFilePath(id: string): Promise<string | null> {
+    if (!this.useNewStore()) return null;
+    const topic = await this.canonical.getTopic(id);
+    if (!topic) return null;
+    // Mirrors TopicStore's filename derivation (sanitizeSegment + '.json').
+    const fileName = `${id.replace(/[^A-Za-z0-9._-]/g, '_')}.json`;
+    return join(TOPICS_DIR, fileName);
   }
 
   async createTopic(input: CreateTopicInput): Promise<Topic> {

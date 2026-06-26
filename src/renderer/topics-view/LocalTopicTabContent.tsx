@@ -18,7 +18,7 @@
 
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Check, List, PanelsTopLeft } from 'lucide-react';
+import { Check, Copy, List, PanelsTopLeft } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from '../alexandria-workspace/topic-description-tab/TopicDescriptionBody';
 import { TopicTrailsRail } from '../alexandria-workspace/topic-description-tab/TopicTrailsRail';
@@ -42,6 +42,30 @@ export const LocalTopicTabContent: React.FC<{
   const [tocOpen, setTocOpen] = React.useState(false);
   const [hasToc, setHasToc] = React.useState(false);
   const closeToc = React.useCallback(() => setTocOpen(false), []);
+
+  // Copy the topic's on-disk JSON path to the clipboard, with a brief "copied"
+  // confirmation. `getFilePath` is null while the legacy topics blob is the
+  // backend (no per-topic file) — the click then no-ops.
+  const [copiedPath, setCopiedPath] = React.useState(false);
+  const copyResetRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyTopicPath = React.useCallback(async () => {
+    const filePath = await TopicService.getFilePath(topicId);
+    if (!filePath) return;
+    try {
+      await navigator.clipboard.writeText(filePath);
+      setCopiedPath(true);
+      if (copyResetRef.current) clearTimeout(copyResetRef.current);
+      copyResetRef.current = setTimeout(() => setCopiedPath(false), 1500);
+    } catch {
+      // navigator.clipboard can reject in restricted webviews; no-op.
+    }
+  }, [topicId]);
+  React.useEffect(
+    () => () => {
+      if (copyResetRef.current) clearTimeout(copyResetRef.current);
+    },
+    [],
+  );
 
   // Promote this topic to a full Alexandria workspace window — the same path
   // HomeView's topic card uses, but routed through the shared open-with-feedback
@@ -100,6 +124,31 @@ export const LocalTopicTabContent: React.FC<{
         >
           {title || 'Topic'}
         </h1>
+        <button
+          type="button"
+          onClick={() => void copyTopicPath()}
+          title="Copy topic file path"
+          aria-label="Copy topic file path"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 32,
+            height: 32,
+            flexShrink: 0,
+            padding: 0,
+            borderRadius: 6,
+            border: `1px solid ${
+              copiedPath ? theme.colors.primary : theme.colors.border
+            }`,
+            background: theme.colors.backgroundSecondary,
+            color: copiedPath ? theme.colors.primary : theme.colors.text,
+            cursor: 'pointer',
+            transition: 'color 0.15s ease, border-color 0.15s ease',
+          }}
+        >
+          {copiedPath ? <Check size={16} /> : <Copy size={16} />}
+        </button>
         {hasToc && (
           <button
             type="button"
