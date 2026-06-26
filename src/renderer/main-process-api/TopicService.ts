@@ -13,7 +13,6 @@ import type {
   LocalTopicRecord,
   PublishTopicResult,
   TopicChangeEvent,
-  TopicMigrationResult,
   UpdateTopicInput,
 } from '../../shared/main-process-api-interfaces/TopicAPI';
 import { topicClient } from '../tipc/topicClient';
@@ -136,14 +135,5 @@ export class TopicService {
    */
   static async getFilePath(id: string): Promise<string | null> {
     return topicClient.getTopicFilePath({ id });
-  }
-
-  /**
-   * Migrate topics from the legacy `~/.alexandria/topics.json` blob to the
-   * file-per-topic store. Explicit (Settings action) and idempotent — a
-   * second run reports `noLegacyBlob`. Returns the migration summary.
-   */
-  static async migrateTopics(): Promise<TopicMigrationResult> {
-    return topicClient.migrateTopics();
   }
 }

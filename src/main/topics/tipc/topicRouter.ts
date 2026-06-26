@@ -110,14 +110,6 @@ export const topicRouter = {
     return registryService.getSessionLinks();
   }),
 
-  // Migrate topics from the legacy ~/.alexandria/topics.json blob to the
-  // file-per-topic store. Triggered by the Settings action; idempotent (a
-  // second run reports noLegacyBlob). Returns the migration summary so the
-  // Settings UI can report how many topics moved.
-  topic_migrateTopics: t.procedure.action(async () => {
-    return registryService.migrateTopics();
-  }),
-
   // ===========================================================================
   // Mutations
   // ===========================================================================
