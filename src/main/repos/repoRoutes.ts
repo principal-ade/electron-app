@@ -30,6 +30,24 @@ interface RepoSummary {
   github?: { owner?: string; name?: string };
 }
 
+/**
+ * Even leaner view for the list route. GET /api/repos can return many entries,
+ * so it carries only the two fields a caller needs to identify a clone: the
+ * canonical path and its remote. Single-entry responses (register/delete) keep
+ * the fuller RepoSummary so the caller can confirm name/views/provenance.
+ */
+interface RepoListItem {
+  path: string;
+  remoteUrl?: string;
+}
+
+function listEntry(entry: AlexandriaEntry): RepoListItem {
+  return {
+    path: String(entry.path),
+    remoteUrl: entry.remoteUrl,
+  };
+}
+
 function summarizeEntry(entry: AlexandriaEntry): RepoSummary {
   return {
     path: String(entry.path),
@@ -67,7 +85,7 @@ export function registerRepoRoutes(
   app.get('/api/repos', async (_req: Request, res: Response) => {
     try {
       const entries = await registry.getRepositories();
-      res.json({ success: true, repos: entries.map(summarizeEntry) });
+      res.json({ success: true, repos: entries.map(listEntry) });
     } catch (err) {
       console.error('[repoRoutes] list failed', err);
       res.status(500).json({
