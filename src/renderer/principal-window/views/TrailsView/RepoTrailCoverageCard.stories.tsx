@@ -3,9 +3,8 @@ import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import {
   buildCityDataFromFileTree,
-  estimateLineCounts,
   type CityData,
-} from '@industry-theme/repository-composition-panels';
+} from '../../../dev-workspace/file-city-panel/cityDataBuilders';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { RepoTrailCoverageCard } from './RepoTrailCoverageCard';
 
@@ -14,7 +13,7 @@ const buildCity = (repoName: string, files: string[]): CityData => {
     files: files.map((f) => `${repoName}/${f}`),
     rootPath: repoName,
   });
-  return estimateLineCounts(buildCityDataFromFileTree(tree, ''));
+  return buildCityDataFromFileTree(tree, '');
 };
 
 const REPO_FILES = [

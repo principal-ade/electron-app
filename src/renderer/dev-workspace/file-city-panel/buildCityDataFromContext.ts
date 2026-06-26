@@ -1,9 +1,8 @@
 import {
   buildCityDataFromFileTree,
   enrichWithLineCounts,
-  estimateLineCounts,
   type CityData,
-} from '@industry-theme/repository-composition-panels';
+} from './cityDataBuilders';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
 
 export interface BuildCityDataInput {
@@ -13,8 +12,9 @@ export interface BuildCityDataInput {
 
 /**
  * Builds CityData from a repo file tree, fetching real line counts from the
- * main process when a repositoryPath is available and falling back to
- * estimates when not.
+ * main process when a repositoryPath is available. When real counts aren't
+ * available the city data is returned without line counts (we no longer
+ * estimate them from file size).
  *
  * Building paths come out repo-relative (e.g. "src/x.ts"), matching the
  * documented LayerItem.path contract ("relative to repository root"). We
@@ -31,7 +31,7 @@ export async function buildCityDataFromContext(
 
   const countLines = window.mainProcess?.fileCityImage?.countLines;
   if (!repositoryPath || !countLines) {
-    return estimateLineCounts(rawCityData);
+    return rawCityData;
   }
 
   try {
@@ -45,9 +45,9 @@ export async function buildCityDataFromContext(
         : filePath;
       lineCounts[key] = count;
     }
-    return estimateLineCounts(enrichWithLineCounts(rawCityData, lineCounts));
+    return enrichWithLineCounts(rawCityData, lineCounts);
   } catch {
-    return estimateLineCounts(rawCityData);
+    return rawCityData;
   }
 }
 

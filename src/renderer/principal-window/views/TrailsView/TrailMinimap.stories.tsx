@@ -3,9 +3,8 @@ import React from 'react';
 import { ThemeProvider, useTheme } from '@principal-ade/industry-theme';
 import {
   buildCityDataFromFileTree,
-  estimateLineCounts,
   type CityData,
-} from '@industry-theme/repository-composition-panels';
+} from '../../../dev-workspace/file-city-panel/cityDataBuilders';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { TrailMinimap } from './TrailMinimap';
 
@@ -13,14 +12,14 @@ import { TrailMinimap } from './TrailMinimap';
  * Build a CityData from a flat list of repo-relative file paths. Mirrors what
  * `buildCityDataFromContext` does in the app (empty rootPath → repo-relative
  * building paths) but stays in the web bundle: no main-process line counts, so
- * we fall back to `estimateLineCounts` like the real helper does offline.
+ * buildings render without line counts, like the real helper does offline.
  */
 const buildCity = (repoName: string, files: string[]): CityData => {
   const tree = new PathsFileTreeBuilder().build({
     files: files.map((f) => `${repoName}/${f}`),
     rootPath: repoName,
   });
-  return estimateLineCounts(buildCityDataFromFileTree(tree, ''));
+  return buildCityDataFromFileTree(tree, '');
 };
 
 // A medium-sized TypeScript-ish repo. Paths are repo-relative, matching the

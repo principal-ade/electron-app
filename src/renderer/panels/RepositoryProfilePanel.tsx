@@ -39,10 +39,9 @@ import {
 import { ArchitectureMapHighlightLayers, type HighlightLayer, createFileColorHighlightLayers } from '@principal-ai/file-city-react';
 import {
   buildCityDataFromFileTree,
-  estimateLineCounts,
   enrichWithLineCounts,
   type CityData,
-} from '@industry-theme/repository-composition-panels';
+} from '../dev-workspace/file-city-panel/cityDataBuilders';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { DocumentView } from 'themed-markdown';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -1027,15 +1026,14 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               }
             }
 
-            const enrichedCityData = enrichWithLineCounts(rawCityData, lineCounts);
-            finalCityData = estimateLineCounts(enrichedCityData);
+            finalCityData = enrichWithLineCounts(rawCityData, lineCounts);
           } catch (error) {
             console.error('[RepositoryProfilePanel] Failed to get line counts:', error);
-            finalCityData = estimateLineCounts(rawCityData);
+            finalCityData = rawCityData;
           }
         } else {
-          // Remote repository - use estimated line counts
-          finalCityData = estimateLineCounts(rawCityData);
+          // Remote repository - no real line counts available
+          finalCityData = rawCityData;
         }
 
         if (!cancelled) {
