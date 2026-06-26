@@ -107,18 +107,14 @@ export class TopicRegistryService {
   }
 
   async createTopic(input: CreateTopicInput): Promise<Topic> {
-    // `id` is omitted when absent so the store mints one; the cast is because
-    // TopicStore's `TopicCreate` types `id` as required even though it fills it
-    // in when omitted (the intersection that was meant to make it optional
-    // doesn't widen the required field from DraftTopic).
     const topic = await this.topicStore.createTopic({
+      id: input.id,
       title: input.title,
       description: input.description,
       trailIds: input.trailIds ?? [],
       createdBy: input.createdBy,
-      ...(input.id !== undefined ? { id: input.id } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
-    } as Parameters<TopicStore['createTopic']>[0]);
+    });
 
     // Seed sync metadata for the new local topic.
     const sync: LocalTopicSync = {
