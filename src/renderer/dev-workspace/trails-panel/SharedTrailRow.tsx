@@ -106,12 +106,12 @@ export const SharedTrailRow: React.FC<SharedTrailRowProps> = ({
         display: 'flex',
         alignItems: 'stretch',
         gap: '10px',
-        padding: '10px 12px',
-        borderRadius: '8px',
-        border: `1px solid ${theme.colors.border}`,
+        padding: '12px 16px',
+        border: 'none',
+        borderBottom: `1px solid ${theme.colors.border}`,
         background: hovered
           ? theme.colors.backgroundSecondary
-          : theme.colors.background,
+          : 'transparent',
         cursor: activating ? 'wait' : 'pointer',
         position: 'relative',
         transition: 'background 120ms, border-color 120ms',
@@ -199,8 +199,8 @@ export const SharedTrailRow: React.FC<SharedTrailRowProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            fontSize: theme.fontSizes[0],
-            color: theme.colors.textSecondary,
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textMuted,
           }}
         >
           <span>{entry.markerCount} markers</span>

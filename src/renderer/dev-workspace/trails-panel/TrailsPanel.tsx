@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { AlertCircle, RefreshCw, Route } from 'lucide-react';
+import { AlertCircle, RefreshCw, Route, Search, X } from 'lucide-react';
 import type { BaseTrailIndexEntry } from '@industry-theme/file-city-panel';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { APP_BRANDING } from '../../../shared/config/appBranding';
@@ -53,6 +53,33 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
   const shares = usePublishedTrails(repositoryPath ?? null);
   const [shareModal, setShareModal] = useState<ShareModalState | null>(null);
   const [view, setView] = useState<'local' | 'shared'>('local');
+  const [query, setQuery] = useState('');
+
+  // Text filter — matches title, repo names, and (for shared) author. Empty
+  // query matches everything. Mirrors the Topics panel's search affordance;
+  // trails have no status axis, so this is the only filter.
+  const q = query.trim().toLowerCase();
+  const filteredLocal = useMemo(
+    () =>
+      library.entries.filter(
+        (e) =>
+          !q ||
+          (e.title ?? '').toLowerCase().includes(q) ||
+          e.repoNames.some((r) => r.toLowerCase().includes(q)),
+      ),
+    [library.entries, q],
+  );
+  const filteredShared = useMemo(
+    () =>
+      shares.entries.filter(
+        (e) =>
+          !q ||
+          (e.title ?? '').toLowerCase().includes(q) ||
+          e.repoNames.some((r) => r.toLowerCase().includes(q)) ||
+          (e.createdBy?.githubLogin ?? '').toLowerCase().includes(q),
+      ),
+    [shares.entries, q],
+  );
 
   const handleRefresh = useCallback(async () => {
     await Promise.all([library.refresh(), shares.refresh()]);
@@ -226,16 +253,69 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
         {showSharedSection && (
           <ViewToggle theme={theme} value={view} onChange={setView} />
         )}
+
+        {/* Text filter */}
+        <div
+          style={{
+            minWidth: 0,
+            height: 30,
+            boxSizing: 'border-box',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '0 8px',
+            borderRadius: 6,
+            border: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.backgroundSecondary,
+          }}
+        >
+          <Search size={14} color={theme.colors.textSecondary} />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter trails"
+            aria-label="Filter trails"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+            }}
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              title="Clear filter"
+              aria-label="Clear filter"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                background: 'transparent',
+                border: 'none',
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+              }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
       </header>
 
       <div
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '12px 16px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
         }}
       >
         {(!showSharedSection || view === 'local') && (
@@ -244,9 +324,12 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
             {localReady && localEmpty && (
               <EmptyState theme={theme} repositoryPath={repositoryPath} />
             )}
+            {localReady && !localEmpty && filteredLocal.length === 0 && (
+              <NoMatches theme={theme} />
+            )}
             {localReady &&
               !localEmpty &&
-              library.entries.map((entry) => (
+              filteredLocal.map((entry) => (
                 <TrailRow
                   key={entry.id}
                   entry={entry}
@@ -288,7 +371,11 @@ export const TrailsPanel: React.FC<TrailsPanelProps> = ({
               )}
             {!sharedLoading &&
               shares.availability === 'available' &&
-              shares.entries.map((entry) => (
+              shares.entries.length > 0 &&
+              filteredShared.length === 0 && <NoMatches theme={theme} />}
+            {!sharedLoading &&
+              shares.availability === 'available' &&
+              filteredShared.map((entry) => (
                 <SharedTrailRow
                   key={entry.id}
                   entry={entry}
@@ -384,7 +471,6 @@ const Section: React.FC<{
     style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: '8px',
     }}
   >
     {title && (
@@ -403,6 +489,20 @@ const Section: React.FC<{
     )}
     {children}
   </section>
+);
+
+const NoMatches: React.FC<{ theme: ReturnType<typeof useTheme>['theme'] }> = ({
+  theme,
+}) => (
+  <div
+    style={{
+      padding: '20px 16px',
+      color: theme.colors.textSecondary,
+      fontSize: theme.fontSizes[1],
+    }}
+  >
+    No trails match the current filter.
+  </div>
 );
 
 const Loading: React.FC<{ theme: ReturnType<typeof useTheme>['theme'] }> = ({

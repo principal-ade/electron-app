@@ -435,10 +435,8 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '12px 16px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
         }}
       >
         {!ready && <Loading theme={theme} />}

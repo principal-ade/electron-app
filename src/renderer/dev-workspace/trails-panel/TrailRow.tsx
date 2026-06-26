@@ -150,11 +150,9 @@ export const TrailRow: React.FC<TrailRowProps> = ({
         display: 'flex',
         alignItems: 'stretch',
         gap: '10px',
-        padding: '10px 12px',
-        borderRadius: '8px',
-        border: `1px solid ${
-          isActive ? theme.colors.primary : theme.colors.border
-        }`,
+        padding: '12px 16px',
+        border: 'none',
+        borderBottom: `1px solid ${theme.colors.border}`,
         background: isActive
           ? theme.colors.backgroundSecondary
           : hovered

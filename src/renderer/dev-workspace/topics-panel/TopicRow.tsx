@@ -99,12 +99,12 @@ export const TopicRow: React.FC<TopicRowProps> = ({
         alignItems: 'flex-start',
         gap: 10,
         width: '100%',
-        padding: '10px 12px',
-        borderRadius: 8,
-        border: `1px solid ${theme.colors.border}`,
+        padding: '12px 16px',
+        border: 'none',
+        borderBottom: `1px solid ${theme.colors.border}`,
         background: hovered
           ? theme.colors.backgroundSecondary
-          : theme.colors.background,
+          : 'transparent',
         cursor: 'pointer',
         textAlign: 'left',
         color: theme.colors.text,
@@ -127,7 +127,7 @@ export const TopicRow: React.FC<TopicRowProps> = ({
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: theme.fontSizes[1],
+            fontSize: theme.fontSizes[2],
             fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
             marginBottom: 4,
@@ -144,8 +144,8 @@ export const TopicRow: React.FC<TopicRowProps> = ({
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: 6,
-            fontSize: theme.fontSizes[0],
-            color: theme.colors.textSecondary,
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textMuted,
           }}
         >
           <span style={{ flexShrink: 0 }}>{trailText}</span>
