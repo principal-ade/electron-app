@@ -210,6 +210,11 @@ each green on `main`:**
   per-surface scopes collapse into one. This is where shared-tabs UX lands — the
   only intended behavior change.
 
+**Landed:** 2a `652fe652a`, 2b `9da7ef06b`, 2c `7dc4d0efd` — all green on `main`,
+all behavior-identical. **Increment 3 is the only remaining step** — and the only
+behavior-changing one (it deliberately changes tab/terminal isolation), so it
+warrants its own focused pass + review rather than riding on the 2x consolidation.
+
 ## Trails surface design (decided 2026-06-20)
 
 **Do NOT migrate the monolithic `TrailsView` in place.** Build a **new
