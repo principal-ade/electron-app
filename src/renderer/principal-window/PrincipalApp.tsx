@@ -4,9 +4,7 @@ import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
 import { PrincipalEventProvider } from './PrincipalEventContext';
 import { PortalEventProvider } from './PortalEventContext';
-import { ProjectsTabsProvider } from './contexts/ProjectsTabsContext';
-import { InboxTabsProvider } from './contexts/InboxTabsContext';
-import { TopicsTabsProvider } from './contexts/TopicsTabsContext';
+import { PortalTabsProvider } from './PortalTabsContext';
 import { PortalIntentBridge } from './components/PortalIntentBridge';
 import { IntegratedShell } from './components/IntegratedShell/IntegratedShell';
 import { KeychainConsentModal } from '../components/KeychainConsentModal';
@@ -44,17 +42,12 @@ export const PrincipalApp: React.FC = () => {
           <MemoryRouter>
             <PrincipalEventProvider>
               <PortalEventProvider>
-                <ProjectsTabsProvider>
-                  <InboxTabsProvider>
-                    <TopicsTabsProvider>
-                      {/* Always-mounted listener on the portal bus, so the
-                          titlebar can open content into a view that isn't
-                          mounted yet. */}
-                      <PortalIntentBridge />
-                      <IntegratedShell />
-                    </TopicsTabsProvider>
-                  </InboxTabsProvider>
-                </ProjectsTabsProvider>
+                <PortalTabsProvider>
+                  {/* Always-mounted listener on the portal bus, so the titlebar
+                      can open content into a view that isn't mounted yet. */}
+                  <PortalIntentBridge />
+                  <IntegratedShell />
+                </PortalTabsProvider>
               </PortalEventProvider>
             </PrincipalEventProvider>
           </MemoryRouter>
