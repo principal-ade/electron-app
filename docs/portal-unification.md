@@ -1,14 +1,48 @@
-# Portal Unification — Intent & Migration Tracker
+# Portal Unification — Intended Design & Migration Tracker
 
-> Working checklist for unifying the principal-window workspace surfaces
-> (Projects / Inbox / Topics, later Trails) onto one persistent tab host fed
-> by a shared intent bus. Topic: **"Unify principal-window views into one
-> shell"** (`topic-1781729349467-vwfz5bjwv`).
+> The **intended design** + working checklist for unifying the principal-window
+> workspace surfaces (Projects / Inbox / Topics, later Trails) onto one
+> persistent tab host fed by a shared intent bus. Topic: **"Unify
+> principal-window views into one shell"** (`topic-1781729349467-vwfz5bjwv`).
 >
-> This doc is the source of truth for the **event/intent contract** and the
-> per-file migration checklist. Tick boxes as each lands. Keep it green at
-> every commit (we commit to `main`, no PRs; each increment must leave the app
-> fully working).
+> This doc is the source of truth for the **target shape**, the **event/intent
+> contract**, and the per-file migration checklist. Tick boxes as each lands.
+> Keep it green at every commit (we commit to `main`, no PRs; each increment
+> must leave the app fully working).
+>
+> **Siblings:** dated snapshots, landed-work history, and the full panel
+> inventory live in [`portal-unification-history.md`](./portal-unification-history.md).
+> The topic holds the brief, live status, and open questions.
+
+## Goal & target shape
+
+The principal window has N parallel view containers — `ProjectsView`,
+`InboxView`, `TopicsView`, `TrailsView` — each a near-identical `*PanelFramework`
+shell. The goal is **one shell where the left panel is a swappable slot and the
+tabbed content host on the right persists** across left-panel switches, so
+switching from Projects to Inbox keeps your open tabs.
+
+Target shape:
+
+- **One persistent tab host** — collapse the 3 `*TabsContext`s into a single
+  `PortalTabsContext` that lives above the swappable left panel.
+- **Left panel as a slot** — `ProjectsLeftPanel`, the inbox list, and the topics
+  list become interchangeable left-panel implementations behind one shell.
+- **One shared bus with intent-based events** — emitters fire view-agnostic
+  intents (`repository:selected`, `trail:open`, `doc:open`); the single tab host
+  is the only listener that turns intents into tabs. On a shared bus the domain
+  prefix finally does real isolation work (repo-open vs trail-open).
+
+## Naming & vocabulary (decided 2026-06-17)
+
+- **`PrincipalPortal`** — the unified, always-mounted base layer (swappable
+  left-panel slot + persistent tabbed host + header). Home and the standalone
+  views render *over* it as overlays. Fits the `Principal*` house style; stays
+  distinct from `IntegratedShell` (the window chrome above it).
+- **`PortalTabsContext`** — the unified tab state replacing the 3 `*TabsContext`s.
+- **`PortalTab`** — the unified tab union replacing `FeedTab`.
+
+(Considered-and-rejected names are recorded in the [history doc](./portal-unification-history.md).)
 
 ## Decisions locked
 
@@ -127,9 +161,61 @@ tab contexts still listen** (each bridges the new intents into its own
 4. **Trails (separate)** — build the new cross-repo panelized Trails (All-Maps
    default tab + `trail:open`/`map:open`); fold into `PortalTabsContext`.
 
-## Out of scope / staying separate
+## Trails surface design (decided 2026-06-20)
+
+**Do NOT migrate the monolithic `TrailsView` in place.** Build a **new
+panelized Trails surface** on the panel framework, mirroring the Topics
+structure (a `TrailsPanelFramework` + tabs-context analog, left list + preview
+fed through `{context, actions, events}`). The old view keeps running until the
+replacement lands; the new one becomes a first-class workspace surface that
+folds into `PortalTabsContext`. (This supersedes the earlier "defer /
+re-scaffold in place" stance — see the [history doc](./portal-unification-history.md).)
+
+The new surface is **cross-repo**, not a 1:1 reskin of today's per-repo view:
+
+- **Left panel (swappable slot): a cross-repo trail browser.** Search/filter
+  trails across *all repos that have trails*. Reuses `TrailCard` / list
+  rendering. Emits intents on the bus (Projects pattern, not Topics' direct
+  tab-context calls).
+- **Default / home tab: an "All Maps" overview.** Renders the File City map for
+  every repo in the *currently filtered* trail set — the empty-state IS an
+  interactive gallery of maps, driven by the left-panel filter. Evolves the
+  existing `ExploredProjectsGrid`.
+- **Two ways to open a tab:** click a **trail** → `trail:open` → single-trail
+  tab (`FileCityTrailPanel`); select a **map** → `map:open` **[NEW]** → that
+  repo's full map/city as its own tab.
+
+**New concepts:** a **Map tab** type (full repo city) distinct from the **Trail
+tab** (one trail's path) — `PortalTab` gains a map-tab variant; and the new
+`map:open` intent alongside `trail:open`.
+
+**Reuse anchors:** `TrailLibraryService.list()` with no `repositoryPath` already
+returns a cross-repo listing; `ExploredProjectsGrid` renders per-repo city
+minimaps; `FileCityTrailPanel` is the Trail tab unchanged.
+
+**Open design questions (resolve before building):**
+
+1. What is a "Map" tab concretely — the repo's full File City (all trails
+   selectable within), and does a full-city non-trail panel exist to reuse or is
+   it net-new?
+2. Filter semantics — when trails are filtered to a subset, do maps with no
+   matching trail drop out, and are only matching trails highlighted?
+3. Map-to-trail drill-in — does clicking a trail marker *on* a map open the
+   Trail tab, or is trail-open only from the left list?
+4. Scope of "all repos" — every repo the local trail library knows, or only
+   workspace repos with ≥1 trail?
+
+## Fast-follow: Skills & Drawings
+
+**Not out of scope — a planned fast-follow** after the core
+Projects/Inbox/Topics/Trails merge. Both are standalone overlays today and will
+be revisited once the portal tab host is in place:
 
 - **Skills** — hermetic overlay (own provider + local bus + conformant
-  agent-panels). Stays an overlay.
+  agent-panels). Already a model of the provider-wraps-conformant-panels
+  pattern; the fast-follow decides whether/how it joins the portal.
 - **Drawings** — monolithic overlay by design (drives `ExcalidrawWrapper`
-  directly to dodge a render-loop). Stays an overlay.
+  directly to dodge a render-loop). Folding it in depends on fixing the upstream
+  wrapper first.
+
+(Current-shape analysis for both is in the [history doc](./portal-unification-history.md).)
