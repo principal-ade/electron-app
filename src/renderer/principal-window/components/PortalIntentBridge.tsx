@@ -10,12 +10,12 @@
  * listener couldn't guarantee.
  *
  * Portal-unification Increment 2c: this replaces the former per-view framework
- * bridges (in Inbox/TopicsPanelFramework) AND the earlier titlebar-only bridge —
- * every open-intent emitter (left panels, the local-topic trails rail, the
- * titlebar) now emits on the portal bus, and this is the only listener. It is
- * the seed of the Increment 3 single `PortalTabsContext` host: when the three
- * buckets collapse into one tab list, surface routing goes away and this folds
- * into that host.
+ * bridges AND the earlier titlebar-only bridge — every open-intent emitter (left
+ * panels, the local-topic trails rail, the titlebar) now emits on the portal
+ * bus, and this is the only listener. Increment 3 (first cut) then collapsed the
+ * Inbox + Topics buckets into one `useWorkspaceTabs()` list hosted by the
+ * persistent `WorkspaceShell`; the `inbox`/`topics` surface routing below now
+ * targets that shared bucket (Projects stays separate until it folds in too).
  *
  * This renders nothing.
  */

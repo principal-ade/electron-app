@@ -10,17 +10,17 @@
  * and back is a pure visibility flip — open tabs, terminals, and scroll state
  * survive with no hoisting required.
  *
- * SLICE #1 SCOPE: the four workspace surfaces still swap among *themselves*
- * via the conditional below (so e.g. Projects→Inbox still unmounts Projects).
- * Collapsing them onto one persistent `PortalTabsContext` + a single swappable
- * left-panel slot is a deliberately deferred later slice — see the topic
- * "Unify principal-window views into one shell".
+ * INCREMENT 3 (first cut): Inbox + Topics are now one persistent `WorkspaceShell`
+ * — a single tabbed-terminal host (one `terminal:workspace` scope, one
+ * `useWorkspaceTabs()` bucket) whose left panel swaps by `activeView`. Switching
+ * Inbox↔Topics keeps the shell — and its open tabs + terminal — mounted. Projects
+ * still swaps in/out separately (it carries far more per-view machinery and is
+ * folded into the shell in a later step — see docs/portal-unification.md).
  */
 import React from 'react';
 import { ProjectsView } from '../../views/ProjectsView';
-import { InboxView } from '../../views/InboxView';
-import { TopicsView } from '../../views/TopicsView';
 import { TrailsView } from '../../views/TrailsView';
+import { WorkspaceShell } from '../../../workspace-shell/WorkspaceShell';
 
 /** The workspace surfaces hosted by the portal (vs. standalone overlays). */
 export type WorkspaceView = 'projects' | 'inbox' | 'topics' | 'trails';
@@ -60,8 +60,9 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
     // overlay (zIndex 2) and hide views like Settings.
     <div style={{ height: '100%', width: '100%', isolation: 'isolate' }}>
       {workspaceView === 'projects' && <ProjectsView />}
-      {workspaceView === 'inbox' && <InboxView />}
-      {workspaceView === 'topics' && <TopicsView />}
+      {(workspaceView === 'inbox' || workspaceView === 'topics') && (
+        <WorkspaceShell activeView={workspaceView} />
+      )}
       {workspaceView === 'trails' && (
         <TrailsView
           bootstrapTrailId={bootstrapTrailId}

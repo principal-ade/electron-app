@@ -1,25 +1,25 @@
 /**
- * InboxPanelFramework
+ * WorkspaceShell
  *
- * Panel framework for the InboxView, mirroring ProjectsPanelFramework but trimmed
- * to the inbox's needs.
+ * The persistent host for the Inbox + Topics surfaces (portal-unification
+ * Increment 3, first cut). It replaces the separate InboxView/InboxPanelFramework
+ * and TopicsView/TopicsPanelFramework with ONE shell:
  *
- * Layout:
- * - Left: InboxLeftPanel (Inbox + Recently Visited lists)
- * - Middle: TabbedTerminalPanel (terminal in HOME dir + opened shared-trail tabs)
- * - Right: Placeholder panel (collapsed by default)
+ * - one tabbed-terminal host reading the shared `useWorkspaceTabs()` bucket, so
+ *   the open tabs (and the single terminal) persist when you swap the left panel;
+ * - one terminal scope (`terminal:workspace`) instead of `terminal:inbox` +
+ *   `terminal:topics`;
+ * - a swappable left panel chosen by `activeView` — Inbox's list or Topics' list.
  *
- * Tab state lives in InboxTabsContext (above IntegratedShell's conditional
- * InboxView mount) so tabs survive view switches.
+ * PrincipalPortal mounts ONE instance for both the `inbox` and `topics`
+ * workspace views, passing `activeView`; switching between them keeps this
+ * component (and its terminal/tabs) mounted and only swaps the left panel.
+ *
+ * Projects is folded into this shell in a later step — it carries far more
+ * per-view machinery (see docs/portal-unification.md).
  */
 
-import React, {
-  useMemo,
-  useState,
-  useCallback,
-  useRef,
-  useEffect,
-} from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Inbox, Route, Layers, Footprints, FileText } from 'lucide-react';
 import {
@@ -27,7 +27,10 @@ import {
   type PanelLayout,
   type ConfigurablePanelLayoutHandle,
 } from '@principal-ade/panel-layouts';
-import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import {
+  PanelEventBus,
+  type PanelEventEmitter,
+} from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import {
   TerminalProvider,
@@ -35,83 +38,43 @@ import {
   useTerminalActivity,
 } from '../contexts/TerminalContext';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import {
   TabbedTerminalPanel,
-  type TerminalTab,
   type TerminalWorkingState,
   type TerminalPanelActions,
-  type BaseTab,
 } from '@industry-theme/xterm-terminal-panel';
+import { InboxLeftPanel } from '../panels/InboxLeftPanel';
+import { TopicsLeftPanel } from '../panels/TopicsLeftPanel';
+import { SharedTrailTabContent } from '../projects-view/SharedTrailTabContent';
+import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
+import { MarkdownDocTabContent } from '../projects-view/MarkdownDocTabContent';
+import { TopicTabContent } from '../inbox-view/TopicTabContent';
+import { LocalTopicTabContent } from '../topics-view/LocalTopicTabContent';
+import {
+  useWorkspaceTabs,
+  type WorkspaceTab,
+} from '../principal-window/PortalTabsContext';
+import { usePortalEvents } from '../principal-window/PortalEventContext';
+import { DocumentService } from '../services/DocumentService';
 import type {
   SharedTrailTab,
   LocalTrailTab,
   MarkdownDocTab,
+  TopicTab,
+  LocalTopicTab,
 } from '../events/portalTabs';
-import { InboxLeftPanel } from '../panels/InboxLeftPanel';
-import { SharedTrailTabContent } from '../projects-view/SharedTrailTabContent';
-import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
-import { MarkdownDocTabContent } from '../projects-view/MarkdownDocTabContent';
-import { TopicTabContent } from './TopicTabContent';
-import { useInboxTabs } from '../principal-window/contexts/InboxTabsContext';
-import { usePortalEvents } from '../principal-window/PortalEventContext';
-import { DocumentService } from '../services/DocumentService';
 
-/**
- * Landing tab shown when the inbox view opens — a hint to pick something
- * from the left panel.
- */
-export interface InboxHomeTab extends BaseTab {
-  contentType: 'inbox-home';
-}
+/** Which surface's left panel + landing the shell currently shows. */
+export type WorkspaceView = 'inbox' | 'topics';
 
-// `SharedTrailTab`, `LocalTrailTab`, and `MarkdownDocTab` are shared across the
-// Projects / Inbox / Topics surfaces — defined once in `events/portalTabs.ts`,
-// re-exported here for back-compat with existing importers (InboxTabsContext).
-export type { SharedTrailTab, LocalTrailTab, MarkdownDocTab };
-
-/**
- * Topic tab — a topic published to web-ade, opened from an inbox row. Carries
- * only the id; the panel self-fetches the topic and its trails.
- */
-export interface TopicTab extends BaseTab {
-  contentType: 'topic';
-  topicId: string;
-}
-
-export type InboxTab =
-  | TerminalTab
-  | InboxHomeTab
-  | SharedTrailTab
-  | TopicTab
-  | LocalTrailTab
-  | MarkdownDocTab;
-
-export interface InboxPanelFrameworkProps {
-  /** Local repositories — used to resolve a clone for shared-trail file trees. */
-  repositories: AlexandriaEntry[];
-  /** Event bus for panel communication. */
-  events: PanelEventEmitter;
-  /** Collapsed state for left/right panels. */
-  collapsed: { left: boolean; right: boolean };
-  /** Callback when collapsed state changes. */
-  onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
-  /** Panel layout configuration. */
-  layout: PanelLayout;
-  /** Optional panel sizes. */
-  panelSizes?: { left: number; middle: number; right: number };
-  /** Callback when panel sizes change. */
-  onPanelSizesChange?: (sizes: {
-    left: number;
-    middle: number;
-    right: number;
-  }) => void;
-}
-
-/**
- * Simple landing content for the `inbox-home` tab.
- */
-const InboxHomePanel: React.FC = () => {
+/** Centered landing hint shown by the `inbox-home` / `topics-home` tabs. */
+const HomePanel: React.FC<{ icon: React.ReactNode; title: string; body: string }> = ({
+  icon,
+  title,
+  body,
+}) => {
   const { theme } = useTheme();
   return (
     <div
@@ -130,7 +93,7 @@ const InboxHomePanel: React.FC = () => {
         fontFamily: theme.fonts.body,
       }}
     >
-      <Inbox size={32} color={theme.colors.textSecondary} />
+      {icon}
       <div
         style={{
           fontSize: theme.fontSizes[2],
@@ -138,19 +101,32 @@ const InboxHomePanel: React.FC = () => {
           color: theme.colors.text,
         }}
       >
-        Your trail inbox
+        {title}
       </div>
-      <div style={{ fontSize: theme.fontSizes[1], maxWidth: 420 }}>
-        Shared trails sent to you and trails you&apos;ve recently visited show
-        up in the panel on the left. Pick one to open it here.
-      </div>
+      <div style={{ fontSize: theme.fontSizes[1], maxWidth: 420 }}>{body}</div>
     </div>
   );
 };
 
-const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
-  repositories,
+interface WorkspaceShellInnerProps {
+  activeView: WorkspaceView;
+  events: PanelEventEmitter;
+  repositories: AlexandriaEntry[];
+  collapsed: { left: boolean; right: boolean };
+  onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
+  layout: PanelLayout;
+  panelSizes: { left: number; middle: number; right: number };
+  onPanelSizesChange: (sizes: {
+    left: number;
+    middle: number;
+    right: number;
+  }) => void;
+}
+
+const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
+  activeView,
   events,
+  repositories,
   collapsed,
   onCollapsedChange,
   layout,
@@ -160,7 +136,6 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
   const { theme } = useTheme();
   const panelLayoutRef = useRef<ConfigurablePanelLayoutHandle>(null);
 
-  // Terminal context
   const {
     context: terminalCtx,
     actions: terminalActions,
@@ -168,15 +143,12 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
   } = useTerminalProvider();
   const { activities: terminalActivities } = useTerminalActivity();
 
-  // Local collapsed state tracking
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(collapsed.left);
-
-  // Base directory from user preferences (terminal cwd)
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
     string | null
   >(null);
 
-  // Refs so renderTabContent stays stable across renders
+  // Refs so renderTabContent stays stable across renders.
   const eventsRef = useRef(events);
   const repositoriesRef = useRef(repositories);
   useEffect(() => {
@@ -184,22 +156,19 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
     repositoriesRef.current = repositories;
   });
 
-  // Tab state lives in InboxTabsContext (above IntegratedShell's conditional
-  // InboxView mount) so tabs survive view switches.
+  // The shared Inbox+Topics tab bucket (the persistent host's tab list).
   const { tabs, setTabs, activeTabId, setActiveTabId, openMarkdownDoc } =
-    useInboxTabs();
-  // The left panel emits open intents on the portal bus; the always-mounted
-  // PortalIntentBridge is the sole listener that turns them into tabs.
+    useWorkspaceTabs();
+  // The left panels emit open intents on the portal bus (PortalIntentBridge
+  // turns them into tabs).
   const { events: portalEvents } = usePortalEvents();
 
-  // Load base directory from user preferences
   useEffect(() => {
     const loadBaseDirectory = async () => {
       const preferences = await UserPreferencesService.getPreferences();
       setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
     };
     loadBaseDirectory();
-
     const unsubscribe = UserPreferencesService.onPreferencesUpdated(
       (preferences) => {
         setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
@@ -210,7 +179,6 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
     };
   }, []);
 
-  // Convert terminal activities to workingStates record
   const workingStates = useMemo(() => {
     const states: Record<string, TerminalWorkingState> = {};
     for (const activity of terminalActivities) {
@@ -223,7 +191,6 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
     return states;
   }, [terminalActivities]);
 
-  // Terminal context for the panel
   const terminalPanelContext = useMemo(
     () => ({
       currentScope: { type: 'workspace' as const },
@@ -251,15 +218,18 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
 
   const terminalDirectory = baseDefaultDirectory || process.env.HOME || '/';
 
-  // Tab rendering callbacks
-  const renderTabIcon = useCallback((tab: InboxTab) => {
+  const renderTabIcon = useCallback((tab: WorkspaceTab) => {
     switch (tab.contentType) {
       case 'inbox-home':
         return <Inbox size={14} />;
+      case 'topics-home':
+        return <Layers size={14} />;
       case 'shared-trail':
         return <Route size={14} />;
       case 'topic':
         return <Layers size={14} />;
+      case 'local-topic':
+        return <FileText size={14} />;
       case 'local-trail':
         return <Footprints size={14} />;
       case 'markdown-doc':
@@ -269,10 +239,24 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
     }
   }, []);
 
-  const renderTabContent = useCallback((tab: InboxTab, _isActive: boolean) => {
+  const renderTabContent = useCallback((tab: WorkspaceTab, _isActive: boolean) => {
     switch (tab.contentType) {
       case 'inbox-home':
-        return <InboxHomePanel />;
+        return (
+          <HomePanel
+            icon={<Inbox size={32} />}
+            title="Your trail inbox"
+            body="Shared trails sent to you and trails you've recently visited show up in the panel on the left. Pick one to open it here."
+          />
+        );
+      case 'topics-home':
+        return (
+          <HomePanel
+            icon={<Layers size={32} />}
+            title="Your topics"
+            body="Topics bundle related trails on one subject. Pick a topic from the panel on the left to read its description here."
+          />
+        );
       case 'shared-trail': {
         const trailTab = tab as SharedTrailTab;
         return (
@@ -293,6 +277,17 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
             topicId={topicTab.topicId}
             events={eventsRef.current}
             repositories={repositoriesRef.current}
+          />
+        );
+      }
+      case 'local-topic': {
+        const topicTab = tab as LocalTopicTab;
+        return (
+          <LocalTopicTabContent
+            key={topicTab.id}
+            topicId={topicTab.topicId}
+            title={topicTab.title}
+            events={eventsRef.current}
           />
         );
       }
@@ -322,10 +317,10 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
     }
   }, []);
 
-  // Open links clicked in the terminal in the default browser
+  // Open links clicked in the terminal in the default browser.
   useTerminalLinkHandler(events);
 
-  // Listen for terminal activity events
+  // Reflect terminal working-state broadcasts.
   useEffect(() => {
     const handleActivityChanged = (event: {
       type: string;
@@ -345,11 +340,7 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
   }, [events, activityActions]);
 
   // Bridge handoff: a doc pushed from the Principal MCP Bridge
-  // (POST /api/document/open) arrives as an OPEN_DOCUMENT IPC when the
-  // principal window is focused on the Inbox view. Open (or focus) a markdown
-  // tab alongside the terminal. This listener only runs while the Inbox view
-  // is mounted, which is the renderer-side gate: the doc lands here only when
-  // the focused window is actually showing this tabbed-terminal surface.
+  // (POST /api/document/open) opens (or focuses) a markdown tab.
   useEffect(() => {
     return DocumentService.onOpenDocument(({ filePath, repositoryPath }) => {
       if (!filePath) return;
@@ -357,7 +348,6 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
     });
   }, [openMarkdownDoc]);
 
-  // Handle panel resize (detect left collapse)
   const handlePanelResize = useCallback(
     (sizes: { left: number; middle: number; right: number }) => {
       const leftCollapsed = sizes.left < 5;
@@ -365,18 +355,22 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
         setIsLeftCollapsed(leftCollapsed);
         onCollapsedChange({ left: leftCollapsed, right: false });
       }
-      onPanelSizesChange?.(sizes);
+      onPanelSizesChange(sizes);
     },
     [isLeftCollapsed, onCollapsedChange, onPanelSizesChange],
   );
 
-  // Define all three panels (terminal must sit in the middle)
   const allPanels = useMemo(
     () => [
       {
-        id: 'inbox-list',
-        label: 'Inbox',
-        content: <InboxLeftPanel events={portalEvents} />,
+        id: 'workspace-list',
+        label: activeView === 'inbox' ? 'Inbox' : 'Topics',
+        content:
+          activeView === 'inbox' ? (
+            <InboxLeftPanel events={portalEvents} />
+          ) : (
+            <TopicsLeftPanel events={portalEvents} />
+          ),
       },
       {
         id: 'terminal',
@@ -391,7 +385,7 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
               flexDirection: 'column',
             }}
           >
-            <TabbedTerminalPanel<InboxTab>
+            <TabbedTerminalPanel<WorkspaceTab>
               context={terminalPanelContext}
               actions={terminalActions as TerminalPanelActions}
               events={events}
@@ -426,8 +420,9 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
       },
     ],
     [
-      events,
+      activeView,
       portalEvents,
+      events,
       terminalPanelContext,
       terminalActions,
       terminalCtx.terminalContext,
@@ -470,20 +465,78 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
 };
 
 /**
- * InboxPanelFramework — main component with TerminalProvider wrapper.
+ * WorkspaceShell — self-contained host (owns its local event bus, repositories
+ * load, layout state) wrapped in a single `terminal:workspace` TerminalProvider.
  */
-export const InboxPanelFramework: React.FC<InboxPanelFrameworkProps> = (
-  props,
-) => {
+export const WorkspaceShell: React.FC<{ activeView: WorkspaceView }> = ({
+  activeView,
+}) => {
+  const { theme } = useTheme();
+  const events = useMemo(() => new PanelEventBus(), []);
+
+  // Local repositories — used to resolve a clone for shared-trail file trees.
+  const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const fetchRepositories = async () => {
+      try {
+        const repos = await AlexandriaService.getRepositories();
+        if (!cancelled) setRepositories(repos);
+      } catch (err) {
+        console.error('[WorkspaceShell] Failed to fetch repositories:', err);
+        if (!cancelled) setRepositories([]);
+      }
+    };
+    void fetchRepositories();
+    const unsubscribe = AlexandriaService.onRepositoryChange(() => {
+      void fetchRepositories();
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  const [layout] = useState<PanelLayout>({
+    left: 'workspace-list',
+    middle: 'terminal',
+    right: 'placeholder',
+  });
+  const [collapsed, setCollapsed] = useState({ left: false, right: false });
+  const [panelSizes, setPanelSizes] = useState({
+    left: 25,
+    middle: 75,
+    right: 0,
+  });
+
   return (
-    <TerminalProvider
-      repositoryPath=""
-      terminalContext="terminal:inbox"
-      repoName="Inbox"
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        backgroundColor: theme.colors.background,
+      }}
     >
-      <InboxPanelFrameworkInner {...props} />
-    </TerminalProvider>
+      <TerminalProvider
+        repositoryPath=""
+        terminalContext="terminal:workspace"
+        repoName="Workspace"
+      >
+        <WorkspaceShellInner
+          activeView={activeView}
+          events={events}
+          repositories={repositories}
+          collapsed={collapsed}
+          onCollapsedChange={setCollapsed}
+          layout={layout}
+          panelSizes={panelSizes}
+          onPanelSizesChange={setPanelSizes}
+        />
+      </TerminalProvider>
+    </div>
   );
 };
 
-export default InboxPanelFramework;
+export default WorkspaceShell;

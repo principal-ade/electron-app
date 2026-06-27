@@ -9,8 +9,9 @@
  * full width.
  *
  * Selecting a trail from the rail emits a `trail:open` intent (source `local`)
- * on the panel bus; TopicsPanelFramework opens it as a `local-trail` tab,
- * reusing the same `LocalTrailTabContent` explorer the inbox/feed views use.
+ * on the portal bus; the always-mounted PortalIntentBridge opens it as a
+ * `local-trail` tab (hosted by the persistent WorkspaceShell), reusing the same
+ * `LocalTrailTabContent` explorer the inbox/feed views use.
  *
  * No `workspaceId` is passed to the body: doc links resolve optimistically,
  * which is the right default for this cross-project reading surface.

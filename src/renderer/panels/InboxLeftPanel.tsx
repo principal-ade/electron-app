@@ -8,8 +8,9 @@
  * - Recently Visited: trails the user has opened, newest first.
  *
  * All are fetched from web-ade via the renderer WebAdeService. Clicking a row
- * emits a view-agnostic `trail:open` / `topic:open` intent on the panel bus;
- * InboxPanelFramework is the sole listener that turns it into a tab.
+ * emits a view-agnostic `trail:open` / `topic:open` intent on the portal bus;
+ * the always-mounted PortalIntentBridge is the sole listener that turns it into
+ * a tab (hosted by the persistent WorkspaceShell).
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';

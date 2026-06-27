@@ -1,19 +1,19 @@
 /**
  * PortalTabsContext
  *
- * Single owner of the workspace tab state for all three surfaces
- * (Projects / Inbox / Topics). Portal-unification Increment 2b: the three former
- * providers — `ProjectsTabsProvider` / `InboxTabsProvider` / `TopicsTabsProvider`
- * — are consolidated into one `PortalTabsProvider` that holds all three
- * per-surface buckets and provides each through its own (still separate) React
- * context. Every surface keeps its own independent tab list + `activeTabId` and
- * its own render isolation, so this is behavior-identical to the three providers
- * it replaces — it just gives the buckets one owner.
+ * Owner of the workspace tab state. Portal-unification:
  *
- * The per-surface compat hooks `useProjectsTabs` / `useInboxTabs` /
- * `useTopicsTabs` are re-exported from their old `contexts/*TabsContext` module
- * paths, so every existing consumer is unchanged. These three buckets collapse
- * into a single tab list over one persistent host in Increment 3.
+ * - **Projects** keeps its own bucket (Increment 2b consolidated the provider;
+ *   the Projects surface is folded into the shared host in a later step).
+ * - **Inbox + Topics** now share ONE bucket (Increment 3, first cut): a single
+ *   tab list + `activeTabId` hosted by the persistent `WorkspaceShell`, so
+ *   switching the left panel between Inbox and Topics keeps your open tabs and a
+ *   single terminal. `useWorkspaceTabs` is the shell's view of that bucket.
+ *
+ * The legacy per-surface compat hooks `useInboxTabs` / `useTopicsTabs` still
+ * work — they read the shared workspace bucket and expose each surface's
+ * `openTopic` (web-ade `topic` vs local `local-topic`). `useProjectsTabs` is
+ * unchanged.
  */
 import React, {
   createContext,
@@ -22,6 +22,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import type { TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import type {
   ActivityFeedTab,
   FeedTab,
@@ -29,24 +30,33 @@ import type {
   UserProfileTab,
 } from '../projects-view/ProjectsPanelFramework';
 import type {
-  InboxTab,
-  InboxHomeTab,
-  TopicTab,
-} from '../inbox-view/InboxPanelFramework';
-import type {
-  TopicsTab,
-  TopicsHomeTab,
-  LocalTopicTab,
-} from '../topics-view/TopicsPanelFramework';
-import type {
   SharedTrailTab,
   LocalTrailTab,
   MarkdownDocTab,
+  InboxHomeTab,
+  TopicTab,
+  TopicsHomeTab,
+  LocalTopicTab,
 } from '../events/portalTabs';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
 
+/**
+ * The unified Inbox+Topics tab union hosted by `WorkspaceShell`. It is the
+ * superset of the former `InboxTab` and `TopicsTab` unions (deduped — both
+ * carried `TerminalTab` / `LocalTrailTab`).
+ */
+export type WorkspaceTab =
+  | TerminalTab
+  | InboxHomeTab
+  | TopicsHomeTab
+  | SharedTrailTab
+  | TopicTab
+  | LocalTopicTab
+  | LocalTrailTab
+  | MarkdownDocTab;
+
 // ----------------------------------------------------------------------------
-// Per-surface slice shapes (unchanged from the three former *TabsContextValues).
+// Slice shapes
 // ----------------------------------------------------------------------------
 
 export interface ProjectsTabsContextValue {
@@ -66,9 +76,28 @@ export interface ProjectsTabsContextValue {
   openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
 }
 
+/** The shared Inbox+Topics bucket, as the `WorkspaceShell` sees it. */
+export interface WorkspaceTabsContextValue {
+  tabs: WorkspaceTab[];
+  setTabs: React.Dispatch<React.SetStateAction<WorkspaceTab[]>>;
+  activeTabId: string | null;
+  setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
+  /** Open a `shared-trail-<trailId>` tab (a web-ade trail). */
+  openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
+  /** Open a `topic-<topicId>` tab (a published web-ade topic). */
+  openWebAdeTopic: (topicId: string, title?: string) => void;
+  /** Open a `local-topic-<topicId>` tab (an on-disk topic). */
+  openLocalTopic: (topicId: string, title?: string) => void;
+  /** Open a `local-trail-<trailId>` tab. */
+  openLocalTrail: (trailId: string, title?: string) => void;
+  /** Open a `markdown-doc-<filePath>` tab. */
+  openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
+}
+
+/** Back-compat shape for `useInboxTabs` (its `openTopic` = web-ade topic). */
 export interface InboxTabsContextValue {
-  tabs: InboxTab[];
-  setTabs: React.Dispatch<React.SetStateAction<InboxTab[]>>;
+  tabs: WorkspaceTab[];
+  setTabs: React.Dispatch<React.SetStateAction<WorkspaceTab[]>>;
   activeTabId: string | null;
   setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
   openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
@@ -77,9 +106,10 @@ export interface InboxTabsContextValue {
   openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
 }
 
+/** Back-compat shape for `useTopicsTabs` (its `openTopic` = local topic). */
 export interface TopicsTabsContextValue {
-  tabs: TopicsTab[];
-  setTabs: React.Dispatch<React.SetStateAction<TopicsTab[]>>;
+  tabs: WorkspaceTab[];
+  setTabs: React.Dispatch<React.SetStateAction<WorkspaceTab[]>>;
   activeTabId: string | null;
   setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
   openTopic: (topicId: string, title?: string) => void;
@@ -87,11 +117,12 @@ export interface TopicsTabsContextValue {
 }
 
 const ProjectsTabsContext = createContext<ProjectsTabsContextValue | null>(null);
-const InboxTabsContext = createContext<InboxTabsContextValue | null>(null);
-const TopicsTabsContext = createContext<TopicsTabsContextValue | null>(null);
+const WorkspaceTabsContext = createContext<WorkspaceTabsContextValue | null>(
+  null,
+);
 
 // ----------------------------------------------------------------------------
-// Projects slice
+// Projects slice (unchanged)
 // ----------------------------------------------------------------------------
 
 const PROJECTS_INITIAL_TABS: FeedTab[] = [
@@ -232,19 +263,20 @@ function useProjectsTabsValue(): ProjectsTabsContextValue {
 }
 
 // ----------------------------------------------------------------------------
-// Inbox slice
+// Workspace slice (shared Inbox + Topics)
 // ----------------------------------------------------------------------------
 
-const INBOX_INITIAL_TABS: InboxTab[] = [
+const WORKSPACE_INITIAL_TABS: WorkspaceTab[] = [
+  { id: 'inbox-home', contentType: 'inbox-home', label: 'Inbox' } as InboxHomeTab,
   {
-    id: 'inbox-home',
-    contentType: 'inbox-home',
-    label: 'Inbox',
-  } as InboxHomeTab,
+    id: 'topics-home',
+    contentType: 'topics-home',
+    label: 'Topics',
+  } as TopicsHomeTab,
 ];
 
-function useInboxTabsValue(): InboxTabsContextValue {
-  const [tabs, setTabs] = useState<InboxTab[]>(INBOX_INITIAL_TABS);
+function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
+  const [tabs, setTabs] = useState<WorkspaceTab[]>(WORKSPACE_INITIAL_TABS);
   const [activeTabId, setActiveTabId] = useState<string | null>('inbox-home');
 
   const openSharedTrail = useCallback(
@@ -269,7 +301,7 @@ function useInboxTabsValue(): InboxTabsContextValue {
     [],
   );
 
-  const openTopic = useCallback((topicId: string, title?: string) => {
+  const openWebAdeTopic = useCallback((topicId: string, title?: string) => {
     const tabId = `topic-${topicId}`;
 
     setTabs((prev) => {
@@ -280,6 +312,24 @@ function useInboxTabsValue(): InboxTabsContextValue {
         contentType: 'topic',
         closable: true,
         topicId,
+      };
+      return [...prev, newTab];
+    });
+    setActiveTabId(tabId);
+  }, []);
+
+  const openLocalTopic = useCallback((topicId: string, title?: string) => {
+    const tabId = `local-topic-${topicId}`;
+
+    setTabs((prev) => {
+      if (prev.some((t) => t.id === tabId)) return prev;
+      const newTab: LocalTopicTab = {
+        id: tabId,
+        label: title || 'Topic',
+        contentType: 'local-topic',
+        closable: true,
+        topicId,
+        title,
       };
       return [...prev, newTab];
     });
@@ -324,14 +374,15 @@ function useInboxTabsValue(): InboxTabsContextValue {
     [],
   );
 
-  return useMemo<InboxTabsContextValue>(
+  return useMemo<WorkspaceTabsContextValue>(
     () => ({
       tabs,
       setTabs,
       activeTabId,
       setActiveTabId,
       openSharedTrail,
-      openTopic,
+      openWebAdeTopic,
+      openLocalTopic,
       openLocalTrail,
       openMarkdownDoc,
     }),
@@ -339,7 +390,8 @@ function useInboxTabsValue(): InboxTabsContextValue {
       tabs,
       activeTabId,
       openSharedTrail,
-      openTopic,
+      openWebAdeTopic,
+      openLocalTopic,
       openLocalTrail,
       openMarkdownDoc,
     ],
@@ -347,91 +399,20 @@ function useInboxTabsValue(): InboxTabsContextValue {
 }
 
 // ----------------------------------------------------------------------------
-// Topics slice
+// Unified provider + hooks
 // ----------------------------------------------------------------------------
 
-const TOPICS_INITIAL_TABS: TopicsTab[] = [
-  {
-    id: 'topics-home',
-    contentType: 'topics-home',
-    label: 'Topics',
-  } as TopicsHomeTab,
-];
-
-function useTopicsTabsValue(): TopicsTabsContextValue {
-  const [tabs, setTabs] = useState<TopicsTab[]>(TOPICS_INITIAL_TABS);
-  const [activeTabId, setActiveTabId] = useState<string | null>('topics-home');
-
-  const openTopic = useCallback((topicId: string, title?: string) => {
-    const tabId = `local-topic-${topicId}`;
-
-    setTabs((prev) => {
-      if (prev.some((t) => t.id === tabId)) return prev;
-      const newTab: LocalTopicTab = {
-        id: tabId,
-        label: title || 'Topic',
-        contentType: 'local-topic',
-        closable: true,
-        topicId,
-        title,
-      };
-      return [...prev, newTab];
-    });
-    setActiveTabId(tabId);
-  }, []);
-
-  const openLocalTrail = useCallback((trailId: string, title?: string) => {
-    const tabId = `local-trail-${trailId}`;
-
-    setTabs((prev) => {
-      if (prev.some((t) => t.id === tabId)) return prev;
-      const newTab: LocalTrailTab = {
-        id: tabId,
-        label: title || 'Trail',
-        contentType: 'local-trail',
-        closable: true,
-        trailId,
-      };
-      return [...prev, newTab];
-    });
-    setActiveTabId(tabId);
-  }, []);
-
-  return useMemo<TopicsTabsContextValue>(
-    () => ({
-      tabs,
-      setTabs,
-      activeTabId,
-      setActiveTabId,
-      openTopic,
-      openLocalTrail,
-    }),
-    [tabs, activeTabId, openTopic, openLocalTrail],
-  );
-}
-
-// ----------------------------------------------------------------------------
-// Unified provider + per-surface hooks
-// ----------------------------------------------------------------------------
-
-/**
- * Owns all three surfaces' tab buckets and provides each through its own
- * context, so a consumer only re-renders when *its* surface changes.
- */
 export const PortalTabsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const projects = useProjectsTabsValue();
-  const inbox = useInboxTabsValue();
-  const topics = useTopicsTabsValue();
+  const workspace = useWorkspaceTabsValue();
 
   return (
     <ProjectsTabsContext.Provider value={projects}>
-      <InboxTabsContext.Provider value={inbox}>
-        <TopicsTabsContext.Provider value={topics}>
-          {children}
-        </TopicsTabsContext.Provider>
-      </InboxTabsContext.Provider>
+      <WorkspaceTabsContext.Provider value={workspace}>
+        {children}
+      </WorkspaceTabsContext.Provider>
     </ProjectsTabsContext.Provider>
   );
 };
@@ -444,18 +425,50 @@ export function useProjectsTabs(): ProjectsTabsContextValue {
   return ctx;
 }
 
-export function useInboxTabs(): InboxTabsContextValue {
-  const ctx = useContext(InboxTabsContext);
+export function useWorkspaceTabs(): WorkspaceTabsContextValue {
+  const ctx = useContext(WorkspaceTabsContext);
   if (!ctx) {
-    throw new Error('useInboxTabs must be used within PortalTabsProvider');
+    throw new Error('useWorkspaceTabs must be used within PortalTabsProvider');
   }
   return ctx;
 }
 
+/**
+ * Back-compat: the Inbox surface's view of the shared workspace bucket. Its
+ * `openTopic` opens a web-ade `topic` tab.
+ */
+export function useInboxTabs(): InboxTabsContextValue {
+  const ws = useWorkspaceTabs();
+  return useMemo(
+    () => ({
+      tabs: ws.tabs,
+      setTabs: ws.setTabs,
+      activeTabId: ws.activeTabId,
+      setActiveTabId: ws.setActiveTabId,
+      openSharedTrail: ws.openSharedTrail,
+      openTopic: ws.openWebAdeTopic,
+      openLocalTrail: ws.openLocalTrail,
+      openMarkdownDoc: ws.openMarkdownDoc,
+    }),
+    [ws],
+  );
+}
+
+/**
+ * Back-compat: the Topics surface's view of the shared workspace bucket. Its
+ * `openTopic` opens a local `local-topic` tab.
+ */
 export function useTopicsTabs(): TopicsTabsContextValue {
-  const ctx = useContext(TopicsTabsContext);
-  if (!ctx) {
-    throw new Error('useTopicsTabs must be used within PortalTabsProvider');
-  }
-  return ctx;
+  const ws = useWorkspaceTabs();
+  return useMemo(
+    () => ({
+      tabs: ws.tabs,
+      setTabs: ws.setTabs,
+      activeTabId: ws.activeTabId,
+      setActiveTabId: ws.setActiveTabId,
+      openTopic: ws.openLocalTopic,
+      openLocalTrail: ws.openLocalTrail,
+    }),
+    [ws],
+  );
 }

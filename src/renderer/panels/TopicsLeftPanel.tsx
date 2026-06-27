@@ -1,10 +1,11 @@
 /**
  * TopicsLeftPanel
  *
- * Left panel for the TopicsView. Lists all LOCAL topics (from the on-disk topic
- * store via `TopicService.getTopics`), most-recently-updated first. Clicking a
- * row emits a `topic:open` intent on the panel bus; TopicsPanelFramework opens
- * it as a tab that renders the markdown description on the right.
+ * Left panel for the Topics surface. Lists all LOCAL topics (from the on-disk
+ * topic store via `TopicService.getTopics`), most-recently-updated first.
+ * Clicking a row emits a `topic:open` intent on the portal bus; the
+ * always-mounted PortalIntentBridge opens it as a tab (hosted by the persistent
+ * WorkspaceShell) that renders the markdown description on the right.
  *
  * Unlike the inbox lists, this is not auth-gated — topics are read from the
  * local store, so there's no sign-in state. The list live-refreshes on any

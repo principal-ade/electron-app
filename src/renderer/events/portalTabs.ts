@@ -4,10 +4,12 @@
  *
  * `SharedTrailTab`, `LocalTrailTab`, and `MarkdownDocTab` were historically
  * declared 2–3× (once per framework) with identical shapes. They're defined
- * once here so the surfaces — and the future unified `PortalTab` union (see
- * docs/portal-unification.md, Increment 2) — share a single definition. Each
- * framework imports + re-exports these for back-compat with existing importers
- * (the per-view `*TabsContext`s).
+ * once here so the surfaces — and the unified `WorkspaceTab` union (see
+ * docs/portal-unification.md, Increment 3) — share a single definition.
+ *
+ * The Inbox/Topics landing + topic tab types (`InboxHomeTab`, `TopicTab`,
+ * `TopicsHomeTab`, `LocalTopicTab`) live here too now that the persistent
+ * `WorkspaceShell` (not the retired per-view frameworks) renders them.
  */
 import type { BaseTab } from '@industry-theme/xterm-terminal-panel';
 
@@ -43,4 +45,34 @@ export interface MarkdownDocTab extends BaseTab {
   contentType: 'markdown-doc';
   filePath: string;
   repositoryPath?: string;
+}
+
+/** Landing tab for the Inbox surface — a hint to pick a trail from the left. */
+export interface InboxHomeTab extends BaseTab {
+  contentType: 'inbox-home';
+}
+
+/**
+ * Topic tab — a topic published to web-ade, opened from an inbox row. Carries
+ * only the id; `TopicTabContent` self-fetches the topic and its trails.
+ */
+export interface TopicTab extends BaseTab {
+  contentType: 'topic';
+  topicId: string;
+}
+
+/** Landing tab for the Topics surface — a hint to pick a topic from the left. */
+export interface TopicsHomeTab extends BaseTab {
+  contentType: 'topics-home';
+}
+
+/**
+ * Local topic tab — a topic from the on-disk topic store, opened from a left
+ * panel row. Carries the id (the body self-fetches) plus the title for the tab
+ * label / header.
+ */
+export interface LocalTopicTab extends BaseTab {
+  contentType: 'local-topic';
+  topicId: string;
+  title?: string;
 }
