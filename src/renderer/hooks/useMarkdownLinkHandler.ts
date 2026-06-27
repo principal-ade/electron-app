@@ -20,6 +20,7 @@ import { useCallback, useState } from 'react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { ShellService } from '../main-process-api/ShellService';
 import type { ResolvedDocLink } from './useWorkspaceFileIndex';
+import type { PurlResolution } from '../../shared/utils/resolvePurlLink';
 
 /** Schemes handed off to the OS browser rather than resolved as docs. */
 const EXTERNAL_SCHEME = /^(https?:|mailto:|tel:|vscode:)/i;
@@ -37,7 +38,14 @@ export interface DocLinkCandidate {
  */
 export type LinkNotice =
   | { kind: 'missing'; path: string }
-  | { kind: 'ambiguous'; path: string; candidates: DocLinkCandidate[] };
+  | { kind: 'ambiguous'; path: string; candidates: DocLinkCandidate[] }
+  /**
+   * A valid purl file-link whose repo isn't cloned locally. We know exactly
+   * which repo to offer (`repoPurl`); the file (`path`) is the purl subpath.
+   * Remote (clone-less) open isn't built yet, so the notice points the user at
+   * adding/cloning the project. See `docs/purl-aware-doc-link-clicking.md`.
+   */
+  | { kind: 'needs-clone'; path: string; repoPurl: string };
 
 export interface MarkdownLinkHandler {
   /** Pass to `DocumentView` / `IndustryMarkdownSlide` `onLinkClick`. */
@@ -76,6 +84,14 @@ export interface MarkdownLinkHandlerOptions {
    * while trees are still loading.
    */
   resolve?: (rawPath: string) => ResolvedDocLink;
+  /**
+   * Resolver for purl-qualified links (`pkg:type/owner/repo#path`), e.g. from
+   * `useRepoPurlResolver`. Purls are handled *before* the bare-path logic below
+   * — the `#subpath` is the file, so it must be parsed before any `#`-split.
+   * Registry-wide and window-independent: the same purl resolves the same way
+   * everywhere. Omit it and purl links are simply ignored (back-compat).
+   */
+  resolvePurl?: (href: string) => PurlResolution;
   /** `source` stamped on the emitted event (for provenance / debugging). */
   source?: string;
 }
@@ -103,6 +119,7 @@ export const useMarkdownLinkHandler = ({
   repositoryPath,
   basePath,
   resolve,
+  resolvePurl,
   source = 'markdown-link',
 }: MarkdownLinkHandlerOptions): MarkdownLinkHandler => {
   const [notice, setNotice] = useState<LinkNotice | null>(null);
@@ -125,6 +142,30 @@ export const useMarkdownLinkHandler = ({
       // themed-markdown passes the href verbatim (confirmed): raw relative/
       // absolute paths, `#fragments` and `..` segments preserved, no encoding.
       if (!href) return;
+
+      // Purl links (`pkg:…#subpath`) must be handled FIRST — before the
+      // external-scheme test and, critically, before the `#`-split below, which
+      // would otherwise discard the subpath (the actual file). Resolution is
+      // registry-wide; a `needs-clone` verdict surfaces the clone affordance.
+      if (href.startsWith('pkg:')) {
+        if (!resolvePurl) return; // no purl resolver wired → ignore (back-compat)
+        const result = resolvePurl(href);
+        if (result.status === 'local') {
+          open(result.filePath, result.repositoryPath);
+          return;
+        }
+        if (result.status === 'needs-clone') {
+          setNotice({
+            kind: 'needs-clone',
+            path: result.subpath,
+            repoPurl: result.repoPurl,
+          });
+          return;
+        }
+        // status === 'unresolvable' (malformed / unsafe / bare repo purl).
+        setNotice({ kind: 'missing', path: href });
+        return;
+      }
 
       // External links → OS browser; never open as a tab.
       if (EXTERNAL_SCHEME.test(href)) {
@@ -180,7 +221,7 @@ export const useMarkdownLinkHandler = ({
         : joinAndNormalize(root, cleanPath);
       open(absolutePath, repositoryPath);
     },
-    [resolve, open, basePath, repositoryPath],
+    [resolve, resolvePurl, open, basePath, repositoryPath],
   );
 
   const dismissNotice = useCallback(() => setNotice(null), []);

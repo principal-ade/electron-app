@@ -34,6 +34,14 @@ import {
 } from './topicImageDrop';
 import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
 import { useWorkspaceFileIndex } from '../../hooks/useWorkspaceFileIndex';
+import { useRepoPurlResolver } from '../../hooks/useRepoPurlResolver';
+
+/**
+ * Extra URI scheme to keep on link hrefs through markdown sanitize, so
+ * purl-qualified doc links (`pkg:type/owner/repo#path`) reach the click handler
+ * instead of having their href stripped. Module-level for a stable identity.
+ */
+const PURL_LINK_PROTOCOLS = ['pkg'];
 import { MarkdownLinkNotice } from '../../components/MarkdownLinkNotice';
 
 const ASSET_SCHEME = 'asset://';
@@ -188,10 +196,12 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
 }) => {
   const { theme } = useTheme();
   const { resolve } = useWorkspaceFileIndex(workspaceId);
+  const { resolvePurl } = useRepoPurlResolver();
   const { onLinkClick, notice, dismissNotice, openCandidate } =
     useMarkdownLinkHandler({
       events,
       resolve,
+      resolvePurl,
       repositoryPath,
       source: linkSource,
     });
@@ -679,6 +689,9 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
             theme={theme}
             enableKeyboardScrolling={false}
             onLinkClick={onLinkClick}
+            // Let purl doc links (`pkg:…#path`) survive href sanitize so they
+            // reach onLinkClick / the purl resolver instead of being stripped.
+            allowedLinkProtocols={PURL_LINK_PROTOCOLS}
             onOpenMermaidInTab={handleOpenMermaidInTab}
             selectableBlocks
             deletionMode="text"

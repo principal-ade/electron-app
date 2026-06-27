@@ -12,7 +12,7 @@
 
 import React, { useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FileQuestion, FolderTree, X } from 'lucide-react';
+import { FileQuestion, FolderTree, FolderGit2, X } from 'lucide-react';
 import type {
   DocLinkCandidate,
   LinkNotice,
@@ -68,19 +68,17 @@ export const MarkdownLinkNotice: React.FC<MarkdownLinkNoticeProps> = ({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-        {notice.kind === 'ambiguous' ? (
-          <FolderTree
-            size={15}
-            color={theme.colors.textSecondary}
-            style={{ flexShrink: 0, marginTop: 1 }}
-          />
-        ) : (
-          <FileQuestion
-            size={15}
-            color={theme.colors.textSecondary}
-            style={{ flexShrink: 0, marginTop: 1 }}
-          />
-        )}
+        {(() => {
+          const iconProps = {
+            size: 15,
+            color: theme.colors.textSecondary,
+            style: { flexShrink: 0, marginTop: 1 },
+          };
+          if (notice.kind === 'ambiguous') return <FolderTree {...iconProps} />;
+          if (notice.kind === 'needs-clone')
+            return <FolderGit2 {...iconProps} />;
+          return <FileQuestion {...iconProps} />;
+        })()}
         <div
           style={{
             flex: 1,
@@ -100,6 +98,13 @@ export const MarkdownLinkNotice: React.FC<MarkdownLinkNoticeProps> = ({
             <span>
               <span style={codeStyle}>{notice.path}</span> exists in multiple
               projects — open which?
+            </span>
+          )}
+          {notice.kind === 'needs-clone' && (
+            <span>
+              <span style={codeStyle}>{notice.path}</span> lives in{' '}
+              <span style={codeStyle}>{notice.repoPurl}</span>, which isn&apos;t
+              added to this machine yet. Add the project to open its files.
             </span>
           )}
         </div>

@@ -348,6 +348,28 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     });
   }, [openMarkdownDoc]);
 
+  // Bridge in-document doc links. The shared markdown link handler
+  // (`useMarkdownLinkHandler`, used by topic descriptions and other markdown
+  // surfaces here) resolves a click — including purl links — to a file and
+  // emits `file:opened` on this bus. The principal window has no panel-framework
+  // router, so translate that into a markdown tab, mirroring how the dev /
+  // alexandria workspaces handle their own `file:opened`.
+  useEffect(() => {
+    const handleFileOpened = (event: {
+      source?: string;
+      payload?: { filePath?: string; repositoryPath?: string };
+    }) => {
+      if (event.source === 'tab') return; // ignore tab re-emits
+      const filePath = event.payload?.filePath;
+      if (!filePath) return;
+      openMarkdownDoc(filePath, event.payload?.repositoryPath);
+    };
+    events.on('file:opened', handleFileOpened);
+    return () => {
+      events.off('file:opened', handleFileOpened);
+    };
+  }, [events, openMarkdownDoc]);
+
   const handlePanelResize = useCallback(
     (sizes: { left: number; middle: number; right: number }) => {
       const leftCollapsed = sizes.left < 5;
