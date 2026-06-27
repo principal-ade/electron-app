@@ -4,8 +4,9 @@ import { ExternalLink, Search, Star, User } from 'lucide-react';
 import { githubClient } from '../../../tipc/githubClient';
 import type { GitHubRepository, GitHubUser } from '../../../../shared/tipc/githubRouterTypes';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
+import { usePortalEvents } from '../../PortalEventContext';
 import { useProjectsTabs } from '../../contexts/ProjectsTabsContext';
-import { useInboxTabs } from '../../contexts/InboxTabsContext';
+import { emitTrailOpen, emitTopicOpen } from '../../../events/portalIntents';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { findClonedGithubEntry } from '../../../utils/alexandriaIdentity';
 import {
@@ -72,9 +73,12 @@ const formatStars = (n?: number): string => {
 
 export const TitlebarGitHubSearch: React.FC = () => {
   const { theme } = useTheme();
+  // `events` (principalEvents) carries the `panel:switch` navigation; the portal
+  // bus carries the content-open intents. Repo/user profile opens still call the
+  // Projects tab context directly (a separate, view-local domain).
   const { events } = usePrincipalEvents();
-  const { openProjectInfo, openUserProfile, openSharedTrail } = useProjectsTabs();
-  const { openTopic } = useInboxTabs();
+  const { events: portalEvents } = usePortalEvents();
+  const { openProjectInfo, openUserProfile } = useProjectsTabs();
   const [query, setQuery] = useState('');
   const [repoResults, setRepoResults] = useState<GitHubRepository[]>([]);
   const [userResults, setUserResults] = useState<GitHubUser[]>([]);
@@ -243,38 +247,42 @@ export const TitlebarGitHubSearch: React.FC = () => {
       // A pasted trail URL is someone else's published trail — not in the
       // local library. Open it as a feed tab (next to repo profiles), which
       // self-fetches the payload and conveys its remote-ness. Switch to the
-      // feed view first; openSharedTrail is called directly on the context
-      // (not via principal events) for the same reason the repo openers are —
-      // ProjectsView may not be mounted yet to receive an event.
+      // feed view first, then emit `trail:open` on the portal bus — its
+      // always-mounted listener (PortalIntentBridge) opens the tab even before
+      // ProjectsView mounts, so the intent never drops on the floor.
       events.emit({
         type: 'panel:switch',
         source: 'titlebar-search',
         timestamp: Date.now(),
         payload: { view: 'projects' },
       });
-      openSharedTrail(id);
+      emitTrailOpen(portalEvents, 'titlebar-search', {
+        trailId: id,
+        source: 'shared',
+      });
       clearSearch();
     },
-    [events, openSharedTrail, clearSearch],
+    [events, portalEvents, clearSearch],
   );
 
   const openTopicById = useCallback(
     (id: string) => {
       // A pasted topic link is a published web-ade topic. Topic tabs render in
-      // the Inbox view (the shared-content surface), so switch there and call
-      // openTopic on InboxTabsContext directly — its state lives above the
-      // conditional InboxView mount, so the tab survives the view switch. The
-      // panel self-fetches the topic and its trails from the bare id.
+      // the Inbox view (the shared-content surface), so switch there and emit
+      // `topic:open` on the portal bus — its always-mounted listener opens the
+      // tab in InboxTabsContext (whose state lives above the conditional
+      // InboxView mount), so the tab survives the view switch. The panel
+      // self-fetches the topic and its trails from the bare id.
       events.emit({
         type: 'panel:switch',
         source: 'titlebar-search',
         timestamp: Date.now(),
         payload: { view: 'inbox' },
       });
-      openTopic(id);
+      emitTopicOpen(portalEvents, 'titlebar-search', { topicId: id });
       clearSearch();
     },
-    [events, openTopic, clearSearch],
+    [events, portalEvents, clearSearch],
   );
 
   const handlePaste = useCallback(

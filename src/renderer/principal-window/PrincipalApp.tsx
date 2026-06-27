@@ -3,9 +3,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
 import { PrincipalEventProvider } from './PrincipalEventContext';
+import { PortalEventProvider } from './PortalEventContext';
 import { ProjectsTabsProvider } from './contexts/ProjectsTabsContext';
 import { InboxTabsProvider } from './contexts/InboxTabsContext';
 import { TopicsTabsProvider } from './contexts/TopicsTabsContext';
+import { PortalIntentBridge } from './components/PortalIntentBridge';
 import { IntegratedShell } from './components/IntegratedShell/IntegratedShell';
 import { KeychainConsentModal } from '../components/KeychainConsentModal';
 import {
@@ -41,13 +43,19 @@ export const PrincipalApp: React.FC = () => {
         <KeychainConsentWrapper>
           <MemoryRouter>
             <PrincipalEventProvider>
-              <ProjectsTabsProvider>
-                <InboxTabsProvider>
-                  <TopicsTabsProvider>
-                    <IntegratedShell />
-                  </TopicsTabsProvider>
-                </InboxTabsProvider>
-              </ProjectsTabsProvider>
+              <PortalEventProvider>
+                <ProjectsTabsProvider>
+                  <InboxTabsProvider>
+                    <TopicsTabsProvider>
+                      {/* Always-mounted listener on the portal bus, so the
+                          titlebar can open content into a view that isn't
+                          mounted yet. */}
+                      <PortalIntentBridge />
+                      <IntegratedShell />
+                    </TopicsTabsProvider>
+                  </InboxTabsProvider>
+                </ProjectsTabsProvider>
+              </PortalEventProvider>
             </PrincipalEventProvider>
           </MemoryRouter>
         </KeychainConsentWrapper>

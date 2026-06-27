@@ -133,12 +133,17 @@ tab contexts still listen** (each bridges the new intents into its own
   `activeTabId` from the context for row highlight; only the open call moved)
 - [x] `topics-view/LocalTopicTabContent.tsx` — emit `trail:open` (source
   `local`); dropped `useTopicsTabs().openLocalTrail`, kept `activeTabId`
-- [ ] `principal-window/components/IntegratedShell/TitlebarGitHubSearch.tsx` —
-  emit intents instead of direct tab calls *(deferred → next sub-step; the
-  titlebar sits above the per-view buses, so it needs the portal-scoped bus)*
+- [x] `principal-window/components/IntegratedShell/TitlebarGitHubSearch.tsx` —
+  pasted trail / topic now emit `trail:open` / `topic:open` on the **portal
+  bus**; `PortalIntentBridge` (always-mounted) opens the tab. *Still direct:
+  the repo / user-profile opens (`openProjectInfo` / `openUserProfile`) — a
+  separate view-local domain (`repository:selected` / `user:profile-selected`),
+  not the trail/topic/doc family this work targets.*
 - [ ] `principal-window/components/IntegratedShell/IntegratedShell.tsx` —
-  any direct `useInboxTabs`/`useTopicsTabs` open calls → intents *(deferred,
-  same reason)*
+  the `onShowInPrincipal` / `onTopicActivate` bridge handoffs still call the tab
+  contexts directly. *Left as-is on purpose: these are always-mounted handlers
+  doing genuine per-`activeView` routing; routing them through an intent buys
+  nothing until the single `PortalTabsContext` listener exists (Increment 2).*
 
 **Bridges (temporary — listen for the new intents, call existing context):**
 - [x] `inbox-view/InboxPanelFramework.tsx` — subscribes `trail:open`/`topic:open`
@@ -150,12 +155,14 @@ tab contexts still listen** (each bridges the new intents into its own
 - [x] Add the intent-name `const`/union + payload types (shared module) —
   `renderer/events/portalIntents.ts` (`PORTAL_INTENTS` + `emitTrailOpen` /
   `emitTopicOpen` / `emitDocOpen` helpers)
-- [ ] Stand up the portal-scoped `PanelEventBus` and thread it to the
-  workspace left panels + tab content *(deferred → paired with the titlebar
-  conversion above. The left-panel/tab-content decoupling above runs on each
-  view's existing per-view bus, which already reaches its framework; the
-  portal-scoped bus is only needed once an emitter (the titlebar) lives outside
-  a single view's bus.)*
+- [x] Stand up the portal-scoped `PanelEventBus` — `PortalEventContext`
+  (`PortalEventProvider` / `usePortalEvents`), provided at the `PrincipalApp`
+  level (above `IntegratedShell`) so always-mounted emitters/listeners can reach
+  it. Its always-mounted listener is `PortalIntentBridge`, the seed of the
+  Increment-2 single `PortalTabsContext` listener. *Note:* the Increment-1
+  left-panel/tab-content emitters still run on their per-view buses; only the
+  titlebar emits on the portal bus so far. Folding the per-view emitters onto
+  the portal bus happens with the `PortalTabsContext` merge in Increment 2.
 
 ## Increment plan (each commit green)
 
