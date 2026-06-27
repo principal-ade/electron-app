@@ -7,17 +7,18 @@
  * - Sent: trails the signed-in user has shared with others.
  * - Recently Visited: trails the user has opened, newest first.
  *
- * All are fetched from web-ade via the renderer WebAdeService. Clicking a trail
- * row opens it through InboxTabsContext.openSharedTrail; a topic row opens
- * through openTopic.
+ * All are fetched from web-ade via the renderer WebAdeService. Clicking a row
+ * emits a view-agnostic `trail:open` / `topic:open` intent on the panel bus;
+ * InboxPanelFramework is the sole listener that turns it into a tab.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Inbox, Route, RefreshCw, Send, Layers, Trash2 } from 'lucide-react';
+import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { WebAdeService } from '../main-process-api/WebAdeService';
-import { useInboxTabs } from '../principal-window/contexts/InboxTabsContext';
+import { emitTrailOpen, emitTopicOpen } from '../events/portalIntents';
 import { useAuth } from '../hooks/useAuthState';
 import type {
   InboxIndexEntry,
@@ -53,9 +54,10 @@ function timeAgo(iso: string): string {
   return `${Math.floor(months / 12)}y ago`;
 }
 
-export const InboxLeftPanel: React.FC = () => {
+export const InboxLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
+  events,
+}) => {
   const { theme } = useTheme();
-  const { openSharedTrail, openTopic } = useInboxTabs();
   const { isAuthenticated, user } = useAuth();
 
   const [mode, setMode] = useState<InboxMode>('inbox');
@@ -198,7 +200,12 @@ export const InboxLeftPanel: React.FC = () => {
    */
   const handleOpenInbox = useCallback(
     (entry: InboxIndexEntry) => {
-      openSharedTrail(entry.trailId, entry.owner, entry.repo);
+      emitTrailOpen(events, 'inbox-left-panel', {
+        trailId: entry.trailId,
+        source: 'shared',
+        owner: entry.owner,
+        repo: entry.repo,
+      });
 
       const hadDot = entry.notification?.dot ?? entry.readAt === null;
       if (!hadDot) return;
@@ -236,7 +243,7 @@ export const InboxLeftPanel: React.FC = () => {
         },
       );
     },
-    [openSharedTrail, load],
+    [events, load],
   );
 
   const spacing = {
@@ -454,7 +461,12 @@ export const InboxLeftPanel: React.FC = () => {
         <button
           key={entry.topicId}
           style={rowBaseStyle}
-          onClick={() => openTopic(entry.topicId, title)}
+          onClick={() =>
+            emitTopicOpen(events, 'inbox-left-panel', {
+              topicId: entry.topicId,
+              title,
+            })
+          }
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor =
               theme.colors.backgroundSecondary;
@@ -540,7 +552,12 @@ export const InboxLeftPanel: React.FC = () => {
           key={entry.trailId}
           style={{ ...rowBaseStyle, alignItems: 'center' }}
           onClick={() =>
-            openSharedTrail(entry.trailId, entry.owner, entry.repo)
+            emitTrailOpen(events, 'inbox-left-panel', {
+              trailId: entry.trailId,
+              source: 'shared',
+              owner: entry.owner,
+              repo: entry.repo,
+            })
           }
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor =
@@ -615,7 +632,14 @@ export const InboxLeftPanel: React.FC = () => {
         <button
           key={entry.id}
           style={{ ...rowBaseStyle, alignItems: 'center' }}
-          onClick={() => openSharedTrail(entry.id, entry.owner, entry.repo)}
+          onClick={() =>
+            emitTrailOpen(events, 'inbox-left-panel', {
+              trailId: entry.id,
+              source: 'shared',
+              owner: entry.owner,
+              repo: entry.repo,
+            })
+          }
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor =
               theme.colors.backgroundSecondary;

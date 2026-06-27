@@ -127,26 +127,35 @@ tab contexts still listen** (each bridges the new intents into its own
 `open*`). No visible change. App green.
 
 **Emitters to convert (stop calling `useInboxTabs`/`useTopicsTabs`, emit intents):**
-- [ ] `panels/InboxLeftPanel.tsx` — emit `trail:open` / `topic:open`
-- [ ] `panels/TopicsLeftPanel.tsx` — emit `topic:open` / `trail:open`
-- [ ] `topics-view/LocalTopicTabContent.tsx` — emit `trail:open` (drop
-  `useTopicsTabs().openLocalTrail`)
+- [x] `panels/InboxLeftPanel.tsx` — emit `trail:open` / `topic:open` (takes an
+  `events` prop; no longer imports `useInboxTabs`)
+- [x] `panels/TopicsLeftPanel.tsx` — emit `topic:open` (keeps reading
+  `activeTabId` from the context for row highlight; only the open call moved)
+- [x] `topics-view/LocalTopicTabContent.tsx` — emit `trail:open` (source
+  `local`); dropped `useTopicsTabs().openLocalTrail`, kept `activeTabId`
 - [ ] `principal-window/components/IntegratedShell/TitlebarGitHubSearch.tsx` —
-  emit intents instead of direct tab calls
+  emit intents instead of direct tab calls *(deferred → next sub-step; the
+  titlebar sits above the per-view buses, so it needs the portal-scoped bus)*
 - [ ] `principal-window/components/IntegratedShell/IntegratedShell.tsx` —
-  any direct `useInboxTabs`/`useTopicsTabs` open calls → intents
+  any direct `useInboxTabs`/`useTopicsTabs` open calls → intents *(deferred,
+  same reason)*
 
 **Bridges (temporary — listen for the new intents, call existing context):**
-- [ ] `inbox-view/InboxPanelFramework.tsx` — subscribe `trail:open`/`topic:open`
+- [x] `inbox-view/InboxPanelFramework.tsx` — subscribes `trail:open`/`topic:open`
   → `useInboxTabs().open*`
-- [ ] `topics-view/TopicsPanelFramework.tsx` — subscribe `topic:open`/`trail:open`
-  → `useTopicsTabs().open*`
+- [x] `topics-view/TopicsPanelFramework.tsx` — subscribes `topic:open`/`trail:open`
+  → `useTopicsTabs().open*` (ignores `shared` trails — Topics hosts local only)
 
 **Shared infra:**
-- [ ] Add the intent-name `const`/union + payload types (shared module)
+- [x] Add the intent-name `const`/union + payload types (shared module) —
+  `renderer/events/portalIntents.ts` (`PORTAL_INTENTS` + `emitTrailOpen` /
+  `emitTopicOpen` / `emitDocOpen` helpers)
 - [ ] Stand up the portal-scoped `PanelEventBus` and thread it to the
-  workspace left panels + tab content (alongside, not replacing, the per-view
-  buses yet)
+  workspace left panels + tab content *(deferred → paired with the titlebar
+  conversion above. The left-panel/tab-content decoupling above runs on each
+  view's existing per-view bus, which already reaches its framework; the
+  portal-scoped bus is only needed once an emitter (the titlebar) lives outside
+  a single view's bus.)*
 
 ## Increment plan (each commit green)
 

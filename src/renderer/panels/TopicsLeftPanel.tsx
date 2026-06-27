@@ -3,8 +3,8 @@
  *
  * Left panel for the TopicsView. Lists all LOCAL topics (from the on-disk topic
  * store via `TopicService.getTopics`), most-recently-updated first. Clicking a
- * row opens that topic as a tab through `TopicsTabsContext.openTopic`, which
- * renders its markdown description on the right.
+ * row emits a `topic:open` intent on the panel bus; TopicsPanelFramework opens
+ * it as a tab that renders the markdown description on the right.
  *
  * Unlike the inbox lists, this is not auth-gated — topics are read from the
  * local store, so there's no sign-in state. The list live-refreshes on any
@@ -30,8 +30,10 @@ import {
   Plus,
 } from 'lucide-react';
 import type { Topic } from '@principal-ai/alexandria-core-library/types';
+import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { NewTopicModal } from '../components/NewTopicModal';
 import { TopicService } from '../main-process-api/TopicService';
+import { emitTopicOpen } from '../events/portalIntents';
 import { useTopicsTabs } from '../principal-window/contexts/TopicsTabsContext';
 import {
   STATES,
@@ -60,9 +62,14 @@ function timeAgo(iso: string): string {
 const stateLabel = (state: string): string =>
   STATES.find((s) => s.value === state)?.label ?? 'New Thought';
 
-export const TopicsLeftPanel: React.FC = () => {
+export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
+  events,
+}) => {
   const { theme } = useTheme();
-  const { openTopic, activeTabId } = useTopicsTabs();
+  // `activeTabId` (read-only highlight) still comes from the tab context; the
+  // open path is decoupled — clicking a row emits `topic:open` on the bus and
+  // the framework turns it into a tab (portal-unification Increment 1).
+  const { activeTabId } = useTopicsTabs();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -202,7 +209,12 @@ export const TopicsLeftPanel: React.FC = () => {
           key={topic.id}
           draggable
           onDragStart={handleDragStart}
-          onClick={() => openTopic(topic.id, topic.title)}
+          onClick={() =>
+            emitTopicOpen(events, 'topics-left-panel', {
+              topicId: topic.id,
+              title: topic.title,
+            })
+          }
           onMouseEnter={() => setHoveredId(topic.id)}
           onMouseLeave={() => setHoveredId(null)}
           style={{

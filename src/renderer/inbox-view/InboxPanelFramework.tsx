@@ -50,6 +50,11 @@ import { MarkdownDocTabContent } from '../projects-view/MarkdownDocTabContent';
 import { TopicTabContent } from './TopicTabContent';
 import { useInboxTabs } from '../principal-window/contexts/InboxTabsContext';
 import { DocumentService } from '../services/DocumentService';
+import {
+  PORTAL_INTENTS,
+  type TrailOpenPayload,
+  type TopicOpenPayload,
+} from '../events/portalIntents';
 
 /**
  * Landing tab shown when the inbox view opens — a hint to pick something
@@ -208,8 +213,16 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
 
   // Tab state lives in InboxTabsContext (above IntegratedShell's conditional
   // InboxView mount) so tabs survive view switches.
-  const { tabs, setTabs, activeTabId, setActiveTabId, openMarkdownDoc } =
-    useInboxTabs();
+  const {
+    tabs,
+    setTabs,
+    activeTabId,
+    setActiveTabId,
+    openMarkdownDoc,
+    openSharedTrail,
+    openTopic,
+    openLocalTrail,
+  } = useInboxTabs();
 
   // Load base directory from user preferences
   useEffect(() => {
@@ -363,6 +376,31 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
     };
   }, [events, activityActions]);
 
+  // Intent bridge (portal-unification Increment 1): the left panel / titlebar
+  // emit view-agnostic `trail:open` / `topic:open` intents on the bus; this
+  // framework is the sole listener that turns them into Inbox tabs via the
+  // existing tab context. Temporary — folds into one PortalTabsContext listener
+  // in Increment 2.
+  useEffect(() => {
+    const handleTrailOpen = (event: { payload: TrailOpenPayload }) => {
+      const p = event.payload;
+      if (p.source === 'local') {
+        openLocalTrail(p.trailId, p.title);
+      } else {
+        openSharedTrail(p.trailId, p.owner, p.repo);
+      }
+    };
+    const handleTopicOpen = (event: { payload: TopicOpenPayload }) => {
+      openTopic(event.payload.topicId, event.payload.title);
+    };
+    events.on(PORTAL_INTENTS.trailOpen, handleTrailOpen);
+    events.on(PORTAL_INTENTS.topicOpen, handleTopicOpen);
+    return () => {
+      events.off(PORTAL_INTENTS.trailOpen, handleTrailOpen);
+      events.off(PORTAL_INTENTS.topicOpen, handleTopicOpen);
+    };
+  }, [events, openSharedTrail, openTopic, openLocalTrail]);
+
   // Bridge handoff: a doc pushed from the Principal MCP Bridge
   // (POST /api/document/open) arrives as an OPEN_DOCUMENT IPC when the
   // principal window is focused on the Inbox view. Open (or focus) a markdown
@@ -395,7 +433,7 @@ const InboxPanelFrameworkInner: React.FC<InboxPanelFrameworkProps> = ({
       {
         id: 'inbox-list',
         label: 'Inbox',
-        content: <InboxLeftPanel />,
+        content: <InboxLeftPanel events={events} />,
       },
       {
         id: 'terminal',

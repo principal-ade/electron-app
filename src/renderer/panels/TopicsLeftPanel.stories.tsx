@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React from 'react';
 import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
+import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import { TopicsLeftPanel } from './TopicsLeftPanel';
 import { TopicService } from '../main-process-api/TopicService';
 import { TopicsTabsProvider } from '../principal-window/contexts/TopicsTabsContext';
@@ -11,6 +12,10 @@ import type { Topic } from '@principal-ai/alexandria-core-library/types';
 // TopicsLeftPanel loads via TopicService.getTopics() and subscribes to
 // onTopicChange. We swap getTopics to read from a mutable `activeMock` cell
 // (set per-story) and stub onTopicChange to a no-op unsubscribe.
+
+// A bus for the stories — TopicsLeftPanel emits `topic:open` on it; nothing
+// listens here, which is fine for a visual story.
+const storyEvents = new PanelEventBus();
 
 let activeMock: Topic[] | 'reject' | 'pending' = [];
 
@@ -104,7 +109,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   render: () => {
     withTopics(topicFixtures);
-    return <TopicsLeftPanel />;
+    return <TopicsLeftPanel events={storyEvents} />;
   },
 };
 
@@ -112,7 +117,7 @@ export const Default: Story = {
 export const Empty: Story = {
   render: () => {
     withTopics([]);
-    return <TopicsLeftPanel />;
+    return <TopicsLeftPanel events={storyEvents} />;
   },
 };
 
@@ -120,7 +125,7 @@ export const Empty: Story = {
 export const Loading: Story = {
   render: () => {
     withTopics('pending');
-    return <TopicsLeftPanel />;
+    return <TopicsLeftPanel events={storyEvents} />;
   },
 };
 
@@ -128,6 +133,6 @@ export const Loading: Story = {
 export const LoadError: Story = {
   render: () => {
     withTopics('reject');
-    return <TopicsLeftPanel />;
+    return <TopicsLeftPanel events={storyEvents} />;
   },
 };

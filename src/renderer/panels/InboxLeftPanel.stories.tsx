@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React from 'react';
 import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
+import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import { InboxLeftPanel } from './InboxLeftPanel';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import { InboxTabsProvider } from '../principal-window/contexts/InboxTabsContext';
@@ -20,6 +21,10 @@ import type {
 // rewire getInbox / getRecentlyVisitedTrails to read from a mutable
 // `activeMocks` cell (swapped per-story), and stub getTopicInbox / getSent to
 // empty — this story only exercises the inbox + recent lists.
+
+// A bus for the stories — InboxLeftPanel emits open intents on it; nothing
+// listens here, which is fine for a visual story.
+const storyEvents = new PanelEventBus();
 
 type MockState = {
   inbox: ListInboxResponse | 'reject' | 'pending';
@@ -284,7 +289,7 @@ export const Inbox: Story = {
       inbox: { entries: inboxFixtures, unreadCount: 2 },
       recent: { entries: recentFixtures },
     });
-    return <InboxLeftPanel />;
+    return <InboxLeftPanel events={storyEvents} />;
   },
 };
 
@@ -301,7 +306,7 @@ export const NotificationStates: Story = {
       inbox: { entries: notificationFixtures, unreadCount: 3 },
       recent: { entries: recentFixtures },
     });
-    return <InboxLeftPanel />;
+    return <InboxLeftPanel events={storyEvents} />;
   },
 };
 
@@ -315,7 +320,7 @@ export const AllRead: Story = {
       },
       recent: { entries: recentFixtures },
     });
-    return <InboxLeftPanel />;
+    return <InboxLeftPanel events={storyEvents} />;
   },
 };
 
@@ -326,7 +331,7 @@ export const EmptyInbox: Story = {
       inbox: { entries: [], unreadCount: 0 },
       recent: { entries: recentFixtures },
     });
-    return <InboxLeftPanel />;
+    return <InboxLeftPanel events={storyEvents} />;
   },
 };
 
@@ -334,7 +339,7 @@ export const EmptyInbox: Story = {
 export const Loading: Story = {
   render: () => {
     withMocks({ inbox: 'pending', recent: 'pending' });
-    return <InboxLeftPanel />;
+    return <InboxLeftPanel events={storyEvents} />;
   },
 };
 
@@ -345,6 +350,6 @@ export const Loading: Story = {
 export const SignedOut: Story = {
   render: () => {
     withMocks({ inbox: 'reject', recent: 'reject' });
-    return <InboxLeftPanel />;
+    return <InboxLeftPanel events={storyEvents} />;
   },
 };

@@ -42,6 +42,11 @@ import { TopicsLeftPanel } from '../panels/TopicsLeftPanel';
 import { LocalTopicTabContent } from './LocalTopicTabContent';
 import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
 import { useTopicsTabs } from '../principal-window/contexts/TopicsTabsContext';
+import {
+  PORTAL_INTENTS,
+  type TrailOpenPayload,
+  type TopicOpenPayload,
+} from '../events/portalIntents';
 
 /**
  * Landing tab shown when the topics view opens — a hint to pick a topic from
@@ -172,7 +177,14 @@ const TopicsPanelFrameworkInner: React.FC<TopicsPanelFrameworkProps> = ({
 
   // Tab state lives in TopicsTabsContext (above IntegratedShell's conditional
   // TopicsView mount) so tabs survive view switches.
-  const { tabs, setTabs, activeTabId, setActiveTabId } = useTopicsTabs();
+  const {
+    tabs,
+    setTabs,
+    activeTabId,
+    setActiveTabId,
+    openTopic,
+    openLocalTrail,
+  } = useTopicsTabs();
 
   // Load base directory from user preferences
   useEffect(() => {
@@ -299,6 +311,29 @@ const TopicsPanelFrameworkInner: React.FC<TopicsPanelFrameworkProps> = ({
     };
   }, [events, activityActions]);
 
+  // Intent bridge (portal-unification Increment 1): the left panel / topic tab
+  // emit view-agnostic `topic:open` / `trail:open` intents on the bus; this
+  // framework is the sole listener that turns them into Topics tabs via the
+  // existing tab context. Topics only hosts local trails, so a `shared` trail
+  // intent is ignored here. Temporary — folds into one PortalTabsContext
+  // listener in Increment 2.
+  useEffect(() => {
+    const handleTopicOpen = (event: { payload: TopicOpenPayload }) => {
+      openTopic(event.payload.topicId, event.payload.title);
+    };
+    const handleTrailOpen = (event: { payload: TrailOpenPayload }) => {
+      if (event.payload.source === 'local') {
+        openLocalTrail(event.payload.trailId, event.payload.title);
+      }
+    };
+    events.on(PORTAL_INTENTS.topicOpen, handleTopicOpen);
+    events.on(PORTAL_INTENTS.trailOpen, handleTrailOpen);
+    return () => {
+      events.off(PORTAL_INTENTS.topicOpen, handleTopicOpen);
+      events.off(PORTAL_INTENTS.trailOpen, handleTrailOpen);
+    };
+  }, [events, openTopic, openLocalTrail]);
+
   // Handle panel resize (detect left collapse)
   const handlePanelResize = useCallback(
     (sizes: { left: number; middle: number; right: number }) => {
@@ -318,7 +353,7 @@ const TopicsPanelFrameworkInner: React.FC<TopicsPanelFrameworkProps> = ({
       {
         id: 'topics-list',
         label: 'Topics',
-        content: <TopicsLeftPanel />,
+        content: <TopicsLeftPanel events={events} />,
       },
       {
         id: 'terminal',

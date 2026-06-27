@@ -8,9 +8,9 @@
  * The rail is omitted when the topic has no trails, so the description gets the
  * full width.
  *
- * Selecting a trail from the rail opens it as a `local-trail` tab in the Topics
- * view (via `TopicsTabsContext.openLocalTrail`), reusing the same
- * `LocalTrailTabContent` explorer the inbox/feed views use.
+ * Selecting a trail from the rail emits a `trail:open` intent (source `local`)
+ * on the panel bus; TopicsPanelFramework opens it as a `local-trail` tab,
+ * reusing the same `LocalTrailTabContent` explorer the inbox/feed views use.
  *
  * No `workspaceId` is passed to the body: doc links resolve optimistically,
  * which is the right default for this cross-project reading surface.
@@ -26,6 +26,7 @@ import { TopicTrailsRail } from '../alexandria-workspace/topic-description-tab/T
 import { TopicService } from '../main-process-api/TopicService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { useOpenWorkspaceWindow } from '../hooks/useOpenWorkspaceWindow';
+import { emitTrailOpen } from '../events/portalIntents';
 import { useTopicsTabs } from '../principal-window/contexts/TopicsTabsContext';
 import '../styles/window-open-feedback.css';
 
@@ -35,7 +36,10 @@ export const LocalTopicTabContent: React.FC<{
   events: PanelEventEmitter;
 }> = ({ topicId, title, events }) => {
   const { theme } = useTheme();
-  const { openLocalTrail, activeTabId } = useTopicsTabs();
+  // `activeTabId` (read-only highlight) still comes from the tab context; the
+  // open path is decoupled — selecting a trail emits `trail:open` on the bus and
+  // the framework turns it into a tab (portal-unification Increment 1).
+  const { activeTabId } = useTopicsTabs();
 
   // Table-of-contents drawer: the body reports whether the description has
   // headings (`hasToc`), this owns the open-state, and the body renders the
@@ -266,7 +270,13 @@ export const LocalTopicTabContent: React.FC<{
 
         <TopicTrailsRail
           topicId={topicId}
-          onOpenTrail={openLocalTrail}
+          onOpenTrail={(trailId, trailTitle) =>
+            emitTrailOpen(events, 'local-topic-tab', {
+              trailId,
+              source: 'local',
+              title: trailTitle,
+            })
+          }
           isTrailActive={(id) => activeTabId === `local-trail-${id}`}
         />
       </div>
