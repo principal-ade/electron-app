@@ -17,7 +17,7 @@ import { CollectionsList } from './CollectionsList';
 import { FollowingList } from './FollowingList';
 import { OrganizationsList } from './OrganizationsList';
 import { CoworkersList } from './CoworkersList';
-import { ProjectsList, type CommitTimestamp } from './ProjectsList';
+import { ProjectsList } from './ProjectsList';
 import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCoworkers';
 import { useTeamActivity } from '../hooks/useTeamActivity';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
@@ -43,10 +43,6 @@ export interface ProjectsLeftPanelProps {
   feedMode: 'my-activity' | 'collections' | 'organizations';
   /** Callback when feed mode changes */
   onFeedModeChange: (mode: 'my-activity' | 'collections' | 'organizations') => void;
-  /** Commit timestamps for activity heatmap */
-  commits: CommitTimestamp[];
-  /** Currently selected time block */
-  selectedBlock: string | null;
   /** Full activity commits for team activity tracking */
   activityCommits?: ActivityCommit[];
 }
@@ -56,8 +52,6 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
   events,
   feedMode,
   onFeedModeChange,
-  commits,
-  selectedBlock,
   activityCommits = [],
 }) => {
   const { theme } = useTheme();
@@ -676,10 +670,8 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
           }}
         >
           <ProjectsList
-            commits={commits}
             repositories={repositories}
             events={events}
-            selectedBlock={selectedBlock}
           />
         </div>
 

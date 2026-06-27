@@ -40,15 +40,23 @@ import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import {
   TabbedTerminalPanel,
-  type TerminalTab,
   type TerminalWorkingState,
   type TerminalPanelActions,
-  type BaseTab,
 } from '@industry-theme/xterm-terminal-panel';
 import type {
   SharedTrailTab,
   LocalTrailTab,
   MarkdownDocTab,
+  CommitReviewTab,
+  LiveActivityTab,
+  InProgressActivityTab,
+  ProjectInfoTab,
+  UserProfileTab,
+  OrgProfileTab,
+  CollectionProfileTab,
+  OwnerActivityTab,
+  RepoActivityTab,
+  FeedTab,
 } from '../events/portalTabs';
 import { ProjectsLeftPanel } from '../panels/ProjectsLeftPanel';
 import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
@@ -67,8 +75,6 @@ import {
 } from '../panels/OrgProfilePanel';
 import { useActivityFeed } from '../hooks/useActivityFeed';
 import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
-import type { CommitTimestamp } from '../panels/ProjectsList';
-import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { GithubService } from '../main-process-api/GithubService';
 import { GitService } from '../main-process-api/GitService';
 import { WebAdeService } from '../main-process-api/WebAdeService';
@@ -124,95 +130,9 @@ interface UserActivityResponse {
   }>;
 }
 
-/**
- * Commit review tab - displays diff for a specific commit
- */
-export interface CommitReviewTab extends BaseTab {
-  contentType: 'commit-review';
-  repoPath: string;
-  repoName: string;
-  githubOwner?: string;
-  githubRepoName?: string;
-  commit: ActivityCommit;
-}
-
-/**
- * Live activity tab - displays real-time presence and repository activity
- */
-export interface LiveActivityTab extends BaseTab {
-  contentType: 'live-activity';
-}
-
-/**
- * Activity feed tab - displays the main activity feed with repository cards
- */
-export interface ActivityFeedTab extends BaseTab {
-  contentType: 'activity-feed';
-}
-
-/**
- * In-progress tab - displays repositories with uncommitted working-tree changes
- */
-export interface InProgressActivityTab extends BaseTab {
-  contentType: 'in-progress-activity';
-}
-
-/**
- * Project info tab - displays repository details with heatmap and file city
- */
-export interface ProjectInfoTab extends BaseTab {
-  contentType: 'project-info';
-  purl: Purl;
-  github?: GithubRepository;
-  localEntry?: AlexandriaEntry;
-}
-
-/**
- * User profile tab - displays user activity and profile information
- */
-export interface UserProfileTab extends BaseTab {
-  contentType: 'user-profile';
-  username: string;
-  email?: string;
-}
-
-/**
- * Organization profile tab - displays org activity and profile information
- */
-export interface OrgProfileTab extends BaseTab {
-  contentType: 'org-profile';
-  orgName: string;
-}
-
-/**
- * Collection profile tab - displays a collection's repos and users
- */
-export interface CollectionProfileTab extends BaseTab {
-  contentType: 'collection-profile';
-  collection: StarredCollection;
-}
-
-export interface OwnerActivityTab extends BaseTab {
-  contentType: 'owner-activity';
-  login: string;
-  accountType: 'User' | 'Organization';
-}
-
-export interface RepoActivityTab extends BaseTab {
-  contentType: 'repo-activity';
-  owner: string;
-  repo: string;
-}
-
-// `SharedTrailTab`, `LocalTrailTab`, and `MarkdownDocTab` are shared across the
-// Projects / Inbox / Topics surfaces — defined once in `events/portalTabs.ts`,
-// re-exported here for back-compat with existing importers (ProjectsTabsContext).
-export type { SharedTrailTab, LocalTrailTab, MarkdownDocTab };
-
-/**
- * Union type of all supported tab types in ProjectsView
- */
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | OwnerActivityTab | RepoActivityTab | SharedTrailTab | LocalTrailTab | MarkdownDocTab;
+// The Projects tab types + the `FeedTab` union now live in
+// `events/portalTabs.ts` (shared with the Inbox / Topics surfaces ahead of the
+// WorkspaceShell merge) and are imported above for this file's own use.
 
 export interface ProjectsPanelFrameworkProps {
   /** List of repositories */
@@ -1099,9 +1019,6 @@ const ProjectsPanelFrameworkInner: React.FC<ProjectsPanelFrameworkInnerProps> = 
     feedModeRef.current = feedMode;
   });
 
-  // Time filter state for heatmap selection
-  const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
-
   // Tab state lives in ProjectsTabsContext (above IntegratedShell's conditional
   // ProjectsView mount) so tabs survive view switches and so producers outside
   // ProjectsView (e.g. the titlebar repo picker) can mutate them directly.
@@ -1255,29 +1172,6 @@ const ProjectsPanelFrameworkInner: React.FC<ProjectsPanelFrameworkInnerProps> = 
       }
     };
   }, []);
-
-  // Transform commits for heatmap
-  const heatmapCommits = useMemo<CommitTimestamp[]>(() => {
-    const transformed = activityFeed.commits.map((commit) => ({
-      timestamp: new Date(commit.date),
-      repoId: commit.repoPath,
-    }));
-    return transformed;
-  }, [activityFeed.commits]);
-
-  // Listen for time filter events to update selected block
-  useEffect(() => {
-    const handleTimeFilter = (event: { type: string; payload: { start: Date; end: Date } | null }) => {
-      if (event.type === 'activity:time-filter-changed') {
-        setSelectedBlock(event.payload?.start.toISOString() ?? null);
-      }
-    };
-
-    events.on('activity:time-filter-changed', handleTimeFilter);
-    return () => {
-      events.off('activity:time-filter-changed', handleTimeFilter);
-    };
-  }, [events]);
 
   // Listen for live activity events to open live activity tab
   useEffect(() => {
@@ -1894,8 +1788,6 @@ const ProjectsPanelFrameworkInner: React.FC<ProjectsPanelFrameworkInnerProps> = 
             events={events}
             feedMode={feedMode}
             onFeedModeChange={onFeedModeChange || (() => {})}
-            commits={heatmapCommits}
-            selectedBlock={selectedBlock}
             activityCommits={activityFeed.commits}
           />
         ),
@@ -1948,10 +1840,8 @@ const ProjectsPanelFrameworkInner: React.FC<ProjectsPanelFrameworkInnerProps> = 
       },
     ],
     [
-      heatmapCommits,
       activityFeed.commits,
       events,
-      selectedBlock,
       terminalPanelContext,
       terminalActions,
       terminalCtx.terminalContext,

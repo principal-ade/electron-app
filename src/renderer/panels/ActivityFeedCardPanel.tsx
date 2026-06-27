@@ -34,10 +34,6 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
 }) => {
   const { theme } = useTheme();
 
-  // Time filter state from heatmap events
-  const [timeFilter, setTimeFilter] = useState<{ start: Date; end: Date } | null>(null);
-  // Repository filter state
-  const [repoFilter, setRepoFilter] = useState<string | null>(null);
   // Explain overlay state
   const [explain, setExplain] = useState<{
     isOpen: boolean;
@@ -79,33 +75,6 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
   // Get activity feed commits
   const activityFeed = useActivityFeed(repositories, 20, 10, 100);
 
-  // Listen for time filter events from heatmap
-  useEffect(() => {
-    const handleTimeFilter = (event: { type: string; payload: { start: Date; end: Date } | null }) => {
-      if (event.type === 'activity:time-filter-changed') {
-        setTimeFilter(event.payload);
-      }
-    };
-
-    events.on('activity:time-filter-changed', handleTimeFilter);
-    return () => {
-      events.off('activity:time-filter-changed', handleTimeFilter);
-    };
-  }, [events]);
-
-  // Listen for repository filter events from repository list
-  useEffect(() => {
-    const handleRepoFilter = (event: { type: string; payload: { repoId: string } | null }) => {
-      if (event.type === 'repository:filter-changed') {
-        setRepoFilter(event.payload?.repoId ?? null);
-      }
-    };
-
-    events.on('repository:filter-changed', handleRepoFilter);
-    return () => {
-      events.off('repository:filter-changed', handleRepoFilter);
-    };
-  }, [events]);
 
   // Listen for repo explain requests from cards
   useEffect(() => {
@@ -239,25 +208,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
     return map;
   }, [repositories]);
 
-  // Filter commits by time range and repository if filters are active
-  const filteredCommits = useMemo(() => {
-    let commits = activityFeed.commits;
-
-    // Apply time filter
-    if (timeFilter) {
-      commits = commits.filter((commit) => {
-        const commitDate = new Date(commit.date);
-        return commitDate >= timeFilter.start && commitDate < timeFilter.end;
-      });
-    }
-
-    // Apply repository filter
-    if (repoFilter) {
-      commits = commits.filter((commit) => commit.repoPath === repoFilter);
-    }
-
-    return commits;
-  }, [activityFeed.commits, timeFilter, repoFilter]);
+  const filteredCommits = activityFeed.commits;
 
   // Helper to get hour bucket for a date
   const getHourBucket = useCallback((date: Date): string => {

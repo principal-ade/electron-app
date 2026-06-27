@@ -28,8 +28,6 @@ import type {
   FeedTab,
   ProjectInfoTab,
   UserProfileTab,
-} from '../projects-view/ProjectsPanelFramework';
-import type {
   SharedTrailTab,
   LocalTrailTab,
   MarkdownDocTab,

@@ -11,7 +11,11 @@
  * `TopicsHomeTab`, `LocalTopicTab`) live here too now that the persistent
  * `WorkspaceShell` (not the retired per-view frameworks) renders them.
  */
-import type { BaseTab } from '@industry-theme/xterm-terminal-panel';
+import type { BaseTab, TerminalTab } from '@industry-theme/xterm-terminal-panel';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { GithubRepository, Purl } from '@principal-ai/alexandria-core-library';
+import type { ActivityCommit } from '../hooks/useActivityFeed';
+import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
  * Shared trail tab — a trail published to web-ade (e.g. opened from an inbox
@@ -76,3 +80,95 @@ export interface LocalTopicTab extends BaseTab {
   topicId: string;
   title?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Projects surface tab types
+//
+// Historically declared in `projects-view/ProjectsPanelFramework.tsx`; moved
+// here so the Projects surface shares the one tab-type module ahead of folding
+// into the persistent `WorkspaceShell` (docs/portal-unification.md, Increment
+// 3b). The framework re-exports them for back-compat.
+// ---------------------------------------------------------------------------
+
+/** Commit review tab — displays the diff for a specific commit. */
+export interface CommitReviewTab extends BaseTab {
+  contentType: 'commit-review';
+  repoPath: string;
+  repoName: string;
+  githubOwner?: string;
+  githubRepoName?: string;
+  commit: ActivityCommit;
+}
+
+/** Live activity tab — real-time presence and repository activity. */
+export interface LiveActivityTab extends BaseTab {
+  contentType: 'live-activity';
+}
+
+/** Activity feed tab — the main activity feed with repository cards. */
+export interface ActivityFeedTab extends BaseTab {
+  contentType: 'activity-feed';
+}
+
+/** In-progress tab — repositories with uncommitted working-tree changes. */
+export interface InProgressActivityTab extends BaseTab {
+  contentType: 'in-progress-activity';
+}
+
+/** Project info tab — repository details with heatmap and file city. */
+export interface ProjectInfoTab extends BaseTab {
+  contentType: 'project-info';
+  purl: Purl;
+  github?: GithubRepository;
+  localEntry?: AlexandriaEntry;
+}
+
+/** User profile tab — user activity and profile information. */
+export interface UserProfileTab extends BaseTab {
+  contentType: 'user-profile';
+  username: string;
+  email?: string;
+}
+
+/** Organization profile tab — org activity and profile information. */
+export interface OrgProfileTab extends BaseTab {
+  contentType: 'org-profile';
+  orgName: string;
+}
+
+/** Collection profile tab — a collection's repos and users. */
+export interface CollectionProfileTab extends BaseTab {
+  contentType: 'collection-profile';
+  collection: StarredCollection;
+}
+
+/** Owner activity tab — a user/org's commit activity. */
+export interface OwnerActivityTab extends BaseTab {
+  contentType: 'owner-activity';
+  login: string;
+  accountType: 'User' | 'Organization';
+}
+
+/** Repo activity tab — a repository's commit activity. */
+export interface RepoActivityTab extends BaseTab {
+  contentType: 'repo-activity';
+  owner: string;
+  repo: string;
+}
+
+/** Union of all tab types the Projects surface renders. */
+export type FeedTab =
+  | TerminalTab
+  | CommitReviewTab
+  | LiveActivityTab
+  | ActivityFeedTab
+  | InProgressActivityTab
+  | ProjectInfoTab
+  | UserProfileTab
+  | OrgProfileTab
+  | CollectionProfileTab
+  | OwnerActivityTab
+  | RepoActivityTab
+  | SharedTrailTab
+  | LocalTrailTab
+  | MarkdownDocTab;

@@ -33,20 +33,11 @@ import { getOffConventionTarget } from '../../shared/utils/clonePath';
 import { CloneFromGitHubModal } from './components/CloneFromGitHubModal';
 import { CreateRepositoryInWorkspaceModal } from './components/CreateRepositoryInWorkspaceModal';
 
-export interface CommitTimestamp {
-  timestamp: Date | string;
-  repoId?: string;
-}
-
 export interface ProjectsListProps {
-  /** Commit timestamps (retained for API compatibility; not used by the list) */
-  commits: CommitTimestamp[];
   /** Locally registered repositories (clones on disk) */
   repositories?: AlexandriaEntry[];
   /** Event emitter for panel communication */
   events: PanelEventEmitter;
-  /** Currently selected time block (unused) */
-  selectedBlock?: string | null;
 }
 
 /** Single-select filter applied to the unified list. */
