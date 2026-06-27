@@ -38,6 +38,7 @@ import {
   type TerminalPanelActions,
   type BaseTab,
 } from '@industry-theme/xterm-terminal-panel';
+import type { LocalTrailTab } from '../events/portalTabs';
 import { TopicsLeftPanel } from '../panels/TopicsLeftPanel';
 import { LocalTopicTabContent } from './LocalTopicTabContent';
 import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
@@ -67,15 +68,10 @@ export interface LocalTopicTab extends BaseTab {
   title?: string;
 }
 
-/**
- * Local trail tab — a trail belonging to a topic, opened from the topic tab's
- * Trails dropdown. Carries only the id; `LocalTrailTabContent` self-fetches the
- * payload from the on-disk library.
- */
-export interface LocalTrailTab extends BaseTab {
-  contentType: 'local-trail';
-  trailId: string;
-}
+// `LocalTrailTab` is shared across surfaces — defined once in
+// `events/portalTabs.ts`, re-exported here for back-compat with existing
+// importers (TopicsTabsContext).
+export type { LocalTrailTab };
 
 export type TopicsTab =
   | TerminalTab

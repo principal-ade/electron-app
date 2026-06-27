@@ -43,6 +43,11 @@ import {
   type TerminalPanelActions,
   type BaseTab,
 } from '@industry-theme/xterm-terminal-panel';
+import type {
+  SharedTrailTab,
+  LocalTrailTab,
+  MarkdownDocTab,
+} from '../events/portalTabs';
 import { InboxLeftPanel } from '../panels/InboxLeftPanel';
 import { SharedTrailTabContent } from '../projects-view/SharedTrailTabContent';
 import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
@@ -64,16 +69,10 @@ export interface InboxHomeTab extends BaseTab {
   contentType: 'inbox-home';
 }
 
-/**
- * Shared trail tab — a trail published to web-ade, opened from an inbox or
- * recently-visited row. Carries only the id; the panel self-fetches the payload.
- */
-export interface SharedTrailTab extends BaseTab {
-  contentType: 'shared-trail';
-  trailId: string;
-  owner?: string;
-  repo?: string;
-}
+// `SharedTrailTab`, `LocalTrailTab`, and `MarkdownDocTab` are shared across the
+// Projects / Inbox / Topics surfaces — defined once in `events/portalTabs.ts`,
+// re-exported here for back-compat with existing importers (InboxTabsContext).
+export type { SharedTrailTab, LocalTrailTab, MarkdownDocTab };
 
 /**
  * Topic tab — a topic published to web-ade, opened from an inbox row. Carries
@@ -82,28 +81,6 @@ export interface SharedTrailTab extends BaseTab {
 export interface TopicTab extends BaseTab {
   contentType: 'topic';
   topicId: string;
-}
-
-/**
- * Local trail tab — a trail from the on-disk library, opened in-place when a
- * freshly authored trail arrives while the user is on the Inbox view and no
- * dev-workspace for its repo is open. Carries only the id; the panel
- * self-fetches the payload + repositoryPath from the local library.
- */
-export interface LocalTrailTab extends BaseTab {
-  contentType: 'local-trail';
-  trailId: string;
-}
-
-/**
- * Markdown document tab — a doc opened in-place from the Principal MCP Bridge
- * (POST /api/document/open) while the user is on the Inbox view. Carries the
- * absolute file path + host repo; renders via `MarkdownDocTabContent`.
- */
-export interface MarkdownDocTab extends BaseTab {
-  contentType: 'markdown-doc';
-  filePath: string;
-  repositoryPath?: string;
 }
 
 export type InboxTab =

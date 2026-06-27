@@ -177,6 +177,39 @@ tab contexts still listen** (each bridges the new intents into its own
 4. **Trails (separate)** — build the new cross-repo panelized Trails (All-Maps
    default tab + `trail:open`/`map:open`); fold into `PortalTabsContext`.
 
+### Increment 2 — staging (decided 2026-06-27)
+
+Census finding: each view renders its **own** `TabbedTerminalPanel` with its own
+terminal scope (`terminal:feed` / `terminal:inbox` / `terminal:topics`). Tabs
+survive view switches only because the *state* lives in the always-mounted
+contexts; the host remounts per view, and tabs are not persisted. So the "one
+persistent host — keep your tabs when you swap the left panel" UX **requires
+collapsing the three hosts into one host with one terminal scope** — the only
+behavior-changing, high-risk part, and effectively the old Increment 2 + 3 done
+as a single host merge.
+
+**Approved staging — risky host-merge last; every prior step behavior-identical,
+each green on `main`:**
+
+- **2a — Dedup tab types.** Extract `SharedTrailTab` / `LocalTrailTab` /
+  `MarkdownDocTab` (defined 2–3× across the frameworks) into one module
+  (`events/portalTabs.ts`); frameworks import + re-export instead of
+  redeclaring. Pure types, no runtime change.
+- **2b — One `PortalTabsContext`, per-surface buckets.** Replace the 3 providers
+  with one context holding per-surface tab buckets; each framework reads its own
+  slice via thin compat hooks (`useProjectsTabs` / `useInboxTabs` /
+  `useTopicsTabs` keep working). Retires 3 providers → 1. Per-surface isolation
+  preserved; behavior-identical.
+- **2c — One always-mounted listener.** Fold the 2 framework bridges + the
+  `PortalIntentBridge` into one portal-bus listener that writes to the right
+  bucket; left panels emit on the portal bus instead of per-view buses.
+  Behavior-identical.
+- **3 — One host + one terminal scope + swappable left slot.** Collapse the 3
+  frameworks into one shell with a single persistent `TabbedTerminalPanel`.
+  **Terminal decision (locked): one shared workspace-wide scope** — the three
+  per-surface scopes collapse into one. This is where shared-tabs UX lands — the
+  only intended behavior change.
+
 ## Trails surface design (decided 2026-06-20)
 
 **Do NOT migrate the monolithic `TrailsView` in place.** Build a **new

@@ -45,6 +45,11 @@ import {
   type TerminalPanelActions,
   type BaseTab,
 } from '@industry-theme/xterm-terminal-panel';
+import type {
+  SharedTrailTab,
+  LocalTrailTab,
+  MarkdownDocTab,
+} from '../events/portalTabs';
 import { ProjectsLeftPanel } from '../panels/ProjectsLeftPanel';
 import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
@@ -199,44 +204,14 @@ export interface RepoActivityTab extends BaseTab {
   repo: string;
 }
 
-/**
- * Shared trail tab — a trail published to web-ade, opened from a pasted
- * `…/trail/{id}` URL. NOT in the local trail library, so it lives in the
- * feed tabs (next to repo profiles) rather than TrailsView. Carries only the
- * id; the panel self-fetches the payload (and resolves owner/repo).
- */
-export interface SharedTrailTab extends BaseTab {
-  contentType: 'shared-trail';
-  trailId: string;
-  owner?: string;
-  repo?: string;
-}
-
-/**
- * Local trail tab — a trail from the on-disk library, opened in-place when a
- * freshly authored trail arrives while the user is on the Projects view and no
- * dev-workspace for its repo is open. Carries only the id; the panel self-fetches
- * the payload + repositoryPath from the local library.
- */
-export interface LocalTrailTab extends BaseTab {
-  contentType: 'local-trail';
-  trailId: string;
-}
+// `SharedTrailTab`, `LocalTrailTab`, and `MarkdownDocTab` are shared across the
+// Projects / Inbox / Topics surfaces — defined once in `events/portalTabs.ts`,
+// re-exported here for back-compat with existing importers (ProjectsTabsContext).
+export type { SharedTrailTab, LocalTrailTab, MarkdownDocTab };
 
 /**
  * Union type of all supported tab types in ProjectsView
  */
-/**
- * Markdown document tab — a doc opened in-place from the Principal MCP Bridge
- * (POST /api/document/open) while the user is on the Projects/feed view.
- * Carries the absolute file path + host repo; renders via `MarkdownDocTabContent`.
- */
-export interface MarkdownDocTab extends BaseTab {
-  contentType: 'markdown-doc';
-  filePath: string;
-  repositoryPath?: string;
-}
-
 export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | InProgressActivityTab | ProjectInfoTab | UserProfileTab | OrgProfileTab | CollectionProfileTab | OwnerActivityTab | RepoActivityTab | SharedTrailTab | LocalTrailTab | MarkdownDocTab;
 
 export interface ProjectsPanelFrameworkProps {
