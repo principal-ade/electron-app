@@ -166,6 +166,12 @@ tab contexts still listen** (each bridges the new intents into its own
 
 ## Increment plan (each commit green)
 
+> **Folding a view into the shell?** Follow the step-by-step playbook in
+> [`portal-view-migration.md`](./portal-view-migration.md) — the repeatable
+> path (decouple → rehome side-effects → merge bucket → render → swap left panel
+> → wire → delete), with the invariants and per-surface notes.
+
+
 1. **Decouple** (this doc's checklist) — intents flow on the shared bus; 3
    contexts still listen via bridges. *Visible change: none.*
 2. **Unify the host** — introduce `PortalTabsContext` (single listener +
