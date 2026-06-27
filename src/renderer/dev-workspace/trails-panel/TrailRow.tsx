@@ -3,6 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Check, Copy, GitCompare, Share2 } from 'lucide-react';
 import type { TrailIndexEntry } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { TrailLibraryService } from '../../services/TrailLibraryService';
+import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 
 const RECENT_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 const COPY_FEEDBACK_MS = 1500;
@@ -121,7 +122,7 @@ export const TrailRow: React.FC<TrailRowProps> = ({
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
       if (!e.dataTransfer) return;
-      const payload = `Use file-city trail "${title}" (id: ${entry.id}) as context — fetch via:\ncurl -s http://localhost:3054/api/file-city/trail/${entry.id}`;
+      const payload = `Use file-city trail "${title}" (id: ${entry.id}) as context — fetch via:\ncurl -s ${getPrincipalBridgeUrl()}/api/file-city/trail/${entry.id}`;
       e.dataTransfer.effectAllowed = 'copy';
       e.dataTransfer.setData('text/plain', payload);
     },

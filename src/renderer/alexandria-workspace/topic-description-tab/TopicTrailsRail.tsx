@@ -14,6 +14,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Footprints } from 'lucide-react';
 import { TopicService } from '../../main-process-api/TopicService';
 import { TrailLibraryService } from '../../services/TrailLibraryService';
+import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 
 /** A topic trail resolved against the local library for its title. */
 interface TrailEntry {
@@ -127,7 +128,7 @@ export const TopicTrailsRail: React.FC<TopicTrailsRailProps> = ({
                 if (!e.dataTransfer) return;
                 // Same agent-prompt payload the Trails panel uses, so an
                 // individual trail can be dragged into a terminal as context.
-                const payload = `Use file-city trail "${trail.title}" (id: ${trail.id}) as context — fetch via:\ncurl -s http://localhost:3054/api/file-city/trail/${trail.id}`;
+                const payload = `Use file-city trail "${trail.title}" (id: ${trail.id}) as context — fetch via:\ncurl -s ${getPrincipalBridgeUrl()}/api/file-city/trail/${trail.id}`;
                 e.dataTransfer.effectAllowed = 'copy';
                 e.dataTransfer.setData('text/plain', payload);
               }}

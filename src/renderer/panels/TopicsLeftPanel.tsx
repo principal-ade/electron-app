@@ -42,6 +42,7 @@ import {
   stateColor,
   type TopicStatusState,
 } from '../alexandria-workspace/topic-description-tab/topicStatusModel';
+import { getPrincipalBridgeUrl } from '../../shared/config/appBranding';
 
 /** Compact "x ago" relative time from an ISO timestamp. */
 function timeAgo(iso: string): string {
@@ -201,7 +202,7 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
       const handleDragStart = (e: React.DragEvent) => {
         if (!e.dataTransfer) return;
         const title = topic.title || 'Untitled topic';
-        const payload = `Use topic "${title}" (id: ${topic.id}) as context — fetch via:\ncurl -s http://localhost:3054/api/topics/${topic.id}`;
+        const payload = `Use topic "${title}" (id: ${topic.id}) as context — fetch via:\ncurl -s ${getPrincipalBridgeUrl()}/api/topics/${topic.id}`;
         e.dataTransfer.effectAllowed = 'copy';
         e.dataTransfer.setData('text/plain', payload);
       };

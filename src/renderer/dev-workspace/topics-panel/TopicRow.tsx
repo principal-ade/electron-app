@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Share2, GitFork } from 'lucide-react';
 import type { LocalTopicRecord } from '../../../shared/main-process-api-interfaces/TopicAPI';
+import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 import {
   STATES,
   normalizeState,
@@ -81,7 +82,7 @@ export const TopicRow: React.FC<TopicRowProps> = ({
   const handleDragStart = (e: React.DragEvent) => {
     if (!e.dataTransfer) return;
     const title = topic.title || 'Untitled topic';
-    const payload = `Use topic "${title}" (id: ${topic.id}) as context — fetch via:\ncurl -s http://localhost:3054/api/topics/${topic.id}`;
+    const payload = `Use topic "${title}" (id: ${topic.id}) as context — fetch via:\ncurl -s ${getPrincipalBridgeUrl()}/api/topics/${topic.id}`;
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('text/plain', payload);
   };

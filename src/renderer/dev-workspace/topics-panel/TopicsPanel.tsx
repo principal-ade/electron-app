@@ -26,6 +26,7 @@ import {
 import { useTopicLibrary } from './useTopicLibrary';
 import { TopicRow } from './TopicRow';
 import { TOPIC_EVENT, type TopicOpenEvent } from './topic-events';
+import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 
 type TopicView = 'thisRepo' | 'all';
 
@@ -622,7 +623,7 @@ const EmptyState: React.FC<{
           color: theme.colors.text,
         }}
       >
-        {`curl -XPOST http://localhost:3044/api/topics \\
+        {`curl -XPOST ${getPrincipalBridgeUrl()}/api/topics \\
   -H 'content-type: application/json' \\
   -d '{ "title": "My topic", "trailIds": [] }'`}
       </pre>

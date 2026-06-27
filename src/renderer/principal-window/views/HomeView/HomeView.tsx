@@ -45,6 +45,7 @@ import {
   type TopicsDashboardTopicEntry,
 } from './TopicsDashboard';
 import { OpenProjectCard, type OpenProjectEntry } from './OpenProjectCard';
+import { getPrincipalBridgeUrl } from '../../../../shared/config/appBranding';
 
 const trailRepoLabel = (repositoryPath: string | undefined): string => {
   if (!repositoryPath) return 'No repo';
@@ -166,7 +167,7 @@ const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
     name: 'principal-ai-desktop-app-tools',
     title: 'Principal Desktop App Tools',
     description:
-      "Canonical reference for the app's local bridge — the HTTP surface at localhost:3044 that agents use to push trails, create topics, and leave notes on documents, plus the conventions every call shares.",
+      `Canonical reference for the app's local bridge — the HTTP surface at ${getPrincipalBridgeUrl()} that agents use to push trails, create topics, and leave notes on documents, plus the conventions every call shares.`,
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/principal-ai-desktop-app-tools`,
     source: TRAIL_SKILL_SOURCE,
     Icon: Plug,

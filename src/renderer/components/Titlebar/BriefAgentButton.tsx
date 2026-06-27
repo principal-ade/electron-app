@@ -3,6 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Bot } from 'lucide-react';
 import type { Topic } from '../../tipc/topicClient';
 import { TopicService } from '../../main-process-api/TopicService';
+import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 
 /**
  * MIME used to carry a topic-briefing payload via HTML5 drag-and-drop.
@@ -36,7 +37,7 @@ export interface BriefAgentDragPayload {
  */
 export function buildBriefingText(payload: BriefAgentDragPayload): string {
   return [
-    `Fetch http://localhost:3044/api/topics/${payload.topicId} to begin working on topic "${payload.topicTitle}". The response returns its description and trails.`,
+    `Fetch ${getPrincipalBridgeUrl()}/api/topics/${payload.topicId} to begin working on topic "${payload.topicTitle}". The response returns its description and trails.`,
     '',
     `Use the topic-context skill to read this brief and leave context as you work. If you author a trail, include "topicId": "${payload.topicId}" in the POST body to attach it here.`,
     '',

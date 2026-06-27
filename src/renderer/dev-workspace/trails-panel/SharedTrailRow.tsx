@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { GitCompare, Link2, Loader2 } from 'lucide-react';
 import type { SharedTrailIndexEntry } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
+import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 
 const relativeTime = (iso: string): string => {
   const then = new Date(iso).getTime();
@@ -79,7 +80,7 @@ export const SharedTrailRow: React.FC<SharedTrailRowProps> = ({
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
       if (!e.dataTransfer || !origin) return;
-      const url = `http://localhost:3054/api/file-city/trail/share/${encodeURIComponent(origin.owner)}/${encodeURIComponent(origin.repo)}/${encodeURIComponent(entry.id)}`;
+      const url = `${getPrincipalBridgeUrl()}/api/file-city/trail/share/${encodeURIComponent(origin.owner)}/${encodeURIComponent(origin.repo)}/${encodeURIComponent(entry.id)}`;
       const payload = `Use file-city trail "${title}" (shared, id: ${entry.id}) as context — fetch via:\ncurl -s ${url}`;
       e.dataTransfer.effectAllowed = 'copy';
       e.dataTransfer.setData('text/plain', payload);

@@ -36,3 +36,19 @@ export const APP_BRANDING = {
 } as const;
 
 export type AppBrandingConfig = typeof APP_BRANDING;
+
+/**
+ * The principal MCP bridge port for the current environment. Dev builds talk to
+ * 3054; packaged/production builds talk to 3044. Use this anywhere a payload or
+ * snippet needs to point a caller at the local bridge — never hardcode 3054.
+ */
+export function getPrincipalBridgePort(): number {
+  return process.env.NODE_ENV === 'development'
+    ? APP_BRANDING.BRIDGE_PORTS.DEVELOPMENT.PRINCIPAL_MCP
+    : APP_BRANDING.BRIDGE_PORTS.PRODUCTION.PRINCIPAL_MCP;
+}
+
+/** Base URL of the local principal MCP bridge for the current environment. */
+export function getPrincipalBridgeUrl(): string {
+  return `http://localhost:${getPrincipalBridgePort()}`;
+}

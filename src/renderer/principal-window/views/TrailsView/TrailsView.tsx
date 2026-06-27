@@ -71,6 +71,7 @@ import { SpikeConvertToolbar } from './SpikeConvertToolbar';
 import { TrailPromptIdeas } from '../../components/TrailPromptIdeas';
 
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { getPrincipalBridgeUrl } from '../../../../shared/config/appBranding';
 
 /**
  * Workspace-global default for the brief-layout switch — applied when
@@ -855,7 +856,7 @@ const TrailsViewInner: React.FC<{
       'Fetch the full payload (markers, snippets, views, notes) from the',
       'local Principal MCP Bridge — the electron app must be running:',
       '',
-      `    curl -s http://localhost:3044/api/file-city/trail/${previewTrail.id}`,
+      `    curl -s ${getPrincipalBridgeUrl()}/api/file-city/trail/${previewTrail.id}`,
       '',
     ].join('\n');
   }, [previewTrail, previewPayload]);

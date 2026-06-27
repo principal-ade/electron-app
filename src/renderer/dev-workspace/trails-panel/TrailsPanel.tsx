@@ -3,7 +3,10 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { AlertCircle, RefreshCw, Route, Search, X } from 'lucide-react';
 import type { BaseTrailIndexEntry } from '@industry-theme/file-city-panel';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
-import { APP_BRANDING } from '../../../shared/config/appBranding';
+import {
+  APP_BRANDING,
+  getPrincipalBridgeUrl,
+} from '../../../shared/config/appBranding';
 import { useTrailLibrary } from './useTrailLibrary';
 import { usePublishedTrails } from './useTrailShares';
 import { TrailRow } from './TrailRow';
@@ -567,7 +570,7 @@ const EmptyState: React.FC<{
   const repoArg = repositoryPath
     ? `,\n    "repositoryPath": "${repositoryPath}"`
     : '';
-  const snippet = `curl -XPOST http://localhost:3054/api/file-city/trail \\\n  -H 'content-type: application/json' \\\n  -d '{\n    "id": "trail-1",\n    "title": "My walkthrough"${repoArg},\n    "markers": [...],\n    "views": [{ "kind": "sequence", "markers": [...], "edges": [...] }],\n    "createdAt": "2026-05-06T00:00:00Z",\n    "updatedAt": "2026-05-06T00:00:00Z"\n  }'`;
+  const snippet = `curl -XPOST ${getPrincipalBridgeUrl()}/api/file-city/trail \\\n  -H 'content-type: application/json' \\\n  -d '{\n    "id": "trail-1",\n    "title": "My walkthrough"${repoArg},\n    "markers": [...],\n    "views": [{ "kind": "sequence", "markers": [...], "edges": [...] }],\n    "createdAt": "2026-05-06T00:00:00Z",\n    "updatedAt": "2026-05-06T00:00:00Z"\n  }'`;
   return (
     <div
       style={{
