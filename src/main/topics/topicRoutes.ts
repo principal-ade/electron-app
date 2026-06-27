@@ -13,6 +13,8 @@ import { upsertSection } from '@principal-ade/markdown-utils';
 import type { Topic } from '@principal-ai/alexandria-core-library';
 import type { TopicRegistryService } from '../stores/TopicRegistryService';
 import type { TrailStore } from '../file-city/trailStore';
+import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { validateTopicLinks } from './validateTopicLinks';
 import type { TrailIndexEntry } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { TopicAPIEvent } from '../../shared/main-process-api-interfaces/TopicAPI';
 import type { TopicActivateEvent } from '../../shared/main-process-api-interfaces/TopicAPI';
@@ -80,6 +82,30 @@ async function resolveTopicTrails(
       updatedAt: entry.updatedAt,
     };
   });
+}
+
+/**
+ * Collect the repo purls a topic "claims" — the union of the Alexandria purls
+ * of the repos its trails were authored in. Used to scope link validation: a
+ * reference into a repo not in this set is flagged as out-of-scope. Trails whose
+ * repo isn't registered (or that are repo-agnostic) simply don't contribute; an
+ * empty set means "don't scope-check" (every purl is treated as in-scope).
+ */
+async function collectTopicRepoPurls(
+  topic: Topic,
+  trailStore: TrailStore,
+): Promise<string[]> {
+  const alexandria = AlexandriaRegistryService.getInstance();
+  const { entries } = await trailStore.list();
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  const purls = new Set<string>();
+  for (const trailId of topic.trailIds) {
+    const entry = byId.get(trailId);
+    if (!entry?.repositoryPath) continue;
+    const repo = await alexandria.getRepositoryByPath(entry.repositoryPath);
+    if (repo?.purl) purls.add(String(repo.purl));
+  }
+  return [...purls];
 }
 
 export function registerTopicRoutes(
@@ -356,4 +382,40 @@ export function registerTopicRoutes(
         .json({ success: false, error: 'failed to activate topic' });
     }
   });
+
+  // Validate the file/doc references embedded in a topic's description. Runs
+  // the pure reference classifier (which links must be purl-qualified, scope
+  // against the topic's repos, inline-code that should be links) plus an
+  // existence check on each purl file-ref (local clone first, remote default
+  // branch as fallback). Returns a severity ladder — `error` (non-purl repo
+  // links, malformed purls), `finding` (missing / out-of-scope / unresolvable),
+  // `suggestion` (convert inline code) — so the caller decides what blocks vs.
+  // nudges. Read-only; it never edits the topic.
+  app.post(
+    '/api/topics/:id/validate-links',
+    async (req: Request, res: Response) => {
+      const id = String(req.params.id);
+      if (!id) {
+        res.status(400).json({ success: false, error: 'topic id is required' });
+        return;
+      }
+      try {
+        const topic = await registry.getTopic(id);
+        if (!topic) {
+          res.status(404).json({ success: false, error: 'unknown topic id' });
+          return;
+        }
+        const topicRepoPurls = await collectTopicRepoPurls(topic, trailStore);
+        const report = await validateTopicLinks(topic.description ?? '', {
+          topicRepoPurls,
+        });
+        res.json({ success: true, topicId: id, ...report });
+      } catch (err) {
+        console.error('[topicRoutes] validate-links failed', err);
+        res
+          .status(500)
+          .json({ success: false, error: 'failed to validate topic links' });
+      }
+    },
+  );
 }
