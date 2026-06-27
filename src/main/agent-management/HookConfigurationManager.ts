@@ -525,7 +525,12 @@ export class HookConfigurationManager {
               ...claudeResult.events.map((e) => ({
                 agent: 'claude' as SupportedAgent,
                 filePath: e.filePath,
-                events: e.events as HookEventData[],
+                // UniversalAgentSessionEvent is a closed interface, so TS won't
+                // implicitly index-signature it into HookEventData
+                // (Record<string, unknown>); route through unknown. The events
+                // are treated as a loose bag downstream, same as the JSON.parse'd
+                // events from the non-claude branch below.
+                events: e.events as unknown as HookEventData[],
               })),
             );
           }
