@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { NavigationSidebar } from './NavigationSidebar';
 import { IntegratedTitlebar } from './IntegratedTitlebar';
 import { useTheme } from '@principal-ade/industry-theme';
@@ -384,6 +385,15 @@ export const IntegratedShell: React.FC = () => {
     }
   }, [preferencesLoaded]);
 
+  // Toggle the Home overlay from the titlebar: open Home if we're not already
+  // on it, otherwise drop back to the last workspace surface (or Projects on a
+  // cold start that never opened one).
+  const handleToggleHome = useCallback(() => {
+    handleViewChange(
+      activeView === 'home' ? (lastWorkspaceView ?? 'projects') : 'home'
+    );
+  }, [activeView, lastWorkspaceView, handleViewChange]);
+
   // Save collapsed states when they change
   const handleToggleSidebar = useCallback(async () => {
     const newCollapsed = !sidebarCollapsed;
@@ -625,6 +635,8 @@ export const IntegratedShell: React.FC = () => {
           showSidebarControl={false}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={handleToggleSidebar}
+          onToggleHome={handleToggleHome}
+          isHomeActive={activeView === 'home'}
           showRightSidebarControl={false}
           rightSidebarCollapsed={rightSidebarCollapsed}
           onToggleRightSidebar={handleToggleRightSidebar}
@@ -695,37 +707,71 @@ export const IntegratedShell: React.FC = () => {
               />
             )}
 
-            {/* Standalone views render as an opaque overlay on top of the portal. */}
-            {overlayView && (
-              <div
-                className="portal-overlay"
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  overflow: 'auto',
-                  backgroundColor,
-                  zIndex: 2,
-                }}
-              >
-                {overlayView === 'home' && <HomeView />}
-                {overlayView === 'onboarding' && (
-                  <OnboardingView
-                    onComplete={() => handleViewChange('projects')}
-                  />
-                )}
-                {overlayView === 'monitoring' && (
-                  <SystemMonitor sidebarCollapsed={sidebarCollapsed} />
-                )}
-                {overlayView === 'settings' && (
-                  <Settings initialCategory={settingsCategory} />
-                )}
-                {overlayView === 'auth' && <AuthView />}
-                {overlayView === 'processes' && <LocalhostProcessesView />}
-                {overlayView === 'connections' && <ConnectionsView />}
-                {overlayView === 'skills' && <SkillBrowserView />}
-                {overlayView === 'drawings' && <DrawingsView />}
-              </div>
-            )}
+            {/*
+              Standalone views render on top of the portal as a scrim + card.
+              The portal stays put; only this overlay moves. The scrim
+              (translucent dark, fades in/out) dims the portal behind it so
+              there's real contrast between the two layers — this is what makes
+              the overlay read as floating *on top* rather than just replacing
+              the view. The card is inset with rounded corners + a shadow so the
+              dimmed portal frames it at the edges. AnimatePresence keeps both
+              mounted through the exit animation; keying on overlayView also
+              crossfades between two standalone views (e.g. Home → Settings).
+            */}
+            <AnimatePresence>
+              {overlayView && (
+                <motion.div
+                  key={overlayView}
+                  className="portal-overlay-scrim"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 2,
+                    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+                  }}
+                >
+                  <motion.div
+                    className="portal-overlay-card"
+                    initial={{ y: 20, scale: 0.98 }}
+                    animate={{ y: 0, scale: 1 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                    style={{
+                      position: 'absolute',
+                      inset: 12,
+                      overflow: 'auto',
+                      backgroundColor,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: 10,
+                      // Soft drop shadow so the card visibly sits above the
+                      // scrimmed portal beneath it.
+                      boxShadow: '0 12px 48px rgba(0, 0, 0, 0.45)',
+                    }}
+                  >
+                    {overlayView === 'home' && <HomeView />}
+                    {overlayView === 'onboarding' && (
+                      <OnboardingView
+                        onComplete={() => handleViewChange('projects')}
+                      />
+                    )}
+                    {overlayView === 'monitoring' && (
+                      <SystemMonitor sidebarCollapsed={sidebarCollapsed} />
+                    )}
+                    {overlayView === 'settings' && (
+                      <Settings initialCategory={settingsCategory} />
+                    )}
+                    {overlayView === 'auth' && <AuthView />}
+                    {overlayView === 'processes' && <LocalhostProcessesView />}
+                    {overlayView === 'connections' && <ConnectionsView />}
+                    {overlayView === 'skills' && <SkillBrowserView />}
+                    {overlayView === 'drawings' && <DrawingsView />}
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>

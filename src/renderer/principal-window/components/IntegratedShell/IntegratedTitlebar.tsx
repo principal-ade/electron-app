@@ -6,7 +6,7 @@ import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls'
 import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
-import { Layers, FolderPlus, FilePlus2, Server } from 'lucide-react';
+import { Home, Layers, FolderPlus, FilePlus2, Server } from 'lucide-react';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 import { CreateRepositoryInWorkspaceModal } from '../../../panels/components/CreateRepositoryInWorkspaceModal';
@@ -36,6 +36,10 @@ interface IntegratedTitlebarProps {
   onShowOnboardingWizard?: () => void;
   hideSearch?: boolean;
   onAddProject?: () => void;
+  /** Toggle the Home overlay on/off. */
+  onToggleHome?: () => void;
+  /** Whether the Home overlay is currently showing (drives the toggled state). */
+  isHomeActive?: boolean;
 }
 
 export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
@@ -48,6 +52,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   onShowOnboardingWizard,
   hideSearch = false,
   onAddProject,
+  onToggleHome,
+  isHomeActive = false,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
@@ -161,6 +167,62 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         zIndex: 100,
       }}
     >
+      {/* Home toggle — left side, clear of the macOS traffic lights. Opens the
+          Home overlay, or drops back to the last workspace surface when it's
+          already showing. */}
+      {onToggleHome && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            paddingLeft: '12px',
+            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+          }}
+        >
+          <button
+            onClick={onToggleHome}
+            title={isHomeActive ? 'Close Home' : 'Home'}
+            aria-pressed={isHomeActive}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              backgroundColor: isHomeActive
+                ? theme.colors.primary
+                : theme.colors.backgroundSecondary,
+              color: isHomeActive ? '#ffffff' : theme.colors.text,
+              border: `1px solid ${
+                isHomeActive ? theme.colors.primary : theme.colors.border
+              }`,
+              cursor: 'pointer',
+              fontSize: theme.fontSizes[1],
+              fontWeight: 500,
+              fontFamily: theme.fonts.body,
+              transition: 'all 0.2s',
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            }}
+            onMouseEnter={(e) => {
+              if (!isHomeActive) {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isHomeActive) {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
+              }
+            }}
+          >
+            <Home size={16} />
+            <span>Home</span>
+          </button>
+        </div>
+      )}
+
       {/* Centered GitHub Search Bar */}
       {!hideSearch && (
         <div

@@ -8,7 +8,6 @@ import {
   ToolCase,
   GraduationCap,
   Footprints,
-  Home,
   Inbox,
   Layers,
   PenTool,
@@ -177,7 +176,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     );
 
   const navItems: NavItem[] = [
-    { id: 'home', icon: <Home size={20} />, label: 'Home' },
+    // Home lives in the titlebar now (toggling overlay), not the sidebar.
     {
       id: 'inbox',
       icon: <Inbox size={20} />,
