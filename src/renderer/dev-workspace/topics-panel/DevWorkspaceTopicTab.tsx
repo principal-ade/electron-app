@@ -3,6 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Check, Copy, List, PanelsTopLeft } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from '../../alexandria-workspace/topic-description-tab/TopicDescriptionBody';
+import { TopicStatusHeaderButton } from '../../alexandria-workspace/topic-description-tab/TopicStatusHeaderButton';
 import { TopicTrailsRail } from '../../alexandria-workspace/topic-description-tab/TopicTrailsRail';
 import { TopicService } from '../../main-process-api/TopicService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
@@ -265,6 +266,7 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
             </>
           )}
         </button>
+        <TopicStatusHeaderButton topicId={topicId} />
       </div>
 
       {/* Body: description on the left, trails rail on the right. */}
