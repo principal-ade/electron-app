@@ -52,9 +52,13 @@ const parseTitlebarUrl = (input: string): ParsedTitlebarUrl | null => {
         return { type: 'trail', id: trailMatch[1] };
       const topicMatch = url.pathname.match(/\/topic\/([A-Za-z0-9._-]+)/i);
       if (topicMatch) return { type: 'topic', id: topicMatch[1] };
+      // web-ade mirrors GitHub's `…/{owner}/{repo}` (and `…/{user}`) paths, so
+      // a non-trail/topic link like `app.principal-ade.com/owner/repo` resolves
+      // to the same repo/user as the equivalent github.com link.
+      // (falls through to the shared owner/repo parsing below)
+    } else if (url.hostname !== 'github.com') {
       return null;
     }
-    if (url.hostname !== 'github.com') return null;
     const parts = url.pathname.split('/').filter(Boolean);
     if (parts.length === 1) return { type: 'user', username: parts[0] };
     if (parts.length >= 2) return { type: 'repo', owner: parts[0], name: parts[1] };
