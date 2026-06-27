@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Search,
   Share2,
+  Telescope,
 } from 'lucide-react';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { GitService } from '../../../main-process-api/GitService';
@@ -148,6 +149,7 @@ const OPTIONAL_SKILL_NAMES = [
   'excalidraw-drawings',
   'principal-ai-desktop-app-tools',
   'file-city-tours',
+  'search-local-topics-trails',
 ] as const;
 
 const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
@@ -179,6 +181,15 @@ const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/file-city-tours`,
     source: TRAIL_SKILL_SOURCE,
     Icon: Compass,
+  },
+  {
+    name: 'search-local-topics-trails',
+    title: 'Search Local Topics & Trails',
+    description:
+      'Search the on-disk trail and topic indexes by title, summary, repo, or recency, then open a matching trail — a read-only way to find the local trails and topics already saved on this machine.',
+    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/search-local-topics-trails`,
+    source: TRAIL_SKILL_SOURCE,
+    Icon: Telescope,
   },
 ];
 
