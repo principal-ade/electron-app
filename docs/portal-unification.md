@@ -204,16 +204,33 @@ each green on `main`:**
   `PortalIntentBridge` into one portal-bus listener that writes to the right
   bucket; left panels emit on the portal bus instead of per-view buses.
   Behavior-identical.
-- **3 — One host + one terminal scope + swappable left slot.** Collapse the 3
+- **3 — One host + one terminal scope + swappable left slot.** Collapse the
   frameworks into one shell with a single persistent `TabbedTerminalPanel`.
-  **Terminal decision (locked): one shared workspace-wide scope** — the three
-  per-surface scopes collapse into one. This is where shared-tabs UX lands — the
-  only intended behavior change.
+  **Terminal decision (locked): one shared workspace-wide scope** — the per-surface
+  scopes collapse into one. This is where shared-tabs UX lands — the only intended
+  behavior change. **Split, by risk (decided 2026-06-27):** the blueprint showed
+  Projects carries far more per-view machinery (repositories + GitHub loads, ~13
+  bus subscriptions that open tabs/modals, the activity-feed/heatmap/delete-modal
+  state) — none of it on the portal bus yet. Inbox + Topics were already
+  portal-bus-clean after 2c, so they merge first; Projects folds in as its own
+  focused step afterward.
+  - **3a — Inbox + Topics → `WorkspaceShell`** (first cut). One persistent host
+    (`src/renderer/workspace-shell/WorkspaceShell.tsx`): single `terminal:workspace`
+    scope, one `useWorkspaceTabs()` bucket (the inbox + topics buckets merged in
+    `PortalTabsContext`), left panel swaps by `activeView`. `PrincipalPortal` mounts
+    one instance for both `inbox` and `topics`, so switching keeps tabs + terminal.
+    The dead per-view frameworks + view wrappers are deleted; their 4 tab types move
+    to `events/portalTabs.ts`. The `useInboxTabs`/`useTopicsTabs` compat hooks now
+    read the shared bucket.
+  - **3b — Projects → `WorkspaceShell`** (deferred). Decouple the Projects surface
+    onto the portal bus (rehome its ~13 tab-opening subscriptions to the
+    always-mounted bridge) + move its data/modals/heatmap state into the host, then
+    add the Projects left panel + tab types to the shell.
 
-**Landed:** 2a `652fe652a`, 2b `9da7ef06b`, 2c `7dc4d0efd` — all green on `main`,
-all behavior-identical. **Increment 3 is the only remaining step** — and the only
-behavior-changing one (it deliberately changes tab/terminal isolation), so it
-warrants its own focused pass + review rather than riding on the 2x consolidation.
+**Landed:** 2a `652fe652a`, 2b `9da7ef06b`, 2c `7dc4d0efd`, 3a `6cdeb57f1` — all
+green on `main`. 2a–2c behavior-identical; **3a changes tab/terminal isolation for
+Inbox + Topics** (shared host) and wants a dev-build check. **Remaining: 3b**
+(Projects into the shell) + Increment 4 (Trails).
 
 ## Trails surface design (decided 2026-06-20)
 
