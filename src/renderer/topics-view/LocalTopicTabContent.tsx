@@ -27,6 +27,7 @@ import { TopicService } from '../main-process-api/TopicService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { useOpenWorkspaceWindow } from '../hooks/useOpenWorkspaceWindow';
 import { emitTrailOpen } from '../events/portalIntents';
+import { usePortalEvents } from '../principal-window/PortalEventContext';
 import { useTopicsTabs } from '../principal-window/contexts/TopicsTabsContext';
 import '../styles/window-open-feedback.css';
 
@@ -37,9 +38,12 @@ export const LocalTopicTabContent: React.FC<{
 }> = ({ topicId, title, events }) => {
   const { theme } = useTheme();
   // `activeTabId` (read-only highlight) still comes from the tab context; the
-  // open path is decoupled — selecting a trail emits `trail:open` on the bus and
-  // the framework turns it into a tab (portal-unification Increment 1).
+  // open path is decoupled — selecting a trail emits `trail:open` on the portal
+  // bus and the single PortalIntentBridge listener turns it into a tab. (The
+  // per-view `events` prop stays — it's the bus the markdown body uses for link
+  // handling.)
   const { activeTabId } = useTopicsTabs();
+  const { events: portalEvents } = usePortalEvents();
 
   // Table-of-contents drawer: the body reports whether the description has
   // headings (`hasToc`), this owns the open-state, and the body renders the
@@ -271,9 +275,10 @@ export const LocalTopicTabContent: React.FC<{
         <TopicTrailsRail
           topicId={topicId}
           onOpenTrail={(trailId, trailTitle) =>
-            emitTrailOpen(events, 'local-topic-tab', {
+            emitTrailOpen(portalEvents, 'local-topic-tab', {
               trailId,
               source: 'local',
+              surface: 'topics',
               title: trailTitle,
             })
           }

@@ -23,6 +23,14 @@ export const PORTAL_INTENTS = {
 export type PortalIntentName =
   (typeof PORTAL_INTENTS)[keyof typeof PORTAL_INTENTS];
 
+/**
+ * Which workspace surface a content-open intent targets. The single tab-host
+ * listener routes the intent to that surface's bucket. Transitional: the three
+ * surfaces collapse into one tab list in Increment 3, after which routing by
+ * surface goes away.
+ */
+export type PortalSurface = 'projects' | 'inbox' | 'topics';
+
 /** Payload for {@link PORTAL_INTENTS.trailOpen}. */
 export interface TrailOpenPayload {
   trailId: string;
@@ -31,6 +39,8 @@ export interface TrailOpenPayload {
    * `local` = a trail from the on-disk library.
    */
   source: 'shared' | 'local';
+  /** Destination surface (which bucket opens the tab). */
+  surface: PortalSurface;
   owner?: string;
   repo?: string;
   title?: string;
@@ -39,6 +49,8 @@ export interface TrailOpenPayload {
 /** Payload for {@link PORTAL_INTENTS.topicOpen}. */
 export interface TopicOpenPayload {
   topicId: string;
+  /** Destination surface (which bucket opens the tab). */
+  surface: PortalSurface;
   title?: string;
 }
 

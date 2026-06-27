@@ -259,6 +259,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
       emitTrailOpen(portalEvents, 'titlebar-search', {
         trailId: id,
         source: 'shared',
+        surface: 'projects',
       });
       clearSearch();
     },
@@ -279,7 +280,10 @@ export const TitlebarGitHubSearch: React.FC = () => {
         timestamp: Date.now(),
         payload: { view: 'inbox' },
       });
-      emitTopicOpen(portalEvents, 'titlebar-search', { topicId: id });
+      emitTopicOpen(portalEvents, 'titlebar-search', {
+        topicId: id,
+        surface: 'inbox',
+      });
       clearSearch();
     },
     [events, portalEvents, clearSearch],

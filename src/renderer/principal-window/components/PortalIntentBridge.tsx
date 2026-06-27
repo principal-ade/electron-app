@@ -1,28 +1,30 @@
 /**
  * PortalIntentBridge
  *
- * The always-mounted listener on the portal bus (`PortalEventContext`). It turns
- * view-agnostic content-open intents into tabs by calling the existing
- * always-mounted tab contexts — so an emitter that lives *outside* any single
- * view's bus (today: the titlebar URL/paste opener) can open content into a view
- * that may not be mounted yet. A per-view framework bridge can't do this: it is
- * only subscribed while its view is active, so an intent fired from the titlebar
- * while another view is showing would drop on the floor.
+ * The single always-mounted listener on the portal bus (`PortalEventContext`).
+ * It turns view-agnostic content-open intents into tabs by calling the unified
+ * `PortalTabsContext` open methods, routing each intent to the surface named in
+ * its payload (`surface`). Because it is always mounted (it lives at the
+ * `PrincipalApp` level, not inside a view), an intent fired while the target
+ * surface isn't the active view still lands — which a per-view framework
+ * listener couldn't guarantee.
  *
- * This renders nothing. It is the seed of the future single `PortalTabsContext`
- * listener (portal-unification Increment 2): when the 3 tab contexts collapse
- * into one, this dispatch logic moves into that context and this file goes away.
+ * Portal-unification Increment 2c: this replaces the former per-view framework
+ * bridges (in Inbox/TopicsPanelFramework) AND the earlier titlebar-only bridge —
+ * every open-intent emitter (left panels, the local-topic trails rail, the
+ * titlebar) now emits on the portal bus, and this is the only listener. It is
+ * the seed of the Increment 3 single `PortalTabsContext` host: when the three
+ * buckets collapse into one tab list, surface routing goes away and this folds
+ * into that host.
  *
- * Destination routing mirrors the titlebar's prior hardcoded behavior: a pasted
- * shared trail opens in Projects (next to repo profiles); a pasted topic opens
- * in Inbox (the shared-content surface). The titlebar still emits its own
- * `panel:switch` on `principalEvents` to bring that view forward.
+ * This renders nothing.
  */
 
 import { useEffect } from 'react';
 import { usePortalEvents } from '../PortalEventContext';
 import { useProjectsTabs } from '../contexts/ProjectsTabsContext';
 import { useInboxTabs } from '../contexts/InboxTabsContext';
+import { useTopicsTabs } from '../contexts/TopicsTabsContext';
 import {
   PORTAL_INTENTS,
   type TrailOpenPayload,
@@ -31,23 +33,44 @@ import {
 
 export const PortalIntentBridge: React.FC = () => {
   const { events } = usePortalEvents();
-  const { openSharedTrail } = useProjectsTabs();
-  const { openTopic } = useInboxTabs();
+  const projects = useProjectsTabs();
+  const inbox = useInboxTabs();
+  const topics = useTopicsTabs();
 
   useEffect(() => {
     const handleTrailOpen = (event: { payload: TrailOpenPayload }) => {
-      // The portal bus only carries shared trails from the titlebar today; a
-      // local trail has no cross-view "home" surface, so ignore it here.
-      if (event.payload.source === 'shared') {
-        openSharedTrail(
-          event.payload.trailId,
-          event.payload.owner,
-          event.payload.repo,
-        );
+      const p = event.payload;
+      switch (p.surface) {
+        case 'projects':
+          // Projects only hosts shared trails opened via the bus (pasted URLs).
+          projects.openSharedTrail(p.trailId, p.owner, p.repo);
+          break;
+        case 'inbox':
+          if (p.source === 'local') {
+            inbox.openLocalTrail(p.trailId, p.title);
+          } else {
+            inbox.openSharedTrail(p.trailId, p.owner, p.repo);
+          }
+          break;
+        case 'topics':
+          // Topics only hosts local trails (a topic's curated trails).
+          topics.openLocalTrail(p.trailId, p.title);
+          break;
       }
     };
     const handleTopicOpen = (event: { payload: TopicOpenPayload }) => {
-      openTopic(event.payload.topicId, event.payload.title);
+      const p = event.payload;
+      switch (p.surface) {
+        case 'inbox':
+          inbox.openTopic(p.topicId, p.title);
+          break;
+        case 'topics':
+          topics.openTopic(p.topicId, p.title);
+          break;
+        case 'projects':
+          // Projects has no topic tabs; nothing to do.
+          break;
+      }
     };
     events.on(PORTAL_INTENTS.trailOpen, handleTrailOpen);
     events.on(PORTAL_INTENTS.topicOpen, handleTopicOpen);
@@ -55,7 +78,7 @@ export const PortalIntentBridge: React.FC = () => {
       events.off(PORTAL_INTENTS.trailOpen, handleTrailOpen);
       events.off(PORTAL_INTENTS.topicOpen, handleTopicOpen);
     };
-  }, [events, openSharedTrail, openTopic]);
+  }, [events, projects, inbox, topics]);
 
   return null;
 };

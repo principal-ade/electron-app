@@ -212,6 +212,7 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
           onClick={() =>
             emitTopicOpen(events, 'topics-left-panel', {
               topicId: topic.id,
+              surface: 'topics',
               title: topic.title,
             })
           }

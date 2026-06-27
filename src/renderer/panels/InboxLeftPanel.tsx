@@ -203,6 +203,7 @@ export const InboxLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
       emitTrailOpen(events, 'inbox-left-panel', {
         trailId: entry.trailId,
         source: 'shared',
+        surface: 'inbox',
         owner: entry.owner,
         repo: entry.repo,
       });
@@ -464,6 +465,7 @@ export const InboxLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
           onClick={() =>
             emitTopicOpen(events, 'inbox-left-panel', {
               topicId: entry.topicId,
+              surface: 'inbox',
               title,
             })
           }
@@ -555,6 +557,7 @@ export const InboxLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
             emitTrailOpen(events, 'inbox-left-panel', {
               trailId: entry.trailId,
               source: 'shared',
+              surface: 'inbox',
               owner: entry.owner,
               repo: entry.repo,
             })
@@ -636,6 +639,7 @@ export const InboxLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
             emitTrailOpen(events, 'inbox-left-panel', {
               trailId: entry.id,
               source: 'shared',
+              surface: 'inbox',
               owner: entry.owner,
               repo: entry.repo,
             })
