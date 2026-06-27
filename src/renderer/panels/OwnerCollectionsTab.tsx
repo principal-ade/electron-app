@@ -3,8 +3,8 @@
  *
  * Renders a GitHub user/org's public starred collections. Used inside
  * UserProfilePanel and OrgProfilePanel as a tab body. Clicking a card
- * emits collection:selected so the ProjectsPanelFramework can open
- * the CollectionProfilePanel for that collection.
+ * emits collection:selected (forwarded to the portal bus) so the workspace
+ * shell can open the CollectionProfilePanel for that collection.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';

@@ -8,7 +8,7 @@
  * projects sort first; the rest sort alphabetically by name, except under the
  * In Progress filter, where they order by most recent activity (the work
  * you're actively in). Orgs with more than 10 repos start collapsed.
- * Used in the ProjectsView left panel.
+ * Used in the Projects surface left panel.
  */
 
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';

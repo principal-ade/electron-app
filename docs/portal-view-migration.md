@@ -41,6 +41,13 @@ violates one will compile but misbehave.
    intents into tabs is `PortalIntentBridge`. This is non-negotiable because a
    tab opened from surface A can be acted on while surface B's left panel is
    showing — a per-view listener would be unmounted and miss the event.
+   **Forwarder variant (Projects, 3b):** a surface whose panels emit open-intents
+   on a single `events` prop mixed with genuine intra-surface chatter can keep
+   emitting on the shell's local bus, as long as the shell installs a typed
+   local→portal forwarder (`installProjectsOpenForwarder`) that lifts *only* the
+   open-intent subset onto the portal bus. The bridge stays the single
+   materializer; the chatter stays local. Do NOT route chatter through the portal
+   bus to avoid the forwarder.
 4. **Tab content emits intra-tab events on the host's *local* bus.** The shell
    creates one `PanelEventBus` (`events`) for terminal links + within-tab
    chatter (file opens inside a trail, etc.). That's separate from the portal
@@ -137,13 +144,37 @@ swap the left panel by `activeView`, host one instance for both in
 
 ## Per-surface notes
 
-- **Projects (3b) — the hard migration.** It's the reason Increment 3 was split.
-  It carries an Alexandria + GitHub `repositories` load, ~13 bus subscriptions
-  that open tabs/modals, and activity-feed / heatmap / delete-modal state — none
-  on the portal bus yet. So steps 2–3 are real work (not no-ops like 3a): decouple
-  ~13 emitters, rehome their handlers + the delete modal to always-mounted homes,
-  then steps 4–8 to host its ~13 tab types + the Projects left panel (which needs
-  `feedMode`/`commits`/`selectedBlock`/`activityCommits` computed at host level).
+- **Projects (3b) — done; the hard migration.** It's the reason Increment 3 was
+  split. Steps 2–3 were real work (not no-ops like 3a). How it actually landed:
+  - **Prep first.** A behavior-identical prep commit dropped the dead
+    feed-filter/heatmap wiring (`activity:time-filter-changed` /
+    `repository:filter-changed` had zero emitters; `commits`/`selectedBlock` were
+    threaded but unread) and hoisted the ~10 Projects tab types into
+    `events/portalTabs.ts`.
+  - **Opens via a typed local→portal forwarder (step 2 variant).** Projects
+    differs from Inbox/Topics: ~30 emit sites (left panel AND persistent tab
+    content) all share one `events` prop, mixing open-intents with intra-surface
+    chatter (`commit:review-selected` overlay, profile-link, delete, repo-CRUD).
+    Rather than rewrite every emit site, the panels keep emitting on the shell's
+    **local** bus and `installProjectsOpenForwarder` (in `events/portalIntents.ts`)
+    lifts just the open-intent allowlist onto the portal bus — normalizing the two
+    legacy owner events into `owner:selected{kind}`. The opens are promoted to
+    typed `PORTAL_INTENTS` and materialized by `PortalIntentBridge` (step 3 lands
+    in the bridge as usual). Chatter + the delete modal stay local.
+  - **Host state (step 1/3) → `useProjectsHost`.** The activity feed, git-status
+    refresh, delete modal (its always-mounted home), profile-link `window.open`
+    side-effects, the initial dirty-check, and the forwarder install live in
+    `projects-view/useProjectsHost.tsx`. The `repositories` load is the shell's
+    (re-sorted by `lastOpenedAt`); the dead GitHub-search load in the old
+    `FeedPanelProvider` was dropped (no consumers).
+  - **Tab bodies (step 5) → `projectsTabContent.ts`.** `renderProjectsTabContent`
+    / `renderProjectsTabIcon` are called first in the shell's renderers; they own
+    the shared trail/doc tabs too (one source of truth).
+  - **Left panel (step 6).** `ProjectsLeftPanel` is fed the shell's **local**
+    `events` (so its opens get forwarded) plus host-computed `feedMode` /
+    `activityCommits`. Steps 7–8: `PrincipalPortal` hosts one shell for
+    projects/inbox/topics; `ProjectsView`/`FeedPanelProvider`/`ProjectsPanelFramework`
+    deleted.
 - **Trails (Increment 4) — build-new, not migrate.** Per the design, Trails is a
   *new* cross-repo panelized surface (All-Maps default tab + `trail:open` /
   `map:open`), not a reskin of today's `TrailsView`. Author it against these

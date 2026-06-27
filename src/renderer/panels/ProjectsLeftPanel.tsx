@@ -1,7 +1,7 @@
 /**
  * ProjectsLeftPanel
  *
- * Left panel for the ProjectsView that contains the feed mode selector
+ * Left panel for the Projects surface that contains the feed mode selector
  * and different list views (my activity, collections with subtabs, team with organizations and coworkers).
  * All sub-components stay mounted to avoid reloading data on mode switch.
  */

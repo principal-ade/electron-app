@@ -10,15 +10,14 @@
  * and back is a pure visibility flip — open tabs, terminals, and scroll state
  * survive with no hoisting required.
  *
- * INCREMENT 3 (first cut): Inbox + Topics are now one persistent `WorkspaceShell`
+ * INCREMENT 3: Projects + Inbox + Topics are now one persistent `WorkspaceShell`
  * — a single tabbed-terminal host (one `terminal:workspace` scope, one
  * `useWorkspaceTabs()` bucket) whose left panel swaps by `activeView`. Switching
- * Inbox↔Topics keeps the shell — and its open tabs + terminal — mounted. Projects
- * still swaps in/out separately (it carries far more per-view machinery and is
- * folded into the shell in a later step — see docs/portal-unification.md).
+ * between the three keeps the shell — and its open tabs + terminal — mounted.
+ * Trails is still its own view until Increment 4 folds it in too (see
+ * docs/portal-unification.md).
  */
 import React from 'react';
-import { ProjectsView } from '../../views/ProjectsView';
 import { TrailsView } from '../../views/TrailsView';
 import { WorkspaceShell } from '../../../workspace-shell/WorkspaceShell';
 
@@ -59,8 +58,9 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
     // contained to this base layer, so they can't bleed above the standalone
     // overlay (zIndex 2) and hide views like Settings.
     <div style={{ height: '100%', width: '100%', isolation: 'isolate' }}>
-      {workspaceView === 'projects' && <ProjectsView />}
-      {(workspaceView === 'inbox' || workspaceView === 'topics') && (
+      {(workspaceView === 'projects' ||
+        workspaceView === 'inbox' ||
+        workspaceView === 'topics') && (
         <WorkspaceShell activeView={workspaceView} />
       )}
       {workspaceView === 'trails' && (

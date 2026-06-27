@@ -179,9 +179,8 @@ export const TitlebarGitHubSearch: React.FC = () => {
         timestamp: Date.now(),
         payload: { view: 'projects' },
       });
-      // Call ProjectsTabsContext directly. Going through principalEvents would
-      // drop on the floor when ProjectsView is not yet mounted — the bridge in
-      // FeedPanelProvider isn't subscribed until after this tick.
+      // Open directly on the shared workspace bucket (always mounted), so the
+      // tab lands even though the portal shell may currently show another surface.
       openProjectInfo(
         payloadFromGithub({
           owner: repo.owner.login,
@@ -249,11 +248,11 @@ export const TitlebarGitHubSearch: React.FC = () => {
   const openTrailById = useCallback(
     (id: string) => {
       // A pasted trail URL is someone else's published trail — not in the
-      // local library. Open it as a feed tab (next to repo profiles), which
+      // local library. Open it as a tab (next to repo profiles), which
       // self-fetches the payload and conveys its remote-ness. Switch to the
-      // feed view first, then emit `trail:open` on the portal bus — its
-      // always-mounted listener (PortalIntentBridge) opens the tab even before
-      // ProjectsView mounts, so the intent never drops on the floor.
+      // projects view first, then emit `trail:open` on the portal bus — its
+      // always-mounted listener (PortalIntentBridge) opens the tab in the shared
+      // host regardless of which surface is showing, so it never drops.
       events.emit({
         type: 'panel:switch',
         source: 'titlebar-search',

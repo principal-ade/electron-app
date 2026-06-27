@@ -113,10 +113,14 @@ listener; do not fold them into the intent union:
 
 ## Naming issues to resolve in the union
 
-- [ ] **`user:profile-selected` (7×) vs `owner:selected` (7×)** — both open a
-  profile; `user:profile-selected` is a `feed:`-era straggler. Collapse to
-  `owner:selected` with `kind` in payload. (Emitters of the straggler:
-  ProjectsLeftPanel, ProjectsList, CollectionProfilePanel.)
+- [~] **`user:profile-selected` (7×) vs `owner:selected` (7×)** — both open a
+  profile; `user:profile-selected` is a `feed:`-era straggler. **Collapsed on the
+  portal bus:** `PORTAL_INTENTS.ownerSelected` carries `kind`, and
+  `installProjectsOpenForwarder` normalizes both legacy events into it (3b). The
+  remaining emit-site cleanup — making the panels emit `owner:selected{kind}`
+  directly instead of the two legacy events — is a follow-up. (Straggler emitters:
+  ProjectsLeftPanel, ProjectsList, CollectionProfilePanel, RepoActivityCard,
+  OrgProfilePanel, RepositoryProfilePanel.)
 - [ ] Decide `trail:open` payload discriminator (`source: 'shared' | 'local'`)
   vs two events. Recommendation: one event + discriminator.
 
@@ -228,15 +232,39 @@ each green on `main`:**
     The dead per-view frameworks + view wrappers are deleted; their 4 tab types move
     to `events/portalTabs.ts`. The `useInboxTabs`/`useTopicsTabs` compat hooks now
     read the shared bucket.
-  - **3b — Projects → `WorkspaceShell`** (deferred). Decouple the Projects surface
-    onto the portal bus (rehome its ~13 tab-opening subscriptions to the
-    always-mounted bridge) + move its data/modals/heatmap state into the host, then
-    add the Projects left panel + tab types to the shell.
+  - **3b — Projects → `WorkspaceShell`** (done). Projects now renders in the one
+    persistent shell for `projects`/`inbox`/`topics`. Its ~10 tab types + open
+    methods merged into the single `useWorkspaceTabs()` bucket; its tab bodies
+    render via `projects-view/projectsTabContent.ts` (`renderProjectsTabContent`);
+    its host concerns (activity feed, git-status refresh, delete modal, profile-link
+    side-effects) live in `projects-view/useProjectsHost.tsx`. The dead
+    `ProjectsView`/`FeedPanelProvider`/`ProjectsPanelFramework` are deleted. See the
+    bus-topology note below.
 
-**Landed:** 2a `652fe652a`, 2b `9da7ef06b`, 2c `7dc4d0efd`, 3a `6cdeb57f1` — all
-green on `main`. 2a–2c behavior-identical; **3a changes tab/terminal isolation for
-Inbox + Topics** (shared host) and wants a dev-build check. **Remaining: 3b**
-(Projects into the shell) + Increment 4 (Trails).
+### Bus topology for Projects opens (decided 2026-06-27)
+
+The doc's canonical-intent table already lists `repository:selected` /
+`owner:selected` / `collection:selected` / `live-activity:open` /
+`owner:activity-requested` / `repository:activity-requested` as portal tab-open
+intents, so those are now **typed members of `PORTAL_INTENTS`**, materialized by
+the lone always-mounted `PortalIntentBridge` into the shared bucket. The legacy
+`user:profile-selected` straggler is collapsed into `owner:selected{ kind }`.
+
+Reconciling that with the panel convention (panels take one `events` prop;
+`commit:review-selected` is an in-panel overlay; profile-link / delete / repo-CRUD
+are local data-sync) is done with a **typed local→portal forwarder**
+(`installProjectsOpenForwarder`): the Projects left panel + tab content keep
+emitting everything on the shell's local bus, and the shell lifts just the
+open-intent subset onto the portal bus. Inbox/Topics still emit straight on the
+portal bus (no chatter to keep local). The emit-site collapse of
+`user:profile-selected` → `owner:selected{kind}` in the panels themselves remains
+a follow-up (normalization currently happens at the forwarder boundary).
+
+**Landed:** 2a `652fe652a`, 2b `9da7ef06b`, 2c `7dc4d0efd`, 3a `6cdeb57f1`, 3b
+(prep + host merge) — all green on `main`. 2a–2c behavior-identical; **3a + 3b
+change tab/terminal isolation** (Projects/Inbox/Topics now share one host + one
+`terminal:workspace` scope) and want a dev-build check. **Remaining: Increment 4
+(Trails).**
 
 ## Trails surface design (decided 2026-06-20)
 

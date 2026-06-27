@@ -1,7 +1,7 @@
 /**
  * ActivityFeedCardPanel
  *
- * Right panel for ProjectsView showing compact activity cards.
+ * Activity panel for the Projects surface showing compact activity cards.
  * Cards display repo info and File City image, with expandable commit details.
  */
 

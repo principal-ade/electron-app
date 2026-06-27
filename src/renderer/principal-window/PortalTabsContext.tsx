@@ -1,19 +1,15 @@
 /**
  * PortalTabsContext
  *
- * Owner of the workspace tab state. Portal-unification:
+ * Owner of the workspace tab state. Portal-unification Increment 3: Projects,
+ * Inbox, and Topics now share ONE persistent bucket — a single tab list +
+ * `activeTabId` hosted by `WorkspaceShell`, so switching the left panel between
+ * the three surfaces keeps your open tabs and a single terminal.
  *
- * - **Projects** keeps its own bucket (Increment 2b consolidated the provider;
- *   the Projects surface is folded into the shared host in a later step).
- * - **Inbox + Topics** now share ONE bucket (Increment 3, first cut): a single
- *   tab list + `activeTabId` hosted by the persistent `WorkspaceShell`, so
- *   switching the left panel between Inbox and Topics keeps your open tabs and a
- *   single terminal. `useWorkspaceTabs` is the shell's view of that bucket.
- *
- * The legacy per-surface compat hooks `useInboxTabs` / `useTopicsTabs` still
- * work — they read the shared workspace bucket and expose each surface's
- * `openTopic` (web-ade `topic` vs local `local-topic`). `useProjectsTabs` is
- * unchanged.
+ * `useWorkspaceTabs` is the shell's view of that bucket. The legacy per-surface
+ * compat hooks still work — `useProjectsTabs` (repo/profile opens + the titlebar's
+ * direct calls), `useInboxTabs` (web-ade `topic`) and `useTopicsTabs` (local
+ * `local-topic`) all read the shared bucket.
  */
 import React, {
   createContext,
@@ -25,9 +21,15 @@ import React, {
 import type { TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import type {
   ActivityFeedTab,
-  FeedTab,
+  CommitReviewTab,
+  LiveActivityTab,
+  InProgressActivityTab,
   ProjectInfoTab,
   UserProfileTab,
+  OrgProfileTab,
+  CollectionProfileTab,
+  OwnerActivityTab,
+  RepoActivityTab,
   SharedTrailTab,
   LocalTrailTab,
   MarkdownDocTab,
@@ -37,11 +39,12 @@ import type {
   LocalTopicTab,
 } from '../events/portalTabs';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
+import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
- * The unified Inbox+Topics tab union hosted by `WorkspaceShell`. It is the
- * superset of the former `InboxTab` and `TopicsTab` unions (deduped — both
- * carried `TerminalTab` / `LocalTrailTab`).
+ * The unified workspace tab union hosted by `WorkspaceShell` — the superset of
+ * the former Projects (`FeedTab`), Inbox and Topics unions (deduped; all three
+ * carried `TerminalTab` and the trail/markdown tabs).
  */
 export type WorkspaceTab =
   | TerminalTab
@@ -51,35 +54,30 @@ export type WorkspaceTab =
   | TopicTab
   | LocalTopicTab
   | LocalTrailTab
-  | MarkdownDocTab;
+  | MarkdownDocTab
+  // Projects
+  | CommitReviewTab
+  | LiveActivityTab
+  | ActivityFeedTab
+  | InProgressActivityTab
+  | ProjectInfoTab
+  | UserProfileTab
+  | OrgProfileTab
+  | CollectionProfileTab
+  | OwnerActivityTab
+  | RepoActivityTab;
 
 // ----------------------------------------------------------------------------
 // Slice shapes
 // ----------------------------------------------------------------------------
 
-export interface ProjectsTabsContextValue {
-  tabs: FeedTab[];
-  setTabs: React.Dispatch<React.SetStateAction<FeedTab[]>>;
-  activeTabId: string | null;
-  setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
-  /** Open a `project-info-<purl>` tab idempotently and focus it. */
-  openProjectInfo: (payload: RepositorySelectedPayload) => void;
-  /** Open a `user-profile-<username>` tab idempotently and focus it. */
-  openUserProfile: (username: string, email?: string) => void;
-  /** Open a `shared-trail-<trailId>` tab idempotently and focus it. */
-  openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
-  /** Open a `local-trail-<trailId>` tab idempotently and focus it. */
-  openLocalTrail: (trailId: string, title?: string) => void;
-  /** Open a `markdown-doc-<filePath>` tab idempotently and focus it. */
-  openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
-}
-
-/** The shared Inbox+Topics bucket, as the `WorkspaceShell` sees it. */
+/** The shared bucket, as the `WorkspaceShell` sees it. */
 export interface WorkspaceTabsContextValue {
   tabs: WorkspaceTab[];
   setTabs: React.Dispatch<React.SetStateAction<WorkspaceTab[]>>;
   activeTabId: string | null;
   setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
+  // Trails / topics / docs
   /** Open a `shared-trail-<trailId>` tab (a web-ade trail). */
   openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
   /** Open a `topic-<topicId>` tab (a published web-ade topic). */
@@ -89,6 +87,37 @@ export interface WorkspaceTabsContextValue {
   /** Open a `local-trail-<trailId>` tab. */
   openLocalTrail: (trailId: string, title?: string) => void;
   /** Open a `markdown-doc-<filePath>` tab. */
+  openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
+  // Projects
+  /** Open a `project-info-<purl>` tab idempotently and focus it. */
+  openProjectInfo: (payload: RepositorySelectedPayload) => void;
+  /** Open a `user-profile-<username>` tab idempotently and focus it. */
+  openUserProfile: (username: string, email?: string) => void;
+  /** Open an `org-profile-<orgName>` tab idempotently and focus it. */
+  openOrgProfile: (orgName: string) => void;
+  /** Open a `collection-profile-<id>` tab idempotently and focus it. */
+  openCollectionProfile: (collection: StarredCollection) => void;
+  /** Open an `owner-activity-<login>` tab idempotently and focus it. */
+  openOwnerActivity: (
+    login: string,
+    accountType: 'User' | 'Organization',
+  ) => void;
+  /** Open a `repo-activity-<owner>/<repo>` tab idempotently and focus it. */
+  openRepoActivity: (owner: string, repo: string) => void;
+  /** Open the singleton `live-activity` tab and focus it. */
+  openLiveActivity: () => void;
+}
+
+/** Back-compat shape for `useProjectsTabs` (titlebar + IntegratedShell). */
+export interface ProjectsTabsContextValue {
+  tabs: WorkspaceTab[];
+  setTabs: React.Dispatch<React.SetStateAction<WorkspaceTab[]>>;
+  activeTabId: string | null;
+  setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
+  openProjectInfo: (payload: RepositorySelectedPayload) => void;
+  openUserProfile: (username: string, email?: string) => void;
+  openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
+  openLocalTrail: (trailId: string, title?: string) => void;
   openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
 }
 
@@ -114,157 +143,20 @@ export interface TopicsTabsContextValue {
   openLocalTrail: (trailId: string, title?: string) => void;
 }
 
-const ProjectsTabsContext = createContext<ProjectsTabsContextValue | null>(null);
 const WorkspaceTabsContext = createContext<WorkspaceTabsContextValue | null>(
   null,
 );
 
 // ----------------------------------------------------------------------------
-// Projects slice (unchanged)
+// Shared workspace bucket (Projects + Inbox + Topics)
 // ----------------------------------------------------------------------------
 
-const PROJECTS_INITIAL_TABS: FeedTab[] = [
+const WORKSPACE_INITIAL_TABS: WorkspaceTab[] = [
   {
     id: 'activity-feed',
     contentType: 'activity-feed',
     label: 'Recent Activity',
   } as ActivityFeedTab,
-];
-
-function useProjectsTabsValue(): ProjectsTabsContextValue {
-  const [tabs, setTabs] = useState<FeedTab[]>(PROJECTS_INITIAL_TABS);
-  const [activeTabId, setActiveTabId] = useState<string | null>(
-    'activity-feed',
-  );
-
-  const openProjectInfo = useCallback((payload: RepositorySelectedPayload) => {
-    const { purl, github, localEntry } = payload;
-    const tabId = `project-info-${purl}`;
-    const label = github ? `${github.owner}/${github.name}` : String(purl);
-
-    setTabs((prev) => {
-      if (prev.some((t) => t.id === tabId)) return prev;
-      const newTab: ProjectInfoTab = {
-        id: tabId,
-        label,
-        contentType: 'project-info',
-        closable: true,
-        purl,
-        github,
-        localEntry,
-      };
-      return [...prev, newTab];
-    });
-    setActiveTabId(tabId);
-  }, []);
-
-  const openUserProfile = useCallback((username: string, email?: string) => {
-    const tabId = `user-profile-${username}`;
-
-    setTabs((prev) => {
-      if (prev.some((t) => t.id === tabId)) return prev;
-      const newTab: UserProfileTab = {
-        id: tabId,
-        label: `@${username}`,
-        contentType: 'user-profile',
-        closable: true,
-        username,
-        email,
-      };
-      return [...prev, newTab];
-    });
-    setActiveTabId(tabId);
-  }, []);
-
-  const openSharedTrail = useCallback(
-    (trailId: string, owner?: string, repo?: string) => {
-      const tabId = `shared-trail-${trailId}`;
-
-      setTabs((prev) => {
-        if (prev.some((t) => t.id === tabId)) return prev;
-        const newTab: SharedTrailTab = {
-          id: tabId,
-          label: 'Shared trail',
-          contentType: 'shared-trail',
-          closable: true,
-          trailId,
-          owner,
-          repo,
-        };
-        return [...prev, newTab];
-      });
-      setActiveTabId(tabId);
-    },
-    [],
-  );
-
-  const openLocalTrail = useCallback((trailId: string, title?: string) => {
-    const tabId = `local-trail-${trailId}`;
-
-    setTabs((prev) => {
-      if (prev.some((t) => t.id === tabId)) return prev;
-      const newTab: LocalTrailTab = {
-        id: tabId,
-        label: title || 'Trail',
-        contentType: 'local-trail',
-        closable: true,
-        trailId,
-      };
-      return [...prev, newTab];
-    });
-    setActiveTabId(tabId);
-  }, []);
-
-  const openMarkdownDoc = useCallback(
-    (filePath: string, repositoryPath?: string) => {
-      const tabId = `markdown-doc-${filePath}`;
-
-      setTabs((prev) => {
-        if (prev.some((t) => t.id === tabId)) return prev;
-        const newTab: MarkdownDocTab = {
-          id: tabId,
-          label: filePath.split('/').pop() || 'Document',
-          contentType: 'markdown-doc',
-          closable: true,
-          filePath,
-          repositoryPath,
-        };
-        return [...prev, newTab];
-      });
-      setActiveTabId(tabId);
-    },
-    [],
-  );
-
-  return useMemo<ProjectsTabsContextValue>(
-    () => ({
-      tabs,
-      setTabs,
-      activeTabId,
-      setActiveTabId,
-      openProjectInfo,
-      openUserProfile,
-      openSharedTrail,
-      openLocalTrail,
-      openMarkdownDoc,
-    }),
-    [
-      tabs,
-      activeTabId,
-      openProjectInfo,
-      openUserProfile,
-      openSharedTrail,
-      openLocalTrail,
-      openMarkdownDoc,
-    ],
-  );
-}
-
-// ----------------------------------------------------------------------------
-// Workspace slice (shared Inbox + Topics)
-// ----------------------------------------------------------------------------
-
-const WORKSPACE_INITIAL_TABS: WorkspaceTab[] = [
   { id: 'inbox-home', contentType: 'inbox-home', label: 'Inbox' } as InboxHomeTab,
   {
     id: 'topics-home',
@@ -275,102 +167,180 @@ const WORKSPACE_INITIAL_TABS: WorkspaceTab[] = [
 
 function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   const [tabs, setTabs] = useState<WorkspaceTab[]>(WORKSPACE_INITIAL_TABS);
-  const [activeTabId, setActiveTabId] = useState<string | null>('inbox-home');
+  const [activeTabId, setActiveTabId] = useState<string | null>(
+    'activity-feed',
+  );
 
-  const openSharedTrail = useCallback(
-    (trailId: string, owner?: string, repo?: string) => {
-      const tabId = `shared-trail-${trailId}`;
-
-      setTabs((prev) => {
-        if (prev.some((t) => t.id === tabId)) return prev;
-        const newTab: SharedTrailTab = {
-          id: tabId,
-          label: repo ? `${owner}/${repo}` : 'Shared trail',
-          contentType: 'shared-trail',
-          closable: true,
-          trailId,
-          owner,
-          repo,
-        };
-        return [...prev, newTab];
-      });
+  // Idempotent open helper: focus the tab if present, else append `make()`.
+  const openTab = useCallback(
+    (tabId: string, make: () => WorkspaceTab) => {
+      setTabs((prev) => (prev.some((t) => t.id === tabId) ? prev : [...prev, make()]));
       setActiveTabId(tabId);
     },
     [],
   );
 
-  const openWebAdeTopic = useCallback((topicId: string, title?: string) => {
-    const tabId = `topic-${topicId}`;
+  const openSharedTrail = useCallback(
+    (trailId: string, owner?: string, repo?: string) => {
+      openTab(`shared-trail-${trailId}`, () => ({
+        id: `shared-trail-${trailId}`,
+        label: repo ? `${owner}/${repo}` : 'Shared trail',
+        contentType: 'shared-trail',
+        closable: true,
+        trailId,
+        owner,
+        repo,
+      }) as SharedTrailTab);
+    },
+    [openTab],
+  );
 
-    setTabs((prev) => {
-      if (prev.some((t) => t.id === tabId)) return prev;
-      const newTab: TopicTab = {
-        id: tabId,
+  const openWebAdeTopic = useCallback(
+    (topicId: string, title?: string) => {
+      openTab(`topic-${topicId}`, () => ({
+        id: `topic-${topicId}`,
         label: title || 'Topic',
         contentType: 'topic',
         closable: true,
         topicId,
-      };
-      return [...prev, newTab];
-    });
-    setActiveTabId(tabId);
-  }, []);
+      }) as TopicTab);
+    },
+    [openTab],
+  );
 
-  const openLocalTopic = useCallback((topicId: string, title?: string) => {
-    const tabId = `local-topic-${topicId}`;
-
-    setTabs((prev) => {
-      if (prev.some((t) => t.id === tabId)) return prev;
-      const newTab: LocalTopicTab = {
-        id: tabId,
+  const openLocalTopic = useCallback(
+    (topicId: string, title?: string) => {
+      openTab(`local-topic-${topicId}`, () => ({
+        id: `local-topic-${topicId}`,
         label: title || 'Topic',
         contentType: 'local-topic',
         closable: true,
         topicId,
         title,
-      };
-      return [...prev, newTab];
-    });
-    setActiveTabId(tabId);
-  }, []);
+      }) as LocalTopicTab);
+    },
+    [openTab],
+  );
 
-  const openLocalTrail = useCallback((trailId: string, title?: string) => {
-    const tabId = `local-trail-${trailId}`;
-
-    setTabs((prev) => {
-      if (prev.some((t) => t.id === tabId)) return prev;
-      const newTab: LocalTrailTab = {
-        id: tabId,
+  const openLocalTrail = useCallback(
+    (trailId: string, title?: string) => {
+      openTab(`local-trail-${trailId}`, () => ({
+        id: `local-trail-${trailId}`,
         label: title || 'Trail',
         contentType: 'local-trail',
         closable: true,
         trailId,
-      };
-      return [...prev, newTab];
-    });
-    setActiveTabId(tabId);
-  }, []);
+      }) as LocalTrailTab);
+    },
+    [openTab],
+  );
 
   const openMarkdownDoc = useCallback(
     (filePath: string, repositoryPath?: string) => {
-      const tabId = `markdown-doc-${filePath}`;
-
-      setTabs((prev) => {
-        if (prev.some((t) => t.id === tabId)) return prev;
-        const newTab: MarkdownDocTab = {
-          id: tabId,
-          label: filePath.split('/').pop() || 'Document',
-          contentType: 'markdown-doc',
-          closable: true,
-          filePath,
-          repositoryPath,
-        };
-        return [...prev, newTab];
-      });
-      setActiveTabId(tabId);
+      openTab(`markdown-doc-${filePath}`, () => ({
+        id: `markdown-doc-${filePath}`,
+        label: filePath.split('/').pop() || 'Document',
+        contentType: 'markdown-doc',
+        closable: true,
+        filePath,
+        repositoryPath,
+      }) as MarkdownDocTab);
     },
-    [],
+    [openTab],
   );
+
+  const openProjectInfo = useCallback(
+    (payload: RepositorySelectedPayload) => {
+      const { purl, github, localEntry } = payload;
+      openTab(`project-info-${purl}`, () => ({
+        id: `project-info-${purl}`,
+        label: github ? `${github.owner}/${github.name}` : String(purl),
+        contentType: 'project-info',
+        closable: true,
+        purl,
+        github,
+        localEntry,
+      }) as ProjectInfoTab);
+    },
+    [openTab],
+  );
+
+  const openUserProfile = useCallback(
+    (username: string, email?: string) => {
+      openTab(`user-profile-${username}`, () => ({
+        id: `user-profile-${username}`,
+        label: `@${username}`,
+        contentType: 'user-profile',
+        closable: true,
+        username,
+        email,
+      }) as UserProfileTab);
+    },
+    [openTab],
+  );
+
+  const openOrgProfile = useCallback(
+    (orgName: string) => {
+      openTab(`org-profile-${orgName}`, () => ({
+        id: `org-profile-${orgName}`,
+        label: `@${orgName}`,
+        contentType: 'org-profile',
+        closable: true,
+        orgName,
+      }) as OrgProfileTab);
+    },
+    [openTab],
+  );
+
+  const openCollectionProfile = useCallback(
+    (collection: StarredCollection) => {
+      openTab(`collection-profile-${collection.id}`, () => ({
+        id: `collection-profile-${collection.id}`,
+        label: collection.name,
+        contentType: 'collection-profile',
+        closable: true,
+        collection,
+      }) as CollectionProfileTab);
+    },
+    [openTab],
+  );
+
+  const openOwnerActivity = useCallback(
+    (login: string, accountType: 'User' | 'Organization') => {
+      openTab(`owner-activity-${login}`, () => ({
+        id: `owner-activity-${login}`,
+        label: `@${login}`,
+        contentType: 'owner-activity',
+        closable: true,
+        login,
+        accountType,
+      }) as OwnerActivityTab);
+    },
+    [openTab],
+  );
+
+  const openRepoActivity = useCallback(
+    (owner: string, repo: string) => {
+      openTab(`repo-activity-${owner}/${repo}`, () => ({
+        id: `repo-activity-${owner}/${repo}`,
+        label: `${owner}/${repo}`,
+        contentType: 'repo-activity',
+        closable: true,
+        owner,
+        repo,
+      }) as RepoActivityTab);
+    },
+    [openTab],
+  );
+
+  const openLiveActivity = useCallback(() => {
+    openTab('live-activity', () => ({
+      id: 'live-activity',
+      label: 'Live Activity',
+      contentType: 'live-activity',
+      closable: true,
+    }) as LiveActivityTab);
+  }, [openTab]);
 
   return useMemo<WorkspaceTabsContextValue>(
     () => ({
@@ -383,6 +353,13 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openLocalTopic,
       openLocalTrail,
       openMarkdownDoc,
+      openProjectInfo,
+      openUserProfile,
+      openOrgProfile,
+      openCollectionProfile,
+      openOwnerActivity,
+      openRepoActivity,
+      openLiveActivity,
     }),
     [
       tabs,
@@ -392,36 +369,31 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openLocalTopic,
       openLocalTrail,
       openMarkdownDoc,
+      openProjectInfo,
+      openUserProfile,
+      openOrgProfile,
+      openCollectionProfile,
+      openOwnerActivity,
+      openRepoActivity,
+      openLiveActivity,
     ],
   );
 }
 
 // ----------------------------------------------------------------------------
-// Unified provider + hooks
+// Provider + hooks
 // ----------------------------------------------------------------------------
 
 export const PortalTabsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const projects = useProjectsTabsValue();
   const workspace = useWorkspaceTabsValue();
-
   return (
-    <ProjectsTabsContext.Provider value={projects}>
-      <WorkspaceTabsContext.Provider value={workspace}>
-        {children}
-      </WorkspaceTabsContext.Provider>
-    </ProjectsTabsContext.Provider>
+    <WorkspaceTabsContext.Provider value={workspace}>
+      {children}
+    </WorkspaceTabsContext.Provider>
   );
 };
-
-export function useProjectsTabs(): ProjectsTabsContextValue {
-  const ctx = useContext(ProjectsTabsContext);
-  if (!ctx) {
-    throw new Error('useProjectsTabs must be used within PortalTabsProvider');
-  }
-  return ctx;
-}
 
 export function useWorkspaceTabs(): WorkspaceTabsContextValue {
   const ctx = useContext(WorkspaceTabsContext);
@@ -429,6 +401,29 @@ export function useWorkspaceTabs(): WorkspaceTabsContextValue {
     throw new Error('useWorkspaceTabs must be used within PortalTabsProvider');
   }
   return ctx;
+}
+
+/**
+ * Back-compat: the Projects surface's view of the shared workspace bucket
+ * (consumed by the titlebar repo/user picker and IntegratedShell's trail
+ * handoff).
+ */
+export function useProjectsTabs(): ProjectsTabsContextValue {
+  const ws = useWorkspaceTabs();
+  return useMemo(
+    () => ({
+      tabs: ws.tabs,
+      setTabs: ws.setTabs,
+      activeTabId: ws.activeTabId,
+      setActiveTabId: ws.setActiveTabId,
+      openProjectInfo: ws.openProjectInfo,
+      openUserProfile: ws.openUserProfile,
+      openSharedTrail: ws.openSharedTrail,
+      openLocalTrail: ws.openLocalTrail,
+      openMarkdownDoc: ws.openMarkdownDoc,
+    }),
+    [ws],
+  );
 }
 
 /**

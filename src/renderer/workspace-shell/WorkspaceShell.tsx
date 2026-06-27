@@ -1,27 +1,32 @@
 /**
  * WorkspaceShell
  *
- * The persistent host for the Inbox + Topics surfaces (portal-unification
- * Increment 3, first cut). It replaces the separate InboxView/InboxPanelFramework
- * and TopicsView/TopicsPanelFramework with ONE shell:
+ * The persistent host for the Projects + Inbox + Topics surfaces
+ * (portal-unification Increment 3). It replaces the separate per-view
+ * frameworks (Projects/Inbox/Topics) with ONE shell:
  *
  * - one tabbed-terminal host reading the shared `useWorkspaceTabs()` bucket, so
  *   the open tabs (and the single terminal) persist when you swap the left panel;
- * - one terminal scope (`terminal:workspace`) instead of `terminal:inbox` +
- *   `terminal:topics`;
- * - a swappable left panel chosen by `activeView` — Inbox's list or Topics' list.
+ * - one terminal scope (`terminal:workspace`) instead of `terminal:feed` /
+ *   `terminal:inbox` / `terminal:topics`;
+ * - a swappable left panel chosen by `activeView` — the Projects feed list, the
+ *   Inbox list, or the Topics list.
  *
- * PrincipalPortal mounts ONE instance for both the `inbox` and `topics`
- * workspace views, passing `activeView`; switching between them keeps this
- * component (and its terminal/tabs) mounted and only swaps the left panel.
+ * PrincipalPortal mounts ONE instance for the `projects`, `inbox` and `topics`
+ * views, passing `activeView`; switching between them keeps this component (and
+ * its terminal/tabs) mounted and only swaps the left panel.
  *
- * Projects is folded into this shell in a later step — it carries far more
- * per-view machinery (see docs/portal-unification.md).
+ * Projects carries more host machinery than Inbox/Topics — its activity feed,
+ * git-status refresh, delete modal and local→portal open-intent forwarder live
+ * in `useProjectsHost`; its tab bodies render via `renderProjectsTabContent`.
+ * The Projects panels emit open intents on the shell's LOCAL `events` bus (the
+ * forwarder lifts them to the portal bus); Inbox/Topics emit straight on the
+ * portal bus. See docs/portal-unification.md + docs/portal-view-migration.md.
  */
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Inbox, Route, Layers, Footprints, FileText } from 'lucide-react';
+import { Inbox, Layers, FileText } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -39,6 +44,7 @@ import {
 } from '../contexts/TerminalContext';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { WindowService } from '../main-process-api/WindowService';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import {
   TabbedTerminalPanel,
@@ -47,27 +53,25 @@ import {
 } from '@industry-theme/xterm-terminal-panel';
 import { InboxLeftPanel } from '../panels/InboxLeftPanel';
 import { TopicsLeftPanel } from '../panels/TopicsLeftPanel';
-import { SharedTrailTabContent } from '../projects-view/SharedTrailTabContent';
-import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
-import { MarkdownDocTabContent } from '../projects-view/MarkdownDocTabContent';
+import { ProjectsLeftPanel } from '../panels/ProjectsLeftPanel';
 import { TopicTabContent } from '../inbox-view/TopicTabContent';
 import { LocalTopicTabContent } from '../topics-view/LocalTopicTabContent';
+import {
+  renderProjectsTabContent,
+  renderProjectsTabIcon,
+} from '../projects-view/projectsTabContent';
+import { useProjectsHost } from '../projects-view/useProjectsHost';
+import type { FeedTab } from '../events/portalTabs';
 import {
   useWorkspaceTabs,
   type WorkspaceTab,
 } from '../principal-window/PortalTabsContext';
 import { usePortalEvents } from '../principal-window/PortalEventContext';
 import { DocumentService } from '../services/DocumentService';
-import type {
-  SharedTrailTab,
-  LocalTrailTab,
-  MarkdownDocTab,
-  TopicTab,
-  LocalTopicTab,
-} from '../events/portalTabs';
+import type { TopicTab, LocalTopicTab } from '../events/portalTabs';
 
 /** Which surface's left panel + landing the shell currently shows. */
-export type WorkspaceView = 'inbox' | 'topics';
+export type WorkspaceView = 'projects' | 'inbox' | 'topics';
 
 /** Centered landing hint shown by the `inbox-home` / `topics-home` tabs. */
 const HomePanel: React.FC<{ icon: React.ReactNode; title: string; body: string }> = ({
@@ -156,12 +160,21 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     repositoriesRef.current = repositories;
   });
 
-  // The shared Inbox+Topics tab bucket (the persistent host's tab list).
+  // The shared workspace tab bucket (the persistent host's tab list).
   const { tabs, setTabs, activeTabId, setActiveTabId, openMarkdownDoc } =
     useWorkspaceTabs();
-  // The left panels emit open intents on the portal bus (PortalIntentBridge
-  // turns them into tabs).
+  // The Inbox/Topics left panels emit open intents on the portal bus
+  // (PortalIntentBridge turns them into tabs).
   const { events: portalEvents } = usePortalEvents();
+
+  // Projects host concerns (activity feed, git-status refresh, delete modal,
+  // and the local→portal open-intent forwarder). Runs for the shell's whole
+  // lifetime across all surfaces so the Projects feed + delete modal stay live
+  // even while Inbox/Topics is showing. The Projects left panel + tab content
+  // emit on the shell's local `events` bus (the forwarder lifts opens to the
+  // portal bus); Inbox/Topics emit straight on `portalEvents`.
+  const { feedMode, setFeedMode, activityCommits, deleteModal } =
+    useProjectsHost({ events, repositories });
 
   useEffect(() => {
     const loadBaseDirectory = async () => {
@@ -219,27 +232,43 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const terminalDirectory = baseDefaultDirectory || process.env.HOME || '/';
 
   const renderTabIcon = useCallback((tab: WorkspaceTab) => {
+    // Projects owns the icons for its tabs + the shared trail/doc tabs.
+    const projectsIcon = renderProjectsTabIcon(tab as FeedTab);
+    if (projectsIcon) return projectsIcon;
     switch (tab.contentType) {
       case 'inbox-home':
         return <Inbox size={14} />;
       case 'topics-home':
         return <Layers size={14} />;
-      case 'shared-trail':
-        return <Route size={14} />;
       case 'topic':
         return <Layers size={14} />;
       case 'local-topic':
-        return <FileText size={14} />;
-      case 'local-trail':
-        return <Footprints size={14} />;
-      case 'markdown-doc':
         return <FileText size={14} />;
       default:
         return null;
     }
   }, []);
 
+  // Open a repository in a dev workspace (from an activity card's open action).
+  const handleOpenRepository = useCallback((entry: AlexandriaEntry) => {
+    void WindowService.openDevWorkspace({ alexandriaEntry: entry });
+    eventsRef.current.emit({
+      type: 'repository:opened',
+      source: 'workspace-shell',
+      timestamp: Date.now(),
+      payload: { repositoryId: entry.name, repository: entry },
+    });
+  }, []);
+
   const renderTabContent = useCallback((tab: WorkspaceTab, _isActive: boolean) => {
+    // Projects renders its own tabs + the shared trail/doc tabs (one source of
+    // truth). It returns null for the Inbox/Topics landing + topic tabs below.
+    const projectsContent = renderProjectsTabContent(tab as FeedTab, {
+      events: eventsRef.current,
+      repositories: repositoriesRef.current,
+      onOpenRepository: handleOpenRepository,
+    });
+    if (projectsContent) return projectsContent;
     switch (tab.contentType) {
       case 'inbox-home':
         return (
@@ -257,18 +286,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             body="Topics bundle related trails on one subject. Pick a topic from the panel on the left to read its description here."
           />
         );
-      case 'shared-trail': {
-        const trailTab = tab as SharedTrailTab;
-        return (
-          <SharedTrailTabContent
-            key={trailTab.id}
-            trailId={trailTab.trailId}
-            events={eventsRef.current}
-            repositories={repositoriesRef.current}
-            briefSide="leading"
-          />
-        );
-      }
       case 'topic': {
         const topicTab = tab as TopicTab;
         return (
@@ -291,31 +308,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           />
         );
       }
-      case 'local-trail': {
-        const trailTab = tab as LocalTrailTab;
-        return (
-          <LocalTrailTabContent
-            key={trailTab.id}
-            trailId={trailTab.trailId}
-            events={eventsRef.current}
-          />
-        );
-      }
-      case 'markdown-doc': {
-        const docTab = tab as MarkdownDocTab;
-        return (
-          <MarkdownDocTabContent
-            key={docTab.id}
-            filePath={docTab.filePath}
-            repositoryPath={docTab.repositoryPath}
-            events={eventsRef.current}
-          />
-        );
-      }
       default:
         return null;
     }
-  }, []);
+  }, [handleOpenRepository]);
 
   // Open links clicked in the terminal in the default browser.
   useTerminalLinkHandler(events);
@@ -386,9 +382,26 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     () => [
       {
         id: 'workspace-list',
-        label: activeView === 'inbox' ? 'Inbox' : 'Topics',
+        label:
+          activeView === 'projects'
+            ? feedMode === 'collections'
+              ? 'Social'
+              : feedMode === 'organizations'
+                ? 'Team'
+                : 'Activity'
+            : activeView === 'inbox'
+              ? 'Inbox'
+              : 'Topics',
         content:
-          activeView === 'inbox' ? (
+          activeView === 'projects' ? (
+            <ProjectsLeftPanel
+              repositories={repositories}
+              events={events}
+              feedMode={feedMode}
+              onFeedModeChange={setFeedMode}
+              activityCommits={activityCommits}
+            />
+          ) : activeView === 'inbox' ? (
             <InboxLeftPanel events={portalEvents} />
           ) : (
             <TopicsLeftPanel events={portalEvents} />
@@ -445,6 +458,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       activeView,
       portalEvents,
       events,
+      repositories,
+      feedMode,
+      setFeedMode,
+      activityCommits,
       terminalPanelContext,
       terminalActions,
       terminalCtx.terminalContext,
@@ -482,6 +499,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         theme={theme}
         onPanelResize={handlePanelResize}
       />
+      {/* Projects repository delete modal — always mounted with the shell. */}
+      {deleteModal}
     </div>
   );
 };
@@ -503,7 +522,15 @@ export const WorkspaceShell: React.FC<{ activeView: WorkspaceView }> = ({
     const fetchRepositories = async () => {
       try {
         const repos = await AlexandriaService.getRepositories();
-        if (!cancelled) setRepositories(repos);
+        // Most-recently-opened first (matches the old Projects feed ordering).
+        const sorted = [...repos].sort((a, b) => {
+          if (a.lastOpenedAt && !b.lastOpenedAt) return -1;
+          if (!a.lastOpenedAt && b.lastOpenedAt) return 1;
+          const aTime = a.lastOpenedAt || a.registeredAt;
+          const bTime = b.lastOpenedAt || b.registeredAt;
+          return new Date(bTime).getTime() - new Date(aTime).getTime();
+        });
+        if (!cancelled) setRepositories(sorted);
       } catch (err) {
         console.error('[WorkspaceShell] Failed to fetch repositories:', err);
         if (!cancelled) setRepositories([]);
