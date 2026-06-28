@@ -418,4 +418,30 @@ export function registerTopicRoutes(
       }
     },
   );
+
+  // Permanently delete a local topic: removes the on-disk payload
+  // (~/.principal/topics/<id>.json), its sync metadata, and drops it from the
+  // registry's in-memory index. Windows showing it are notified via
+  // TOPIC_REMOVED so they can clear the tab. The topic's trails are left
+  // untouched (a topic is just a bundle of trail ids). Mirrors the trail
+  // DELETE route; the registry already owns the delete logic.
+  app.delete('/api/topics/:id', async (req: Request, res: Response) => {
+    const id = String(req.params.id);
+    if (!id) {
+      res.status(400).json({ success: false, error: 'topic id is required' });
+      return;
+    }
+    try {
+      const removed = await registry.deleteTopic(id);
+      if (!removed) {
+        res.status(404).json({ success: false, error: 'unknown topic id' });
+        return;
+      }
+      broadcastTopicEvent(TopicAPIEvent.TOPIC_REMOVED, { id });
+      res.json({ success: true, id });
+    } catch (err) {
+      console.error('[topicRoutes] delete failed', err);
+      res.status(500).json({ success: false, error: 'failed to delete topic' });
+    }
+  });
 }
