@@ -8,10 +8,7 @@ import { getThemeHandler } from '../theme/themeHandler';
 import { isValidPropertyPath } from '../../shared/theme/themeSchema';
 import { getTracer } from '../telemetry';
 import { BrunoValidationService } from '../bruno/BrunoValidationService';
-import {
-  ElectronFileAdapter,
-  BrunoLangParserAdapter,
-} from '../bruno/adapters';
+import { ElectronFileAdapter, BrunoLangParserAdapter } from '../bruno/adapters';
 import { registerTrailRoutes } from '../file-city/trailRoutes';
 import { getTrailStore } from '../file-city/trailStore';
 import { registerDocumentNotesRoutes } from '../document-notes/documentNotesRoutes';
@@ -21,6 +18,8 @@ import { registerTopicRoutes } from '../topics/topicRoutes';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
 import { registerRepoRoutes } from '../repos/repoRoutes';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { registerDependencyRoutes } from '../dependency-graph/dependencyRoutes';
+import { DependencyGraphService } from '../dependency-graph/DependencyGraphService';
 
 // Tracer for Principal MCP Bridge instrumentation
 const tracer = getTracer('principal-ade-main');
@@ -84,7 +83,7 @@ export class PrincipalMCPBridge extends EventEmitter {
       res.json({
         service: 'Principal MCP Bridge',
         port: this.port,
-        note: 'Catalog currently covers File City trail routes only. Other route groups (theme, bruno, document-notes, dependencies) are mounted but not yet documented here.',
+        note: 'Catalog covers File City trail routes and the dependency-graph blast-radius route. Other route groups (theme, bruno, document-notes, topics, repos) are mounted but not yet documented here.',
         groups: [
           {
             name: 'file-city-trails',
@@ -155,7 +154,8 @@ export class PrincipalMCPBridge extends EventEmitter {
                 method: 'GET',
                 path: '/api/file-city/trail/:id',
                 summary: 'Fetch a stored trail payload by id.',
-                response: '{ success, payload } | 404 { success: false, error }',
+                response:
+                  '{ success, payload } | 404 { success: false, error }',
               },
               {
                 method: 'DELETE',
@@ -230,6 +230,30 @@ export class PrincipalMCPBridge extends EventEmitter {
                 },
                 response:
                   '{ success, windowOpened } — windowOpened is false when no focused window hosts a tabbed terminal.',
+              },
+            ],
+          },
+          {
+            name: 'dependency-graph',
+            description:
+              'Cross-repo dependency blast radius. Indexes the packages published by cloned registry repos and answers which other repos depend on a package the target repo publishes.',
+            routes: [
+              {
+                method: 'GET',
+                path: '/api/repos/blast-radius',
+                summary:
+                  'Direct dependents (Phase 1) of the packages a target repo publishes. Identity is purl.',
+                query: {
+                  repo: 'string — <owner/name> or repo name (one selector required)',
+                  path: 'string — absolute repo path (alternative selector)',
+                  purl: 'string — a published package purl (alternative selector)',
+                  includeSelf:
+                    '"true" (optional) — keep packages published by the target repo itself',
+                  refresh:
+                    '"true" (optional) — rebuild the index before answering',
+                },
+                response:
+                  '{ success, scope:"direct-dependents", target:{ repoPath, repoName?, purls[] }, impacted:[{ purl, repoPath, name, dependsOn[] }], unanalyzedCount }',
               },
             ],
           },
@@ -338,7 +362,7 @@ export class PrincipalMCPBridge extends EventEmitter {
           // Event: calling repository monitoring manager
           span.addEvent('principal_mcp.repo_monitoring.calling', {
             'dependency.id': dependencyId,
-            'has_repository_root': !!repositoryRoot,
+            has_repository_root: !!repositoryRoot,
           });
 
           // Resolve dependency using repository monitoring server
@@ -353,10 +377,10 @@ export class PrincipalMCPBridge extends EventEmitter {
             // Event: raw result received from monitoring manager
             span.addEvent('principal_mcp.repo_monitoring.result_received', {
               'dependency.id': dependencyId,
-              'found': dependencyResolution.found,
-              'has_alexandria_entry': !!dependencyResolution.alexandriaEntry,
-              'has_package_info': !!dependencyResolution.packageInfo,
-              'has_suggestions': !!dependencyResolution.suggestions,
+              found: dependencyResolution.found,
+              has_alexandria_entry: !!dependencyResolution.alexandriaEntry,
+              has_package_info: !!dependencyResolution.packageInfo,
+              has_suggestions: !!dependencyResolution.suggestions,
             });
 
             // Event: check Alexandria registry result
@@ -417,17 +441,19 @@ export class PrincipalMCPBridge extends EventEmitter {
             }
 
             // Event: final dependency resolved status
-            const resolvedEventAttrs: Record<string, string | boolean | number> =
-              {
-                'dependency.id': dependencyId,
-                'resolution.success': true,
-                'found': dependencyResolution.found,
-                'source': dependencyResolution.alexandriaEntry
-                  ? 'alexandria'
-                  : dependencyResolution.packageInfo
-                    ? 'package'
-                    : 'none',
-              };
+            const resolvedEventAttrs: Record<
+              string,
+              string | boolean | number
+            > = {
+              'dependency.id': dependencyId,
+              'resolution.success': true,
+              found: dependencyResolution.found,
+              source: dependencyResolution.alexandriaEntry
+                ? 'alexandria'
+                : dependencyResolution.packageInfo
+                  ? 'package'
+                  : 'none',
+            };
 
             span.addEvent(
               'principal_mcp.repo_monitoring.dependency_resolved',
@@ -612,7 +638,8 @@ export class PrincipalMCPBridge extends EventEmitter {
           });
           res.status(400).json({
             success: false,
-            error: 'propertyPath is required (e.g., "colors.primary", "fonts.body")',
+            error:
+              'propertyPath is required (e.g., "colors.primary", "fonts.body")',
           });
           return;
         }
@@ -722,10 +749,7 @@ export class PrincipalMCPBridge extends EventEmitter {
           message: errorMessage,
         });
 
-        console.error(
-          '[Principal MCP Bridge] Failed to update theme:',
-          error,
-        );
+        console.error('[Principal MCP Bridge] Failed to update theme:', error);
         res.status(500).json({
           success: false,
           error: errorMessage,
@@ -746,95 +770,102 @@ export class PrincipalMCPBridge extends EventEmitter {
     );
 
     // POST /api/bruno/validate - Validate .bru file content
-    this.app.post('/api/bruno/validate', async (req: Request, res: Response) => {
-      const span = tracer.startSpan('principal_mcp.bruno_validate_content');
+    this.app.post(
+      '/api/bruno/validate',
+      async (req: Request, res: Response) => {
+        const span = tracer.startSpan('principal_mcp.bruno_validate_content');
 
-      try {
-        const { content } = req.body;
+        try {
+          const { content } = req.body;
 
-        // Event: client request initiated
-        span.addEvent('principal_mcp.client.request_initiated', {
-          'http.method': 'POST',
-          'http.url': '/api/bruno/validate',
-          'client.type': 'mcp',
-        });
-
-        // Event: server received request
-        span.addEvent('principal_mcp.server.request_received', {
-          'http.method': 'POST',
-          'http.path': '/api/bruno/validate',
-          'server.port': this.port,
-        });
-
-        // Validate required fields
-        if (!content) {
-          span.addEvent('principal_mcp.bruno.validate_content_requested', {
-            'bruno.content_length': 0,
+          // Event: client request initiated
+          span.addEvent('principal_mcp.client.request_initiated', {
+            'http.method': 'POST',
+            'http.url': '/api/bruno/validate',
+            'client.type': 'mcp',
           });
+
+          // Event: server received request
+          span.addEvent('principal_mcp.server.request_received', {
+            'http.method': 'POST',
+            'http.path': '/api/bruno/validate',
+            'server.port': this.port,
+          });
+
+          // Validate required fields
+          if (!content) {
+            span.addEvent('principal_mcp.bruno.validate_content_requested', {
+              'bruno.content_length': 0,
+            });
+            span.addEvent('principal_mcp.error.bruno_validation_failed', {
+              'error.type': 'missing_content',
+              'error.message': 'content is required',
+              'bruno.file_path': '',
+            });
+            span.setStatus({
+              code: SpanStatusCode.ERROR,
+              message: 'content is required',
+            });
+            res.status(400).json({
+              success: false,
+              error: 'content is required',
+            });
+            return;
+          }
+
+          // Event: validation requested
+          span.addEvent('principal_mcp.bruno.validate_content_requested', {
+            'bruno.content_length': content.length,
+          });
+
+          // Event: service invoked
+          span.addEvent('principal_mcp.bruno.service_invoked', {
+            'bruno.operation': 'validateBruContent',
+          });
+
+          const result =
+            await brunoValidationService.validateBruContent(content);
+
+          // Event: content validated
+          span.addEvent('principal_mcp.bruno.content_validated', {
+            'bruno.valid': result.valid,
+            'bruno.error_count': result.errors.length,
+            'bruno.warning_count': result.warnings.length,
+          });
+
+          span.setStatus({ code: SpanStatusCode.OK });
+          res.json({
+            success: true,
+            ...result,
+          });
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+
           span.addEvent('principal_mcp.error.bruno_validation_failed', {
-            'error.type': 'missing_content',
-            'error.message': 'content is required',
+            'error.type': 'internal_error',
+            'error.message': errorMessage,
             'bruno.file_path': '',
           });
+
           span.setStatus({
             code: SpanStatusCode.ERROR,
-            message: 'content is required',
+            message: errorMessage,
           });
-          res.status(400).json({
+
+          console.error(
+            '[Principal MCP Bridge] Bruno validation error:',
+            error,
+          );
+          res.status(500).json({
             success: false,
-            error: 'content is required',
+            error: errorMessage,
           });
-          return;
+        } finally {
+          span.end();
         }
-
-        // Event: validation requested
-        span.addEvent('principal_mcp.bruno.validate_content_requested', {
-          'bruno.content_length': content.length,
-        });
-
-        // Event: service invoked
-        span.addEvent('principal_mcp.bruno.service_invoked', {
-          'bruno.operation': 'validateBruContent',
-        });
-
-        const result = await brunoValidationService.validateBruContent(content);
-
-        // Event: content validated
-        span.addEvent('principal_mcp.bruno.content_validated', {
-          'bruno.valid': result.valid,
-          'bruno.error_count': result.errors.length,
-          'bruno.warning_count': result.warnings.length,
-        });
-
-        span.setStatus({ code: SpanStatusCode.OK });
-        res.json({
-          success: true,
-          ...result,
-        });
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
-
-        span.addEvent('principal_mcp.error.bruno_validation_failed', {
-          'error.type': 'internal_error',
-          'error.message': errorMessage,
-          'bruno.file_path': '',
-        });
-
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: errorMessage,
-        });
-
-        console.error('[Principal MCP Bridge] Bruno validation error:', error);
-        res.status(500).json({
-          success: false,
-          error: errorMessage,
-        });
-      } finally {
-        span.end();
-      }
-    });
+      },
+    );
 
     // POST /api/bruno/validate/file - Validate .bru file by path
     this.app.post(
@@ -939,7 +970,9 @@ export class PrincipalMCPBridge extends EventEmitter {
     this.app.post(
       '/api/bruno/validate/collection',
       async (req: Request, res: Response) => {
-        const span = tracer.startSpan('principal_mcp.bruno_validate_collection');
+        const span = tracer.startSpan(
+          'principal_mcp.bruno_validate_collection',
+        );
 
         try {
           const { collectionPath } = req.body;
@@ -1189,6 +1222,11 @@ export class PrincipalMCPBridge extends EventEmitter {
     // REPO REGISTRY ROUTES
     // ============================================
     registerRepoRoutes(this.app, AlexandriaRegistryService.getInstance());
+
+    // ============================================
+    // DEPENDENCY GRAPH (BLAST RADIUS) ROUTES
+    // ============================================
+    registerDependencyRoutes(this.app, DependencyGraphService.getInstance());
   }
 
   public async start(): Promise<number> {
