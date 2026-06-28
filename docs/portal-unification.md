@@ -262,7 +262,7 @@ a follow-up (normalization currently happens at the forwarder boundary).
 
 **Landed:** 2a `652fe652a`, 2b `9da7ef06b`, 2c `7dc4d0efd`, 3a `6cdeb57f1`, 3b
 (prep + host merge), Drawings fast-follow `5d544d47c`, **Trails (simple list)
-`c0da9adc9`**, **Skills `<pending>`** — all green on `main`. 2a–2c
+`c0da9adc9`**, **Skills `74036e440`** — all green on `main`. 2a–2c
 behavior-identical; 3a + 3b change tab/terminal isolation (Projects/Inbox/Topics
 now share one host + one `terminal:workspace` scope). **Every workspace surface
 (Projects, Inbox, Topics, Drawings, Trails, Skills) now lives in the one
@@ -353,7 +353,7 @@ survives tab switches. That's what makes both viable as tabs.
   feared — it's only the package's `ExcalidrawPanel`; `DrawingTabContent`
   replicates the old overlay's loop-free `ExcalidrawWrapper` wiring verbatim. The
   `DrawingsView` overlay is deleted.
-- **Skills — done** (`<pending>`). The heaviest fold-in: `SkillBrowserView` was a
+- **Skills — done** (`74036e440`). The heaviest fold-in: `SkillBrowserView` was a
   ~1325-line hermetic sub-app (list-left + detail-right, provider-driven, 3
   modals, install orchestration). Folded as list-left + a **singleton
   selection-following** skill detail tab (plan A; multiple per-skill tabs
