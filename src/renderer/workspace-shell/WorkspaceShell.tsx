@@ -1,9 +1,9 @@
 /**
  * WorkspaceShell
  *
- * The persistent host for the Projects + Inbox + Topics surfaces
- * (portal-unification Increment 3). It replaces the separate per-view
- * frameworks (Projects/Inbox/Topics) with ONE shell:
+ * The persistent host for the Projects + Inbox + Topics + Drawings surfaces
+ * (portal-unification Increment 3 + the Drawings fast-follow). It replaces the
+ * separate per-view frameworks / overlays with ONE shell:
  *
  * - one tabbed-terminal host reading the shared `useWorkspaceTabs()` bucket, so
  *   the open tabs (and the single terminal) persist when you swap the left panel;
@@ -26,7 +26,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Inbox, Layers, FileText } from 'lucide-react';
+import { Inbox, Layers, FileText, PenTool } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -61,7 +61,10 @@ import {
   renderProjectsTabIcon,
 } from '../projects-view/projectsTabContent';
 import { useProjectsHost } from '../projects-view/useProjectsHost';
-import type { FeedTab } from '../events/portalTabs';
+import { DrawingsLeftPanel } from '../drawings-view/DrawingsLeftPanel';
+import { DrawingTabContent } from '../drawings-view/DrawingTabContent';
+import { useDrawingsHost } from '../drawings-view/useDrawingsHost';
+import type { FeedTab, DrawingTab } from '../events/portalTabs';
 import {
   useWorkspaceTabs,
   type WorkspaceTab,
@@ -71,7 +74,7 @@ import { DocumentService } from '../services/DocumentService';
 import type { TopicTab, LocalTopicTab } from '../events/portalTabs';
 
 /** Which surface's left panel + landing the shell currently shows. */
-export type WorkspaceView = 'projects' | 'inbox' | 'topics';
+export type WorkspaceView = 'projects' | 'inbox' | 'topics' | 'drawings';
 
 /** Centered landing hint shown by the `inbox-home` / `topics-home` tabs. */
 const HomePanel: React.FC<{ icon: React.ReactNode; title: string; body: string }> = ({
@@ -176,6 +179,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const { feedMode, setFeedMode, activityCommits, deleteModal } =
     useProjectsHost({ events, repositories });
 
+  // Drawings host glue (open/save/delete → shared tab bucket).
+  useDrawingsHost({ events });
+
   useEffect(() => {
     const loadBaseDirectory = async () => {
       const preferences = await UserPreferencesService.getPreferences();
@@ -244,6 +250,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         return <Layers size={14} />;
       case 'local-topic':
         return <FileText size={14} />;
+      case 'drawing':
+        return <PenTool size={14} />;
       default:
         return null;
     }
@@ -304,6 +312,19 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             key={topicTab.id}
             topicId={topicTab.topicId}
             title={topicTab.title}
+            events={eventsRef.current}
+          />
+        );
+      }
+      case 'drawing': {
+        const drawingTab = tab as DrawingTab;
+        return (
+          <DrawingTabContent
+            key={drawingTab.id}
+            tabId={drawingTab.id}
+            drawingId={drawingTab.drawingId}
+            path={drawingTab.path}
+            name={drawingTab.name}
             events={eventsRef.current}
           />
         );
@@ -391,7 +412,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
                 : 'Activity'
             : activeView === 'inbox'
               ? 'Inbox'
-              : 'Topics',
+              : activeView === 'drawings'
+                ? 'Drawings'
+                : 'Topics',
         content:
           activeView === 'projects' ? (
             <ProjectsLeftPanel
@@ -403,6 +426,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             />
           ) : activeView === 'inbox' ? (
             <InboxLeftPanel events={portalEvents} />
+          ) : activeView === 'drawings' ? (
+            <DrawingsLeftPanel events={events} />
           ) : (
             <TopicsLeftPanel events={portalEvents} />
           ),

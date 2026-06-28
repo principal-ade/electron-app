@@ -156,6 +156,23 @@ export interface RepoActivityTab extends BaseTab {
   repo: string;
 }
 
+// ---------------------------------------------------------------------------
+// Drawings surface tab type
+// ---------------------------------------------------------------------------
+
+/**
+ * Drawing tab — an Excalidraw canvas for one `.excalidraw` file, opened from the
+ * Drawings left-panel list. Carries the drawing id + absolute path; the body
+ * (`DrawingTabContent`) self-loads the file and owns save. A brand-new unsaved
+ * drawing uses a `new-<uuid>` sentinel `drawingId` and no `path` until first save.
+ */
+export interface DrawingTab extends BaseTab {
+  contentType: 'drawing';
+  drawingId: string;
+  path?: string;
+  name: string;
+}
+
 /** Union of all tab types the Projects surface renders. */
 export type FeedTab =
   | TerminalTab

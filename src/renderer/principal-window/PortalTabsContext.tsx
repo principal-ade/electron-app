@@ -37,6 +37,7 @@ import type {
   TopicTab,
   TopicsHomeTab,
   LocalTopicTab,
+  DrawingTab,
 } from '../events/portalTabs';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
@@ -65,7 +66,9 @@ export type WorkspaceTab =
   | OrgProfileTab
   | CollectionProfileTab
   | OwnerActivityTab
-  | RepoActivityTab;
+  | RepoActivityTab
+  // Drawings
+  | DrawingTab;
 
 // ----------------------------------------------------------------------------
 // Slice shapes
@@ -106,6 +109,12 @@ export interface WorkspaceTabsContextValue {
   openRepoActivity: (owner: string, repo: string) => void;
   /** Open the singleton `live-activity` tab and focus it. */
   openLiveActivity: () => void;
+  /** Open (or focus) a `drawing` tab, deduped by drawing id. */
+  openDrawing: (payload: {
+    drawingId: string;
+    path?: string;
+    name: string;
+  }) => void;
 }
 
 /** Back-compat shape for `useProjectsTabs` (titlebar + IntegratedShell). */
@@ -342,6 +351,42 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     }) as LiveActivityTab);
   }, [openTab]);
 
+  // Deduped by the `drawingId` *field* (not the tab id) so a freshly-created
+  // drawing — whose tab keeps its `new-<uuid>` tab id but whose `drawingId` is
+  // rewritten to the real file id on first save — focuses instead of duplicating.
+  const openDrawing = useCallback(
+    (payload: { drawingId: string; path?: string; name: string }) => {
+      const existing = tabs.find(
+        (t) =>
+          t.contentType === 'drawing' &&
+          (t as DrawingTab).drawingId === payload.drawingId,
+      );
+      if (existing) {
+        setActiveTabId(existing.id);
+        return;
+      }
+      const id = `drawing-${payload.drawingId}`;
+      setTabs((prev) =>
+        prev.some((t) => t.id === id)
+          ? prev
+          : [
+              ...prev,
+              {
+                id,
+                label: payload.name || 'Drawing',
+                contentType: 'drawing',
+                closable: true,
+                drawingId: payload.drawingId,
+                path: payload.path,
+                name: payload.name,
+              } as DrawingTab,
+            ],
+      );
+      setActiveTabId(id);
+    },
+    [tabs],
+  );
+
   return useMemo<WorkspaceTabsContextValue>(
     () => ({
       tabs,
@@ -360,6 +405,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openOwnerActivity,
       openRepoActivity,
       openLiveActivity,
+      openDrawing,
     }),
     [
       tabs,
@@ -376,6 +422,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openOwnerActivity,
       openRepoActivity,
       openLiveActivity,
+      openDrawing,
     ],
   );
 }

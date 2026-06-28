@@ -10,11 +10,12 @@
  * and back is a pure visibility flip — open tabs, terminals, and scroll state
  * survive with no hoisting required.
  *
- * INCREMENT 3: Projects + Inbox + Topics are now one persistent `WorkspaceShell`
- * — a single tabbed-terminal host (one `terminal:workspace` scope, one
- * `useWorkspaceTabs()` bucket) whose left panel swaps by `activeView`. Switching
- * between the three keeps the shell — and its open tabs + terminal — mounted.
- * Trails is still its own view until Increment 4 folds it in too (see
+ * INCREMENT 3 + Drawings fast-follow: Projects + Inbox + Topics + Drawings are
+ * now one persistent `WorkspaceShell` — a single tabbed-terminal host (one
+ * `terminal:workspace` scope, one `useWorkspaceTabs()` bucket) whose left panel
+ * swaps by `activeView`. Switching between them keeps the shell — and its open
+ * tabs + terminal — mounted, so e.g. a drawing tab persists while you read a
+ * trail. Trails is still its own view until Increment 4 folds it in too (see
  * docs/portal-unification.md).
  */
 import React from 'react';
@@ -22,12 +23,18 @@ import { TrailsView } from '../../views/TrailsView';
 import { WorkspaceShell } from '../../../workspace-shell/WorkspaceShell';
 
 /** The workspace surfaces hosted by the portal (vs. standalone overlays). */
-export type WorkspaceView = 'projects' | 'inbox' | 'topics' | 'trails';
+export type WorkspaceView =
+  | 'projects'
+  | 'inbox'
+  | 'topics'
+  | 'drawings'
+  | 'trails';
 
 export const WORKSPACE_VIEWS: WorkspaceView[] = [
   'projects',
   'inbox',
   'topics',
+  'drawings',
   'trails',
 ];
 
@@ -60,7 +67,8 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
     <div style={{ height: '100%', width: '100%', isolation: 'isolate' }}>
       {(workspaceView === 'projects' ||
         workspaceView === 'inbox' ||
-        workspaceView === 'topics') && (
+        workspaceView === 'topics' ||
+        workspaceView === 'drawings') && (
         <WorkspaceShell activeView={workspaceView} />
       )}
       {workspaceView === 'trails' && (

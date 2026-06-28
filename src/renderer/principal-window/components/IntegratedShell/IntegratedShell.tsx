@@ -10,7 +10,6 @@ import { OnboardingView } from '../../views/OnboardingView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
-import { DrawingsView } from '../../views/DrawingsView';
 import { HomeView } from '../../views/HomeView';
 import {
   PrincipalPortal,
@@ -767,7 +766,6 @@ export const IntegratedShell: React.FC = () => {
                     {overlayView === 'processes' && <LocalhostProcessesView />}
                     {overlayView === 'connections' && <ConnectionsView />}
                     {overlayView === 'skills' && <SkillBrowserView />}
-                    {overlayView === 'drawings' && <DrawingsView />}
                   </motion.div>
                 </motion.div>
               )}

@@ -1,1 +1,0 @@
-export { DrawingsView } from './DrawingsView';

@@ -312,15 +312,26 @@ minimaps; `FileCityTrailPanel` is the Trail tab unchanged.
 
 ## Fast-follow: Skills & Drawings
 
-**Not out of scope — a planned fast-follow** after the core
-Projects/Inbox/Topics/Trails merge. Both are standalone overlays today and will
-be revisited once the portal tab host is in place:
+The reframing that unblocked these (decided 2026-06-27): folding a surface in is
+about **tab-ability** — opening its content as a persistent tab in the one shared
+host, with the left panel as a per-surface launcher — *not* about needing the
+terminal. The tab host (`TabbedTerminalPanel`) renders each tab in an
+opacity-hidden + `inert` div and **lazily mounts on first activation, then keeps
+it mounted**, so stateful tab content (an Excalidraw canvas, a skill detail)
+survives tab switches. That's what makes both viable as tabs.
 
-- **Skills** — hermetic overlay (own provider + local bus + conformant
-  agent-panels). Already a model of the provider-wraps-conformant-panels
-  pattern; the fast-follow decides whether/how it joins the portal.
-- **Drawings** — monolithic overlay by design (drives `ExcalidrawWrapper`
-  directly to dodge a render-loop). Folding it in depends on fixing the upstream
-  wrapper first.
+- **Drawings — done.** Moved from `overlayView` to a `WORKSPACE_VIEWS` surface.
+  The list is the left-panel launcher (`drawings-view/DrawingsLeftPanel`); the
+  Excalidraw canvas is a `drawing` tab (`DrawingTabContent`, self-loads by path,
+  owns save). List↔canvas↔host sync runs on the shell's local bus
+  (`drawing:open`/`saved`/`delete-requested`/`deleted`) via `useDrawingsHost`;
+  `openDrawing` dedups by `drawingId`. The "render-loop" caveat was narrower than
+  feared — it's only the package's `ExcalidrawPanel`; `DrawingTabContent`
+  replicates the old overlay's loop-free `ExcalidrawWrapper` wiring verbatim. The
+  `DrawingsView` overlay is deleted.
+- **Skills** — still a standalone overlay. Same overlay→surface variant
+  (left-panel launcher + a skill tab type), but heavier: `SkillBrowserView` is a
+  ~1325-line hermetic sub-app (own provider, `ConfigurablePanelLayout`, view
+  modes, 4 modals). Next fast-follow.
 
-(Current-shape analysis for both is in the [history doc](./portal-unification-history.md).)
+(Current-shape analysis is in the [history doc](./portal-unification-history.md).)
