@@ -8,6 +8,7 @@ import * as fs from 'fs/promises';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { parseGitRemoteUrl } from '../../shared/utils/gitRemoteUrl';
 
 const execFileAsync = promisify(execFile);
 
@@ -65,37 +66,12 @@ export class GitRepositoryScannerService {
   }
 
   /**
-   * Parse owner and repo name from git remote URL
-   * Supports: https://github.com/owner/repo.git, git@github.com:owner/repo.git, etc.
+   * Parse owner and repo name from a git remote URL via the shared
+   * host-general parser. Returns `{}` when the URL doesn't parse.
    */
   private parseGitRemote(remoteUrl: string): { owner?: string; repo?: string } {
-    if (!remoteUrl) {
-      return {};
-    }
-
-    try {
-      // Handle SSH format: git@github.com:owner/repo.git
-      const sshMatch = remoteUrl.match(/[^@]+@[^:]+:([^/]+)\/(.+?)(?:\.git)?$/);
-      if (sshMatch) {
-        return {
-          owner: sshMatch[1],
-          repo: sshMatch[2]
-        };
-      }
-
-      // Handle HTTPS format: https://github.com/owner/repo.git
-      const httpsMatch = remoteUrl.match(/https?:\/\/[^/]+\/([^/]+)\/(.+?)(?:\.git)?$/);
-      if (httpsMatch) {
-        return {
-          owner: httpsMatch[1],
-          repo: httpsMatch[2]
-        };
-      }
-
-      return {};
-    } catch {
-      return {};
-    }
+    const parsed = parseGitRemoteUrl(remoteUrl);
+    return parsed ? { owner: parsed.owner, repo: parsed.repo } : {};
   }
 
   /**

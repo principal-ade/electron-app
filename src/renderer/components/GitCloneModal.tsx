@@ -13,6 +13,7 @@ import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { joinClonePath } from '../../shared/utils/clonePath';
+import { parseGitRemoteUrl } from '../../shared/utils/gitRemoteUrl';
 
 interface GitCloneModalProps {
   isOpen: boolean;
@@ -229,14 +230,10 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     }
   };
 
-  // Extract owner from URL (github.com/owner/repo or git@github.com:owner/repo)
-  const extractOwner = (url: string): string => {
-    const sshMatch = url.match(/git@[^:]+:([^/]+)\//);
-    if (sshMatch) return sshMatch[1];
-    const httpsMatch = url.match(/https?:\/\/[^/]+\/([^/]+)\//);
-    if (httpsMatch) return httpsMatch[1];
-    return '';
-  };
+  // Extract owner from a git URL (any host) via the shared parser; '' when
+  // it doesn't parse, so the clone path falls back to {baseDir}/{repo}.
+  const extractOwner = (url: string): string =>
+    parseGitRemoteUrl(url)?.owner ?? '';
 
   // Validate Git URL format (now accepts browser URLs too)
   const isValidGitUrl = (url: string): boolean => {

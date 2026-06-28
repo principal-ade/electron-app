@@ -20,6 +20,7 @@ import {
   SystemInfo,
 } from '@principal-ai/agent-monitoring';
 import { getTracer } from './telemetry';
+import { parseGitRemoteUrl as parseGitRemote } from '../shared/utils/gitRemoteUrl';
 import { SpanStatusCode } from '@opentelemetry/api';
 
 const execAsync = promisify(exec);
@@ -166,36 +167,17 @@ class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
     owner: string;
     repo: string;
   } {
-    // Handle various git URL formats
-    // SSH: git@github.com:owner/repo.git
-    // HTTPS: https://github.com/owner/repo.git
-    // GH CLI: gh:owner/repo
-
-    let owner = '';
-    let repo = '';
-
-    if (remoteUrl.includes('github.com')) {
-      const match = remoteUrl.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
-      if (match) {
-        owner = match[1];
-        repo = match[2];
-      }
-    } else if (remoteUrl.startsWith('gh:')) {
-      const parts = remoteUrl.substring(3).split('/');
-      if (parts.length === 2) {
-        owner = parts[0];
-        repo = parts[1];
-      }
-    } else {
-      // Generic git URL parsing
-      const match = remoteUrl.match(/([^/:]+)\/([^/]+?)(\.git)?$/);
-      if (match) {
-        owner = match[1];
-        repo = match[2];
-      }
+    // Well-formed remotes (https/ssh/scp/git:// on any host, plus gh:
+    // shorthand) go through the shared host-general parser.
+    const parsed = parseGitRemote(remoteUrl);
+    if (parsed) {
+      return { owner: parsed.owner, repo: parsed.repo };
     }
 
-    return { owner, repo };
+    // Generic last-resort: take the trailing two path-ish segments. Preserves
+    // the prior behavior for odd remotes the shared parser doesn't recognize.
+    const match = remoteUrl.match(/([^/:]+)\/([^/]+?)(?:\.git)?$/);
+    return match ? { owner: match[1], repo: match[2] } : { owner: '', repo: '' };
   }
 
   getSystemInfo(): SystemInfo {
