@@ -231,9 +231,13 @@ export const IntegratedShell: React.FC = () => {
   // after focusOrCreateMainWindow when the principal window was already
   // open (cold starts ride the URL hash above instead).
   //
-  // All surfaces share one tab bucket, so the trail opens as a tab regardless.
-  // If the user is on Projects or Inbox we keep them there; otherwise we switch
-  // to the Trails surface (its left-panel list) and open the tab.
+  // All surfaces share one tab bucket, so the trail opens as a tab regardless of
+  // the active surface. Projects and Inbox use their own open variant (feed vs.
+  // inbox flavor) and keep the user there; every other workspace surface
+  // (trails/topics/drawings/skills) keeps them there too via the shared bucket.
+  // Only switch to the Trails surface when on a standalone overlay (home/
+  // settings/…), where the workspace portal is hidden and the new tab would
+  // otherwise be invisible.
   useEffect(() => {
     const unsubscribe = TrailService.onShowInPrincipal(({ trailId, title }) => {
       const view = activeViewRef.current;
@@ -245,19 +249,26 @@ export const IntegratedShell: React.FC = () => {
         openLocalTrailInInbox(trailId, title);
         return;
       }
-      setActiveView('trails');
+      if (!isWorkspaceView(view)) {
+        setActiveView('trails');
+      }
       openLocalTrailInFeed(trailId, title);
     });
     return unsubscribe;
   }, [openLocalTrailInFeed, openLocalTrailInInbox]);
 
   // Topic activate from the bridge: topicRoutes' POST /api/topics/:id/activate
-  // targeted this (focused) window. Switch to the Topics view and open the
-  // topic as a tab. Mirrors the SHOW_IN_PRINCIPAL handoff above, but topics
-  // only live in the Topics view so there's no per-view branching.
+  // targeted this (focused) window. Topics share the one workspace tab bucket
+  // (useTopicsTabs → useWorkspaceTabs), so the tab opens regardless of which
+  // surface is active — no need to force the Topics view and yank the user off
+  // whatever workspace surface they were on. Only switch when they're on a
+  // standalone overlay (home/settings/…), where the workspace portal is hidden
+  // and the freshly-opened tab would otherwise be invisible.
   useEffect(() => {
     const unsubscribe = topicClient.onTopicActivate(({ topicId, title }) => {
-      setActiveView('topics');
+      if (!isWorkspaceView(activeViewRef.current)) {
+        setActiveView('topics');
+      }
       openTopicInTopicsView(topicId, title);
     });
     return unsubscribe;
