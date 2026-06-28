@@ -22,6 +22,7 @@ import type {
 } from '@principal-ai/alexandria-core-library';
 import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
 import { applicationWindows, PrimaryWindowType } from '../window/types';
+import { joinClonePath, baseName } from '../../shared/utils/clonePath';
 
 export class WorkspaceApiEventHandler implements WorkspaceAPI {
   private service: AlexandriaRegistryService;
@@ -397,9 +398,11 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       );
     }
 
-    // Owner-grouped target; the repo folder name is preserved.
-    const repoName = path.basename(repository.path);
-    const targetPath = path.join(
+    // Owner-grouped target; the repo folder name is preserved. Uses the
+    // shared clone-path util so the move target matches the convention
+    // predicate (getConventionStatus().expectedPath) exactly.
+    const repoName = baseName(repository.path);
+    const targetPath = joinClonePath(
       preferences.baseDefaultDirectory,
       owner.trim(),
       repoName,

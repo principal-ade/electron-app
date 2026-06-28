@@ -12,6 +12,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
+import { joinClonePath } from '../../shared/utils/clonePath';
 
 interface GitCloneModalProps {
   isOpen: boolean;
@@ -43,24 +44,6 @@ interface AuthMethods {
   https: AuthMethod;
   suggestions: string[];
 }
-
-// Join path segments in a cross-platform way
-const joinPath = (base: string, ...segments: string[]): string => {
-  // Normalize the base path
-  let result = base.replace(/[/\\]+$/, ''); // Remove trailing slashes
-
-  // Add each segment
-  for (const segment of segments) {
-    if (segment) {
-      const normalized = segment.replace(/^[/\\]+|[/\\]+$/g, ''); // Remove leading/trailing slashes
-      if (normalized) {
-        result += '/' + normalized;
-      }
-    }
-  }
-
-  return result;
-};
 
 export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   isOpen,
@@ -342,7 +325,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       }
 
       const owner = extractOwner(gitUrl);
-      const fullPath = owner ? joinPath(baseDir, owner, repoName) : joinPath(baseDir, repoName);
+      const fullPath = joinClonePath(baseDir, owner, repoName);
       setCloneDirectory(fullPath);
 
       // Check if directory already exists
@@ -809,7 +792,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                     ? (() => {
                         const base = customDirectory || baseDefaultDirectory;
                         const owner = extractOwner(gitUrl);
-                        return owner ? `${base}/${owner}/${repoName}` : `${base}/${repoName}`;
+                        return joinClonePath(base, owner, repoName);
                       })()
                     : 'No home folder configured — set one in Settings'}
                 </div>

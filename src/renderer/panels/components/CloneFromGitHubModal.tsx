@@ -21,19 +21,7 @@ import type {
   GitHubUser,
   GitHubOrganization,
 } from '../../../shared/main-process-api-interfaces/GitHubAPI';
-
-// Helper to join paths (works in renderer without Node.js path module)
-function joinPath(...parts: string[]): string {
-  return parts
-    .map((part, i) => {
-      if (i === 0) {
-        return part.replace(/\/+$/, '');
-      }
-      return part.replace(/^\/+|\/+$/g, '');
-    })
-    .filter(Boolean)
-    .join('/');
-}
+import { joinClonePath } from '../../../shared/utils/clonePath';
 
 interface CloneFromGitHubModalProps {
   isOpen: boolean;
@@ -283,7 +271,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
     }
 
     if (resolvedWorkspace?.suggestedClonePath) {
-      return joinPath(resolvedWorkspace.suggestedClonePath, repoName);
+      return joinClonePath(resolvedWorkspace.suggestedClonePath, repoName);
     }
 
     return null;
@@ -402,7 +390,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
 
       if (!result.canceled && result.filePaths.length > 0) {
         const selectedPath = parsedUrl
-          ? joinPath(result.filePaths[0], parsedUrl.repo)
+          ? joinClonePath(result.filePaths[0], parsedUrl.repo)
           : result.filePaths[0];
         setCustomPath(selectedPath);
         setUseCustomPath(true);
@@ -748,7 +736,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
                 }}
               >
                 {parsedUrl
-                  ? joinPath(resolvedWorkspace?.suggestedClonePath ?? '', parsedUrl.repo)
+                  ? joinClonePath(resolvedWorkspace?.suggestedClonePath ?? '', parsedUrl.repo)
                   : resolvedWorkspace?.suggestedClonePath}
               </div>
               <button

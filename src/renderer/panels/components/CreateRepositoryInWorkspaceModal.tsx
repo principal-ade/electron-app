@@ -27,6 +27,7 @@ import type {
 } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import type { AlexandriaEntry, Workspace } from '@principal-ai/alexandria-core-library/types';
 import * as path from 'path-browserify';
+import { joinClonePath } from '../../../shared/utils/clonePath';
 
 interface CreateRepositoryInWorkspaceModalProps {
   isOpen: boolean;
@@ -243,7 +244,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
           ? currentUser?.login || ''
           : selectedOrg || ''
         : '';
-    return ownerSegment ? path.join(base, ownerSegment) : base;
+    return joinClonePath(base, ownerSegment);
   }, [clonePathOverride, selectedDestination, useOwnerLayout, selectedOrg, currentUser]);
 
   // Let the user pick a different parent directory for this clone.
@@ -315,9 +316,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
             ? currentUser?.login || ''
             : selectedOrg
           : '';
-      const targetPath = ownerSegment
-        ? path.join(clonePath, ownerSegment, repoName)
-        : path.join(clonePath, repoName);
+      const targetPath = joinClonePath(clonePath, ownerSegment, repoName);
 
       // Check if this is a local-only repository
       if (selectedOrg === LOCAL_ONLY_OPTION) {

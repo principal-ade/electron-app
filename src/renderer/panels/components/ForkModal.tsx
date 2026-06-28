@@ -8,6 +8,7 @@ import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import type { GitHubUser, GitHubOrganization } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { joinClonePath } from '../../../shared/utils/clonePath';
 
 interface AuthMethods {
   ssh: { available: boolean; reason?: string };
@@ -27,13 +28,6 @@ interface ForkModalProps {
 
 type Step = 'select' | 'progress' | 'complete';
 type ProgressStep = 'forking' | 'cloning' | 'registering' | 'adding';
-
-function joinPath(...parts: string[]): string {
-  return parts
-    .map((part, i) => (i === 0 ? part.replace(/\/+$/, '') : part.replace(/^\/+|\/+$/g, '')))
-    .filter(Boolean)
-    .join('/');
-}
 
 export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner, repoName, registerRepository }) => {
   const { theme } = useTheme();
@@ -88,7 +82,7 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
   }, [isOpen]);
 
   const targetLogin = forkTarget === 'personal' ? (currentUser?.login ?? '') : forkTarget;
-  const clonePath = baseDir && targetLogin ? joinPath(baseDir, targetLogin, repoName) : null;
+  const clonePath = baseDir && targetLogin ? joinClonePath(baseDir, targetLogin, repoName) : null;
 
   const handleFork = async () => {
     if (!clonePath) {

@@ -7,6 +7,7 @@ import { FileSystemService } from '../main-process-api/FileSystemService';
 import { TopicService } from '../main-process-api/TopicService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { predefinedThemes } from '../themes/predefinedThemes';
+import { joinClonePath } from '../../shared/utils/clonePath';
 
 interface CreateWorkspaceModalProps {
   isOpen: boolean;
@@ -21,24 +22,6 @@ const toKebabCase = (str: string): string => {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric characters with hyphens
     .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-};
-
-// Join path segments in a cross-platform way
-const joinPath = (base: string, ...segments: string[]): string => {
-  // Normalize the base path
-  let result = base.replace(/[/\\]+$/, ''); // Remove trailing slashes
-
-  // Add each segment
-  for (const segment of segments) {
-    if (segment) {
-      const normalized = segment.replace(/^[/\\]+|[/\\]+$/g, ''); // Remove leading/trailing slashes
-      if (normalized) {
-        result += '/' + normalized;
-      }
-    }
-  }
-
-  return result;
 };
 
 export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
@@ -86,7 +69,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
       if (formName) {
         const kebabName = toKebabCase(formName);
         if (kebabName) {
-          const generatedPath = joinPath(baseDirectory, kebabName);
+          const generatedPath = joinClonePath(baseDirectory, kebabName);
           setFormPath(generatedPath);
         }
       } else {
