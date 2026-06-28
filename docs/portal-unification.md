@@ -262,7 +262,7 @@ a follow-up (normalization currently happens at the forwarder boundary).
 
 **Landed:** 2a `652fe652a`, 2b `9da7ef06b`, 2c `7dc4d0efd`, 3a `6cdeb57f1`, 3b
 (prep + host merge), Drawings fast-follow `5d544d47c`, **Trails (simple list)
-`<pending>`** — all green on `main`. 2a–2c behavior-identical; 3a + 3b change
+`c0da9adc9`** — all green on `main`. 2a–2c behavior-identical; 3a + 3b change
 tab/terminal isolation (Projects/Inbox/Topics now share one host + one
 `terminal:workspace` scope). **Every workspace surface now lives in the one
 `WorkspaceShell`.** Remaining: the **Skills** fast-follow, and the deferred
