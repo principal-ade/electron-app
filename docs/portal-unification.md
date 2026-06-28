@@ -261,22 +261,45 @@ portal bus (no chatter to keep local). The emit-site collapse of
 a follow-up (normalization currently happens at the forwarder boundary).
 
 **Landed:** 2a `652fe652a`, 2b `9da7ef06b`, 2c `7dc4d0efd`, 3a `6cdeb57f1`, 3b
-(prep + host merge) — all green on `main`. 2a–2c behavior-identical; **3a + 3b
-change tab/terminal isolation** (Projects/Inbox/Topics now share one host + one
-`terminal:workspace` scope) and want a dev-build check. **Remaining: Increment 4
-(Trails).**
+(prep + host merge), Drawings fast-follow `5d544d47c`, **Trails (simple list)
+`<pending>`** — all green on `main`. 2a–2c behavior-identical; 3a + 3b change
+tab/terminal isolation (Projects/Inbox/Topics now share one host + one
+`terminal:workspace` scope). **Every workspace surface now lives in the one
+`WorkspaceShell`.** Remaining: the **Skills** fast-follow, and the deferred
+**All-Maps** Trails surface (below).
 
-## Trails surface design (decided 2026-06-20)
+## Trails surface
 
-**Do NOT migrate the monolithic `TrailsView` in place.** Build a **new
-panelized Trails surface** on the panel framework, mirroring the Topics
-structure (a `TrailsPanelFramework` + tabs-context analog, left list + preview
-fed through `{context, actions, events}`). The old view keeps running until the
-replacement lands; the new one becomes a first-class workspace surface that
-folds into `PortalTabsContext`. (This supersedes the earlier "defer /
-re-scaffold in place" stance — see the [history doc](./portal-unification-history.md).)
+### What shipped (Increment 4, simple list — decided 2026-06-27)
 
-The new surface is **cross-repo**, not a 1:1 reskin of today's per-repo view:
+A **trail-list launcher**, not the full All-Maps surface below. Rationale: trail
+tabs (`local-trail`/`shared-trail` + `FileCityTrailPanel`) and the `trail:open`
+intent **already existed** (Inbox/Topics open trails), so "open a trail" was
+done — the only missing piece was a list. The ambitious All-Maps design has 4
+unresolved questions (below); building on those would stall, so we took the
+small, decided increment now and deferred the rest.
+
+- `trails-view/TrailsLeftPanel`: lists `TrailLibraryService.list()` (cross-repo),
+  search/filter, live-refresh via `onLibraryChanged`; a row emits `trail:open`
+  (source `local`) on the portal bus → `PortalIntentBridge` → a `local-trail`
+  tab in the shared host. **No host hook, no new tab type** — the bridge +
+  `renderProjectsTabContent` already cover it.
+- `'trails'` added to `WORKSPACE_VIEWS` + the shell's left-panel slot; the
+  3077-line `TrailsView` (+ `ExploredProjectsGrid`, recent-files, etc.) is
+  **deleted** (in git history for when All-Maps is built). `formatRelativeTime`
+  extracted to `utils/`.
+- Bootstrap rewired: cold-start (`getOpenTrailId`) and warm-start
+  (`SHOW_IN_PRINCIPAL`) now open the trail as a tab in the shared bucket instead
+  of feeding `TrailsView`'s Recent grid. **Dropped:** the File City map gallery,
+  recent-files discovery, and the HomeView repo-card per-repo pre-select
+  (`home:open-in-trails` just switches to the surface now). Known minor: a
+  cold-start deep-link with no title shows a generic "Trail" tab label (the list
+  path always passes the real title).
+
+### Deferred: the All-Maps surface (designed 2026-06-20)
+
+The richer cross-repo surface, **not** a 1:1 reskin of the old per-repo view,
+still to build when the questions below are resolved:
 
 - **Left panel (swappable slot): a cross-repo trail browser.** Search/filter
   trails across *all repos that have trails*. Reuses `TrailCard` / list

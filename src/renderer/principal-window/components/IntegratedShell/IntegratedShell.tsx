@@ -118,21 +118,6 @@ const getViewDefaults = (
 
 export const IntegratedShell: React.FC = () => {
   const [activeView, setActiveView] = useState<NavigationView>('home');
-  // Trail id this window was opened with (cold-start URL hash) or routed
-  // to (warm-start SHOW_IN_PRINCIPAL IPC). Flows down to TrailsView so it
-  // boots on the Recent grid with the activated trail surfaced. Lifted
-  // here because TrailsView is conditionally mounted — subscribing to the
-  // IPC inside TrailsView would miss the warm-start fire that races
-  // ahead of mount.
-  const [bootstrapTrailId, setBootstrapTrailId] = useState<string | null>(
-    () => TrailService.getOpenTrailId(),
-  );
-  // Set when HomeView dispatches `home:open-in-trails` so TrailsView can
-  // pre-select that repo on mount. Distinct from bootstrapTrailId so the
-  // two flows don't fight each other when both arrive in the same session.
-  const [bootstrapProjectPath, setBootstrapProjectPath] = useState<
-    string | null
-  >(null);
   // The workspace surface (projects/inbox/topics/trails) shown in the
   // persistent PrincipalPortal beneath any standalone overlay. Stays `null`
   // until the user first visits a workspace view, so a cold start that lands
@@ -191,8 +176,8 @@ export const IntegratedShell: React.FC = () => {
   useEffect(() => {
     // Cold-start handoff from main: if this window was opened via
     // focusOrCreateMainWindow({ openTrailId }) the trail id sits on the URL
-    // hash. Force the Trails view so the trail surfaces in Recents; the
-    // saved pref doesn't get to override the explicit bootstrap.
+    // hash. Switch to the Trails surface and open the trail as a tab (the
+    // saved pref doesn't get to override the explicit bootstrap).
     const bootstrapTrailId = TrailService.getOpenTrailId();
     const loadPreferences = async () => {
       try {
@@ -200,6 +185,7 @@ export const IntegratedShell: React.FC = () => {
 
         if (bootstrapTrailId) {
           setActiveView('trails');
+          openLocalTrailInFeed(bootstrapTrailId);
         } else if (prefs.interactiveShell?.activeNavigationView) {
           // Cast to string to handle legacy values from storage
           const savedView = prefs.interactiveShell.activeNavigationView as string;
@@ -246,11 +232,9 @@ export const IntegratedShell: React.FC = () => {
   // after focusOrCreateMainWindow when the principal window was already
   // open (cold starts ride the URL hash above instead).
   //
-  // Default: force the Trails view and stash the trail id so TrailsView boots
-  // on the Recent grid. BUT if the user is currently on the Projects (feed) or
-  // Inbox view, opening the trail there as a tab keeps them in place instead of
-  // yanking them over to Trails — both views own a tabbed panel that can host
-  // the trail.
+  // All surfaces share one tab bucket, so the trail opens as a tab regardless.
+  // If the user is on Projects or Inbox we keep them there; otherwise we switch
+  // to the Trails surface (its left-panel list) and open the tab.
   useEffect(() => {
     const unsubscribe = TrailService.onShowInPrincipal(({ trailId, title }) => {
       const view = activeViewRef.current;
@@ -263,7 +247,7 @@ export const IntegratedShell: React.FC = () => {
         return;
       }
       setActiveView('trails');
-      setBootstrapTrailId(trailId);
+      openLocalTrailInFeed(trailId, title);
     });
     return unsubscribe;
   }, [openLocalTrailInFeed, openLocalTrailInInbox]);
@@ -280,16 +264,13 @@ export const IntegratedShell: React.FC = () => {
     return unsubscribe;
   }, [openTopicInTopicsView]);
 
-  // HomeView dashboard click → switch to TrailsView. A repo card sends a
-  // `repoPath` and we pre-select that repo (opening its Recent grid). The
-  // "View All Projects" button sends no `repoPath`; we leave the bootstrap
-  // null so TrailsView mounts on its projects landing screen showing every
-  // explored project.
+  // HomeView dashboard click → switch to the Trails surface (its left-panel
+  // trail list). The old per-repo pre-select (a repo card's `repoPath` opening
+  // that repo's File City map grid) is dropped with the map gallery; the simple
+  // trail list isn't repo-scoped. Revisit if/when an All-Maps surface lands.
   useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ repoPath?: string }>).detail ?? {};
+    const handler = () => {
       setActiveView('trails');
-      setBootstrapProjectPath(detail.repoPath ?? null);
     };
     window.addEventListener('home:open-in-trails', handler);
     return () => window.removeEventListener('home:open-in-trails', handler);
@@ -696,14 +677,7 @@ export const IntegratedShell: React.FC = () => {
               cold start on Home doesn't eagerly boot a workspace.
             */}
             {lastWorkspaceView && (
-              <PrincipalPortal
-                workspaceView={lastWorkspaceView}
-                bootstrapTrailId={bootstrapTrailId}
-                bootstrapProjectPath={bootstrapProjectPath}
-                onBootstrapProjectPathConsumed={() =>
-                  setBootstrapProjectPath(null)
-                }
-              />
+              <PrincipalPortal workspaceView={lastWorkspaceView} />
             )}
 
             {/*

@@ -1,1 +1,0 @@
-export { TrailsView } from './TrailsView';

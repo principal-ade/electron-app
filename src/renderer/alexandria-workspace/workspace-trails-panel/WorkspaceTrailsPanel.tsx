@@ -13,7 +13,7 @@ import { TrailLibraryService } from '../../services/TrailLibraryService';
 import { TopicService } from '../../main-process-api/TopicService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import type { TrailIndexEntry } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
-import { formatRelativeTime } from '../../principal-window/views/TrailsView/TrailCard';
+import { formatRelativeTime } from '../../utils/formatRelativeTime';
 import { PANEL_FOCUS_SEARCH_EVENT } from '../../components/Sidebar/PanelIconSidebar';
 import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 

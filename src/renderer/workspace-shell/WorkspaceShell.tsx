@@ -64,6 +64,7 @@ import { useProjectsHost } from '../projects-view/useProjectsHost';
 import { DrawingsLeftPanel } from '../drawings-view/DrawingsLeftPanel';
 import { DrawingTabContent } from '../drawings-view/DrawingTabContent';
 import { useDrawingsHost } from '../drawings-view/useDrawingsHost';
+import { TrailsLeftPanel } from '../trails-view/TrailsLeftPanel';
 import type { FeedTab, DrawingTab } from '../events/portalTabs';
 import {
   useWorkspaceTabs,
@@ -74,7 +75,12 @@ import { DocumentService } from '../services/DocumentService';
 import type { TopicTab, LocalTopicTab } from '../events/portalTabs';
 
 /** Which surface's left panel + landing the shell currently shows. */
-export type WorkspaceView = 'projects' | 'inbox' | 'topics' | 'drawings';
+export type WorkspaceView =
+  | 'projects'
+  | 'inbox'
+  | 'topics'
+  | 'drawings'
+  | 'trails';
 
 /** Centered landing hint shown by the `inbox-home` / `topics-home` tabs. */
 const HomePanel: React.FC<{ icon: React.ReactNode; title: string; body: string }> = ({
@@ -414,7 +420,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               ? 'Inbox'
               : activeView === 'drawings'
                 ? 'Drawings'
-                : 'Topics',
+                : activeView === 'trails'
+                  ? 'Trails'
+                  : 'Topics',
         content:
           activeView === 'projects' ? (
             <ProjectsLeftPanel
@@ -428,6 +436,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             <InboxLeftPanel events={portalEvents} />
           ) : activeView === 'drawings' ? (
             <DrawingsLeftPanel events={events} />
+          ) : activeView === 'trails' ? (
+            <TrailsLeftPanel events={portalEvents} />
           ) : (
             <TopicsLeftPanel events={portalEvents} />
           ),

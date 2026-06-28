@@ -43,7 +43,7 @@ export type PortalIntentName =
  * surfaces collapse into one tab list in Increment 3, after which routing by
  * surface goes away.
  */
-export type PortalSurface = 'projects' | 'inbox' | 'topics';
+export type PortalSurface = 'projects' | 'inbox' | 'topics' | 'trails';
 
 /** Payload for {@link PORTAL_INTENTS.trailOpen}. */
 export interface TrailOpenPayload {
