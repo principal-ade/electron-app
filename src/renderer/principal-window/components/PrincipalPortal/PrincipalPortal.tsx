@@ -27,7 +27,8 @@ export type WorkspaceView =
   | 'inbox'
   | 'topics'
   | 'drawings'
-  | 'trails';
+  | 'trails'
+  | 'skills';
 
 export const WORKSPACE_VIEWS: WorkspaceView[] = [
   'projects',
@@ -35,6 +36,7 @@ export const WORKSPACE_VIEWS: WorkspaceView[] = [
   'topics',
   'drawings',
   'trails',
+  'skills',
 ];
 
 /** Type guard: is this navigation view a portal-hosted workspace surface? */
@@ -58,7 +60,8 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
         workspaceView === 'inbox' ||
         workspaceView === 'topics' ||
         workspaceView === 'drawings' ||
-        workspaceView === 'trails') && (
+        workspaceView === 'trails' ||
+        workspaceView === 'skills') && (
         <WorkspaceShell activeView={workspaceView} />
       )}
     </div>

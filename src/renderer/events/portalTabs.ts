@@ -173,6 +173,20 @@ export interface DrawingTab extends BaseTab {
   name: string;
 }
 
+// ---------------------------------------------------------------------------
+// Skills surface tab type
+// ---------------------------------------------------------------------------
+
+/**
+ * Skill detail tab — a singleton view of the currently-selected skill. The body
+ * (`SkillDetailTabContent`) reads the selected skill + install config from the
+ * Skills surface context, so the tab carries no per-skill data; selecting a
+ * different skill in the left list just updates this one tab's label + content.
+ */
+export interface SkillTab extends BaseTab {
+  contentType: 'skill';
+}
+
 /** Union of all tab types the Projects surface renders. */
 export type FeedTab =
   | TerminalTab

@@ -1,9 +1,10 @@
 /**
  * WorkspaceShell
  *
- * The persistent host for the Projects + Inbox + Topics + Drawings surfaces
- * (portal-unification Increment 3 + the Drawings fast-follow). It replaces the
- * separate per-view frameworks / overlays with ONE shell:
+ * The persistent host for every workspace surface — Projects, Inbox, Topics,
+ * Drawings, Trails, and Skills (portal-unification Increment 3 + the
+ * Drawings/Trails/Skills fast-follows). It replaces the separate per-view
+ * frameworks / overlays with ONE shell:
  *
  * - one tabbed-terminal host reading the shared `useWorkspaceTabs()` bucket, so
  *   the open tabs (and the single terminal) persist when you swap the left panel;
@@ -26,7 +27,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Inbox, Layers, FileText, PenTool } from 'lucide-react';
+import { Inbox, Layers, FileText, PenTool, ToolCase } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -65,6 +66,10 @@ import { DrawingsLeftPanel } from '../drawings-view/DrawingsLeftPanel';
 import { DrawingTabContent } from '../drawings-view/DrawingTabContent';
 import { useDrawingsHost } from '../drawings-view/useDrawingsHost';
 import { TrailsLeftPanel } from '../trails-view/TrailsLeftPanel';
+import { SkillBrowserPanelProvider } from '../principal-window/views/SkillBrowserView/SkillBrowserPanelProvider';
+import { SkillsSurfaceProvider } from '../skills-view/SkillsSurfaceContext';
+import { SkillsLeftPanel } from '../skills-view/SkillsLeftPanel';
+import { SkillDetailTabContent } from '../skills-view/SkillDetailTabContent';
 import type { FeedTab, DrawingTab } from '../events/portalTabs';
 import {
   useWorkspaceTabs,
@@ -80,7 +85,8 @@ export type WorkspaceView =
   | 'inbox'
   | 'topics'
   | 'drawings'
-  | 'trails';
+  | 'trails'
+  | 'skills';
 
 /** Centered landing hint shown by the `inbox-home` / `topics-home` tabs. */
 const HomePanel: React.FC<{ icon: React.ReactNode; title: string; body: string }> = ({
@@ -188,6 +194,12 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   // Drawings host glue (open/save/delete → shared tab bucket).
   useDrawingsHost({ events });
 
+  // Skills surface state runs (loaders, focus-refresh) only when Skills is the
+  // active surface or a skill detail tab is open; otherwise it stays dormant.
+  const skillsBus = useMemo(() => new PanelEventBus(), []);
+  const skillsEnabled =
+    activeView === 'skills' || tabs.some((t) => t.contentType === 'skill');
+
   useEffect(() => {
     const loadBaseDirectory = async () => {
       const preferences = await UserPreferencesService.getPreferences();
@@ -258,6 +270,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         return <FileText size={14} />;
       case 'drawing':
         return <PenTool size={14} />;
+      case 'skill':
+        return <ToolCase size={14} />;
       default:
         return null;
     }
@@ -335,6 +349,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           />
         );
       }
+      case 'skill':
+        return <SkillDetailTabContent key={tab.id} />;
       default:
         return null;
     }
@@ -422,7 +438,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
                 ? 'Drawings'
                 : activeView === 'trails'
                   ? 'Trails'
-                  : 'Topics',
+                  : activeView === 'skills'
+                    ? 'Skills'
+                    : 'Topics',
         content:
           activeView === 'projects' ? (
             <ProjectsLeftPanel
@@ -438,6 +456,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             <DrawingsLeftPanel events={events} />
           ) : activeView === 'trails' ? (
             <TrailsLeftPanel events={portalEvents} />
+          ) : activeView === 'skills' ? (
+            <SkillsLeftPanel />
           ) : (
             <TopicsLeftPanel events={portalEvents} />
           ),
@@ -513,30 +533,37 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   );
 
   return (
-    <div
-      style={{
-        height: '100%',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        backgroundColor: theme.colors.background,
-      }}
-    >
-      <ConfigurablePanelLayout
-        ref={panelLayoutRef}
-        panels={allPanels}
-        layout={layout}
-        collapsiblePanels={{ left: true, right: true }}
-        defaultSizes={panelSizes || { left: 25, middle: 75, right: 0 }}
-        collapsed={{ left: collapsed.left, right: true }}
-        showCollapseButtons={false}
-        theme={theme}
-        onPanelResize={handlePanelResize}
-      />
-      {/* Projects repository delete modal — always mounted with the shell. */}
-      {deleteModal}
-    </div>
+    // Skills surface providers wrap the shell stably (always mounted, so the
+    // hidden skill detail tab keeps its context across surface switches); the
+    // surface's heavy effects are gated on `skillsEnabled`.
+    <SkillBrowserPanelProvider events={skillsBus}>
+      <SkillsSurfaceProvider enabled={skillsEnabled}>
+        <div
+          style={{
+            height: '100%',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            backgroundColor: theme.colors.background,
+          }}
+        >
+          <ConfigurablePanelLayout
+            ref={panelLayoutRef}
+            panels={allPanels}
+            layout={layout}
+            collapsiblePanels={{ left: true, right: true }}
+            defaultSizes={panelSizes || { left: 25, middle: 75, right: 0 }}
+            collapsed={{ left: collapsed.left, right: true }}
+            showCollapseButtons={false}
+            theme={theme}
+            onPanelResize={handlePanelResize}
+          />
+          {/* Projects repository delete modal — always mounted with the shell. */}
+          {deleteModal}
+        </div>
+      </SkillsSurfaceProvider>
+    </SkillBrowserPanelProvider>
   );
 };
 

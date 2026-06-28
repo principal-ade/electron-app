@@ -262,11 +262,12 @@ a follow-up (normalization currently happens at the forwarder boundary).
 
 **Landed:** 2a `652fe652a`, 2b `9da7ef06b`, 2c `7dc4d0efd`, 3a `6cdeb57f1`, 3b
 (prep + host merge), Drawings fast-follow `5d544d47c`, **Trails (simple list)
-`c0da9adc9`** — all green on `main`. 2a–2c behavior-identical; 3a + 3b change
-tab/terminal isolation (Projects/Inbox/Topics now share one host + one
-`terminal:workspace` scope). **Every workspace surface now lives in the one
-`WorkspaceShell`.** Remaining: the **Skills** fast-follow, and the deferred
-**All-Maps** Trails surface (below).
+`c0da9adc9`**, **Skills `<pending>`** — all green on `main`. 2a–2c
+behavior-identical; 3a + 3b change tab/terminal isolation (Projects/Inbox/Topics
+now share one host + one `terminal:workspace` scope). **Every workspace surface
+(Projects, Inbox, Topics, Drawings, Trails, Skills) now lives in the one
+`WorkspaceShell`.** Remaining: only the deferred **All-Maps** Trails surface and
+**per-skill detail tabs** (both below) — the core unification is complete.
 
 ## Trails surface
 
@@ -352,9 +353,15 @@ survives tab switches. That's what makes both viable as tabs.
   feared — it's only the package's `ExcalidrawPanel`; `DrawingTabContent`
   replicates the old overlay's loop-free `ExcalidrawWrapper` wiring verbatim. The
   `DrawingsView` overlay is deleted.
-- **Skills** — still a standalone overlay. Same overlay→surface variant
-  (left-panel launcher + a skill tab type), but heavier: `SkillBrowserView` is a
-  ~1325-line hermetic sub-app (own provider, `ConfigurablePanelLayout`, view
-  modes, 4 modals). Next fast-follow.
+- **Skills — done** (`<pending>`). The heaviest fold-in: `SkillBrowserView` was a
+  ~1325-line hermetic sub-app (list-left + detail-right, provider-driven, 3
+  modals, install orchestration). Folded as list-left + a **singleton
+  selection-following** skill detail tab (plan A; multiple per-skill tabs
+  deferred). The intertwined orchestration state moved verbatim into a
+  `skills-view/SkillsSurfaceContext` provider (mounted stably in the shell,
+  heavy effects gated on `enabled` = Skills active or a skill tab open);
+  `SkillsLeftPanel` = header + list, `SkillDetailTabContent` = the detail tab,
+  both reading the context; the provider opens the tab on `skill:selected` and
+  renders the modals. `SkillBrowserView.tsx` deleted; sub-components kept.
 
 (Current-shape analysis is in the [history doc](./portal-unification-history.md).)

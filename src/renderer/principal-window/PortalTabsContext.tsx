@@ -38,6 +38,7 @@ import type {
   TopicsHomeTab,
   LocalTopicTab,
   DrawingTab,
+  SkillTab,
 } from '../events/portalTabs';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
@@ -68,7 +69,9 @@ export type WorkspaceTab =
   | OwnerActivityTab
   | RepoActivityTab
   // Drawings
-  | DrawingTab;
+  | DrawingTab
+  // Skills
+  | SkillTab;
 
 // ----------------------------------------------------------------------------
 // Slice shapes
@@ -115,6 +118,8 @@ export interface WorkspaceTabsContextValue {
     path?: string;
     name: string;
   }) => void;
+  /** Open (or focus) the singleton `skill` detail tab; updates its label. */
+  openSkill: (label: string) => void;
 }
 
 /** Back-compat shape for `useProjectsTabs` (titlebar + IntegratedShell). */
@@ -387,6 +392,27 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [tabs],
   );
 
+  // Singleton skill detail tab — one tab follows the current selection; opening
+  // a different skill just relabels + focuses it (content reads the surface
+  // context, so no per-skill tab data).
+  const openSkill = useCallback((label: string) => {
+    const id = 'skill-detail';
+    setTabs((prev) =>
+      prev.some((t) => t.id === id)
+        ? prev.map((t) => (t.id === id ? { ...t, label } : t))
+        : [
+            ...prev,
+            {
+              id,
+              label: label || 'Skill',
+              contentType: 'skill',
+              closable: true,
+            } as SkillTab,
+          ],
+    );
+    setActiveTabId(id);
+  }, []);
+
   return useMemo<WorkspaceTabsContextValue>(
     () => ({
       tabs,
@@ -406,6 +432,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openRepoActivity,
       openLiveActivity,
       openDrawing,
+      openSkill,
     }),
     [
       tabs,
@@ -423,6 +450,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openRepoActivity,
       openLiveActivity,
       openDrawing,
+      openSkill,
     ],
   );
 }
