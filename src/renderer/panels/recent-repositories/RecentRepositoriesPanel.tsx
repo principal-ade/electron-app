@@ -11,6 +11,7 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import { useTerminalProvider } from '../../contexts/TerminalContext';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
+import { shellQuote } from '../../utils/shellQuote';
 
 function displayPath(path: string, home: string | null): string {
   if (!home) return path;
@@ -29,13 +30,6 @@ const createPanelEvent = <T,>(type: string, payload: T) => ({
   timestamp: Date.now(),
   payload,
 });
-
-// Matches the files-panel convention so dropping onto an xterm pastes a
-// safely-quoted path.
-function shellQuote(s: string): string {
-  if (/^[\w@%+=:,./-]+$/.test(s)) return s;
-  return `'${s.replace(/'/g, `'\\''`)}'`;
-}
 
 /**
  * Repository card component

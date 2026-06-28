@@ -29,6 +29,13 @@ export interface OrgRepoItemCardProps {
   offConvention?: boolean;
   /** Opens the relocate modal for an off-convention clone. */
   onRelocate?: () => void;
+  /**
+   * Text put on the drag payload (`text/plain`) when the row is dragged onto a
+   * terminal, which xterm pastes verbatim. Cloned projects pass their
+   * shell-quoted on-disk path; not-yet-cloned projects pass their GitHub URL.
+   * When omitted the row is not draggable.
+   */
+  dragText?: string;
 }
 
 export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
@@ -41,6 +48,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   onRemove,
   offConvention = false,
   onRelocate,
+  dragText,
 }) => {
   const { theme } = useTheme();
   const spacing = { xs: 4, sm: 8, md: 16 };
@@ -51,6 +59,17 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
     <div
       onClick={onClick}
       role={onClick ? 'button' : undefined}
+      // Projects can be dragged onto a terminal: cloned ones paste their path,
+      // not-yet-cloned ones paste their GitHub URL.
+      draggable={dragText ? true : undefined}
+      onDragStart={
+        dragText
+          ? (e) => {
+              e.dataTransfer.effectAllowed = 'copy';
+              e.dataTransfer.setData('text/plain', dragText);
+            }
+          : undefined
+      }
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

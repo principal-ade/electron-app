@@ -28,6 +28,7 @@ import { UserPreferencesService } from '../main-process-api/UserPreferencesServi
 import { useGithubProjects } from '../hooks/useGithubProjects';
 import { OrgSectionHeaderCard } from './cards/OrgSectionHeaderCard';
 import { OrgRepoItemCard } from './cards/OrgRepoItemCard';
+import { shellQuote } from '../utils/shellQuote';
 import { RelocateToConventionModal } from './components/RelocateToConventionModal';
 import { getOffConventionTarget } from '../../shared/utils/clonePath';
 import { CloneFromGitHubModal } from './components/CloneFromGitHubModal';
@@ -77,6 +78,21 @@ const toMs = (iso?: string): number => {
 /** Local registry metadata tracks `isPublic`; invert to our `isPrivate`. */
 const toIsPrivate = (isPublic?: boolean): boolean | undefined =>
   isPublic === undefined ? undefined : !isPublic;
+
+/**
+ * Text dropped into a terminal when a project row is dragged. Cloned projects
+ * paste their shell-quoted on-disk path (drop and `cd`); not-yet-cloned ones
+ * paste their GitHub web URL. Returns undefined when neither is available, which
+ * leaves the row non-draggable.
+ */
+const projectDragText = (project: UnifiedProject): string | undefined => {
+  const path = project.entry?.path ? String(project.entry.path) : undefined;
+  if (path) return shellQuote(path);
+  if (project.owner && project.owner !== 'Untracked') {
+    return `https://github.com/${project.owner}/${project.name}`;
+  }
+  return undefined;
+};
 
 export const ProjectsList: React.FC<ProjectsListProps> = ({
   repositories = [],
@@ -716,6 +732,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                         isCloned={project.isCloned}
                         isDirty={project.isDirty}
                         isPrivate={project.isPrivate}
+                        dragText={projectDragText(project)}
                         onClick={() => handleProjectClick(project)}
                         onClone={
                           !project.isCloned && project.cloneUrl
