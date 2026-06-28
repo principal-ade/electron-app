@@ -27,7 +27,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Inbox, Layers, FileText, PenTool, ToolCase } from 'lucide-react';
+import { Inbox, Layers, PenTool, ToolCase } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -267,7 +267,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       case 'topic':
         return <Layers size={14} />;
       case 'local-topic':
-        return <FileText size={14} />;
+        // Topics (published + local) share the Layers icon; FileText is the
+        // markdown-doc tab's icon, so a local topic must not reuse it.
+        return <Layers size={14} />;
       case 'drawing':
         return <PenTool size={14} />;
       case 'skill':
