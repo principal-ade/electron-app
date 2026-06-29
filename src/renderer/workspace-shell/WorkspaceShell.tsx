@@ -78,6 +78,7 @@ import {
 import { usePortalEvents } from '../principal-window/PortalEventContext';
 import { DocumentService } from '../services/DocumentService';
 import type { TopicTab, LocalTopicTab } from '../events/portalTabs';
+import { PORTAL_INTENTS, type TerminalOpenPayload } from '../events/portalIntents';
 
 /** Which surface's left panel + landing the shell currently shows. */
 export type WorkspaceView =
@@ -380,6 +381,50 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     };
   }, [events, activityActions]);
 
+  // "Open a terminal here" from the Projects left panel + repository profile
+  // tab. Mirrors the dev-workspace flow (AlexandriaWorkspaceLayout): create — or
+  // reuse, since `createTerminalSession` dedupes by context — a session rooted at
+  // the path, then point `requestFocusTabId` at the `tab-restored-<id>` tab the
+  // TabbedTerminalPanel materializes from `terminalSessions`. Appending a
+  // terminal tab to the shared bucket does NOT work: the panel seeds terminal
+  // tabs from the session list, not from `initialTabs` after mount.
+  const [requestFocusTabId, setRequestFocusTabId] = useState<string | null>(
+    null,
+  );
+  const handleFocusTabHandled = useCallback(
+    () => setRequestFocusTabId(null),
+    [],
+  );
+  useEffect(() => {
+    const handleTerminalOpen = (event: { payload: TerminalOpenPayload }) => {
+      const directory = event.payload?.directory;
+      if (!directory) return;
+      void (async () => {
+        try {
+          const sessionId = await terminalActions.createTerminalSession({
+            cwd: directory,
+            context: `repo:${directory}`,
+          });
+          window.dispatchEvent(
+            new CustomEvent('terminal-session-created', {
+              detail: {
+                sessionId,
+                context: `${terminalCtx.terminalContext}:repo:${directory}`,
+              },
+            }),
+          );
+          setRequestFocusTabId(`tab-restored-${sessionId}`);
+        } catch (err) {
+          console.error('[WorkspaceShell] Failed to open terminal:', err);
+        }
+      })();
+    };
+    events.on(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
+    return () => {
+      events.off(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
+    };
+  }, [events, terminalActions, terminalCtx.terminalContext]);
+
   // Bridge handoff: a doc pushed from the Principal MCP Bridge
   // (POST /api/document/open) opens (or focuses) a markdown tab.
   useEffect(() => {
@@ -488,6 +533,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onTabsChange={setTabs}
               activeTabId={activeTabId}
               onActiveTabChange={setActiveTabId}
+              requestFocusTabId={requestFocusTabId}
+              onFocusTabHandled={handleFocusTabHandled}
               renderTabContent={renderTabContent}
               renderTabIcon={renderTabIcon}
             />
@@ -528,6 +575,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       activeTabId,
       setTabs,
       setActiveTabId,
+      requestFocusTabId,
+      handleFocusTabHandled,
       renderTabContent,
       renderTabIcon,
       theme,

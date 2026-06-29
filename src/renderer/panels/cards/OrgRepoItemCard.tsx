@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Circle, Cloud, Download, Eraser, FolderGit2, FolderTree, Lock } from 'lucide-react';
+import { Circle, Cloud, Download, Eraser, FolderGit2, FolderTree, Lock, Terminal } from 'lucide-react';
 
 export interface OrgRepoItemCardData {
   name: string;
@@ -22,6 +22,8 @@ export interface OrgRepoItemCardProps {
   onClone?: () => void;
   /** Hover-revealed action to remove a cloned project from the local registry. */
   onRemove?: () => void;
+  /** Hover-revealed action to open a terminal tab rooted at the clone's path. */
+  onOpenTerminal?: () => void;
   /**
    * Whether this clone is off the `{baseDir}/{owner}/{repo}` convention. When
    * true, a clickable folder-tree glyph appears next to the name.
@@ -46,6 +48,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   isPrivate,
   onClone,
   onRemove,
+  onOpenTerminal,
   offConvention = false,
   onRelocate,
   dragText,
@@ -221,6 +224,43 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
           }}
         >
           <FolderTree size={14} />
+        </button>
+      )}
+
+      {/* Open-a-terminal-here action for cloned projects. */}
+      {isCloned && onOpenTerminal && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenTerminal();
+          }}
+          title="Open a terminal here"
+          aria-label={`Open a terminal in ${repo.name}`}
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 24,
+            height: 24,
+            padding: 0,
+            border: 'none',
+            borderRadius: 4,
+            background: 'transparent',
+            color: theme.colors.textSecondary,
+            cursor: 'pointer',
+            opacity: hovered ? 1 : 0,
+            transition: 'opacity 120ms, color 120ms',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = theme.colors.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = theme.colors.textSecondary;
+          }}
+        >
+          <Terminal size={14} />
         </button>
       )}
 

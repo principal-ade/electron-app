@@ -32,6 +32,8 @@ export const PORTAL_INTENTS = {
   ownerActivityRequested: 'owner:activity-requested',
   /** Open a repository commit-activity tab. */
   repositoryActivityRequested: 'repository:activity-requested',
+  /** Open a terminal tab rooted at a local directory. */
+  terminalOpen: 'terminal:open',
 } as const;
 
 export type PortalIntentName =
@@ -159,6 +161,28 @@ export interface OwnerActivityRequestedPayload {
 export interface RepositoryActivityRequestedPayload {
   owner: string;
   repo: string;
+}
+
+/** Payload for {@link PORTAL_INTENTS.terminalOpen}. */
+export interface TerminalOpenPayload {
+  /** Absolute local directory the terminal should start in. */
+  directory: string;
+  /** Optional tab label (defaults to the directory's basename). */
+  label?: string;
+}
+
+/** Emit a {@link PORTAL_INTENTS.terminalOpen} intent. */
+export function emitTerminalOpen(
+  events: PanelEventEmitter,
+  source: string,
+  payload: TerminalOpenPayload,
+): void {
+  events.emit<TerminalOpenPayload>({
+    type: PORTAL_INTENTS.terminalOpen,
+    source,
+    timestamp: Date.now(),
+    payload,
+  });
 }
 
 /**

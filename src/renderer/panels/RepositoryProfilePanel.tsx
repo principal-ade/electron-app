@@ -35,6 +35,7 @@ import {
   Loader2,
   Download,
   GitFork,
+  Terminal,
 } from 'lucide-react';
 import { ArchitectureMapHighlightLayers, type HighlightLayer, createFileColorHighlightLayers } from '@principal-ai/file-city-react';
 import {
@@ -46,6 +47,7 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import { DocumentView } from 'themed-markdown';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { payloadFromGithub } from '../events/repositorySelected';
+import { emitTerminalOpen } from '../events/portalIntents';
 import type { LocalClone } from '../../shared/types/repository.types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import * as LucideIcons from 'lucide-react';
@@ -1062,6 +1064,16 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     setTimeout(() => setBouncingButton(null), 2000);
 
     await actions.openRepository(clonePath, repositoryData.htmlUrl || undefined);
+  };
+
+  // Open a terminal tab rooted at this clone's path. Emitted on the local bus;
+  // the Projects open-forwarder lifts it to the portal bus where
+  // PortalIntentBridge materializes the terminal tab in the shared workspace.
+  const handleOpenTerminal = (clonePath: string) => {
+    emitTerminalOpen(events, 'repository-profile-panel', {
+      directory: clonePath,
+      label: repositoryData?.name,
+    });
   };
 
   // Handle delete clone
@@ -2458,6 +2470,49 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                       >
                         <FolderOpen size={12} />
                         Open
+                      </button>
+                      <button
+                        onClick={() => handleOpenTerminal(clone.path)}
+                        title="Open a terminal here"
+                        style={{
+                          padding: `${spacing.xs}px ${spacing.sm}px`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: spacing.xs,
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: 6,
+                          background: theme.colors.backgroundSecondary,
+                          color: theme.colors.text,
+                          cursor: 'pointer',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          fontSize: theme.fontSizes[0],
+                          fontFamily: theme.fonts?.body,
+                          fontWeight: theme.fontWeights?.medium ?? 500,
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = theme.colors.primary;
+                          e.currentTarget.style.color = theme.colors.primary;
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}30, 0 2px 4px rgba(0, 0, 0, 0.1)`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = theme.colors.border;
+                          e.currentTarget.style.color = theme.colors.text;
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                        }}
+                        onMouseDown={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.1)';
+                        }}
+                        onMouseUp={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}30, 0 2px 4px rgba(0, 0, 0, 0.1)`;
+                        }}
+                      >
+                        <Terminal size={12} />
+                        Terminal
                       </button>
                       <button
                         onClick={() => handleDeleteClone(clone.path)}

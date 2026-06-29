@@ -17,6 +17,7 @@ import { Eraser, FolderGit2, FolderSearch, Loader2, Lock, Search } from 'lucide-
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { payloadFromGithub, payloadFromLocalEntry } from '../events/repositorySelected';
+import { emitTerminalOpen } from '../events/portalIntents';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
@@ -232,6 +233,21 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         source: 'projects-list-panel',
         timestamp: Date.now(),
         payload,
+      });
+    },
+    [events]
+  );
+
+  // Open a terminal tab rooted at a cloned project's on-disk path. The Projects
+  // open-forwarder lifts this to the portal bus where PortalIntentBridge
+  // materializes the terminal tab in the shared workspace.
+  const handleOpenTerminal = useCallback(
+    (project: UnifiedProject) => {
+      const path = project.entry?.path ? String(project.entry.path) : undefined;
+      if (!path) return;
+      emitTerminalOpen(events, 'projects-list-panel', {
+        directory: path,
+        label: project.name,
       });
     },
     [events]
@@ -741,6 +757,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                         }
                         onRemove={
                           project.entry ? () => setRemoveConfirm(project.entry ?? null) : undefined
+                        }
+                        onOpenTerminal={
+                          project.entry?.path ? () => handleOpenTerminal(project) : undefined
                         }
                         offConvention={!!project.offConvention}
                         onRelocate={
