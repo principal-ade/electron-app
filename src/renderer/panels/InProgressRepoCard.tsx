@@ -60,6 +60,8 @@ export interface InProgressSummary {
   repoPath: string;
   repoName: string;
   branch?: string;
+  /** Working tree has uncommitted changes. When false the card is only "ahead". */
+  isDirty?: boolean;
   aheadCount?: number;
   behindCount?: number;
   githubOwner?: string;
@@ -606,31 +608,51 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                 >
                   {summary.repoName}
                 </h4>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 8px',
-                    fontSize: theme.fontSizes[0],
-                    fontWeight: theme.fontWeights.semibold,
-                    color: theme.colors.warning,
-                    backgroundColor: `${theme.colors.warning}22`,
-                    borderRadius: 999,
-                    flexShrink: 0,
-                  }}
-                >
+                {summary.isDirty === false ? (
                   <span
                     style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.warning,
-                      animation: 'inProgressPulse 1.4s ease-in-out infinite',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 8px',
+                      fontSize: theme.fontSizes[0],
+                      fontWeight: theme.fontWeights.semibold,
+                      color: theme.colors.textOnAccent,
+                      backgroundColor: theme.colors.accent,
+                      borderRadius: 999,
+                      flexShrink: 0,
                     }}
-                  />
-                  In progress
-                </span>
+                  >
+                    <Upload size={11} />
+                    Ahead
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 8px',
+                      fontSize: theme.fontSizes[0],
+                      fontWeight: theme.fontWeights.semibold,
+                      color: theme.colors.textOnAccent,
+                      backgroundColor: theme.colors.warning,
+                      borderRadius: 999,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.textOnAccent,
+                        animation: 'inProgressPulse 1.4s ease-in-out infinite',
+                      }}
+                    />
+                    In progress
+                  </span>
+                )}
               </div>
               <div
                 style={{

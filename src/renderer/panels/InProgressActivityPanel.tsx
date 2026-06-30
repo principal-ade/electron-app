@@ -39,6 +39,7 @@ function statusToSummary(entry: AlexandriaEntry, status: GitStatusWithFiles): In
     repoPath: String(entry.path),
     repoName: entry.name,
     branch: status.branch,
+    isDirty: status.isDirty,
     aheadCount: status.ahead,
     behindCount: status.behind,
     githubOwner: entry.github?.owner,
