@@ -11,7 +11,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import type { TopicStatus } from '@principal-ai/alexandria-core-library';
+import type { TopicStatus } from '@principal-ai/principal-view-core';
 import { TopicService } from '../../main-process-api/TopicService';
 import { useTheme } from '@principal-ade/industry-theme';
 import { normalizeState, type TopicStatusState } from './topicStatusModel';

@@ -2,17 +2,17 @@
  * IPC API interface for Topic management.
  *
  * Topics are curated bundles of trails on a single subject. The canonical
- * Topic shape lives in @principal-ai/alexandria-core-library; on the
+ * Topic shape lives in @principal-ai/principal-view-core (DraftTopic); on the
  * desktop we wrap it in a LocalTopicRecord that carries sync metadata
  * (origin, remoteId, visibility, timestamps). Most consumers only need
  * the Topic; sync UIs ask for the full LocalTopicRecord.
  */
 
 import type {
-  Topic,
+  DraftTopic as Topic,
   TopicAsset,
   TopicStatus,
-} from '@principal-ai/alexandria-core-library';
+} from '@principal-ai/principal-view-core';
 
 /**
  * Sync metadata layered on top of the canonical Topic. Local-only — never
@@ -121,6 +121,12 @@ export interface CreateTopicInput {
   visibility?: 'private' | 'sharable';
   /** Optional initial workflow status; defaults to absent (treated as `active`). */
   status?: TopicStatus;
+  /**
+   * Repositories this topic is about, as PURL strings (e.g.
+   * `pkg:github/owner/repo`). Usually seeded from the topic's workspace, but a
+   * caller may set them explicitly (e.g. round-tripping a received shared topic).
+   */
+  repos?: string[];
 }
 
 /** Input to {@link TopicAPI.updateTopic} — partial patch. */
@@ -136,6 +142,12 @@ export interface UpdateTopicInput {
   status?: TopicStatus;
   /** Images attached to the topic (see {@link TopicAsset}). */
   assets?: TopicAsset[];
+  /**
+   * Replace the topic's repositories (PURL strings, e.g.
+   * `pkg:github/owner/repo`). The workspace↔topic sync mirrors repo membership
+   * here; a caller may also set it directly.
+   */
+  repos?: string[];
 }
 
 export interface TopicAPI {

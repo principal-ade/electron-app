@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTheme } from '@principal-ade/industry-theme';
-import type { TopicStatus } from '@principal-ai/alexandria-core-library';
+import type { TopicStatus } from '@principal-ai/principal-view-core';
 
 /** The structured status axis — derived from the core lib's inline union. */
 type TopicStatusState = TopicStatus['state'];

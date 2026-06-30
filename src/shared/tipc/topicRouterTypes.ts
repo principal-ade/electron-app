@@ -6,7 +6,7 @@
  */
 
 import type { ActionContext } from '@egoist/tipc/main';
-import type { Topic } from '@principal-ai/alexandria-core-library';
+import type { DraftTopic as Topic } from '@principal-ai/principal-view-core';
 import type {
   CreateTopicInput,
   FetchSharedTopicResult,

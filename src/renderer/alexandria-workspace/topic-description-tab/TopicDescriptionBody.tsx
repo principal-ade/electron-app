@@ -25,7 +25,7 @@ import {
   useDropZone,
   type PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
-import type { TopicAsset } from '@principal-ai/alexandria-core-library';
+import type { TopicAsset } from '@principal-ai/principal-view-core';
 import { TopicService } from '../../main-process-api/TopicService';
 import {
   describeRejection,

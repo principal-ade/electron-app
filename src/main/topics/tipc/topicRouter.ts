@@ -8,7 +8,7 @@
 
 import { tipc } from '@egoist/tipc/main';
 import { BrowserWindow } from 'electron';
-import type { Topic } from '@principal-ai/alexandria-core-library';
+import type { DraftTopic as Topic } from '@principal-ai/principal-view-core';
 import { TopicRegistryService } from '../../stores/TopicRegistryService';
 import { TopicAPIEvent } from '../../../shared/main-process-api-interfaces/TopicAPI';
 import type {

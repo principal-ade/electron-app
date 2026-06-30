@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React from 'react';
 import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
-import type { TopicStatus } from '@principal-ai/alexandria-core-library';
+import type { TopicStatus } from '@principal-ai/principal-view-core';
 import { TopicsPanel } from './TopicsPanel';
 import { TopicService } from '../../main-process-api/TopicService';
 import { TrailLibraryService } from '../../services/TrailLibraryService';

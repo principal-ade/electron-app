@@ -22,7 +22,7 @@
  */
 
 import fetch from 'node-fetch';
-import type { Topic, TopicStatus } from '@principal-ai/alexandria-core-library';
+import type { DraftTopic as Topic, TopicStatus } from '@principal-ai/principal-view-core';
 import {
   TOKEN_KEYS,
   UnifiedSecureStorage,

@@ -10,7 +10,7 @@
 
 import type { Application, Request, Response } from 'express';
 import { upsertSection } from '@principal-ade/markdown-utils';
-import type { Topic } from '@principal-ai/alexandria-core-library';
+import type { DraftTopic as Topic } from '@principal-ai/principal-view-core';
 import type { TopicRegistryService } from '../stores/TopicRegistryService';
 import type { TrailStore } from '../file-city/trailStore';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';

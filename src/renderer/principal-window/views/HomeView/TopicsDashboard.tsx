@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Library, Plus } from 'lucide-react';
-import type { TopicStatus } from '@principal-ai/alexandria-core-library';
+import type { TopicStatus } from '@principal-ai/principal-view-core';
 import { TopicCard } from './TopicCard';
 
 /** The structured status axis — derived from the core lib's inline union. */

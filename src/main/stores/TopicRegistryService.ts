@@ -14,7 +14,7 @@
  * {@link getTopics}; sync/publish UIs use {@link getRecord}/{@link getRecords}.
  */
 
-import { type Topic } from '@principal-ai/alexandria-core-library';
+import type { DraftTopic as Topic } from '@principal-ai/principal-view-core';
 import { TopicStore, TOPICS_DIR } from '@principal-ai/principal-view-core/node';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -114,6 +114,7 @@ export class TopicRegistryService {
       trailIds: input.trailIds ?? [],
       createdBy: input.createdBy,
       ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.repos !== undefined ? { repos: input.repos } : {}),
     });
 
     // Seed sync metadata for the new local topic.
@@ -156,6 +157,9 @@ export class TopicRegistryService {
         title: remote.title,
         description: remote.description,
         status: remote.status,
+        // repos don't round-trip through web-ade yet, so preserve any
+        // repos edit locally rather than dropping it on the remote reconcile.
+        ...(topicUpdates.repos !== undefined ? { repos: topicUpdates.repos } : {}),
       });
       const now = new Date().toISOString();
       this.writeSync(id, {

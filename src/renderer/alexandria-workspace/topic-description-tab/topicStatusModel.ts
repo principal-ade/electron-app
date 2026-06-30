@@ -6,7 +6,7 @@
  */
 
 import { useTheme } from '@principal-ade/industry-theme';
-import type { TopicStatus } from '@principal-ai/alexandria-core-library';
+import type { TopicStatus } from '@principal-ai/principal-view-core';
 
 export type TopicStatusState = TopicStatus['state'];
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
