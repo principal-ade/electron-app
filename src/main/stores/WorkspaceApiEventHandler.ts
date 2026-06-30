@@ -23,6 +23,10 @@ import type {
 import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
 import { applicationWindows, PrimaryWindowType } from '../window/types';
 import { joinClonePath, baseName } from '../../shared/utils/clonePath';
+import { repoPurlFromEntry } from '../../shared/topics/repoPurl';
+import { TopicRegistryService } from './TopicRegistryService';
+import { broadcastTopicEvent } from '../topics/tipc/topicRouter';
+import { TopicAPIEvent } from '../../shared/main-process-api-interfaces/TopicAPI';
 
 export class WorkspaceApiEventHandler implements WorkspaceAPI {
   private service: AlexandriaRegistryService;
@@ -267,6 +271,10 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       metadata,
     );
 
+    // Mirror the repo's PURL into this workspace's topics so a topic carries
+    // its own repository set (the source of truth for repo-scoped topic views).
+    await this.mirrorRepoToWorkspaceTopics(repository, workspaceId, 'add');
+
     const repoEntry = typeof repository === 'string' ? null : repository;
     const repoId =
       repoEntry?.github?.id ||
@@ -313,12 +321,96 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
 
     await this.service.removeRepositoryFromWorkspace(repository, workspaceId);
 
+    // Mirror the removal out of this workspace's topics' repos.
+    await this.mirrorRepoToWorkspaceTopics(repository, workspaceId, 'remove');
+
     this.broadcastWorkspaceChange(
       'membership-changed',
       undefined,
       workspaceId,
       repoId,
     );
+  }
+
+  /**
+   * Mirror a repository's PURL into (or out of) the `repos` of every topic in a
+   * workspace — the workspace→topic half of the repo-sync model. Directional
+   * per lifecycle event (add/remove), so there's no continuous two-way loop to
+   * guard. Best-effort: a failure here is logged but never fails the membership
+   * change that triggered it. Emits `TOPIC_UPDATED` so open Topics panels react.
+   */
+  private async mirrorRepoToWorkspaceTopics(
+    repository: AlexandriaEntry | Purl,
+    workspaceId: string,
+    op: 'add' | 'remove',
+  ): Promise<void> {
+    try {
+      const purl = repoPurlFromEntry(repository);
+      if (!purl) return;
+
+      const workspace = await this.service.getWorkspace(workspaceId);
+      const topicIds = workspace?.topicIds ?? [];
+      if (topicIds.length === 0) return;
+
+      const registry = TopicRegistryService.getInstance();
+      for (const topicId of topicIds) {
+        const topic = await registry.getTopic(topicId);
+        if (!topic) continue;
+
+        const current = topic.repos ?? [];
+        const has = current.includes(purl);
+        let next: string[] | undefined;
+        if (op === 'add' && !has) next = [...current, purl];
+        else if (op === 'remove' && has) next = current.filter((r) => r !== purl);
+        if (!next) continue; // already in the desired state — no write
+
+        const updated = await registry.updateTopic(topicId, { repos: next });
+        broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, updated);
+      }
+    } catch (error) {
+      console.error(
+        `[Workspace] Failed to mirror repo into topics (${op}):`,
+        error,
+      );
+    }
+  }
+
+  /**
+   * One-time reconcile so existing topics gain `repos` without waiting for a
+   * future add/remove: for every workspace, seed each topic's `repos` from the
+   * workspace's current memberships. Additive and idempotent (only writes when a
+   * PURL is missing), so it's safe to run on every startup.
+   */
+  async reconcileTopicReposFromMemberships(): Promise<void> {
+    try {
+      const workspaces = await this.service.getWorkspaces();
+      const registry = TopicRegistryService.getInstance();
+      for (const workspace of workspaces) {
+        const topicIds = workspace.topicIds ?? [];
+        if (topicIds.length === 0) continue;
+        const memberships = await this.service.getWorkspaceMemberships(
+          workspace.id,
+        );
+        const purls = Array.from(
+          new Set(memberships.map((m) => m.repositoryId as string)),
+        );
+        if (purls.length === 0) continue;
+
+        for (const topicId of topicIds) {
+          const topic = await registry.getTopic(topicId);
+          if (!topic) continue;
+          const current = topic.repos ?? [];
+          const missing = purls.filter((p) => !current.includes(p));
+          if (missing.length === 0) continue;
+          const updated = await registry.updateTopic(topicId, {
+            repos: [...current, ...missing],
+          });
+          broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, updated);
+        }
+      }
+    } catch (error) {
+      console.error('[Workspace] Failed to reconcile topic repos:', error);
+    }
   }
 
   async getWorkspaceMemberships(
@@ -558,6 +650,11 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
  */
 export function registerWorkspaceHandlers(): void {
   const handler = new WorkspaceApiEventHandler();
+
+  // Seed existing topics' `repos` from current workspace memberships, once at
+  // startup. Idempotent + best-effort (it swallows its own errors), so it's
+  // safe to fire-and-forget here without blocking handler registration.
+  void handler.reconcileTopicReposFromMemberships();
 
   // Workspace CRUD
   ipcMain.handle(
