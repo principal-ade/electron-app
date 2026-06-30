@@ -13,7 +13,7 @@
 
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Eraser, FolderGit2, FolderSearch, Loader2, Lock, Search } from 'lucide-react';
+import { Eraser, FolderGit2, FolderSearch, Loader2, Lock, Search, Terminal } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { payloadFromGithub, payloadFromLocalEntry } from '../events/repositorySelected';
@@ -55,8 +55,14 @@ interface UnifiedProject {
   isDirty: boolean;
   /** Repository visibility: `true` private, `false` public, `undefined` unknown. */
   isPrivate?: boolean;
-  /** The local registry entry, when cloned. */
+  /** The local registry entry, when cloned. Representative for single-clone actions. */
   entry?: AlexandriaEntry;
+  /**
+   * Every local clone of this repo on disk. A repo can be cloned more than once
+   * (rows are keyed by `owner/name`, so multiple checkouts collapse into one
+   * row). Empty when not cloned. Drives the terminal button's clone picker.
+   */
+  clones: AlexandriaEntry[];
   /** Epoch ms of the most recent activity, for the recency sort. */
   lastActivity: number;
   /** URL used to seed the clone flow, when known. */
@@ -241,22 +247,38 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   // Open a terminal tab rooted at a cloned project's on-disk path. The Projects
   // open-forwarder lifts this to the portal bus where PortalIntentBridge
   // materializes the terminal tab in the shared workspace.
-  const handleOpenTerminal = useCallback(
-    (project: UnifiedProject) => {
-      const path = project.entry?.path ? String(project.entry.path) : undefined;
-      if (!path) return;
+  const openTerminalAt = useCallback(
+    (path: string, label?: string) => {
       emitTerminalOpen(events, 'projects-list-panel', {
         directory: path,
-        label: project.name,
+        label,
       });
     },
     [events]
+  );
+
+  // Terminal button click. With a single clone, open it straight away; with
+  // more than one (the same repo cloned to multiple paths) let the user pick
+  // which checkout to open the terminal in.
+  const handleOpenTerminal = useCallback(
+    (project: UnifiedProject) => {
+      const clones = project.clones.filter((c) => c.path);
+      if (clones.length === 0) return;
+      if (clones.length === 1) {
+        openTerminalAt(String(clones[0].path), project.name);
+        return;
+      }
+      setTerminalPickerTarget(project);
+    },
+    [openTerminalAt]
   );
 
   // Remove-from-list confirmation state. This flow only unregisters the
   // project from Alexandria; the clone on disk is untouched.
   const [removeConfirm, setRemoveConfirm] = useState<AlexandriaEntry | null>(null);
   const [relocateTarget, setRelocateTarget] = useState<UnifiedProject | null>(null);
+  // Set when a multi-clone repo's terminal button is clicked; drives the clone picker.
+  const [terminalPickerTarget, setTerminalPickerTarget] = useState<UnifiedProject | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [clearAllConfirm, setClearAllConfirm] = useState(false);
   const [clearAllBusy, setClearAllBusy] = useState(false);
@@ -335,6 +357,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         isPrivate: repo.private,
         lastActivity: toMs(repo.pushed_at || repo.updated_at),
         cloneUrl: repo.clone_url || repo.html_url,
+        clones: [],
       });
     }
 
@@ -356,6 +379,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       if (existing) {
         existing.isCloned = true;
         existing.entry = entry;
+        existing.clones.push(entry);
         existing.isDirty = gitStatus?.isDirty ?? false;
         existing.description = existing.description ?? entry.github?.description;
         existing.isPrivate = existing.isPrivate ?? toIsPrivate(entry.github?.isPublic);
@@ -371,6 +395,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           isDirty: gitStatus?.isDirty ?? false,
           isPrivate: toIsPrivate(entry.github?.isPublic),
           entry,
+          clones: [entry],
           lastActivity: localActivity,
           cloneUrl: entry.remoteUrl,
           offConvention,
@@ -759,7 +784,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                           project.entry ? () => setRemoveConfirm(project.entry ?? null) : undefined
                         }
                         onOpenTerminal={
-                          project.entry?.path ? () => handleOpenTerminal(project) : undefined
+                          project.clones.some((c) => c.path)
+                            ? () => handleOpenTerminal(project)
+                            : undefined
                         }
                         offConvention={!!project.offConvention}
                         onRelocate={
@@ -802,6 +829,23 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             )
           }
           onClose={() => setRelocateTarget(null)}
+        />
+      )}
+
+      {/* Clone picker — shown when a repo cloned to more than one path has its
+          terminal button clicked, so the user chooses which checkout to open. */}
+      {terminalPickerTarget && (
+        <ClonePickerModal
+          repoName={terminalPickerTarget.name}
+          clonePaths={terminalPickerTarget.clones
+            .map((c) => String(c.path))
+            .filter(Boolean)}
+          onPick={(path) => {
+            openTerminalAt(path, terminalPickerTarget.name);
+            setTerminalPickerTarget(null);
+          }}
+          onCancel={() => setTerminalPickerTarget(null)}
+          theme={theme}
         />
       )}
 
@@ -982,6 +1026,130 @@ const RemoveConfirmModal: React.FC<RemoveConfirmModalProps> = ({
           }}
         >
           {busy ? busyLabel : confirmLabel}
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+interface ClonePickerModalProps {
+  repoName: string;
+  clonePaths: string[];
+  onPick: (path: string) => void;
+  onCancel: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  theme: any;
+}
+
+/**
+ * Picks which on-disk checkout to open a terminal in when a repo has been
+ * cloned to more than one path. Mirrors the RemoveConfirmModal chrome.
+ */
+const ClonePickerModal: React.FC<ClonePickerModalProps> = ({
+  repoName,
+  clonePaths,
+  onPick,
+  onCancel,
+  theme,
+}) => (
+  <div
+    onClick={onCancel}
+    style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 1000,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        width: 'min(520px, 90%)',
+        padding: 20,
+        borderRadius: 12,
+        backgroundColor: theme.colors.backgroundSecondary,
+        border: `1px solid ${theme.colors.border}`,
+        boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+        color: theme.colors.text,
+        fontFamily: theme.fonts.body,
+      }}
+    >
+      <div
+        style={{
+          fontSize: theme.fontSizes[2],
+          fontWeight: theme.fontWeights?.semibold ?? 600,
+          marginBottom: 8,
+        }}
+      >
+        Open terminal in {repoName}
+      </div>
+      <div
+        style={{
+          fontSize: theme.fontSizes[1],
+          color: theme.colors.textSecondary,
+          lineHeight: 1.4,
+          marginBottom: 16,
+        }}
+      >
+        This repo is cloned to more than one location. Choose which checkout to
+        open the terminal in.
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {clonePaths.map((path) => (
+          <button
+            key={path}
+            type="button"
+            onClick={() => onPick(path)}
+            title={path}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: 8,
+              border: `1px solid ${theme.colors.border}`,
+              background: 'transparent',
+              color: theme.colors.text,
+              fontFamily: theme.fonts.monospace ?? 'monospace',
+              fontSize: theme.fontSizes[1],
+              textAlign: 'left',
+              cursor: 'pointer',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+          >
+            <Terminal size={14} style={{ flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{path}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            padding: '8px 14px',
+            borderRadius: 8,
+            border: `1px solid ${theme.colors.border}`,
+            background: 'transparent',
+            color: theme.colors.text,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            cursor: 'pointer',
+          }}
+        >
+          Cancel
         </button>
       </div>
     </div>
