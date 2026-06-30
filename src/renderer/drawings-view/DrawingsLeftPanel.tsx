@@ -9,7 +9,7 @@
  * Extracted from the former `DrawingsView` overlay's master list.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { PenTool, Plus, Trash2, Clock, Search, X, Copy, Check } from 'lucide-react';
+import { PenTool, Plus, Trash2, Clock, Search, X, Copy, Check, RefreshCw } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import {
@@ -188,6 +188,29 @@ export const DrawingsLeftPanel: React.FC<DrawingsLeftPanelProps> = ({
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <button
+            onClick={() => void rescan()}
+            title="Refresh"
+            disabled={listLoading}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px',
+              border: 'none',
+              borderRadius: '4px',
+              backgroundColor: 'transparent',
+              color: theme.colors.textSecondary,
+              cursor: listLoading ? 'default' : 'pointer',
+            }}
+          >
+            <RefreshCw
+              size={16}
+              style={{
+                animation: listLoading ? 'spin 0.8s linear infinite' : undefined,
+              }}
+            />
+          </button>
           <button
             onClick={() => setShowSearch((s) => !s)}
             title="Search"
