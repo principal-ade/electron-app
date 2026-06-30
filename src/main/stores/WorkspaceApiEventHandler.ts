@@ -229,8 +229,50 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     }
 
     const created = await this.service.createWorkspace(workspace);
+
+    // Topic → workspace seed: a workspace opened from a topic (notably a
+    // received shared topic, which already carries `repos`) starts with the
+    // repositories that topic is about. The reverse of the add/remove mirror,
+    // and it runs once here at create — no continuous two-way loop.
+    await this.seedWorkspaceMembershipsFromTopics(
+      created.id,
+      created.topicIds ?? [],
+    );
+
     this.broadcastWorkspaceChange('added', created);
     return created;
+  }
+
+  /**
+   * Seed a new workspace's repository memberships from the `repos` of the
+   * topics it was created with. Writes memberships directly via the registry
+   * service (idempotent on the library side) — deliberately NOT through this
+   * handler's `addRepositoryToWorkspace`, so it doesn't re-trigger the forward
+   * topic-mirror and cross-pollute a multi-topic workspace's other topics.
+   * Best-effort — a failure is logged, never fatal to workspace creation.
+   */
+  private async seedWorkspaceMembershipsFromTopics(
+    workspaceId: string,
+    topicIds: string[],
+  ): Promise<void> {
+    if (topicIds.length === 0) return;
+    try {
+      const registry = TopicRegistryService.getInstance();
+      const seen = new Set<string>();
+      for (const topicId of topicIds) {
+        const topic = await registry.getTopic(topicId);
+        for (const purl of topic?.repos ?? []) {
+          if (seen.has(purl)) continue;
+          seen.add(purl);
+          await this.service.addRepositoryToWorkspace(purl as Purl, workspaceId);
+        }
+      }
+    } catch (error) {
+      console.error(
+        '[Workspace] Failed to seed memberships from topic repos:',
+        error,
+      );
+    }
   }
 
   async getWorkspace(id: string): Promise<Workspace | null> {
