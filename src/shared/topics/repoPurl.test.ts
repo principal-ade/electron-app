@@ -1,4 +1,4 @@
-import { repoPurlFromEntry } from './repoPurl';
+import { isPublishableRepoPurl, repoPurlFromEntry } from './repoPurl';
 import {
   createLocalRepoPurl,
   type AlexandriaEntry,
@@ -50,5 +50,17 @@ describe('repoPurlFromEntry', () => {
 
   it('returns null when nothing identifies the repo', () => {
     expect(repoPurlFromEntry(entry({}))).toBeNull();
+  });
+});
+
+describe('isPublishableRepoPurl', () => {
+  it('allows a portable github purl', () => {
+    expect(isPublishableRepoPurl('pkg:github/acme/web')).toBe(true);
+  });
+
+  it('rejects a machine-local repo purl', () => {
+    expect(isPublishableRepoPurl(createLocalRepoPurl('/Users/me/dev/repo'))).toBe(
+      false,
+    );
   });
 });

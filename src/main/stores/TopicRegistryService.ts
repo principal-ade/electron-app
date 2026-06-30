@@ -34,6 +34,7 @@ import {
   removeTrailOnWebAde,
   reorderTrailsOnWebAde,
 } from '../topics/topicShare';
+import { isPublishableRepoPurl } from '../../shared/topics/repoPurl';
 import { getTrailStore } from '../file-city/trailStore';
 import { TrailShareError } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 
@@ -157,8 +158,10 @@ export class TopicRegistryService {
         title: remote.title,
         description: remote.description,
         status: remote.status,
-        // repos don't round-trip through web-ade yet, so preserve any
+        // repos is a locally-derived field (mirrored from workspace membership),
+        // not part of the remote write-through gate — preserve a concurrent
         // repos edit locally rather than dropping it on the remote reconcile.
+        // It's snapshotted to the server at publish; see publishTopicToWebAde.
         ...(topicUpdates.repos !== undefined ? { repos: topicUpdates.repos } : {}),
       });
       const now = new Date().toISOString();
@@ -307,11 +310,17 @@ export class TopicRegistryService {
       shareIfNeeded: true,
     });
 
+    // Only portable repo PURLs cross the wire — machine-local ones
+    // (`pkg:generic/local/...`) are meaningless to other readers and web-ade
+    // rejects them, so drop them from the published snapshot (they stay local).
+    const publishableRepos = topic.repos?.filter(isPublishableRepoPurl);
+
     const published = await publishTopicToWebAde({
       title: topic.title,
       description: topic.description,
       trailIds: remoteTrailIds,
       ...(topic.status !== undefined ? { status: topic.status } : {}),
+      ...(publishableRepos !== undefined ? { repos: publishableRepos } : {}),
     });
     const now = new Date().toISOString();
     const sync: LocalTopicSync = {

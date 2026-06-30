@@ -15,6 +15,7 @@
 
 import {
   createLocalRepoPurl,
+  parsePurl,
   type AlexandriaEntry,
   type Purl,
 } from '@principal-ai/alexandria-core-library';
@@ -31,4 +32,15 @@ export function repoPurlFromEntry(repository: AlexandriaEntry | Purl): Purl | nu
   if (repository.purl) return repository.purl;
   if (repository.github?.purl) return repository.github.purl;
   return repository.path ? createLocalRepoPurl(repository.path) : null;
+}
+
+/**
+ * Whether a repo PURL is portable enough to publish on a shared topic. Excludes
+ * machine-local repos (`pkg:generic/local/...`), whose encoded absolute path is
+ * meaningless to other machines — web-ade rejects them, so the publisher drops
+ * them from the snapshot first. Locally the PURL stays on the topic.
+ */
+export function isPublishableRepoPurl(purl: string): boolean {
+  const parsed = parsePurl(purl);
+  return !(parsed?.type === 'generic' && parsed.namespace === 'local');
 }

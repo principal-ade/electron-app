@@ -208,6 +208,7 @@ export async function publishTopicToWebAde(input: {
   description?: string;
   trailIds: string[];
   status?: TopicStatus;
+  repos?: string[];
 }): Promise<PublishedTopic> {
   const json = await topicRequest<{ id: string; url: string; topic: Topic }>(
     'POST',
@@ -218,16 +219,22 @@ export async function publishTopicToWebAde(input: {
       description: input.description ?? '',
       trailIds: input.trailIds,
       ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.repos !== undefined ? { repos: input.repos } : {}),
     },
   );
   return { id: json.id, url: absoluteUrl(json.url), topic: json.topic };
 }
 
-/** Owner edit of a published topic's title/description/status. Returns the
+/** Owner edit of a published topic's title/description/status/repos. Returns the
  *  server's updated canonical topic. */
 export async function patchTopicOnWebAde(
   remoteId: string,
-  updates: { title?: string; description?: string; status?: TopicStatus },
+  updates: {
+    title?: string;
+    description?: string;
+    status?: TopicStatus;
+    repos?: string[];
+  },
 ): Promise<Topic> {
   const json = await topicRequest<{ topic: Topic }>(
     'PATCH',
