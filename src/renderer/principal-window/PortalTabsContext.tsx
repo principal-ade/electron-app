@@ -171,12 +171,6 @@ const WORKSPACE_INITIAL_TABS: WorkspaceTab[] = [
     contentType: 'activity-feed',
     label: 'Recent Activity',
   } as ActivityFeedTab,
-  { id: 'inbox-home', contentType: 'inbox-home', label: 'Inbox' } as InboxHomeTab,
-  {
-    id: 'topics-home',
-    contentType: 'topics-home',
-    label: 'Topics',
-  } as TopicsHomeTab,
 ];
 
 function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
