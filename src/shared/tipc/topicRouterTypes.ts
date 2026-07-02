@@ -11,6 +11,7 @@ import type {
   CreateTopicInput,
   FetchSharedTopicResult,
   LocalTopicRecord,
+  PublishedTopicVisibility,
   PublishTopicResult,
   UpdateTopicInput,
 } from '../main-process-api-interfaces/TopicAPI';
@@ -105,6 +106,8 @@ export interface FetchSharedTopicInput {
 /** Input to {@link TopicRouterType.topic_publishTopic}. */
 export interface PublishTopicInput {
   id: string;
+  /** Audience to publish with. Defaults are applied by the caller (renderer). */
+  visibility: PublishedTopicVisibility;
 }
 
 export interface LinkSessionInput {

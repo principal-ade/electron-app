@@ -23,7 +23,9 @@ import type {
   CreateTopicInput,
   LocalTopicRecord,
   LocalTopicSync,
+  PublishedTopicVisibility,
   PublishTopicResult,
+  TopicTrailPublishResult,
   UpdateTopicInput,
 } from '../../shared/main-process-api-interfaces/TopicAPI';
 
@@ -162,7 +164,9 @@ export class TopicRegistryService {
         // not part of the remote write-through gate — preserve a concurrent
         // repos edit locally rather than dropping it on the remote reconcile.
         // It's snapshotted to the server at publish; see publishTopicToWebAde.
-        ...(topicUpdates.repos !== undefined ? { repos: topicUpdates.repos } : {}),
+        ...(topicUpdates.repos !== undefined
+          ? { repos: topicUpdates.repos }
+          : {}),
       });
       const now = new Date().toISOString();
       this.writeSync(id, {
@@ -210,25 +214,16 @@ export class TopicRegistryService {
         shareIfNeeded: true,
       });
       await addTrailOnWebAde(existing.remoteId, remoteTrailId);
-      const local = await this.topicStore.addTrailToTopic(
-        topicId,
-        trailId,
-      );
+      const local = await this.topicStore.addTrailToTopic(topicId, trailId);
       this.touchSynced(topicId, local.updatedAt);
       return local;
     }
-    const topic = await this.topicStore.addTrailToTopic(
-      topicId,
-      trailId,
-    );
+    const topic = await this.topicStore.addTrailToTopic(topicId, trailId);
     this.touchSync(topicId, topic.updatedAt);
     return topic;
   }
 
-  async removeTrailFromTopic(
-    topicId: string,
-    trailId: string,
-  ): Promise<Topic> {
+  async removeTrailFromTopic(topicId: string, trailId: string): Promise<Topic> {
     const existing = this.readSync(topicId);
     if (existing?.remoteId) {
       // The trail is already in a published topic, so it's already shared —
@@ -244,10 +239,7 @@ export class TopicRegistryService {
       this.touchSynced(topicId, local.updatedAt);
       return local;
     }
-    const topic = await this.topicStore.removeTrailFromTopic(
-      topicId,
-      trailId,
-    );
+    const topic = await this.topicStore.removeTrailFromTopic(topicId, trailId);
     this.touchSync(topicId, topic.updatedAt);
     return topic;
   }
@@ -264,17 +256,11 @@ export class TopicRegistryService {
         shareIfNeeded: false,
       });
       await reorderTrailsOnWebAde(existing.remoteId, remoteOrder);
-      const local = await this.topicStore.reorderTopicTrails(
-        topicId,
-        trailIds,
-      );
+      const local = await this.topicStore.reorderTopicTrails(topicId, trailIds);
       this.touchSynced(topicId, local.updatedAt);
       return local;
     }
-    const topic = await this.topicStore.reorderTopicTrails(
-      topicId,
-      trailIds,
-    );
+    const topic = await this.topicStore.reorderTopicTrails(topicId, trailIds);
     this.touchSync(topicId, topic.updatedAt);
     return topic;
   }
@@ -288,8 +274,14 @@ export class TopicRegistryService {
    * leaving local state untouched, when the publish fails (e.g. a referenced
    * trail isn't shared yet). Re-publishing an already-published topic is a
    * no-op that just returns its current record + link.
+   *
+   * `visibility` is the web-ade audience (`'private' | 'public'`) — a per-publish
+   * choice, distinct from the local `sync.visibility` intent flag.
    */
-  async publishTopic(id: string): Promise<PublishTopicResult> {
+  async publishTopic(
+    id: string,
+    visibility: PublishedTopicVisibility,
+  ): Promise<PublishTopicResult> {
     const topic = await this.getTopic(id);
     if (!topic) {
       throw new Error(`No local topic with id ${id}.`);
@@ -299,15 +291,20 @@ export class TopicRegistryService {
       return {
         url: this.topicUrl(existing.remoteId),
         record: { topic, sync: existing },
+        visibility,
+        trailResults: [],
       };
     }
 
     // A topic stores LOCAL trail ids, but web-ade references trails by their
     // server-minted id. Resolve each: already-shared trails contribute the id
     // from their `sharedUrl`; unshared ones are published now (sharing mints
-    // the id we then reference).
+    // the id we then reference). `trailResults` collects the per-trail outcome
+    // so the renderer can show what happened to each.
+    const trailResults: TopicTrailPublishResult[] = [];
     const remoteTrailIds = await this.resolveRemoteTrailIds(topic.trailIds, {
       shareIfNeeded: true,
+      collect: trailResults,
     });
 
     // Only portable repo PURLs cross the wire — machine-local ones
@@ -319,6 +316,7 @@ export class TopicRegistryService {
       title: topic.title,
       description: topic.description,
       trailIds: remoteTrailIds,
+      visibility,
       ...(topic.status !== undefined ? { status: topic.status } : {}),
       ...(publishableRepos !== undefined ? { repos: publishableRepos } : {}),
     });
@@ -330,7 +328,12 @@ export class TopicRegistryService {
       locallyModifiedAt: now,
     };
     this.writeSync(id, sync);
-    return { url: published.url, record: { topic, sync } };
+    return {
+      url: published.url,
+      record: { topic, sync },
+      visibility,
+      trailResults,
+    };
   }
 
   /**
@@ -343,7 +346,7 @@ export class TopicRegistryService {
    */
   private async resolveRemoteTrailIds(
     localTrailIds: string[],
-    opts: { shareIfNeeded: boolean },
+    opts: { shareIfNeeded: boolean; collect?: TopicTrailPublishResult[] },
   ): Promise<string[]> {
     if (localTrailIds.length === 0) return [];
     const store = getTrailStore();
@@ -368,9 +371,19 @@ export class TopicRegistryService {
           );
         }
         remoteIds.push(webAdeId);
+        opts.collect?.push({
+          id: localId,
+          title: entry.title,
+          outcome: 'already-shared',
+        });
       } else if (opts.shareIfNeeded) {
         const result = await store.share(localId);
         remoteIds.push(result.id);
+        opts.collect?.push({
+          id: localId,
+          title: entry.title,
+          outcome: 'published',
+        });
       } else {
         throw new TrailShareError(
           'SHARE_NOT_FOUND',

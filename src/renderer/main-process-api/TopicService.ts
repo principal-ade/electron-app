@@ -14,6 +14,7 @@ import type {
   CreateTopicInput,
   FetchSharedTopicResult,
   LocalTopicRecord,
+  PublishedTopicVisibility,
   PublishTopicResult,
   TopicChangeEvent,
   UpdateTopicInput,
@@ -116,8 +117,11 @@ export class TopicService {
    * metadata so subsequent edits write through. Rejects (leaving the local
    * topic unchanged) when a referenced trail isn't shared yet.
    */
-  static async publishTopic(id: string): Promise<PublishTopicResult> {
-    return topicClient.publishTopic({ id });
+  static async publishTopic(
+    id: string,
+    visibility: PublishedTopicVisibility,
+  ): Promise<PublishTopicResult> {
+    return topicClient.publishTopic({ id, visibility });
   }
 
   /** Full LocalTopicRecord including sync metadata (for sync UI). */

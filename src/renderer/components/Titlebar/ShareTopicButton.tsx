@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Check, Loader2, UploadCloud } from 'lucide-react';
-import type { LocalTopicRecord } from '../../../shared/main-process-api-interfaces/TopicAPI';
-import { TrailShareError } from '../../../shared/main-process-api-interfaces/FileCityTrailAPI';
+import type {
+  LocalTopicRecord,
+  PublishedTopicVisibility,
+  TopicTrailPublishResult,
+} from '../../../shared/main-process-api-interfaces/TopicAPI';
 import { TopicService } from '../../main-process-api/TopicService';
 import { TrailLibraryService } from '../../services/TrailLibraryService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
@@ -43,6 +46,13 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
   const [plan, setPlan] = useState<{ trails: TopicTrailPlan[] }>({
     trails: [],
   });
+  // Set on a successful publish while the modal is open, so the modal can show
+  // a confirmation (link, audience, per-trail results) instead of closing.
+  const [publishResult, setPublishResult] = useState<{
+    url: string;
+    visibility: PublishedTopicVisibility;
+    trails: TopicTrailPublishResult[];
+  } | null>(null);
   // Mirrors `topicSharing.skipPublishConfirm` — when true, an unblocked publish
   // skips the educational modal. Read once on mount and kept current via the
   // preferences-updated event.
@@ -54,7 +64,9 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
     UserPreferencesService.getPreferences()
       .then((prefs) => {
         if (!cancelled)
-          skipConfirmRef.current = Boolean(prefs.topicSharing?.skipPublishConfirm);
+          skipConfirmRef.current = Boolean(
+            prefs.topicSharing?.skipPublishConfirm,
+          );
       })
       .catch(() => {
         /* default: don't skip */
@@ -118,37 +130,56 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
   // modal-confirm path. Keeps the modal open on error so its message shows
   // there; closes + flashes "copied" on success. `dontShowAgain` is only set
   // from the modal's checkbox; persists the opt-out before publishing.
-  const runPublish = useCallback(async (dontShowAgain = false) => {
-    if (!topicId) return;
-    if (dontShowAgain) {
-      skipConfirmRef.current = true;
-      void UserPreferencesService.updatePreferences({
-        topicSharing: { skipPublishConfirm: true },
-      });
-    }
-    setStatus('publishing');
-    setErrorMsg(null);
-    try {
-      const result = await TopicService.publishTopic(topicId);
-      setRecord(result.record);
-      try {
-        await navigator.clipboard.writeText(result.url);
-      } catch {
-        /* clipboard denied — still published */
+  const runPublish = useCallback(
+    async (
+      dontShowAgain = false,
+      visibility: PublishedTopicVisibility = 'private',
+    ) => {
+      if (!topicId) return;
+      if (dontShowAgain) {
+        skipConfirmRef.current = true;
+        void UserPreferencesService.updatePreferences({
+          topicSharing: { skipPublishConfirm: true },
+        });
       }
-      setModalOpen(false);
-      setStatus('idle');
-      flash('copied', 1500);
-    } catch (err) {
-      setStatus('idle');
-      setErrorMsg(
-        err instanceof TrailShareError
-          ? err.message
-          : 'Could not share this topic.',
-      );
-      if (!modalOpen) flash('error', 3500);
-    }
-  }, [topicId, modalOpen, flash]);
+      setStatus('publishing');
+      setErrorMsg(null);
+      try {
+        const result = await TopicService.publishTopic(topicId, visibility);
+        setRecord(result.record);
+        try {
+          await navigator.clipboard.writeText(result.url);
+        } catch {
+          /* clipboard denied — still published */
+        }
+        if (modalOpen) {
+          // Keep the modal open to confirm success (link, audience, per-trail
+          // results) rather than closing it silently.
+          setPublishResult({
+            url: result.url,
+            visibility: result.visibility,
+            trails: result.trailResults,
+          });
+          setStatus('idle');
+        } else {
+          setStatus('idle');
+          flash('copied', 1500);
+        }
+      } catch (err) {
+        setStatus('idle');
+        // The typed TrailShareError loses its class crossing IPC, but its message
+        // survives — surface it so the real reason (e.g. "description exceeds
+        // 8000 chars", "sign in to GitHub") shows instead of a generic string.
+        setErrorMsg(
+          err instanceof Error && err.message
+            ? err.message
+            : 'Could not share this topic.',
+        );
+        if (!modalOpen) flash('error', 3500);
+      }
+    },
+    [topicId, modalOpen, flash],
+  );
 
   const handleClick = useCallback(async () => {
     if (!topicId || !record || status === 'publishing') return;
@@ -191,6 +222,7 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
     }
     setPlan({ trails });
     setErrorMsg(null);
+    setPublishResult(null);
     setModalOpen(true);
   }, [topicId, record, remoteId, status, flash, runPublish]);
 
@@ -206,7 +238,11 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
             : 'Publish topic';
 
   const Icon =
-    status === 'publishing' ? Loader2 : published || status === 'copied' ? Check : UploadCloud;
+    status === 'publishing'
+      ? Loader2
+      : published || status === 'copied'
+        ? Check
+        : UploadCloud;
 
   const title = !topicId
     ? 'Create a topic first'
@@ -226,75 +262,77 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
 
   return (
     <>
-    <button
-      type="button"
-      disabled={!armed && status === 'idle'}
-      onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      title={title}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '6px 12px',
-        minHeight: '34px',
-        boxSizing: 'border-box',
-        borderRadius: '6px',
-        background: showActive
-          ? theme.colors.primary
-          : theme.colors.backgroundTertiary,
-        border: `1px solid ${showActive ? theme.colors.primary : restingBorder}`,
-        color:
-          status === 'error'
-            ? theme.colors.error
-            : showActive
-              ? theme.colors.background
-              : published || status === 'copied'
-                ? theme.colors.primary
-                : theme.colors.textSecondary,
-        cursor: armed ? 'pointer' : 'not-allowed',
-        opacity: armed ? 1 : 0.5,
-        fontSize: `${theme.fontSizes[1]}px`,
-        fontWeight: theme.fontWeights.medium,
-        fontFamily: theme.fonts.body,
-        transition: 'all 0.2s',
-        whiteSpace: 'nowrap',
-        // @ts-ignore - WebkitAppRegion is not in CSSProperties
-        WebkitAppRegion: 'no-drag',
-      }}
-    >
-      <Icon
-        size={16}
-        className={status === 'publishing' ? 'publish-topic-spin' : undefined}
-        style={
-          status === 'publishing'
-            ? { animation: 'publish-topic-spin 0.8s linear infinite' }
-            : undefined
-        }
-      />
-      <span>{label}</span>
-      <style>{`
+      <button
+        type="button"
+        disabled={!armed && status === 'idle'}
+        onClick={handleClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        title={title}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '6px 12px',
+          minHeight: '34px',
+          boxSizing: 'border-box',
+          borderRadius: '6px',
+          background: showActive
+            ? theme.colors.primary
+            : theme.colors.backgroundTertiary,
+          border: `1px solid ${showActive ? theme.colors.primary : restingBorder}`,
+          color:
+            status === 'error'
+              ? theme.colors.error
+              : showActive
+                ? theme.colors.background
+                : published || status === 'copied'
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary,
+          cursor: armed ? 'pointer' : 'not-allowed',
+          opacity: armed ? 1 : 0.5,
+          fontSize: `${theme.fontSizes[1]}px`,
+          fontWeight: theme.fontWeights.medium,
+          fontFamily: theme.fonts.body,
+          transition: 'all 0.2s',
+          whiteSpace: 'nowrap',
+          // @ts-ignore - WebkitAppRegion is not in CSSProperties
+          WebkitAppRegion: 'no-drag',
+        }}
+      >
+        <Icon
+          size={16}
+          className={status === 'publishing' ? 'publish-topic-spin' : undefined}
+          style={
+            status === 'publishing'
+              ? { animation: 'publish-topic-spin 0.8s linear infinite' }
+              : undefined
+          }
+        />
+        <span>{label}</span>
+        <style>{`
         @keyframes publish-topic-spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
       `}</style>
-    </button>
-    {modalOpen && record && (
-      <ShareTopicModal
-        topicTitle={record.topic.title}
-        trails={plan.trails}
-        busy={status === 'publishing'}
-        error={errorMsg}
-        onConfirm={runPublish}
-        onCancel={() => {
-          if (status === 'publishing') return;
-          setModalOpen(false);
-          setErrorMsg(null);
-        }}
-      />
-    )}
+      </button>
+      {modalOpen && record && (
+        <ShareTopicModal
+          topicTitle={record.topic.title}
+          trails={plan.trails}
+          busy={status === 'publishing'}
+          error={errorMsg}
+          result={publishResult}
+          onConfirm={runPublish}
+          onCancel={() => {
+            if (status === 'publishing') return;
+            setModalOpen(false);
+            setErrorMsg(null);
+            setPublishResult(null);
+          }}
+        />
+      )}
     </>
   );
 };

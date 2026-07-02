@@ -22,7 +22,10 @@
  */
 
 import fetch from 'node-fetch';
-import type { DraftTopic as Topic, TopicStatus } from '@principal-ai/principal-view-core';
+import type {
+  DraftTopic as Topic,
+  TopicStatus,
+} from '@principal-ai/principal-view-core';
 import {
   TOKEN_KEYS,
   UnifiedSecureStorage,
@@ -96,7 +99,11 @@ function topicShareError(
   if (res.status === 401 || body.code === 'NOT_AUTHENTICATED') {
     return new TrailShareError('NO_GITHUB_TOKEN', message);
   }
-  if (res.status === 403 || body.code === 'NOT_OWNER' || body.code === 'NO_REPO_ACCESS') {
+  if (
+    res.status === 403 ||
+    body.code === 'NOT_OWNER' ||
+    body.code === 'NO_REPO_ACCESS'
+  ) {
     return new TrailShareError('NO_REPO_ACCESS', message);
   }
   if (
@@ -209,6 +216,7 @@ export async function publishTopicToWebAde(input: {
   trailIds: string[];
   status?: TopicStatus;
   repos?: string[];
+  visibility?: 'private' | 'public';
 }): Promise<PublishedTopic> {
   const json = await topicRequest<{ id: string; url: string; topic: Topic }>(
     'POST',
@@ -220,6 +228,9 @@ export async function publishTopicToWebAde(input: {
       trailIds: input.trailIds,
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.repos !== undefined ? { repos: input.repos } : {}),
+      ...(input.visibility !== undefined
+        ? { visibility: input.visibility }
+        : {}),
     },
   );
   return { id: json.id, url: absoluteUrl(json.url), topic: json.topic };

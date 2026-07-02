@@ -82,7 +82,10 @@ export const topicRouter = {
   topic_publishTopic: t.procedure
     .input<PublishTopicInput>()
     .action(async ({ input }) => {
-      const result = await registryService.publishTopic(input.id);
+      const result = await registryService.publishTopic(
+        input.id,
+        input.visibility,
+      );
       broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, result.record.topic);
       return result;
     }),
@@ -146,9 +149,10 @@ export const topicRouter = {
         throw new Error(`Unknown topic id: ${input.id}`);
       }
       const prior = (existing.description ?? '').replace(/\s+$/, '');
-      const description =
-        prior.length > 0 ? `${prior}\n\n${text}` : text;
-      const topic = await registryService.updateTopic(input.id, { description });
+      const description = prior.length > 0 ? `${prior}\n\n${text}` : text;
+      const topic = await registryService.updateTopic(input.id, {
+        description,
+      });
       broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
       return topic;
     }),
@@ -249,7 +253,10 @@ export const topicRouter = {
   topic_linkSession: t.procedure
     .input<LinkSessionInput>()
     .action(async ({ input }) => {
-      const changed = registryService.linkSession(input.topicId, input.sessionId);
+      const changed = registryService.linkSession(
+        input.topicId,
+        input.sessionId,
+      );
       if (changed) {
         const payload: SessionLinkedEvent = {
           sessionId: input.sessionId,

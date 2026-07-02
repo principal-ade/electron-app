@@ -52,14 +52,41 @@ export interface FetchSharedTopicResult {
 }
 
 /**
+ * Audience a topic is published with on web-ade. Deliberately distinct from
+ * {@link LocalTopicSync.visibility} (a local publish-*intent* flag): this is the
+ * server-side access control — `'public'` = anyone with the link + shows in the
+ * discovery feed; `'private'` = only the creator and explicit recipients, and
+ * the link 404s for everyone else.
+ */
+export type PublishedTopicVisibility = 'private' | 'public';
+
+/**
+ * Per-trail outcome for the trails a topic references, reported back after a
+ * publish so the UI can show what happened to each (light publish detail).
+ */
+export interface TopicTrailPublishResult {
+  /** Local trail id. */
+  id: string;
+  title?: string;
+  /**
+   * `'already-shared'` — the trail was already on web-ade, reused as-is.
+   * `'published'` — the trail was shared as part of this topic publish.
+   */
+  outcome: 'already-shared' | 'published';
+}
+
+/**
  * Result of publishing a local topic to web-ade. `url` is the public topic
  * link (for copy-to-clipboard); `record` is the local record after its
  * `sync.remoteId` was stamped, so the renderer reflects the now-shared state
- * without a refetch.
+ * without a refetch. `visibility` echoes the audience it was published with,
+ * and `trailResults` reports what happened to each referenced trail.
  */
 export interface PublishTopicResult {
   url: string;
   record: LocalTopicRecord;
+  visibility: PublishedTopicVisibility;
+  trailResults: TopicTrailPublishResult[];
 }
 
 export enum TopicEventType {
