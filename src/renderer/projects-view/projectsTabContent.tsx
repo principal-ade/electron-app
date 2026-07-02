@@ -982,7 +982,6 @@ export function renderProjectsTabContent(
           key={`in-progress-${repositories.length}`}
           repositories={repositories}
           events={events}
-          onOpenRepository={onOpenRepository}
           actions={inProgressActivityPanelActions}
         />
       );

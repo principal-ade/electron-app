@@ -13,6 +13,7 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { emitTerminalOpen } from '../events/portalIntents';
 import {
   InProgressRepoCard,
   type ExplainInProgressRequest,
@@ -24,7 +25,6 @@ import { RepoExplainOverlay, type ExplainAudience } from './RepoExplainOverlay';
 export interface InProgressActivityPanelProps {
   repositories: AlexandriaEntry[];
   events: PanelEventEmitter;
-  onOpenRepository?: (entry: AlexandriaEntry) => void;
   actions: InProgressRepoCardActions;
 }
 
@@ -52,7 +52,6 @@ function statusToSummary(entry: AlexandriaEntry, status: GitStatusWithFiles): In
 export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = ({
   repositories,
   events,
-  onOpenRepository,
   actions,
 }) => {
   const { theme } = useTheme();
@@ -166,14 +165,18 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
     return rows;
   }, [statusMap, entryByPath, dismissedPaths]);
 
+  // Double-clicking a card opens a terminal tab rooted at the repo in the
+  // principal window (not a separate dev-workspace window). WorkspaceShell
+  // listens for this intent and materializes the terminal tab.
   const handleOpenRepo = useCallback(
     (repoPath: string) => {
       const entry = entryByPath.get(repoPath);
-      if (entry && onOpenRepository) {
-        onOpenRepository(entry);
-      }
+      emitTerminalOpen(events, 'in-progress-activity-panel', {
+        directory: repoPath,
+        label: entry?.name,
+      });
     },
-    [entryByPath, onOpenRepository],
+    [entryByPath, events],
   );
 
   const handleExplainRequested = useCallback((request: ExplainInProgressRequest) => {
