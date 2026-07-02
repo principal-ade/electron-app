@@ -46,6 +46,11 @@ export const LocalTopicTabContent: React.FC<{
   const { activeTabId } = useTopicsTabs();
   const { events: portalEvents } = usePortalEvents();
 
+  // When the topic has no projects and no trails the rail collapses; centering
+  // the (capped) description in the full view then reads better than pinning it
+  // to the left beside empty space. The rail reports this via `onEmptyChange`.
+  const [railEmpty, setRailEmpty] = React.useState(false);
+
   // Table-of-contents drawer: the body reports whether the description has
   // headings (`hasToc`), this owns the open-state, and the body renders the
   // outline overlay (it has the heading DOM).
@@ -253,15 +258,24 @@ export const LocalTopicTabContent: React.FC<{
         <TopicStatusHeaderButton topicId={topicId} />
       </div>
 
-      {/* Body: description on the left, trails rail on the right. */}
+      {/* Body: description (capped for readability) on the left, trails/projects
+          rail filling the remaining space on the right. */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <div
           style={{
-            flex: 1,
+            // With a rail present, hold at 800 on the left; when the rail
+            // collapses, fill the view so the (centered) description sits in
+            // the middle instead of pinned left beside empty space.
+            ...(railEmpty
+              ? { flex: 1 }
+              : { flex: '0 1 800px', maxWidth: 800 }),
             minWidth: 0,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            // Match the markdown slide's own background (theme.colors.backgroundDark)
+            // so the area reads uniform when the centered prose leaves side gaps.
+            backgroundColor: theme.colors.backgroundDark,
           }}
         >
           <TopicDescriptionBody
@@ -275,6 +289,8 @@ export const LocalTopicTabContent: React.FC<{
 
         <TopicTrailsRail
           topicId={topicId}
+          fill
+          onEmptyChange={setRailEmpty}
           onOpenTrail={(trailId, trailTitle) =>
             emitTrailOpen(portalEvents, 'local-topic-tab', {
               trailId,

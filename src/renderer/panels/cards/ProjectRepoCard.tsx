@@ -13,11 +13,13 @@ export interface ProjectRepoCardData {
 export interface ProjectRepoCardProps {
   repo: ProjectRepoCardData;
   onClick?: () => void;
+  /** Tighter padding for dense contexts like the topic rail. */
+  dense?: boolean;
 }
 
-export const ProjectRepoCard: React.FC<ProjectRepoCardProps> = ({ repo, onClick }) => {
+export const ProjectRepoCard: React.FC<ProjectRepoCardProps> = ({ repo, onClick, dense }) => {
   const { theme } = useTheme();
-  const spacing = { md: 16 };
+  const spacing = { md: dense ? 10 : 16 };
   const radius = theme.radii?.[1] || 4;
   const avatarSrc =
     repo.ownerAvatarUrl ??
@@ -56,7 +58,7 @@ export const ProjectRepoCard: React.FC<ProjectRepoCardProps> = ({ repo, onClick 
             style={{
               width: 40,
               height: 40,
-              borderRadius: '50%',
+              borderRadius: 8,
               flexShrink: 0,
               display: 'block',
             }}
@@ -73,7 +75,7 @@ export const ProjectRepoCard: React.FC<ProjectRepoCardProps> = ({ repo, onClick 
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: '50%',
+              borderRadius: 8,
               backgroundColor: theme.colors.backgroundTertiary,
             }}
           >

@@ -681,25 +681,32 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
           // before the real content arrives.
           null
         ) : trimmed ? (
-          <IndustryMarkdownSlide
-            content={description as string}
-            slideIdPrefix="topic-description"
-            slideIndex={0}
-            isVisible={visible}
-            theme={theme}
-            enableKeyboardScrolling={false}
-            onLinkClick={onLinkClick}
-            // Let purl doc links (`pkg:…#path`) survive href sanitize so they
-            // reach onLinkClick / the purl resolver instead of being stripped.
-            allowedLinkProtocols={PURL_LINK_PROTOCOLS}
-            onOpenMermaidInTab={handleOpenMermaidInTab}
-            selectableBlocks
-            deletionMode="text"
-            onContentChange={handleContentChange}
-            editable
-            onCheckboxChange={handleCheckboxChange}
-            transformImageUri={resolveAssetUri}
-          />
+          // Cap the prose at a comfortable reading measure, centered within its
+          // column. When the column is 800 wide (rail present) this reads as
+          // left-aligned; when the column fills the view (rail collapsed) the
+          // prose centers. Narrow columns (e.g. the Braindump slide-over) fall
+          // back to full width.
+          <div style={{ maxWidth: 800, width: '100%', margin: '0 auto' }}>
+            <IndustryMarkdownSlide
+              content={description as string}
+              slideIdPrefix="topic-description"
+              slideIndex={0}
+              isVisible={visible}
+              theme={theme}
+              enableKeyboardScrolling={false}
+              onLinkClick={onLinkClick}
+              // Let purl doc links (`pkg:…#path`) survive href sanitize so they
+              // reach onLinkClick / the purl resolver instead of being stripped.
+              allowedLinkProtocols={PURL_LINK_PROTOCOLS}
+              onOpenMermaidInTab={handleOpenMermaidInTab}
+              selectableBlocks
+              deletionMode="text"
+              onContentChange={handleContentChange}
+              editable
+              onCheckboxChange={handleCheckboxChange}
+              transformImageUri={resolveAssetUri}
+            />
+          </div>
         ) : (
           <div
             style={{
