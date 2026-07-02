@@ -25,7 +25,13 @@
  * portal bus. See docs/portal-unification.md + docs/portal-view-migration.md.
  */
 
-import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import React, {
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+} from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Inbox, Layers, PenTool, ToolCase } from 'lucide-react';
 import {
@@ -78,7 +84,10 @@ import {
 import { usePortalEvents } from '../principal-window/PortalEventContext';
 import { DocumentService } from '../services/DocumentService';
 import type { TopicTab, LocalTopicTab } from '../events/portalTabs';
-import { PORTAL_INTENTS, type TerminalOpenPayload } from '../events/portalIntents';
+import {
+  PORTAL_INTENTS,
+  type TerminalOpenPayload,
+} from '../events/portalIntents';
 
 /** Which surface's left panel + landing the shell currently shows. */
 export type WorkspaceView =
@@ -90,11 +99,11 @@ export type WorkspaceView =
   | 'skills';
 
 /** Centered landing hint shown by the `inbox-home` / `topics-home` tabs. */
-const HomePanel: React.FC<{ icon: React.ReactNode; title: string; body: string }> = ({
-  icon,
-  title,
-  body,
-}) => {
+const HomePanel: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+}> = ({ icon, title, body }) => {
   const { theme } = useTheme();
   return (
     <div
@@ -291,73 +300,76 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     });
   }, []);
 
-  const renderTabContent = useCallback((tab: WorkspaceTab, _isActive: boolean) => {
-    // Projects renders its own tabs + the shared trail/doc tabs (one source of
-    // truth). It returns null for the Inbox/Topics landing + topic tabs below.
-    const projectsContent = renderProjectsTabContent(tab as FeedTab, {
-      events: eventsRef.current,
-      repositories: repositoriesRef.current,
-      onOpenRepository: handleOpenRepository,
-    });
-    if (projectsContent) return projectsContent;
-    switch (tab.contentType) {
-      case 'inbox-home':
-        return (
-          <HomePanel
-            icon={<Inbox size={32} />}
-            title="Your trail inbox"
-            body="Shared trails sent to you and trails you've recently visited show up in the panel on the left. Pick one to open it here."
-          />
-        );
-      case 'topics-home':
-        return (
-          <HomePanel
-            icon={<Layers size={32} />}
-            title="Your topics"
-            body="Topics bundle related trails on one subject. Pick a topic from the panel on the left to read its description here."
-          />
-        );
-      case 'topic': {
-        const topicTab = tab as TopicTab;
-        return (
-          <TopicTabContent
-            key={topicTab.id}
-            topicId={topicTab.topicId}
-            events={eventsRef.current}
-            repositories={repositoriesRef.current}
-          />
-        );
+  const renderTabContent = useCallback(
+    (tab: WorkspaceTab, _isActive: boolean) => {
+      // Projects renders its own tabs + the shared trail/doc tabs (one source of
+      // truth). It returns null for the Inbox/Topics landing + topic tabs below.
+      const projectsContent = renderProjectsTabContent(tab as FeedTab, {
+        events: eventsRef.current,
+        repositories: repositoriesRef.current,
+        onOpenRepository: handleOpenRepository,
+      });
+      if (projectsContent) return projectsContent;
+      switch (tab.contentType) {
+        case 'inbox-home':
+          return (
+            <HomePanel
+              icon={<Inbox size={32} />}
+              title="Your trail inbox"
+              body="Shared trails sent to you and trails you've recently visited show up in the panel on the left. Pick one to open it here."
+            />
+          );
+        case 'topics-home':
+          return (
+            <HomePanel
+              icon={<Layers size={32} />}
+              title="Your topics"
+              body="Topics bundle related trails on one subject. Pick a topic from the panel on the left to read its description here."
+            />
+          );
+        case 'topic': {
+          const topicTab = tab as TopicTab;
+          return (
+            <TopicTabContent
+              key={topicTab.id}
+              topicId={topicTab.topicId}
+              events={eventsRef.current}
+              repositories={repositoriesRef.current}
+            />
+          );
+        }
+        case 'local-topic': {
+          const topicTab = tab as LocalTopicTab;
+          return (
+            <LocalTopicTabContent
+              key={topicTab.id}
+              topicId={topicTab.topicId}
+              title={topicTab.title}
+              events={eventsRef.current}
+            />
+          );
+        }
+        case 'drawing': {
+          const drawingTab = tab as DrawingTab;
+          return (
+            <DrawingTabContent
+              key={drawingTab.id}
+              tabId={drawingTab.id}
+              drawingId={drawingTab.drawingId}
+              path={drawingTab.path}
+              name={drawingTab.name}
+              events={eventsRef.current}
+            />
+          );
+        }
+        case 'skill':
+          return <SkillDetailTabContent key={tab.id} />;
+        default:
+          return null;
       }
-      case 'local-topic': {
-        const topicTab = tab as LocalTopicTab;
-        return (
-          <LocalTopicTabContent
-            key={topicTab.id}
-            topicId={topicTab.topicId}
-            title={topicTab.title}
-            events={eventsRef.current}
-          />
-        );
-      }
-      case 'drawing': {
-        const drawingTab = tab as DrawingTab;
-        return (
-          <DrawingTabContent
-            key={drawingTab.id}
-            tabId={drawingTab.id}
-            drawingId={drawingTab.drawingId}
-            path={drawingTab.path}
-            name={drawingTab.name}
-            events={eventsRef.current}
-          />
-        );
-      }
-      case 'skill':
-        return <SkillDetailTabContent key={tab.id} />;
-      default:
-        return null;
-    }
-  }, [handleOpenRepository]);
+    },
+    [handleOpenRepository],
+  );
 
   // Open links clicked in the terminal in the default browser.
   useTerminalLinkHandler(events);
@@ -420,10 +432,15 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       })();
     };
     events.on(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
+    // The titlebar search lives outside the shell, so it can only reach the
+    // portal bus (like its trail/topic opens). Listen there too so a local-clone
+    // pick from the titlebar materializes a terminal tab in this host.
+    portalEvents.on(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
     return () => {
       events.off(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
+      portalEvents.off(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
     };
-  }, [events, terminalActions, terminalCtx.terminalContext]);
+  }, [events, portalEvents, terminalActions, terminalCtx.terminalContext]);
 
   // Bridge handoff: a doc pushed from the Principal MCP Bridge
   // (POST /api/document/open) opens (or focuses) a markdown tab.
