@@ -115,7 +115,9 @@ export function registerTopicRoutes(
 ): void {
   // Create a local topic. The agent analogue of the in-app UI's "new topic"
   // affordance (TIPC topic_createTopic): a briefed terminal can mint a topic
-  // to bundle the trails it's about to author. The topic is local-only until
+  // to bundle the trails it's about to author. May also be scoped to explicit
+  // `repos` (PURL strings) so a caller can mint a topic *about a resolved repo*
+  // rather than submitting a cross-repo task. The topic is local-only until
   // published from the app UI — `id`, timestamps, and `createdBy` are filled
   // in by the registry when omitted. Returns the same `{ topic, trails }`
   // shape as the read route so the caller can immediately link/append.
@@ -149,6 +151,25 @@ export function registerTopicRoutes(
       }
       trailIds = body.trailIds as string[];
     }
+    // Repositories this topic is about, as PURL strings (e.g.
+    // `pkg:github/owner/repo`). Usually a topic's repo scope is *derived* from
+    // the repos its trails were authored in (see `collectTopicRepoPurls`), but a
+    // caller may set them explicitly — e.g. minting a topic scoped to a resolved
+    // repo instead of submitting a cross-repo task.
+    let repos: string[] | undefined;
+    if (body && body.repos !== undefined) {
+      if (
+        !Array.isArray(body.repos) ||
+        !body.repos.every((r) => typeof r === 'string')
+      ) {
+        res.status(400).json({
+          success: false,
+          error: 'repos must be an array of PURL strings',
+        });
+        return;
+      }
+      repos = body.repos as string[];
+    }
     const visibility =
       body && (body.visibility === 'private' || body.visibility === 'sharable')
         ? body.visibility
@@ -158,6 +179,7 @@ export function registerTopicRoutes(
         title,
         ...(description !== undefined ? { description } : {}),
         ...(trailIds !== undefined ? { trailIds } : {}),
+        ...(repos !== undefined ? { repos } : {}),
         ...(visibility !== undefined ? { visibility } : {}),
       });
       broadcastTopicEvent(TopicAPIEvent.TOPIC_ADDED, topic);
