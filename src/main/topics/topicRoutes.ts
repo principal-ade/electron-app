@@ -85,11 +85,14 @@ async function resolveTopicTrails(
 }
 
 /**
- * Collect the repo purls a topic "claims" — the union of the Alexandria purls
- * of the repos its trails were authored in. Used to scope link validation: a
- * reference into a repo not in this set is flagged as out-of-scope. Trails whose
- * repo isn't registered (or that are repo-agnostic) simply don't contribute; an
- * empty set means "don't scope-check" (every purl is treated as in-scope).
+ * Collect the repo purls a topic "claims" — the union of its explicitly
+ * declared `repos` and the Alexandria purls of the repos its trails were
+ * authored in. Used to scope link validation: a reference into a repo not in
+ * this set is flagged as out-of-scope. Including `topic.repos` lets a
+ * repo-scoped topic reference files in a repo it names even before any trail
+ * from that repo is added. Trails whose repo isn't registered (or that are
+ * repo-agnostic) simply don't contribute; an empty set means "don't scope-check"
+ * (every purl is treated as in-scope).
  */
 async function collectTopicRepoPurls(
   topic: Topic,
@@ -99,6 +102,9 @@ async function collectTopicRepoPurls(
   const { entries } = await trailStore.list();
   const byId = new Map(entries.map((e) => [e.id, e]));
   const purls = new Set<string>();
+  for (const purl of topic.repos ?? []) {
+    if (typeof purl === 'string' && purl) purls.add(purl);
+  }
   for (const trailId of topic.trailIds) {
     const entry = byId.get(trailId);
     if (!entry?.repositoryPath) continue;
