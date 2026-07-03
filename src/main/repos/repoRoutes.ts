@@ -14,6 +14,7 @@ import path from 'path';
 import type { Application, Request, Response } from 'express';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { repoPurlFromEntry } from '../../shared/topics/repoPurl';
 
 /**
  * Trimmed, JSON-safe view of a registry entry. The full AlexandriaEntry
@@ -24,6 +25,13 @@ interface RepoSummary {
   path: string;
   name: string;
   remoteUrl?: string;
+  /**
+   * Canonical repo PURL (`pkg:github/owner/repo`, or `pkg:generic/local/...`
+   * for a local-only clone). Derived via the same helper the workspace↔topic
+   * sync uses, so this is exactly the value a caller should write into a
+   * topic's `repos` to scope it to this repo.
+   */
+  purl?: string;
   registeredAt: string;
   hasViews: boolean;
   viewCount: number;
@@ -32,19 +40,23 @@ interface RepoSummary {
 
 /**
  * Even leaner view for the list route. GET /api/repos can return many entries,
- * so it carries only the two fields a caller needs to identify a clone: the
- * canonical path and its remote. Single-entry responses (register/delete) keep
- * the fuller RepoSummary so the caller can confirm name/views/provenance.
+ * so it carries only the fields a caller needs to identify a clone: the
+ * canonical path, its remote, and its PURL (so a caller can resolve a repo to
+ * the string it writes into a topic's `repos` without a second call). Single-
+ * entry responses (register/delete) keep the fuller RepoSummary so the caller
+ * can confirm name/views/provenance.
  */
 interface RepoListItem {
   path: string;
   remoteUrl?: string;
+  purl?: string;
 }
 
 function listEntry(entry: AlexandriaEntry): RepoListItem {
   return {
     path: String(entry.path),
     remoteUrl: entry.remoteUrl,
+    purl: repoPurlFromEntry(entry) ?? undefined,
   };
 }
 
@@ -53,6 +65,7 @@ function summarizeEntry(entry: AlexandriaEntry): RepoSummary {
     path: String(entry.path),
     name: entry.name,
     remoteUrl: entry.remoteUrl,
+    purl: repoPurlFromEntry(entry) ?? undefined,
     registeredAt: entry.registeredAt,
     hasViews: entry.hasViews,
     viewCount: entry.viewCount,
