@@ -9,6 +9,10 @@
  * state from the response. HTTP route handlers, which can't rely on the
  * caller already having the result, use `sendToRepoWindows()` after a
  * mutation to push to renderer windows scoped to the affected repo.
+ * Exception: the note IPC handlers fan out LIBRARY_CHANGED after the
+ * mutation — notes are the one IPC write path with cross-window readers
+ * (any LocalTrailTabContent re-fetches off that hint), and the initiating
+ * caller's inline update alone would leave them stale.
  */
 
 import { ipcMain } from 'electron';
@@ -363,6 +367,54 @@ export function sendToPrincipalWindow(
   return 1;
 }
 
+/**
+ * Fan LIBRARY_CHANGED out to every window that could be rendering the
+ * trail: its repo's dev-workspace windows, workspace windows hosting a
+ * topic that contains it, and the principal window. Only LIBRARY_CHANGED
+ * is sent — never PAYLOAD_SET, whose consumers open/focus trail tabs; a
+ * background persistence hint must not move UI. Fire-and-forget: callers
+ * don't await, and failures only log.
+ *
+ * TopicRegistryService is resolved lazily because it statically imports
+ * `getTrailStore` from this module; a top-level import back would create
+ * a load-order-sensitive cycle.
+ */
+async function broadcastLibraryChangedForTrail(
+  store: TrailStore,
+  trailId: string,
+): Promise<void> {
+  try {
+    const loaded = await store.loadByIdWithRepoPath(trailId);
+    const repositoryPath = loaded?.repositoryPath;
+    sendToRepoWindows(
+      FileCityTrailEvent.LIBRARY_CHANGED,
+      { repositoryPath },
+      repositoryPath,
+    );
+    sendToPrincipalWindow(FileCityTrailEvent.LIBRARY_CHANGED, {
+      repositoryPath,
+    });
+    const { TopicRegistryService } = await import(
+      '../stores/TopicRegistryService'
+    );
+    const topics =
+      await TopicRegistryService.getInstance().getTopicsForTrail(trailId);
+    for (const topic of topics) {
+      sendToTopicWindows(
+        FileCityTrailEvent.LIBRARY_CHANGED,
+        { repositoryPath },
+        topic.id,
+      );
+    }
+  } catch (err) {
+    console.error(
+      '[TrailStore] LIBRARY_CHANGED broadcast failed for trail',
+      trailId,
+      err,
+    );
+  }
+}
+
 let singleton: TrailStore | null = null;
 
 export function getTrailStore(): TrailStore {
@@ -397,18 +449,25 @@ export function registerTrailHandlers(): void {
   );
   ipcMain.handle(
     FileCityTrailEvent.NOTE_CREATE,
-    (_event, payloadId: string, draft: TrailNoteDraft) =>
-      store.createNote(payloadId, draft),
+    async (_event, payloadId: string, draft: TrailNoteDraft) => {
+      const note = await store.createNote(payloadId, draft);
+      void broadcastLibraryChangedForTrail(store, payloadId);
+      return note;
+    },
   );
   ipcMain.handle(
     FileCityTrailEvent.NOTE_UPDATE,
-    (_event, payloadId: string, noteId: string, body: string) =>
-      store.updateNote(payloadId, noteId, body),
+    async (_event, payloadId: string, noteId: string, body: string) => {
+      const note = await store.updateNote(payloadId, noteId, body);
+      void broadcastLibraryChangedForTrail(store, payloadId);
+      return note;
+    },
   );
   ipcMain.handle(
     FileCityTrailEvent.NOTE_DELETE,
     async (_event, payloadId: string, noteId: string) => {
       await store.deleteNote(payloadId, noteId);
+      void broadcastLibraryChangedForTrail(store, payloadId);
     },
   );
   ipcMain.handle(

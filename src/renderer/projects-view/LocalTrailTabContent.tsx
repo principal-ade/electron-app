@@ -11,7 +11,8 @@
  * than on web-ade: it self-fetches the payload + host-private repositoryPath via
  * `TrailLibraryService.activate`, then hands them to `FileCityTrailTabContent`
  * (the same standalone explorer mount Alexandria uses — no RepositoryPanelProvider
- * required).
+ * required). Re-fetches on LIBRARY_CHANGED so edits to the trail land in the
+ * open tab.
  */
 
 import React from 'react';
@@ -35,33 +36,61 @@ export const LocalTrailTabContent: React.FC<{
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    void (async () => {
+  // Monotonic fetch sequence: a resolution only lands if no newer fetch
+  // (or unmount/trailId change, which bump the counter) started after it.
+  const fetchSeqRef = React.useRef(0);
+  const invalidateFetches = React.useCallback(() => {
+    fetchSeqRef.current++;
+  }, []);
+
+  const loadTrail = React.useCallback(
+    async (mode: 'initial' | 'refresh') => {
+      const seq = ++fetchSeqRef.current;
+      if (mode === 'initial') {
+        setLoading(true);
+        setError(null);
+      }
       try {
         const activated = await TrailLibraryService.activate(trailId);
-        if (cancelled) return;
-        if (!activated) {
+        if (seq !== fetchSeqRef.current) return;
+        if (activated) {
+          setResult({
+            payload: activated.payload,
+            repositoryPath: activated.repositoryPath,
+          });
+        } else if (mode === 'initial') {
+          // On refresh, a missing trail (e.g. just deleted) keeps the last
+          // good payload; the DELETE flow closes the tab separately.
           setError('Could not load this trail.');
-          return;
         }
-        setResult({
-          payload: activated.payload,
-          repositoryPath: activated.repositoryPath,
-        });
       } catch {
-        if (cancelled) return;
-        setError('Could not load this trail.');
+        if (seq !== fetchSeqRef.current) return;
+        if (mode === 'initial') setError('Could not load this trail.');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (seq === fetchSeqRef.current && mode === 'initial') {
+          setLoading(false);
+        }
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [trailId]);
+    },
+    [trailId],
+  );
+
+  React.useEffect(() => {
+    void loadTrail('initial');
+    return invalidateFetches;
+  }, [loadTrail, invalidateFetches]);
+
+  // Tabs stay mounted-hidden for their whole life, so the mount fetch above
+  // runs exactly once — without this subscription the tab renders its
+  // open-time snapshot forever. LIBRARY_CHANGED fires on every trail write
+  // (bridge re-POSTs, forks, note mutations) and carries no trail id, so
+  // re-read unconditionally; the ACTIVATE IPC read is side-effect-free.
+  React.useEffect(() => {
+    const off = TrailLibraryService.onLibraryChanged(() => {
+      void loadTrail('refresh');
+    });
+    return () => off();
+  }, [loadTrail]);
 
   if (error || !result) {
     return (
