@@ -53,6 +53,7 @@ import { UserPreferencesService } from '../main-process-api/UserPreferencesServi
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { WindowService } from '../main-process-api/WindowService';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
+import { useTerminalRepoInfo } from '../hooks/useTerminalRepoInfo';
 import {
   TabbedTerminalPanel,
   type TerminalWorkingState,
@@ -171,6 +172,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     activityActions,
   } = useTerminalProvider();
   const { activities: terminalActivities } = useTerminalActivity();
+  // Resolves the active terminal's directory to repo context (owner/repo,
+  // avatar, git status) for the panel's bottom status bar.
+  const getRepoInfo = useTerminalRepoInfo();
 
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(collapsed.left);
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
@@ -545,6 +549,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               events={events}
               terminalContext={terminalCtx.terminalContext}
               directory={terminalDirectory}
+              getRepoInfo={getRepoInfo}
               workingStates={workingStates}
               initialTabs={tabs}
               onTabsChange={setTabs}
@@ -587,6 +592,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       terminalActions,
       terminalCtx.terminalContext,
       terminalDirectory,
+      getRepoInfo,
       workingStates,
       tabs,
       activeTabId,
