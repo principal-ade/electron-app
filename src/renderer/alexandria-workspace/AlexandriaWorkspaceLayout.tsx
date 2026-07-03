@@ -53,6 +53,7 @@ import { TerminalService } from '../main-process-api/TerminalService';
 import { DocumentService } from '../services/DocumentService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
+import { useTerminalRepoInfo } from '../hooks/useTerminalRepoInfo';
 import { WindowService } from '../main-process-api/WindowService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import {
@@ -214,6 +215,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   useTerminalLinkHandler(events);
   const { context: terminalCtx, actions: terminalActions } =
     useTerminalProvider();
+  // Resolves the active terminal's directory to repo context (owner/repo,
+  // avatar, git status) for the panel's bottom status bar.
+  const getRepoInfo = useTerminalRepoInfo();
   const [showAllTerminals, setShowAllTerminals] = useState(false);
 
   // Imperative focus request for the TabbedTerminalPanel — set when we want
@@ -477,7 +481,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     setTabs((prev) => {
       if (
         prev.some(
-          (t) => t.contentType === 'topic' && (t as TopicTab).topicId === topicId,
+          (t) =>
+            t.contentType === 'topic' && (t as TopicTab).topicId === topicId,
         )
       ) {
         return prev;
@@ -791,7 +796,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     if (!activeTerminalTabId) return null;
     const sessionId = tabSessionMapRef.current.get(activeTerminalTabId);
     if (!sessionId) return null;
-    const session = terminalCtx.terminalSessions.find((s) => s.id === sessionId);
+    const session = terminalCtx.terminalSessions.find(
+      (s) => s.id === sessionId,
+    );
     const prefix = `${terminalContext}:repo:`;
     if (session?.context?.startsWith(prefix)) {
       return session.context.slice(prefix.length);
@@ -1379,7 +1386,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       };
 
       if (!code) {
-        console.warn('[AlexandriaWorkspaceLayout] mermaid:open-in-tab with no code');
+        console.warn(
+          '[AlexandriaWorkspaceLayout] mermaid:open-in-tab with no code',
+        );
         return;
       }
 
@@ -1704,6 +1713,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               events={events}
               terminalContext={terminalContext}
               directory={terminalDirectory}
+              getRepoInfo={getRepoInfo}
               initialTabs={tabs as AlexandriaTab[]}
               onTabsChange={handleTabsChange}
               renderTabContent={(tab, isActive, sessionId) =>
@@ -2831,6 +2841,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       enableKeyboardShortcuts,
       terminalContext,
       terminalDirectory,
+      getRepoInfo,
       terminalPanelContext,
       terminalActions,
       showAllTerminals,
