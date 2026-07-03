@@ -578,6 +578,29 @@ export const IntegratedShell: React.FC = () => {
     };
   }, [events, handleToggleSidebar, handleToggleRightSidebar, handleViewChange]);
 
+  // Cmd+': toggle home overlay
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.code === 'Quote') {
+        e.preventDefault();
+        handleViewChange(activeViewRef.current === 'home' ? (lastWorkspaceView ?? 'projects') : 'home');
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [lastWorkspaceView, handleViewChange]);
+
+  // Escape: dismiss a standalone overlay (home → workspace, others → home)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isWorkspaceView(activeViewRef.current)) {
+        handleViewChange(activeViewRef.current === 'home' ? (lastWorkspaceView ?? 'projects') : 'home');
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [lastWorkspaceView, handleViewChange]);
+
   // Agent Command Palette - Cmd+Shift+P to open
   const agentPalette = useAgentCommandPalette({
     events,

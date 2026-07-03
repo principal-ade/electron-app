@@ -278,24 +278,6 @@ app.on('browser-window-created', (_, window) => {
   log.info('[Window Switcher] Attaching keyboard listener to window');
 
   window.webContents.on('before-input-event', (event, input) => {
-    // Command+' (or Ctrl+') - Toggle mode
-    if (
-      input.type === 'keyDown' &&
-      input.code === 'Quote' &&
-      ((process.platform === 'darwin' &&
-        input.meta &&
-        !input.control &&
-        !input.shift) ||
-        (process.platform !== 'darwin' &&
-          input.control &&
-          !input.meta &&
-          !input.shift))
-    ) {
-      log.info("[Window Switcher] Toggle shortcut triggered (Command+')");
-      windowSwitcher.toggle();
-      event.preventDefault();
-    }
-
     // Command+O (or Ctrl+O) - Quick Open (repos/workspaces)
     if (
       input.type === 'keyDown' &&
