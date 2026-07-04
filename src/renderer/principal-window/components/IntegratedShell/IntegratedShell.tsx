@@ -140,6 +140,8 @@ export const IntegratedShell: React.FC = () => {
   const activeViewRef = useRef(activeView);
   activeViewRef.current = activeView;
 
+  const prevOverlayRef = useRef<string | null>(null);
+
   // Remember the most recent workspace surface so the portal keeps showing it
   // beneath standalone overlays. Standalone views (home, settings, …) leave
   // this untouched — that's what makes them feel like overlays you pop back
@@ -148,6 +150,12 @@ export const IntegratedShell: React.FC = () => {
     if (isWorkspaceView(activeView)) {
       setLastWorkspaceView(activeView);
     }
+  }, [activeView]);
+
+  const overlayView = isWorkspaceView(activeView) ? null : activeView;
+  const isFirstOverlay = prevOverlayRef.current === null && overlayView !== null;
+  useEffect(() => {
+    prevOverlayRef.current = overlayView;
   }, [activeView]);
 
   // Store collapsed states per view to avoid animation glitches when switching
@@ -590,11 +598,11 @@ export const IntegratedShell: React.FC = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [lastWorkspaceView, handleViewChange]);
 
-  // Escape: dismiss a standalone overlay (home → workspace, others → home)
+  // Escape: dismiss a standalone overlay (always back to workspace)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isWorkspaceView(activeViewRef.current)) {
-        handleViewChange(activeViewRef.current === 'home' ? (lastWorkspaceView ?? 'projects') : 'home');
+        handleViewChange(lastWorkspaceView ?? 'projects');
       }
     };
     window.addEventListener('keydown', handler);
@@ -624,10 +632,6 @@ export const IntegratedShell: React.FC = () => {
     mode === 'dark' && theme.modes?.dark?.background
       ? theme.modes.dark.background
       : theme.colors.background;
-
-  // The active view is either a portal-hosted workspace surface (rendered as
-  // the persistent base) or a standalone view (rendered as an overlay on top).
-  const overlayView = isWorkspaceView(activeView) ? null : activeView;
 
   return (
     <div
@@ -721,15 +725,16 @@ export const IntegratedShell: React.FC = () => {
               the overlay read as floating *on top* rather than just replacing
               the view. The card is inset with rounded corners + a shadow so the
               dimmed portal frames it at the edges. AnimatePresence keeps both
-              mounted through the exit animation; keying on overlayView also
-              crossfades between two standalone views (e.g. Home → Settings).
+              mounted through the exit animation. The enter animation only
+              plays when an overlay first appears (not when switching between
+              overlays like Home → Settings).
             */}
             <AnimatePresence>
               {overlayView && (
                 <motion.div
                   key={overlayView}
                   className="portal-overlay-scrim"
-                  initial={{ opacity: 0 }}
+                  initial={isFirstOverlay ? { opacity: 0 } : false}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.18, ease: 'easeOut' }}
@@ -742,7 +747,7 @@ export const IntegratedShell: React.FC = () => {
                 >
                   <motion.div
                     className="portal-overlay-card"
-                    initial={{ y: 20, scale: 0.98 }}
+                    initial={isFirstOverlay ? { y: 20, scale: 0.98 } : false}
                     animate={{ y: 0, scale: 1 }}
                     transition={{ duration: 0.18, ease: 'easeOut' }}
                     style={{
