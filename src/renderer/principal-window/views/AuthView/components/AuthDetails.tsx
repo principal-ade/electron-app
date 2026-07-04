@@ -13,6 +13,8 @@ import {
   RefreshCw,
   ExternalLink,
   Users,
+  Lock,
+  Settings,
 } from 'lucide-react';
 import { gitSyncConnectionManager } from '../../../../services/git-sync/GitSyncConnectionManager';
 import { GithubService } from '../../../../main-process-api/GithubService';
@@ -2398,6 +2400,72 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                           </>
                         )}
                       </button>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginTop: '8px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <button
+                          onClick={() => void ShellService.openKeychainAccess()}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '8px 16px',
+                            backgroundColor: 'transparent',
+                            border: `1px solid ${theme.colors.border}`,
+                            borderRadius: '6px',
+                            color: theme.colors.text,
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              theme.colors.backgroundSecondary;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              'transparent';
+                          }}
+                        >
+                          <Lock size={14} />
+                          Open Keychain Access
+                        </button>
+                        <button
+                          onClick={() => void ShellService.openPrivacySettings()}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '8px 16px',
+                            backgroundColor: 'transparent',
+                            border: `1px solid ${theme.colors.border}`,
+                            borderRadius: '6px',
+                            color: theme.colors.text,
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              theme.colors.backgroundSecondary;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              'transparent';
+                          }}
+                        >
+                          <Settings size={14} />
+                          Open System Settings
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <div

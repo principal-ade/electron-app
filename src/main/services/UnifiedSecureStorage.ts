@@ -2,11 +2,7 @@ import { safeStorage, app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
-import {
-  TokenDomain,
-  type TokenMetadata,
-  type TokenData,
-} from './storage-domains/TokenDomain';
+import { KeytarTokenManager } from './KeytarTokenManager';
 import {
   SecretsDomain,
   type StoredSecret,
@@ -81,9 +77,8 @@ export interface UnifiedStorageData {
 }
 
 interface DecryptedData {
-  tokens: Record<string, TokenData>;
+  tokens: Record<string, { token: string; metadata?: Record<string, unknown>; savedAt: number }>;
   secrets: Record<string, StoredSecret>;
-  tokenMetadata?: Record<string, TokenMetadata>;
 }
 
 export class UnifiedSecureStorage {
@@ -91,9 +86,10 @@ export class UnifiedSecureStorage {
   private storageFilePath: string;
   private encryptionInitialized: boolean = false;
   private memoryCache: DecryptedData | null = null;
-  private tokenDomain: TokenDomain;
+  private tokenManager: KeytarTokenManager;
   private secretsDomain: SecretsDomain;
   private readonly STORAGE_VERSION = '1.0.0';
+  private migrationDone = false;
 
   private constructor() {
     const userDataPath = app.getPath('userData');
@@ -102,7 +98,7 @@ export class UnifiedSecureStorage {
       'unified-secure-storage.json',
     );
 
-    this.tokenDomain = new TokenDomain(this);
+    this.tokenManager = new KeytarTokenManager();
     this.secretsDomain = new SecretsDomain(this);
   }
 
@@ -184,6 +180,12 @@ export class UnifiedSecureStorage {
       const data: DecryptedData = JSON.parse(decrypted);
 
       this.memoryCache = data;
+
+      // Migrate any tokens from the old file format to keytar entries
+      if (!this.migrationDone) {
+        await this.migrateTokensFromFile(data);
+      }
+
       return data;
     } catch (error: unknown) {
       // Check if it's a file not found error (ENOENT)
@@ -240,6 +242,25 @@ export class UnifiedSecureStorage {
     console.log('[UnifiedSecureStorage] Saved to disk');
   }
 
+  private async migrateTokensFromFile(data: DecryptedData): Promise<void> {
+    const keys = Object.keys(data.tokens || {});
+    if (keys.length === 0) return;
+
+    console.log(
+      `[UnifiedSecureStorage] Migrating ${keys.length} tokens from file to keychain...`,
+    );
+    for (const key of keys) {
+      const entry = data.tokens[key];
+      if (entry) {
+        await this.tokenManager.setToken(key, entry.token, entry.metadata);
+      }
+    }
+    // Remove tokens from the in-memory data so they aren't saved back
+    data.tokens = {};
+    this.migrationDone = true;
+    console.log('[UnifiedSecureStorage] Token migration complete');
+  }
+
   async getData(): Promise<DecryptedData> {
     return this.loadFromDisk();
   }
@@ -255,27 +276,27 @@ export class UnifiedSecureStorage {
   async setToken(
     key: string,
     token: string,
-    metadata?: TokenMetadata,
+    metadata?: Record<string, unknown>,
   ): Promise<void> {
-    return this.tokenDomain.setToken(key, token, metadata);
+    return this.tokenManager.setToken(key, token, metadata);
   }
 
   async getToken(key: string): Promise<string | null> {
-    return this.tokenDomain.getToken(key);
+    return this.tokenManager.getToken(key);
   }
 
   async getTokenWithMetadata(
     key: string,
-  ): Promise<{ token: string; metadata?: TokenMetadata } | null> {
-    return this.tokenDomain.getTokenWithMetadata(key);
+  ): Promise<{ token: string; metadata?: Record<string, unknown> } | null> {
+    return this.tokenManager.getTokenWithMetadata(key);
   }
 
-  async deleteToken(key: string): Promise<void> {
-    return this.tokenDomain.deleteToken(key);
+  async deleteToken(key: string): Promise<boolean> {
+    return this.tokenManager.deleteToken(key);
   }
 
   async getAllTokenKeys(): Promise<string[]> {
-    return this.tokenDomain.getAllKeys();
+    return this.tokenManager.getAllKeys();
   }
 
   async storeSecrets(
@@ -311,6 +332,7 @@ export class UnifiedSecureStorage {
   async clearAll(): Promise<void> {
     const emptyData: DecryptedData = { tokens: {}, secrets: {} };
     await this.saveToDisk(emptyData);
+    await this.tokenManager.clearAll();
     console.log('[UnifiedSecureStorage] Cleared all data');
   }
 

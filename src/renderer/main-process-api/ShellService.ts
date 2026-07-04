@@ -139,6 +139,28 @@ export class ShellService {
   }
 
   /**
+   * Open the macOS Keychain Access application.
+   */
+  static async openKeychainAccess(): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    console.info('[ShellService] Opening Keychain Access');
+    return window.mainProcess.shell.openKeychainAccess();
+  }
+
+  /**
+   * Open the macOS System Settings → Privacy & Security pane.
+   */
+  static async openPrivacySettings(): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    console.info('[ShellService] Opening Privacy & Security settings');
+    return window.mainProcess.shell.openPrivacySettings();
+  }
+
+  /**
    * Open a path in the default editor (simplified version)
    * This is a convenience method that uses VS Code as the default editor
    */

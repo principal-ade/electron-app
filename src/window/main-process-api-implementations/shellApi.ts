@@ -66,4 +66,12 @@ export const shellAPI = {
   // Clear the cached PATH information
   clearPathCache: async () =>
     ipcRenderer.invoke(ShellAPIEvent.CLEAR_PATH_CACHE),
+
+  // Open the macOS Keychain Access application
+  openKeychainAccess: async () =>
+    ipcRenderer.invoke(ShellAPIEvent.OPEN_KEYCHAIN_ACCESS),
+
+  // Open macOS System Settings → Privacy & Security pane
+  openPrivacySettings: async () =>
+    ipcRenderer.invoke(ShellAPIEvent.OPEN_PRIVACY_SETTINGS),
 };

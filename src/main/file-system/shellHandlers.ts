@@ -509,4 +509,34 @@ export function setupShellHandlers() {
       }
     },
   );
+
+  // Open the macOS Keychain Access application
+  ipcMain.handle(ShellAPIEvent.OPEN_KEYCHAIN_ACCESS, async () => {
+    if (os.platform() !== 'darwin') {
+      return { success: false, error: 'Only supported on macOS' };
+    }
+    try {
+      await execAsync('open -a "Keychain Access"');
+      return { success: true };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error opening Keychain Access:', error);
+      return { success: false, error: message };
+    }
+  });
+
+  // Open macOS System Settings app
+  ipcMain.handle(ShellAPIEvent.OPEN_PRIVACY_SETTINGS, async () => {
+    if (os.platform() !== 'darwin') {
+      return { success: false, error: 'Only supported on macOS' };
+    }
+    try {
+      await execAsync('open -b com.apple.systempreferences');
+      return { success: true };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error opening System Settings:', error);
+      return { success: false, error: message };
+    }
+  });
 }

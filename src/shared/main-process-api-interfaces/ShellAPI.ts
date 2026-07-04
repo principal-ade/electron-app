@@ -11,6 +11,8 @@ export enum ShellAPIEvent {
   OPEN_TERMINAL = 'shell:openTerminal',
   CHECK_COMMAND = 'terminal:checkCommand',
   CLEAR_PATH_CACHE = 'terminal:clearPathCache',
+  OPEN_KEYCHAIN_ACCESS = 'shell:open-keychain-access',
+  OPEN_PRIVACY_SETTINGS = 'shell:open-privacy-settings',
 }
 export interface ShellAPI {
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
@@ -87,4 +89,16 @@ export interface ShellAPI {
    * Useful when the system PATH has been modified.
    */
   clearPathCache: () => Promise<void>;
+
+  /**
+   * Open the macOS Keychain Access application.
+   * No-op on non-macOS platforms.
+   */
+  openKeychainAccess: () => Promise<{ success: boolean; error?: string }>;
+
+  /**
+   * Open the macOS System Settings → Privacy & Security pane.
+   * No-op on non-macOS platforms.
+   */
+  openPrivacySettings: () => Promise<{ success: boolean; error?: string }>;
 }

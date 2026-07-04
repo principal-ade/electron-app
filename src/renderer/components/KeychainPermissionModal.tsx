@@ -8,8 +8,11 @@ import {
   AlertTriangle,
   RefreshCw,
   ExternalLink,
+  Settings,
+  Lock,
 } from 'lucide-react';
 import { AuthenticationService } from '../main-process-api/AuthenticationService';
+import { ShellService } from '../main-process-api/ShellService';
 
 const processName = window.appName || 'Electron App';
 
@@ -151,24 +154,43 @@ export const KeychainPermissionModal: React.FC<
     }
   };
 
-  const getInstructions = () => {
-    const steps = [];
+  type InstructionItem = {
+    text: string;
+    action?: () => void;
+    icon?: React.ReactNode;
+    label?: string;
+  };
+
+  const getInstructions = (): InstructionItem[] => {
+    const steps: InstructionItem[] = [];
 
     if (errorType === 'timeout' || errorType === 'not_available') {
-      steps.push('Unlock your system keychain if it is locked');
-      steps.push('Open "Keychain Access" app from Applications → Utilities');
-      steps.push('Ensure the "login" keychain is unlocked');
+      steps.push({ text: 'Unlock your system keychain if it is locked' });
+      steps.push({ text: 'Ensure the "login" keychain is unlocked (it should show as "status: unlocked")' });
     }
 
     if (errorType === 'permission_denied') {
-      steps.push('Open System Preferences → Security & Privacy');
-      steps.push('Go to the Privacy tab');
-      steps.push('Select "Automation" or "Full Disk Access" from the list');
-      steps.push(`Find "${processName}" and enable it`);
+      steps.push({ text: 'Go to the Privacy tab in System Settings' });
+      steps.push({
+        text: `Find "${processName}" in the list (check "Automation", "Files & Folders", or "Full Disk Access")`,
+      });
+      steps.push({ text: `Toggle the switch next to "${processName}" to enable access` });
     }
 
-    steps.push('Click "Test Access" below to verify keychain access');
-    steps.push('Click "Retry Login" to authenticate again');
+    steps.push({
+      text: 'Open "Keychain Access" app to inspect your keychain status',
+      action: () => void ShellService.openKeychainAccess(),
+      icon: <Lock size={14} />,
+      label: 'Open Keychain Access',
+    });
+    steps.push({
+      text: 'Open System Settings, then go to Privacy & Security to check app permissions',
+      action: () => void ShellService.openPrivacySettings(),
+      icon: <Settings size={14} />,
+      label: 'Open System Settings',
+    });
+    steps.push({ text: 'Click "Test Access" below to verify keychain access' });
+    steps.push({ text: 'Click "Retry Login" to authenticate again' });
 
     return steps;
   };
@@ -384,7 +406,49 @@ export const KeychainPermissionModal: React.FC<
               }}
             >
               {getInstructions().map((instruction) => (
-                <li key={instruction}>{instruction}</li>
+                <li key={instruction.text}>
+                  {instruction.action ? (
+                    <span
+                      onClick={instruction.action}
+                      style={{
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: theme.colors.primary,
+                          textDecoration: 'underline',
+                          textDecorationColor: theme.colors.primary,
+                          textUnderlineOffset: '2px',
+                        }}
+                      >
+                        {instruction.text}
+                      </span>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          backgroundColor: theme.colors.primary,
+                          color: theme.colors.background,
+                          borderRadius: '4px',
+                          padding: '2px 6px',
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {instruction.icon}
+                        {instruction.label}
+                      </span>
+                    </span>
+                  ) : (
+                    instruction.text
+                  )}
+                </li>
               ))}
             </ol>
           </div>
