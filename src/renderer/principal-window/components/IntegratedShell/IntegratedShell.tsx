@@ -156,7 +156,7 @@ export const IntegratedShell: React.FC = () => {
   const isFirstOverlay = prevOverlayRef.current === null && overlayView !== null;
   useEffect(() => {
     prevOverlayRef.current = overlayView;
-  }, [activeView]);
+  }, [overlayView]);
 
   // Store collapsed states per view to avoid animation glitches when switching
   const [viewCollapsedStates, setViewCollapsedStates] = useState<
