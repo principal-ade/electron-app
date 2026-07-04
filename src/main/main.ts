@@ -594,26 +594,9 @@ app
     // Initialize all services (this initializes UserPreferencesHandler)
     await initializeServices();
 
-    // Check keychain consent before initializing auth
-    // This prevents the macOS keychain prompt from appearing without user context
-    // Note: Must be after initializeServices() which initializes UserPreferencesHandler
-    const { UserPreferencesHandler } = require('./stores/userPreferencesHandler');
-    const userPrefsHandler = UserPreferencesHandler.getInstance();
-    const prefs = await userPrefsHandler.getUserPreferences();
-
-    if (prefs.keychainConsent?.status === 'granted') {
-      // User has granted consent - initialize auth (may trigger keychain access)
-      await authService.initializeAuthState();
-      console.log('[Main] Auth state initialized (keychain consent granted)');
-    } else {
-      // Consent pending or declined - skip keychain access
-      console.log(
-        '[Main] Skipping auth init - keychain consent:',
-        prefs.keychainConsent?.status || 'pending',
-      );
-      // Ensure auth state manager is in unauthenticated state
-      AuthStateManager.getInstance().clearAuthentication();
-    }
+    // Initialize auth state (tokens stored in safeStorage-encrypted file)
+    await authService.initializeAuthState();
+    console.log('[Main] Auth state initialized');
 
     // Window handlers are now registered in initializeServices() via modernWindowHandlers
 

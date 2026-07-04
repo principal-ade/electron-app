@@ -2,7 +2,7 @@ import { safeStorage, app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
-import { KeytarTokenManager } from './KeytarTokenManager';
+import { TokenDomain } from './storage-domains/TokenDomain';
 import {
   SecretsDomain,
   type StoredSecret,
@@ -86,10 +86,9 @@ export class UnifiedSecureStorage {
   private storageFilePath: string;
   private encryptionInitialized: boolean = false;
   private memoryCache: DecryptedData | null = null;
-  private tokenManager: KeytarTokenManager;
+  private tokenDomain: TokenDomain;
   private secretsDomain: SecretsDomain;
   private readonly STORAGE_VERSION = '1.0.0';
-  private migrationDone = false;
 
   private constructor() {
     const userDataPath = app.getPath('userData');
@@ -98,7 +97,7 @@ export class UnifiedSecureStorage {
       'unified-secure-storage.json',
     );
 
-    this.tokenManager = new KeytarTokenManager();
+    this.tokenDomain = new TokenDomain(this);
     this.secretsDomain = new SecretsDomain(this);
   }
 
@@ -181,11 +180,6 @@ export class UnifiedSecureStorage {
 
       this.memoryCache = data;
 
-      // Migrate any tokens from the old file format to keytar entries
-      if (!this.migrationDone) {
-        await this.migrateTokensFromFile(data);
-      }
-
       return data;
     } catch (error: unknown) {
       // Check if it's a file not found error (ENOENT)
@@ -242,25 +236,6 @@ export class UnifiedSecureStorage {
     console.log('[UnifiedSecureStorage] Saved to disk');
   }
 
-  private async migrateTokensFromFile(data: DecryptedData): Promise<void> {
-    const keys = Object.keys(data.tokens || {});
-    if (keys.length === 0) return;
-
-    console.log(
-      `[UnifiedSecureStorage] Migrating ${keys.length} tokens from file to keychain...`,
-    );
-    for (const key of keys) {
-      const entry = data.tokens[key];
-      if (entry) {
-        await this.tokenManager.setToken(key, entry.token, entry.metadata);
-      }
-    }
-    // Remove tokens from the in-memory data so they aren't saved back
-    data.tokens = {};
-    this.migrationDone = true;
-    console.log('[UnifiedSecureStorage] Token migration complete');
-  }
-
   async getData(): Promise<DecryptedData> {
     return this.loadFromDisk();
   }
@@ -278,25 +253,26 @@ export class UnifiedSecureStorage {
     token: string,
     metadata?: Record<string, unknown>,
   ): Promise<void> {
-    return this.tokenManager.setToken(key, token, metadata);
+    return this.tokenDomain.setToken(key, token, metadata);
   }
 
   async getToken(key: string): Promise<string | null> {
-    return this.tokenManager.getToken(key);
+    return this.tokenDomain.getToken(key);
   }
 
   async getTokenWithMetadata(
     key: string,
   ): Promise<{ token: string; metadata?: Record<string, unknown> } | null> {
-    return this.tokenManager.getTokenWithMetadata(key);
+    return this.tokenDomain.getTokenWithMetadata(key);
   }
 
   async deleteToken(key: string): Promise<boolean> {
-    return this.tokenManager.deleteToken(key);
+    await this.tokenDomain.deleteToken(key);
+    return true;
   }
 
   async getAllTokenKeys(): Promise<string[]> {
-    return this.tokenManager.getAllKeys();
+    return this.tokenDomain.getAllKeys();
   }
 
   async storeSecrets(
@@ -330,9 +306,8 @@ export class UnifiedSecureStorage {
   }
 
   async clearAll(): Promise<void> {
-    const emptyData: DecryptedData = { tokens: {}, secrets: {} };
-    await this.saveToDisk(emptyData);
-    await this.tokenManager.clearAll();
+    await this.tokenDomain.clearAll();
+    await this.secretsDomain.clearAll();
     console.log('[UnifiedSecureStorage] Cleared all data');
   }
 

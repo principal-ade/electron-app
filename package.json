@@ -262,7 +262,6 @@
     "json5": "^2.2.3",
     "jsonwebtoken": "^9.0.2",
     "jszip": "^3.10.1",
-    "keytar": "^7.9.0",
     "lucide-react": "^0.534.0",
     "mermaid": "^11.14.0",
     "minimatch": "^10.0.3",
