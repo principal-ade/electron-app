@@ -20,8 +20,6 @@ export const PierreFileView: React.FC<PierreFileViewProps> = ({
   const [contents, setContents] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Per @pierre/diffs docs: keep the file object stable — the component uses
-  // reference equality to detect changes.
   const fileObject = React.useMemo(
     () => (contents !== null ? { name: fileName, contents } : null),
     [fileName, contents],
@@ -70,10 +68,6 @@ export const PierreFileView: React.FC<PierreFileViewProps> = ({
   );
 };
 
-// `:host` rule plus background override on every element the library normally
-// paints with --diffs-bg. We can't just override --diffs-bg because the theme's
-// own :host rule (in @layer rendered) re-derives backgrounds from --diffs-dark-bg
-// via color-mix; @layer unsafe wins outright.
 const buildBackgroundCSS = (color: string) => `
   :host {
     background: ${color} !important;

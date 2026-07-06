@@ -190,7 +190,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   });
 
   // The shared workspace tab bucket (the persistent host's tab list).
-  const { tabs, setTabs, activeTabId, setActiveTabId, openMarkdownDoc } =
+  const { tabs, setTabs, activeTabId, setActiveTabId, openMarkdownDoc, openSourceFile, openMedia } =
     useWorkspaceTabs();
   // The Inbox/Topics left panels emit open intents on the portal bus
   // (PortalIntentBridge turns them into tabs).
@@ -458,9 +458,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   // Bridge in-document doc links. The shared markdown link handler
   // (`useMarkdownLinkHandler`, used by topic descriptions and other markdown
   // surfaces here) resolves a click — including purl links — to a file and
-  // emits `file:opened` on this bus. The principal window has no panel-framework
-  // router, so translate that into a markdown tab, mirroring how the dev /
-  // alexandria workspaces handle their own `file:opened`.
+  // emits `file:opened` on this bus. Route by extension, mirroring how the
+  // dev / alexandria workspaces handle their own `file:opened`.
   useEffect(() => {
     const handleFileOpened = (event: {
       source?: string;
@@ -469,13 +468,21 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       if (event.source === 'tab') return; // ignore tab re-emits
       const filePath = event.payload?.filePath;
       if (!filePath) return;
-      openMarkdownDoc(filePath, event.payload?.repositoryPath);
+      const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
+      const isMedia = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(filePath);
+      if (isMarkdown) {
+        openMarkdownDoc(filePath, event.payload?.repositoryPath);
+      } else if (isMedia) {
+        openMedia(filePath);
+      } else {
+        openSourceFile(filePath);
+      }
     };
     events.on('file:opened', handleFileOpened);
     return () => {
       events.off('file:opened', handleFileOpened);
     };
-  }, [events, openMarkdownDoc]);
+  }, [events, openMarkdownDoc, openSourceFile, openMedia]);
 
   const handlePanelResize = useCallback(
     (sizes: { left: number; middle: number; right: number }) => {

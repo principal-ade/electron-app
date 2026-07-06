@@ -35,6 +35,8 @@ import type {
   SharedTrailTab,
   LocalTrailTab,
   MarkdownDocTab,
+  SourceFileTab,
+  MediaTab,
   CommitReviewTab,
   ProjectInfoTab,
   UserProfileTab,
@@ -75,6 +77,8 @@ import { commitActivityPanelActions } from '../panels/commitActivityPanelActions
 import { InProgressActivityPanel } from '../panels/InProgressActivityPanel';
 import { inProgressActivityPanelActions } from '../panels/inProgressActivityPanelActions';
 import { MarkdownDocTabContent } from './MarkdownDocTabContent';
+import { SourceFileTabContent } from '../panels/SourceFileTabContent';
+import { MediaTabContent } from '../panels/MediaTabContent';
 
 /**
  * User activity response from Principal ADE API
@@ -1083,6 +1087,26 @@ export function renderProjectsTabContent(
           filePath={docTab.filePath}
           repositoryPath={docTab.repositoryPath}
           events={events}
+        />
+      );
+    }
+    case 'source-file': {
+      const srcTab = tab as SourceFileTab;
+      return (
+        <SourceFileTabContent
+          key={srcTab.id}
+          filePath={srcTab.filePath}
+          fileName={srcTab.label}
+        />
+      );
+    }
+    case 'media': {
+      const mediaTab = tab as MediaTab;
+      return (
+        <MediaTabContent
+          key={mediaTab.id}
+          filePath={mediaTab.filePath}
+          fileName={mediaTab.label}
         />
       );
     }

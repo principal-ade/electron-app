@@ -51,6 +51,26 @@ export interface MarkdownDocTab extends BaseTab {
   repositoryPath?: string;
 }
 
+/**
+ * Source file tab — a non-markdown code file opened from a doc link. Rendered
+ * read-only via `SourceFileTabContent` / `PierreFileView`. Multi-instance,
+ * keyed by absolute `filePath`.
+ */
+export interface SourceFileTab extends BaseTab {
+  contentType: 'source-file';
+  filePath: string;
+}
+
+/**
+ * Media tab — an image/video opened from a doc link. Rendered via
+ * `MediaTabContent` / `MediaViewerPanel`. Multi-instance, keyed by absolute
+ * `filePath`.
+ */
+export interface MediaTab extends BaseTab {
+  contentType: 'media';
+  filePath: string;
+}
+
 /** Landing tab for the Inbox surface — a hint to pick a trail from the left. */
 export interface InboxHomeTab extends BaseTab {
   contentType: 'inbox-home';
@@ -202,4 +222,6 @@ export type FeedTab =
   | RepoActivityTab
   | SharedTrailTab
   | LocalTrailTab
-  | MarkdownDocTab;
+  | MarkdownDocTab
+  | SourceFileTab
+  | MediaTab;

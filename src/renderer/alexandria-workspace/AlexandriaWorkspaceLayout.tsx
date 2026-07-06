@@ -31,8 +31,8 @@ import {
   AgentToolsPanel,
 } from '@industry-theme/agent-driven-ui-panels';
 import { MarkdownPanel } from '../panels/markdown-panel';
-import { PierreFileView } from '../dev-workspace/file-city-panel/PierreFileView';
-import { MediaViewerPanel } from '../panels/MediaViewerPanel';
+import { SourceFileTabContent } from '../panels/SourceFileTabContent';
+import { MediaTabContent } from '../panels/MediaTabContent';
 import {
   StoryboardListPanel,
   CanvasEditorPanel,
@@ -708,32 +708,12 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       }
       if (tab.contentType === 'source-file') {
         return (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'auto',
-              position: 'relative',
-            }}
-          >
-            <PierreFileView filePath={tab.filePath} fileName={tab.label} />
-          </div>
+          <SourceFileTabContent filePath={tab.filePath} fileName={tab.label} />
         );
       }
       if (tab.contentType === 'media') {
         return (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <MediaViewerPanel filePath={tab.filePath} fileName={tab.label} />
-          </div>
+          <MediaTabContent filePath={tab.filePath} fileName={tab.label} />
         );
       }
       if (tab.contentType === 'mermaid-diagram') {

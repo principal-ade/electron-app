@@ -127,11 +127,11 @@ import {
   GitHubIssueDetailPanel,
 } from '@industry-theme/github-panels';
 import { TerminalSessionsPanel } from '../panels/terminal-sessions';
-import { MediaViewerPanel } from '../panels/MediaViewerPanel';
+import { SourceFileTabContent } from '../panels/SourceFileTabContent';
+import { MediaTabContent } from '../panels/MediaTabContent';
 import { FilesPanel } from './files-panel';
 import { FileCityPanel } from './file-city-panel';
 import { FileCityTrailPanel } from './file-city-trail-panel';
-import { PierreFileView } from './file-city-panel/PierreFileView';
 import type { Repository } from '../../shared/types/repository.types';
 import {
   PanelIconSidebar,
@@ -1953,7 +1953,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         handleSpan.setStatus({ code: SpanStatusCode.OK });
         handleSpan.end();
       }),
-      // File opened - open file in markdown tab (normal click on docs)
+      // File opened - open file tab (doc link clicks, purl resolution)
       events.on('file:opened', async (event) => {
         const tracer = getTracer('principal-ade-dev-workspace');
         // Ignore re-emitted events from tabs to prevent loop
@@ -1966,12 +1966,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return;
         }
 
-        // Only handle markdown files
-        if (!filePath.endsWith('.md') && !filePath.endsWith('.mdx')) {
-          return;
-        }
-
         const fileName = filePath.split('/').pop() || 'Document';
+
+        // Route by file type, mirroring how the alexandria / principal windows
+        // handle `file:opened`: markdown → MarkdownTab, media → MediaTab,
+        // everything else → PierreFileTab (read-only source viewer).
+        const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
+        const isMedia = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(filePath);
 
         // OTEL: Start event dispatch span
         const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
@@ -2022,12 +2023,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         const sanitizedPath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
 
         setTabs((prevTabs) => {
-          // Check if tab already exists
-          const existingTab = prevTabs.find(
-            (t) =>
-              t.contentType === 'markdown' &&
-              (t as MarkdownTab).filePath === filePath,
-          );
+          const existingTab = prevTabs.find((t) => {
+            if (t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath) return true;
+            if (t.contentType === 'media' && (t as MediaTab).filePath === filePath) return true;
+            if (t.contentType === 'pierre-file' && (t as PierreFileTab).filePath === filePath) return true;
+            return false;
+          });
 
           if (existingTab) {
             tabExists = true;
@@ -2036,14 +2037,37 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             return prevTabs;
           }
 
-          // Create new markdown tab
           tabId = `file-${sanitizedPath}`;
-          const newTab: MarkdownTab = {
+          if (isMedia) {
+            const newTab: MediaTab = {
+              id: tabId,
+              label: fileName,
+              contentType: 'media',
+              filePath,
+              fileName,
+              closable: true,
+            };
+            setFocusTabId(newTab.id);
+            return [...prevTabs, newTab];
+          }
+          if (isMarkdown) {
+            const newTab: MarkdownTab = {
+              id: tabId,
+              label: fileName,
+              contentType: 'markdown',
+              filePath,
+              fileName,
+              closable: true,
+            };
+            setFocusTabId(newTab.id);
+            return [...prevTabs, newTab];
+          }
+          const newTab: PierreFileTab = {
             id: tabId,
             label: fileName,
-            contentType: 'markdown',
-            filePath: filePath,
-            fileName: fileName,
+            contentType: 'pierre-file',
+            filePath,
+            fileName,
             closable: true,
           };
           setFocusTabId(newTab.id);
@@ -2057,10 +2081,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         });
 
         // OTEL: Add tab created event (only if new tab was created)
+        const contentTypeLabel = isMedia ? 'media' : isMarkdown ? 'markdown' : 'pierre-file';
         if (!tabExists) {
           handleSpan.addEvent('devworkspace.tab.created', {
             'tab.id': tabId || `file-${sanitizedPath}`,
-            'tab.contentType': 'markdown',
+            'tab.contentType': contentTypeLabel,
           });
         }
 
@@ -3309,21 +3334,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         case 'pierre-file': {
           const pierreTab = tab as PierreFileTab;
           return (
-            <div
-              style={{
-                height: '100%',
-                width: '100%',
-                overflow: 'auto',
-                display: 'flex',
-                flexDirection: 'column',
-                backgroundColor: theme.colors.background,
-              }}
-            >
-              <PierreFileView
-                filePath={pierreTab.filePath}
-                fileName={pierreTab.fileName}
-              />
-            </div>
+            <SourceFileTabContent
+              filePath={pierreTab.filePath}
+              fileName={pierreTab.fileName}
+            />
           );
         }
 
@@ -3553,21 +3567,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         case 'media': {
           const mediaTab = tab as MediaTab;
           return (
-            <div
-              style={{
-                height: '100%',
-                width: '100%',
-                overflow: 'hidden',
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <MediaViewerPanel
-                filePath={mediaTab.filePath}
-                fileName={mediaTab.fileName}
-              />
-            </div>
+            <MediaTabContent
+              filePath={mediaTab.filePath}
+              fileName={mediaTab.fileName}
+            />
           );
         }
 

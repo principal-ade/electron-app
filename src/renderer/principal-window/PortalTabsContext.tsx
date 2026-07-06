@@ -33,6 +33,8 @@ import type {
   SharedTrailTab,
   LocalTrailTab,
   MarkdownDocTab,
+  SourceFileTab,
+  MediaTab,
   InboxHomeTab,
   TopicTab,
   TopicsHomeTab,
@@ -57,6 +59,8 @@ export type WorkspaceTab =
   | LocalTopicTab
   | LocalTrailTab
   | MarkdownDocTab
+  | SourceFileTab
+  | MediaTab
   // Projects
   | CommitReviewTab
   | LiveActivityTab
@@ -94,6 +98,10 @@ export interface WorkspaceTabsContextValue {
   openLocalTrail: (trailId: string, title?: string) => void;
   /** Open a `markdown-doc-<filePath>` tab. */
   openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
+  /** Open a `source-file-<filePath>` tab (read-only code viewer). */
+  openSourceFile: (filePath: string) => void;
+  /** Open a `media-<filePath>` tab (image/video viewer). */
+  openMedia: (filePath: string) => void;
   // Projects
   /** Open a `project-info-<purl>` tab idempotently and focus it. */
   openProjectInfo: (payload: RepositorySelectedPayload) => void;
@@ -253,6 +261,33 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
         filePath,
         repositoryPath,
       }) as MarkdownDocTab);
+    },
+    [openTab],
+  );
+
+  const openSourceFile = useCallback(
+    (filePath: string) => {
+      openTab(`source-file-${filePath}`, () => ({
+        id: `source-file-${filePath}`,
+        label: filePath.split('/').pop() || 'File',
+        contentType: 'source-file',
+        closable: true,
+        filePath,
+      }) as SourceFileTab);
+    },
+    [openTab],
+  );
+
+  const openMedia = useCallback(
+    (filePath: string) => {
+      const fileName = filePath.split('/').pop() || 'Media';
+      openTab(`media-${filePath}`, () => ({
+        id: `media-${filePath}`,
+        label: fileName,
+        contentType: 'media',
+        closable: true,
+        filePath,
+      }) as MediaTab);
     },
     [openTab],
   );
@@ -418,6 +453,8 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openLocalTopic,
       openLocalTrail,
       openMarkdownDoc,
+      openSourceFile,
+      openMedia,
       openProjectInfo,
       openUserProfile,
       openOrgProfile,
@@ -436,6 +473,8 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openLocalTopic,
       openLocalTrail,
       openMarkdownDoc,
+      openSourceFile,
+      openMedia,
       openProjectInfo,
       openUserProfile,
       openOrgProfile,

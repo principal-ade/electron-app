@@ -2,7 +2,7 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ExternalLink } from 'lucide-react';
 
-import { PierreFileView } from './PierreFileView';
+import { PierreFileView } from '../../panels/PierreFileView';
 
 export interface FileOverlayProps {
   filePath: string;
