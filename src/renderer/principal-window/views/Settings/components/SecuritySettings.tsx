@@ -64,13 +64,9 @@ export const SecuritySettings: React.FC = () => {
   };
 
   const getStatusDescription = () => {
-    if (consentStatus === 'granted') {
-      return 'Your authentication credentials are securely stored in the macOS Keychain.';
-    }
-    if (consentStatus === 'declined') {
-      return 'Secure credential storage is disabled. You will need to log in each time you use the app.';
-    }
-    return 'Secure credential storage has not been configured yet.';
+    // Tokens are stored as plaintext JSON (owner-only 0o600) under app userData.
+    // Optional Keychain-backed storage may return later as an opt-in.
+    return 'Authentication credentials are stored locally in an app data file with restricted permissions (owner read/write only).';
   };
 
   return (

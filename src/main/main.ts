@@ -594,7 +594,7 @@ app
     // Initialize all services (this initializes UserPreferencesHandler)
     await initializeServices();
 
-    // Initialize auth state (tokens stored in safeStorage-encrypted file)
+    // Initialize auth state (tokens in plaintext userData file, mode 0o600)
     await authService.initializeAuthState();
     console.log('[Main] Auth state initialized');
 

@@ -65,10 +65,9 @@ export function useKeychainConsent(): UseKeychainConsentReturn {
         setStatus(consent.status);
         setIsLoading(false);
 
-        // Show modal on first run (status is 'pending')
-        if (consent.status === 'pending') {
-          setShowModal(true);
-        }
+        // Credentials are stored as plaintext (0o600) for now — no keychain
+        // consent prompt on startup. Consent UI may return later as an opt-in.
+
       } catch (err) {
         if (!mounted) return;
         console.error('[useKeychainConsent] Failed to load consent status:', err);

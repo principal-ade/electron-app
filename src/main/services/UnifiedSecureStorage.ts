@@ -1,4 +1,4 @@
-import { safeStorage, app } from 'electron';
+import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
@@ -14,20 +14,17 @@ const fsPromises = {
   readFile: promisify(fs.readFile),
   writeFile: promisify(fs.writeFile),
   unlink: promisify(fs.unlink),
+  rename: promisify(fs.rename),
   access: promisify(fs.access),
 };
 
-// Keychain operation timeout (30 seconds)
-const KEYCHAIN_TIMEOUT_MS = 30000;
-
 /**
- * Custom error types for better error handling
+ * Legacy error types kept for AuthService / IPC compatibility.
+ * Plaintext storage no longer uses the OS keychain; these are unused at runtime.
  */
 export class KeychainTimeoutError extends Error {
   constructor(operation: string) {
-    super(
-      `Keychain operation timed out after ${KEYCHAIN_TIMEOUT_MS / 1000} seconds during ${operation}. Please check System Preferences → Security & Privacy → Privacy → Keychain Access.`,
-    );
+    super(`Keychain operation timed out during ${operation}.`);
     this.name = 'KeychainTimeoutError';
   }
 }
@@ -41,34 +38,22 @@ export class KeychainPermissionError extends Error {
 
 export class KeychainNotAvailableError extends Error {
   constructor() {
-    super(
-      'Keychain encryption is not available on this system. Please ensure your system keychain is unlocked.',
-    );
+    super('Keychain encryption is not available on this system.');
     this.name = 'KeychainNotAvailableError';
   }
 }
 
 /**
- * Wraps a keychain operation with a timeout
+ * On-disk layout (v2): plaintext JSON, owner-only file mode (0o600).
+ * Same approach as OpenCode's auth.json — no OS keychain / safeStorage.
  */
-async function withKeychainTimeout<T>(
-  operation: () => Promise<T> | T,
-  operationName: string,
-): Promise<T> {
-  return Promise.race([
-    Promise.resolve(operation()),
-    new Promise<T>((_, reject) =>
-      setTimeout(
-        () => reject(new KeychainTimeoutError(operationName)),
-        KEYCHAIN_TIMEOUT_MS,
-      ),
-    ),
-  ]);
-}
-
 export interface UnifiedStorageData {
   version: string;
-  encrypted: string;
+  tokens: Record<
+    string,
+    { token: string; metadata?: Record<string, unknown>; savedAt: number }
+  >;
+  secrets: Record<string, StoredSecret>;
   metadata: {
     lastModified: number;
     tokenCount: number;
@@ -76,19 +61,22 @@ export interface UnifiedStorageData {
   };
 }
 
-interface DecryptedData {
-  tokens: Record<string, { token: string; metadata?: Record<string, unknown>; savedAt: number }>;
+interface StoredData {
+  tokens: Record<
+    string,
+    { token: string; metadata?: Record<string, unknown>; savedAt: number }
+  >;
   secrets: Record<string, StoredSecret>;
 }
 
 export class UnifiedSecureStorage {
   private static instance: UnifiedSecureStorage;
   private storageFilePath: string;
-  private encryptionInitialized: boolean = false;
-  private memoryCache: DecryptedData | null = null;
+  private memoryCache: StoredData | null = null;
   private tokenDomain: TokenDomain;
   private secretsDomain: SecretsDomain;
-  private readonly STORAGE_VERSION = '1.0.0';
+  /** Plaintext format version. v1 was safeStorage-encrypted. */
+  private readonly STORAGE_VERSION = '2.0.0';
 
   private constructor() {
     const userDataPath = app.getPath('userData');
@@ -108,49 +96,53 @@ export class UnifiedSecureStorage {
     return UnifiedSecureStorage.instance;
   }
 
-  private async ensureEncryptionAvailable(): Promise<void> {
-    if (this.encryptionInitialized) return;
+  private emptyData(): StoredData {
+    return { tokens: {}, secrets: {} };
+  }
 
+  private buildMetadata(data: StoredData): UnifiedStorageData['metadata'] {
+    return {
+      lastModified: Date.now(),
+      tokenCount: Object.keys(data.tokens).length,
+      secretsCount: Object.entries(data.secrets).reduce(
+        (acc, [repoId, storedSecret]) => {
+          acc[repoId] = Object.keys(storedSecret.data).length;
+          return acc;
+        },
+        {} as Record<string, number>,
+      ),
+    };
+  }
+
+  private isLegacyEncrypted(stored: Record<string, unknown>): boolean {
+    return (
+      typeof stored.encrypted === 'string' &&
+      !Object.prototype.hasOwnProperty.call(stored, 'tokens')
+    );
+  }
+
+  /**
+   * Move unreadable legacy encrypted files aside so we never call safeStorage.
+   * Users must re-login; recovering v1 data would reintroduce keychain prompts.
+   */
+  private async quarantineLegacyFile(): Promise<void> {
+    const backupPath = `${this.storageFilePath}.legacy-encrypted.bak`;
     try {
-      console.log(
-        '[UnifiedSecureStorage] Checking keychain encryption availability...',
+      await fsPromises.rename(this.storageFilePath, backupPath);
+      console.warn(
+        '[UnifiedSecureStorage] Quarantined legacy keychain-encrypted storage at',
+        backupPath,
+        '— log in again to create plaintext credentials (0o600).',
       );
-
-      // Wrap the encryption check in a timeout
-      const isAvailable = await withKeychainTimeout(
-        () => safeStorage.isEncryptionAvailable(),
-        'checking encryption availability',
-      );
-
-      if (!isAvailable) {
-        throw new KeychainNotAvailableError();
-      }
-
-      this.encryptionInitialized = true;
-      console.log('[UnifiedSecureStorage] Encryption initialized successfully');
-    } catch (error: unknown) {
-      // Re-throw custom errors as-is
-      if (
-        error instanceof KeychainTimeoutError ||
-        error instanceof KeychainNotAvailableError
-      ) {
-        throw error;
-      }
-
-      // Wrap other errors in KeychainPermissionError
+    } catch (error) {
       console.error(
-        '[UnifiedSecureStorage] Failed to initialize encryption:',
+        '[UnifiedSecureStorage] Failed to quarantine legacy storage file:',
         error,
-      );
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      throw new KeychainPermissionError(
-        `Failed to access keychain: ${errorMessage}. Please grant keychain access in System Preferences.`,
       );
     }
   }
 
-  private async loadFromDisk(): Promise<DecryptedData> {
+  private async loadFromDisk(): Promise<StoredData> {
     if (this.memoryCache) {
       return this.memoryCache;
     }
@@ -161,28 +153,29 @@ export class UnifiedSecureStorage {
         this.storageFilePath,
         'utf-8',
       );
-      const stored: UnifiedStorageData = JSON.parse(fileContent);
+      const stored = JSON.parse(fileContent) as Record<string, unknown>;
 
-      if (stored.version !== this.STORAGE_VERSION) {
-        console.warn(
-          `[UnifiedSecureStorage] Version mismatch: ${stored.version} vs ${this.STORAGE_VERSION}`,
-        );
+      // Never decrypt v1 files — that would hit macOS Keychain.
+      if (this.isLegacyEncrypted(stored)) {
+        await this.quarantineLegacyFile();
+        const empty = this.emptyData();
+        this.memoryCache = empty;
+        return empty;
       }
 
-      await this.ensureEncryptionAvailable();
+      const tokens =
+        stored.tokens && typeof stored.tokens === 'object'
+          ? (stored.tokens as StoredData['tokens'])
+          : {};
+      const secrets =
+        stored.secrets && typeof stored.secrets === 'object'
+          ? (stored.secrets as StoredData['secrets'])
+          : {};
 
-      const encryptedBuffer = Buffer.from(stored.encrypted, 'base64');
-      const decrypted = await withKeychainTimeout(
-        () => safeStorage.decryptString(encryptedBuffer),
-        'decrypting stored data',
-      );
-      const data: DecryptedData = JSON.parse(decrypted);
-
+      const data: StoredData = { tokens, secrets };
       this.memoryCache = data;
-
       return data;
     } catch (error: unknown) {
-      // Check if it's a file not found error (ENOENT)
       if (
         error &&
         typeof error === 'object' &&
@@ -190,9 +183,9 @@ export class UnifiedSecureStorage {
         error.code === 'ENOENT'
       ) {
         console.log(
-          '[UnifiedSecureStorage] No existing storage file, creating new',
+          '[UnifiedSecureStorage] No existing storage file, starting empty',
         );
-        const emptyData: DecryptedData = { tokens: {}, secrets: {} };
+        const emptyData = this.emptyData();
         this.memoryCache = emptyData;
         return emptyData;
       }
@@ -201,29 +194,12 @@ export class UnifiedSecureStorage {
     }
   }
 
-  private async saveToDisk(data: DecryptedData): Promise<void> {
-    await this.ensureEncryptionAvailable();
-
-    const dataJson = JSON.stringify(data);
-    const encrypted = await withKeychainTimeout(
-      () => safeStorage.encryptString(dataJson),
-      'encrypting data for storage',
-    );
-
+  private async saveToDisk(data: StoredData): Promise<void> {
     const storageData: UnifiedStorageData = {
       version: this.STORAGE_VERSION,
-      encrypted: encrypted.toString('base64'),
-      metadata: {
-        lastModified: Date.now(),
-        tokenCount: Object.keys(data.tokens).length,
-        secretsCount: Object.entries(data.secrets).reduce(
-          (acc, [repoId, storedSecret]) => {
-            acc[repoId] = Object.keys(storedSecret.data).length;
-            return acc;
-          },
-          {} as Record<string, number>,
-        ),
-      },
+      tokens: data.tokens,
+      secrets: data.secrets,
+      metadata: this.buildMetadata(data),
     };
 
     await fsPromises.writeFile(
@@ -233,16 +209,14 @@ export class UnifiedSecureStorage {
     );
 
     this.memoryCache = data;
-    console.log('[UnifiedSecureStorage] Saved to disk');
+    console.log('[UnifiedSecureStorage] Saved plaintext storage (mode 0o600)');
   }
 
-  async getData(): Promise<DecryptedData> {
+  async getData(): Promise<StoredData> {
     return this.loadFromDisk();
   }
 
-  async updateData(
-    updater: (data: DecryptedData) => DecryptedData,
-  ): Promise<void> {
+  async updateData(updater: (data: StoredData) => StoredData): Promise<void> {
     const data = await this.loadFromDisk();
     const updated = updater(data);
     await this.saveToDisk(updated);
@@ -297,7 +271,10 @@ export class UnifiedSecureStorage {
 
   async getSecretsWithMetadata(
     repoId: string,
-  ): Promise<{ data: Record<string, SecretValue>; metadata: SecretMetadata } | null> {
+  ): Promise<{
+    data: Record<string, SecretValue>;
+    metadata: SecretMetadata;
+  } | null> {
     return this.secretsDomain.getSecretsWithMetadata(repoId);
   }
 
@@ -312,84 +289,49 @@ export class UnifiedSecureStorage {
   }
 
   async exportData(): Promise<UnifiedStorageData> {
-    const fileContent = await fsPromises.readFile(
-      this.storageFilePath,
-      'utf-8',
-    );
-    return JSON.parse(fileContent);
+    const data = await this.loadFromDisk();
+    return {
+      version: this.STORAGE_VERSION,
+      tokens: data.tokens,
+      secrets: data.secrets,
+      metadata: this.buildMetadata(data),
+    };
   }
 
   async importData(data: UnifiedStorageData): Promise<void> {
-    await this.ensureEncryptionAvailable();
+    if (this.isLegacyEncrypted(data as unknown as Record<string, unknown>)) {
+      throw new Error(
+        'Cannot import legacy keychain-encrypted storage without decryption. Use a v2 plaintext export.',
+      );
+    }
 
-    const encryptedBuffer = Buffer.from(data.encrypted, 'base64');
-    const decrypted = await withKeychainTimeout(
-      () => safeStorage.decryptString(encryptedBuffer),
-      'decrypting imported data',
-    );
-    const decryptedData: DecryptedData = JSON.parse(decrypted);
-
-    await this.saveToDisk(decryptedData);
+    await this.saveToDisk({
+      tokens: data.tokens ?? {},
+      secrets: data.secrets ?? {},
+    });
     console.log('[UnifiedSecureStorage] Data imported successfully');
   }
 
   /**
-   * Check keychain access status without triggering permission prompts
-   * Returns information about encryption availability and initialization state
+   * Storage status for settings / diagnostics.
+   * No longer touches the OS keychain.
    */
   async checkKeychainStatus(): Promise<{
     available: boolean;
     initialized: boolean;
     error?: string;
     errorType?: string;
+    storageMode?: 'plaintext';
   }> {
-    try {
-      // First check if already initialized (no keychain access needed)
-      if (this.encryptionInitialized) {
-        return {
-          available: true,
-          initialized: true,
-        };
-      }
-
-      // Try to check availability with timeout
-      const isAvailable = await withKeychainTimeout(
-        () => safeStorage.isEncryptionAvailable(),
-        'checking keychain status',
-      );
-
-      return {
-        available: isAvailable,
-        initialized: false,
-      };
-    } catch (error: unknown) {
-      let errorType = 'unknown';
-      let errorMessage = 'Unknown error';
-
-      if (error instanceof KeychainTimeoutError) {
-        errorType = 'timeout';
-        errorMessage = error.message;
-      } else if (error instanceof KeychainNotAvailableError) {
-        errorType = 'not_available';
-        errorMessage = error.message;
-      } else if (error instanceof KeychainPermissionError) {
-        errorType = 'permission_denied';
-        errorMessage = error.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      return {
-        available: false,
-        initialized: false,
-        error: errorMessage,
-        errorType,
-      };
-    }
+    return {
+      available: true,
+      initialized: true,
+      storageMode: 'plaintext',
+    };
   }
 
   /**
-   * Test keychain access by attempting a simple encrypt/decrypt operation
+   * Verifies the storage file can be read/written. Does not use keychain.
    */
   async testKeychainAccess(): Promise<{
     success: boolean;
@@ -397,48 +339,15 @@ export class UnifiedSecureStorage {
     errorType?: string;
   }> {
     try {
-      await this.ensureEncryptionAvailable();
-
-      // Test encrypt/decrypt
-      const testData = 'test';
-      const encrypted = await withKeychainTimeout(
-        () => safeStorage.encryptString(testData),
-        'testing keychain access (encrypt)',
-      );
-
-      const decrypted = await withKeychainTimeout(
-        () => safeStorage.decryptString(encrypted),
-        'testing keychain access (decrypt)',
-      );
-
-      if (decrypted !== testData) {
-        throw new Error(
-          'Encryption test failed: decrypted data does not match',
-        );
-      }
-
+      const data = await this.loadFromDisk();
+      // Round-trip write of current data (no-op content-wise) to verify perms
+      await this.saveToDisk(data);
       return { success: true };
     } catch (error: unknown) {
-      let errorType = 'unknown';
-      let errorMessage = 'Unknown error';
-
-      if (error instanceof KeychainTimeoutError) {
-        errorType = 'timeout';
-        errorMessage = error.message;
-      } else if (error instanceof KeychainNotAvailableError) {
-        errorType = 'not_available';
-        errorMessage = error.message;
-      } else if (error instanceof KeychainPermissionError) {
-        errorType = 'permission_denied';
-        errorMessage = error.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
       return {
         success: false,
-        error: errorMessage,
-        errorType,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: 'unknown',
       };
     }
   }

@@ -1,9 +1,10 @@
 /**
  * AuthService - Handles OAuth authentication for the Electron app
  *
- * Uses Electron's safeStorage for secure credential storage without
- * keychain permission prompts. Communicates with code-city-landing
- * OAuth server for GitHub authentication.
+ * Credentials are stored via UnifiedSecureStorage as plaintext JSON with
+ * owner-only permissions (0o600), similar to OpenCode's auth.json. Does not
+ * use macOS Keychain / Electron safeStorage. Communicates with the
+ * code-city-landing OAuth server for GitHub authentication via WorkOS.
  */
 
 import { ipcMain, shell } from 'electron';
@@ -65,29 +66,27 @@ export class AuthService {
   private refreshInFlight: Promise<AuthResult> | null = null;
 
   constructor() {
-    // Use electron-store for persistent storage
+    // Use electron-store for non-secret auth prefs (not tokens)
     this.store = new Store({
       name: 'dev-collab-auth',
-      // Don't use encryption key here - we'll use UnifiedSecureStorage for encryption
     });
 
-    // Lazy init UnifiedSecureStorage to defer keychain access
+    // Tokens / secrets: plaintext file under userData (mode 0o600)
     this.storage = UnifiedSecureStorage.getInstance();
 
     this.setupHandlers();
-    console.log('[AuthService] Initialized with UnifiedSecureStorage');
-    // Note: UnifiedSecureStorage will handle keychain access when needed
+    console.log('[AuthService] Initialized with UnifiedSecureStorage (plaintext)');
   }
 
   private setupHandlers() {
-    // Check handler - reads from safeStorage
+    // Check handler - reads stored credentials (plaintext file)
     ipcMain.handle(AuthEvent.CHECK, async () => {
       try {
         console.log('\n========================================');
         console.log('[AuthService] CHECK HANDLER INVOKED');
 
         console.log(
-          '[AuthService] Checking safeStorage for stored credentials...',
+          '[AuthService] Checking storage for stored credentials...',
         );
         console.log('========================================\n');
 
@@ -966,13 +965,12 @@ export class AuthService {
 
   /**
    * Initialize auth state on startup
-   * Checks and loads stored credentials to populate AuthStateManager
+   * Loads stored credentials to populate AuthStateManager (no keychain access)
    */
   async initializeAuthState(): Promise<void> {
     try {
       console.log('[AuthService] Initializing auth state on startup...');
 
-      // Try to get stored auth - this will decrypt credentials
       const storedAuth = await this.getStoredAuth();
 
       if (storedAuth.success && storedAuth.token && storedAuth.user) {
@@ -998,11 +996,10 @@ export class AuthService {
   }
 
   /**
-   * Check if stored auth exists without decrypting
+   * Check if stored auth exists
    */
   private async hasStoredAuth(): Promise<boolean> {
     try {
-      // Check if token exists without retrieving it (avoids keychain access)
       const token = await this.storage.getToken(TOKEN_KEYS.GITHUB_TOKEN);
       return token !== null;
     } catch {
