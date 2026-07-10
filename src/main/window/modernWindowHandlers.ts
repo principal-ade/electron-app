@@ -12,7 +12,11 @@ import {
 import { resolveHtmlPath } from '../util';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
-import type { IModernApplicationWindow, WindowMetadata } from './types';
+import type {
+  IModernApplicationWindow,
+  WindowMetadata,
+  TabTransferData,
+} from './types';
 import { PrimaryWindowType } from './types';
 import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
@@ -639,4 +643,46 @@ export function registerModernWindowHandlers(): void {
     }
     return false;
   });
+
+  // Cross-window tab transfer
+  ipcMain.handle(
+    WindowEvent.SEND_TAB_TO_WINDOW,
+    async (_event, data: TabTransferData) => {
+      const { getApplicationWindows } = require('./modernWindowManager');
+      const { getMainWindowId } = require('./types');
+      const applicationWindows = getApplicationWindows();
+
+      let targetWindow: Electron.BrowserWindow | undefined;
+
+      if (data.direction === 'to-principal') {
+        const mainId = getMainWindowId();
+        if (mainId != null) {
+          const aw = applicationWindows.get(mainId);
+          if (aw && !aw.window.isDestroyed()) {
+            targetWindow = aw.window;
+          }
+        }
+      } else if (data.direction === 'to-dev-workspace') {
+        // The cwd field holds the target repository localPath
+        const targetPath = data.cwd || '';
+        for (const [, aw] of applicationWindows) {
+          if (aw.window.isDestroyed()) continue;
+          const meta = aw.metadata;
+          if (
+            meta?.primaryType === PrimaryWindowType.DEV_WORKSPACE &&
+            meta.localPath === targetPath
+          ) {
+            targetWindow = aw.window;
+            break;
+          }
+        }
+      }
+
+      if (targetWindow) {
+        data.targetWindowId = targetWindow.id;
+        targetWindow.webContents.send(WindowEvent.TAB_RECEIVED, data);
+        targetWindow.focus();
+      }
+    },
+  );
 }

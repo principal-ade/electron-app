@@ -89,6 +89,25 @@ export interface ExtensionWindowOptions {
 }
 
 /**
+ * Payload for cross-window tab transfer (WindowEvent.SEND_TAB_TO_WINDOW / TAB_RECEIVED).
+ */
+export interface TabTransferData {
+  /** The tab id that was active in the source window. */
+  tabId: string;
+  /** The session-id if this is a terminal tab. */
+  sessionId?: string;
+  /** The working directory (cwd) of the tab, if known. */
+  cwd?: string;
+  /** Window-type marker: 'to-principal' when a dev-workspace sends to
+   *  the main window; 'to-dev-workspace' when the main window sends to a
+   *  dev-workspace window. */
+  direction: 'to-principal' | 'to-dev-workspace';
+  /** The target window's Electron BrowserWindow id (filled by the main
+   *  process after routing). */
+  targetWindowId?: number;
+}
+
+/**
  * Main WindowAPI interface
  */
 export interface WindowAPI {
@@ -229,4 +248,17 @@ export interface WindowAPI {
    * @returns Unsubscribe function
    */
   onNavigateToUpdates(callback: () => void): () => void;
+
+  /**
+   * Send a tab to another window (cross-window tab transfer).
+   * @param data - The tab transfer payload
+   */
+  sendTabToWindow(data: TabTransferData): Promise<void>;
+
+  /**
+   * Listen for tab-received events (when another window sends a tab here).
+   * @param callback - Called with the tab transfer data
+   * @returns Unsubscribe function
+   */
+  onTabReceived(callback: (data: TabTransferData) => void): () => void;
 }

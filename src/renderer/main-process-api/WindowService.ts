@@ -14,11 +14,12 @@ import type {
   DevWorkspaceOptions,
   ExtensionWindowOptions,
   AlexandriaWorkspaceOptions,
+  TabTransferData,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 // Re-export for convenience
-export type { RepositoryWindowState, WorkspaceWindowState, WindowReadyState };
+export type { RepositoryWindowState, WorkspaceWindowState, WindowReadyState, TabTransferData };
 
 /**
  * Service for managing application windows
@@ -336,6 +337,37 @@ export class WindowService {
     } catch (error) {
       console.error(
         '[WindowService] Failed to register thread repositories listener:',
+        error,
+      );
+      return () => {};
+    }
+  }
+
+  /**
+   * Send a tab to another window.
+   * @param data - The tab transfer payload
+   */
+  static async sendTabToWindow(data: TabTransferData): Promise<void> {
+    try {
+      await window.mainProcess.window.sendTabToWindow(data);
+    } catch (error) {
+      console.error('[WindowService] Failed to send tab to window:', error);
+    }
+  }
+
+  /**
+   * Listen for tab-received events (another window sent a tab here).
+   * @param callback - Called with the tab transfer data
+   * @returns Unsubscribe function
+   */
+  static onTabReceived(
+    callback: (data: TabTransferData) => void,
+  ): () => void {
+    try {
+      return window.mainProcess.window.onTabReceived(callback);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to register tab-received listener:',
         error,
       );
       return () => {};

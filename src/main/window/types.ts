@@ -142,6 +142,17 @@ export function getWindowMetadata(windowId: number): WindowMetadata | null {
   return appWindow?.metadata ?? null;
 }
 
+/**
+ * Payload for cross-window tab transfer.
+ */
+export interface TabTransferData {
+  tabId: string;
+  sessionId?: string;
+  cwd?: string;
+  direction: 'to-principal' | 'to-dev-workspace';
+  targetWindowId?: number;
+}
+
 export function isMainWindow(windowId: number): boolean {
   return windowId === mainWindowId;
 }

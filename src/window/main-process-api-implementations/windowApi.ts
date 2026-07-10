@@ -12,6 +12,7 @@ import type {
   DevWorkspaceOptions,
   ExtensionWindowOptions,
   AlexandriaWorkspaceOptions,
+  TabTransferData,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -205,6 +206,22 @@ export const windowAPI: WindowAPI = {
     ipcRenderer.on(WindowEvent.NAVIGATE_TO_UPDATES, handler);
     return () => {
       ipcRenderer.removeListener(WindowEvent.NAVIGATE_TO_UPDATES, handler);
+    };
+  },
+
+  sendTabToWindow: (data: TabTransferData) =>
+    ipcRenderer.invoke(WindowEvent.SEND_TAB_TO_WINDOW, data),
+
+  onTabReceived: (callback: (data: TabTransferData) => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      data: TabTransferData,
+    ) => {
+      callback(data);
+    };
+    ipcRenderer.on(WindowEvent.TAB_RECEIVED, handler);
+    return () => {
+      ipcRenderer.removeListener(WindowEvent.TAB_RECEIVED, handler);
     };
   },
 };

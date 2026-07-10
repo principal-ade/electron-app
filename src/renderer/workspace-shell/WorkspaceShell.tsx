@@ -54,6 +54,9 @@ import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { WindowService } from '../main-process-api/WindowService';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { useTerminalRepoInfo } from '../hooks/useTerminalRepoInfo';
+import { SendTabButton } from '../move-tab/SendTabButton';
+import { useTabReceiver } from '../move-tab/useTabReceiver';
+import { useOpenRepositoryWindows } from '../hooks/useOpenRepositoryWindows';
 import {
   TabbedTerminalPanel,
   type TerminalWorkingState,
@@ -411,6 +414,56 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     () => setRequestFocusTabId(null),
     [],
   );
+
+  // Tab close after cross-window transfer.
+  const [requestCloseTabId, setRequestCloseTabId] = useState<string | null>(
+    null,
+  );
+
+  // Cross-window tab receiver.
+  const { incomingTab, clearIncomingTab } = useTabReceiver();
+  const repoWindows = useOpenRepositoryWindows();
+
+  // When a tab arrives from another window, create a terminal session for it.
+  useEffect(() => {
+    if (!incomingTab) return;
+    void (async () => {
+      try {
+        const sessionId = await terminalActions.createTerminalSession({
+          cwd: incomingTab.cwd || terminalDirectory,
+          context: `tab:${incomingTab.tabId}`,
+        });
+        window.dispatchEvent(
+          new CustomEvent('terminal-session-created', {
+            detail: {
+              sessionId,
+              context: `${terminalCtx.terminalContext}:tab:${incomingTab.tabId}`,
+            },
+          }),
+        );
+        setRequestFocusTabId(`tab-restored-${sessionId}`);
+      } catch (err) {
+        console.error('[WorkspaceShell] Failed to create session for incoming tab:', err);
+      }
+    })();
+    clearIncomingTab();
+  }, [incomingTab, clearIncomingTab, terminalActions, terminalCtx.terminalContext, terminalDirectory]);
+
+  // bottom-bar content for cross-window tab transfer (principal → dev-workspace).
+  const bottomBarContent = useMemo(() => {
+    const direction: 'to-dev-workspace' = 'to-dev-workspace';
+    return (
+      <SendTabButton
+        direction={direction}
+        activeTabId={activeTabId}
+        cwd={terminalDirectory}
+        repoWindows={repoWindows}
+        onTabDispatched={() => {
+          if (activeTabId) setRequestCloseTabId(activeTabId);
+        }}
+      />
+    );
+  }, [activeTabId, terminalDirectory, repoWindows]);
   useEffect(() => {
     const handleTerminalOpen = (event: { payload: TerminalOpenPayload }) => {
       const directory = event.payload?.directory;
@@ -564,8 +617,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onActiveTabChange={setActiveTabId}
               requestFocusTabId={requestFocusTabId}
               onFocusTabHandled={handleFocusTabHandled}
+              requestCloseTabId={requestCloseTabId}
               renderTabContent={renderTabContent}
               renderTabIcon={renderTabIcon}
+              bottomBarContent={bottomBarContent}
             />
           </div>
         ),
@@ -607,8 +662,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       setActiveTabId,
       requestFocusTabId,
       handleFocusTabHandled,
+      requestCloseTabId,
       renderTabContent,
       renderTabIcon,
+      bottomBarContent,
       theme,
     ],
   );

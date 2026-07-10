@@ -36,4 +36,9 @@ export enum WindowEvent {
   // replies with CONFIRM_CLOSE to let the window actually close.
   WORKSPACE_BEFORE_CLOSE = 'window:workspace-before-close',
   WORKSPACE_CONFIRM_CLOSE = 'window:workspace-confirm-close',
+
+  // Cross-window tab transfer: sender invokes with tab data + target window
+  // path; main pushes a TAB_RECEIVED event to the target window's webContents.
+  SEND_TAB_TO_WINDOW = 'window:send-tab-to-window',
+  TAB_RECEIVED = 'window:tab-received',
 }

@@ -65,6 +65,8 @@ import {
   type TabAssociations,
   type TerminalPanelActions,
 } from '@industry-theme/xterm-terminal-panel';
+import { SendTabButton } from '../move-tab/SendTabButton';
+import { useTabReceiver } from '../move-tab/useTabReceiver';
 import {
   panels as principalViewPanels,
   TraceDetailsPanel,
@@ -1146,6 +1148,62 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Show all terminals state - when true, shows terminals from other windows
   const [showAllTerminals, setShowAllTerminals] = useState(false);
+
+  // Active tab tracking for cross-window tab transfer.
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
+  // Tab close after cross-window transfer (sender removes the tab).
+  const [requestCloseTabId, setRequestCloseTabId] = useState<string | null>(
+    null,
+  );
+
+  // Cross-window tab receiver.
+  const { incomingTab, clearIncomingTab } = useTabReceiver();
+
+  // When a tab arrives from another window, create a terminal session for it.
+  useEffect(() => {
+    if (!incomingTab) return;
+    void (async () => {
+      try {
+        const sessionId = await terminalActions.createTerminalSession({
+          cwd: incomingTab.cwd || terminalDirectory,
+          context: `tab:${incomingTab.tabId}`,
+        });
+        window.dispatchEvent(
+          new CustomEvent('terminal-session-created', {
+            detail: {
+              sessionId,
+              context: `${terminalContext}:tab:${incomingTab.tabId}`,
+            },
+          }),
+        );
+        setFocusTabId(`tab-restored-${sessionId}`);
+      } catch (err) {
+        console.error(
+          '[DevWorkspace] Failed to create session for incoming tab:',
+          err,
+        );
+      }
+    })();
+    clearIncomingTab();
+  }, [incomingTab, clearIncomingTab, terminalActions, terminalContext, terminalDirectory]);
+
+  // bottom-bar content for cross-window tab transfer (dev-workspace → principal).
+  const bottomBarContent = useMemo(() => {
+    if (activeTabId) {
+      return (
+        <SendTabButton
+          direction="to-principal"
+          activeTabId={activeTabId}
+          cwd={terminalDirectory}
+          onTabDispatched={() => {
+            setRequestCloseTabId(activeTabId);
+          }}
+        />
+      );
+    }
+    return null;
+  }, [activeTabId, terminalDirectory]);
 
   // Right panel history - tracks documents opened in the right panel for quick navigation
   const [rightPanelHistory, setRightPanelHistory] = useState<
@@ -3652,9 +3710,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               width={terminalPanelWidth}
               requestFocusTabId={focusTabId}
               onFocusTabHandled={handleFocusTabHandled}
+              activeTabId={activeTabId}
+              onActiveTabChange={setActiveTabId}
+              requestCloseTabId={requestCloseTabId}
               workingStates={workingStates}
               showAllTerminals={showAllTerminals}
               onShowAllTerminalsChange={setShowAllTerminals}
+              bottomBarContent={bottomBarContent}
               // Tab association props
               associations={associations}
               onAssociationCollapsedChange={handleAssociationCollapsedChange}
@@ -4560,6 +4622,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       rightPanelHistory,
       showRightPanelHistory,
       handleHistoryItemClick,
+      activeTabId,
+      requestCloseTabId,
+      bottomBarContent,
     ],
   );
 
