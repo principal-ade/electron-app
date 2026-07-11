@@ -281,7 +281,14 @@ export class GitHubAdapter {
           '[GitHub] makeGitHubAPICall: No token, falling back to gh CLI for endpoint:',
           endpoint,
         );
-        return this.makeGitHubAPICallViaGh(endpoint, options);
+        const ghResult = await this.makeGitHubAPICallViaGh(endpoint, options);
+        if (ghResult.success) return ghResult;
+
+        console.log(
+          '[GitHub] makeGitHubAPICall: gh CLI unavailable, trying unauthenticated request:',
+          endpoint,
+        );
+        return this.makeGitHubAPICallUnauthenticated(endpoint, options);
       }
       console.error('[GitHub] makeGitHubAPICall: No GitHub token available');
       return { success: false, error: 'No GitHub token available' };
@@ -447,6 +454,59 @@ export class GitHubAdapter {
       status: 200,
       statusText: 'OK',
     };
+  }
+
+  /**
+   * Last-resort fallback for GET requests when neither the in-app token nor
+   * the `gh` CLI is available. Makes an unauthenticated HTTP request to
+   * GitHub — works for search endpoints with a 10 req/min rate limit.
+   */
+  private async makeGitHubAPICallUnauthenticated(
+    endpoint: string,
+    options: {
+      method?: string;
+      headers?: Record<string, string>;
+      body?: GitHubAPIRequestBody;
+    } = {},
+  ): Promise<{
+    success: boolean;
+    data?: GitHubAPIResponseData;
+    headers?: GitHubAPIResponseHeaders;
+    status?: number;
+    statusText?: string;
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`https://api.github.com${endpoint}`, {
+        method: options.method || 'GET',
+        headers: {
+          Accept: 'application/vnd.github.v3+json',
+          ...options.headers,
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+
+      if (!response.ok) {
+        const error = `GitHub API error (unauthenticated): ${response.status} ${response.statusText}`;
+        console.error('[GitHub]', error);
+        return { success: false, error, status: response.status, statusText: response.statusText };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data,
+        headers: Object.fromEntries(response.headers.entries()),
+        status: response.status,
+        statusText: response.statusText,
+      };
+    } catch (error) {
+      console.error('[GitHub] Unauthenticated request failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   // DELETED: detectRepository, getGitRemotes, parseGitRemoteUrl - unused (0 calls)
