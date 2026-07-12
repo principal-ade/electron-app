@@ -11,6 +11,7 @@ import {
   Inbox,
   Layers,
   PenTool,
+  Home,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -177,6 +178,11 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const navItems: NavItem[] = [
     // Home lives in the titlebar now (toggling overlay), not the sidebar.
+    {
+      id: 'home-panel',
+      icon: <Home size={20} />,
+      label: 'Home',
+    },
     {
       id: 'projects',
       icon: <GitIcon size={20} />,

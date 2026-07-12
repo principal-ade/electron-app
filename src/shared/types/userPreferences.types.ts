@@ -6,6 +6,7 @@ import type { PanelLayout } from '@principal-ade/panels';
 // Interactive shell navigation view types
 export type InteractiveShellNavigationView =
   | 'home'
+  | 'home-panel'
   | 'trails'
   | 'inbox'
   | 'topics'

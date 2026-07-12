@@ -23,6 +23,7 @@ import { WorkspaceShell } from '../../../workspace-shell/WorkspaceShell';
 
 /** The workspace surfaces hosted by the portal (vs. standalone overlays). */
 export type WorkspaceView =
+  | 'home-panel'
   | 'projects'
   | 'inbox'
   | 'topics'
@@ -31,6 +32,7 @@ export type WorkspaceView =
   | 'skills';
 
 export const WORKSPACE_VIEWS: WorkspaceView[] = [
+  'home-panel',
   'projects',
   'inbox',
   'topics',
@@ -56,7 +58,8 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
     // contained to this base layer, so they can't bleed above the standalone
     // overlay (zIndex 2) and hide views like Settings.
     <div style={{ height: '100%', width: '100%', isolation: 'isolate' }}>
-      {(workspaceView === 'projects' ||
+      {(workspaceView === 'home-panel' ||
+        workspaceView === 'projects' ||
         workspaceView === 'inbox' ||
         workspaceView === 'topics' ||
         workspaceView === 'drawings' ||

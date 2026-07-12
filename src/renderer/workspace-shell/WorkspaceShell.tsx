@@ -65,6 +65,7 @@ import {
 import { InboxLeftPanel } from '../panels/InboxLeftPanel';
 import { TopicsLeftPanel } from '../panels/TopicsLeftPanel';
 import { ProjectsLeftPanel } from '../panels/ProjectsLeftPanel';
+import { HomeLeftPanel } from '../panels/home-panel';
 import { TopicTabContent } from '../inbox-view/TopicTabContent';
 import { LocalTopicTabContent } from '../topics-view/LocalTopicTabContent';
 import {
@@ -95,6 +96,7 @@ import {
 
 /** Which surface's left panel + landing the shell currently shows. */
 export type WorkspaceView =
+  | 'home-panel'
   | 'projects'
   | 'inbox'
   | 'topics'
@@ -554,23 +556,30 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       {
         id: 'workspace-list',
         label:
-          activeView === 'projects'
-            ? feedMode === 'collections'
-              ? 'Social'
-              : feedMode === 'organizations'
-                ? 'Team'
-                : 'Activity'
-            : activeView === 'inbox'
-              ? 'Inbox'
-              : activeView === 'drawings'
-                ? 'Drawings'
-                : activeView === 'trails'
-                  ? 'Trails'
-                  : activeView === 'skills'
-                    ? 'Skills'
-                    : 'Topics',
+          activeView === 'home-panel'
+            ? 'Home'
+            : activeView === 'projects'
+              ? feedMode === 'collections'
+                ? 'Social'
+                : feedMode === 'organizations'
+                  ? 'Team'
+                  : 'Activity'
+              : activeView === 'inbox'
+                ? 'Inbox'
+                : activeView === 'drawings'
+                  ? 'Drawings'
+                  : activeView === 'trails'
+                    ? 'Trails'
+                    : activeView === 'skills'
+                      ? 'Skills'
+                      : 'Topics',
         content:
-          activeView === 'projects' ? (
+          activeView === 'home-panel' ? (
+            <HomeLeftPanel
+              repositories={repositories}
+              events={events}
+            />
+          ) : activeView === 'projects' ? (
             <ProjectsLeftPanel
               repositories={repositories}
               events={events}

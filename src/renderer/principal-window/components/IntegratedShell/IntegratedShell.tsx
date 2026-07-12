@@ -39,6 +39,7 @@ export type NavigationView = InteractiveShellNavigationView;
 // Available views for switch command
 const VIEW_OPTIONS = [
   'home',
+  'home-panel',
   'trails',
   'inbox',
   'topics',
@@ -165,6 +166,7 @@ export const IntegratedShell: React.FC = () => {
     trails: { left: false, right: false },
     inbox: { left: false, right: false },
     topics: { left: false, right: false },
+    'home-panel': { left: false, right: false },
     projects: { left: false, right: false },
     onboarding: { left: false, right: false },
     auth: { left: false, right: false },
@@ -516,6 +518,7 @@ export const IntegratedShell: React.FC = () => {
           setViewCollapsedStates({
             trails: { left: false, right: false },
             projects: { left: false, right: false },
+            'home-panel': { left: false, right: false },
             onboarding: { left: false, right: false },
             auth: { left: false, right: false },
             monitoring: { left: false, right: false },
@@ -575,6 +578,7 @@ export const IntegratedShell: React.FC = () => {
         setViewCollapsedStates({
           trails: { left: false, right: false },
           projects: { left: false, right: false },
+          'home-panel': { left: false, right: false },
           onboarding: { left: false, right: false },
           auth: { left: false, right: false },
           monitoring: { left: false, right: false },
