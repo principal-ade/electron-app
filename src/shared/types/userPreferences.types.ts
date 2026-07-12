@@ -101,6 +101,14 @@ export interface UserPreferences {
   /** Use PTY daemon for terminal sessions (default: false). Requires app restart to take effect. */
   usePtyDaemon?: boolean;
 
+  /**
+   * Where Command+O (Quick Open) opens a selected local repository.
+   * - `'window'` (default): open/focus a dedicated project (dev-workspace) window
+   * - `'terminal'`: open a terminal tab in the principal window at the repo path
+   * Workspaces always open as their own window regardless of this setting.
+   */
+  quickOpenTarget?: 'window' | 'terminal';
+
   // Repository management
   /** Base default directory - the top-level directory for all Principal work (cloning, workspaces, discovery) */
   baseDefaultDirectory?: string;

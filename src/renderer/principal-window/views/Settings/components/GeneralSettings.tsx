@@ -28,6 +28,9 @@ export const GeneralSettings: React.FC = () => {
     USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
   );
   const [showAlexandriaHookDebug, setShowAlexandriaHookDebug] = useState(false);
+  const [quickOpenTarget, setQuickOpenTarget] = useState<'window' | 'terminal'>(
+    'window',
+  );
   const [isClearing, setIsClearing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
@@ -62,6 +65,9 @@ export const GeneralSettings: React.FC = () => {
       );
       setShowAlexandriaHookDebug(
         prefs.alexandriaWorkspace?.titlebar?.hookDebug ?? false,
+      );
+      setQuickOpenTarget(
+        prefs.quickOpenTarget === 'terminal' ? 'terminal' : 'window',
       );
     };
 
@@ -209,6 +215,64 @@ export const GeneralSettings: React.FC = () => {
           >
             Visit our website →
           </a>
+        </div>
+      </div>
+
+      {/* Quick Open (Command+O) destination */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Quick Open (⌘O)
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <p
+            style={{
+              fontSize: '14px',
+              color: theme.colors.textSecondary,
+              marginBottom: '12px',
+            }}
+          >
+            Choose where selecting a project from Quick Open lands. Workspaces
+            always open in their own window.
+          </p>
+          <select
+            value={quickOpenTarget}
+            onChange={async (e) => {
+              const value = e.target.value as 'window' | 'terminal';
+              setQuickOpenTarget(value);
+              await UserPreferencesService.updatePreferences({
+                quickOpenTarget: value,
+              });
+            }}
+            style={{
+              padding: '10px 14px',
+              borderRadius: '8px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              cursor: 'pointer',
+              fontSize: '14px',
+              minWidth: '280px',
+            }}
+          >
+            <option value="window">Open in a project window</option>
+            <option value="terminal">
+              Open as a terminal tab in Principal
+            </option>
+          </select>
         </div>
       </div>
 

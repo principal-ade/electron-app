@@ -19,6 +19,9 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import { gitHubAPICore } from '../version-control-providers/github/apiCore';
 import { authService } from '../services/AuthService';
 import { gitClientFactory } from '../utils/gitClientFactory';
+import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
+import type { OpenTerminalTabPayload } from '../../shared/main-process-api-interfaces/WindowAPI';
+import { focusOrCreateMainWindow } from './modernWindowManager';
 
 interface GitHubSearchResult {
   id: number;
@@ -342,6 +345,55 @@ class QuickOpen {
 export const quickOpen = new QuickOpen();
 
 /**
+ * Resolve the Quick Open destination preference. Defaults to opening a
+ * dedicated project window (historical behavior).
+ */
+async function getQuickOpenTarget(): Promise<'window' | 'terminal'> {
+  try {
+    const {
+      UserPreferencesHandler,
+    } = require('../stores/userPreferencesHandler');
+    const prefsService = UserPreferencesHandler.getInstance();
+    const preferences = await prefsService.getUserPreferences();
+    return preferences.quickOpenTarget === 'terminal' ? 'terminal' : 'window';
+  } catch (error) {
+    log.error('[Quick Open] Failed to read quickOpenTarget preference:', error);
+    return 'window';
+  }
+}
+
+/**
+ * Focus/create the principal window and ask its renderer to open a terminal
+ * tab at `directory`. Waits for the renderer to finish loading when the
+ * principal window was just created, so the IPC isn't dropped.
+ */
+async function openTerminalTabInPrincipal(
+  directory: string,
+  label?: string,
+): Promise<void> {
+  const principal = await focusOrCreateMainWindow();
+  if (!principal || principal.window.isDestroyed()) {
+    log.error('[Quick Open] No principal window available for terminal tab');
+    return;
+  }
+
+  const payload: OpenTerminalTabPayload = { directory, label };
+  const send = () => {
+    if (principal.window.isDestroyed()) return;
+    principal.window.webContents.send(WindowEvent.OPEN_TERMINAL_TAB, payload);
+    log.info(
+      `[Quick Open] Sent open-terminal-tab for ${label ?? directory} → principal`,
+    );
+  };
+
+  if (principal.window.webContents.isLoading()) {
+    principal.window.webContents.once('did-finish-load', send);
+  } else {
+    send();
+  }
+}
+
+/**
  * Setup IPC handlers for quick open
  */
 export function setupQuickOpenHandlers(): void {
@@ -353,6 +405,20 @@ export function setupQuickOpenHandlers(): void {
 
     // Close the overlay immediately for instant feedback
     quickOpen.hide();
+
+    const openTarget = await getQuickOpenTarget();
+
+    // Terminal mode: open a terminal tab in the principal window for local
+    // repositories. Workspaces still open as their own window (no single cwd).
+    // Repos without a local path fall back to the window path below.
+    if (
+      openTarget === 'terminal' &&
+      item.type === 'repository' &&
+      item.localPath
+    ) {
+      await openTerminalTabInPrincipal(item.localPath, item.name);
+      return;
+    }
 
     if (item.isOpen && item.openWindowId) {
       // Focus existing window
@@ -589,12 +655,23 @@ export function setupQuickOpenHandlers(): void {
 
         log.info(`[Quick Open] Registered repository: ${registeredRepo.name}`);
 
-        // Open the dev workspace for the cloned repo
+        // Open the cloned repo per the Quick Open destination preference
         if (registeredRepo) {
-          await openDevWorkspaceWindow({
-            alexandriaEntry: registeredRepo,
-          });
-          log.info(`[Quick Open] Opened dev workspace for ${repoName}`);
+          const openTarget = await getQuickOpenTarget();
+          if (openTarget === 'terminal' && registeredRepo.path) {
+            await openTerminalTabInPrincipal(
+              String(registeredRepo.path),
+              registeredRepo.name,
+            );
+            log.info(
+              `[Quick Open] Opened terminal tab for cloned ${repoName}`,
+            );
+          } else {
+            await openDevWorkspaceWindow({
+              alexandriaEntry: registeredRepo,
+            });
+            log.info(`[Quick Open] Opened dev workspace for ${repoName}`);
+          }
         }
 
         return { success: true, path: targetPath };

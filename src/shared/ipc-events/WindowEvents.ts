@@ -30,6 +30,11 @@ export enum WindowEvent {
 
   // Navigation events (sent to principal window)
   NAVIGATE_TO_UPDATES = 'window:navigate-to-updates',
+  /**
+   * Open (or focus) a terminal tab in the principal window at a local path.
+   * Used by Quick Open when `quickOpenTarget === 'terminal'`.
+   */
+  OPEN_TERMINAL_TAB = 'window:open-terminal-tab',
 
   // Workspace-window close prompt. Main holds the close and sends
   // BEFORE_CLOSE so the renderer can surface the status modal; the renderer

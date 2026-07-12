@@ -15,11 +15,18 @@ import type {
   ExtensionWindowOptions,
   AlexandriaWorkspaceOptions,
   TabTransferData,
+  OpenTerminalTabPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 // Re-export for convenience
-export type { RepositoryWindowState, WorkspaceWindowState, WindowReadyState, TabTransferData };
+export type {
+  RepositoryWindowState,
+  WorkspaceWindowState,
+  WindowReadyState,
+  TabTransferData,
+  OpenTerminalTabPayload,
+};
 
 /**
  * Service for managing application windows
@@ -93,6 +100,26 @@ export class WindowService {
     } catch (error) {
       console.error(
         '[WindowService] Failed to register navigate to updates listener:',
+        error,
+      );
+      return () => {};
+    }
+  }
+
+  /**
+   * Listen for open-terminal-tab events (Quick Open with terminal target).
+   * The principal window should open a terminal tab at the given directory.
+   * @param callback - Called with directory + optional label
+   * @returns Unsubscribe function
+   */
+  static onOpenTerminalTab(
+    callback: (payload: OpenTerminalTabPayload) => void,
+  ): () => void {
+    try {
+      return window.mainProcess.window.onOpenTerminalTab(callback);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to register open-terminal-tab listener:',
         error,
       );
       return () => {};

@@ -13,6 +13,7 @@ import type {
   ExtensionWindowOptions,
   AlexandriaWorkspaceOptions,
   TabTransferData,
+  OpenTerminalTabPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -206,6 +207,22 @@ export const windowAPI: WindowAPI = {
     ipcRenderer.on(WindowEvent.NAVIGATE_TO_UPDATES, handler);
     return () => {
       ipcRenderer.removeListener(WindowEvent.NAVIGATE_TO_UPDATES, handler);
+    };
+  },
+
+  /**
+   * Listen for open-terminal-tab events (Quick Open → principal window).
+   */
+  onOpenTerminalTab: (callback: (payload: OpenTerminalTabPayload) => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: OpenTerminalTabPayload,
+    ) => {
+      callback(payload);
+    };
+    ipcRenderer.on(WindowEvent.OPEN_TERMINAL_TAB, handler);
+    return () => {
+      ipcRenderer.removeListener(WindowEvent.OPEN_TERMINAL_TAB, handler);
     };
   },
 

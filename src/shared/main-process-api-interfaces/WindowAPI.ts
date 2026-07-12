@@ -89,6 +89,17 @@ export interface ExtensionWindowOptions {
 }
 
 /**
+ * Payload for {@link WindowEvent.OPEN_TERMINAL_TAB} — open a terminal tab in
+ * the principal window rooted at a local directory.
+ */
+export interface OpenTerminalTabPayload {
+  /** Absolute local directory the terminal should start in. */
+  directory: string;
+  /** Optional tab label (defaults to the directory basename). */
+  label?: string;
+}
+
+/**
  * Payload for cross-window tab transfer (WindowEvent.SEND_TAB_TO_WINDOW / TAB_RECEIVED).
  */
 export interface TabTransferData {
@@ -248,6 +259,16 @@ export interface WindowAPI {
    * @returns Unsubscribe function
    */
   onNavigateToUpdates(callback: () => void): () => void;
+
+  /**
+   * Listen for "open a terminal tab in the principal window" events.
+   * Fired by Quick Open when `quickOpenTarget === 'terminal'`.
+   * @param callback - Called with the directory (and optional label) to open
+   * @returns Unsubscribe function
+   */
+  onOpenTerminalTab(
+    callback: (payload: OpenTerminalTabPayload) => void,
+  ): () => void;
 
   /**
    * Send a tab to another window (cross-window tab transfer).

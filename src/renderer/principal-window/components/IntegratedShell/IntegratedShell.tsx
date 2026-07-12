@@ -27,11 +27,16 @@ import {
   useAgentCommandPalette,
 } from '@principal-ade/panel-layouts';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
+import { usePortalEvents } from '../../PortalEventContext';
 import { useProjectsTabs } from '../../contexts/ProjectsTabsContext';
 import { useInboxTabs } from '../../contexts/InboxTabsContext';
 import { useTopicsTabs } from '../../contexts/TopicsTabsContext';
 import { topicClient } from '../../../tipc/topicClient';
 import { OnboardingWizard } from '../../../components/OnboardingWizard/OnboardingWizard';
+import {
+  emitTerminalOpen,
+  type TerminalOpenPayload,
+} from '../../../events/portalIntents';
 import './IntegratedShell.css';
 
 export type NavigationView = InteractiveShellNavigationView;
@@ -131,6 +136,7 @@ export const IntegratedShell: React.FC = () => {
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const { theme, mode } = useTheme();
   const { events } = usePrincipalEvents();
+  const { events: portalEvents } = usePortalEvents();
   const { openLocalTrail: openLocalTrailInFeed } = useProjectsTabs();
   const { openLocalTrail: openLocalTrailInInbox } = useInboxTabs();
   const { openTopic: openTopicInTopicsView } = useTopicsTabs();
@@ -140,6 +146,15 @@ export const IntegratedShell: React.FC = () => {
   // without re-subscribing (and risking a missed fire) on every switch.
   const activeViewRef = useRef(activeView);
   activeViewRef.current = activeView;
+
+  // Mirror of lastWorkspaceView so the open-terminal-tab IPC handler can tell
+  // whether the portal (and WorkspaceShell terminal host) is already mounted.
+  const lastWorkspaceViewRef = useRef(lastWorkspaceView);
+  lastWorkspaceViewRef.current = lastWorkspaceView;
+
+  // Queued when Quick Open asks for a terminal tab before the portal has ever
+  // mounted; flushed once lastWorkspaceView is set and WorkspaceShell is up.
+  const pendingTerminalOpenRef = useRef<TerminalOpenPayload | null>(null);
 
   const prevOverlayRef = useRef<string | null>(null);
 
@@ -312,6 +327,54 @@ export const IntegratedShell: React.FC = () => {
       unsubscribe();
     };
   }, []);
+
+  // Quick Open (Command+O) with quickOpenTarget === 'terminal': main sends
+  // OPEN_TERMINAL_TAB after focusing the principal window. Ensure a workspace
+  // surface is showing (so the terminal host is mounted + visible), then emit
+  // terminal:open on the portal bus for WorkspaceShell to materialize the tab.
+  useEffect(() => {
+    const unsubscribe = WindowService.onOpenTerminalTab((payload) => {
+      if (!payload?.directory) return;
+
+      // Leave overlays (home/settings/…) so the portal is visible; if the
+      // portal has never mounted, landing on projects also sets lastWorkspaceView.
+      if (!isWorkspaceView(activeViewRef.current)) {
+        setActiveView('projects');
+      }
+
+      if (!lastWorkspaceViewRef.current) {
+        // WorkspaceShell isn't mounted yet — queue and flush after it mounts.
+        pendingTerminalOpenRef.current = {
+          directory: payload.directory,
+          label: payload.label,
+        };
+        return;
+      }
+
+      emitTerminalOpen(portalEvents, 'quick-open', {
+        directory: payload.directory,
+        label: payload.label,
+      });
+    });
+    return unsubscribe;
+  }, [portalEvents]);
+
+  // Flush a terminal-open that arrived before the portal first mounted.
+  useEffect(() => {
+    if (!lastWorkspaceView) return;
+    const pending = pendingTerminalOpenRef.current;
+    if (!pending) return;
+
+    // WorkspaceShell mounts in the same commit as lastWorkspaceView; its
+    // terminal:open listener registers in a useEffect that runs after paint.
+    // Defer one macrotask so the emit is not lost.
+    const timer = setTimeout(() => {
+      if (pendingTerminalOpenRef.current !== pending) return;
+      pendingTerminalOpenRef.current = null;
+      emitTerminalOpen(portalEvents, 'quick-open', pending);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [lastWorkspaceView, portalEvents]);
 
   // Auto-connect to presence on startup if enabled
   useEffect(() => {
