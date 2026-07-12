@@ -120,6 +120,8 @@ interface RawGitHubOrganizationResponse {
   id: unknown;
   avatar_url: unknown;
   description: unknown;
+  /** Present on full org profiles (`GET /orgs/{org}`), not always on list endpoints. */
+  name?: unknown;
 }
 
 /** Raw GitHub API license template response */
@@ -1479,15 +1481,64 @@ export class GitHubAdapter {
 
   // Get user's organizations
   async getUserOrganizations(): Promise<GitHubOrganization[]> {
+    const mapOrg = (org: RawGitHubOrganizationResponse): GitHubOrganization => ({
+      login: org.login as string,
+      id: org.id as number,
+      avatar_url: org.avatar_url as string,
+      description: (org.description as string | null) ?? null,
+      name:
+        typeof org.name === 'string' && org.name.trim()
+          ? (org.name as string)
+          : null,
+    });
+
+    // List endpoint returns Simple Organization (often without display name).
+    // Enrich each with GET /orgs/{login} so UI can show the profile display name.
+    const enrichWithDisplayNames = async (
+      basic: GitHubOrganization[],
+    ): Promise<GitHubOrganization[]> => {
+      return Promise.all(
+        basic.map(async (org) => {
+          if (org.name) return org;
+          try {
+            const detail = await this.makeGitHubAPICall(`/orgs/${org.login}`);
+            if (detail.success && detail.data) {
+              const raw = detail.data as RawGitHubOrganizationResponse;
+              const name =
+                typeof raw.name === 'string' && raw.name.trim()
+                  ? (raw.name as string)
+                  : null;
+              return { ...org, name };
+            }
+            // CLI fallback for a single org profile
+            const cli = await this.executeCommand([
+              'gh',
+              'api',
+              `/orgs/${org.login}`,
+            ]);
+            if (cli.success && cli.stdout) {
+              const raw = JSON.parse(cli.stdout) as RawGitHubOrganizationResponse;
+              const name =
+                typeof raw.name === 'string' && raw.name.trim()
+                  ? (raw.name as string)
+                  : null;
+              return { ...org, name };
+            }
+          } catch {
+            // Keep login-only if enrichment fails
+          }
+          return org;
+        }),
+      );
+    };
+
     // Try using token-based API first
     const apiResult = await this.makeGitHubAPICall('/user/orgs');
     if (apiResult.success && apiResult.data) {
-      return (apiResult.data as RawGitHubOrganizationResponse[]).map((org) => ({
-        login: org.login as string,
-        id: org.id as number,
-        avatar_url: org.avatar_url as string,
-        description: org.description as string | null,
-      }));
+      const basic = (apiResult.data as RawGitHubOrganizationResponse[]).map(
+        mapOrg,
+      );
+      return enrichWithDisplayNames(basic);
     }
 
     // Fallback to CLI
@@ -1496,13 +1547,8 @@ export class GitHubAdapter {
 
       if (result.success && result.stdout) {
         const orgs = JSON.parse(result.stdout);
-        // Return only the fields we need
-        return (orgs as RawGitHubOrganizationResponse[]).map((org) => ({
-          login: org.login as string,
-          id: org.id as number,
-          avatar_url: org.avatar_url as string,
-          description: org.description as string | null,
-        }));
+        const basic = (orgs as RawGitHubOrganizationResponse[]).map(mapOrg);
+        return enrichWithDisplayNames(basic);
       }
 
       return [];

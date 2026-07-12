@@ -54,6 +54,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showConnectionsButton, setShowConnectionsButton] = useState(false);
   const [showProcessesButton, setShowProcessesButton] = useState(false);
+  // Legacy Projects surface — hidden by default in favor of Home panel.
+  const [showProjectsButton, setShowProjectsButton] = useState(false);
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   const [inboxUnread, setInboxUnread] = useState(0);
   useEffect(() => {
@@ -61,6 +63,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowConnectionsButton(prefs.showConnectionsButton ?? false);
       setShowProcessesButton(prefs.showProcessesButton ?? false);
+      setShowProjectsButton(prefs.showProjectsButton ?? false);
       setShowOnboardingButton(prefs.showOnboardingButton ?? false);
     });
 
@@ -75,6 +78,9 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }
         if ('showProcessesButton' in detail) {
           setShowProcessesButton(detail.showProcessesButton ?? false);
+        }
+        if ('showProjectsButton' in detail) {
+          setShowProjectsButton(detail.showProjectsButton ?? false);
         }
         if ('showOnboardingButton' in detail) {
           setShowOnboardingButton(detail.showOnboardingButton ?? false);
@@ -177,17 +183,23 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     );
 
   const navItems: NavItem[] = [
-    // Home lives in the titlebar now (toggling overlay), not the sidebar.
+    // Titlebar "Dashboard" toggles the HomeView overlay; this is the
+    // home-panel workspace browse surface (web-app-style left rail).
     {
       id: 'home-panel',
       icon: <Home size={20} />,
       label: 'Home',
     },
-    {
-      id: 'projects',
-      icon: <GitIcon size={20} />,
-      label: 'Projects',
-    },
+    // Legacy Projects surface — opt-in via Settings (showProjectsButton).
+    ...(showProjectsButton
+      ? [
+          {
+            id: 'projects' as NavigationView,
+            icon: <GitIcon size={20} />,
+            label: 'Projects',
+          },
+        ]
+      : []),
     {
       id: 'inbox',
       icon: <Inbox size={20} />,

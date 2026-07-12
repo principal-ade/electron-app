@@ -233,6 +233,8 @@ export interface GitHubOrganization {
   id: number;
   avatar_url: string;
   description: string | null;
+  /** Org display name when available (from full org profile). Falls back to login in UI. */
+  name?: string | null;
 }
 
 export interface GitHubUser {

@@ -3,33 +3,33 @@
  *
  * The Home surface's left panel — a SlidePane carousel that mirrors the web
  * app's home left panel. The default "home" view shows a UserAboutCard
- * (GitHub profile) and HomeNavCards (6 clickable cards). Clicking a card
- * slides to that sub-view; a back button slides back to the overview.
+ * (GitHub profile) and HomeNavCards. Clicking a card slides to that sub-view;
+ * a back button slides back to the overview.
  *
- * This is the first consumer of the shared SlidePane component. Other surfaces
- * (Trails, Topics) can reuse SlidePane for their own carousel navigation.
+ * Nav order: Your Projects → Other Clones → Starred → (Principal) Collections / Recent.
+ * "Cloned only" is a switch inside Your Projects, not its own card.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { SlidePane, makeSlideDirection } from '../../components/SlidePane';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { GithubService } from '../../main-process-api/GithubService';
+import { GitService } from '../../main-process-api/GitService';
 import { payloadFromGithub, payloadFromLocalEntry } from '../../events/repositorySelected';
 import { useAuthState } from '../../hooks/useAuthState';
 import { UserAboutCard, type UserAboutInfo } from './UserAboutCard';
 import { HomeNavCards, type HomeNavKey, type HomeNavCardCounts } from './HomeNavCards';
+import { HomeClonedSubView } from './sub-views/HomeClonedSubView';
 import { HomeProjectsSubView, type ProjectSection } from './sub-views/HomeProjectsSubView';
 import { HomeStarredSubView } from './sub-views/HomeStarredSubView';
 import { HomeCollectionsSubView } from './sub-views/HomeCollectionsSubView';
-import { HomeBookmarksSubView } from './sub-views/HomeBookmarksSubView';
-import { HomeLibrarySubView } from './sub-views/HomeLibrarySubView';
 import { HomeRecentSubView } from './sub-views/HomeRecentSubView';
 
 // ---------------------------------------------------------------------------
-// HomeLeftPanel — the signed-in home's left rail, the user-based sibling of
-// the owner/repo explorer's TrailListPane. Uses the shared SlidePane for
+// HomeLeftPanel — the home left rail, the user-based sibling of the
+// owner/repo explorer's TrailListPane. Uses the shared SlidePane for
 // animated carousel navigation between the overview and destination views.
 // ---------------------------------------------------------------------------
 
@@ -39,13 +39,38 @@ export type HomeView = 'home' | HomeNavKey;
 const HOME_SLIDE_ORDER: readonly HomeView[] = [
   'home',
   'projects',
+  'other-clones',
   'starred',
   'collections',
-  'bookmarks',
-  'library',
   'recent',
 ];
 const homeSlideDirection = makeSlideDirection(HOME_SLIDE_ORDER as readonly string[]);
+
+async function loadGitIdentity(): Promise<UserAboutInfo | null> {
+  const dir = process.env.HOME || '/';
+  try {
+    const [nameResult, emailResult] = await Promise.all([
+      GitService.execCommand(dir, ['config', '--global', 'user.name']).catch(
+        () => ({ stdout: '' }),
+      ),
+      GitService.execCommand(dir, ['config', '--global', 'user.email']).catch(
+        () => ({ stdout: '' }),
+      ),
+    ]);
+    const name = nameResult.stdout.trim() || null;
+    const email = emailResult.stdout.trim() || null;
+    if (!name && !email) return null;
+    return {
+      source: 'git',
+      // login is required by the type; use email or name as a stable handle
+      login: email || name || 'git',
+      name,
+      email,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export interface HomeLeftPanelProps {
   repositories: AlexandriaEntry[];
@@ -56,34 +81,65 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   repositories,
   events,
 }) => {
-  const { user: authUser } = useAuthState();
+  // Principal app OAuth — gates collections/recent and re-runs profile load.
+  const { user: authUser, isAuthenticated: isPrincipalSignedIn } = useAuthState();
   const [view, setView] = useState<HomeView>('home');
 
-  // GitHub user profile (enriched)
-  const [githubUser, setGithubUser] = useState<UserAboutInfo | null>(null);
+  // Sidebar Home (and any navigate-to-home-panel) always returns to the
+  // about + nav-cards overview, even when a sub-view is already open.
+  useEffect(() => {
+    const handleShowOverview = () => setView('home');
+    window.addEventListener('home-panel:show-overview', handleShowOverview);
+    return () => {
+      window.removeEventListener(
+        'home-panel:show-overview',
+        handleShowOverview,
+      );
+    };
+  }, []);
+
+  // If the user signs out while on a Principal-only sub-view, drop back home.
+  useEffect(() => {
+    if (
+      !isPrincipalSignedIn &&
+      (view === 'collections' || view === 'recent')
+    ) {
+      setView('home');
+    }
+  }, [isPrincipalSignedIn, view]);
+
+  // About card: GitHub profile when CLI/API available, else git identity
+  const [aboutUser, setAboutUser] = useState<UserAboutInfo | null>(null);
   const [userLoading, setUserLoading] = useState(true);
 
-  // Projects data
+  // Projects data + owners the current user is considered to "own"
+  // (personal login + orgs). Used to split Other Clones from Your Projects.
   const [projectSections, setProjectSections] = useState<ProjectSection[] | null>(null);
+  const [ownedOwners, setOwnedOwners] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
 
-  // Counts
   const [counts, setCounts] = useState<HomeNavCardCounts>({});
 
-  // Fetch enriched GitHub user profile
+  // Prefer GitHub (token API or `gh` CLI via getCurrentUser). If that fails,
+  // fall back to global git config user.name / user.email so the about section
+  // still has something useful when the user isn't signed into the CLI.
   useEffect(() => {
-    if (!authUser?.login) {
-      setUserLoading(false);
-      return;
-    }
     let cancelled = false;
     setUserLoading(true);
-    GithubService.getCurrentUser()
-      .then((u) => {
-        if (!cancelled && u) {
-          setGithubUser({
+
+    (async () => {
+      try {
+        const u = await GithubService.getCurrentUser();
+        if (cancelled) return;
+        if (u) {
+          setAboutUser({
+            source: 'github',
             login: u.login,
             name: u.name,
+            email: u.email,
             avatar_url: u.avatar_url,
+            html_url: `https://github.com/${u.login}`,
             bio: u.bio,
             company: u.company,
             location: u.location,
@@ -92,16 +148,35 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
             public_repos: u.public_repos,
             created_at: u.created_at,
           });
+          return;
         }
-      })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setUserLoading(false); });
-    return () => { cancelled = true; };
+
+        const gitIdentity = await loadGitIdentity();
+        if (!cancelled) setAboutUser(gitIdentity);
+      } catch {
+        if (cancelled) return;
+        const gitIdentity = await loadGitIdentity();
+        if (!cancelled) setAboutUser(gitIdentity);
+      } finally {
+        if (!cancelled) setUserLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [authUser?.login]);
 
-  // Fetch repos for project sections + counts
+  // Fetch repos for project sections + counts — only when we have a GitHub identity
+  const githubLogin =
+    aboutUser?.source === 'github' ? aboutUser.login : authUser?.login ?? null;
+
   useEffect(() => {
-    if (!authUser?.login) return;
+    if (!githubLogin) {
+      setOwnedOwners(new Set());
+      setProjectSections(null);
+      return;
+    }
     let cancelled = false;
 
     const fetchRepos = async () => {
@@ -112,6 +187,12 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         ]);
 
         if (cancelled) return;
+
+        const owners = new Set<string>([githubLogin.toLowerCase()]);
+        for (const org of orgs) {
+          if (org.login) owners.add(org.login.toLowerCase());
+        }
+        setOwnedOwners(owners);
 
         // Group by owner
         const grouped = new Map<string, GitHubRepository[]>();
@@ -124,10 +205,25 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         // Fetch org repos
         const orgReposPromises = orgs.map(async (org) => {
           try {
-            const repos = await GithubService.getOrgRepositories(org.login, { perPage: 100, sort: 'updated', direction: 'desc' });
-            return { org: org.login, repos };
+            const repos = await GithubService.getOrgRepositories(org.login, {
+              perPage: 100,
+              sort: 'updated',
+              direction: 'desc',
+            });
+            return {
+              org: org.login,
+              // Prefer GitHub profile display name over login for section headers.
+              displayName: (org.name && org.name.trim()) || org.login,
+              repos,
+              avatar_url: org.avatar_url,
+            };
           } catch {
-            return { org: org.login, repos: [] as GitHubRepository[] };
+            return {
+              org: org.login,
+              displayName: (org.name && org.name.trim()) || org.login,
+              repos: [] as GitHubRepository[],
+              avatar_url: org.avatar_url,
+            };
           }
         });
 
@@ -146,22 +242,22 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 
         // Build sections: user first, then orgs
         const sections: ProjectSection[] = [];
-        const userReposList = grouped.get(authUser.login);
+        const userReposList = grouped.get(githubLogin);
         if (userReposList && userReposList.length > 0) {
           sections.push({
-            key: authUser.login,
+            key: githubLogin,
             label: 'Your repositories',
             repos: userReposList,
           });
         }
 
-        for (const org of orgs) {
-          const orgReposList = grouped.get(org.login);
+        for (const { org, displayName, avatar_url } of orgResults) {
+          const orgReposList = grouped.get(org);
           if (orgReposList && orgReposList.length > 0) {
             sections.push({
-              key: org.login,
-              label: org.login,
-              avatar_url: org.avatar_url,
+              key: org,
+              label: displayName,
+              avatar_url,
               repos: orgReposList,
             });
           }
@@ -170,13 +266,55 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         setProjectSections(sections);
         setCounts((prev) => ({ ...prev, projects: userRepos.length }));
       } catch {
-        if (!cancelled) setProjectSections([]);
+        if (!cancelled) {
+          setProjectSections([]);
+          setOwnedOwners(new Set([githubLogin.toLowerCase()]));
+        }
       }
     };
 
     void fetchRepos();
     return () => { cancelled = true; };
-  }, [authUser?.login]);
+  }, [githubLogin]);
+
+  // Local clones keyed for "Cloned only" in Your Projects.
+  const clonedFullNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const entry of repositories) {
+      const owner = entry.github?.owner;
+      const name = entry.github?.name;
+      if (owner && name) {
+        set.add(`${owner}/${name}`.toLowerCase());
+      }
+    }
+    return set;
+  }, [repositories]);
+
+  // Other Clones: local checkouts whose GitHub owner is not the user / their orgs.
+  // Untracked (no github owner) always land here.
+  const otherClones = useMemo(() => {
+    return repositories.filter((entry) => {
+      const owner = entry.github?.owner?.toLowerCase();
+      if (!owner) return true;
+      // No known identity yet → treat everything with an owner as "other"
+      // only if we have zero owned owners (still loading / signed out of gh).
+      // Once ownedOwners is populated, filter properly.
+      if (ownedOwners.size === 0) {
+        // If we have a githubLogin we haven't finished loading orgs for,
+        // still exclude the personal login as "yours".
+        if (githubLogin && owner === githubLogin.toLowerCase()) return false;
+        return true;
+      }
+      return !ownedOwners.has(owner);
+    });
+  }, [repositories, ownedOwners, githubLogin]);
+
+  useEffect(() => {
+    setCounts((prev) => ({
+      ...prev,
+      'other-clones': otherClones.length || null,
+    }));
+  }, [otherClones.length]);
 
   const go = useCallback((next: HomeView) => {
     setView(next);
@@ -212,6 +350,18 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     [events, repositories],
   );
 
+  const emitLocalEntrySelected = useCallback(
+    (entry: AlexandriaEntry) => {
+      events.emit({
+        type: 'repository:selected',
+        source: 'home-panel',
+        timestamp: Date.now(),
+        payload: payloadFromLocalEntry(entry),
+      });
+    },
+    [events],
+  );
+
   return (
     <div
       style={{
@@ -234,10 +384,11 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               flexDirection: 'column',
             }}
           >
-            <UserAboutCard info={githubUser} loading={userLoading} />
+            <UserAboutCard info={aboutUser} loading={userLoading} />
             <HomeNavCards
               counts={counts}
               activeView={null}
+              isPrincipalSignedIn={isPrincipalSignedIn}
               onOpenView={(key) => go(key)}
             />
           </div>
@@ -245,8 +396,18 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
           <HomeProjectsSubView
             key="projects"
             sections={projectSections}
+            clonedFullNames={clonedFullNames}
             onBack={() => go('home')}
             onSelectRepo={(repo) => emitRepoSelected(repo)}
+          />
+        ) : view === 'other-clones' ? (
+          <HomeClonedSubView
+            key="other-clones"
+            repositories={otherClones}
+            label="Other Clones"
+            emptyMessage="No other clones yet. Local checkouts that aren't yours will show up here."
+            onBack={() => go('home')}
+            onSelectEntry={emitLocalEntrySelected}
           />
         ) : view === 'starred' ? (
           <HomeStarredSubView
@@ -254,22 +415,12 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
             onBack={() => go('home')}
             onSelectRepo={(repo) => emitRepoSelected(repo)}
           />
-        ) : view === 'collections' ? (
+        ) : view === 'collections' && isPrincipalSignedIn ? (
           <HomeCollectionsSubView
             key="collections"
             onBack={() => go('home')}
           />
-        ) : view === 'bookmarks' ? (
-          <HomeBookmarksSubView
-            key="bookmarks"
-            onBack={() => go('home')}
-          />
-        ) : view === 'library' ? (
-          <HomeLibrarySubView
-            key="library"
-            onBack={() => go('home')}
-          />
-        ) : view === 'recent' ? (
+        ) : view === 'recent' && isPrincipalSignedIn ? (
           <HomeRecentSubView
             key="recent"
             onBack={() => go('home')}

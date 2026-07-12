@@ -1,17 +1,16 @@
 /**
  * HomeNavCards
  *
- * The 6 clickable navigation cards shown on the Home panel's default view.
- * Ported from the web app's HomeNavCards, adapted to inline styles.
- * Each card has an icon, label, description, optional count, and a chevron.
+ * Clickable navigation cards on the Home panel's default view.
+ * Order: Your Projects → Other Clones → Starred → (Principal) Collections / Recent.
+ * "Cloned only" lives as a switch inside Your Projects, not a separate card.
  */
 
 import React from 'react';
 import {
-  Bookmark,
   ChevronRight,
   FolderGit2,
-  Footprints,
+  HardDrive,
   History,
   Layers,
   Star,
@@ -20,18 +19,16 @@ import { useTheme } from '@principal-ade/industry-theme';
 
 export type HomeNavKey =
   | 'projects'
+  | 'other-clones'
   | 'starred'
   | 'collections'
-  | 'bookmarks'
-  | 'library'
   | 'recent';
 
 export interface HomeNavCardCounts {
   projects?: number | null;
+  'other-clones'?: number | null;
   starred?: number | null;
   collections?: number | null;
-  bookmarks?: number | null;
-  library?: number | null;
   recent?: number | null;
 }
 
@@ -40,6 +37,8 @@ export interface HomeNavCardMeta {
   icon: React.ReactNode;
   label: string;
   description: string;
+  /** When true, only shown if the user is signed in with Principal. */
+  requiresPrincipal?: boolean;
 }
 
 export const HOME_NAV_CARDS: HomeNavCardMeta[] = [
@@ -48,6 +47,12 @@ export const HOME_NAV_CARDS: HomeNavCardMeta[] = [
     icon: <FolderGit2 size={18} />,
     label: 'Your Projects',
     description: "Your repos and your orgs' repos",
+  },
+  {
+    key: 'other-clones',
+    icon: <HardDrive size={18} />,
+    label: 'Other Clones',
+    description: "Local clones you don't own",
   },
   {
     key: 'starred',
@@ -60,24 +65,14 @@ export const HOME_NAV_CARDS: HomeNavCardMeta[] = [
     icon: <Layers size={18} />,
     label: 'Collections',
     description: 'Your curated collections of repos',
-  },
-  {
-    key: 'bookmarks',
-    icon: <Bookmark size={18} />,
-    label: 'Bookmarks',
-    description: 'Saved topics and trails',
-  },
-  {
-    key: 'library',
-    icon: <Footprints size={18} />,
-    label: 'Your Trails & Topics',
-    description: "Trails and topics you've published",
+    requiresPrincipal: true,
   },
   {
     key: 'recent',
     icon: <History size={18} />,
     label: 'Recently Visited',
     description: "Trails, topics, and projects you've opened",
+    requiresPrincipal: true,
   },
 ];
 
@@ -85,18 +80,25 @@ export interface HomeNavCardsProps {
   counts?: HomeNavCardCounts;
   activeView?: HomeNavKey | null;
   onOpenView: (key: HomeNavKey) => void;
+  /** Principal (app OAuth) sign-in — gates collections / recently visited. */
+  isPrincipalSignedIn?: boolean;
 }
 
 export const HomeNavCards: React.FC<HomeNavCardsProps> = ({
   counts,
   activeView = null,
   onOpenView,
+  isPrincipalSignedIn = false,
 }) => {
   const { theme } = useTheme();
 
+  const cards = HOME_NAV_CARDS.filter(
+    (card) => !card.requiresPrincipal || isPrincipalSignedIn,
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 16px' }}>
-      {HOME_NAV_CARDS.map((card) => {
+      {cards.map((card) => {
         const count = counts?.[card.key];
         const active = activeView === card.key;
         return (

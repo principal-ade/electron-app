@@ -23,6 +23,7 @@ export const GeneralSettings: React.FC = () => {
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
   const [showProcessesButton, setShowProcessesButton] = useState(false);
+  const [showProjectsButton, setShowProjectsButton] = useState(false);
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   const [presenceAutoConnect, setPresenceAutoConnect] = useState(
     USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
@@ -59,6 +60,7 @@ export const GeneralSettings: React.FC = () => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
       setShowProcessesButton(prefs.showProcessesButton ?? false);
+      setShowProjectsButton(prefs.showProjectsButton ?? false);
       setShowOnboardingButton(prefs.showOnboardingButton ?? false);
       setPresenceAutoConnect(
         prefs.presenceAutoConnect ?? USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
@@ -921,6 +923,102 @@ export const GeneralSettings: React.FC = () => {
                     height: '18px',
                     width: '18px',
                     left: showProcessesButton ? '27px' : '3px',
+                    bottom: '3px',
+                    backgroundColor: theme.colors.background,
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                  }}
+                />
+              </span>
+            </label>
+          </div>
+
+          {/* Legacy Projects side-nav button */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '16px',
+              marginTop: '16px',
+              paddingTop: '16px',
+              borderTop: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <label
+                htmlFor="showProjectsButton"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  display: 'block',
+                  marginBottom: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Show Projects Button
+              </label>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  lineHeight: '1.5',
+                }}
+              >
+                When enabled, the legacy Projects button appears in the side
+                navigation. When disabled (default), project browsing lives on
+                the Home panel instead.
+              </p>
+            </div>
+            <label
+              style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '48px',
+                height: '24px',
+                flexShrink: 0,
+              }}
+            >
+              <input
+                id="showProjectsButton"
+                type="checkbox"
+                checked={showProjectsButton}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  setShowProjectsButton(newValue);
+                  await UserPreferencesService.updatePreferences({
+                    showProjectsButton: newValue,
+                  });
+                }}
+                style={{
+                  opacity: 0,
+                  width: 0,
+                  height: 0,
+                }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: showProjectsButton
+                    ? theme.colors.primary
+                    : theme.colors.border,
+                  transition: '0.3s',
+                  borderRadius: '24px',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    content: '',
+                    height: '18px',
+                    width: '18px',
+                    left: showProjectsButton ? '27px' : '3px',
                     bottom: '3px',
                     backgroundColor: theme.colors.background,
                     transition: '0.3s',

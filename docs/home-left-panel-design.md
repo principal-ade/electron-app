@@ -10,7 +10,7 @@
 Users who primarily **browse** repositories (rather than clone/develop them)
 need a landing surface that feels like the web app's home page — a profile card
 and a set of nav cards that drill into their projects, starred repos,
-collections, bookmarks, trails, and recent items. The existing Projects left
+collections, and recent items. The existing Projects left
 panel is clone/dev-oriented (auth settings, feed modes, terminal forwarders);
 this new panel is browse-oriented and sits **alongside** Projects as a separate
 workspace surface.
@@ -28,8 +28,6 @@ The web app's home left panel (`web-ade/src/components/home/`) is a
 | `HomeProjectsView.tsx` | `src/renderer/panels/home-panel/sub-views/HomeProjectsSubView.tsx` |
 | `HomeStarredView.tsx` | `src/renderer/panels/home-panel/sub-views/HomeStarredSubView.tsx` |
 | `HomeCollectionsView.tsx` | `src/renderer/panels/home-panel/sub-views/HomeCollectionsSubView.tsx` |
-| `HomeTrailsTopicsView.tsx` (bookmarks) | `src/renderer/panels/home-panel/sub-views/HomeBookmarksSubView.tsx` |
-| `HomeTrailsTopicsView.tsx` (library) | `src/renderer/panels/home-panel/sub-views/HomeLibrarySubView.tsx` |
 | `HomeRecentlyVisitedView.tsx` | `src/renderer/panels/home-panel/sub-views/HomeRecentSubView.tsx` |
 | `SlidePane.tsx` | `src/renderer/components/SlidePane/SlidePane.tsx` (shared) |
 | `RailPaneHeader.tsx` | `src/renderer/panels/home-panel/sub-views/SubViewHeader.tsx` |
@@ -51,9 +49,10 @@ The web app's home left panel (`web-ade/src/components/home/`) is a
    `WebAdeService`, `TopicService`) and the `useAuthState` hook.
 
 4. **View ID is `home-panel`, not `home`.** The existing `home` NavigationView
-   is the overlay `HomeView` dashboard (toggled from the titlebar).
-   `home-panel` is a workspace surface that lives in the persistent
-   `PrincipalPortal` / `WorkspaceShell` — a different layer.
+   is the overlay `HomeView` dashboard (toggled from the titlebar as
+   **Dashboard**). `home-panel` is the sidebar **Home** workspace surface that
+   lives in the persistent `PrincipalPortal` / `WorkspaceShell` — a different
+   layer.
 
 ## Architecture
 
@@ -67,11 +66,10 @@ IntegratedShell (owns activeView state)
             └── HomeLeftPanel
                  ├── SlidePane (shared animated carousel)
                  │    ├── [view='home']  → UserAboutCard + HomeNavCards
-                 │    ├── [view='projects']  → HomeProjectsSubView
+                 │    ├── [view='projects']  → HomeProjectsSubView (+ Cloned only switch)
+                 │    ├── [view='other-clones'] → HomeClonedSubView
                  │    ├── [view='starred']   → HomeStarredSubView
                  │    ├── [view='collections'] → HomeCollectionsSubView
-                 │    ├── [view='bookmarks'] → HomeBookmarksSubView
-                 │    ├── [view='library']   → HomeLibrarySubView
                  │    └── [view='recent']    → HomeRecentSubView
                  └── (emits repository:selected on the shell's local events bus)
 ```
@@ -94,7 +92,7 @@ keys. The Home panel's ordering:
 
 ```ts
 const HOME_SLIDE_ORDER = [
-  'home', 'projects', 'starred', 'collections', 'bookmarks', 'library', 'recent',
+  'home', 'projects', 'other-clones', 'starred', 'collections', 'recent',
 ];
 ```
 
@@ -111,14 +109,17 @@ The overview shows two stacked blocks:
    followers/following). Includes a skeleton loading state. Fetches via
    `GithubService.getCurrentUser()` + `useAuthState()`.
 
-2. **`HomeNavCards`** — 6 clickable cards, each with an icon, label,
+2. **`HomeNavCards`** — clickable cards, each with an icon, label,
    description, optional count badge, and a chevron-right:
-   - Your Projects → grouped repos (user's own + org repos)
+   - Your Projects → grouped repos (user's own + org repos); **Cloned only**
+     switch filters to repos that already have a local Alexandria clone
+   - Other Clones → local clones whose owner is not the user / their orgs
    - Starred Projects → flat starred repo list with filter + sort
-   - Collections → starred collections from web-ade
-   - Bookmarks → inbox trails (proxied; dedicated bookmarks API is WIP)
-   - Your Trails & Topics → local topics from `TopicService`
-   - Recently Visited → recent projects from localStorage
+   - Collections → starred collections from web-ade (Principal sign-in)
+   - Recently Visited → recent projects from localStorage (Principal sign-in)
+
+   Bookmarks and Trails/Topics are available on their own sidebar surfaces
+   and are not duplicated here.
 
 ### Sub-views
 
@@ -128,12 +129,11 @@ inside the SlidePane — only the active view is mounted.
 
 | Sub-view | Data source | Notes |
 | --- | --- | --- |
-| Projects | `GithubService.getUserRepositories` + `getOrgRepositories` | Grouped by owner with sticky section headers; filter when ≥ 8 repos |
+| Projects | `GithubService.getUserRepositories` + `getOrgRepositories` | Grouped by owner; **Cloned only** switch vs local Alexandria entries |
+| Other Clones | `repositories` filtered by non-owned owners | StarredRepoCard rows; untracked + third-party local clones |
 | Starred | `GithubService.getUserStarredRepositories` | Filter + sort (A-Z / Stars / Updated) |
-| Collections | `WebAdeService.getStarredCollections` | Flat list; create/detail deferred |
-| Bookmarks | `WebAdeService.getInbox` | Proxied from inbox until dedicated bookmarks API lands |
-| Library | `TopicService.getTopics` | Local topics only; trails listing is WIP |
-| Recent | `localStorage.getItem('recent-repositories')` | Projects only; trails deferred |
+| Collections | `WebAdeService.getStarredCollections` | Flat list; create/detail deferred; Principal sign-in required |
+| Recent | `localStorage.getItem('recent-repositories')` | Projects only; trails deferred; Principal sign-in required |
 
 ## Integration contract
 
@@ -181,7 +181,8 @@ the shared helpers — the same pattern used by `ProjectsList` and
   about the Home panel's specific views.
 
 - **`home-panel` as the view ID.** Avoids collision with the existing `home`
-  overlay view (the `HomeView` dashboard toggled from the titlebar).
+  overlay view (the `HomeView` dashboard toggled from the titlebar as
+  **Dashboard**).
 
 - **Inline styles, not Tailwind.** Matches the electron app's conventions.
 
@@ -189,8 +190,6 @@ the shared helpers — the same pattern used by `ProjectsList` and
 
 | Gap | Status | Notes |
 | --- | --- | --- |
-| Bookmarks | Proxied from inbox | Dedicated bookmarks API (`getBookmarkedTrails` / `getBookmarkedTopics`) doesn't exist in the electron app yet |
-| Library — trails | WIP | No local trails listing API; only topics shown via `TopicService.getTopics()` |
 | Recently visited — trails | Deferred | Only projects from localStorage; trails deferred until a recent-trails listing is available |
 | Collections — create/detail | Deferred | Collection create modal and detail drilldown are not wired yet |
 | Repo click → right pane | Not wired | `repository:selected` is emitted but the right pane in `WorkspaceShell` is a placeholder; the profile panel renders as a tab via the forwarder |
@@ -213,8 +212,7 @@ the shared helpers — the same pattern used by `ProjectsList` and
 | `src/renderer/panels/home-panel/sub-views/HomeProjectsSubView.tsx` | Projects sub-view |
 | `src/renderer/panels/home-panel/sub-views/HomeStarredSubView.tsx` | Starred sub-view |
 | `src/renderer/panels/home-panel/sub-views/HomeCollectionsSubView.tsx` | Collections sub-view |
-| `src/renderer/panels/home-panel/sub-views/HomeBookmarksSubView.tsx` | Bookmarks sub-view |
-| `src/renderer/panels/home-panel/sub-views/HomeLibrarySubView.tsx` | Library sub-view |
+
 | `src/renderer/panels/home-panel/sub-views/HomeRecentSubView.tsx` | Recently visited sub-view |
 
 ### Modified files

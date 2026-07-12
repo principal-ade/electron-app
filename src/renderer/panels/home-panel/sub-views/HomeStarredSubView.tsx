@@ -2,6 +2,8 @@
  * HomeStarredSubView
  *
  * The "Starred Projects" sub-view: filter + sort + flat repo list.
+ * Rows use the shared StarredRepoCard (same as Projects → Starred and
+ * Home → Other Clones).
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -9,7 +11,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Search, Star } from 'lucide-react';
 import { GithubService } from '../../../main-process-api/GithubService';
 import type { GitHubRepository } from '../../../../shared/main-process-api-interfaces/GitHubAPI';
-import { getLanguageColor } from '../languageColors';
+import { StarredRepoCard } from '../../cards/StarredRepoCard';
 import { SubViewHeader } from './SubViewHeader';
 
 type SortKey = 'name' | 'stars' | 'updated';
@@ -31,9 +33,15 @@ export const HomeStarredSubView: React.FC<HomeStarredSubViewProps> = ({
   useEffect(() => {
     let cancelled = false;
     GithubService.getUserStarredRepositories({ perPage: 100 })
-      .then((r) => { if (!cancelled) setRepos(r); })
-      .catch(() => { if (!cancelled) setRepos([]); });
-    return () => { cancelled = true; };
+      .then((r) => {
+        if (!cancelled) setRepos(r);
+      })
+      .catch(() => {
+        if (!cancelled) setRepos([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filtered = useMemo(() => {
@@ -49,8 +57,12 @@ export const HomeStarredSubView: React.FC<HomeStarredSubViewProps> = ({
       : repos;
 
     return [...items].sort((a, b) => {
-      if (sort === 'stars') return (b.stargazers_count ?? 0) - (a.stargazers_count ?? 0);
-      if (sort === 'updated') return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      if (sort === 'stars')
+        return (b.stargazers_count ?? 0) - (a.stargazers_count ?? 0);
+      if (sort === 'updated')
+        return (
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        );
       return a.name.localeCompare(b.name);
     });
   }, [repos, filter, sort]);
@@ -88,6 +100,7 @@ export const HomeStarredSubView: React.FC<HomeStarredSubViewProps> = ({
               color: theme.colors.text,
               fontFamily: theme.fonts.body,
               fontSize: theme.fontSizes[1],
+              border: 'none',
             }}
           />
           <select
@@ -111,7 +124,14 @@ export const HomeStarredSubView: React.FC<HomeStarredSubViewProps> = ({
         </div>
       )}
 
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          padding: '4px 6px',
+        }}
+      >
         {filtered === null ? (
           <ListMessage>Loading starred repos…</ListMessage>
         ) : filtered.length === 0 ? (
@@ -121,123 +141,28 @@ export const HomeStarredSubView: React.FC<HomeStarredSubViewProps> = ({
               : `No starred repos match "${filter}".`}
           </ListMessage>
         ) : (
-          filtered.map((repo) => (
-            <StarredRow key={repo.id} repo={repo} onSelect={() => onSelectRepo?.(repo)} />
-          ))
+          filtered.map((repo) => {
+            const [owner, name] = repo.full_name.split('/');
+            return (
+              <StarredRepoCard
+                key={repo.id}
+                repo={{
+                  owner: owner || repo.owner?.login || 'unknown',
+                  name: name || repo.name,
+                  ownerAvatarUrl: repo.owner?.avatar_url,
+                  description: repo.description,
+                  language: repo.language,
+                  stargazersCount: repo.stargazers_count,
+                }}
+                onClick={() => onSelectRepo?.(repo)}
+              />
+            );
+          })
         )}
       </div>
     </>
   );
 };
-
-function StarredRow({
-  repo,
-  onSelect,
-}: {
-  repo: GitHubRepository;
-  onSelect: () => void;
-}) {
-  const { theme } = useTheme();
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <div
-      style={{ borderBottom: `1px solid ${theme.colors.border}` }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <button
-        type="button"
-        onClick={onSelect}
-        style={{
-          width: '100%',
-          textAlign: 'left',
-          padding: '10px 16px',
-          background: hovered
-            ? `color-mix(in srgb, ${theme.colors.primary} 6%, ${theme.colors.background})`
-            : 'transparent',
-          color: theme.colors.text,
-          cursor: 'pointer',
-          border: 'none',
-          display: 'block',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          {repo.owner?.avatar_url && (
-            <img
-              src={repo.owner.avatar_url}
-              alt=""
-              width={20}
-              height={20}
-              style={{ borderRadius: 4, flexShrink: 0 }}
-            />
-          )}
-          <span
-            style={{
-              fontSize: theme.fontSizes[2],
-              fontWeight: 600,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {repo.full_name}
-          </span>
-        </div>
-
-        {repo.description && (
-          <div
-            style={{
-              marginTop: 4,
-              color: theme.colors.textMuted,
-              fontSize: theme.fontSizes[0],
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {repo.description}
-          </div>
-        )}
-
-        <div
-          style={{
-            marginTop: 4,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            color: theme.colors.textMuted,
-            fontSize: theme.fontSizes[0],
-          }}
-        >
-          {(repo.stargazers_count ?? 0) > 0 && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Star size={11} />
-              {repo.stargazers_count!.toLocaleString()}
-            </span>
-          )}
-          {repo.language && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: getLanguageColor(repo.language),
-                  display: 'inline-block',
-                }}
-              />
-              {repo.language}
-            </span>
-          )}
-          <span>
-            Updated {new Date(repo.updated_at).toLocaleDateString()}
-          </span>
-        </div>
-      </button>
-    </div>
-  );
-}
 
 function ListMessage({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();

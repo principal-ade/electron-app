@@ -7,7 +7,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowCard } from './WindowCard';
 
 // NOTE: Cmd+' was reclaimed by the principal window's IntegratedShell to toggle
-// the Home overlay. The Window Switcher toggle shortcut is removed — only the
+// the Dashboard overlay. The Window Switcher toggle shortcut is removed — only the
 // Cmd+; cycle mode remains in main.ts.
 
 type SwitcherWindow = {

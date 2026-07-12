@@ -131,6 +131,8 @@ export interface RawGitHubOrganizationResponse {
   id: unknown;
   avatar_url: unknown;
   description: unknown;
+  /** Present on full org profiles (`GET /orgs/{org}`), not always on list endpoints. */
+  name?: unknown;
 }
 
 /** Raw GitHub API license template response */

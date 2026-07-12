@@ -6,7 +6,13 @@ import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls'
 import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
-import { Home, Layers, FolderPlus, FilePlus2, Server } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Layers,
+  FolderPlus,
+  FilePlus2,
+  Server,
+} from 'lucide-react';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 import { CreateRepositoryInWorkspaceModal } from '../../../panels/components/CreateRepositoryInWorkspaceModal';
@@ -36,9 +42,9 @@ interface IntegratedTitlebarProps {
   onShowOnboardingWizard?: () => void;
   hideSearch?: boolean;
   onAddProject?: () => void;
-  /** Toggle the Home overlay on/off. */
+  /** Toggle the Dashboard overlay (`home` view) on/off. */
   onToggleHome?: () => void;
-  /** Whether the Home overlay is currently showing (drives the toggled state). */
+  /** Whether the Dashboard overlay is currently showing (drives the toggled state). */
   isHomeActive?: boolean;
 }
 
@@ -167,9 +173,10 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         zIndex: 100,
       }}
     >
-      {/* Home toggle — left side, clear of the macOS traffic lights. Opens the
-          Home overlay, or drops back to the last workspace surface when it's
-          already showing. */}
+      {/* Dashboard toggle — left side, clear of the macOS traffic lights. Opens
+          the Dashboard overlay (`home` view), or drops back to the last
+          workspace surface when it's already showing. Sidebar "Home" is the
+          separate home-panel browse surface. */}
       {onToggleHome && (
         <div
           style={{
@@ -181,7 +188,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         >
           <button
             onClick={onToggleHome}
-            title={isHomeActive ? 'Close Home' : 'Home'}
+            title={isHomeActive ? 'Close Dashboard' : 'Dashboard'}
             aria-pressed={isHomeActive}
             style={{
               display: 'flex',
@@ -217,8 +224,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
               }
             }}
           >
-            <Home size={16} />
-            <span>Home</span>
+            <LayoutDashboard size={16} />
+            <span>Dashboard</span>
           </button>
         </div>
       )}

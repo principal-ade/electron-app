@@ -216,7 +216,12 @@ export const IntegratedShell: React.FC = () => {
           // Migrate removed views to 'projects' (removed 2026-04-19 in commit b742f44b2).
           // 'feed' is the former id for the Projects view, renamed 2026-06-17.
           const legacyViews = ['local-projects', 'remote-projects', 'starred-projects', 'network', 'feed'];
-          const view = legacyViews.includes(savedView) ? 'projects' : savedView;
+          let view = legacyViews.includes(savedView) ? 'projects' : savedView;
+          // Legacy Projects side-nav is hidden by default (showProjectsButton).
+          // If the saved surface is projects but the button is off, land on Home.
+          if (view === 'projects' && !(prefs.showProjectsButton ?? false)) {
+            view = 'home-panel';
+          }
           setActiveView(view as NavigationView);
         }
 
@@ -439,6 +444,13 @@ export const IntegratedShell: React.FC = () => {
       setSettingsCategory(undefined);
     }
 
+    // Sidebar Home always lands on the about/overview surface of the home
+    // panel — including when Home is already active but a sub-view (Your
+    // Projects, Other Clones, …) is showing.
+    if (view === 'home-panel') {
+      window.dispatchEvent(new CustomEvent('home-panel:show-overview'));
+    }
+
     // Only save preference after initial load to avoid race conditions
     if (preferencesLoaded) {
       try {
@@ -453,12 +465,12 @@ export const IntegratedShell: React.FC = () => {
     }
   }, [preferencesLoaded]);
 
-  // Toggle the Home overlay from the titlebar: open Home if we're not already
+  // Toggle the Dashboard overlay from the titlebar: open Dashboard if we're not already
   // on it, otherwise drop back to the last workspace surface (or Projects on a
   // cold start that never opened one).
   const handleToggleHome = useCallback(() => {
     handleViewChange(
-      activeView === 'home' ? (lastWorkspaceView ?? 'projects') : 'home'
+      activeView === 'home' ? (lastWorkspaceView ?? 'home-panel') : 'home'
     );
   }, [activeView, lastWorkspaceView, handleViewChange]);
 
@@ -658,12 +670,12 @@ export const IntegratedShell: React.FC = () => {
     };
   }, [events, handleToggleSidebar, handleToggleRightSidebar, handleViewChange]);
 
-  // Cmd+': toggle home overlay
+  // Cmd+': toggle dashboard overlay
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.code === 'Quote') {
         e.preventDefault();
-        handleViewChange(activeViewRef.current === 'home' ? (lastWorkspaceView ?? 'projects') : 'home');
+        handleViewChange(activeViewRef.current === 'home' ? (lastWorkspaceView ?? 'home-panel') : 'home');
       }
     };
     window.addEventListener('keydown', handler);
@@ -674,7 +686,7 @@ export const IntegratedShell: React.FC = () => {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isWorkspaceView(activeViewRef.current)) {
-        handleViewChange(lastWorkspaceView ?? 'projects');
+        handleViewChange(lastWorkspaceView ?? 'home-panel');
       }
     };
     window.addEventListener('keydown', handler);
@@ -838,7 +850,7 @@ export const IntegratedShell: React.FC = () => {
                     {overlayView === 'home' && <HomeView />}
                     {overlayView === 'onboarding' && (
                       <OnboardingView
-                        onComplete={() => handleViewChange('projects')}
+                        onComplete={() => handleViewChange('home-panel')}
                       />
                     )}
                     {overlayView === 'monitoring' && (
@@ -876,7 +888,7 @@ export const IntegratedShell: React.FC = () => {
           <OnboardingWizard
             onComplete={async () => {
               setShowOnboardingWizard(false);
-              handleViewChange('projects');
+              handleViewChange('home-panel');
               try {
                 await UserPreferencesService.updatePreferences({
                   onboardingCompleted: true
