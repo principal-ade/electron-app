@@ -226,6 +226,11 @@ export const IntegratedShell: React.FC = () => {
         }
 
         setViewCollapsedStates(newViewStates);
+
+        // Show onboarding wizard on first launch
+        if (!prefs.onboardingCompleted) {
+          setShowOnboardingWizard(true);
+        }
       } catch (error) {
         console.error('Failed to load navigation preference:', error);
       } finally {
@@ -664,6 +669,7 @@ export const IntegratedShell: React.FC = () => {
                   window.dispatchEvent(new CustomEvent('trails:add-project'))
               : undefined
           }
+          onShowOnboardingWizard={() => setShowOnboardingWizard(true)}
         />
 
         {/* Main content area with rounded corners for Slack-style cutout */}
@@ -801,8 +807,16 @@ export const IntegratedShell: React.FC = () => {
           zIndex: 10000
         }}>
           <OnboardingWizard
-            onComplete={() => {
+            onComplete={async () => {
               setShowOnboardingWizard(false);
+              handleViewChange('projects');
+              try {
+                await UserPreferencesService.updatePreferences({
+                  onboardingCompleted: true
+                });
+              } catch (error) {
+                console.error('Failed to save onboarding completion:', error);
+              }
             }}
           />
         </div>

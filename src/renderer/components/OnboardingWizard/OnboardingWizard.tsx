@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme, Theme } from '@principal-ade/industry-theme';
-import { FileCityLogo } from '@principal-ai/logo-component';
+import { FileCityLogo, FileCityLogoAnimated } from '@principal-ai/logo-component';
 import {
   FolderGit2,
   ArrowRight,
@@ -8,11 +8,12 @@ import {
   FolderPlus,
   Folder,
   FolderTree,
-  MoveRight,
   AlertCircle,
-  Info
+  Info,
+  Pencil
 } from 'lucide-react';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
+import { GitService } from '../../main-process-api/GitService';
 
 // Git Logo Component
 const GitLogo: React.FC<{ size?: number; color?: string }> = ({
@@ -53,10 +54,10 @@ const GitHubLogo: React.FC<{ size?: number; color?: string }> = ({
   </svg>
 );
 
-type OnboardingStep = 'welcome' | 'choose-method' | 'folder-selection' | 'scanning' | 'repo-location' | 'home-directory' | 'organize-projects' | 'github-connect' | 'ready';
+type OnboardingStep = 'welcome' | 'git-config' | 'choose-method' | 'folder-selection' | 'scanning' | 'repo-location' | 'home-directory' | 'github-connect' | 'ready';
 
 type RepoLocationMode = 'single' | 'multiple' | 'add-list';
-type SetupMethod = 'scan' | 'select' | null;
+type SetupMethod = 'scan' | 'select' | 'later' | null;
 
 interface OnboardingWizardProps {
   repoLocationMode?: RepoLocationMode;
@@ -101,20 +102,25 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [hasStarted, setHasStarted] = useState(false);
   const [showContent, setShowContent] = useState(true);
   const [devDirectoryName, setDevDirectoryName] = useState('Development');
-  const [shouldOrganize, setShouldOrganize] = useState(true);
+  const [gitConfigLoaded, setGitConfigLoaded] = useState(false);
+  const [gitVersion, setGitVersion] = useState('');
+  const [gitUserName, setGitUserName] = useState('');
+  const [gitUserEmail, setGitUserEmail] = useState('');
 
   // Get active steps based on user's choice
   const getActiveSteps = (): OnboardingStep[] => {
-    const baseSteps: OnboardingStep[] = ['welcome', 'choose-method'];
+    const baseSteps: OnboardingStep[] = ['welcome', 'git-config', 'choose-method'];
 
     if (setupMethod === 'scan') {
-      return [...baseSteps, 'folder-selection', 'scanning', 'home-directory', 'organize-projects', 'github-connect', 'ready'];
+      return [...baseSteps, 'folder-selection', 'scanning', 'home-directory', 'github-connect', 'ready'];
     } else if (setupMethod === 'select') {
-      return [...baseSteps, 'repo-location', 'home-directory', 'organize-projects', 'github-connect', 'ready'];
+      return [...baseSteps, 'repo-location', 'home-directory', 'github-connect', 'ready'];
+    } else if (setupMethod === 'later') {
+      return [...baseSteps, 'github-connect', 'ready'];
     }
 
     // Before method is chosen, show all possible steps
-    return ['welcome', 'choose-method', 'home-directory', 'organize-projects', 'github-connect', 'ready'];
+    return ['welcome', 'git-config', 'choose-method', 'home-directory', 'github-connect', 'ready'];
   };
 
   const activeSteps = getActiveSteps();
@@ -130,10 +136,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     if (currentStep === 'folder-selection' && topLevelFolders.length === 0) {
       setIsLoadingFolders(true);
       fileSystemService.getTopLevelFolders().then((folders) => {
-        setTopLevelFolders(folders.map(f => ({
-          ...f,
-          selected: f.category === 'dev' // Pre-select dev folders
-        })));
+        setTopLevelFolders(folders
+          .filter(f => !f.name.startsWith('.'))
+          .map(f => ({
+            ...f,
+            selected: f.category === 'dev' // Pre-select dev folders
+          })));
         setIsLoadingFolders(false);
       });
     }
@@ -154,10 +162,54 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, fileSystemService]);
 
+  // Fetch git config when entering git-config step
+  useEffect(() => {
+    if (currentStep === 'git-config' && !gitConfigLoaded) {
+      const fetchGitConfig = async () => {
+        try {
+          const versionResult = await GitService.execCommand('', ['--version']);
+          setGitVersion(versionResult.stdout.trim());
+
+          try {
+            const nameResult = await GitService.execCommand('', ['config', '--global', 'user.name']);
+            setGitUserName(nameResult.stdout.trim());
+          } catch {
+            setGitUserName('');
+          }
+
+          try {
+            const emailResult = await GitService.execCommand('', ['config', '--global', 'user.email']);
+            setGitUserEmail(emailResult.stdout.trim());
+          } catch {
+            setGitUserEmail('');
+          }
+        } catch {
+          // git not installed — step will show error
+        } finally {
+          setGitConfigLoaded(true);
+        }
+      };
+      fetchGitConfig();
+    }
+  }, [currentStep, gitConfigLoaded]);
+
+  const handleSaveGitConfig = async (name: string, email: string) => {
+    if (name !== gitUserName) {
+      await GitService.execCommand('', ['config', '--global', 'user.name', name]);
+      setGitUserName(name);
+    }
+    if (email !== gitUserEmail) {
+      await GitService.execCommand('', ['config', '--global', 'user.email', email]);
+      setGitUserEmail(email);
+    }
+  };
+
   const startScanning = async () => {
     setIsScanning(true);
     setFoundProjects([]);
     setScanProgress({ current: 0, total: 0, currentFolder: '', foundRepos: 0 });
+
+    const scanStartTime = Date.now();
 
     try {
       const selectedFolders = topLevelFolders.filter(f => f.selected).map(f => f.path);
@@ -173,13 +225,18 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           registered: repo.registered,
           alreadyRegistered: repo.alreadyRegistered,
           registrationError: repo.registrationError
-        }));
+        })).sort((a, b) => a.name.localeCompare(b.name));
         setFoundProjects(projects);
       }
     } catch (error) {
       console.error('Scanning failed:', error);
     } finally {
-      setIsScanning(false);
+      // Ensure scanning animation shows for at least 2 seconds
+      const elapsed = Date.now() - scanStartTime;
+      const remaining = Math.max(0, 2000 - elapsed);
+      setTimeout(() => {
+        setIsScanning(false);
+      }, remaining);
     }
   };
 
@@ -188,7 +245,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
     // Step 1: Fade out welcome content (300ms)
     setTimeout(() => {
-      setCurrentStep('choose-method');
+      const nextIndex = activeSteps.indexOf('welcome') + 1;
+      setCurrentStep(activeSteps[nextIndex] || 'choose-method');
       setHasStarted(true);
 
       // Step 2: Nav slides up (400ms animation in CSS)
@@ -273,6 +331,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const canProceed = () => {
+    if (currentStep === 'git-config') {
+      return gitConfigLoaded;
+    }
     if (currentStep === 'choose-method') {
       return setupMethod !== null;
     }
@@ -334,6 +395,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <WelcomeStep theme={theme} onStart={handleStart} />
           )}
 
+          {currentStep === 'git-config' && (
+            <GitConfigStep
+              theme={theme}
+              isLoading={!gitConfigLoaded}
+              gitVersion={gitVersion}
+              userName={gitUserName}
+              userEmail={gitUserEmail}
+              onSave={handleSaveGitConfig}
+            />
+          )}
+
           {currentStep === 'choose-method' && (
             <ChooseMethodStep
               theme={theme}
@@ -367,7 +439,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           {currentStep === 'repo-location' && (
             <RepoLocationStep
               theme={theme}
-              mode={repoLocationMode}
               paths={repoPaths}
               onAddPath={handleAddPath}
               onRemovePath={handleRemovePath}
@@ -379,16 +450,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               theme={theme}
               devDirectoryName={devDirectoryName}
               onSetDevDirectoryName={setDevDirectoryName}
-            />
-          )}
-
-          {currentStep === 'organize-projects' && (
-            <OrganizeProjectsStep
-              theme={theme}
-              projects={foundProjects}
-              devDirectoryName={devDirectoryName}
-              shouldOrganize={shouldOrganize}
-              onToggleOrganize={() => setShouldOrganize(!shouldOrganize)}
             />
           )}
 
@@ -470,6 +531,299 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
 // Step Components
 
+interface GitConfigStepProps {
+  theme: Theme;
+  isLoading: boolean;
+  gitVersion: string;
+  userName: string;
+  userEmail: string;
+  onSave: (name: string, email: string) => Promise<void>;
+}
+
+const GitConfigStep: React.FC<GitConfigStepProps> = ({
+  theme,
+  isLoading,
+  gitVersion,
+  userName,
+  userEmail,
+  onSave
+}) => {
+  const [editingName, setEditingName] = React.useState(false);
+  const [editingEmail, setEditingEmail] = React.useState(false);
+  const [name, setName] = React.useState(userName);
+  const [email, setEmail] = React.useState(userEmail);
+  const [saving, setSaving] = React.useState(false);
+  const nameInputRef = React.useRef<HTMLInputElement>(null);
+  const emailInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    setName(userName);
+    setEmail(userEmail);
+  }, [userName, userEmail]);
+
+  React.useEffect(() => {
+    if (editingName && nameInputRef.current) nameInputRef.current.focus();
+  }, [editingName]);
+
+  React.useEffect(() => {
+    if (editingEmail && emailInputRef.current) emailInputRef.current.focus();
+  }, [editingEmail]);
+
+  const handleSaveName = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    await onSave(name, userEmail);
+    setSaving(false);
+    setEditingName(false);
+  };
+
+  const handleSaveEmail = async () => {
+    if (!email.trim()) return;
+    setSaving(true);
+    await onSave(userName, email);
+    setSaving(false);
+    setEditingEmail(false);
+  };
+
+  const hasGit = !!gitVersion;
+  const hasName = !!userName;
+  const hasEmail = !!userEmail;
+  const configured = hasGit && hasName && hasEmail;
+
+  return (
+    <div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{
+          display: 'inline-flex',
+          padding: 20,
+          backgroundColor: '#ffffff',
+          borderRadius: '50%'
+        }}>
+          <GitLogo size={48} color="#F05032" />
+        </div>
+      </div>
+
+      <h2 style={{
+        fontFamily: theme.fonts.heading,
+        fontSize: `${theme.fontSizes[6]}px`,
+        fontWeight: 700,
+        color: theme.colors.text,
+        marginBottom: 8,
+        textAlign: 'center'
+      }}>
+        Git Configuration
+      </h2>
+
+      <p style={{
+        fontFamily: theme.fonts.body,
+        fontSize: `${theme.fontSizes[3]}px`,
+        color: theme.colors.textSecondary,
+        textAlign: 'center',
+        marginBottom: 32
+      }}>
+        {configured
+          ? 'Your git identity is all set.'
+          : 'Let\'s make sure git is ready to go.'}
+      </p>
+
+      {isLoading ? (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          padding: 32
+        }}>
+          <div style={{
+            width: 24,
+            height: 24,
+            border: `3px solid ${theme.colors.border}`,
+            borderTopColor: theme.colors.primary,
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+        </div>
+      ) : (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+          maxWidth: 400,
+          margin: '0 auto'
+        }}>
+          {/* User name */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '12px 16px',
+            backgroundColor: hasName ? `${theme.colors.success || '#4CAF50'}10` : `${theme.colors.warning || '#FF9800'}10`,
+            border: `1px solid ${hasName ? (theme.colors.success || '#4CAF50') : (theme.colors.warning || '#FF9800')}30`,
+            borderRadius: 8
+          }}>
+            {hasName ? (
+              <CheckCircle size={18} color={theme.colors.success || '#4CAF50'} />
+            ) : (
+              <Info size={18} color={theme.colors.warning || '#FF9800'} />
+            )}
+            {editingName ? (
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveName();
+                  if (e.key === 'Escape') { setName(userName); setEditingName(false); }
+                }}
+                onBlur={handleSaveName}
+                placeholder="Your name"
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  padding: '4px 8px',
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.text,
+                  border: `1px solid ${theme.colors.primary}`,
+                  borderRadius: 4,
+                  fontFamily: theme.fonts.body,
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  outline: 'none'
+                }}
+              />
+            ) : (
+              <>
+                <div style={{
+                  flex: 1,
+                  fontFamily: theme.fonts.body,
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  color: theme.colors.text,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {hasName ? (
+                    <>Name: <strong style={{ color: theme.colors.primary }}>{userName}</strong></>
+                  ) : (
+                    <span style={{ color: theme.colors.warning || '#FF9800' }}>No name configured</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setName(userName); setEditingName(true); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28,
+                    height: 28,
+                    padding: 0,
+                    backgroundColor: 'transparent',
+                    color: theme.colors.textSecondary,
+                    border: 'none',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    transition: 'color 0.15s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = theme.colors.primary; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textSecondary; }}
+                >
+                  <Pencil size={14} />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* User email */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '12px 16px',
+            backgroundColor: hasEmail ? `${theme.colors.success || '#4CAF50'}10` : `${theme.colors.warning || '#FF9800'}10`,
+            border: `1px solid ${hasEmail ? (theme.colors.success || '#4CAF50') : (theme.colors.warning || '#FF9800')}30`,
+            borderRadius: 8
+          }}>
+            {hasEmail ? (
+              <CheckCircle size={18} color={theme.colors.success || '#4CAF50'} />
+            ) : (
+              <Info size={18} color={theme.colors.warning || '#FF9800'} />
+            )}
+            {editingEmail ? (
+              <input
+                ref={emailInputRef}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveEmail();
+                  if (e.key === 'Escape') { setEmail(userEmail); setEditingEmail(false); }
+                }}
+                onBlur={handleSaveEmail}
+                placeholder="you@example.com"
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  padding: '4px 8px',
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.text,
+                  border: `1px solid ${theme.colors.primary}`,
+                  borderRadius: 4,
+                  fontFamily: theme.fonts.body,
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  outline: 'none'
+                }}
+              />
+            ) : (
+              <>
+                <div style={{
+                  flex: 1,
+                  fontFamily: theme.fonts.body,
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  color: theme.colors.text,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {hasEmail ? (
+                    <>Email: <strong style={{ color: theme.colors.primary }}>{userEmail}</strong></>
+                  ) : (
+                    <span style={{ color: theme.colors.warning || '#FF9800' }}>No email configured</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setEmail(userEmail); setEditingEmail(true); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28,
+                    height: 28,
+                    padding: 0,
+                    backgroundColor: 'transparent',
+                    color: theme.colors.textSecondary,
+                    border: 'none',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    transition: 'color 0.15s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = theme.colors.primary; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textSecondary; }}
+                >
+                  <Pencil size={14} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface ChooseMethodStepProps {
   theme: Theme;
   selectedMethod: SetupMethod;
@@ -489,78 +843,70 @@ const ChooseMethodStep: React.FC<ChooseMethodStepProps> = ({
     }}>
       <div style={{
         display: 'inline-flex',
-        padding: 24,
+        padding: 20,
         backgroundColor: '#ffffff',
         borderRadius: '50%'
       }}>
-        <GitLogo size={60} color="#F05032" />
+        <GitLogo size={48} color="#F05032" />
       </div>
     </div>
 
     <h2 style={{
       fontFamily: theme.fonts.heading,
-      fontSize: `${theme.fontSizes[4]}px`,
+      fontSize: `${theme.fontSizes[6]}px`,
       fontWeight: 700,
       color: theme.colors.text,
-      marginBottom: 32,
+      marginBottom: 8,
       textAlign: 'center'
     }}>
-      How would you like to find your <span style={{ color: '#F05032' }}>git</span> projects?
+      Local Projects
     </h2>
+
+    <p style={{
+      fontFamily: theme.fonts.body,
+      fontSize: `${theme.fontSizes[3]}px`,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 32
+    }}>
+      How would you like to add your projects?
+    </p>
 
     <div style={{
       display: 'flex',
-      flexDirection: 'column',
+      flexDirection: 'row',
       gap: 16
     }}>
       {/* Scan Option */}
       <button
         onClick={() => onSelectMethod('scan')}
         style={{
+          flex: 1,
           padding: 24,
           backgroundColor: selectedMethod === 'scan' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
           border: `2px solid ${selectedMethod === 'scan' ? theme.colors.primary : theme.colors.border}`,
           borderRadius: 12,
           cursor: 'pointer',
-          textAlign: 'left',
+          textAlign: 'center',
           transition: 'all 0.2s ease'
         }}
       >
         <div style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 16
+          fontFamily: theme.fonts.body,
+          fontSize: `${theme.fontSizes[2]}px`,
+          fontWeight: 600,
+          color: theme.colors.text,
+          marginBottom: 8
         }}>
-          <div style={{
-            padding: 12,
-            backgroundColor: `${theme.colors.primary}20`,
-            borderRadius: 8,
-            flexShrink: 0
-          }}>
-            <FolderTree size={24} color={theme.colors.primary} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontFamily: theme.fonts.body,
-              fontSize: `${theme.fontSizes[2]}px`,
-              fontWeight: 600,
-              color: theme.colors.text,
-              marginBottom: 8
-            }}>
-              Find for me
-            </div>
-            <div style={{
-              fontFamily: theme.fonts.body,
-              fontSize: `${theme.fontSizes[1]}px`,
-              color: theme.colors.textSecondary,
-              lineHeight: 1.5
-            }}>
-              We will look for .git which are present in git projects
-            </div>
-          </div>
-          {selectedMethod === 'scan' && (
-            <CheckCircle size={24} color={theme.colors.primary} />
-          )}
+          Automatic
+        </div>
+        <div style={{
+          fontFamily: theme.fonts.body,
+          fontSize: `${theme.fontSizes[1]}px`,
+          color: theme.colors.textSecondary,
+          lineHeight: 1.5
+        }}>
+          Scan for .git projects
         </div>
       </button>
 
@@ -568,50 +914,65 @@ const ChooseMethodStep: React.FC<ChooseMethodStepProps> = ({
       <button
         onClick={() => onSelectMethod('select')}
         style={{
+          flex: 1,
           padding: 24,
           backgroundColor: selectedMethod === 'select' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
           border: `2px solid ${selectedMethod === 'select' ? theme.colors.primary : theme.colors.border}`,
           borderRadius: 12,
           cursor: 'pointer',
-          textAlign: 'left',
+          textAlign: 'center',
           transition: 'all 0.2s ease'
         }}
       >
         <div style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 16
+          fontFamily: theme.fonts.body,
+          fontSize: `${theme.fontSizes[2]}px`,
+          fontWeight: 600,
+          color: theme.colors.text,
+          marginBottom: 8
         }}>
-          <div style={{
-            padding: 12,
-            backgroundColor: `${theme.colors.primary}20`,
-            borderRadius: 8,
-            flexShrink: 0
-          }}>
-            <FolderPlus size={24} color={theme.colors.primary} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontFamily: theme.fonts.body,
-              fontSize: `${theme.fontSizes[2]}px`,
-              fontWeight: 600,
-              color: theme.colors.text,
-              marginBottom: 8
-            }}>
-              I'll pick
-            </div>
-            <div style={{
-              fontFamily: theme.fonts.body,
-              fontSize: `${theme.fontSizes[1]}px`,
-              color: theme.colors.textSecondary,
-              lineHeight: 1.5
-            }}>
-              Use Finder to pick git projects manually
-            </div>
-          </div>
-          {selectedMethod === 'select' && (
-            <CheckCircle size={24} color={theme.colors.primary} />
-          )}
+          Manual
+        </div>
+        <div style={{
+          fontFamily: theme.fonts.body,
+          fontSize: `${theme.fontSizes[1]}px`,
+          color: theme.colors.textSecondary,
+          lineHeight: 1.5
+        }}>
+          Pick using Finder
+        </div>
+      </button>
+
+      {/* Setup Later Option */}
+      <button
+        onClick={() => onSelectMethod('later')}
+        style={{
+          flex: 1,
+          padding: 24,
+          backgroundColor: selectedMethod === 'later' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
+          border: `2px solid ${selectedMethod === 'later' ? theme.colors.primary : theme.colors.border}`,
+          borderRadius: 12,
+          cursor: 'pointer',
+          textAlign: 'center',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        <div style={{
+          fontFamily: theme.fonts.body,
+          fontSize: `${theme.fontSizes[2]}px`,
+          fontWeight: 600,
+          color: theme.colors.text,
+          marginBottom: 8
+        }}>
+          Skip For Now
+        </div>
+        <div style={{
+          fontFamily: theme.fonts.body,
+          fontSize: `${theme.fontSizes[1]}px`,
+          color: theme.colors.textSecondary,
+          lineHeight: 1.5
+        }}>
+          Add later
         </div>
       </button>
     </div>
@@ -625,33 +986,33 @@ interface WelcomeStepProps {
 
 const WelcomeStep: React.FC<WelcomeStepProps> = ({ theme, onStart }) => (
   <div style={{ textAlign: 'center' }}>
+    <h1 style={{
+      fontFamily: theme.fonts.heading,
+      fontSize: `${theme.fontSizes[7]}px`,
+      fontWeight: 700,
+      color: theme.colors.text,
+      marginBottom: 32
+    }}>
+      Welcome <span style={{ color: theme.colors.primary }}>to</span> Principal <span style={{ color: theme.colors.primary }}>AI</span>
+    </h1>
+
     <div style={{
       display: 'flex',
       justifyContent: 'center',
       marginBottom: 32
     }}>
       {/* ANIMATED-LOGO-TODO: was the animated sphere Logo; static for now. */}
-      <FileCityLogo mark="P" width={120} height={120} primary={theme.colors.primary} color={theme.colors.text} background="transparent" />
+      <FileCityLogoAnimated mark="P" width={120} height={120} primary={theme.colors.primary} accent={theme.colors.accent} color={theme.colors.text} background="transparent" />
     </div>
-
-    <h1 style={{
-      fontFamily: theme.fonts.heading,
-      fontSize: `${theme.fontSizes[5]}px`,
-      fontWeight: 700,
-      color: theme.colors.text,
-      marginBottom: 16
-    }}>
-      Welcome to Principal <span style={{ color: theme.colors.primary }}>AI</span>
-    </h1>
 
     <p style={{
       fontFamily: theme.fonts.body,
-      fontSize: `${theme.fontSizes[2]}px`,
+      fontSize: `${theme.fontSizes[4]}px`,
       color: theme.colors.textSecondary,
       lineHeight: 1.6,
       marginBottom: 48
     }}>
-      Let's get you set up in just a few quick steps.
+      Let's get you set up.
     </p>
 
     <button
@@ -677,14 +1038,13 @@ const WelcomeStep: React.FC<WelcomeStepProps> = ({ theme, onStart }) => (
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      Start
+      Begin
     </button>
   </div>
 );
 
 interface RepoLocationStepProps {
   theme: Theme;
-  mode: RepoLocationMode;
   paths: string[];
   onAddPath: () => void;
   onRemovePath: (index: number) => void;
@@ -692,7 +1052,6 @@ interface RepoLocationStepProps {
 
 const RepoLocationStep: React.FC<RepoLocationStepProps> = ({
   theme,
-  mode,
   paths,
   onAddPath,
   onRemovePath
@@ -705,147 +1064,118 @@ const RepoLocationStep: React.FC<RepoLocationStepProps> = ({
     }}>
       <div style={{
         display: 'inline-flex',
-        padding: 24,
-        backgroundColor: '#ffffff',
+        padding: 20,
+        backgroundColor: `${theme.colors.primary}15`,
         borderRadius: '50%'
       }}>
-        <GitLogo size={60} color="#F05032" />
+        <FolderPlus size={48} color={theme.colors.primary} />
       </div>
     </div>
 
     <h2 style={{
       fontFamily: theme.fonts.heading,
-      fontSize: `${theme.fontSizes[4]}px`,
+      fontSize: `${theme.fontSizes[6]}px`,
       fontWeight: 700,
       color: theme.colors.text,
       marginBottom: 12,
       textAlign: 'center'
     }}>
-      Where do you keep your <span style={{ color: '#F05032' }}>git</span> projects?
+      Add your projects
     </h2>
 
     <p style={{
       fontFamily: theme.fonts.body,
-      fontSize: `${theme.fontSizes[1]}px`,
+      fontSize: `${theme.fontSizes[3]}px`,
       color: theme.colors.textSecondary,
       lineHeight: 1.6,
       marginBottom: 32,
       textAlign: 'center'
     }}>
-      This will help us find your projects to make it easier for you to manage them.
+      Pick each project folder using Finder.
     </p>
 
-    {mode === 'single' && (
-      <div style={{ marginBottom: 24 }}>
-        <button
-          onClick={onAddPath}
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 12,
+      marginBottom: 16
+    }}>
+      {paths.map((path) => (
+        <div
+          key={path}
           style={{
-            width: '100%',
-            padding: '48px 24px',
+            padding: '12px 16px',
             backgroundColor: theme.colors.backgroundSecondary,
-            border: `2px dashed ${theme.colors.border}`,
-            borderRadius: 12,
-            cursor: 'pointer',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 8,
             display: 'flex',
-            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <div style={{
+            display: 'flex',
             alignItems: 'center',
             gap: 12,
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <Folder size={32} color={theme.colors.textSecondary} />
-          <span style={{
-            fontFamily: theme.fonts.body,
-            color: theme.colors.text,
-            fontSize: `${theme.fontSizes[1]}px`,
-            fontWeight: 500
+            flex: 1,
+            minWidth: 0
           }}>
-            {paths.length > 0 ? paths[0] : 'Choose main folder'}
-          </span>
-        </button>
-      </div>
-    )}
-
-    {mode === 'add-list' && (
-      <div>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          marginBottom: 16
-        }}>
-          {paths.map((path) => (
-            <div
-              key={path}
-              style={{
-                padding: '16px',
-                backgroundColor: theme.colors.backgroundSecondary,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}
-            >
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12
-              }}>
-                <Folder size={20} color={theme.colors.textSecondary} />
-                <span style={{
-                  fontFamily: theme.fonts.body,
-                  color: theme.colors.text,
-                  fontSize: `${theme.fontSizes[1]}px`
-                }}>
-                  {path}
-                </span>
-              </div>
-              <button
-                onClick={() => onRemovePath(paths.indexOf(path))}
-                style={{
-                  padding: '4px 12px',
-                  backgroundColor: 'transparent',
-                  color: theme.colors.textSecondary,
-                  border: 'none',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  fontFamily: theme.fonts.body,
-                  fontSize: `${theme.fontSizes[0]}px`,
-                  transition: 'color 0.2s ease'
-                }}
-              >
-                Remove
-              </button>
-            </div>
-          ))}
+            <Folder size={18} color={theme.colors.textSecondary} />
+            <span style={{
+              fontFamily: theme.fonts.body,
+              color: theme.colors.text,
+              fontSize: `${theme.fontSizes[1]}px`,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {path}
+            </span>
+          </div>
+          <button
+            onClick={() => onRemovePath(paths.indexOf(path))}
+            style={{
+              padding: '4px 12px',
+              backgroundColor: 'transparent',
+              color: theme.colors.textSecondary,
+              border: 'none',
+              borderRadius: 6,
+              cursor: 'pointer',
+              fontFamily: theme.fonts.body,
+              fontSize: `${theme.fontSizes[0]}px`,
+              flexShrink: 0,
+              transition: 'color 0.2s ease'
+            }}
+          >
+            Remove
+          </button>
         </div>
+      ))}
+    </div>
 
-        <button
-          onClick={onAddPath}
-          style={{
-            width: '100%',
-            padding: '16px',
-            backgroundColor: 'transparent',
-            color: theme.colors.primary,
-            border: `2px dashed ${theme.colors.primary}`,
-            borderRadius: 8,
-            cursor: 'pointer',
-            fontFamily: theme.fonts.body,
-            fontSize: `${theme.fontSizes[1]}px`,
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <FolderPlus size={20} />
-          Add another folder
-        </button>
-      </div>
-    )}
+    <button
+      onClick={onAddPath}
+      style={{
+        width: '100%',
+        padding: '14px 16px',
+        backgroundColor: 'transparent',
+        color: theme.colors.primary,
+        border: `2px dashed ${theme.colors.primary}`,
+        borderRadius: 8,
+        cursor: 'pointer',
+        fontFamily: theme.fonts.body,
+        fontSize: `${theme.fontSizes[1]}px`,
+        fontWeight: 500,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        transition: 'all 0.2s ease'
+      }}
+    >
+      <FolderPlus size={18} />
+      Add Project
+    </button>
   </div>
 );
 
@@ -880,13 +1210,13 @@ const FolderSelectionStep: React.FC<FolderSelectionStepProps> = ({
           backgroundColor: `${theme.colors.primary}15`,
           borderRadius: '50%'
         }}>
-          <FolderTree size={40} color={theme.colors.primary} />
+          <FolderTree size={48} color={theme.colors.primary} />
         </div>
       </div>
 
       <h2 style={{
         fontFamily: theme.fonts.heading,
-        fontSize: `${theme.fontSizes[4]}px`,
+        fontSize: `${theme.fontSizes[6]}px`,
         fontWeight: 700,
         color: theme.colors.text,
         marginBottom: 12,
@@ -897,7 +1227,7 @@ const FolderSelectionStep: React.FC<FolderSelectionStepProps> = ({
 
       <p style={{
         fontFamily: theme.fonts.body,
-        fontSize: `${theme.fontSizes[1]}px`,
+        fontSize: `${theme.fontSizes[3]}px`,
         color: theme.colors.textSecondary,
         lineHeight: 1.6,
         marginBottom: 8,
@@ -917,8 +1247,8 @@ const FolderSelectionStep: React.FC<FolderSelectionStepProps> = ({
       </p>
 
       <div style={{
-        maxHeight: 400,
-        minHeight: 400,
+        maxHeight: 350,
+        minHeight: 350,
         overflowY: 'auto',
         marginBottom: 24
       }}>
@@ -1061,70 +1391,26 @@ const ScanningStep: React.FC<ScanningStepProps> = ({
   // Skeleton loader items for projects
   const skeletonProjects = Array.from({ length: 5 }, (_, i) => i);
 
-  // Calculate progress percentage
-  const progressPercentage = progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
-  const circumference = 2 * Math.PI * 45; // radius of 45px
-  const strokeDashoffset = circumference - (progressPercentage / 100) * circumference;
-
   return (
     <div>
       <div style={{
         display: 'flex',
         justifyContent: 'center',
-        marginBottom: 24,
-        position: 'relative'
+        marginBottom: 24
       }}>
-        {/* Circular progress indicator - always visible */}
-        <svg
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%) rotate(-90deg)',
-            width: 110,
-            height: 110
-          }}
-        >
-          {/* Background circle */}
-          <circle
-            cx="55"
-            cy="55"
-            r="45"
-            stroke={theme.colors.border}
-            strokeWidth="3"
-            fill="none"
-          />
-          {/* Progress circle */}
-          <circle
-            cx="55"
-            cy="55"
-            r="45"
-            stroke={!isScanning && foundProjects.length > 0 ? theme.colors.success || '#10b981' : theme.colors.primary}
-            strokeWidth="3"
-            fill="none"
-            strokeDasharray={circumference}
-            strokeDashoffset={isScanning ? strokeDashoffset : 0}
-            strokeLinecap="round"
-            style={{
-              transition: 'stroke-dashoffset 0.3s ease, stroke 0.3s ease'
-            }}
-          />
-        </svg>
-
         <div style={{
           display: 'inline-flex',
           padding: 20,
           backgroundColor: `${theme.colors.primary}15`,
-          borderRadius: '50%',
-          zIndex: 1
+          borderRadius: '50%'
         }}>
-          <FolderGit2 size={40} color={theme.colors.primary} />
+          <FolderGit2 size={48} color={theme.colors.primary} />
         </div>
       </div>
 
       <h2 style={{
         fontFamily: theme.fonts.heading,
-        fontSize: `${theme.fontSizes[4]}px`,
+        fontSize: `${theme.fontSizes[6]}px`,
         fontWeight: 700,
         color: theme.colors.text,
         marginBottom: 12,
@@ -1139,9 +1425,32 @@ const ScanningStep: React.FC<ScanningStepProps> = ({
         )}
       </h2>
 
+      <p style={{
+        fontFamily: theme.fonts.body,
+        fontSize: `${theme.fontSizes[3]}px`,
+        color: theme.colors.textSecondary,
+        lineHeight: 1.6,
+        marginBottom: 8,
+        textAlign: 'center',
+        minHeight: 29
+      }}>
+        {isScanning ? 'Scanning your selected folders' : `Found ${foundProjects.length} project${foundProjects.length !== 1 ? 's' : ''}`}
+      </p>
+
+      <p style={{
+        fontFamily: theme.fonts.body,
+        fontSize: `${theme.fontSizes[0]}px`,
+        color: theme.colors.textSecondary,
+        marginBottom: 32,
+        textAlign: 'center',
+        minHeight: 16
+      }}>
+        {isScanning ? '' : '\u00A0'}
+      </p>
+
       {/* Results area - always reserve space */}
       <div style={{
-        minHeight: 300
+        minHeight: 350
       }}>
         {isScanning && (
           <>
@@ -1274,7 +1583,7 @@ const ScanningStep: React.FC<ScanningStepProps> = ({
                   }}
                 >
                   <FolderGit2 size={20} color={theme.colors.primary} />
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
                       fontFamily: theme.fonts.monospace,
                       fontSize: `${theme.fontSizes[1]}px`,
@@ -1293,16 +1602,6 @@ const ScanningStep: React.FC<ScanningStepProps> = ({
                     }}>
                       {project.currentPath}
                     </div>
-                    {project.alreadyRegistered && (
-                      <div style={{
-                        fontFamily: theme.fonts.body,
-                        fontSize: `${theme.fontSizes[0]}px`,
-                        color: theme.colors.textSecondary,
-                        marginTop: 4
-                      }}>
-                        Already in library
-                      </div>
-                    )}
                     {project.registrationError && (
                       <div style={{
                         fontFamily: theme.fonts.body,
@@ -1316,9 +1615,6 @@ const ScanningStep: React.FC<ScanningStepProps> = ({
                   </div>
                   {project.registered === true && !project.alreadyRegistered && (
                     <CheckCircle size={20} color={theme.colors.success || '#10b981'} />
-                  )}
-                  {project.alreadyRegistered && (
-                    <Info size={20} color={theme.colors.textSecondary} />
                   )}
                   {project.registered === false && (
                     <AlertCircle size={20} color={theme.colors.error || '#ef4444'} />
@@ -1359,24 +1655,24 @@ const HomeDirectoryStep: React.FC<HomeDirectoryStepProps> = ({
           backgroundColor: `${theme.colors.primary}15`,
           borderRadius: '50%'
         }}>
-          <FolderTree size={40} color={theme.colors.primary} />
+          <FolderTree size={48} color={theme.colors.primary} />
         </div>
       </div>
 
       <h2 style={{
         fontFamily: theme.fonts.heading,
-        fontSize: `${theme.fontSizes[4]}px`,
+        fontSize: `${theme.fontSizes[6]}px`,
         fontWeight: 700,
         color: theme.colors.text,
         marginBottom: 12,
         textAlign: 'center'
       }}>
-        Set a Development directory
+        Set a Default Clone Directory
       </h2>
 
       <p style={{
         fontFamily: theme.fonts.body,
-        fontSize: `${theme.fontSizes[1]}px`,
+        fontSize: `${theme.fontSizes[3]}px`,
         color: theme.colors.textSecondary,
         lineHeight: 1.6,
         marginBottom: 32,
@@ -1469,177 +1765,6 @@ const HomeDirectoryStep: React.FC<HomeDirectoryStepProps> = ({
   );
 };
 
-interface OrganizeProjectsStepProps {
-  theme: Theme;
-  projects: Array<{ currentPath: string; owner: string; name: string; registered?: boolean; alreadyRegistered?: boolean; registrationError?: string }>;
-  devDirectoryName: string;
-  shouldOrganize: boolean;
-  onToggleOrganize: () => void;
-}
-
-const OrganizeProjectsStep: React.FC<OrganizeProjectsStepProps> = ({
-  theme,
-  projects,
-  devDirectoryName,
-  shouldOrganize,
-  onToggleOrganize
-}) => {
-  const homeDir = '~';
-
-  return (
-    <div>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        marginBottom: 24
-      }}>
-        <div style={{
-          display: 'inline-flex',
-          padding: 20,
-          backgroundColor: `${theme.colors.primary}15`,
-          borderRadius: '50%'
-        }}>
-          <FolderTree size={40} color={theme.colors.primary} />
-        </div>
-      </div>
-
-      <h2 style={{
-        fontFamily: theme.fonts.heading,
-        fontSize: `${theme.fontSizes[4]}px`,
-        fontWeight: 700,
-        color: theme.colors.text,
-        marginBottom: 12,
-        textAlign: 'center'
-      }}>
-        Organize your projects?
-      </h2>
-
-      <p style={{
-        fontFamily: theme.fonts.body,
-        fontSize: `${theme.fontSizes[1]}px`,
-        color: theme.colors.textSecondary,
-        lineHeight: 1.6,
-        marginBottom: 32,
-        textAlign: 'center'
-      }}>
-        We found {projects.length} git {projects.length === 1 ? 'project' : 'projects'}. Would you like us to organize them?
-      </p>
-
-      <label style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        cursor: 'pointer',
-        padding: 16,
-        borderRadius: 8,
-        backgroundColor: shouldOrganize ? `${theme.colors.primary}10` : 'transparent',
-        border: `1px solid ${shouldOrganize ? theme.colors.primary : theme.colors.border}`,
-        transition: 'all 0.2s ease',
-        marginBottom: 24
-      }}>
-        <input
-          type="checkbox"
-          checked={shouldOrganize}
-          onChange={onToggleOrganize}
-          style={{
-            width: 20,
-            height: 20,
-            cursor: 'pointer'
-          }}
-        />
-        <span style={{
-          fontFamily: theme.fonts.body,
-          color: theme.colors.text,
-          fontSize: `${theme.fontSizes[1]}px`
-        }}>
-          Yes, organize my projects into {devDirectoryName}
-        </span>
-      </label>
-
-      <div style={{
-        backgroundColor: theme.colors.backgroundSecondary,
-        borderRadius: 8,
-        padding: 16,
-        maxHeight: 300,
-        overflowY: 'auto'
-      }}>
-          <div style={{
-            fontFamily: theme.fonts.body,
-            fontSize: `${theme.fontSizes[2]}px`,
-            color: theme.colors.textSecondary,
-            marginBottom: 16,
-            fontWeight: 600
-          }}>
-            {shouldOrganize ? 'Preview:' : 'Discovered projects:'}
-          </div>
-          {projects.map((project, idx) => (
-            <div
-              key={project.currentPath}
-              style={{
-                marginBottom: 16,
-                paddingBottom: 16,
-                borderBottom: idx < projects.length - 1 ? `1px solid ${theme.colors.border}` : 'none'
-              }}
-            >
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                marginBottom: 8
-              }}>
-                <FolderGit2 size={20} color={theme.colors.textSecondary} />
-                <span style={{
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: `${theme.fontSizes[2]}px`,
-                  color: theme.colors.text,
-                  fontWeight: 500
-                }}>
-                  {project.name}
-                </span>
-              </div>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'auto 40px auto',
-                alignItems: 'center',
-                gap: 8,
-                paddingLeft: 28
-              }}>
-                <div style={{
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  color: theme.colors.textSecondary,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {project.currentPath}
-                </div>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  opacity: shouldOrganize ? 1 : 0,
-                  visibility: shouldOrganize ? 'visible' : 'hidden'
-                }}>
-                  <MoveRight size={20} color={theme.colors.primary} />
-                </div>
-                <div style={{
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  color: theme.colors.primary,
-                  fontWeight: 500,
-                  opacity: shouldOrganize ? 1 : 0,
-                  visibility: shouldOrganize ? 'visible' : 'hidden'
-                }}>
-                  {homeDir}/{devDirectoryName}/{project.owner}/{project.name}
-                </div>
-              </div>
-            </div>
-          ))}
-      </div>
-    </div>
-  );
-};
-
 interface GitHubConnectStepProps {
   theme: Theme;
   isConnected: boolean;
@@ -1668,13 +1793,13 @@ const GitHubConnectStep: React.FC<GitHubConnectStepProps> = ({
         backgroundColor: '#24292e',
         borderRadius: '50%'
       }}>
-        <GitHubLogo size={60} color="#ffffff" />
+        <GitHubLogo size={48} color="#ffffff" />
       </div>
     </div>
 
     <h2 style={{
       fontFamily: theme.fonts.heading,
-      fontSize: `${theme.fontSizes[4]}px`,
+      fontSize: `${theme.fontSizes[6]}px`,
       fontWeight: 700,
       color: theme.colors.text,
       marginBottom: 12,
@@ -1685,7 +1810,7 @@ const GitHubConnectStep: React.FC<GitHubConnectStepProps> = ({
 
     <p style={{
       fontFamily: theme.fonts.body,
-      fontSize: `${theme.fontSizes[1]}px`,
+      fontSize: `${theme.fontSizes[3]}px`,
       color: theme.colors.textSecondary,
       lineHeight: 1.6,
       marginBottom: 32,
@@ -1768,21 +1893,23 @@ const ReadyStep: React.FC<ReadyStepProps> = ({ theme }) => (
       <CheckCircle size={64} color={theme.colors.success || '#10b981'} />
     </div>
 
-    <h1 style={{
+    <h2 style={{
       fontFamily: theme.fonts.heading,
-      fontSize: `${theme.fontSizes[5]}px`,
+      fontSize: `${theme.fontSizes[6]}px`,
       fontWeight: 700,
       color: theme.colors.text,
-      marginBottom: 16
+      marginBottom: 12,
+      textAlign: 'center'
     }}>
       You're all set!
-    </h1>
+    </h2>
 
     <p style={{
       fontFamily: theme.fonts.body,
-      fontSize: `${theme.fontSizes[2]}px`,
+      fontSize: `${theme.fontSizes[3]}px`,
       color: theme.colors.textSecondary,
-      lineHeight: 1.6
+      lineHeight: 1.6,
+      textAlign: 'center'
     }}>
       Let's start exploring your <span style={{ color: '#F05032' }}>git</span> projects and building something awesome together.
     </p>

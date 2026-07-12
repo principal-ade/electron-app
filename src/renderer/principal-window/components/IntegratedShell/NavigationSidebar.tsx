@@ -178,12 +178,16 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const navItems: NavItem[] = [
     // Home lives in the titlebar now (toggling overlay), not the sidebar.
     {
+      id: 'projects',
+      icon: <GitIcon size={20} />,
+      label: 'Projects',
+    },
+    {
       id: 'inbox',
       icon: <Inbox size={20} />,
       label: 'Inbox',
       badgeCount: inboxUnread,
     },
-    { id: 'projects', icon: <GitIcon size={20} />, label: 'Projects' },
     { id: 'trails', icon: <Footprints size={20} />, label: 'Trails' },
     { id: 'topics', icon: <Layers size={20} />, label: 'Topics' },
     { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },

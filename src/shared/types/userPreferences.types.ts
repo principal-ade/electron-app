@@ -126,6 +126,7 @@ export interface UserPreferences {
   showProcessesButton?: boolean; // Show/hide the processes button in side nav (default: false)
   showOnboardingButton?: boolean; // Show/hide the onboarding/tutorials button in side nav (default: false)
   showExtensionsButton?: boolean; // Show/hide the extensions button in settings (default: false)
+  onboardingCompleted?: boolean; // Whether the onboarding wizard has been completed (default: false)
 
   // Presence preferences
   presenceAutoConnect?: boolean; // Automatically connect to presence server on startup (default: false)
