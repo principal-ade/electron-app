@@ -15,10 +15,21 @@ import { FileSystemService } from '../main-process-api/FileSystemService';
 import { joinClonePath } from '../../shared/utils/clonePath';
 import { parseGitRemoteUrl } from '../../shared/utils/gitRemoteUrl';
 
+/** Progress reported after the modal dismisses and cloning continues in the background. */
+export type CloneProgressState =
+  | { phase: 'cloning' | 'registering' | 'complete'; message: string }
+  | { phase: 'error'; message: string; details?: string };
+
 interface GitCloneModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRepositoryAdded?: (repo: AlexandriaEntry) => void;
+  /**
+   * Called when long-running clone/register work begins and as it progresses.
+   * The modal dismisses itself so the host can show progress inline (e.g. on
+   * the repository profile panel) instead of trapping the user in a modal.
+   */
+  onCloneProgress?: (state: CloneProgressState) => void;
   initialUrl?: string;
   registerRepository: (
     path: string,
@@ -50,6 +61,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   isOpen,
   onClose,
   onRepositoryAdded,
+  onCloneProgress,
   initialUrl,
   registerRepository,
 }) => {
@@ -400,11 +412,24 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     }
   };
 
+  // Report progress to the host (profile panel) and dismiss the modal so the
+  // long-running clone doesn't trap the user behind an unclosable overlay.
+  const reportProgress = (state: CloneProgressState) => {
+    setCloneProgress(state.message);
+    onCloneProgress?.(state);
+  };
+
+  const dismissForBackgroundWork = () => {
+    // Parent shows progress inline; keep async work alive in this component.
+    onClose();
+  };
+
   // Handle the actual cloning process
   const handleStartClone = async (targetPath: string) => {
     setCurrentStep('cloning');
     setIsCloning(true);
-    setCloneProgress('Initializing clone...');
+    reportProgress({ phase: 'cloning', message: 'Initializing clone...' });
+    dismissForBackgroundWork();
 
     try {
       // Determine which URL to use based on selected auth method
@@ -424,28 +449,26 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
         }
       }
 
-      setCloneProgress('Cloning repository...');
+      reportProgress({ phase: 'cloning', message: 'Cloning repository...' });
       const success = await GitService.cloneRepository(cloneUrl, targetPath);
 
       if (success) {
-        setCloneProgress('Registering repository...');
+        reportProgress({
+          phase: 'registering',
+          message: 'Registering repository...',
+        });
 
         // Register with Alexandria — identity is derived by the library from
         // the remote URL, never from the bare repo name.
         const registeredRepo = await registerRepository(targetPath, cloneUrl);
 
-        setCloneProgress('Clone complete!');
+        reportProgress({ phase: 'complete', message: 'Clone complete!' });
         setCurrentStep('complete');
 
         // Notify parent component
         if (onRepositoryAdded) {
           onRepositoryAdded(registeredRepo);
         }
-
-        // Auto-close after a delay
-        setTimeout(() => {
-          onClose();
-        }, 2000);
       } else {
         throw new Error('Clone failed');
       }
@@ -464,6 +487,11 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       setError(errorMessage);
       setErrorDetails(details);
       setCurrentStep('error');
+      reportProgress({
+        phase: 'error',
+        message: errorMessage,
+        details: details || undefined,
+      });
     } finally {
       setIsCloning(false);
     }
@@ -492,34 +520,37 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     if (!pathToRegister) return;
 
     setIsCloning(true);
-    setCloneProgress('Registering existing repository...');
     setError('');
+    reportProgress({
+      phase: 'registering',
+      message: 'Registering existing repository...',
+    });
+    dismissForBackgroundWork();
 
     try {
       // Register with Alexandria — let the library derive identity from the
       // origin remote it discovers at this path.
       const registeredRepo = await registerRepository(pathToRegister);
 
-      setCloneProgress('Registration complete!');
+      reportProgress({
+        phase: 'complete',
+        message: 'Registration complete!',
+      });
       setCurrentStep('complete');
 
       // Notify parent component
       if (onRepositoryAdded) {
         onRepositoryAdded(registeredRepo);
       }
-
-      // Auto-close after a delay
-      setTimeout(() => {
-        onClose();
-      }, 2000);
     } catch (err) {
       console.error('Error registering existing repository:', err);
-      setError(
+      const errorMessage =
         err instanceof Error
           ? err.message
-          : 'Failed to register existing repository',
-      );
+          : 'Failed to register existing repository';
+      setError(errorMessage);
       setCurrentStep('error');
+      reportProgress({ phase: 'error', message: errorMessage });
     } finally {
       setIsCloning(false);
     }
@@ -553,19 +584,24 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
             </h2>
             <button
               onClick={onClose}
-              disabled={isValidating || isCloning}
+              disabled={isCloning}
+              title={
+                isCloning
+                  ? 'Clone is running — progress continues on the profile panel'
+                  : 'Close'
+              }
               style={{
                 color: theme.colors.textSecondary,
-                cursor: isValidating || isCloning ? 'not-allowed' : 'pointer',
-                opacity: isValidating || isCloning ? 0.5 : 1,
+                cursor: isCloning ? 'not-allowed' : 'pointer',
+                opacity: isCloning ? 0.5 : 1,
               }}
               onMouseEnter={(e) => {
-                if (!isValidating && !isCloning) {
+                if (!isCloning) {
                   e.currentTarget.style.color = theme.colors.text;
                 }
               }}
               onMouseLeave={(e) => {
-                if (!isValidating && !isCloning) {
+                if (!isCloning) {
                   e.currentTarget.style.color = theme.colors.textSecondary;
                 }
               }}

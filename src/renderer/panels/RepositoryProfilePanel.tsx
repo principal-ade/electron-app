@@ -57,7 +57,10 @@ import { ShellService } from '../main-process-api/ShellService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
-import { GitCloneModal } from '../components/GitCloneModal';
+import {
+  GitCloneModal,
+  type CloneProgressState,
+} from '../components/GitCloneModal';
 import { ForkModal } from './components/ForkModal';
 
 export interface RepositoryProfileData {
@@ -527,9 +530,21 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const [isForked, setIsForked] = useState(false);
   const [forkedRepoOwner, setForkedRepoOwner] = useState<string | null>(null);
 
-  // Clone modal state for repos without local clones
+  // Clone modal state for repos without local clones.
+  // Long-running clone progress is shown inline on this panel (not in the modal)
+  // so the user can keep using the app while a clone runs.
   const [showCloneModal, setShowCloneModal] = useState(false);
+  const [cloneProgress, setCloneProgress] = useState<CloneProgressState | null>(
+    null,
+  );
   const [showForkModal, setShowForkModal] = useState(false);
+
+  // Auto-clear successful clone progress after a short celebration.
+  useEffect(() => {
+    if (cloneProgress?.phase !== 'complete') return;
+    const timer = setTimeout(() => setCloneProgress(null), 3000);
+    return () => clearTimeout(timer);
+  }, [cloneProgress?.phase]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -2103,9 +2118,21 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             })()}
           </div>
           {!repositoryData.isLocal && (
-            <div style={{ marginTop: spacing.sm, display: 'flex', gap: spacing.xs }}>
+            <div
+              style={{
+                marginTop: spacing.sm,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: spacing.xs,
+              }}
+            >
+            <div style={{ display: 'flex', gap: spacing.xs, flexWrap: 'wrap' }}>
               <button
                 onClick={() => setShowCloneModal(true)}
+                disabled={
+                  cloneProgress?.phase === 'cloning' ||
+                  cloneProgress?.phase === 'registering'
+                }
                 style={{
                   padding: `${spacing.xs}px ${spacing.sm}px`,
                   display: 'flex',
@@ -2115,7 +2142,16 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   borderRadius: 6,
                   background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}dd)`,
                   color: theme.colors.background,
-                  cursor: 'pointer',
+                  cursor:
+                    cloneProgress?.phase === 'cloning' ||
+                    cloneProgress?.phase === 'registering'
+                      ? 'not-allowed'
+                      : 'pointer',
+                  opacity:
+                    cloneProgress?.phase === 'cloning' ||
+                    cloneProgress?.phase === 'registering'
+                      ? 0.7
+                      : 1,
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   fontSize: theme.fontSizes[0],
                   fontFamily: theme.fonts?.body,
@@ -2123,6 +2159,12 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   boxShadow: `0 2px 8px ${theme.colors.primary}40, 0 1px 2px rgba(0, 0, 0, 0.1)`,
                 }}
                 onMouseEnter={(e) => {
+                  if (
+                    cloneProgress?.phase === 'cloning' ||
+                    cloneProgress?.phase === 'registering'
+                  ) {
+                    return;
+                  }
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
                 }}
@@ -2135,12 +2177,26 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   e.currentTarget.style.boxShadow = `0 1px 4px ${theme.colors.primary}30`;
                 }}
                 onMouseUp={(e) => {
+                  if (
+                    cloneProgress?.phase === 'cloning' ||
+                    cloneProgress?.phase === 'registering'
+                  ) {
+                    return;
+                  }
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}60, 0 2px 4px rgba(0, 0, 0, 0.15)`;
                 }}
               >
-                <Download size={12} />
-                Clone
+                {cloneProgress?.phase === 'cloning' ||
+                cloneProgress?.phase === 'registering' ? (
+                  <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  <Download size={12} />
+                )}
+                {cloneProgress?.phase === 'cloning' ||
+                cloneProgress?.phase === 'registering'
+                  ? 'Cloning…'
+                  : 'Clone'}
               </button>
               {isForked && forkedRepoOwner ? (
                 <button
@@ -2211,6 +2267,138 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   Fork
                 </button>
               )}
+            </div>
+            {/* Inline clone progress — shown here so cloning never blocks the profile behind a modal */}
+            {cloneProgress && (
+              <div
+                role="status"
+                aria-live="polite"
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: spacing.sm,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  borderRadius: 6,
+                  border: `1px solid ${
+                    cloneProgress.phase === 'error'
+                      ? theme.colors.error
+                      : cloneProgress.phase === 'complete'
+                        ? theme.colors.success
+                        : theme.colors.border
+                  }`,
+                  backgroundColor:
+                    cloneProgress.phase === 'error'
+                      ? `${theme.colors.error}12`
+                      : cloneProgress.phase === 'complete'
+                        ? `${theme.colors.success}12`
+                        : theme.colors.backgroundSecondary,
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts?.body,
+                  color: theme.colors.text,
+                  maxWidth: '100%',
+                }}
+              >
+                <div style={{ flexShrink: 0, marginTop: 1 }}>
+                  {cloneProgress.phase === 'cloning' ||
+                  cloneProgress.phase === 'registering' ? (
+                    <Loader2
+                      size={14}
+                      style={{
+                        animation: 'spin 1s linear infinite',
+                        color: theme.colors.primary,
+                      }}
+                    />
+                  ) : cloneProgress.phase === 'complete' ? (
+                    <CheckCircle2 size={14} style={{ color: theme.colors.success }} />
+                  ) : (
+                    <AlertCircle size={14} style={{ color: theme.colors.error }} />
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontWeight: theme.fontWeights?.medium ?? 500,
+                      color:
+                        cloneProgress.phase === 'error'
+                          ? theme.colors.error
+                          : cloneProgress.phase === 'complete'
+                            ? theme.colors.success
+                            : theme.colors.text,
+                    }}
+                  >
+                    {cloneProgress.message}
+                  </div>
+                  {cloneProgress.phase === 'error' && cloneProgress.details && (
+                    <pre
+                      style={{
+                        margin: `${spacing.xs}px 0 0`,
+                        padding: spacing.xs,
+                        maxHeight: 120,
+                        overflow: 'auto',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        fontSize: 11,
+                        fontFamily: theme.fonts?.monospace ?? 'monospace',
+                        color: theme.colors.textSecondary,
+                        backgroundColor: theme.colors.background,
+                        borderRadius: 4,
+                      }}
+                    >
+                      {cloneProgress.details}
+                    </pre>
+                  )}
+                </div>
+                {(cloneProgress.phase === 'error' ||
+                  cloneProgress.phase === 'complete') && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: spacing.xs,
+                      flexShrink: 0,
+                      alignItems: 'center',
+                    }}
+                  >
+                    {cloneProgress.phase === 'error' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCloneProgress(null);
+                          setShowCloneModal(true);
+                        }}
+                        style={{
+                          padding: `2px ${spacing.xs}px`,
+                          borderRadius: 4,
+                          border: 'none',
+                          background: theme.colors.primary,
+                          color: theme.colors.background,
+                          cursor: 'pointer',
+                          fontSize: theme.fontSizes[0],
+                          fontFamily: theme.fonts?.body,
+                        }}
+                      >
+                        Retry
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setCloneProgress(null)}
+                      aria-label="Dismiss clone status"
+                      style={{
+                        padding: 2,
+                        border: 'none',
+                        background: 'transparent',
+                        color: theme.colors.textSecondary,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <LucideIcons.X size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             </div>
           )}
           {repositoryData.isLocal && (
@@ -3432,9 +3620,15 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         onClose={() => setShowCloneModal(false)}
         initialUrl={repositoryData?.htmlUrl ?? undefined}
         registerRepository={actions.registerRepository}
+        onCloneProgress={setCloneProgress}
         onRepositoryAdded={() => {
           setShowCloneModal(false);
-          events.emit({ type: 'repository-profile:clone-completed', source: 'repository-profile-panel', timestamp: Date.now(), payload: {} });
+          events.emit({
+            type: 'repository-profile:clone-completed',
+            source: 'repository-profile-panel',
+            timestamp: Date.now(),
+            payload: {},
+          });
         }}
       />
       <ForkModal
