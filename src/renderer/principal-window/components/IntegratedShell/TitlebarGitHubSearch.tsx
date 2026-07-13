@@ -270,6 +270,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
           lastUpdated: repo.updated_at,
           isPublic: !repo.private,
           defaultBranch: repo.default_branch,
+          createdAt: repo.created_at,
         }),
       );
       clearSearch();

@@ -6,6 +6,9 @@
  * of web-ade's RepoAboutCard: repo name + stars, description, facts row,
  * contributor faces (when available), and a README button.
  *
+ * When the repo is cloned, a clone row shows branch status + Open / Terminal
+ * buttons — the same surface the full RepositoryProfilePanel renders.
+ *
  * This is the electron-app counterpart of web-ade's RepoAboutCard / RepoOverview
  * left-rail extract. For the full profile hub, see RepositoryProfilePanel (tab).
  */
@@ -13,14 +16,44 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
+  AlertCircle,
   BookOpen,
   CalendarDays,
+  CheckCircle2,
+  Circle,
+  Download,
+  FolderOpen,
+  GitBranch,
+  GitFork,
+  Loader2,
   Star,
+  Terminal,
   X,
 } from 'lucide-react';
 import { parsePurl } from '@principal-ai/alexandria-core-library';
+import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { RepositorySelectedPayload } from '../../events/repositorySelected';
+import { payloadFromGithub } from '../../events/repositorySelected';
+import { emitTerminalOpen } from '../../events/portalIntents';
 import { GithubService } from '../../main-process-api/GithubService';
+import { GitService, type GitBranchStatus } from '../../main-process-api/GitService';
+import { AlexandriaService } from '../../main-process-api/AlexandriaService';
+import { WindowService } from '../../main-process-api/WindowService';
+import { GitCloneModal, type CloneProgressState } from '../../components/GitCloneModal';
+import { ForkModal } from '../components/ForkModal';
+
+function getRepositoryAge(createdAt: string): string {
+  const created = new Date(createdAt);
+  if (isNaN(created.getTime())) return '';
+  const now = new Date();
+  const diffMs = now.getTime() - created.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays < 30) return `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? 's' : ''}`;
+  const diffYears = Math.floor(diffMonths / 12);
+  return `${diffYears} year${diffYears !== 1 ? 's' : ''}`;
+}
 
 export interface RepoAboutCardProps {
   /** The selected repo payload. */
@@ -29,6 +62,8 @@ export interface RepoAboutCardProps {
   onDismiss: () => void;
   /** Open the full RepositoryProfilePanel as a tab. */
   onOpenProfile: () => void;
+  /** Portal event emitter for terminal open intents etc. */
+  events: PanelEventEmitter;
 }
 
 function relativeTime(iso: string): string {
@@ -53,6 +88,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   repo,
   onDismiss,
   onOpenProfile,
+  events,
 }) => {
   const { theme } = useTheme();
   const gh = repo.github;
@@ -72,11 +108,91 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
     return () => { cancelled = true; };
   }, [owner]);
 
+  // Branch status for cloned repos (one per clone)
+  const [branchStatusMap, setBranchStatusMap] = useState<Map<string, GitBranchStatus>>(new Map());
+  const clones = repo.localClones;
+  useEffect(() => {
+    if (!clones || clones.length === 0) { setBranchStatusMap(new Map()); return; }
+    let cancelled = false;
+    Promise.all(
+      clones.map(async (clone) => {
+        try {
+          const status = await GitService.getBranchStatus(clone.path);
+          if (!cancelled) return [clone.path, status] as const;
+          return null;
+        } catch { return null; }
+      }),
+    ).then((results) => {
+      if (cancelled) return;
+      const map = new Map<string, GitBranchStatus>();
+      for (const r of results) {
+        if (r) map.set(r[0], r[1]);
+      }
+      setBranchStatusMap(map);
+    });
+    return () => { cancelled = true; };
+  }, [clones]);
+
+  // Clone / Fork modal state
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [cloneProgress, setCloneProgress] = useState<CloneProgressState | null>(null);
+  const [showForkModal, setShowForkModal] = useState(false);
+  const [isForked, setIsForked] = useState(false);
+  const [forkedRepoOwner, setForkedRepoOwner] = useState<string | null>(null);
+
+  // Auto-clear clone progress on completion
+  useEffect(() => {
+    if (cloneProgress?.phase !== 'complete') return;
+    const timer = setTimeout(() => setCloneProgress(null), 3000);
+    return () => clearTimeout(timer);
+  }, [cloneProgress?.phase]);
+
+  // Check if the current user has already forked this repo
+  useEffect(() => {
+    if (!gh) { setIsForked(false); return; }
+    let cancelled = false;
+    const checkForkStatus = async () => {
+      try {
+        const user = await GithubService.getCurrentUser();
+        if (!user || cancelled) return;
+        const userRepo = await GithubService.getRepository(user.login, name);
+        const forked =
+          !!userRepo &&
+          userRepo.fork === true &&
+          userRepo.parent?.full_name === `${owner}/${name}`;
+        if (!cancelled) {
+          setIsForked(forked);
+          setForkedRepoOwner(forked ? user.login : null);
+        }
+      } catch {
+        if (!cancelled) { setIsForked(false); setForkedRepoOwner(null); }
+      }
+    };
+    checkForkStatus();
+    return () => { cancelled = true; };
+  }, [owner, name, gh]);
+
   const description = gh?.description;
   const stars = gh?.stars ?? 0;
   const repoUrl = `https://github.com/${owner}/${name}`;
-  // Use lastUpdated as a proxy for activity (we don't have created_at in the payload)
   const lastUpdated = gh?.lastUpdated;
+  const hasClones = clones && clones.length > 0;
+
+  const registerRepository = async (path: string, remoteUrl?: string) =>
+    AlexandriaService.registerRepository(path, remoteUrl);
+
+  const handleOpen = async (clonePath: string) => {
+    const entry = await AlexandriaService.getRepositoryByPath(clonePath)
+      ?? await AlexandriaService.registerRepository(clonePath, repoUrl);
+    await WindowService.openDevWorkspace({ alexandriaEntry: entry });
+  };
+
+  const handleTerminal = (clonePath: string) => {
+    emitTerminalOpen(events, 'repo-about-card', {
+      directory: clonePath,
+      label: name,
+    });
+  };
 
   return (
     <div
@@ -250,8 +366,8 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
         </>
       )}
 
-      {/* Facts row: last updated (left) */}
-      {lastUpdated && (
+      {/* Facts row: age (left) + last updated (right) */}
+      {(lastUpdated || gh?.createdAt) && (
         <div
           style={{
             display: 'flex',
@@ -262,10 +378,286 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
             fontSize: theme.fontSizes[1],
           }}
         >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <CalendarDays size={14} />
-            Updated {relativeTime(lastUpdated)}
-          </span>
+          {gh?.createdAt && (() => {
+            const age = getRepositoryAge(gh.createdAt);
+            if (!age) return null;
+            return (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <CalendarDays size={14} />
+                {age} old
+              </span>
+            );
+          })()}
+          {lastUpdated && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              Updated {relativeTime(lastUpdated)}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Clone rows: one per local clone */}
+      {clones && clones.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {clones.map((clone, index) => {
+            const branchStatus = branchStatusMap.get(clone.path);
+            return (
+              <div
+                key={clone.path}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  flexWrap: 'wrap',
+                }}
+              >
+                {/* Cloned badge */}
+                <span
+                  title={clone.path}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    backgroundColor: `${theme.colors.success}15`,
+                    border: `1px solid ${theme.colors.success}30`,
+                    fontSize: theme.fontSizes[0],
+                    fontWeight: theme.fontWeights.medium ?? 500,
+                    color: theme.colors.success,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {clones.length === 1 ? 'cloned' : `clone ${index + 1}`}
+                </span>
+
+                {/* Branch + status */}
+                {branchStatus && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 8px',
+                      borderRadius: 6,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      border: `1px solid ${theme.colors.border}`,
+                      fontSize: theme.fontSizes[0],
+                      fontWeight: theme.fontWeights.medium ?? 500,
+                      color: theme.colors.text,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <GitBranch size={12} />
+                    {branchStatus.branch}
+                    {branchStatus.ahead === 0 && branchStatus.behind === 0 && branchStatus.hasUpstream ? (
+                      <>
+                        <span style={{ color: theme.colors.textSecondary }}>·</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: theme.colors.success }}>
+                          <CheckCircle2 size={11} />
+                          in sync
+                        </span>
+                      </>
+                    ) : !branchStatus.hasUpstream ? (
+                      <>
+                        <span style={{ color: theme.colors.textSecondary }}>·</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: theme.colors.warning }}>
+                          <AlertCircle size={11} />
+                          no remote
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ color: theme.colors.textSecondary }}>·</span>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 3,
+                            color: branchStatus.ahead > 0 && branchStatus.behind > 0
+                              ? theme.colors.error
+                              : branchStatus.behind > 0
+                                ? theme.colors.warning
+                                : theme.colors.info,
+                          }}
+                        >
+                          <Circle size={8} fill="currentColor" />
+                          {branchStatus.ahead > 0 && branchStatus.behind === 0
+                            ? `${branchStatus.ahead} ahead`
+                            : branchStatus.ahead === 0 && branchStatus.behind > 0
+                              ? `${branchStatus.behind} behind`
+                              : `${branchStatus.ahead}↑ ${branchStatus.behind}↓`}
+                        </span>
+                      </>
+                    )}
+                  </span>
+                )}
+
+                {/* Open button */}
+                <button
+                  type="button"
+                  onClick={() => handleOpen(clone.path)}
+                  title="Open in workspace"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}dd)`,
+                    color: theme.colors.background,
+                    cursor: 'pointer',
+                    fontSize: theme.fontSizes[0],
+                    fontWeight: theme.fontWeights.medium ?? 500,
+                    whiteSpace: 'nowrap',
+                    transition: 'opacity 0.15s',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.85'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                >
+                  <FolderOpen size={12} />
+                  Open
+                </button>
+
+                {/* Terminal button */}
+                <button
+                  type="button"
+                  onClick={() => handleTerminal(clone.path)}
+                  title="Open a terminal here"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    border: `1px solid ${theme.colors.border}`,
+                    background: theme.colors.backgroundSecondary,
+                    color: theme.colors.text,
+                    cursor: 'pointer',
+                    fontSize: theme.fontSizes[0],
+                    fontWeight: theme.fontWeights.medium ?? 500,
+                    whiteSpace: 'nowrap',
+                    transition: 'border-color 0.15s, color 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.borderColor = theme.colors.primary;
+                    (e.currentTarget as HTMLElement).style.color = theme.colors.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.borderColor = theme.colors.border;
+                    (e.currentTarget as HTMLElement).style.color = theme.colors.text;
+                  }}
+                >
+                  <Terminal size={12} />
+                  Terminal
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Clone + Fork buttons (shown when no local clones exist) */}
+      {!hasClones && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setShowCloneModal(true)}
+            disabled={cloneProgress?.phase === 'cloning' || cloneProgress?.phase === 'registering'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '4px 10px',
+              borderRadius: 6,
+              border: 'none',
+              background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}dd)`,
+              color: theme.colors.background,
+              cursor: cloneProgress?.phase === 'cloning' || cloneProgress?.phase === 'registering' ? 'not-allowed' : 'pointer',
+              opacity: cloneProgress?.phase === 'cloning' || cloneProgress?.phase === 'registering' ? 0.7 : 1,
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.medium ?? 500,
+              transition: 'opacity 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              if (cloneProgress?.phase === 'cloning' || cloneProgress?.phase === 'registering') return;
+              (e.currentTarget as HTMLElement).style.opacity = '0.85';
+            }}
+            onMouseLeave={(e) => {
+              if (cloneProgress?.phase === 'cloning' || cloneProgress?.phase === 'registering') return;
+              (e.currentTarget as HTMLElement).style.opacity = '1';
+            }}
+          >
+            {cloneProgress?.phase === 'cloning' || cloneProgress?.phase === 'registering' ? (
+              <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+            ) : (
+              <Download size={12} />
+            )}
+            {cloneProgress?.phase === 'cloning' || cloneProgress?.phase === 'registering' ? 'Cloning…' : 'Clone'}
+          </button>
+          {isForked && forkedRepoOwner ? (
+            <button
+              type="button"
+              onClick={() => {
+                events.emit({
+                  type: 'repository:selected',
+                  source: 'repo-about-card',
+                  timestamp: Date.now(),
+                  payload: payloadFromGithub({ owner: forkedRepoOwner, name }),
+                });
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '4px 10px',
+                borderRadius: 6,
+                border: `1px solid ${theme.colors.primary}`,
+                background: `${theme.colors.primary}18`,
+                color: theme.colors.primary,
+                cursor: 'pointer',
+                fontSize: theme.fontSizes[0],
+                fontWeight: theme.fontWeights.medium ?? 500,
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = `${theme.colors.primary}28`; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = `${theme.colors.primary}18`; }}
+            >
+              <GitFork size={12} />
+              forked: {forkedRepoOwner}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowForkModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '4px 10px',
+                borderRadius: 6,
+                border: `1px solid ${theme.colors.border}`,
+                background: 'transparent',
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                fontSize: theme.fontSizes[0],
+                fontWeight: theme.fontWeights.medium ?? 500,
+                transition: 'border-color 0.15s, color 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.color = theme.colors.primary;
+                (e.currentTarget as HTMLElement).style.borderColor = theme.colors.primary;
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.color = theme.colors.textSecondary;
+                (e.currentTarget as HTMLElement).style.borderColor = theme.colors.border;
+              }}
+            >
+              <GitFork size={12} />
+              Fork
+            </button>
+          )}
         </div>
       )}
 
@@ -300,6 +692,23 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
         <BookOpen size={15} />
         Full profile
       </button>
+
+      {/* Clone + Fork modals */}
+      <GitCloneModal
+        isOpen={showCloneModal}
+        onClose={() => setShowCloneModal(false)}
+        initialUrl={repoUrl}
+        registerRepository={registerRepository}
+        onCloneProgress={setCloneProgress}
+        onRepositoryAdded={() => setShowCloneModal(false)}
+      />
+      <ForkModal
+        isOpen={showForkModal}
+        onClose={() => setShowForkModal(false)}
+        repoOwner={owner}
+        repoName={name}
+        registerRepository={registerRepository}
+      />
     </div>
   );
 };

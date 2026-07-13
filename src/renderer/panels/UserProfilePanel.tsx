@@ -347,6 +347,7 @@ function payloadFromRepoCard(repo: RepoCardData): RepositorySelectedPayload {
     primaryLanguage: repo.language,
     isPublic: !repo.isPrivate,
     lastUpdated: repo.updatedAt,
+    createdAt: repo.createdAt,
   });
 }
 

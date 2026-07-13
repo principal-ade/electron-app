@@ -92,6 +92,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const { theme } = useTheme();
   const [view, setView] = useState<HomeView>('home');
   const [selectedRepo, setSelectedRepo] = useState<RepositorySelectedPayload | null>(null);
+  const [repoCardExiting, setRepoCardExiting] = useState(false);
 
   // Sidebar Home (and any navigate-to-home-panel) always returns to the
   // about + nav-cards overview, even when a sub-view is already open.
@@ -99,6 +100,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   useEffect(() => {
     const handleShowOverview = () => {
       setSelectedRepo(null);
+      setRepoCardExiting(false);
       setView('home');
     };
     window.addEventListener('home-panel:show-overview', handleShowOverview);
@@ -110,7 +112,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     };
   }, []);
 
-  // If the user signs out while on a Principal-only sub-view, drop back home.
+  // When the user signs out while on a Principal-only sub-view, drop back home.
   // Also clear selected repo card.
   useEffect(() => {
     if (
@@ -119,8 +121,17 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     ) {
       setView('home');
       setSelectedRepo(null);
+      setRepoCardExiting(false);
     }
   }, [isPrincipalSignedIn, view]);
+
+  const dismissRepoCard = useCallback(() => {
+    setRepoCardExiting(true);
+    setTimeout(() => {
+      setSelectedRepo(null);
+      setRepoCardExiting(false);
+    }, 320);
+  }, []);
 
   // About card: GitHub profile when CLI/API available, else git identity
   const [aboutUser, setAboutUser] = useState<UserAboutInfo | null>(null);
@@ -339,11 +350,12 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const emitRepoSelected = useCallback(
     (repo: GitHubRepository) => {
       const [owner, name] = repo.full_name.split('/');
-      const localEntry = repositories.find(
+      const matchingEntries = repositories.filter(
         (entry) => entry.github?.owner === owner && entry.github?.name === name,
       );
+      const localEntry = matchingEntries[0];
       const payload = localEntry
-        ? payloadFromLocalEntry(localEntry)
+        ? payloadFromLocalEntry(localEntry, matchingEntries)
         : payloadFromGithub({
             owner,
             name,
@@ -353,6 +365,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
             isPublic: !repo.private,
             defaultBranch: repo.default_branch,
             lastUpdated: repo.updated_at,
+            createdAt: repo.created_at,
           });
       setSelectedRepo(payload);
       events.emit({
@@ -367,7 +380,12 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 
   const emitLocalEntrySelected = useCallback(
     (entry: AlexandriaEntry) => {
-      const payload = payloadFromLocalEntry(entry);
+      const matchingEntries = repositories.filter((e) => {
+        const ep = e.purl ?? e.github?.purl;
+        const ip = entry.purl ?? entry.github?.purl;
+        return ep && ip && ep === ip;
+      });
+      const payload = payloadFromLocalEntry(entry, matchingEntries.length > 0 ? matchingEntries : undefined);
       setSelectedRepo(payload);
       events.emit({
         type: 'repository:selected',
@@ -376,7 +394,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         payload,
       });
     },
-    [events],
+    [events, repositories],
   );
 
   return (
@@ -389,7 +407,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         flexDirection: 'column',
       }}
     >
-      {selectedRepo && (
+      {(selectedRepo || repoCardExiting) && (
         <div
           key="repo-about-slide"
           style={{
@@ -398,7 +416,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
             zIndex: 1,
             overflowY: 'auto',
             background: theme.colors.background,
-            animation: 'repoAboutSlideIn 320ms ease',
+            animation: repoCardExiting
+              ? 'repoAboutSlideOut 320ms ease forwards'
+              : 'repoAboutSlideIn 320ms ease',
           }}
         >
           <style>{`
@@ -406,12 +426,19 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               from { transform: translateX(100%); }
               to   { transform: translateX(0); }
             }
+            @keyframes repoAboutSlideOut {
+              from { transform: translateX(0); }
+              to   { transform: translateX(100%); }
+            }
           `}</style>
-          <RepoAboutCard
-            repo={selectedRepo}
-            onDismiss={() => setSelectedRepo(null)}
-            onOpenProfile={() => setSelectedRepo(null)}
-          />
+          {selectedRepo && (
+            <RepoAboutCard
+              repo={selectedRepo}
+              onDismiss={dismissRepoCard}
+              onOpenProfile={dismissRepoCard}
+              events={events}
+            />
+          )}
         </div>
       )}
 
@@ -423,7 +450,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          ...(selectedRepo
+          ...(selectedRepo || repoCardExiting
             ? { pointerEvents: 'none' as const }
             : undefined),
         }}

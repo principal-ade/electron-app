@@ -86,6 +86,7 @@ export const StarredReposList: React.FC<StarredReposListProps> = ({ events }) =>
           name,
           stars: repo.stargazers_count ?? 0,
           lastUpdated: repo.updated_at,
+          createdAt: repo.created_at,
         }),
       });
     },
