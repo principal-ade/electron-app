@@ -17,9 +17,15 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { GithubService } from '../../main-process-api/GithubService';
 import { GitService } from '../../main-process-api/GitService';
-import { payloadFromGithub, payloadFromLocalEntry } from '../../events/repositorySelected';
+import {
+  payloadFromGithub,
+  payloadFromLocalEntry,
+  type RepositorySelectedPayload,
+} from '../../events/repositorySelected';
+import { useTheme } from '@principal-ade/industry-theme';
 import { useAuthState } from '../../hooks/useAuthState';
 import { UserAboutCard, type UserAboutInfo } from './UserAboutCard';
+import { RepoAboutCard } from './RepoAboutCard';
 import { HomeNavCards, type HomeNavKey, type HomeNavCardCounts } from './HomeNavCards';
 import { HomeClonedSubView } from './sub-views/HomeClonedSubView';
 import { HomeProjectsSubView, type ProjectSection } from './sub-views/HomeProjectsSubView';
@@ -83,12 +89,18 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 }) => {
   // Principal app OAuth — gates collections/recent and re-runs profile load.
   const { user: authUser, isAuthenticated: isPrincipalSignedIn } = useAuthState();
+  const { theme } = useTheme();
   const [view, setView] = useState<HomeView>('home');
+  const [selectedRepo, setSelectedRepo] = useState<RepositorySelectedPayload | null>(null);
 
   // Sidebar Home (and any navigate-to-home-panel) always returns to the
   // about + nav-cards overview, even when a sub-view is already open.
+  // Also clears the selected repo card so UserAboutCard returns.
   useEffect(() => {
-    const handleShowOverview = () => setView('home');
+    const handleShowOverview = () => {
+      setSelectedRepo(null);
+      setView('home');
+    };
     window.addEventListener('home-panel:show-overview', handleShowOverview);
     return () => {
       window.removeEventListener(
@@ -99,12 +111,14 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   }, []);
 
   // If the user signs out while on a Principal-only sub-view, drop back home.
+  // Also clear selected repo card.
   useEffect(() => {
     if (
       !isPrincipalSignedIn &&
       (view === 'collections' || view === 'recent')
     ) {
       setView('home');
+      setSelectedRepo(null);
     }
   }, [isPrincipalSignedIn, view]);
 
@@ -340,6 +354,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
             defaultBranch: repo.default_branch,
             lastUpdated: repo.updated_at,
           });
+      setSelectedRepo(payload);
       events.emit({
         type: 'repository:selected',
         source: 'home-panel',
@@ -352,11 +367,13 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 
   const emitLocalEntrySelected = useCallback(
     (entry: AlexandriaEntry) => {
+      const payload = payloadFromLocalEntry(entry);
+      setSelectedRepo(payload);
       events.emit({
         type: 'repository:selected',
         source: 'home-panel',
         timestamp: Date.now(),
-        payload: payloadFromLocalEntry(entry),
+        payload,
       });
     },
     [events],
@@ -372,61 +389,101 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         flexDirection: 'column',
       }}
     >
-      <SlidePane viewKey={view} resolveDirection={homeSlideDirection}>
-        {view === 'home' ? (
-          <div
-            key="home"
-            style={{
-              flex: 1,
-              minHeight: 0,
-              overflowY: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <UserAboutCard info={aboutUser} loading={userLoading} />
-            <HomeNavCards
-              counts={counts}
-              activeView={null}
-              isPrincipalSignedIn={isPrincipalSignedIn}
-              onOpenView={(key) => go(key)}
+      {selectedRepo && (
+        <div
+          key="repo-about-slide"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 1,
+            overflowY: 'auto',
+            background: theme.colors.background,
+            animation: 'repoAboutSlideIn 320ms ease',
+          }}
+        >
+          <style>{`
+            @keyframes repoAboutSlideIn {
+              from { transform: translateX(100%); }
+              to   { transform: translateX(0); }
+            }
+          `}</style>
+          <RepoAboutCard
+            repo={selectedRepo}
+            onDismiss={() => setSelectedRepo(null)}
+            onOpenProfile={() => setSelectedRepo(null)}
+          />
+        </div>
+      )}
+
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          ...(selectedRepo
+            ? { pointerEvents: 'none' as const }
+            : undefined),
+        }}
+      >
+        <SlidePane viewKey={view} resolveDirection={homeSlideDirection}>
+          {view === 'home' ? (
+            <div
+              key="home"
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <UserAboutCard info={aboutUser} loading={userLoading} />
+              <HomeNavCards
+                counts={counts}
+                activeView={null}
+                isPrincipalSignedIn={isPrincipalSignedIn}
+                onOpenView={(key) => go(key)}
+              />
+            </div>
+          ) : view === 'projects' ? (
+            <HomeProjectsSubView
+              key="projects"
+              sections={projectSections}
+              clonedFullNames={clonedFullNames}
+              onBack={() => go('home')}
+              onSelectRepo={(repo) => emitRepoSelected(repo)}
             />
-          </div>
-        ) : view === 'projects' ? (
-          <HomeProjectsSubView
-            key="projects"
-            sections={projectSections}
-            clonedFullNames={clonedFullNames}
-            onBack={() => go('home')}
-            onSelectRepo={(repo) => emitRepoSelected(repo)}
-          />
-        ) : view === 'other-clones' ? (
-          <HomeClonedSubView
-            key="other-clones"
-            repositories={otherClones}
-            label="Other Clones"
-            emptyMessage="No other clones yet. Local checkouts that aren't yours will show up here."
-            onBack={() => go('home')}
-            onSelectEntry={emitLocalEntrySelected}
-          />
-        ) : view === 'starred' ? (
-          <HomeStarredSubView
-            key="starred"
-            onBack={() => go('home')}
-            onSelectRepo={(repo) => emitRepoSelected(repo)}
-          />
-        ) : view === 'collections' && isPrincipalSignedIn ? (
-          <HomeCollectionsSubView
-            key="collections"
-            onBack={() => go('home')}
-          />
-        ) : view === 'recent' && isPrincipalSignedIn ? (
-          <HomeRecentSubView
-            key="recent"
-            onBack={() => go('home')}
-          />
-        ) : null}
-      </SlidePane>
+          ) : view === 'other-clones' ? (
+            <HomeClonedSubView
+              key="other-clones"
+              repositories={otherClones}
+              label="Other Clones"
+              emptyMessage="No other clones yet. Local checkouts that aren't yours will show up here."
+              onBack={() => go('home')}
+              onSelectEntry={emitLocalEntrySelected}
+            />
+          ) : view === 'starred' ? (
+            <HomeStarredSubView
+              key="starred"
+              onBack={() => go('home')}
+              onSelectRepo={(repo) => emitRepoSelected(repo)}
+            />
+          ) : view === 'collections' && isPrincipalSignedIn ? (
+            <HomeCollectionsSubView
+              key="collections"
+              onBack={() => go('home')}
+            />
+          ) : view === 'recent' && isPrincipalSignedIn ? (
+            <HomeRecentSubView
+              key="recent"
+              onBack={() => go('home')}
+            />
+          ) : null}
+        </SlidePane>
+      </div>
     </div>
   );
 };
