@@ -49,11 +49,15 @@ Emitter (home panel, activity cards, search, profile links, …)
 interface RepositorySelectedPayload {
   purl: Purl;                 // always
   github?: GithubRepository;  // display meta when known
-  localEntry?: AlexandriaEntry; // when cloned / registered
+  localEntry?: AlexandriaEntry; // first matching local clone
+  localClones?: Array<{       // all clones deduped by path
+    path: string;
+    addedAt: number;
+  }>;
 }
 ```
 
-Helpers: `payloadFromLocalEntry`, `payloadFromGithub`.
+Helpers: `payloadFromLocalEntry`, `payloadFromGithub`, `collectLocalClones`.
 
 **Intent name:** `PORTAL_INTENTS.repositorySelected` === `'repository:selected'`.
 
@@ -129,9 +133,9 @@ when another workspace surface is active.
 - Lists (Projects, Other Clones, Starred, …) call `emitRepoSelected` /
   `emitLocalEntrySelected`
 - Source: `'home-panel'`
-- Does **not** keep a `selectedRepoFullName` highlight for an About card
-- Does **not** host File City or About in the left rail; selection only opens
-  this profile tab
+- Also stores `selectedRepo` in state and renders `RepoAboutCard` as a
+  slide-in overlay in the left rail (see [repo-about-surface.md](./repo-about-surface.md))
+- Selection **also** opens this profile tab via `repository:selected`
 
 Home shell placement: `WorkspaceShell` when `activeView === 'home-panel'`
 renders `HomeLeftPanel` with the shell’s local `events` bus (forwarded to

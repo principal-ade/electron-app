@@ -1,12 +1,12 @@
-# RepoAboutCard — Planned Left-Rail Repo About Surface (electron-app)
+# RepoAboutCard — Left-Rail Repo About Surface (electron-app)
 
-> How a **selected-repo About card** will appear in the desktop Home left panel
+> How a **selected-repo About card** appears in the desktop Home left panel
 > when the user picks a repository from any sub-view. This is the electron-app
 > counterpart of web-ade's `RepoAboutCard` / `RepoOverview` left-rail extract.
 > For the full profile hub that opens as a tab, see
 > [repository-profile-panel-surface.md](./repository-profile-panel-surface.md).
 
-## What it is (today)
+## What it is
 
 The Home left panel (`HomeLeftPanel`) has two layers in its default `"home"`
 view:
@@ -16,60 +16,52 @@ view:
 2. **`HomeNavCards`** — clickable nav cards (Projects, Other Clones, Starred,
    Collections, Recent).
 
-When the user selects a repo from any sub-view (Projects, Starred, Other
-Clones, …), the panel emits `repository:selected` on the shell events bus,
-which opens `RepositoryProfilePanel` as a **tab** in the right pane. The left
-panel does **not** currently show any repo-specific about information — it
-stays on the sub-view the user was browsing.
+When the user selects a repo from any sub-view, the `RepoAboutCard` slides in
+from the right over the sub-view (which stays mounted with `pointerEvents:
+none`). The card dismisses with a matching slide-out animation.
 
-## What it will be
-
-A **`RepoAboutCard`** that replaces (or slides in place of) the `UserAboutCard`
-when a repository is selected in the left rail, giving the user a quick
-overview without leaving the home surface. This mirrors web-ade's behavior
-where `RepoAboutCard` appears in the left rail on `owner/repo` routes.
-
-### When it appears
-
-- User clicks a repo row in any left-rail sub-view (Projects, Starred, Other
-  Clones, Recent)
-- User navigates to a repo via search, activity cards, or other entry points
-  that emit `repository:selected`
-- The left panel slides back to the `"home"` view with the `RepoAboutCard`
-  replacing the `UserAboutCard`
-
-### When it dismisses
-
-- User clicks back / navigates to the sidebar Home button → returns to
-  `UserAboutCard` + `HomeNavCards`
-- User selects a different repo → card updates in place
-- User signs out → falls back to `UserAboutCard`
-
-## Proposed card content
+## Card content
 
 | Section | Source | Notes |
 | --- | --- | --- |
-| Owner avatar + repo name | `RepositorySelectedPayload.github` | Clickable → opens `RepositoryProfilePanel` tab |
-| Description | `github.description` | Truncated to 2–3 lines |
-| Language + star count | `github.primaryLanguage`, `github.stars` | Inline badges |
-| Default branch | `github.defaultBranch` | Subtle label |
-| Local clone status | Match against `repositories` (Alexandria entries) | "Cloned at ~/…" or "Not cloned" |
-| Quick actions | Open workspace, Open terminal, Clone/Fork | Only if local clone exists; mirrors profile panel actions |
+| Owner avatar + display name | `GithubService.getUser(owner)` | Fallback to owner initial |
+| Repo name + star count | `RepositorySelectedPayload.github` | Name links to GitHub |
+| Description | `github.description` | Falls back to "No description" with GitHub link |
+| Project age | `github.createdAt` | Computed via `getRepositoryAge` (days/months/years) |
+| Last updated | `github.lastUpdated` | Relative time ("2h ago") |
+| Clone rows (per clone) | `RepositorySelectedPayload.localClones` | Green "cloned" badge, branch name, sync status |
+| Open / Terminal buttons | Per-clone, via `WindowService` / `emitTerminalOpen` | Opens workspace or terminal at clone path |
+| Clone / Fork buttons | `GitCloneModal` / `ForkModal` | Shown when no local clones exist |
+| Fork status | `GithubService.getCurrentUser` + `getRepository` | Shows "forked: {owner}" if user already forked |
+| Full profile button | — | Slides to `RepositoryProfilePanel` tab |
 
-The card is intentionally **lighter** than `RepositoryProfilePanel` — it is a
-preview, not the full hub. Users who want the full experience click through to
-the profile tab.
+## Clone row details
 
-## Relationship to other surfaces
+Each local clone renders a row with:
 
-| Surface | Scope | Lives |
-| --- | --- | --- |
-| **RepoAboutCard** (this doc) | Left-rail preview of a selected repo | electron-app Home left panel |
-| `RepositoryProfilePanel` | Full project hub tab (heatmap, city, clones, contributors, README) | electron-app profile tab |
-| web-ade `RepoAboutCard` / `RepoOverview` | Left-rail about on `owner/repo` routes | web-ade |
-| `UserAboutCard` | Signed-in user profile (always in left rail when no repo selected) | electron-app Home left panel |
+- **Cloned badge** — green pill, shows "cloned" or "clone N" for multiple
+- **Branch + status** — branch name via `GitService.getBranchStatus`, with
+  sync indicator: "in sync" (green), "no remote" (yellow), or ahead/behind
+  counts (blue/red)
+- **Open button** — opens the clone in a dev workspace via
+  `WindowService.openDevWorkspace`
+- **Terminal button** — emits `terminal:open` intent via `emitTerminalOpen`
 
-## Open path (proposed)
+When no clones exist, **Clone** and **Fork** buttons appear instead:
+
+- **Clone** — opens `GitCloneModal` with the repo URL pre-filled; shows
+  spinner during cloning
+- **Fork** — opens `ForkModal`; if already forked, shows "forked: {owner}"
+  and navigates to the fork on click
+
+## Dismissal
+
+- **X button** or **Full profile** — triggers `dismissRepoCard`, which runs
+  the `repoAboutSlideOut` animation (320ms) before clearing state
+- **Sidebar Home button** — instant clear (no animation)
+- **Sign-out** — falls back to `UserAboutCard`
+
+## Data flow
 
 ```
 User picks repo in sub-view (Projects, Starred, …)
@@ -81,72 +73,75 @@ User picks repo in sub-view (Projects, Starred, …)
   └─ HomeLeftPanel also:
         → stores selectedRepo payload in state
         → slides to 'home' view
-        → renders RepoAboutCard instead of UserAboutCard
+        → renders RepoAboutCard (overlays sub-view with pointer-events none)
 ```
 
 The existing `repository:selected` → tab flow is preserved. The RepoAboutCard
 is an **addition** to the left rail, not a replacement for the tab.
 
-## Integration with HomeLeftPanel
+### Payload
 
-### State additions
-
-```ts
-// In HomeLeftPanel
-const [selectedRepo, setSelectedRepo] = useState<RepositorySelectedPayload | null>(null);
-```
-
-When `emitRepoSelected` or `emitLocalEntrySelected` fires, the panel stores
-the payload and slides to the home view.
-
-### View routing
-
-The `"home"` view branch in the `SlidePane` would conditionally render:
-
-```tsx
-{view === 'home' ? (
-  selectedRepo ? (
-    <RepoAboutCard
-      repo={selectedRepo}
-      onDismiss={() => setSelectedRepo(null)}
-      onOpenProfile={() => { /* emit repository:selected to open tab */ }}
-    />
-  ) : (
-    <>
-      <UserAboutCard info={aboutUser} loading={userLoading} />
-      <HomeNavCards … />
-    </>
-  )
-  // … rest of sub-views
-) : null}
-```
-
-### Data requirements
-
-`RepoAboutCard` needs a subset of `RepositorySelectedPayload`:
+`RepoAboutCard` reads from `RepositorySelectedPayload`:
 
 ```ts
-interface RepoAboutCardData {
-  owner: string;
-  name: string;
-  description?: string;
-  stars?: number;
-  primaryLanguage?: string;
-  isPublic?: boolean;
-  defaultBranch?: string;
-  // Enriched from local clones:
-  localClone?: {
+interface RepositorySelectedPayload {
+  purl: Purl;
+  github?: GithubRepository;      // display meta, createdAt
+  localEntry?: AlexandriaEntry;   // first matching local entry
+  localClones?: Array<{           // all clones deduped by path
     path: string;
-    branch: string;
-    ahead: number;
-    behind: number;
-    dirty: boolean;
-  };
+    addedAt: number;
+  }>;
 }
 ```
 
-Enrichment (local clone status) comes from matching `selectedRepo.purl`
-against the `repositories` prop (Alexandria entries).
+`localClones` is aggregated across all entries matching the repo's purl via
+`collectLocalClones`. Each clone's branch status is fetched independently via
+`GitService.getBranchStatus`.
+
+## Integration with HomeLeftPanel
+
+### State
+
+```ts
+const [selectedRepo, setSelectedRepo] = useState<RepositorySelectedPayload | null>(null);
+const [repoCardExiting, setRepoCardExiting] = useState(false);
+```
+
+### View routing
+
+The card renders as an absolute overlay when `selectedRepo` or
+`repoCardExiting` is true:
+
+```tsx
+{(selectedRepo || repoCardExiting) && (
+  <div style={{ animation: repoCardExiting ? 'repoAboutSlideOut …' : 'repoAboutSlideIn …' }}>
+    {selectedRepo && (
+      <RepoAboutCard
+        repo={selectedRepo}
+        onDismiss={dismissRepoCard}
+        onOpenProfile={dismissRepoCard}
+        events={events}
+      />
+    )}
+  </div>
+)}
+```
+
+The sub-view stays mounted with `pointerEvents: 'none'` while the card is
+visible or exiting.
+
+## Key source paths
+
+| Path | Role |
+| --- | --- |
+| `src/renderer/panels/home-panel/RepoAboutCard.tsx` | Card component |
+| `src/renderer/panels/home-panel/HomeLeftPanel.tsx` | Left rail orchestrator |
+| `src/renderer/panels/home-panel/UserAboutCard.tsx` | User profile card |
+| `src/renderer/events/repositorySelected.ts` | Payload type + builders + `collectLocalClones` |
+| `src/renderer/components/GitCloneModal.tsx` | Clone modal |
+| `src/renderer/panels/components/ForkModal.tsx` | Fork modal |
+| `src/renderer/panels/RepositoryProfilePanel.tsx` | Full profile tab (click-through target) |
 
 ## Explicit non-goals
 
@@ -157,16 +152,6 @@ against the `repositories` prop (Alexandria entries).
 - **Not the `UserAboutCard`.** These are two distinct cards — user profile vs.
   repo profile. The `UserAboutCard` always returns when no repo is selected.
 
-## Status
-
-- [ ] Design card layout (avatar overlap, description truncation, badge row)
-- [ ] Add `selectedRepo` state to `HomeLeftPanel`
-- [ ] Build `RepoAboutCard` component
-- [ ] Wire sub-view repo selections to set `selectedRepo` + slide home
-- [ ] Add quick-action buttons (open workspace, terminal, clone)
-- [ ] Dismissal logic (Home button, sign-out, different repo)
-- [ ] Loading / skeleton state for enriched data (local clone status)
-
 ## Related docs
 
 | Doc | Scope |
@@ -174,14 +159,3 @@ against the `repositories` prop (Alexandria entries).
 | [repository-profile-panel-surface.md](./repository-profile-panel-surface.md) | Full profile hub tab |
 | [home-left-panel-design.md](./home-left-panel-design.md) | Home left rail architecture |
 | [repository-profile-panel-architecture.md](./repository-profile-panel-architecture.md) | Profile panel internals |
-| web-ade `docs/repo-about-surface.md` | Web RepoAboutCard / RepoOverview |
-
-## Key source paths
-
-| Path | Role |
-| --- | --- |
-| `src/renderer/panels/home-panel/HomeLeftPanel.tsx` | Home left rail orchestrator |
-| `src/renderer/panels/home-panel/UserAboutCard.tsx` | Current user profile card |
-| `src/renderer/panels/home-panel/HomeNavCards.tsx` | Nav cards |
-| `src/renderer/events/repositorySelected.ts` | Payload builders |
-| `src/renderer/panels/RepositoryProfilePanel.tsx` | Full profile tab (target of click-through) |
