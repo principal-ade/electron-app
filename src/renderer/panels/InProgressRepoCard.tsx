@@ -15,7 +15,6 @@ import {
   GitBranch,
   GitCommit,
   Loader2,
-  Sparkles,
   Upload,
   User,
 } from 'lucide-react';
@@ -70,18 +69,6 @@ export interface InProgressSummary {
   lastEditAt?: Date;
 }
 
-export interface ExplainInProgressInput {
-  repoPath: string;
-  repoName: string;
-  branch?: string;
-  files: InProgressChangedFile[];
-  audienceLevel: 'maintainer' | 'non-technical';
-}
-
-export interface ExplainInProgressResponse {
-  text: string;
-}
-
 export interface InProgressAheadCommit {
   hash: string;
   message: string;
@@ -94,17 +81,9 @@ export interface InProgressPushResult {
   message: string;
 }
 
-export interface ExplainInProgressRequest {
-  repoPath: string;
-  repoName: string;
-  branch?: string;
-  files: InProgressChangedFile[];
-}
-
 export interface InProgressRepoCardActions {
   getFileTreeForLocalRepo: (repoPath: string) => Promise<FileTree | null>;
   getWorkingChanges: (repoPath: string) => Promise<InProgressChangedFile[]>;
-  explainWorkingChanges: (input: ExplainInProgressInput) => Promise<ExplainInProgressResponse>;
   getAheadCommits: (repoPath: string) => Promise<InProgressAheadCommit[]>;
   pushBranch: (repoPath: string) => Promise<InProgressPushResult>;
 }
@@ -113,8 +92,6 @@ interface InProgressRepoCardProps {
   summary: InProgressSummary;
   onOpen?: () => void;
   onDismiss?: (repoPath: string) => void;
-  onExplainRequested?: (request: ExplainInProgressRequest) => void;
-  explainLoading?: boolean;
   dimmed?: boolean;
   events?: PanelEventEmitter;
   entry?: AlexandriaEntry;
@@ -153,8 +130,6 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
   summary,
   onOpen,
   onDismiss,
-  onExplainRequested,
-  explainLoading = false,
   dimmed = false,
   events,
   entry,
@@ -167,6 +142,7 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
   const [cityData, setCityData] = useState<CityData | null>(null);
   const [cityLoading, setCityLoading] = useState(true);
   const [changedFiles, setChangedFiles] = useState<InProgressChangedFile[]>([]);
+  const [detailView, setDetailView] = useState<'files' | 'commits'>('files');
 
   const [aheadCommits, setAheadCommits] = useState<InProgressAheadCommit[]>([]);
   const [aheadCommitsLoaded, setAheadCommitsLoaded] = useState(false);
@@ -324,23 +300,6 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
     },
     [collapsing, onDismiss, summary.repoPath],
   );
-
-  const requestExplain = useCallback(() => {
-    if (!onExplainRequested) return;
-    if (changedFiles.length === 0) return;
-    onExplainRequested({
-      repoPath: summary.repoPath,
-      repoName: summary.repoName,
-      branch: summary.branch,
-      files: changedFiles,
-    });
-  }, [
-    onExplainRequested,
-    changedFiles,
-    summary.repoPath,
-    summary.repoName,
-    summary.branch,
-  ]);
 
   const totals = useMemo(() => {
     let additions = 0;
@@ -500,46 +459,6 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
       <div style={{ display: 'flex', minHeight: 300 }}>
         <div
           style={{
-            width: 300,
-            height: 300,
-            backgroundColor: theme.colors.background,
-            borderRight: `1px solid ${theme.colors.border}`,
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          {cityLoading ? (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: spacing.sm,
-                color: theme.colors.textMuted,
-              }}
-            >
-              <FolderGit2 size={32} style={{ opacity: 0.5 }} />
-              <span style={{ fontSize: theme.fontSizes[0] }}>Loading...</span>
-            </div>
-          ) : cityData ? (
-            <ArchitectureMapHighlightLayers
-              cityData={cityData}
-              highlightLayers={highlightLayers}
-              fullSize
-              showFileNames={false}
-              canvasBackgroundColor={theme.colors.background}
-              maxCanvasSize={1024}
-            />
-          ) : (
-            <FolderGit2 size={64} color={theme.colors.textMuted} style={{ opacity: 0.3 }} />
-          )}
-        </div>
-
-        <div
-          style={{
             flex: 1,
             padding: spacing.md,
             display: 'flex',
@@ -550,7 +469,7 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
           <div
             style={{
               display: 'flex',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               gap: spacing.sm,
               marginBottom: spacing.md,
             }}
@@ -608,7 +527,7 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                 >
                   {summary.repoName}
                 </h4>
-                {summary.isDirty === false ? (
+                {summary.isDirty === false && summary.aheadCount !== undefined && summary.aheadCount > 0 && (
                   <span
                     style={{
                       display: 'inline-flex',
@@ -626,32 +545,6 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                     <Upload size={11} />
                     Ahead
                   </span>
-                ) : (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '2px 8px',
-                      fontSize: theme.fontSizes[0],
-                      fontWeight: theme.fontWeights.semibold,
-                      color: theme.colors.textOnAccent,
-                      backgroundColor: theme.colors.warning,
-                      borderRadius: 999,
-                      flexShrink: 0,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: '50%',
-                        backgroundColor: theme.colors.textOnAccent,
-                        animation: 'inProgressPulse 1.4s ease-in-out infinite',
-                      }}
-                    />
-                    In progress
-                  </span>
                 )}
               </div>
               <div
@@ -668,61 +561,51 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                 {summary.branch && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                     <GitBranch size={12} />
-                    {summary.branch}
+                    on {summary.branch}
+                  </span>
+                )}
+                {summary.aheadCount !== undefined && summary.aheadCount > 0 && (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDetailView('commits');
+                    }}
+                    style={{
+                      cursor: 'pointer',
+                      color: detailView === 'commits' ? theme.colors.text : undefined,
+                    }}
+                  >
+                    {summary.aheadCount} commit{summary.aheadCount !== 1 ? 's' : ''} ahead of remote
+                  </span>
+                )}
+                {summary.behindCount !== undefined && summary.behindCount > 0 && (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDetailView('commits');
+                    }}
+                    style={{
+                      cursor: 'pointer',
+                      color: detailView === 'commits' ? theme.colors.text : undefined,
+                    }}
+                  >
+                    {summary.behindCount} commit{summary.behindCount !== 1 ? 's' : ''} behind remote
                   </span>
                 )}
                 {totals.fileCount > 0 && (
-                  <span>
-                    · {totals.fileCount} file{totals.fileCount !== 1 ? 's' : ''} changed
-                    {totals.staged > 0 && ` (${totals.staged} staged)`}
-                  </span>
-                )}
-                {totals.fileCount > 0 && onExplainRequested && (
-                  <button
-                    type="button"
+                  <span
                     onClick={(e) => {
                       e.stopPropagation();
-                      requestExplain();
+                      setDetailView('files');
                     }}
-                    disabled={explainLoading}
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '2px 8px',
-                      fontSize: theme.fontSizes[0],
-                      fontFamily: theme.fonts.body,
-                      fontWeight: theme.fontWeights.semibold,
-                      color: theme.colors.primary,
-                      backgroundColor: 'transparent',
-                      border: `1px solid ${theme.colors.primary}`,
-                      borderRadius: 4,
-                      cursor: explainLoading ? 'default' : 'pointer',
-                      opacity: explainLoading ? 0.7 : 1,
-                      lineHeight: 1.4,
+                      cursor: 'pointer',
+                      color: detailView === 'files' ? theme.colors.text : undefined,
                     }}
                   >
-                    {explainLoading ? (
-                      <>
-                        <Loader2
-                          size={10}
-                          style={{ animation: 'inProgressSpin 1s linear infinite' }}
-                        />
-                        <span>Explaining…</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={10} />
-                        <span>Explain</span>
-                      </>
-                    )}
-                  </button>
-                )}
-                {summary.aheadCount !== undefined && summary.aheadCount > 0 && (
-                  <span>↑{summary.aheadCount}</span>
-                )}
-                {summary.behindCount !== undefined && summary.behindCount > 0 && (
-                  <span>↓{summary.behindCount}</span>
+                    + {totals.fileCount} file{totals.fileCount !== 1 ? 's' : ''} changed
+                    {totals.staged > 0 && ` (${totals.staged} staged)`}
+                  </span>
                 )}
                 {totals.fileCount === 0 && aheadCount > 0 && (
                   <button
@@ -858,7 +741,7 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
               flex: 1,
             }}
           >
-            {totals.fileCount === 0 && aheadCount > 0 ? (
+            {detailView === 'commits' && aheadCount > 0 ? (
               <>
                 <div
                   style={{
@@ -1061,13 +944,49 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
           </div>
 
         </div>
+
+        <div
+          style={{
+            width: 300,
+            height: 300,
+            backgroundColor: theme.colors.background,
+            borderLeft: `1px solid ${theme.colors.border}`,
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {cityLoading ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: spacing.sm,
+                color: theme.colors.textMuted,
+              }}
+            >
+              <FolderGit2 size={32} style={{ opacity: 0.5 }} />
+              <span style={{ fontSize: theme.fontSizes[0] }}>Loading...</span>
+            </div>
+          ) : cityData ? (
+            <ArchitectureMapHighlightLayers
+              cityData={cityData}
+              highlightLayers={highlightLayers}
+              fullSize
+              showFileNames={false}
+              canvasBackgroundColor={theme.colors.background}
+              maxCanvasSize={1024}
+            />
+          ) : (
+            <FolderGit2 size={64} color={theme.colors.textMuted} style={{ opacity: 0.3 }} />
+          )}
+        </div>
       </div>
 
       <style>{`
-        @keyframes inProgressPulse {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 1; }
-        }
         @keyframes inProgressSpin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }

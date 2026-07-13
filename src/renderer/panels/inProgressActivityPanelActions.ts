@@ -6,11 +6,7 @@
 
 import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import { WebAdeService } from '../main-process-api/WebAdeService';
-import type { WorkingChangeData } from '../../shared/tipc/webAdeRouterTypes';
 import type {
-  ExplainInProgressInput,
-  ExplainInProgressResponse,
   InProgressAheadCommit,
   InProgressChangedFile,
   InProgressFileStatus,
@@ -55,25 +51,6 @@ async function getWorkingChanges(repoPath: string): Promise<InProgressChangedFil
   return files;
 }
 
-async function explainWorkingChanges(
-  input: ExplainInProgressInput,
-): Promise<ExplainInProgressResponse> {
-  const changes: WorkingChangeData[] = input.files.map((f) => ({
-    path: f.path,
-    status: f.status,
-    additions: f.additions || undefined,
-    deletions: f.deletions || undefined,
-    staged: f.staged,
-  }));
-
-  return WebAdeService.explainWorkingChanges({
-    changes,
-    audienceLevel: input.audienceLevel,
-    repoName: input.repoName,
-    branch: input.branch,
-  });
-}
-
 async function getAheadCommits(repoPath: string): Promise<InProgressAheadCommit[]> {
   const commits = await GitService.getAheadCommits(repoPath);
   return commits.map((c) => ({
@@ -96,7 +73,6 @@ async function pushBranch(repoPath: string): Promise<InProgressPushResult> {
 export const inProgressActivityPanelActions: InProgressRepoCardActions = {
   getFileTreeForLocalRepo: (repoPath) => RepositoryMonitoringService.getFileTree(repoPath),
   getWorkingChanges,
-  explainWorkingChanges,
   getAheadCommits,
   pushBranch,
 };
