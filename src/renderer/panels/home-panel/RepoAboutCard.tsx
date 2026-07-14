@@ -20,8 +20,10 @@ import {
   BookOpen,
   Building2,
   CalendarDays,
+  Check,
   CheckCircle2,
   Circle,
+  Copy,
   Download,
   FileText,
   FolderOpen,
@@ -145,6 +147,9 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
     return () => { cancelled = true; };
   }, [clones]);
 
+  // Copy-path feedback
+  const [copiedClonePath, setCopiedClonePath] = useState<string | null>(null);
+
   // Clone / Fork modal state
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [cloneProgress, setCloneProgress] = useState<CloneProgressState | null>(null);
@@ -224,6 +229,19 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
         clonePath,
       },
     });
+  };
+
+  const handleCopyClonePath = async (clonePath: string) => {
+    try {
+      await navigator.clipboard.writeText(clonePath);
+      setCopiedClonePath(clonePath);
+      setTimeout(
+        () => setCopiedClonePath((prev) => (prev === clonePath ? null : prev)),
+        1500,
+      );
+    } catch (error) {
+      console.error('Failed to copy clone path:', error);
+    }
   };
 
   return (
@@ -583,6 +601,41 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
                 >
                   <Terminal size={12} />
                   Terminal
+                </button>
+
+                {/* Copy path button */}
+                <button
+                  type="button"
+                  onClick={() => void handleCopyClonePath(clone.path)}
+                  title={copiedClonePath === clone.path ? 'Copied' : `Copy path\n${clone.path}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    border: `1px solid ${copiedClonePath === clone.path ? theme.colors.success : theme.colors.border}`,
+                    background: copiedClonePath === clone.path ? `${theme.colors.success}15` : theme.colors.backgroundSecondary,
+                    color: copiedClonePath === clone.path ? theme.colors.success : theme.colors.text,
+                    cursor: 'pointer',
+                    fontSize: theme.fontSizes[0],
+                    fontWeight: theme.fontWeights.medium ?? 500,
+                    whiteSpace: 'nowrap',
+                    transition: 'border-color 0.15s, color 0.15s, background 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (copiedClonePath === clone.path) return;
+                    (e.currentTarget as HTMLElement).style.borderColor = theme.colors.primary;
+                    (e.currentTarget as HTMLElement).style.color = theme.colors.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    if (copiedClonePath === clone.path) return;
+                    (e.currentTarget as HTMLElement).style.borderColor = theme.colors.border;
+                    (e.currentTarget as HTMLElement).style.color = theme.colors.text;
+                  }}
+                >
+                  {copiedClonePath === clone.path ? <Check size={12} /> : <Copy size={12} />}
+                  {copiedClonePath === clone.path ? 'Copied' : 'Copy Path'}
                 </button>
 
                 {/* Delete button */}

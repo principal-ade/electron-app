@@ -581,7 +581,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
             <RepoAboutCard
               repo={selectedRepo}
               onDismiss={dismissRepoCard}
-              onOpenProfile={dismissRepoCard}
+              onOpenProfile={() => {}}
               events={events}
               readmePath={readmePath}
               onOpenReadme={readmePath ? handleToggleReadme : undefined}
