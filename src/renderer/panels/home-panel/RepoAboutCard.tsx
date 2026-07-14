@@ -30,6 +30,7 @@ import {
   Loader2,
   Star,
   Terminal,
+  Trash2,
   X,
 } from 'lucide-react';
 import { parsePurl } from '@principal-ai/alexandria-core-library';
@@ -202,6 +203,26 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
     emitTerminalOpen(events, 'repo-about-card', {
       directory: clonePath,
       label: name,
+    });
+  };
+
+  const handleDeleteClone = (clonePath: string) => {
+    events.emit({
+      type: 'repository-profile:delete-clone-requested',
+      source: 'repo-about-card',
+      timestamp: Date.now(),
+      payload: {
+        repository: {
+          name,
+          owner,
+          description,
+          url: repoUrl,
+          purl: repo.purl,
+          localClones: clones,
+          github: gh,
+        },
+        clonePath,
+      },
     });
   };
 
@@ -562,6 +583,41 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
                 >
                   <Terminal size={12} />
                   Terminal
+                </button>
+
+                {/* Delete button */}
+                <button
+                  type="button"
+                  onClick={() => handleDeleteClone(clone.path)}
+                  title="Delete this clone"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    border: `1px solid ${theme.colors.error}50`,
+                    background: `${theme.colors.error}08`,
+                    color: theme.colors.error,
+                    cursor: 'pointer',
+                    fontSize: theme.fontSizes[0],
+                    fontWeight: theme.fontWeights.medium ?? 500,
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = theme.colors.error;
+                    (e.currentTarget as HTMLElement).style.color = theme.colors.background;
+                    (e.currentTarget as HTMLElement).style.borderColor = theme.colors.error;
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = `${theme.colors.error}08`;
+                    (e.currentTarget as HTMLElement).style.color = theme.colors.error;
+                    (e.currentTarget as HTMLElement).style.borderColor = `${theme.colors.error}50`;
+                  }}
+                >
+                  <Trash2 size={12} />
+                  Delete
                 </button>
               </div>
             );

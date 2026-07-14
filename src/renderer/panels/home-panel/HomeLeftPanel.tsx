@@ -14,10 +14,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { SlidePane, makeSlideDirection } from '../../components/SlidePane';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { githubIdToPurl } from '@principal-ai/alexandria-core-library';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { GithubService } from '../../main-process-api/GithubService';
 import { GitService } from '../../main-process-api/GitService';
 import {
+  extractLocalClones,
   payloadFromGithub,
   payloadFromLocalEntry,
   type RepositorySelectedPayload,
@@ -145,6 +147,39 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       setRepoCardExiting(false);
     }
   }, [isPrincipalSignedIn, view]);
+
+  // Keep selectedRepo.localClones in sync when the registry changes (e.g. after
+  // a clone is deleted via the RepoAboutCard delete button). Without this the
+  // card holds a stale snapshot and the deleted clone keeps showing.
+  useEffect(() => {
+    if (!selectedRepo) return;
+    const purl = selectedRepo.purl;
+    if (!purl) return;
+    const matchingEntries = repositories.filter(
+      (e) => (e.purl ?? e.github?.purl) === purl,
+    );
+    const currentPaths = selectedRepo.localClones?.map((c) => c.path) ?? [];
+    const nextClones =
+      matchingEntries.length > 0
+        ? Array.from(
+            new Map(
+              matchingEntries.flatMap((e) =>
+                (extractLocalClones(e) ?? []).map((c) => [c.path, c] as const),
+              ),
+            ).values(),
+          )
+        : [];
+    const nextPaths = nextClones.map((c) => c.path);
+    if (
+      nextPaths.length === currentPaths.length &&
+      nextPaths.every((p, i) => p === currentPaths[i])
+    ) {
+      return; // no change
+    }
+    setSelectedRepo((prev) =>
+      prev ? { ...prev, localClones: nextClones } : prev,
+    );
+  }, [repositories, selectedRepo?.purl]);
 
   const dismissRepoCard = useCallback(() => {
     setRepoCardExiting(true);
@@ -401,13 +436,19 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   }, [githubLogin]);
 
   // Local clones keyed for "Cloned only" in Your Projects.
-  const clonedFullNames = useMemo(() => {
+  // Uses PURL as the canonical identifier so matching is case-insensitive
+  // and robust to owner/name casing differences between the registry and
+  // the GitHub API.
+  const clonedPurls = useMemo(() => {
     const set = new Set<string>();
     for (const entry of repositories) {
-      const owner = entry.github?.owner;
-      const name = entry.github?.name;
-      if (owner && name) {
-        set.add(`${owner}/${name}`.toLowerCase());
+      const purl =
+        entry.purl ??
+        entry.github?.purl;
+      if (purl) {
+        set.add(purl);
+      } else if (entry.github?.owner && entry.github?.name) {
+        set.add(githubIdToPurl(`${entry.github.owner}/${entry.github.name}`));
       }
     }
     return set;
@@ -447,16 +488,23 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // against local clones when available (so the profile panel knows the path).
   const emitRepoSelected = useCallback(
     (repo: GitHubRepository) => {
-      const [owner, name] = repo.full_name.split('/');
-      const matchingEntries = repositories.filter(
-        (entry) => entry.github?.owner === owner && entry.github?.name === name,
-      );
+      const purl = githubIdToPurl(repo.full_name);
+      const matchingEntries = repositories.filter((entry) => {
+        const entryPurl =
+          entry.purl ??
+          entry.github?.purl;
+        if (entryPurl) return entryPurl === purl;
+        if (entry.github?.owner && entry.github?.name) {
+          return githubIdToPurl(`${entry.github.owner}/${entry.github.name}`) === purl;
+        }
+        return false;
+      });
       const localEntry = matchingEntries[0];
       const payload = localEntry
         ? payloadFromLocalEntry(localEntry, matchingEntries)
         : payloadFromGithub({
-            owner,
-            name,
+            owner: repo.owner.login,
+            name: repo.name,
             description: repo.description ?? undefined,
             stars: repo.stargazers_count ?? 0,
             primaryLanguage: repo.language ?? undefined,
@@ -580,7 +628,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
             <HomeProjectsSubView
               key="projects"
               sections={projectSections}
-              clonedFullNames={clonedFullNames}
+              clonedPurls={clonedPurls}
               onBack={() => go('home')}
               onSelectRepo={(repo) => emitRepoSelected(repo)}
             />

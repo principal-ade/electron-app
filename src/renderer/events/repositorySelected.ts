@@ -63,7 +63,7 @@ interface LocalClone {
  * Read the renderer-side `localClones` array from an entry, falling back to
  * a single-clone array derived from `entry.path` when the extension is absent.
  */
-function extractLocalClones(entry: AlexandriaEntry): LocalClone[] | undefined {
+export function extractLocalClones(entry: AlexandriaEntry): LocalClone[] | undefined {
   const maybeClones = (entry as { localClones?: unknown }).localClones;
   if (Array.isArray(maybeClones)) return maybeClones as LocalClone[];
   return entry.path ? [{ path: entry.path, addedAt: Date.now() }] : undefined;

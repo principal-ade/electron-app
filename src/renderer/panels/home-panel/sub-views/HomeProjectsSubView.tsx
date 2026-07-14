@@ -8,6 +8,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { githubIdToPurl } from '@principal-ai/alexandria-core-library';
 import { FolderGit2, Lock, Search, Star } from 'lucide-react';
 import type { GitHubRepository } from '../../../../shared/main-process-api-interfaces/GitHubAPI';
 import { getLanguageColor } from '../languageColors';
@@ -25,10 +26,10 @@ export interface HomeProjectsSubViewProps {
   onBack: () => void;
   onSelectRepo?: (repo: GitHubRepository) => void;
   /**
-   * Set of `owner/name` (lowercased) for repos that have a local Alexandria
-   * clone. Drives the "Cloned only" switch.
+   * Set of PURLs for repos that have a local Alexandria clone.
+   * Drives the "Cloned only" switch.
    */
-  clonedFullNames?: ReadonlySet<string>;
+  clonedPurls?: ReadonlySet<string>;
 }
 
 /** Personal section is always expanded by default; org sections start collapsed. */
@@ -40,7 +41,7 @@ export const HomeProjectsSubView: React.FC<HomeProjectsSubViewProps> = ({
   sections,
   onBack,
   onSelectRepo,
-  clonedFullNames,
+  clonedPurls,
 }) => {
   const { theme } = useTheme();
   const [filter, setFilter] = useState('');
@@ -50,7 +51,7 @@ export const HomeProjectsSubView: React.FC<HomeProjectsSubViewProps> = ({
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(() => new Set());
   const [orgsSeeded, setOrgsSeeded] = useState(false);
 
-  const canFilterCloned = Boolean(clonedFullNames && clonedFullNames.size > 0);
+  const canFilterCloned = Boolean(clonedPurls && clonedPurls.size > 0);
 
   // Seed org sections as collapsed once when sections load.
   useEffect(() => {
@@ -73,13 +74,13 @@ export const HomeProjectsSubView: React.FC<HomeProjectsSubViewProps> = ({
       );
 
     const base =
-      !clonedOnly || !clonedFullNames
+      !clonedOnly || !clonedPurls
         ? sections
         : sections
             .map((s) => ({
               ...s,
               repos: s.repos.filter((r) =>
-                clonedFullNames.has(r.full_name.toLowerCase()),
+                clonedPurls.has(githubIdToPurl(r.full_name)),
               ),
             }))
             .filter((s) => s.repos.length > 0);
@@ -88,7 +89,7 @@ export const HomeProjectsSubView: React.FC<HomeProjectsSubViewProps> = ({
       ...s,
       repos: sortAlpha(s.repos),
     }));
-  }, [sections, clonedOnly, clonedFullNames]);
+  }, [sections, clonedOnly, clonedPurls]);
 
   const totalRepos = useMemo(
     () => (scopedSections ?? []).reduce((n, s) => n + s.repos.length, 0),
