@@ -31,6 +31,7 @@ import {
   type CollectionSelectedPayload,
   type OwnerActivityRequestedPayload,
   type RepositoryActivityRequestedPayload,
+  type RepositoryGuideOpenReadmePayload,
 } from '../../events/portalIntents';
 
 export const PortalIntentBridge: React.FC = () => {
@@ -72,6 +73,13 @@ export const PortalIntentBridge: React.FC = () => {
       ws.openFileCityGuide(event.payload);
     };
 
+    const handleRepositoryGuideOpenReadme = (event: {
+      payload: RepositoryGuideOpenReadmePayload;
+    }) => {
+      const p = event.payload;
+      ws.openFileCityGuide(p, p.readmeActive, p.readmePath);
+    };
+
     const handleOwnerSelected = (event: { payload: OwnerSelectedPayload }) => {
       const { owner, kind, email } = event.payload;
       if (kind === 'org') {
@@ -107,6 +115,7 @@ export const PortalIntentBridge: React.FC = () => {
     events.on(PORTAL_INTENTS.topicOpen, handleTopicOpen);
     events.on(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
     events.on(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
+    events.on(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);
     events.on(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
     events.on(PORTAL_INTENTS.collectionSelected, handleCollectionSelected);
     events.on(PORTAL_INTENTS.liveActivityOpen, handleLiveActivityOpen);
@@ -117,6 +126,7 @@ export const PortalIntentBridge: React.FC = () => {
       events.off(PORTAL_INTENTS.topicOpen, handleTopicOpen);
       events.off(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
       events.off(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
+      events.off(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);
       events.off(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
       events.off(PORTAL_INTENTS.collectionSelected, handleCollectionSelected);
       events.off(PORTAL_INTENTS.liveActivityOpen, handleLiveActivityOpen);

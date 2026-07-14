@@ -10,6 +10,11 @@
  * rather than silently never matching.
  */
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type {
+  GithubRepository,
+  Purl,
+} from '@principal-ai/alexandria-core-library';
 import type { RepositorySelectedPayload } from './repositorySelected';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
@@ -24,6 +29,8 @@ export const PORTAL_INTENTS = {
   repositorySelected: 'repository:selected',
   /** Open a File City guide tab (the guide host, separate from the profile). */
   repositoryGuideOpen: 'repository:guide-open',
+  /** Open a File City guide tab with README active (or toggle it off). */
+  repositoryGuideOpenReadme: 'repository:guide-open-readme',
   /** Open a user/org profile tab (collapses the legacy `user:profile-selected`). */
   ownerSelected: 'owner:selected',
   /** Open a collection profile tab. */
@@ -201,6 +208,29 @@ export function emitRepositoryGuideOpen(
   });
 }
 
+/** Payload for {@link PORTAL_INTENTS.repositoryGuideOpenReadme}. */
+export interface RepositoryGuideOpenReadmePayload {
+  purl: Purl;
+  github?: GithubRepository;
+  localEntry?: AlexandriaEntry;
+  readmeActive: boolean;
+  readmePath?: string;
+}
+
+/** Emit a {@link PORTAL_INTENTS.repositoryGuideOpenReadme} intent. */
+export function emitRepositoryGuideOpenReadme(
+  events: PanelEventEmitter,
+  source: string,
+  payload: RepositoryGuideOpenReadmePayload,
+): void {
+  events.emit<RepositoryGuideOpenReadmePayload>({
+    type: PORTAL_INTENTS.repositoryGuideOpenReadme,
+    source,
+    timestamp: Date.now(),
+    payload,
+  });
+}
+
 /**
  * Forward the Projects open-intent subset from a panel's local bus onto the
  * portal bus, normalizing the two legacy owner events into one
@@ -232,6 +262,7 @@ export function installProjectsOpenForwarder(
   const unsubs = [
     forward(PORTAL_INTENTS.repositorySelected),
     forward(PORTAL_INTENTS.repositoryGuideOpen),
+    forward(PORTAL_INTENTS.repositoryGuideOpenReadme),
     forward(PORTAL_INTENTS.collectionSelected),
     forward(PORTAL_INTENTS.liveActivityOpen),
     forward(PORTAL_INTENTS.ownerActivityRequested),

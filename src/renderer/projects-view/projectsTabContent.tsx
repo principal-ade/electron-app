@@ -70,6 +70,7 @@ import {
   type FileCityGuidePanelContext,
   type FileCityGuideRepository,
   type LineCountsSliceData,
+  type ReadmeView,
 } from '@industry-theme/file-city-panel';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
 import type { HighlightLayer } from '@principal-ai/file-city-react';
@@ -707,12 +708,16 @@ const FileCityGuideTabContent: React.FC<{
   github?: GithubRepository;
   localEntry?: AlexandriaEntry;
   events: PanelEventEmitter;
-}> = ({ purl, github, localEntry, events }) => {
+  readmeActive?: boolean;
+  readmePath?: string;
+}> = ({ purl, github, localEntry, events, readmeActive = false, readmePath }) => {
   const [fileTree, setFileTree] = React.useState<RepoFileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = React.useState(false);
   const [lineCounts, setLineCounts] =
     React.useState<LineCountsSliceData | null>(null);
   const [lineCountsLoading, setLineCountsLoading] = React.useState(false);
+  const [readmeContent, setReadmeContent] = React.useState<string | null>(null);
+  const [readmeLoading, setReadmeLoading] = React.useState(false);
 
   const localPath = localEntry?.path ?? null;
 
@@ -825,6 +830,30 @@ const FileCityGuideTabContent: React.FC<{
     };
   }, [localPath, github?.owner, github?.name]);
 
+  // Fetch README content when active.
+  React.useEffect(() => {
+    if (!readmeActive || !readmePath || !github?.owner || !github?.name) {
+      setReadmeContent(null);
+      return;
+    }
+    let cancelled = false;
+    setReadmeLoading(true);
+    GithubService.getFileContent(github.owner, github.name, readmePath)
+      .then((content) => {
+        if (!cancelled) setReadmeContent(content ?? null);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('[FileCityGuideTab] Failed to fetch README:', err);
+          setReadmeContent(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setReadmeLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [readmeActive, readmePath, github?.owner, github?.name]);
+
   // Per-slice memos so unrelated state changes don't churn slice identity.
   const fileTreeSlice = React.useMemo(
     () =>
@@ -853,6 +882,25 @@ const FileCityGuideTabContent: React.FC<{
     () => makeGuideSlice<HighlightLayer[] | null>('highlightLayers', null),
     [],
   );
+
+  // README slice — populated when readmeActive is true and content is fetched.
+  const readmeSlice = React.useMemo(() => {
+    if (!readmeActive || !readmeContent) {
+      return makeGuideSlice<ReadmeView | null>('readme', null);
+    }
+    const readmeView: ReadmeView = {
+      content: readmeContent,
+      path: readmePath,
+      repositoryInfo: github
+        ? {
+            owner: github.owner,
+            repo: github.name,
+            branch: github.defaultBranch ?? 'main',
+          }
+        : undefined,
+    };
+    return makeGuideSlice<ReadmeView | null>('readme', readmeView, readmeLoading);
+  }, [readmeActive, readmeContent, readmePath, readmeLoading, github]);
 
   const repository = React.useMemo<FileCityGuideRepository | null>(() => {
     if (!localPath && !github?.name) return null;
@@ -893,6 +941,7 @@ const FileCityGuideTabContent: React.FC<{
         lineCounts: lineCountsSlice,
         tour: tourSlice,
         highlightLayers: highlightLayersSlice,
+        readme: readmeSlice,
         repository,
       }) as PanelContextValue & FileCityGuidePanelContext,
     [
@@ -901,6 +950,7 @@ const FileCityGuideTabContent: React.FC<{
       lineCountsSlice,
       tourSlice,
       highlightLayersSlice,
+      readmeSlice,
       repository,
     ],
   );
@@ -933,6 +983,7 @@ const FileCityGuideTabContent: React.FC<{
         showFileTree
         showFileTreeToggle
         showColorLegend
+        readmeMarkdownWidth={readmeActive ? 0.66 : undefined}
       />
     </div>
   );
@@ -1488,6 +1539,8 @@ export function renderProjectsTabContent(
           github={guideTab.github}
           localEntry={guideTab.localEntry}
           events={events}
+          readmeActive={guideTab.readmeActive}
+          readmePath={guideTab.readmePath}
         />
       );
     }

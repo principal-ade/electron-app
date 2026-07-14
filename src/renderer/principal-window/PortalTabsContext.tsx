@@ -121,7 +121,11 @@ export interface WorkspaceTabsContextValue {
   /** Open a `repo-activity-<owner>/<repo>` tab idempotently and focus it. */
   openRepoActivity: (owner: string, repo: string) => void;
   /** Open a `file-city-guide-<purl>` tab idempotently and focus it. */
-  openFileCityGuide: (payload: RepositorySelectedPayload) => void;
+  openFileCityGuide: (
+    payload: RepositorySelectedPayload,
+    readmeActive?: boolean,
+    readmePath?: string,
+  ) => void;
   /** Open the singleton `live-activity` tab and focus it. */
   openLiveActivity: () => void;
   /** Open (or focus) a `drawing` tab, deduped by drawing id. */
@@ -432,22 +436,57 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   );
 
   const openFileCityGuide = useCallback(
-    (payload: RepositorySelectedPayload) => {
+    (
+      payload: RepositorySelectedPayload,
+      readmeActive?: boolean,
+      readmePath?: string,
+    ) => {
       const { purl, github, localEntry } = payload;
-      openTab(
-        `file-city-guide-${purl}`,
-        () =>
-          ({
-            id: `file-city-guide-${purl}`,
-            label: github
-              ? `${github.owner}/${github.name} · City`
-              : `City · ${String(purl)}`,
-            contentType: 'file-city-guide',
-            closable: true,
-            purl,
-            github,
-            localEntry,
-          }) as FileCityGuideTab,
+      const tabId = `file-city-guide-${purl}`;
+      // If toggling README, update existing tab or create one if it doesn't exist yet.
+      if (readmeActive !== undefined) {
+        setTabs((prev) => {
+          const exists = prev.some((t) => t.id === tabId);
+          if (exists) {
+            return prev.map((t) =>
+              t.id === tabId
+                ? { ...t, readmeActive, readmePath } as FileCityGuideTab
+                : t,
+            );
+          }
+          return [
+            ...prev,
+            {
+              id: tabId,
+              label: github
+                ? `${github.owner}/${github.name} · City`
+                : `City · ${String(purl)}`,
+              contentType: 'file-city-guide',
+              closable: true,
+              purl,
+              github,
+              localEntry,
+              readmeActive,
+              readmePath,
+            } as FileCityGuideTab,
+          ];
+        });
+        setActiveTabId(tabId);
+        return;
+      }
+      openTab(tabId, () =>
+        ({
+          id: tabId,
+          label: github
+            ? `${github.owner}/${github.name} · City`
+            : `City · ${String(purl)}`,
+          contentType: 'file-city-guide',
+          closable: true,
+          purl,
+          github,
+          localEntry,
+          readmeActive: false,
+        }) as FileCityGuideTab,
       );
     },
     [openTab],

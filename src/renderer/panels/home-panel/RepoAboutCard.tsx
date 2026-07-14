@@ -18,10 +18,12 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   AlertCircle,
   BookOpen,
+  Building2,
   CalendarDays,
   CheckCircle2,
   Circle,
   Download,
+  FileText,
   FolderOpen,
   GitBranch,
   GitFork,
@@ -64,6 +66,12 @@ export interface RepoAboutCardProps {
   onOpenProfile: () => void;
   /** Portal event emitter for terminal open intents etc. */
   events: PanelEventEmitter;
+  /** README file path in the repo (e.g. "README.md") — null if unknown. */
+  readmePath?: string | null;
+  /** Called when the README toggle button is clicked. */
+  onOpenReadme?: () => void;
+  /** Whether README is currently active in the guide tab. */
+  readmeActive?: boolean;
 }
 
 function relativeTime(iso: string): string {
@@ -89,6 +97,9 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   onDismiss,
   onOpenProfile,
   events,
+  readmePath,
+  onOpenReadme,
+  readmeActive = false,
 }) => {
   const { theme } = useTheme();
   const gh = repo.github;
@@ -700,6 +711,49 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
         <BookOpen size={15} />
         Full profile
       </button>
+
+      {/* README toggle button */}
+      {readmePath && onOpenReadme && (
+        <button
+          type="button"
+          onClick={onOpenReadme}
+          aria-pressed={readmeActive}
+          title={readmeActive ? `Close ${readmePath} and show the city` : `Open ${readmePath}`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            padding: '6px 12px',
+            borderRadius: 6,
+            border: `1px solid ${readmeActive ? theme.colors.primary : theme.colors.border}`,
+            background: readmeActive
+              ? `color-mix(in srgb, ${theme.colors.primary} 14%, transparent)`
+              : theme.colors.backgroundSecondary,
+            color: readmeActive ? theme.colors.primary : theme.colors.text,
+            cursor: 'pointer',
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            fontWeight: theme.fontWeights.medium,
+            transition: 'background 0.15s, border-color 0.15s, color 0.15s',
+          }}
+          onMouseEnter={(e) => {
+            if (!readmeActive) {
+              (e.currentTarget as HTMLElement).style.borderColor = theme.colors.primary;
+              (e.currentTarget as HTMLElement).style.color = theme.colors.primary;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!readmeActive) {
+              (e.currentTarget as HTMLElement).style.borderColor = theme.colors.border;
+              (e.currentTarget as HTMLElement).style.color = theme.colors.text;
+            }
+          }}
+        >
+          {readmeActive ? <Building2 size={15} /> : <FileText size={15} />}
+          {readmeActive ? 'City' : 'README'}
+        </button>
+      )}
 
       {/* Clone + Fork modals */}
       <GitCloneModal

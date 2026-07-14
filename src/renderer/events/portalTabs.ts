@@ -194,6 +194,8 @@ export interface FileCityGuideTab extends BaseTab {
   purl: Purl;
   github?: GithubRepository;
   localEntry?: AlexandriaEntry;
+  readmeActive?: boolean;
+  readmePath?: string;
 }
 
 // ---------------------------------------------------------------------------
