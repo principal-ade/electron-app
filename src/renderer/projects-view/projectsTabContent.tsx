@@ -980,7 +980,6 @@ const FileCityGuideTabContent: React.FC<{
         context={guideContext}
         actions={guideActions}
         events={events}
-        showFileTree
         showFileTreeToggle
         showColorLegend
         readmeMarkdownWidth={readmeActive ? 0.66 : undefined}

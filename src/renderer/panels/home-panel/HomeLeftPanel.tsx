@@ -222,13 +222,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     const next = !readmeActive;
     setReadmeActive(next);
     writeReadmeOpenPref(owner, name, next);
-    // Dismiss card + emit intent
-    setRepoCardExiting(true);
-    setTimeout(() => {
-      setSelectedRepo(null);
-      setRepoCardExiting(false);
-      setReadmePath(null);
-    }, 320);
     emitRepositoryGuideOpenReadme(events, 'home-panel', {
       purl: selectedRepo.purl,
       github: selectedRepo.github,
