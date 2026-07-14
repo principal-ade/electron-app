@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.821",
+  "version": "0.0.822",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -289,7 +289,7 @@
     "simple-git": "^3.30.0",
     "socket.io-client": "^4.8.1",
     "stream-browserify": "^3.0.0",
-    "themed-markdown": "^0.1.105",
+    "themed-markdown": "0.1.117",
     "three": "^0.172.0",
     "uuid": "^11.1.0",
     "ws": "^8.18.3",
