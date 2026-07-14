@@ -22,6 +22,8 @@ export const PORTAL_INTENTS = {
   docOpen: 'doc:open',
   /** Open a repository profile tab. */
   repositorySelected: 'repository:selected',
+  /** Open a File City guide tab (the guide host, separate from the profile). */
+  repositoryGuideOpen: 'repository:guide-open',
   /** Open a user/org profile tab (collapses the legacy `user:profile-selected`). */
   ownerSelected: 'owner:selected',
   /** Open a collection profile tab. */
@@ -185,6 +187,20 @@ export function emitTerminalOpen(
   });
 }
 
+/** Emit a {@link PORTAL_INTENTS.repositoryGuideOpen} intent. */
+export function emitRepositoryGuideOpen(
+  events: PanelEventEmitter,
+  source: string,
+  payload: RepositorySelectedPayload,
+): void {
+  events.emit<RepositorySelectedPayload>({
+    type: PORTAL_INTENTS.repositoryGuideOpen,
+    source,
+    timestamp: Date.now(),
+    payload,
+  });
+}
+
 /**
  * Forward the Projects open-intent subset from a panel's local bus onto the
  * portal bus, normalizing the two legacy owner events into one
@@ -215,6 +231,7 @@ export function installProjectsOpenForwarder(
   // Pass-through opens (payload unchanged).
   const unsubs = [
     forward(PORTAL_INTENTS.repositorySelected),
+    forward(PORTAL_INTENTS.repositoryGuideOpen),
     forward(PORTAL_INTENTS.collectionSelected),
     forward(PORTAL_INTENTS.liveActivityOpen),
     forward(PORTAL_INTENTS.ownerActivityRequested),

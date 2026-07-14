@@ -30,6 +30,7 @@ import type {
   CollectionProfileTab,
   OwnerActivityTab,
   RepoActivityTab,
+  FileCityGuideTab,
   SharedTrailTab,
   LocalTrailTab,
   MarkdownDocTab,
@@ -72,6 +73,7 @@ export type WorkspaceTab =
   | CollectionProfileTab
   | OwnerActivityTab
   | RepoActivityTab
+  | FileCityGuideTab
   // Drawings
   | DrawingTab
   // Skills
@@ -118,6 +120,8 @@ export interface WorkspaceTabsContextValue {
   ) => void;
   /** Open a `repo-activity-<owner>/<repo>` tab idempotently and focus it. */
   openRepoActivity: (owner: string, repo: string) => void;
+  /** Open a `file-city-guide-<purl>` tab idempotently and focus it. */
+  openFileCityGuide: (payload: RepositorySelectedPayload) => void;
   /** Open the singleton `live-activity` tab and focus it. */
   openLiveActivity: () => void;
   /** Open (or focus) a `drawing` tab, deduped by drawing id. */
@@ -188,92 +192,115 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   );
 
   // Idempotent open helper: focus the tab if present, else append `make()`.
-  const openTab = useCallback(
-    (tabId: string, make: () => WorkspaceTab) => {
-      setTabs((prev) => (prev.some((t) => t.id === tabId) ? prev : [...prev, make()]));
-      setActiveTabId(tabId);
-    },
-    [],
-  );
+  const openTab = useCallback((tabId: string, make: () => WorkspaceTab) => {
+    setTabs((prev) =>
+      prev.some((t) => t.id === tabId) ? prev : [...prev, make()],
+    );
+    setActiveTabId(tabId);
+  }, []);
 
   const openSharedTrail = useCallback(
     (trailId: string, owner?: string, repo?: string) => {
-      openTab(`shared-trail-${trailId}`, () => ({
-        id: `shared-trail-${trailId}`,
-        label: repo ? `${owner}/${repo}` : 'Shared trail',
-        contentType: 'shared-trail',
-        closable: true,
-        trailId,
-        owner,
-        repo,
-      }) as SharedTrailTab);
+      openTab(
+        `shared-trail-${trailId}`,
+        () =>
+          ({
+            id: `shared-trail-${trailId}`,
+            label: repo ? `${owner}/${repo}` : 'Shared trail',
+            contentType: 'shared-trail',
+            closable: true,
+            trailId,
+            owner,
+            repo,
+          }) as SharedTrailTab,
+      );
     },
     [openTab],
   );
 
   const openWebAdeTopic = useCallback(
     (topicId: string, title?: string) => {
-      openTab(`topic-${topicId}`, () => ({
-        id: `topic-${topicId}`,
-        label: title || 'Topic',
-        contentType: 'topic',
-        closable: true,
-        topicId,
-      }) as TopicTab);
+      openTab(
+        `topic-${topicId}`,
+        () =>
+          ({
+            id: `topic-${topicId}`,
+            label: title || 'Topic',
+            contentType: 'topic',
+            closable: true,
+            topicId,
+          }) as TopicTab,
+      );
     },
     [openTab],
   );
 
   const openLocalTopic = useCallback(
     (topicId: string, title?: string) => {
-      openTab(`local-topic-${topicId}`, () => ({
-        id: `local-topic-${topicId}`,
-        label: title || 'Topic',
-        contentType: 'local-topic',
-        closable: true,
-        topicId,
-        title,
-      }) as LocalTopicTab);
+      openTab(
+        `local-topic-${topicId}`,
+        () =>
+          ({
+            id: `local-topic-${topicId}`,
+            label: title || 'Topic',
+            contentType: 'local-topic',
+            closable: true,
+            topicId,
+            title,
+          }) as LocalTopicTab,
+      );
     },
     [openTab],
   );
 
   const openLocalTrail = useCallback(
     (trailId: string, title?: string) => {
-      openTab(`local-trail-${trailId}`, () => ({
-        id: `local-trail-${trailId}`,
-        label: title || 'Trail',
-        contentType: 'local-trail',
-        closable: true,
-        trailId,
-      }) as LocalTrailTab);
+      openTab(
+        `local-trail-${trailId}`,
+        () =>
+          ({
+            id: `local-trail-${trailId}`,
+            label: title || 'Trail',
+            contentType: 'local-trail',
+            closable: true,
+            trailId,
+          }) as LocalTrailTab,
+      );
     },
     [openTab],
   );
 
   const openMarkdownDoc = useCallback(
     (filePath: string, repositoryPath?: string) => {
-      openTab(`markdown-doc-${filePath}`, () => ({
-        id: `markdown-doc-${filePath}`,
-        label: filePath.split('/').pop() || 'Document',
-        contentType: 'markdown-doc',
-        closable: true,
-        filePath,
-        repositoryPath,
-      }) as MarkdownDocTab);
+      openTab(
+        `markdown-doc-${filePath}`,
+        () =>
+          ({
+            id: `markdown-doc-${filePath}`,
+            label: filePath.split('/').pop() || 'Document',
+            contentType: 'markdown-doc',
+            closable: true,
+            filePath,
+            repositoryPath,
+          }) as MarkdownDocTab,
+      );
     },
     [openTab],
   );
 
   const openSourceFile = useCallback(
     (filePath: string) => {
-      openTab(`source-file-${filePath}`, () => ({
-        id: `source-file-${filePath}`,
-        label: filePath.split('/').pop() || 'File',
-        contentType: 'source-file',
-        closable: true,
-        filePath,
-      }) as SourceFileTab);
+      openTab(
+        `source-file-${filePath}`,
+        () =>
+          ({
+            id: `source-file-${filePath}`,
+            label: filePath.split('/').pop() || 'File',
+            contentType: 'source-file',
+            closable: true,
+            filePath,
+          }) as SourceFileTab,
+      );
     },
     [openTab],
   );
@@ -281,13 +308,17 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   const openMedia = useCallback(
     (filePath: string) => {
       const fileName = filePath.split('/').pop() || 'Media';
-      openTab(`media-${filePath}`, () => ({
-        id: `media-${filePath}`,
-        label: fileName,
-        contentType: 'media',
-        closable: true,
-        filePath,
-      }) as MediaTab);
+      openTab(
+        `media-${filePath}`,
+        () =>
+          ({
+            id: `media-${filePath}`,
+            label: fileName,
+            contentType: 'media',
+            closable: true,
+            filePath,
+          }) as MediaTab,
+      );
     },
     [openTab],
   );
@@ -295,94 +326,144 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   const openProjectInfo = useCallback(
     (payload: RepositorySelectedPayload) => {
       const { purl, github, localEntry } = payload;
-      openTab(`project-info-${purl}`, () => ({
-        id: `project-info-${purl}`,
-        label: github ? `${github.owner}/${github.name}` : String(purl),
-        contentType: 'project-info',
-        closable: true,
-        purl,
-        github,
-        localEntry,
-      }) as ProjectInfoTab);
+      openTab(
+        `project-info-${purl}`,
+        () =>
+          ({
+            id: `project-info-${purl}`,
+            label: github ? `${github.owner}/${github.name}` : String(purl),
+            contentType: 'project-info',
+            closable: true,
+            purl,
+            github,
+            localEntry,
+          }) as ProjectInfoTab,
+      );
     },
     [openTab],
   );
 
   const openUserProfile = useCallback(
     (username: string, email?: string) => {
-      openTab(`user-profile-${username}`, () => ({
-        id: `user-profile-${username}`,
-        label: `@${username}`,
-        contentType: 'user-profile',
-        closable: true,
-        username,
-        email,
-      }) as UserProfileTab);
+      openTab(
+        `user-profile-${username}`,
+        () =>
+          ({
+            id: `user-profile-${username}`,
+            label: `@${username}`,
+            contentType: 'user-profile',
+            closable: true,
+            username,
+            email,
+          }) as UserProfileTab,
+      );
     },
     [openTab],
   );
 
   const openOrgProfile = useCallback(
     (orgName: string) => {
-      openTab(`org-profile-${orgName}`, () => ({
-        id: `org-profile-${orgName}`,
-        label: `@${orgName}`,
-        contentType: 'org-profile',
-        closable: true,
-        orgName,
-      }) as OrgProfileTab);
+      openTab(
+        `org-profile-${orgName}`,
+        () =>
+          ({
+            id: `org-profile-${orgName}`,
+            label: `@${orgName}`,
+            contentType: 'org-profile',
+            closable: true,
+            orgName,
+          }) as OrgProfileTab,
+      );
     },
     [openTab],
   );
 
   const openCollectionProfile = useCallback(
     (collection: StarredCollection) => {
-      openTab(`collection-profile-${collection.id}`, () => ({
-        id: `collection-profile-${collection.id}`,
-        label: collection.name,
-        contentType: 'collection-profile',
-        closable: true,
-        collection,
-      }) as CollectionProfileTab);
+      openTab(
+        `collection-profile-${collection.id}`,
+        () =>
+          ({
+            id: `collection-profile-${collection.id}`,
+            label: collection.name,
+            contentType: 'collection-profile',
+            closable: true,
+            collection,
+          }) as CollectionProfileTab,
+      );
     },
     [openTab],
   );
 
   const openOwnerActivity = useCallback(
     (login: string, accountType: 'User' | 'Organization') => {
-      openTab(`owner-activity-${login}`, () => ({
-        id: `owner-activity-${login}`,
-        label: `@${login}`,
-        contentType: 'owner-activity',
-        closable: true,
-        login,
-        accountType,
-      }) as OwnerActivityTab);
+      openTab(
+        `owner-activity-${login}`,
+        () =>
+          ({
+            id: `owner-activity-${login}`,
+            label: `@${login}`,
+            contentType: 'owner-activity',
+            closable: true,
+            login,
+            accountType,
+          }) as OwnerActivityTab,
+      );
     },
     [openTab],
   );
 
   const openRepoActivity = useCallback(
     (owner: string, repo: string) => {
-      openTab(`repo-activity-${owner}/${repo}`, () => ({
-        id: `repo-activity-${owner}/${repo}`,
-        label: `${owner}/${repo}`,
-        contentType: 'repo-activity',
-        closable: true,
-        owner,
-        repo,
-      }) as RepoActivityTab);
+      openTab(
+        `repo-activity-${owner}/${repo}`,
+        () =>
+          ({
+            id: `repo-activity-${owner}/${repo}`,
+            label: `${owner}/${repo}`,
+            contentType: 'repo-activity',
+            closable: true,
+            owner,
+            repo,
+          }) as RepoActivityTab,
+      );
+    },
+    [openTab],
+  );
+
+  const openFileCityGuide = useCallback(
+    (payload: RepositorySelectedPayload) => {
+      const { purl, github, localEntry } = payload;
+      openTab(
+        `file-city-guide-${purl}`,
+        () =>
+          ({
+            id: `file-city-guide-${purl}`,
+            label: github
+              ? `${github.owner}/${github.name} · City`
+              : `City · ${String(purl)}`,
+            contentType: 'file-city-guide',
+            closable: true,
+            purl,
+            github,
+            localEntry,
+          }) as FileCityGuideTab,
+      );
     },
     [openTab],
   );
 
   const openLiveActivity = useCallback(() => {
-    openTab('live-activity', () => ({
-      id: 'live-activity',
-      label: 'Live Activity',
-      contentType: 'live-activity',
-      closable: true,
-    }) as LiveActivityTab);
+    openTab(
+      'live-activity',
+      () =>
+        ({
+          id: 'live-activity',
+          label: 'Live Activity',
+          contentType: 'live-activity',
+          closable: true,
+        }) as LiveActivityTab,
+    );
   }, [openTab]);
 
   // Deduped by the `drawingId` *field* (not the tab id) so a freshly-created
@@ -461,6 +542,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openCollectionProfile,
       openOwnerActivity,
       openRepoActivity,
+      openFileCityGuide,
       openLiveActivity,
       openDrawing,
       openSkill,
@@ -481,6 +563,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openCollectionProfile,
       openOwnerActivity,
       openRepoActivity,
+      openFileCityGuide,
       openLiveActivity,
       openDrawing,
       openSkill,

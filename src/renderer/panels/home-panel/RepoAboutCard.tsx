@@ -664,7 +664,15 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
       {/* Full profile button */}
       <button
         type="button"
-        onClick={onOpenProfile}
+        onClick={() => {
+          events.emit({
+            type: 'repository:selected',
+            source: 'repo-about-card',
+            timestamp: Date.now(),
+            payload: repo,
+          });
+          onOpenProfile();
+        }}
         style={{
           display: 'inline-flex',
           alignItems: 'center',

@@ -369,7 +369,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
           });
       setSelectedRepo(payload);
       events.emit({
-        type: 'repository:selected',
+        type: 'repository:guide-open',
         source: 'home-panel',
         timestamp: Date.now(),
         payload,
@@ -388,7 +388,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       const payload = payloadFromLocalEntry(entry, matchingEntries.length > 0 ? matchingEntries : undefined);
       setSelectedRepo(payload);
       events.emit({
-        type: 'repository:selected',
+        type: 'repository:guide-open',
         source: 'home-panel',
         timestamp: Date.now(),
         payload,

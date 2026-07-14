@@ -66,6 +66,12 @@ export const PortalIntentBridge: React.FC = () => {
       ws.openProjectInfo(event.payload);
     };
 
+    const handleRepositoryGuideOpen = (event: {
+      payload: RepositorySelectedPayload;
+    }) => {
+      ws.openFileCityGuide(event.payload);
+    };
+
     const handleOwnerSelected = (event: { payload: OwnerSelectedPayload }) => {
       const { owner, kind, email } = event.payload;
       if (kind === 'org') {
@@ -100,6 +106,7 @@ export const PortalIntentBridge: React.FC = () => {
     events.on(PORTAL_INTENTS.trailOpen, handleTrailOpen);
     events.on(PORTAL_INTENTS.topicOpen, handleTopicOpen);
     events.on(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
+    events.on(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
     events.on(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
     events.on(PORTAL_INTENTS.collectionSelected, handleCollectionSelected);
     events.on(PORTAL_INTENTS.liveActivityOpen, handleLiveActivityOpen);
@@ -109,11 +116,15 @@ export const PortalIntentBridge: React.FC = () => {
       events.off(PORTAL_INTENTS.trailOpen, handleTrailOpen);
       events.off(PORTAL_INTENTS.topicOpen, handleTopicOpen);
       events.off(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
+      events.off(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
       events.off(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
       events.off(PORTAL_INTENTS.collectionSelected, handleCollectionSelected);
       events.off(PORTAL_INTENTS.liveActivityOpen, handleLiveActivityOpen);
       events.off(PORTAL_INTENTS.ownerActivityRequested, handleOwnerActivity);
-      events.off(PORTAL_INTENTS.repositoryActivityRequested, handleRepoActivity);
+      events.off(
+        PORTAL_INTENTS.repositoryActivityRequested,
+        handleRepoActivity,
+      );
     };
   }, [events, ws]);
 

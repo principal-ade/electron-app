@@ -11,9 +11,15 @@
  * `TopicsHomeTab`, `LocalTopicTab`) live here too now that the persistent
  * `WorkspaceShell` (not the retired per-view frameworks) renders them.
  */
-import type { BaseTab, TerminalTab } from '@industry-theme/xterm-terminal-panel';
+import type {
+  BaseTab,
+  TerminalTab,
+} from '@industry-theme/xterm-terminal-panel';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import type { GithubRepository, Purl } from '@principal-ai/alexandria-core-library';
+import type {
+  GithubRepository,
+  Purl,
+} from '@principal-ai/alexandria-core-library';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
@@ -176,6 +182,20 @@ export interface RepoActivityTab extends BaseTab {
   repo: string;
 }
 
+/**
+ * File City guide tab — a standalone File City explorer for one repository,
+ * separate from the RepositoryProfilePanel's embedded city. Carries the purl
+ * and optional GitHub/local identity so the panel can self-fetch file trees
+ * and line counts. This is the desktop counterpart to web-ade's
+ * FileCityGuidePanel surface.
+ */
+export interface FileCityGuideTab extends BaseTab {
+  contentType: 'file-city-guide';
+  purl: Purl;
+  github?: GithubRepository;
+  localEntry?: AlexandriaEntry;
+}
+
 // ---------------------------------------------------------------------------
 // Drawings surface tab type
 // ---------------------------------------------------------------------------
@@ -220,6 +240,7 @@ export type FeedTab =
   | CollectionProfileTab
   | OwnerActivityTab
   | RepoActivityTab
+  | FileCityGuideTab
   | SharedTrailTab
   | LocalTrailTab
   | MarkdownDocTab
