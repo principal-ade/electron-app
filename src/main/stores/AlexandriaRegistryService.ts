@@ -6,6 +6,7 @@
 import {
   AlexandriaOutpostManager,
   MemoryPalace,
+  extractPurlFromRemoteUrl,
 } from '@principal-ai/alexandria-core-library';
 import {
   NodeFileSystemAdapter,
@@ -348,7 +349,29 @@ export class AlexandriaRegistryService {
     if (!repo) return null;
 
     try {
-      const githubMetadata = await this.fetchGitHubMetadata(repo.remoteUrl);
+      // Backfill remoteUrl from git when missing (e.g. repos registered before
+      // the origin remote was set, or scanned without reading git remotes).
+      let remoteUrl = repo.remoteUrl;
+      if (!remoteUrl) {
+        try {
+          const remotes = await gitClientFactory.getRemotes(path);
+          const originRemote = remotes.find((r) => r.name === 'origin');
+          if (originRemote?.url) {
+            remoteUrl = originRemote.url;
+            await this.outpostManager.updateRepository(path, { remoteUrl });
+
+            // Derive the correct PURL from the remote URL
+            const purl = extractPurlFromRemoteUrl(remoteUrl);
+            if (purl) {
+              await this.outpostManager.updateRepository(path, { purl });
+            }
+          }
+        } catch {
+          // Git read failed — proceed with whatever we have
+        }
+      }
+
+      const githubMetadata = await this.fetchGitHubMetadata(remoteUrl);
       console.log(
         '[refreshRepository] Fetched GitHub metadata:',
         githubMetadata,

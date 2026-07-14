@@ -17,19 +17,18 @@ import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   AlertCircle,
-  BookOpen,
   Building2,
   CalendarDays,
-  Check,
   CheckCircle2,
   Circle,
-  Copy,
   Download,
   FileText,
   FolderOpen,
+  FolderTree,
   GitBranch,
   GitFork,
   Loader2,
+  RefreshCw,
   Star,
   Terminal,
   Trash2,
@@ -46,6 +45,9 @@ import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WindowService } from '../../main-process-api/WindowService';
 import { GitCloneModal, type CloneProgressState } from '../../components/GitCloneModal';
 import { ForkModal } from '../components/ForkModal';
+import { RelocateToConventionModal } from '../components/RelocateToConventionModal';
+import { getOffConventionTarget } from '../../../shared/utils/clonePath';
+import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 
 function getRepositoryAge(createdAt: string): string {
   const created = new Date(createdAt);
@@ -65,8 +67,6 @@ export interface RepoAboutCardProps {
   repo: RepositorySelectedPayload;
   /** Dismiss the card and return to the previous sub-view. */
   onDismiss: () => void;
-  /** Open the full RepositoryProfilePanel as a tab. */
-  onOpenProfile: () => void;
   /** Portal event emitter for terminal open intents etc. */
   events: PanelEventEmitter;
   /** README file path in the repo (e.g. "README.md") — null if unknown. */
@@ -75,6 +75,8 @@ export interface RepoAboutCardProps {
   onOpenReadme?: () => void;
   /** Whether README is currently active in the guide tab. */
   readmeActive?: boolean;
+  /** The user's base clone directory (e.g. ~/Developer). */
+  baseDefaultDirectory?: string | null;
 }
 
 function relativeTime(iso: string): string {
@@ -98,11 +100,11 @@ function relativeTime(iso: string): string {
 export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   repo,
   onDismiss,
-  onOpenProfile,
   events,
   readmePath,
   onOpenReadme,
   readmeActive = false,
+  baseDefaultDirectory,
 }) => {
   const { theme } = useTheme();
   const gh = repo.github;
@@ -124,10 +126,12 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
 
   // Branch status for cloned repos (one per clone)
   const [branchStatusMap, setBranchStatusMap] = useState<Map<string, GitBranchStatus>>(new Map());
+  const [branchLoading, setBranchLoading] = useState(false);
   const clones = repo.localClones;
   useEffect(() => {
     if (!clones || clones.length === 0) { setBranchStatusMap(new Map()); return; }
     let cancelled = false;
+    setBranchLoading(true);
     Promise.all(
       clones.map(async (clone) => {
         try {
@@ -143,12 +147,29 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
         if (r) map.set(r[0], r[1]);
       }
       setBranchStatusMap(map);
+      setBranchLoading(false);
     });
     return () => { cancelled = true; };
   }, [clones]);
 
   // Copy-path feedback
   const [copiedClonePath, setCopiedClonePath] = useState<string | null>(null);
+
+  // Expanded clone path (show path row under branch status)
+  const [expandedClonePath, setExpandedClonePath] = useState<string | null>(null);
+
+  // Refresh-branch feedback
+  const [refreshingClonePath, setRefreshingClonePath] = useState<string | null>(null);
+
+  // Fix-registration feedback
+  const [fixingClonePath, setFixingClonePath] = useState<string | null>(null);
+
+  // Relocate modal state
+  const [relocateClone, setRelocateClone] = useState<{
+    currentPath: string;
+    expectedPath: string;
+    owner: string;
+  } | null>(null);
 
   // Clone / Fork modal state
   const [showCloneModal, setShowCloneModal] = useState(false);
@@ -244,6 +265,39 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
     }
   };
 
+  const handleRelocate = async (clonePath: string, newOwner: string): Promise<string> => {
+    const entry = await AlexandriaService.getRepositoryByPath(clonePath);
+    if (!entry) throw new Error('Repository not found in registry');
+    return WorkspaceService.moveRepositoryToConventionalPath(entry, newOwner);
+  };
+
+  const handleFixRegistration = async (clonePath: string) => {
+    try {
+      setFixingClonePath(clonePath);
+      await AlexandriaService.refreshRepository(clonePath);
+    } catch (error) {
+      console.error('Failed to fix registration:', error);
+    } finally {
+      setFixingClonePath(null);
+    }
+  };
+
+  const handleRefreshBranchStatus = async (clonePath: string) => {
+    try {
+      setRefreshingClonePath(clonePath);
+      const status = await GitService.getBranchStatus(clonePath);
+      setBranchStatusMap((prev) => {
+        const next = new Map(prev);
+        next.set(clonePath, status);
+        return next;
+      });
+    } catch (error) {
+      console.error('Failed to refresh branch status:', error);
+    } finally {
+      setRefreshingClonePath(null);
+    }
+  };
+
   return (
     <div
       style={{
@@ -278,6 +332,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
               borderRadius: `${Math.min(12, 28 / 4)}px`,
               background: theme.colors.backgroundSecondary,
               color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.body,
               fontSize: theme.fontSizes[3],
               fontWeight: 600,
               display: 'flex',
@@ -292,6 +347,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
         )}
         <span
           style={{
+            fontFamily: theme.fonts.body,
             fontSize: theme.fontSizes[2],
             fontWeight: 600,
             color: theme.colors.text,
@@ -369,6 +425,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 4,
+              fontFamily: theme.fonts.body,
               color: theme.colors.warning,
               fontSize: theme.fontSizes[2],
               flexShrink: 0,
@@ -385,6 +442,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
         <p
           style={{
             margin: 0,
+            fontFamily: theme.fonts.body,
             color: theme.colors.text,
             fontSize: theme.fontSizes[2],
             lineHeight: 1.4,
@@ -397,6 +455,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
           <p
             style={{
               margin: 0,
+              fontFamily: theme.fonts.body,
               color: theme.colors.textMuted,
               fontSize: theme.fontSizes[1],
               lineHeight: 1.4,
@@ -409,14 +468,14 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
             href={repoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: theme.colors.primary, fontSize: theme.fontSizes[1] }}
+            style={{ fontFamily: theme.fonts.body, color: theme.colors.primary, fontSize: theme.fontSizes[1] }}
           >
             Update on GitHub
           </a>
         </>
       )}
 
-      {/* Facts row: age (left) + last updated (right) */}
+      {/* Facts row: last updated (left) + age (right) */}
       {(lastUpdated || gh?.createdAt) && (
         <div
           style={{
@@ -424,10 +483,16 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 8,
+            fontFamily: theme.fonts.body,
             color: theme.colors.textMuted,
             fontSize: theme.fontSizes[1],
           }}
         >
+          {lastUpdated && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              Updated {relativeTime(lastUpdated)}
+            </span>
+          )}
           {gh?.createdAt && (() => {
             const age = getRepositoryAge(gh.createdAt);
             if (!age) return null;
@@ -438,64 +503,72 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
               </span>
             );
           })()}
-          {lastUpdated && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              Updated {relativeTime(lastUpdated)}
-            </span>
-          )}
         </div>
       )}
 
       {/* Clone rows: one per local clone */}
       {clones && clones.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {clones.map((clone, index) => {
+          {clones.map((clone) => {
             const branchStatus = branchStatusMap.get(clone.path);
+            const offConvention = getOffConventionTarget(
+              { path: clone.path, github: gh, purl: repo.purl, remoteUrl: undefined },
+              baseDefaultDirectory,
+            );
+            const purlParsed = repo.purl ? parsePurl(repo.purl) : null;
+            const isLocalPurl = purlParsed?.type === 'generic' && purlParsed.namespace === 'local';
             return (
               <div
                 key={clone.path}
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  flexWrap: 'wrap',
+                  flexDirection: 'column',
+                  gap: 4,
                 }}
               >
-                {/* Cloned badge */}
-                <span
-                  title={clone.path}
+                <div
                   style={{
-                    display: 'inline-flex',
+                    display: 'flex',
                     alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                    backgroundColor: `${theme.colors.success}15`,
-                    border: `1px solid ${theme.colors.success}30`,
-                    fontSize: theme.fontSizes[0],
-                    fontWeight: theme.fontWeights.medium ?? 500,
-                    color: theme.colors.success,
-                    whiteSpace: 'nowrap',
+                    gap: 6,
+                    flexWrap: 'wrap',
                   }}
                 >
-                  {clones.length === 1 ? 'cloned' : `clone ${index + 1}`}
-                </span>
-
-                {/* Branch + status */}
+                {/* Branch + status — clickable to show path */}
                 {branchStatus && (
-                  <span
+                  <button
+                    type="button"
+                    onClick={() => setExpandedClonePath(
+                      expandedClonePath === clone.path ? null : clone.path,
+                    )}
+                    title={expandedClonePath === clone.path ? 'Hide path' : `Show path for ${branchStatus.branch}`}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 4,
-                      padding: '2px 8px',
+                      padding: '4px 10px',
                       borderRadius: 6,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      border: `1px solid ${theme.colors.border}`,
-                      fontSize: theme.fontSizes[0],
+                      backgroundColor: expandedClonePath === clone.path
+                        ? `${theme.colors.primary}15`
+                        : theme.colors.backgroundSecondary,
+                      border: `1px solid ${expandedClonePath === clone.path ? theme.colors.primary : theme.colors.border}`,
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[1],
                       fontWeight: theme.fontWeights.medium ?? 500,
-                      color: theme.colors.text,
+                      color: expandedClonePath === clone.path ? theme.colors.primary : theme.colors.text,
                       whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      transition: 'border-color 0.15s, color 0.15s, background 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (expandedClonePath === clone.path) return;
+                      (e.currentTarget as HTMLElement).style.borderColor = theme.colors.primary;
+                      (e.currentTarget as HTMLElement).style.color = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      if (expandedClonePath === clone.path) return;
+                      (e.currentTarget as HTMLElement).style.borderColor = theme.colors.border;
+                      (e.currentTarget as HTMLElement).style.color = theme.colors.text;
                     }}
                   >
                     <GitBranch size={12} />
@@ -540,6 +613,74 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
                         </span>
                       </>
                     )}
+                  </button>
+                )}
+
+                {/* Refresh branch status button */}
+                {branchStatus && (
+                  <button
+                    type="button"
+                    onClick={() => void handleRefreshBranchStatus(clone.path)}
+                    disabled={refreshingClonePath === clone.path}
+                    title="Check for upstream changes"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 28,
+                      height: 28,
+                      padding: 0,
+                      borderRadius: 6,
+                      border: `1px solid ${theme.colors.border}`,
+                      background: theme.colors.backgroundSecondary,
+                      color: theme.colors.textMuted,
+                      cursor: refreshingClonePath === clone.path ? 'not-allowed' : 'pointer',
+                      opacity: refreshingClonePath === clone.path ? 0.6 : 1,
+                      transition: 'border-color 0.15s, color 0.15s',
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (refreshingClonePath === clone.path) return;
+                      (e.currentTarget as HTMLElement).style.borderColor = theme.colors.primary;
+                      (e.currentTarget as HTMLElement).style.color = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      if (refreshingClonePath === clone.path) return;
+                      (e.currentTarget as HTMLElement).style.borderColor = theme.colors.border;
+                      (e.currentTarget as HTMLElement).style.color = theme.colors.textMuted;
+                    }}
+                  >
+                    <Loader2
+                      size={14}
+                      style={refreshingClonePath === clone.path ? { animation: 'spin 1s linear infinite' } : { display: 'none' }}
+                    />
+                    <RefreshCw
+                      size={14}
+                      style={refreshingClonePath === clone.path ? { display: 'none' } : undefined}
+                    />
+                  </button>
+                )}
+
+                {/* Loading state while branch status is fetched */}
+                {branchLoading && !branchStatus && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      border: `1px solid ${theme.colors.border}`,
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: theme.fontWeights.medium ?? 500,
+                      color: theme.colors.textMuted,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                    Loading…
                   </span>
                 )}
 
@@ -552,13 +693,14 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 4,
-                    padding: '2px 8px',
+                    padding: '4px 10px',
                     borderRadius: 6,
                     border: 'none',
                     background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}dd)`,
                     color: theme.colors.background,
                     cursor: 'pointer',
-                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[1],
                     fontWeight: theme.fontWeights.medium ?? 500,
                     whiteSpace: 'nowrap',
                     transition: 'opacity 0.15s',
@@ -579,13 +721,14 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 4,
-                    padding: '2px 8px',
+                    padding: '4px 10px',
                     borderRadius: 6,
                     border: `1px solid ${theme.colors.border}`,
                     background: theme.colors.backgroundSecondary,
                     color: theme.colors.text,
                     cursor: 'pointer',
-                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[1],
                     fontWeight: theme.fontWeights.medium ?? 500,
                     whiteSpace: 'nowrap',
                     transition: 'border-color 0.15s, color 0.15s',
@@ -602,76 +745,180 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
                   <Terminal size={12} />
                   Terminal
                 </button>
+                </div>
 
-                {/* Copy path button */}
-                <button
-                  type="button"
-                  onClick={() => void handleCopyClonePath(clone.path)}
-                  title={copiedClonePath === clone.path ? 'Copied' : `Copy path\n${clone.path}`}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                    border: `1px solid ${copiedClonePath === clone.path ? theme.colors.success : theme.colors.border}`,
-                    background: copiedClonePath === clone.path ? `${theme.colors.success}15` : theme.colors.backgroundSecondary,
-                    color: copiedClonePath === clone.path ? theme.colors.success : theme.colors.text,
-                    cursor: 'pointer',
-                    fontSize: theme.fontSizes[0],
-                    fontWeight: theme.fontWeights.medium ?? 500,
-                    whiteSpace: 'nowrap',
-                    transition: 'border-color 0.15s, color 0.15s, background 0.15s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (copiedClonePath === clone.path) return;
-                    (e.currentTarget as HTMLElement).style.borderColor = theme.colors.primary;
-                    (e.currentTarget as HTMLElement).style.color = theme.colors.primary;
-                  }}
-                  onMouseLeave={(e) => {
-                    if (copiedClonePath === clone.path) return;
-                    (e.currentTarget as HTMLElement).style.borderColor = theme.colors.border;
-                    (e.currentTarget as HTMLElement).style.color = theme.colors.text;
-                  }}
-                >
-                  {copiedClonePath === clone.path ? <Check size={12} /> : <Copy size={12} />}
-                  {copiedClonePath === clone.path ? 'Copied' : 'Copy Path'}
-                </button>
+                {/* Expandable path row */}
+                {expandedClonePath === clone.path && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      width: '100%',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => void handleCopyClonePath(clone.path)}
+                      title={copiedClonePath === clone.path ? 'Copied!' : 'Click to copy path'}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        flex: 1,
+                        minWidth: 0,
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        border: `1px solid ${copiedClonePath === clone.path ? theme.colors.success : theme.colors.border}`,
+                        background: copiedClonePath === clone.path ? `${theme.colors.success}15` : theme.colors.backgroundSecondary,
+                        color: copiedClonePath === clone.path ? theme.colors.success : theme.colors.text,
+                        cursor: 'pointer',
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: theme.fontWeights.medium ?? 500,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        transition: 'border-color 0.15s, color 0.15s, background 0.15s',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (copiedClonePath === clone.path) return;
+                        (e.currentTarget as HTMLElement).style.borderColor = theme.colors.primary;
+                      }}
+                      onMouseLeave={(e) => {
+                        if (copiedClonePath === clone.path) return;
+                        (e.currentTarget as HTMLElement).style.borderColor = theme.colors.border;
+                      }}
+                    >
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {clone.path}
+                      </span>
+                    </button>
 
-                {/* Delete button */}
-                <button
-                  type="button"
-                  onClick={() => handleDeleteClone(clone.path)}
-                  title="Delete this clone"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                    border: `1px solid ${theme.colors.error}50`,
-                    background: `${theme.colors.error}08`,
-                    color: theme.colors.error,
-                    cursor: 'pointer',
-                    fontSize: theme.fontSizes[0],
-                    fontWeight: theme.fontWeights.medium ?? 500,
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s',
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = theme.colors.error;
-                    (e.currentTarget as HTMLElement).style.color = theme.colors.background;
-                    (e.currentTarget as HTMLElement).style.borderColor = theme.colors.error;
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = `${theme.colors.error}08`;
-                    (e.currentTarget as HTMLElement).style.color = theme.colors.error;
-                    (e.currentTarget as HTMLElement).style.borderColor = `${theme.colors.error}50`;
-                  }}
-                >
-                  <Trash2 size={12} />
-                  Delete
-                </button>
+                    {offConvention && (
+                      <button
+                        type="button"
+                        onClick={() => setRelocateClone({
+                          currentPath: clone.path,
+                          expectedPath: offConvention.expectedPath,
+                          owner: offConvention.owner,
+                        })}
+                        title="Move to standard location"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          border: `1px solid ${theme.colors.warning}50`,
+                          background: `${theme.colors.warning}08`,
+                          color: theme.colors.warning,
+                          cursor: 'pointer',
+                          fontFamily: theme.fonts.body,
+                          fontSize: theme.fontSizes[1],
+                          fontWeight: theme.fontWeights.medium ?? 500,
+                          whiteSpace: 'nowrap',
+                          transition: 'all 0.15s',
+                          flexShrink: 0,
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.background = theme.colors.warning;
+                          (e.currentTarget as HTMLElement).style.color = theme.colors.background;
+                          (e.currentTarget as HTMLElement).style.borderColor = theme.colors.warning;
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.background = `${theme.colors.warning}08`;
+                          (e.currentTarget as HTMLElement).style.color = theme.colors.warning;
+                          (e.currentTarget as HTMLElement).style.borderColor = `${theme.colors.warning}50`;
+                        }}
+                      >
+                        <FolderTree size={12} />
+                        Relocate
+                      </button>
+                    )}
+
+                    {isLocalPurl && (
+                      <button
+                        type="button"
+                        onClick={() => void handleFixRegistration(clone.path)}
+                        disabled={fixingClonePath === clone.path}
+                        title="Re-read git remote and fix registration"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          border: `1px solid ${theme.colors.warning}50`,
+                          background: `${theme.colors.warning}08`,
+                          color: theme.colors.warning,
+                          cursor: fixingClonePath === clone.path ? 'not-allowed' : 'pointer',
+                          opacity: fixingClonePath === clone.path ? 0.6 : 1,
+                          fontFamily: theme.fonts.body,
+                          fontSize: theme.fontSizes[1],
+                          fontWeight: theme.fontWeights.medium ?? 500,
+                          whiteSpace: 'nowrap',
+                          transition: 'all 0.15s',
+                          flexShrink: 0,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (fixingClonePath === clone.path) return;
+                          (e.currentTarget as HTMLElement).style.background = theme.colors.warning;
+                          (e.currentTarget as HTMLElement).style.color = theme.colors.background;
+                          (e.currentTarget as HTMLElement).style.borderColor = theme.colors.warning;
+                        }}
+                        onMouseLeave={(e) => {
+                          if (fixingClonePath === clone.path) return;
+                          (e.currentTarget as HTMLElement).style.background = `${theme.colors.warning}08`;
+                          (e.currentTarget as HTMLElement).style.color = theme.colors.warning;
+                          (e.currentTarget as HTMLElement).style.borderColor = `${theme.colors.warning}50`;
+                        }}
+                      >
+                        {fixingClonePath === clone.path ? (
+                          <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                        ) : (
+                          <RefreshCw size={12} />
+                        )}
+                        {fixingClonePath === clone.path ? 'Fixing…' : 'Fix'}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteClone(clone.path)}
+                      title="Delete this clone"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        border: `1px solid ${theme.colors.error}50`,
+                        background: `${theme.colors.error}08`,
+                        color: theme.colors.error,
+                        cursor: 'pointer',
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: theme.fontWeights.medium ?? 500,
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.15s',
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = theme.colors.error;
+                        (e.currentTarget as HTMLElement).style.color = theme.colors.background;
+                        (e.currentTarget as HTMLElement).style.borderColor = theme.colors.error;
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = `${theme.colors.error}08`;
+                        (e.currentTarget as HTMLElement).style.color = theme.colors.error;
+                        (e.currentTarget as HTMLElement).style.borderColor = `${theme.colors.error}50`;
+                      }}
+                    >
+                      <Trash2 size={12} />
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -680,7 +927,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
 
       {/* Clone + Fork buttons (shown when no local clones exist) */}
       {!hasClones && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
           <button
             type="button"
             onClick={() => setShowCloneModal(true)}
@@ -696,7 +943,8 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
               color: theme.colors.background,
               cursor: cloneProgress?.phase === 'cloning' || cloneProgress?.phase === 'registering' ? 'not-allowed' : 'pointer',
               opacity: cloneProgress?.phase === 'cloning' || cloneProgress?.phase === 'registering' ? 0.7 : 1,
-              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
               fontWeight: theme.fontWeights.medium ?? 500,
               transition: 'opacity 0.15s',
             }}
@@ -737,7 +985,8 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
                 background: `${theme.colors.primary}18`,
                 color: theme.colors.primary,
                 cursor: 'pointer',
-                fontSize: theme.fontSizes[0],
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
                 fontWeight: theme.fontWeights.medium ?? 500,
                 transition: 'background 0.15s',
               }}
@@ -761,7 +1010,8 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
                 background: 'transparent',
                 color: theme.colors.textSecondary,
                 cursor: 'pointer',
-                fontSize: theme.fontSizes[0],
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
                 fontWeight: theme.fontWeights.medium ?? 500,
                 transition: 'border-color 0.15s, color 0.15s',
               }}
@@ -780,46 +1030,6 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
           )}
         </div>
       )}
-
-      {/* Full profile button */}
-      <button
-        type="button"
-        onClick={() => {
-          events.emit({
-            type: 'repository:selected',
-            source: 'repo-about-card',
-            timestamp: Date.now(),
-            payload: repo,
-          });
-          onOpenProfile();
-        }}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-          padding: '6px 12px',
-          borderRadius: 6,
-          border: `1px solid ${theme.colors.border}`,
-          background: theme.colors.backgroundSecondary,
-          color: theme.colors.text,
-          cursor: 'pointer',
-          fontFamily: theme.fonts.body,
-          fontSize: theme.fontSizes[1],
-          fontWeight: theme.fontWeights.medium,
-          transition: 'opacity 0.15s',
-          marginTop: 4,
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.opacity = '0.85';
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.opacity = '1';
-        }}
-      >
-        <BookOpen size={15} />
-        Full profile
-      </button>
 
       {/* README toggle button */}
       {readmePath && onOpenReadme && (
@@ -879,6 +1089,19 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
         repoOwner={owner}
         repoName={name}
         registerRepository={registerRepository}
+      />
+      <RelocateToConventionModal
+        isOpen={!!relocateClone}
+        onClose={() => setRelocateClone(null)}
+        repoName={name}
+        owner={relocateClone?.owner ?? owner}
+        currentPath={relocateClone?.currentPath ?? ''}
+        expectedPath={relocateClone?.expectedPath ?? ''}
+        onRelocate={() => {
+          const rc = relocateClone;
+          if (!rc) return Promise.reject(new Error('No clone selected'));
+          return handleRelocate(rc.currentPath, rc.owner);
+        }}
       />
     </div>
   );

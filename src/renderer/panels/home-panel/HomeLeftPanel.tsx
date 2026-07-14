@@ -18,6 +18,7 @@ import { githubIdToPurl } from '@principal-ai/alexandria-core-library';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { GithubService } from '../../main-process-api/GithubService';
 import { GitService } from '../../main-process-api/GitService';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import {
   extractLocalClones,
   payloadFromGithub,
@@ -116,6 +117,17 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // README toggle state
   const [readmeActive, setReadmeActive] = useState(false);
   const [readmePath, setReadmePath] = useState<string | null>(null);
+
+  // Base directory for off-convention detection
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
+  useEffect(() => {
+    UserPreferencesService.getPreferences().then((prefs) => {
+      setBaseDefaultDirectory(prefs.baseDefaultDirectory || null);
+    });
+    return UserPreferencesService.onPreferencesUpdated((prefs) => {
+      setBaseDefaultDirectory(prefs.baseDefaultDirectory || null);
+    });
+  }, []);
 
   // Sidebar Home (and any navigate-to-home-panel) always returns to the
   // about + nav-cards overview, even when a sub-view is already open.
@@ -581,11 +593,11 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
             <RepoAboutCard
               repo={selectedRepo}
               onDismiss={dismissRepoCard}
-              onOpenProfile={() => {}}
               events={events}
               readmePath={readmePath}
               onOpenReadme={readmePath ? handleToggleReadme : undefined}
               readmeActive={readmeActive}
+              baseDefaultDirectory={baseDefaultDirectory}
             />
           )}
         </div>
