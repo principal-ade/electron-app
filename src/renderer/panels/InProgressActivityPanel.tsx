@@ -131,11 +131,7 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
       if (!entry) continue;
       rows.push({ entry, status, summary: statusToSummary(entry, status) });
     }
-    rows.sort((a, b) => {
-      const aTime = a.status.lastChangedAt ? new Date(a.status.lastChangedAt).getTime() : 0;
-      const bTime = b.status.lastChangedAt ? new Date(b.status.lastChangedAt).getTime() : 0;
-      return bTime - aTime;
-    });
+    rows.sort((a, b) => a.summary.repoName.localeCompare(b.summary.repoName));
     return rows;
   }, [statusMap, entryByPath, dismissedPaths]);
 
