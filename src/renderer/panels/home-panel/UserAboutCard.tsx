@@ -279,15 +279,21 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
           onClick={() => setShowAuthModal(true)}
           title="Authenticated with GitHub CLI"
           style={{
-            ...sourceBadgeStyle,
-            cursor: 'pointer',
+            flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: 4,
+            width: 28,
+            height: 28,
+            padding: 0,
+            backgroundColor: '#000',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 6,
+            cursor: 'pointer',
+            color: '#fff',
           }}
         >
-          <Github size={14} />
+          <Github size={18} />
         </button>
       </div>
 
