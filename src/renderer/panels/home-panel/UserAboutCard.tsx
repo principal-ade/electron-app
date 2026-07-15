@@ -11,7 +11,7 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   Building2,
-  CalendarDays,
+  FolderGit2,
   Mail,
   MapPin,
   Users,
@@ -39,12 +39,7 @@ export interface UserAboutInfo {
 export interface UserAboutCardProps {
   info: UserAboutInfo | null;
   loading?: boolean;
-}
-
-function joinedLabel(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  clonedCount?: number;
 }
 
 function Avatar({
@@ -105,6 +100,7 @@ const cardShell = (borderColor: string): React.CSSProperties => ({
 export const UserAboutCard: React.FC<UserAboutCardProps> = ({
   info,
   loading = false,
+  clonedCount,
 }) => {
   const { theme } = useTheme();
 
@@ -212,7 +208,6 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
   // --- GitHub profile ---
   const profileUrl = info.html_url ?? `https://github.com/${info.login}`;
   const displayName = info.name || info.login;
-  const joined = info.created_at ? joinedLabel(info.created_at) : null;
 
   return (
     <div style={cardShell(theme.colors.border)}>
@@ -298,8 +293,8 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
         {info.bio || 'No bio yet.'}
       </p>
 
-      {/* Facts row: joined date */}
-      {joined && (
+      {/* Facts row: cloned count */}
+      {clonedCount != null && clonedCount > 0 && (
         <div
           style={{
             display: 'flex',
@@ -310,8 +305,8 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
           }}
         >
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <CalendarDays size={14} />
-            Joined {joined}
+            <FolderGit2 size={14} />
+            {clonedCount} cloned
           </span>
         </div>
       )}

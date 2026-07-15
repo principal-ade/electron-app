@@ -628,7 +628,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 flexDirection: 'column',
               }}
             >
-              <UserAboutCard info={aboutUser} loading={userLoading} />
+              <UserAboutCard info={aboutUser} loading={userLoading} clonedCount={clonedPurls.size} />
               <HomeNavCards
                 counts={counts}
                 activeView={null}
