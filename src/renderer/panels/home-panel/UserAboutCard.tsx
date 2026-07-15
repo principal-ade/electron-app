@@ -283,17 +283,17 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 28,
-            height: 28,
+            width: 36,
+            height: 36,
             padding: 0,
             backgroundColor: '#000',
             border: `1px solid ${theme.colors.border}`,
-            borderRadius: 6,
+            borderRadius: '50%',
             cursor: 'pointer',
             color: '#fff',
           }}
         >
-          <Github size={18} />
+          <Github size={20} />
         </button>
       </div>
 
