@@ -43,6 +43,8 @@ export interface UserAboutCardProps {
   clonedCount?: number;
   onOpenFollowers?: () => void;
   onOpenFollowing?: () => void;
+  isPrincipalSignedIn?: boolean;
+  onLogin?: () => void;
 }
 
 function Avatar({
@@ -106,6 +108,8 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
   clonedCount,
   onOpenFollowers,
   onOpenFollowing,
+  isPrincipalSignedIn = false,
+  onLogin,
 }) => {
   const { theme } = useTheme();
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -391,59 +395,83 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
       )}
 
       {/* Followers / following */}
-      {(info.followers != null || info.following != null) && (
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            color: theme.colors.textMuted,
-            fontSize: theme.fontSizes[1],
-          }}
-        >
-          <Users size={14} style={{ flexShrink: 0 }} />
-          <span>
-            {info.followers != null && onOpenFollowers && (
-              <button
-                type="button"
-                onClick={onOpenFollowers}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  font: 'inherit',
-                  color: 'inherit',
-                }}
-              >
-                <span style={{ color: theme.colors.text, fontWeight: 600 }}>
-                  {info.followers.toLocaleString()}
-                </span>{' '}
-                followers
-              </button>
-            )}
-            {info.followers != null && info.following != null && ' · '}
-            {info.following != null && onOpenFollowing && (
-              <button
-                type="button"
-                onClick={onOpenFollowing}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  font: 'inherit',
-                  color: 'inherit',
-                }}
-              >
-                <span style={{ color: theme.colors.text, fontWeight: 600 }}>
-                  {info.following.toLocaleString()}
-                </span>{' '}
-                following
-              </button>
-            )}
-          </span>
-        </div>
+      {isPrincipalSignedIn ? (
+        (info.followers != null || info.following != null) && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+            }}
+          >
+            <Users size={14} style={{ flexShrink: 0 }} />
+            <span>
+              {info.followers != null && onOpenFollowers && (
+                <button
+                  type="button"
+                  onClick={onOpenFollowers}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    font: 'inherit',
+                    color: 'inherit',
+                  }}
+                >
+                  <span style={{ color: theme.colors.text, fontWeight: 600 }}>
+                    {info.followers.toLocaleString()}
+                  </span>{' '}
+                  followers
+                </button>
+              )}
+              {info.followers != null && info.following != null && ' · '}
+              {info.following != null && onOpenFollowing && (
+                <button
+                  type="button"
+                  onClick={onOpenFollowing}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    font: 'inherit',
+                    color: 'inherit',
+                  }}
+                >
+                  <span style={{ color: theme.colors.text, fontWeight: 600 }}>
+                    {info.following.toLocaleString()}
+                  </span>{' '}
+                  following
+                </button>
+              )}
+            </span>
+          </div>
+        )
+      ) : (
+        onLogin && (
+          <button
+            type="button"
+            onClick={onLogin}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              color: theme.colors.primary,
+              fontSize: theme.fontSizes[1],
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              font: 'inherit',
+            }}
+          >
+            <Github size={14} style={{ flexShrink: 0 }} />
+            Sign in with GitHub
+          </button>
+        )
       )}
 
       {showAuthModal && (
