@@ -36,7 +36,8 @@ export const FollowersFollowingSubView: React.FC<FollowersFollowingSubViewProps>
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          padding: '12px 16px',
+          height: 40,
+          padding: '0 16px',
           borderBottom: `1px solid ${theme.colors.border}`,
           flexShrink: 0,
         }}
