@@ -12,7 +12,6 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   Building2,
   CalendarDays,
-  FolderGit2,
   Mail,
   MapPin,
   Users,
@@ -299,32 +298,21 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
         {info.bio || 'No bio yet.'}
       </p>
 
-      {/* Facts row: public repo count + joined date */}
-      {(joined || info.public_repos != null) && (
+      {/* Facts row: joined date */}
+      {joined && (
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
             gap: 8,
             color: theme.colors.textMuted,
             fontSize: theme.fontSizes[1],
           }}
         >
-          {info.public_repos != null ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <FolderGit2 size={14} />
-              {info.public_repos.toLocaleString()} repos
-            </span>
-          ) : (
-            <span />
-          )}
-          {joined && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <CalendarDays size={14} />
-              Joined {joined}
-            </span>
-          )}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <CalendarDays size={14} />
+            Joined {joined}
+          </span>
         </div>
       )}
 
