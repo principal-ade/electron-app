@@ -440,11 +440,27 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
               border: `1px solid ${theme.colors.border}`,
               padding: 24,
               maxWidth: 320,
-              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <Github size={32} style={{ marginBottom: 12, color: theme.colors.text }} />
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                backgroundColor: '#000',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 16,
+                color: '#fff',
+              }}
+            >
+              <Github size={28} />
+            </div>
             <h3
               style={{
                 margin: '0 0 8px',
@@ -469,7 +485,7 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
               onClick={() => setShowAuthModal(false)}
               style={{
                 marginTop: 16,
-                padding: '8px 16px',
+                padding: '8px 24px',
                 fontSize: theme.fontSizes[2],
                 fontWeight: theme.fontWeights.semibold,
                 color: theme.colors.textOnAccent,
