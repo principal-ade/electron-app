@@ -22,7 +22,9 @@ export type HomeNavKey =
   | 'other-clones'
   | 'starred'
   | 'collections'
-  | 'recent';
+  | 'recent'
+  | 'followers'
+  | 'following';
 
 export interface HomeNavCardCounts {
   projects?: number | null;
@@ -30,6 +32,8 @@ export interface HomeNavCardCounts {
   starred?: number | null;
   collections?: number | null;
   recent?: number | null;
+  followers?: number | null;
+  following?: number | null;
 }
 
 export interface HomeNavCardMeta {

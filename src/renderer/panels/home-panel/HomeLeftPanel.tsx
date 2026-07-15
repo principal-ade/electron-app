@@ -15,7 +15,7 @@ import { SlidePane, makeSlideDirection } from '../../components/SlidePane';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { githubIdToPurl } from '@principal-ai/alexandria-core-library';
-import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
+import type { GitHubRepository, GitHubUser } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { GithubService } from '../../main-process-api/GithubService';
 import { GitService } from '../../main-process-api/GitService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
@@ -36,6 +36,7 @@ import { HomeProjectsSubView, type ProjectSection } from './sub-views/HomeProjec
 import { HomeStarredSubView } from './sub-views/HomeStarredSubView';
 import { HomeCollectionsSubView } from './sub-views/HomeCollectionsSubView';
 import { HomeRecentSubView } from './sub-views/HomeRecentSubView';
+import { FollowersFollowingSubView } from './sub-views/FollowersFollowingSubView';
 
 // ---------------------------------------------------------------------------
 // HomeLeftPanel — the home left rail, the user-based sibling of the
@@ -290,6 +291,41 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   );
 
   const [counts, setCounts] = useState<HomeNavCardCounts>({});
+
+  // Followers / following state for sub-view
+  const [followersList, setFollowersList] = useState<GitHubUser[]>([]);
+  const [followingList, setFollowingList] = useState<GitHubUser[]>([]);
+  const [listLoading, setListLoading] = useState(false);
+
+  const handleOpenFollowers = useCallback(async () => {
+    if (!aboutUser?.login) return;
+    setListLoading(true);
+    setView('followers');
+    try {
+      const users = await GithubService.getUserFollowers(aboutUser.login);
+      setFollowersList(users);
+    } catch (err) {
+      console.error('[HomeLeftPanel] Failed to fetch followers:', err);
+      setFollowersList([]);
+    } finally {
+      setListLoading(false);
+    }
+  }, [aboutUser?.login]);
+
+  const handleOpenFollowing = useCallback(async () => {
+    if (!aboutUser?.login) return;
+    setListLoading(true);
+    setView('following');
+    try {
+      const users = await GithubService.getUserFollowing(aboutUser.login);
+      setFollowingList(users);
+    } catch (err) {
+      console.error('[HomeLeftPanel] Failed to fetch following:', err);
+      setFollowingList([]);
+    } finally {
+      setListLoading(false);
+    }
+  }, [aboutUser?.login]);
 
   // Prefer GitHub (token API or `gh` CLI via getCurrentUser). If that fails,
   // fall back to global git config user.name / user.email so the about section
@@ -628,7 +664,13 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 flexDirection: 'column',
               }}
             >
-              <UserAboutCard info={aboutUser} loading={userLoading} clonedCount={clonedPurls.size} />
+              <UserAboutCard
+                info={aboutUser}
+                loading={userLoading}
+                clonedCount={clonedPurls.size}
+                onOpenFollowers={handleOpenFollowers}
+                onOpenFollowing={handleOpenFollowing}
+              />
               <HomeNavCards
                 counts={counts}
                 activeView={null}
@@ -667,6 +709,22 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
           ) : view === 'recent' && isPrincipalSignedIn ? (
             <HomeRecentSubView
               key="recent"
+              onBack={() => go('home')}
+            />
+          ) : view === 'followers' ? (
+            <FollowersFollowingSubView
+              key="followers"
+              users={followersList}
+              loading={listLoading}
+              label="Followers"
+              onBack={() => go('home')}
+            />
+          ) : view === 'following' ? (
+            <FollowersFollowingSubView
+              key="following"
+              users={followingList}
+              loading={listLoading}
+              label="Following"
               onBack={() => go('home')}
             />
           ) : null}
