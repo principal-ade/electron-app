@@ -7,16 +7,20 @@
  *                      user is not signed in via the GitHub CLI / API
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   Building2,
   FolderGit2,
   Github,
+  Loader2,
   Mail,
   MapPin,
   Users,
+  X,
 } from 'lucide-react';
+import { GithubService } from '../../main-process-api/GithubService';
+import type { GitHubUser } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 
 export type UserAboutSource = 'github' | 'git';
 
@@ -105,6 +109,33 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
 }) => {
   const { theme } = useTheme();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [listModal, setListModal] = useState<{ type: 'followers' | 'following' } | null>(null);
+  const [listUsers, setListUsers] = useState<GitHubUser[]>([]);
+  const [listLoading, setListLoading] = useState(false);
+
+  const fetchList = useCallback(async (type: 'followers' | 'following') => {
+    if (!info?.login) return;
+    setListLoading(true);
+    try {
+      const users = type === 'followers'
+        ? await GithubService.getUserFollowers(info.login)
+        : await GithubService.getUserFollowing(info.login);
+      setListUsers(users);
+    } catch (err) {
+      console.error('[UserAboutCard] Failed to fetch list:', err);
+      setListUsers([]);
+    } finally {
+      setListLoading(false);
+    }
+  }, [info?.login]);
+
+  useEffect(() => {
+    if (listModal) {
+      fetchList(listModal.type);
+    } else {
+      setListUsers([]);
+    }
+  }, [listModal, fetchList]);
 
   if (!info) return loading ? <UserAboutCardSkeleton /> : null;
 
@@ -400,21 +431,43 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
           <Users size={14} style={{ flexShrink: 0 }} />
           <span>
             {info.followers != null && (
-              <>
+              <button
+                type="button"
+                onClick={() => setListModal({ type: 'followers' })}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  font: 'inherit',
+                  color: 'inherit',
+                }}
+              >
                 <span style={{ color: theme.colors.text, fontWeight: 600 }}>
                   {info.followers.toLocaleString()}
                 </span>{' '}
                 followers
-              </>
+              </button>
             )}
             {info.followers != null && info.following != null && ' · '}
             {info.following != null && (
-              <>
+              <button
+                type="button"
+                onClick={() => setListModal({ type: 'following' })}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  font: 'inherit',
+                  color: 'inherit',
+                }}
+              >
                 <span style={{ color: theme.colors.text, fontWeight: 600 }}>
                   {info.following.toLocaleString()}
                 </span>{' '}
                 following
-              </>
+              </button>
             )}
           </span>
         </div>
@@ -497,6 +550,154 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
             >
               OK
             </button>
+          </div>
+        </div>
+      )}
+
+      {listModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }}
+          onClick={() => setListModal(null)}
+        >
+          <div
+            style={{
+              backgroundColor: theme.colors.surface,
+              borderRadius: 8,
+              border: `1px solid ${theme.colors.border}`,
+              width: 320,
+              maxHeight: 400,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                borderBottom: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: theme.fontWeights.semibold,
+                  color: theme.colors.text,
+                }}
+              >
+                {listModal.type === 'followers' ? 'Followers' : 'Following'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setListModal(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 4,
+                  cursor: 'pointer',
+                  color: theme.colors.textMuted,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '8px 0',
+              }}
+            >
+              {listLoading ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 32,
+                    color: theme.colors.textMuted,
+                  }}
+                >
+                  <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                </div>
+              ) : listUsers.length === 0 ? (
+                <div
+                  style={{
+                    padding: 32,
+                    textAlign: 'center',
+                    color: theme.colors.textMuted,
+                    fontSize: theme.fontSizes[2],
+                  }}
+                >
+                  No {listModal.type} found
+                </div>
+              ) : (
+                listUsers.map((user) => (
+                  <a
+                    key={user.id}
+                    href={`https://github.com/${user.login}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '8px 16px',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                    }}
+                  >
+                    <img
+                      src={user.avatar_url}
+                      alt={user.login}
+                      width={32}
+                      height={32}
+                      style={{ borderRadius: '50%' }}
+                    />
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[2],
+                          fontWeight: theme.fontWeights.semibold,
+                          color: theme.colors.text,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {user.name || user.login}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.textMuted,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        @{user.login}
+                      </div>
+                    </div>
+                  </a>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
