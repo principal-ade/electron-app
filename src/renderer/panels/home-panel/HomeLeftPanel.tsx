@@ -28,6 +28,7 @@ import {
 import { emitRepositoryGuideOpenReadme } from '../../events/portalIntents';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuthState } from '../../hooks/useAuthState';
+import { useWorkspaceTabs } from '../../principal-window/PortalTabsContext';
 import { UserAboutCard, type UserAboutInfo } from './UserAboutCard';
 import { RepoAboutCard } from './RepoAboutCard';
 import { HomeNavCards, type HomeNavKey, type HomeNavCardCounts } from './HomeNavCards';
@@ -114,6 +115,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const [view, setView] = useState<HomeView>('home');
   const [selectedRepo, setSelectedRepo] = useState<RepositorySelectedPayload | null>(null);
   const [repoCardExiting, setRepoCardExiting] = useState(false);
+  const { openUserProfile } = useWorkspaceTabs();
 
   // README toggle state
   const [readmeActive, setReadmeActive] = useState(false);
@@ -718,6 +720,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               loading={listLoading}
               label="Followers"
               onBack={() => go('home')}
+              onUserClick={(username) => openUserProfile(username)}
             />
           ) : view === 'following' ? (
             <FollowersFollowingSubView
@@ -726,6 +729,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               loading={listLoading}
               label="Following"
               onBack={() => go('home')}
+              onUserClick={(username) => openUserProfile(username)}
             />
           ) : null}
         </SlidePane>

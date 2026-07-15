@@ -8,6 +8,7 @@ export interface FollowersFollowingSubViewProps {
   loading?: boolean;
   label: string;
   onBack: () => void;
+  onUserClick?: (username: string) => void;
 }
 
 export const FollowersFollowingSubView: React.FC<FollowersFollowingSubViewProps> = ({
@@ -15,6 +16,7 @@ export const FollowersFollowingSubView: React.FC<FollowersFollowingSubViewProps>
   loading = false,
   label,
   onBack,
+  onUserClick,
 }) => {
   const { theme } = useTheme();
 
@@ -111,55 +113,65 @@ export const FollowersFollowingSubView: React.FC<FollowersFollowingSubViewProps>
             No {label.toLowerCase()} found
           </div>
         ) : (
-          users.map((user) => (
-            <a
-              key={user.id}
-              href={`https://github.com/${user.login}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '8px 16px',
-                textDecoration: 'none',
-                color: 'inherit',
-              }}
-            >
-              <img
-                src={user.avatar_url}
-                alt={user.login}
-                width={32}
-                height={32}
-                style={{ borderRadius: '50%' }}
-              />
-              <div style={{ minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: theme.fontSizes[2],
-                    fontWeight: theme.fontWeights.semibold,
-                    color: theme.colors.text,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {user.name || user.login}
+          users.map((user) => {
+            const handleClick = () => onUserClick?.(user.login);
+            const Component = onUserClick ? 'button' : 'a';
+            const linkProps = onUserClick
+              ? { onClick: handleClick, type: 'button' as const }
+              : { href: `https://github.com/${user.login}`, target: '_blank', rel: 'noopener noreferrer' };
+            return (
+              <Component
+                key={user.id}
+                {...linkProps}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '8px 16px',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  width: '100%',
+                }}
+              >
+                <img
+                  src={user.avatar_url}
+                  alt={user.login}
+                  width={32}
+                  height={32}
+                  style={{ borderRadius: '50%' }}
+                />
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[2],
+                      fontWeight: theme.fontWeights.semibold,
+                      color: theme.colors.text,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {user.name || user.login}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[1],
+                      color: theme.colors.textMuted,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    @{user.login}
+                  </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: theme.fontSizes[1],
-                    color: theme.colors.textMuted,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  @{user.login}
-                </div>
-              </div>
-            </a>
-          ))
+              </Component>
+            );
+          })
         )}
       </div>
     </div>
