@@ -7,11 +7,12 @@
  *                      user is not signed in via the GitHub CLI / API
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   Building2,
   FolderGit2,
+  Github,
   Mail,
   MapPin,
   Users,
@@ -103,6 +104,7 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
   clonedCount,
 }) => {
   const { theme } = useTheme();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   if (!info) return loading ? <UserAboutCardSkeleton /> : null;
 
@@ -272,12 +274,21 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
             @{info.login}
           </div>
         </a>
-        <span
-          title="Profile from the GitHub CLI (gh auth / gh api)"
-          style={sourceBadgeStyle}
+        <button
+          type="button"
+          onClick={() => setShowAuthModal(true)}
+          title="Authenticated with GitHub CLI"
+          style={{
+            ...sourceBadgeStyle,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 4,
+          }}
         >
-          GitHub CLI
-        </span>
+          <Github size={14} />
+        </button>
       </div>
 
       {/* Bio */}
@@ -400,6 +411,71 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
               </>
             )}
           </span>
+        </div>
+      )}
+
+      {showAuthModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }}
+          onClick={() => setShowAuthModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: theme.colors.surface,
+              borderRadius: 8,
+              border: `1px solid ${theme.colors.border}`,
+              padding: 24,
+              maxWidth: 320,
+              textAlign: 'center',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Github size={32} style={{ marginBottom: 12, color: theme.colors.text }} />
+            <h3
+              style={{
+                margin: '0 0 8px',
+                fontSize: theme.fontSizes[3],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.text,
+              }}
+            >
+              Authenticated
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                fontSize: theme.fontSizes[2],
+                color: theme.colors.textSecondary,
+              }}
+            >
+              Signed in via GitHub CLI
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowAuthModal(false)}
+              style={{
+                marginTop: 16,
+                padding: '8px 16px',
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.textOnAccent,
+                backgroundColor: theme.colors.primary,
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+              }}
+            >
+              OK
+            </button>
+          </div>
         </div>
       )}
     </div>
