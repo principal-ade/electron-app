@@ -333,6 +333,15 @@ export interface UserPreferences {
     lastBadgeShownDate?: string;
   };
 
+  // Home panel feature flags — when false (default) the corresponding
+  // collections / recently-visited surfaces are hidden throughout the app.
+  homePanel?: {
+    /** Show the Collections nav card, sub-view, profile tabs, and collect button. */
+    collections?: boolean;
+    /** Show the Recently Visited nav card, sub-view, and inbox tab. */
+    recentlyVisited?: boolean;
+  };
+
   // TODO: Add these fields that are currently using direct storage.get/set calls:
   // - aiConfiguration: src/renderer/services/ai/SessionSummaryService.ts:223
   //                     src/renderer/services/ai/ArchitecturalScaffoldService.ts:117,142

@@ -86,6 +86,9 @@ export interface HomeNavCardsProps {
   onOpenView: (key: HomeNavKey) => void;
   /** Principal (app OAuth) sign-in — gates collections / recently visited. */
   isPrincipalSignedIn?: boolean;
+  /** Feature flags — when false the corresponding card is hidden. */
+  showCollections?: boolean;
+  showRecentlyVisited?: boolean;
 }
 
 export const HomeNavCards: React.FC<HomeNavCardsProps> = ({
@@ -93,12 +96,17 @@ export const HomeNavCards: React.FC<HomeNavCardsProps> = ({
   activeView = null,
   onOpenView,
   isPrincipalSignedIn = false,
+  showCollections = false,
+  showRecentlyVisited = false,
 }) => {
   const { theme } = useTheme();
 
-  const cards = HOME_NAV_CARDS.filter(
-    (card) => !card.requiresPrincipal || isPrincipalSignedIn,
-  );
+  const cards = HOME_NAV_CARDS.filter((card) => {
+    if (card.requiresPrincipal && !isPrincipalSignedIn) return false;
+    if (card.key === 'collections' && !showCollections) return false;
+    if (card.key === 'recent' && !showRecentlyVisited) return false;
+    return true;
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 16px' }}>

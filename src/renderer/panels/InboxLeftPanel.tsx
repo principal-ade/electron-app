@@ -21,6 +21,7 @@ import { SegmentedControl } from '../components/SegmentedControl';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import { emitTrailOpen, emitTopicOpen } from '../events/portalIntents';
 import { useAuth } from '../hooks/useAuthState';
+import { useHomePanelPreferences } from '../hooks/useHomePanelPreferences';
 import type {
   InboxIndexEntry,
   OutboxIndexEntry,
@@ -60,6 +61,7 @@ export const InboxLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
 }) => {
   const { theme } = useTheme();
   const { isAuthenticated, user } = useAuth();
+  const homePanelPrefs = useHomePanelPreferences();
 
   const [mode, setMode] = useState<InboxMode>('inbox');
 
@@ -802,9 +804,11 @@ export const InboxLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
                 topicUnreadCount > 0 ? `Topics ${topicUnreadCount}` : 'Topics',
             },
             { value: 'sent', label: 'Sent' },
-            { value: 'recent', label: 'Recently Visited' },
+            ...(homePanelPrefs.recentlyVisited
+              ? [{ value: 'recent', label: 'Recently Visited' }]
+              : []),
           ]}
-          value={mode}
+          value={homePanelPrefs.recentlyVisited ? mode : (mode === 'recent' ? 'inbox' : mode)}
           onChange={(value) => setMode(value as InboxMode)}
           theme={theme}
           variant="pill-flat"

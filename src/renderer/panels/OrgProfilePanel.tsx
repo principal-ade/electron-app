@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
 import { OwnerCollectionsTab } from './OwnerCollectionsTab';
+import { useHomePanelPreferences } from '../hooks/useHomePanelPreferences';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import {
   payloadFromGithub,
@@ -250,6 +251,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   events,
 }) => {
   const { theme } = useTheme();
+  const homePanelPrefs = useHomePanelPreferences();
   const org = context.currentScope?.org;
 
   // Panel manages its own profile data state
@@ -925,6 +927,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
         >
           Repositories
         </button>
+        {homePanelPrefs.collections && (
         <button
           style={{
             background: 'none',
@@ -945,6 +948,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
         >
           Collections
         </button>
+        )}
         {isNarrow && pinnedRepoNames.length > 0 && (
           <button
             style={{
@@ -1102,7 +1106,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
       )}
 
       {/* Collections Tab - Scrollable section */}
-      {activeTab === 'collections' && org && (
+      {homePanelPrefs.collections && activeTab === 'collections' && org && (
         <div
           style={{
             flex: 1,

@@ -62,6 +62,7 @@ import {
   type CloneProgressState,
 } from '../components/GitCloneModal';
 import { ForkModal } from './components/ForkModal';
+import { useHomePanelPreferences } from '../hooks/useHomePanelPreferences';
 
 export interface RepositoryProfileData {
   name: string;
@@ -401,6 +402,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   events,
 }) => {
   const { theme } = useTheme();
+  const homePanelPrefs = useHomePanelPreferences();
 
   const spacing = useMemo(
     () => ({
@@ -1851,7 +1853,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               )}
 
               {/* Collect Button */}
-              {repositoryData.github && (
+              {homePanelPrefs.collections && repositoryData.github && (
                 <div
                   ref={collectDropdownRef}
                   style={{

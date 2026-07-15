@@ -22,6 +22,7 @@ import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCowork
 import { useTeamActivity } from '../hooks/useTeamActivity';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { useAuthState } from '../hooks/useAuthState';
+import { useHomePanelPreferences } from '../hooks/useHomePanelPreferences';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
@@ -56,6 +57,7 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const { user: currentUser, login, logout } = useAuthState();
+  const homePanelPrefs = useHomePanelPreferences();
 
   const spacing = {
     xs: theme.space?.[1] || 4,
@@ -72,6 +74,10 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
   const isOAuthSignedIn = !!currentUser;
   const effectiveSubtab =
     !isOAuthSignedIn && collectionsSubtab === 'collections' ? 'starred' : collectionsSubtab;
+
+  // When the collections feature flag is off, force feed mode away from 'collections'.
+  const effectiveFeedMode =
+    !homePanelPrefs.collections && feedMode === 'collections' ? 'my-activity' : feedMode;
 
   // Local git identity (shown when signed out)
   const [localGitName, setLocalGitName] = useState<string | null>(null);
@@ -647,9 +653,11 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
             options={[
               { value: 'my-activity', label: 'My Projects' },
               { value: 'organizations', label: 'Team' },
-              { value: 'collections', label: 'Social' },
+              ...(homePanelPrefs.collections
+                ? [{ value: 'collections', label: 'Social' }]
+                : []),
             ]}
-            value={feedMode}
+            value={effectiveFeedMode}
             onChange={(value) => onFeedModeChange(value as 'my-activity' | 'collections' | 'organizations')}
             theme={theme}
             variant="underline"
@@ -662,7 +670,7 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
         {/* My Activity - Projects List */}
         <div
           style={{
-            display: feedMode === 'my-activity' ? 'flex' : 'none',
+            display: effectiveFeedMode === 'my-activity' ? 'flex' : 'none',
             height: '100%',
             width: '100%',
             flexDirection: 'column',
@@ -678,7 +686,7 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
         {/* Collections Tab with Subtabs */}
         <div
           style={{
-            display: feedMode === 'collections' ? 'flex' : 'none',
+            display: effectiveFeedMode === 'collections' ? 'flex' : 'none',
             height: '100%',
             width: '100%',
             flexDirection: 'column',
@@ -751,7 +759,7 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
         {/* Organizations & Coworkers */}
         <div
           style={{
-            display: feedMode === 'organizations' ? 'flex' : 'none',
+            display: effectiveFeedMode === 'organizations' ? 'flex' : 'none',
             height: '100%',
             width: '100%',
             flexDirection: 'column',

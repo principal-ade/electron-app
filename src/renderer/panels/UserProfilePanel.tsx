@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
 import { OwnerCollectionsTab } from './OwnerCollectionsTab';
+import { useHomePanelPreferences } from '../hooks/useHomePanelPreferences';
 import {
   CommitActivityPanel,
   type CommitActivityPanelActions,
@@ -367,6 +368,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   commitActivityActions,
 }) => {
   const { theme } = useTheme();
+  const homePanelPrefs = useHomePanelPreferences();
   const user = context.currentScope?.user;
 
   // Panel manages its own profile data state
@@ -1228,6 +1230,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         >
           Activity
         </button>
+        {homePanelPrefs.collections && (
         <button
           style={{
             background: 'none',
@@ -1252,6 +1255,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         >
           Collections
         </button>
+        )}
         {isNarrow && pinnedRepoNames.length > 0 && (
           <button
             style={{
@@ -1301,7 +1305,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         )}
 
         {/* Collections Tab */}
-        {activeTab === 'collections' && userData && (
+        {homePanelPrefs.collections && activeTab === 'collections' && userData && (
           <div style={{ marginTop: spacing.md }}>
             <OwnerCollectionsTab ownerLogin={userData.username} events={events} />
           </div>

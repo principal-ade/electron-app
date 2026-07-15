@@ -28,6 +28,7 @@ import {
 import { emitRepositoryGuideOpenReadme } from '../../events/portalIntents';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuthState } from '../../hooks/useAuthState';
+import { useHomePanelPreferences } from '../../hooks/useHomePanelPreferences';
 import { useWorkspaceTabs } from '../../principal-window/PortalTabsContext';
 import { UserAboutCard, type UserAboutInfo } from './UserAboutCard';
 import { RepoAboutCard } from './RepoAboutCard';
@@ -111,6 +112,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 }) => {
   // Principal app OAuth — gates collections/recent and re-runs profile load.
   const { user: authUser, isAuthenticated: isPrincipalSignedIn, login: principalLogin } = useAuthState();
+  const homePanelPrefs = useHomePanelPreferences();
   const { theme } = useTheme();
   const [view, setView] = useState<HomeView>('home');
   const [selectedRepo, setSelectedRepo] = useState<RepositorySelectedPayload | null>(null);
@@ -151,7 +153,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   }, []);
 
   // When the user signs out while on a Principal-only sub-view, drop back home.
-  // Also clear selected repo card.
+  // Also drop back when the feature flag is off (shouldn't be reachable, but
+  // defensive). Clear selected repo card.
   useEffect(() => {
     if (
       !isPrincipalSignedIn &&
@@ -161,7 +164,17 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       setSelectedRepo(null);
       setRepoCardExiting(false);
     }
-  }, [isPrincipalSignedIn, view]);
+    if (view === 'collections' && !homePanelPrefs.collections) {
+      setView('home');
+      setSelectedRepo(null);
+      setRepoCardExiting(false);
+    }
+    if (view === 'recent' && !homePanelPrefs.recentlyVisited) {
+      setView('home');
+      setSelectedRepo(null);
+      setRepoCardExiting(false);
+    }
+  }, [isPrincipalSignedIn, view, homePanelPrefs.collections, homePanelPrefs.recentlyVisited]);
 
   // Keep selectedRepo.localClones in sync when the registry changes (e.g. after
   // a clone is deleted via the RepoAboutCard delete button). Without this the
@@ -679,6 +692,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 counts={counts}
                 activeView={null}
                 isPrincipalSignedIn={isPrincipalSignedIn}
+                showCollections={homePanelPrefs.collections}
+                showRecentlyVisited={homePanelPrefs.recentlyVisited}
                 onOpenView={(key) => go(key)}
               />
             </div>
@@ -705,12 +720,12 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               onBack={() => go('home')}
               onSelectRepo={(repo) => emitRepoSelected(repo)}
             />
-          ) : view === 'collections' && isPrincipalSignedIn ? (
+          ) : view === 'collections' && isPrincipalSignedIn && homePanelPrefs.collections ? (
             <HomeCollectionsSubView
               key="collections"
               onBack={() => go('home')}
             />
-          ) : view === 'recent' && isPrincipalSignedIn ? (
+          ) : view === 'recent' && isPrincipalSignedIn && homePanelPrefs.recentlyVisited ? (
             <HomeRecentSubView
               key="recent"
               onBack={() => go('home')}
