@@ -40,18 +40,6 @@ const baseActions = (files: InProgressChangedFile[]): InProgressRepoCardActions 
   },
   getAheadCommits: async () => [],
   pushBranch: async () => ({ success: true, message: 'pushed' }),
-  explainWorkingChanges: async (input) => {
-    await delay(900);
-    const audience = input.audienceLevel;
-    if (audience === 'non-technical') {
-      return {
-        text: 'You\'re tidying up how a button looks and behaves, writing a new helper to format text, and throwing out some old code that isn\'t used anymore. Part of it is ready to share with the team; the rest is still being tested locally.',
-      };
-    }
-    return {
-      text: 'Tightens Button styling and pulls shared formatter logic into src/utils/format.ts. Staged changes remove the now-unused legacy helper and update the Button test for the new prop shape; unstaged changes still include an in-flight useAuth refactor that should land in a follow-up commit.',
-    };
-  },
 });
 
 const noChangesActions: InProgressRepoCardActions = {
@@ -59,29 +47,6 @@ const noChangesActions: InProgressRepoCardActions = {
   getWorkingChanges: async () => [],
   getAheadCommits: async () => [],
   pushBranch: async () => ({ success: true, message: 'pushed' }),
-  explainWorkingChanges: async () => ({ text: '' }),
-};
-
-const erroringActions: InProgressRepoCardActions = {
-  getFileTreeForLocalRepo: async () => null,
-  getWorkingChanges: async () => sampleFiles,
-  getAheadCommits: async () => [],
-  pushBranch: async () => ({ success: true, message: 'pushed' }),
-  explainWorkingChanges: async () => {
-    await delay(400);
-    throw new Error('LLM request timed out after 30s');
-  },
-};
-
-const slowActions: InProgressRepoCardActions = {
-  getFileTreeForLocalRepo: async () => null,
-  getWorkingChanges: async () => sampleFiles,
-  getAheadCommits: async () => [],
-  pushBranch: async () => ({ success: true, message: 'pushed' }),
-  explainWorkingChanges: async () => {
-    await delay(20_000);
-    return { text: 'This would eventually load.' };
-  },
 };
 
 type EventHandler = (event: PanelEvent<unknown>) => void;
@@ -169,17 +134,38 @@ const InProgressRepoCardStory: React.FC<StoryWrapperProps> = ({
       entry={entry}
       events={events}
       actions={actions}
+      onSelect={(repoPath) => console.info('[Story] onSelect:', repoPath)}
     />
   );
 };
 
 const Wrapper: React.FC<{ children: React.ReactNode; width?: number }> = ({
   children,
-  width = 820,
+  width = 900,
 }) => (
   <ThemeProvider>
     <div style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
       <div style={{ maxWidth: width }}>{children}</div>
+    </div>
+  </ThemeProvider>
+);
+
+const GridWrapper: React.FC<{ children: React.ReactNode; width?: number }> = ({
+  children,
+  width = 900,
+}) => (
+  <ThemeProvider>
+    <div style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+      <div
+        style={{
+          maxWidth: width,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: 16,
+        }}
+      >
+        {children}
+      </div>
     </div>
   </ThemeProvider>
 );
@@ -206,12 +192,14 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   render: () => (
     <Wrapper>
-      <InProgressRepoCardStory
-        summary={createMockSummary()}
-        actions={baseActions(sampleFiles)}
-        entry={createMockEntry('my-awesome-project')}
-        events={new MockEventEmitter()}
-      />
+      <div style={{ width: 300, height: 300 }}>
+        <InProgressRepoCardStory
+          summary={createMockSummary()}
+          actions={baseActions(sampleFiles)}
+          entry={createMockEntry('my-awesome-project')}
+          events={new MockEventEmitter()}
+        />
+      </div>
     </Wrapper>
   ),
 };
@@ -219,30 +207,16 @@ export const Default: Story = {
 export const SingleFile: Story = {
   render: () => (
     <Wrapper>
-      <InProgressRepoCardStory
-        summary={createMockSummary({
-          repoName: 'scheduler',
-          branch: 'perf/batch-low-priority',
-          aheadCount: 0,
-        })}
-        actions={baseActions(singleFileWorking)}
-      />
-    </Wrapper>
-  ),
-};
-
-export const LoadingExplanation: Story = {
-  render: () => (
-    <Wrapper>
-      <InProgressRepoCardStory summary={createMockSummary()} actions={slowActions} />
-    </Wrapper>
-  ),
-};
-
-export const ExplanationError: Story = {
-  render: () => (
-    <Wrapper>
-      <InProgressRepoCardStory summary={createMockSummary()} actions={erroringActions} />
+      <div style={{ width: 300, height: 300 }}>
+        <InProgressRepoCardStory
+          summary={createMockSummary({
+            repoName: 'scheduler',
+            branch: 'perf/batch-low-priority',
+            aheadCount: 0,
+          })}
+          actions={baseActions(singleFileWorking)}
+        />
+      </div>
     </Wrapper>
   ),
 };
@@ -250,14 +224,16 @@ export const ExplanationError: Story = {
 export const NoChanges: Story = {
   render: () => (
     <Wrapper>
-      <InProgressRepoCardStory
-        summary={createMockSummary({
-          repoName: 'clean-repo',
-          branch: 'main',
-          aheadCount: 0,
-        })}
-        actions={noChangesActions}
-      />
+      <div style={{ width: 300, height: 300 }}>
+        <InProgressRepoCardStory
+          summary={createMockSummary({
+            repoName: 'clean-repo',
+            branch: 'main',
+            aheadCount: 0,
+          })}
+          actions={noChangesActions}
+        />
+      </div>
     </Wrapper>
   ),
 };
@@ -265,16 +241,18 @@ export const NoChanges: Story = {
 export const Dimmed: Story = {
   render: () => (
     <Wrapper>
-      <InProgressRepoCardStory
-        summary={createMockSummary()}
-        actions={baseActions(sampleFiles)}
-        dimmed
-      />
+      <div style={{ width: 300, height: 300 }}>
+        <InProgressRepoCardStory
+          summary={createMockSummary()}
+          actions={baseActions(sampleFiles)}
+          dimmed
+        />
+      </div>
     </Wrapper>
   ),
 };
 
-export const List: Story = {
+export const Grid: Story = {
   render: () => {
     const summaries = [
       createMockSummary({
@@ -296,6 +274,13 @@ export const List: Story = {
         aheadCount: 5,
         lastEditAt: new Date(Date.now() - 2 * 3_600_000),
       }),
+      createMockSummary({
+        repoName: 'api-gateway',
+        repoPath: '/Users/developer/projects/api-gateway',
+        branch: 'fix/rate-limiting',
+        aheadCount: 1,
+        lastEditAt: new Date(Date.now() - 45 * 60_000),
+      }),
     ];
     const filesPerRepo: Record<string, InProgressChangedFile[]> = {
       'my-awesome-project': sampleFiles,
@@ -304,20 +289,21 @@ export const List: Story = {
         { path: 'docs/getting-started.md', status: 'modified', additions: 6, deletions: 2, staged: true },
         { path: 'docs/api/overview.md', status: 'modified', additions: 2, deletions: 2, staged: true },
       ],
+      'api-gateway': [
+        { path: 'src/middleware/rateLimit.ts', status: 'modified', additions: 15, deletions: 3, staged: false },
+      ],
     };
     return (
-      <Wrapper>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {summaries.map((s) => (
-            <InProgressRepoCardStory
-              key={s.repoName}
-              summary={s}
-              actions={baseActions(filesPerRepo[s.repoName] ?? [])}
-              events={new MockEventEmitter()}
-            />
-          ))}
-        </div>
-      </Wrapper>
+      <GridWrapper>
+        {summaries.map((s) => (
+          <InProgressRepoCardStory
+            key={s.repoName}
+            summary={s}
+            actions={baseActions(filesPerRepo[s.repoName] ?? [])}
+            events={new MockEventEmitter()}
+          />
+        ))}
+      </GridWrapper>
     );
   },
 };

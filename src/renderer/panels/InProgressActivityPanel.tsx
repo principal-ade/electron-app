@@ -1,9 +1,10 @@
 /**
  * InProgressActivityPanel
  *
- * Feed-view panel that lists repositories with uncommitted working-tree
- * changes. Sibling of ActivityFeedCardPanel — same shape, but each row is an
- * InProgressRepoCard rather than a RepoActivityCard driven by commits.
+ * Grid-view panel that lists repositories with uncommitted working-tree
+ * changes. Each repo is shown as a square card in a responsive grid.
+ * Clicking a card opens InProgressRepoDetailModal with full file/commit
+ * details.
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -19,6 +20,7 @@ import {
   type InProgressRepoCardActions,
   type InProgressSummary,
 } from './InProgressRepoCard';
+import { InProgressRepoDetailModal } from './InProgressRepoDetailModal';
 
 export interface InProgressActivityPanelProps {
   repositories: AlexandriaEntry[];
@@ -58,6 +60,7 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
   const [statusMap, setStatusMap] = useState<Map<string, GitStatusWithFiles>>(new Map());
   const [loaded, setLoaded] = useState(false);
   const [dismissedPaths, setDismissedPaths] = useState<Set<string>>(new Set());
+  const [selectedRepoPath, setSelectedRepoPath] = useState<string | null>(null);
 
   const entryByPath = useMemo(() => {
     const map = new Map<string, AlexandriaEntry>();
@@ -107,9 +110,6 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
         next.set(repoPath, status);
         return next;
       });
-      // A fresh status arrived — drop any dismissal so the natural filter
-      // decides visibility (post-push the repo will simply not match anymore;
-      // if the user commits again later, the card returns).
       setDismissedPaths((prev) => {
         if (!prev.has(repoPath)) return prev;
         const next = new Set(prev);
@@ -139,9 +139,6 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
     return rows;
   }, [statusMap, entryByPath, dismissedPaths]);
 
-  // Double-clicking a card opens a terminal tab rooted at the repo in the
-  // principal window (not a separate dev-workspace window). WorkspaceShell
-  // listens for this intent and materializes the terminal tab.
   const handleOpenRepo = useCallback(
     (repoPath: string) => {
       const entry = entryByPath.get(repoPath);
@@ -160,14 +157,24 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
       next.add(repoPath);
       return next;
     });
-    // The push happened a moment ago; the monitoring layer doesn't always
-    // notice on its own, so kick a refresh now that the card has fully
-    // animated out. The resulting onGitStatusChanged event will clear the
-    // dismissal entry; the natural ahead===0 filter keeps it hidden.
+    setSelectedRepoPath(null);
     RepositoryMonitoringService.refreshRepository(repoPath).catch((err) => {
       console.warn('[InProgressActivityPanel] Failed to refresh after push:', err);
     });
   }, []);
+
+  const handleSelectRepo = useCallback((repoPath: string) => {
+    setSelectedRepoPath(repoPath);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedRepoPath(null);
+  }, []);
+
+  const selectedRow = useMemo(() => {
+    if (!selectedRepoPath) return null;
+    return dirtyRows.find((r) => r.summary.repoPath === selectedRepoPath) ?? null;
+  }, [selectedRepoPath, dirtyRows]);
 
   return (
     <div
@@ -202,7 +209,13 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
             </span>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: spacing.md,
+            }}
+          >
             {dirtyRows.map(({ entry, summary }) => (
               <InProgressRepoCard
                 key={summary.repoPath}
@@ -212,11 +225,24 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
                 events={events}
                 entry={entry}
                 actions={actions}
+                onSelect={handleSelectRepo}
               />
             ))}
           </div>
         )}
       </div>
+
+      {selectedRow && (
+        <InProgressRepoDetailModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          summary={selectedRow.summary}
+          actions={actions}
+          events={events}
+          entry={selectedRow.entry}
+          onDismiss={handleDismiss}
+        />
+      )}
     </div>
   );
 };
