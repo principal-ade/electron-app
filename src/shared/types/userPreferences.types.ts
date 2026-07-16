@@ -92,6 +92,8 @@ export interface UserPreferences {
   enableVimMode?: boolean;
 
   // Terminal preferences
+  /** Show the "open in repo window" / "open in main window" button in the terminal bottom bar (default: false) */
+  showSendTabButton?: boolean;
   /** Default terminal for opening shells */
   defaultTerminal?: TerminalId;
   /** Terminal implementation for panel framework mode */

@@ -67,6 +67,7 @@ import {
 } from '@industry-theme/xterm-terminal-panel';
 import { SendTabButton } from '../move-tab/SendTabButton';
 import { useTabReceiver } from '../move-tab/useTabReceiver';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import {
   panels as principalViewPanels,
   TraceDetailsPanel,
@@ -714,6 +715,23 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Derive collapsed state from actual layout
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(collapsed.left);
   const [isRightCollapsed, setIsRightCollapsed] = useState(collapsed.right);
+  const [showSendTabButton, setShowSendTabButton] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadPreferences = async () => {
+      const prefs = await UserPreferencesService.getPreferences();
+      if (isMounted) setShowSendTabButton(prefs.showSendTabButton ?? false);
+    };
+    loadPreferences();
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
+      if (isMounted) setShowSendTabButton(prefs.showSendTabButton ?? false);
+    });
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
   // Store callbacks and state in refs to avoid stale closures
   const onCollapsedChangeRef = useRef(onCollapsedChange);
@@ -1190,20 +1208,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // bottom-bar content for cross-window tab transfer (dev-workspace → principal).
   const bottomBarContent = useMemo(() => {
-    if (activeTabId) {
-      return (
-        <SendTabButton
-          direction="to-principal"
-          activeTabId={activeTabId}
-          cwd={terminalDirectory}
-          onTabDispatched={() => {
-            setRequestCloseTabId(activeTabId);
-          }}
-        />
-      );
-    }
-    return null;
-  }, [activeTabId, terminalDirectory]);
+    if (!showSendTabButton || !activeTabId) return null;
+    return (
+      <SendTabButton
+        direction="to-principal"
+        activeTabId={activeTabId}
+        cwd={terminalDirectory}
+        onTabDispatched={() => {
+          setRequestCloseTabId(activeTabId);
+        }}
+      />
+    );
+  }, [showSendTabButton, activeTabId, terminalDirectory]);
 
   // Right panel history - tracks documents opened in the right panel for quick navigation
   const [rightPanelHistory, setRightPanelHistory] = useState<

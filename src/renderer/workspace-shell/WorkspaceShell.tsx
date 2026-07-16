@@ -185,6 +185,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
     string | null
   >(null);
+  const [showSendTabButton, setShowSendTabButton] = useState(false);
 
   // Refs so renderTabContent stays stable across renders.
   const eventsRef = useRef(events);
@@ -220,14 +221,16 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     activeView === 'skills' || tabs.some((t) => t.contentType === 'skill');
 
   useEffect(() => {
-    const loadBaseDirectory = async () => {
+    const loadPreferences = async () => {
       const preferences = await UserPreferencesService.getPreferences();
       setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+      setShowSendTabButton(preferences.showSendTabButton ?? false);
     };
-    loadBaseDirectory();
+    loadPreferences();
     const unsubscribe = UserPreferencesService.onPreferencesUpdated(
       (preferences) => {
         setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+        setShowSendTabButton(preferences.showSendTabButton ?? false);
       },
     );
     return () => {
@@ -453,6 +456,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
 
   // bottom-bar content for cross-window tab transfer (principal → dev-workspace).
   const bottomBarContent = useMemo(() => {
+    if (!showSendTabButton) return null;
     const direction: 'to-dev-workspace' = 'to-dev-workspace';
     return (
       <SendTabButton
@@ -465,7 +469,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         }}
       />
     );
-  }, [activeTabId, terminalDirectory, repoWindows]);
+  }, [showSendTabButton, activeTabId, terminalDirectory, repoWindows]);
   useEffect(() => {
     const handleTerminalOpen = (event: { payload: TerminalOpenPayload }) => {
       const directory = event.payload?.directory;
