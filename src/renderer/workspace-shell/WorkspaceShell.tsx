@@ -56,6 +56,9 @@ import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { useTerminalRepoInfo } from '../hooks/useTerminalRepoInfo';
 import { SendTabButton } from '../move-tab/SendTabButton';
 import { useTabReceiver } from '../move-tab/useTabReceiver';
+import { RepoAboutCard } from '../panels/home-panel/RepoAboutCard';
+import { payloadFromLocalEntry } from '../events/repositorySelected';
+import type { RepositorySelectedPayload } from '../events/repositorySelected';
 import { useOpenRepositoryWindows } from '../hooks/useOpenRepositoryWindows';
 import {
   TabbedTerminalPanel,
@@ -186,6 +189,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     string | null
   >(null);
   const [showSendTabButton, setShowSendTabButton] = useState(false);
+  const [selectedRepo, setSelectedRepo] = useState<RepositorySelectedPayload | null>(null);
+  const [repoCardExiting, setRepoCardExiting] = useState(false);
 
   // Refs so renderTabContent stays stable across renders.
   const eventsRef = useRef(events);
@@ -454,22 +459,126 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     clearIncomingTab();
   }, [incomingTab, clearIncomingTab, terminalActions, terminalCtx.terminalContext, terminalDirectory]);
 
+  // Find the active terminal tab's directory for the "show project" button.
+  const activeTabDirectory = useMemo(() => {
+    if (!activeTabId) return undefined;
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    if (activeTab && 'directory' in activeTab) {
+      return (activeTab as { directory: string }).directory;
+    }
+    return undefined;
+  }, [activeTabId, tabs]);
+
+  // Nearest-ancestor lookup: find the AlexandriaEntry whose path is the longest
+  // prefix of the given directory (same logic as useTerminalRepoInfo).
+  const findEntryForDirectory = useCallback(
+    (directory: string): AlexandriaEntry | undefined => {
+      let best: AlexandriaEntry | undefined;
+      let bestLen = -1;
+      for (const entry of repositories) {
+        const repoPath = String(entry.path);
+        if (
+          (directory === repoPath || directory.startsWith(repoPath + '/')) &&
+          repoPath.length > bestLen
+        ) {
+          best = entry;
+          bestLen = repoPath.length;
+        }
+      }
+      return best;
+    },
+    [repositories],
+  );
+
+  const handleShowProject = useCallback(() => {
+    if (!activeTabDirectory) return;
+    const entry = findEntryForDirectory(activeTabDirectory);
+    if (!entry) return;
+    const matchingEntries = repositories.filter((e) => {
+      const ep = e.purl ?? e.github?.purl;
+      const ip = entry.purl ?? entry.github?.purl;
+      return ep && ip && ep === ip;
+    });
+    try {
+      const payload = payloadFromLocalEntry(
+        entry,
+        matchingEntries.length > 0 ? matchingEntries : undefined,
+      );
+      setSelectedRepo(payload);
+      setRepoCardExiting(false);
+      // Expand the left panel if collapsed.
+      if (isLeftCollapsed) {
+        panelLayoutRef.current?.expandPanel('left');
+        setIsLeftCollapsed(false);
+        onCollapsedChange({ left: false, right: collapsed.right });
+      }
+    } catch (err) {
+      console.error('[WorkspaceShell] Failed to build repo payload:', err);
+    }
+  }, [
+    activeTabDirectory,
+    findEntryForDirectory,
+    repositories,
+    isLeftCollapsed,
+    onCollapsedChange,
+    collapsed.right,
+  ]);
+
+  const dismissRepoCard = useCallback(() => {
+    setRepoCardExiting(true);
+    setTimeout(() => {
+      setSelectedRepo(null);
+      setRepoCardExiting(false);
+    }, 320);
+  }, []);
+
   // bottom-bar content for cross-window tab transfer (principal → dev-workspace).
   const bottomBarContent = useMemo(() => {
-    if (!showSendTabButton) return null;
-    const direction: 'to-dev-workspace' = 'to-dev-workspace';
+    const hasRepo = activeTabDirectory
+      ? findEntryForDirectory(activeTabDirectory) !== undefined
+      : false;
+    if (!showSendTabButton && !hasRepo) return null;
     return (
-      <SendTabButton
-        direction={direction}
-        activeTabId={activeTabId}
-        cwd={terminalDirectory}
-        repoWindows={repoWindows}
-        onTabDispatched={() => {
-          if (activeTabId) setRequestCloseTabId(activeTabId);
-        }}
-      />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {hasRepo && (
+          <button
+            onClick={handleShowProject}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'inherit',
+              fontSize: 12,
+              padding: '0 8px',
+              whiteSpace: 'nowrap',
+            }}
+            title="Show this project in the side panel"
+          >
+            show project
+          </button>
+        )}
+        {showSendTabButton && (
+          <SendTabButton
+            direction="to-dev-workspace"
+            activeTabId={activeTabId}
+            cwd={terminalDirectory}
+            repoWindows={repoWindows}
+            onTabDispatched={() => {
+              if (activeTabId) setRequestCloseTabId(activeTabId);
+            }}
+          />
+        )}
+      </div>
     );
-  }, [showSendTabButton, activeTabId, terminalDirectory, repoWindows]);
+  }, [
+    showSendTabButton,
+    activeTabId,
+    terminalDirectory,
+    repoWindows,
+    activeTabDirectory,
+    findEntryForDirectory,
+    handleShowProject,
+  ]);
   useEffect(() => {
     const handleTerminalOpen = (event: { payload: TerminalOpenPayload }) => {
       const directory = event.payload?.directory;
@@ -710,6 +819,42 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             theme={theme}
             onPanelResize={handlePanelResize}
           />
+          {/* RepoAboutCard overlay — slides in over the left panel when a
+              project is selected from the terminal bottom bar. */}
+          {selectedRepo && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '25%',
+                height: '100%',
+                zIndex: 10,
+                overflowY: 'auto',
+                background: theme.colors.background,
+                animation: repoCardExiting
+                  ? 'repoAboutSlideOut 320ms ease forwards'
+                  : 'repoAboutSlideIn 320ms ease',
+              }}
+            >
+              <style>{`
+                @keyframes repoAboutSlideIn {
+                  from { transform: translateX(-100%); }
+                  to   { transform: translateX(0); }
+                }
+                @keyframes repoAboutSlideOut {
+                  from { transform: translateX(0); }
+                  to   { transform: translateX(-100%); }
+                }
+              `}</style>
+              <RepoAboutCard
+                repo={selectedRepo}
+                onDismiss={dismissRepoCard}
+                events={events}
+                baseDefaultDirectory={baseDefaultDirectory}
+              />
+            </div>
+          )}
           {/* Projects repository delete modal — always mounted with the shell. */}
           {deleteModal}
         </div>
