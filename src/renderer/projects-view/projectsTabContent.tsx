@@ -921,21 +921,31 @@ const FileCityGuideTabContent: React.FC<{
   }, [readmeActive, readmePath, github?.owner, github?.name]);
 
   // Fetch this week's commits (+ optional dirty working tree) when week mode is on.
+  // Enter week mode immediately with `loading: true` so the panel header can show
+  // centered fetch progress while GitHub detail calls complete.
   React.useEffect(() => {
     if (!weekActive || !github?.owner || !github?.name) {
       setWeekView(null);
+      setWeekLoading(false);
       return;
     }
     let cancelled = false;
+    const asOf = new Date();
+    const rangeStart = startOfWeek(asOf, WEEK_STARTS_ON);
+    const rangeStartIso = rangeStart.toISOString();
+    const asOfIso = asOf.toISOString();
+
     setWeekLoading(true);
+    setWeekView({
+      rangeStart: rangeStartIso,
+      asOf: asOfIso,
+      weekStartsOn: WEEK_STARTS_ON,
+      commits: [],
+      loading: true,
+    });
 
     (async () => {
       try {
-        const asOf = new Date();
-        const rangeStart = startOfWeek(asOf, WEEK_STARTS_ON);
-        const rangeStartIso = rangeStart.toISOString();
-        const asOfIso = asOf.toISOString();
-
         const list = await GithubService.getCommitsInDateRange(
           github.owner,
           github.name,
@@ -1029,11 +1039,20 @@ const FileCityGuideTabContent: React.FC<{
           weekStartsOn: WEEK_STARTS_ON,
           commits,
           dirty,
+          loading: false,
         });
       } catch (err) {
         if (!cancelled) {
           console.error('[FileCityGuideTab] week commits fetch failed', err);
-          setWeekView(null);
+          // Keep week mode open with an empty, non-loading payload so the user
+          // sees the empty state rather than a snap back to idle.
+          setWeekView({
+            rangeStart: rangeStartIso,
+            asOf: asOfIso,
+            weekStartsOn: WEEK_STARTS_ON,
+            commits: [],
+            loading: false,
+          });
         }
       } finally {
         if (!cancelled) setWeekLoading(false);
