@@ -25,7 +25,6 @@ import {
   payloadFromLocalEntry,
   type RepositorySelectedPayload,
 } from '../../events/repositorySelected';
-import { emitRepositoryGuideOpenReadme } from '../../events/portalIntents';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuthState } from '../../hooks/useAuthState';
 import { useHomePanelPreferences } from '../../hooks/useHomePanelPreferences';
@@ -58,22 +57,6 @@ const HOME_SLIDE_ORDER: readonly HomeView[] = [
   'recent',
 ];
 const homeSlideDirection = makeSlideDirection(HOME_SLIDE_ORDER as readonly string[]);
-
-// localStorage helpers for README open preference per repo.
-function readmeOpenStorageKey(owner: string, repo: string): string {
-  return `principal:readmeOpen:${owner}/${repo}`;
-}
-function readReadmeOpenPref(owner: string, repo: string): boolean | null {
-  try {
-    const raw = localStorage.getItem(readmeOpenStorageKey(owner, repo));
-    if (raw === 'true') return true;
-    if (raw === 'false') return false;
-    return null; // never decided → default open
-  } catch { return null; }
-}
-function writeReadmeOpenPref(owner: string, repo: string, open: boolean): void {
-  try { localStorage.setItem(readmeOpenStorageKey(owner, repo), String(open)); } catch {}
-}
 
 async function loadGitIdentity(): Promise<UserAboutInfo | null> {
   const dir = process.env.HOME || '/';
@@ -118,10 +101,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const [selectedRepo, setSelectedRepo] = useState<RepositorySelectedPayload | null>(null);
   const [repoCardExiting, setRepoCardExiting] = useState(false);
   const { openUserProfile } = useWorkspaceTabs();
-
-  // README toggle state
-  const [readmeActive, setReadmeActive] = useState(false);
-  const [readmePath, setReadmePath] = useState<string | null>(null);
 
   // Base directory for off-convention detection
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
@@ -214,85 +193,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     setTimeout(() => {
       setSelectedRepo(null);
       setRepoCardExiting(false);
-      setReadmePath(null);
     }, 320);
   }, []);
-
-  // Resolve README path when a GitHub repo is selected.
-  useEffect(() => {
-    if (!selectedRepo?.github) { setReadmePath(null); return; }
-    const { owner, name } = selectedRepo.github;
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const latestCommit = await GithubService.getLatestCommit(owner, name);
-        if (cancelled || !latestCommit) return;
-        const filePaths = await GithubService.getFileTreeAtCommit(
-          owner, name, latestCommit.sha,
-        );
-        if (cancelled) return;
-        // Find root-level README: README.md > any .md > .markdown > any readme
-        const readmePattern = /^readme(\.|$)/i;
-        const candidates = filePaths
-          .filter((f) => !f.includes('/') && readmePattern.test(f.split('/').pop() || ''))
-          .sort((a, b) => {
-            const aBase = a.split('/').pop() || a;
-            const bBase = b.split('/').pop() || b;
-            if (aBase === 'README.md') return -1;
-            if (bBase === 'README.md') return 1;
-            if (aBase.endsWith('.md')) return -1;
-            if (bBase.endsWith('.md')) return 1;
-            return 0;
-          });
-        if (!cancelled && candidates.length > 0) {
-          setReadmePath(candidates[0]);
-        } else if (!cancelled) {
-          setReadmePath(null);
-        }
-      } catch {
-        if (!cancelled) setReadmePath(null);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [selectedRepo?.github?.owner, selectedRepo?.github?.name]);
-
-  // Auto-open README on first visit (localStorage pref, default open).
-  useEffect(() => {
-    if (!selectedRepo?.github || !readmePath) return;
-    const { owner, name } = selectedRepo.github;
-    const pref = readReadmeOpenPref(owner, name);
-    // null = never decided → default open; true = user wants it open
-    if (pref !== false) {
-      setReadmeActive(true);
-      writeReadmeOpenPref(owner, name, true);
-      emitRepositoryGuideOpenReadme(events, 'home-panel', {
-        purl: selectedRepo.purl,
-        github: selectedRepo.github,
-        localEntry: selectedRepo.localEntry,
-        readmeActive: true,
-        readmePath,
-      });
-    } else {
-      setReadmeActive(false);
-    }
-  }, [selectedRepo, readmePath, events]);
-
-  const handleToggleReadme = useCallback(() => {
-    if (!selectedRepo?.github) return;
-    const { owner, name } = selectedRepo.github;
-    const next = !readmeActive;
-    setReadmeActive(next);
-    writeReadmeOpenPref(owner, name, next);
-    emitRepositoryGuideOpenReadme(events, 'home-panel', {
-      purl: selectedRepo.purl,
-      github: selectedRepo.github,
-      localEntry: selectedRepo.localEntry,
-      readmeActive: next,
-      readmePath: readmePath ?? undefined,
-    });
-  }, [selectedRepo, readmeActive, readmePath, events]);
 
   // About card: GitHub profile when CLI/API available, else git identity
   const [aboutUser, setAboutUser] = useState<UserAboutInfo | null>(null);
@@ -645,9 +547,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               repo={selectedRepo}
               onDismiss={dismissRepoCard}
               events={events}
-              readmePath={readmePath}
-              onOpenReadme={readmePath ? handleToggleReadme : undefined}
-              readmeActive={readmeActive}
               baseDefaultDirectory={baseDefaultDirectory}
             />
           )}

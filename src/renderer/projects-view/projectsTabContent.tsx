@@ -66,12 +66,21 @@ import {
 import { ActivityCitiesPanel } from '../panels/ActivityCitiesPanel';
 import {
   FileCityGuidePanel,
+  type CommitFileChange,
+  type CommitFileStatus,
+  type CommitView,
+  type DirtyWorkingTree,
   type FileCityGuidePanelActions,
   type FileCityGuidePanelContext,
   type FileCityGuideRepository,
   type LineCountsSliceData,
   type ReadmeView,
+  type WeekCommitsView,
+  type WeekStartsOn,
 } from '@industry-theme/file-city-panel';
+import {
+  emitRepositoryGuideOpenWeek,
+} from '../events/portalIntents';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
 import type { HighlightLayer } from '@principal-ai/file-city-react';
 import {
@@ -690,6 +699,53 @@ const EMPTY_GUIDE_FILE_TREE: RepoFileTree = {
   },
 };
 
+const WEEK_STARTS_ON: WeekStartsOn = 1; // Monday
+
+/** Start of the calendar week containing `asOf` (local midnight). */
+function startOfWeek(asOf: Date, weekStartsOn: WeekStartsOn): Date {
+  const d = new Date(asOf);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = (day - weekStartsOn + 7) % 7;
+  d.setDate(d.getDate() - diff);
+  return d;
+}
+
+function mapChangedStatus(
+  status: 'added' | 'modified' | 'deleted' | 'renamed',
+): CommitFileStatus {
+  if (status === 'deleted') return 'removed';
+  return status;
+}
+
+/** Parse `git status --porcelain` into panel dirty file rows. */
+function dirtyFilesFromPorcelain(stdout: string): CommitFileChange[] {
+  const files: CommitFileChange[] = [];
+  for (const line of stdout.split('\n')) {
+    if (line.length < 4) continue;
+    const xy = line.slice(0, 2);
+    let path = line.slice(3).trim();
+    // Renames: `R  old -> new`
+    if (path.includes(' -> ')) {
+      path = path.split(' -> ').pop()?.trim() ?? path;
+    }
+    // Untracked
+    if (xy === '??') {
+      files.push({ path, status: 'added' });
+      continue;
+    }
+    const code = (xy[0] !== ' ' && xy[0] !== '?' ? xy[0] : xy[1]) ?? 'M';
+    let status: CommitFileStatus = 'modified';
+    if (code === 'A') status = 'added';
+    else if (code === 'D') status = 'removed';
+    else if (code === 'R') status = 'renamed';
+    else if (code === 'C') status = 'copied';
+    else if (code === 'M') status = 'modified';
+    files.push({ path, status });
+  }
+  return files;
+}
+
 /**
  * Wrapper component for the File City guide tab content.
  *
@@ -699,9 +755,8 @@ const EMPTY_GUIDE_FILE_TREE: RepoFileTree = {
  * `RepositoryProfilePanel`'s embedded bespoke city — this is the dedicated
  * guide host (web-ade's FileCityGuidePanel surface) running as its own tab.
  *
- * The tour/commit slices are left null (idle city); tours are authored and
- * loaded from the tour library, not from this tab's identity. Host-supplied
- * `highlightLayers` are also null so the idle city renders plain.
+ * Modes (readme / week) are driven by tab fields set from RepoAboutCard via
+ * portal intents. Tour slice stays null here; tours come from the tour library.
  */
 const FileCityGuideTabContent: React.FC<{
   purl: Purl;
@@ -710,7 +765,16 @@ const FileCityGuideTabContent: React.FC<{
   events: PanelEventEmitter;
   readmeActive?: boolean;
   readmePath?: string;
-}> = ({ purl, github, localEntry, events, readmeActive = false, readmePath }) => {
+  weekActive?: boolean;
+}> = ({
+  purl,
+  github,
+  localEntry,
+  events,
+  readmeActive = false,
+  readmePath,
+  weekActive = false,
+}) => {
   const [fileTree, setFileTree] = React.useState<RepoFileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = React.useState(false);
   const [lineCounts, setLineCounts] =
@@ -718,6 +782,8 @@ const FileCityGuideTabContent: React.FC<{
   const [lineCountsLoading, setLineCountsLoading] = React.useState(false);
   const [readmeContent, setReadmeContent] = React.useState<string | null>(null);
   const [readmeLoading, setReadmeLoading] = React.useState(false);
+  const [weekView, setWeekView] = React.useState<WeekCommitsView | null>(null);
+  const [weekLoading, setWeekLoading] = React.useState(false);
 
   const localPath = localEntry?.path ?? null;
 
@@ -854,6 +920,131 @@ const FileCityGuideTabContent: React.FC<{
     return () => { cancelled = true; };
   }, [readmeActive, readmePath, github?.owner, github?.name]);
 
+  // Fetch this week's commits (+ optional dirty working tree) when week mode is on.
+  React.useEffect(() => {
+    if (!weekActive || !github?.owner || !github?.name) {
+      setWeekView(null);
+      return;
+    }
+    let cancelled = false;
+    setWeekLoading(true);
+
+    (async () => {
+      try {
+        const asOf = new Date();
+        const rangeStart = startOfWeek(asOf, WEEK_STARTS_ON);
+        const rangeStartIso = rangeStart.toISOString();
+        const asOfIso = asOf.toISOString();
+
+        const list = await GithubService.getCommitsInDateRange(
+          github.owner,
+          github.name,
+          rangeStartIso,
+          asOfIso,
+        );
+        if (cancelled) return;
+
+        // Enrich each commit with per-file changes (list endpoint has no files[]).
+        const commits: CommitView[] = [];
+        const concurrency = 4;
+        for (let i = 0; i < list.length; i += concurrency) {
+          if (cancelled) return;
+          const batch = list.slice(i, i + concurrency);
+          const enriched = await Promise.all(
+            batch.map(async (c) => {
+              let files: CommitFileChange[] = [];
+              let additions = 0;
+              let deletions = 0;
+              try {
+                const changed = await GithubService.getChangedFilesForCommit(
+                  github.owner,
+                  github.name,
+                  c.sha,
+                );
+                for (const [path, info] of changed) {
+                  files.push({
+                    path,
+                    status: mapChangedStatus(info.status),
+                    additions: info.additions,
+                    deletions: info.deletions,
+                  });
+                  additions += info.additions;
+                  deletions += info.deletions;
+                }
+              } catch (err) {
+                console.warn(
+                  '[FileCityGuideTab] getChangedFilesForCommit failed',
+                  c.sha,
+                  err,
+                );
+              }
+              return {
+                sha: c.sha,
+                message: c.commit.message,
+                author: {
+                  name: c.commit.author?.name ?? c.author?.login ?? 'Unknown',
+                  login: c.author?.login,
+                  avatarUrl: c.author?.avatar_url,
+                },
+                authoredAt: c.commit.author?.date ?? asOfIso,
+                stats: {
+                  filesChanged: files.length,
+                  additions,
+                  deletions,
+                },
+                url: c.html_url,
+                files,
+              } satisfies CommitView;
+            }),
+          );
+          commits.push(...enriched);
+        }
+
+        // Newest first (API is usually newest-first; re-sort to be sure).
+        commits.sort(
+          (a, b) =>
+            new Date(b.authoredAt).getTime() - new Date(a.authoredAt).getTime(),
+        );
+
+        let dirty: DirtyWorkingTree | null = null;
+        if (localPath) {
+          try {
+            const status = await GitService.execCommand(localPath, [
+              'status',
+              '--porcelain',
+            ]);
+            const files = dirtyFilesFromPorcelain(status.stdout);
+            if (files.length > 0) {
+              dirty = { asOf: asOfIso, files };
+            }
+          } catch (err) {
+            console.warn('[FileCityGuideTab] dirty status failed', err);
+          }
+        }
+
+        if (cancelled) return;
+        setWeekView({
+          rangeStart: rangeStartIso,
+          asOf: asOfIso,
+          weekStartsOn: WEEK_STARTS_ON,
+          commits,
+          dirty,
+        });
+      } catch (err) {
+        if (!cancelled) {
+          console.error('[FileCityGuideTab] week commits fetch failed', err);
+          setWeekView(null);
+        }
+      } finally {
+        if (!cancelled) setWeekLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [weekActive, github?.owner, github?.name, localPath]);
+
   // Per-slice memos so unrelated state changes don't churn slice identity.
   const fileTreeSlice = React.useMemo(
     () =>
@@ -884,8 +1075,9 @@ const FileCityGuideTabContent: React.FC<{
   );
 
   // README slice — populated when readmeActive is true and content is fetched.
+  // Week mode wins exclusivity on the panel side if both were somehow set.
   const readmeSlice = React.useMemo(() => {
-    if (!readmeActive || !readmeContent) {
+    if (weekActive || !readmeActive || !readmeContent) {
       return makeGuideSlice<ReadmeView | null>('readme', null);
     }
     const readmeView: ReadmeView = {
@@ -900,7 +1092,18 @@ const FileCityGuideTabContent: React.FC<{
         : undefined,
     };
     return makeGuideSlice<ReadmeView | null>('readme', readmeView, readmeLoading);
-  }, [readmeActive, readmeContent, readmePath, readmeLoading, github]);
+  }, [weekActive, readmeActive, readmeContent, readmePath, readmeLoading, github]);
+
+  const weekCommitsSlice = React.useMemo(() => {
+    if (!weekActive) {
+      return makeGuideSlice<WeekCommitsView | null>('weekCommits', null);
+    }
+    return makeGuideSlice<WeekCommitsView | null>(
+      'weekCommits',
+      weekView,
+      weekLoading,
+    );
+  }, [weekActive, weekView, weekLoading]);
 
   const repository = React.useMemo<FileCityGuideRepository | null>(() => {
     if (!localPath && !github?.name) return null;
@@ -942,6 +1145,7 @@ const FileCityGuideTabContent: React.FC<{
         tour: tourSlice,
         highlightLayers: highlightLayersSlice,
         readme: readmeSlice,
+        weekCommits: weekCommitsSlice,
         repository,
       }) as PanelContextValue & FileCityGuidePanelContext,
     [
@@ -951,6 +1155,7 @@ const FileCityGuideTabContent: React.FC<{
       tourSlice,
       highlightLayersSlice,
       readmeSlice,
+      weekCommitsSlice,
       repository,
     ],
   );
@@ -970,8 +1175,16 @@ const FileCityGuideTabContent: React.FC<{
           payload: { path: absolute, line },
         });
       },
+      closeWeekCommits: () => {
+        emitRepositoryGuideOpenWeek(events, 'file-city-guide-tab', {
+          purl,
+          github,
+          localEntry,
+          weekActive: false,
+        });
+      },
     }),
-    [localPath, events],
+    [localPath, events, purl, github, localEntry],
   );
 
   return (
@@ -982,7 +1195,7 @@ const FileCityGuideTabContent: React.FC<{
         events={events}
         showFileTreeToggle
         showColorLegend
-        readmeMarkdownWidth={readmeActive ? 0.66 : undefined}
+        readmeMarkdownWidth={readmeActive && !weekActive ? 0.66 : undefined}
       />
     </div>
   );
@@ -1540,6 +1753,7 @@ export function renderProjectsTabContent(
           events={events}
           readmeActive={guideTab.readmeActive}
           readmePath={guideTab.readmePath}
+          weekActive={guideTab.weekActive}
         />
       );
     }

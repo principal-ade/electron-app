@@ -32,6 +32,7 @@ import {
   type OwnerActivityRequestedPayload,
   type RepositoryActivityRequestedPayload,
   type RepositoryGuideOpenReadmePayload,
+  type RepositoryGuideOpenWeekPayload,
 } from '../../events/portalIntents';
 
 export const PortalIntentBridge: React.FC = () => {
@@ -77,7 +78,17 @@ export const PortalIntentBridge: React.FC = () => {
       payload: RepositoryGuideOpenReadmePayload;
     }) => {
       const p = event.payload;
-      ws.openFileCityGuide(p, p.readmeActive, p.readmePath);
+      ws.openFileCityGuide(p, {
+        readmeActive: p.readmeActive,
+        readmePath: p.readmePath,
+      });
+    };
+
+    const handleRepositoryGuideOpenWeek = (event: {
+      payload: RepositoryGuideOpenWeekPayload;
+    }) => {
+      const p = event.payload;
+      ws.openFileCityGuide(p, { weekActive: p.weekActive });
     };
 
     const handleOwnerSelected = (event: { payload: OwnerSelectedPayload }) => {
@@ -116,6 +127,7 @@ export const PortalIntentBridge: React.FC = () => {
     events.on(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
     events.on(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
     events.on(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);
+    events.on(PORTAL_INTENTS.repositoryGuideOpenWeek, handleRepositoryGuideOpenWeek);
     events.on(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
     events.on(PORTAL_INTENTS.collectionSelected, handleCollectionSelected);
     events.on(PORTAL_INTENTS.liveActivityOpen, handleLiveActivityOpen);
@@ -127,6 +139,7 @@ export const PortalIntentBridge: React.FC = () => {
       events.off(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
       events.off(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
       events.off(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);
+      events.off(PORTAL_INTENTS.repositoryGuideOpenWeek, handleRepositoryGuideOpenWeek);
       events.off(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
       events.off(PORTAL_INTENTS.collectionSelected, handleCollectionSelected);
       events.off(PORTAL_INTENTS.liveActivityOpen, handleLiveActivityOpen);

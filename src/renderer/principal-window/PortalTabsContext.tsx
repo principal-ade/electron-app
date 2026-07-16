@@ -120,11 +120,18 @@ export interface WorkspaceTabsContextValue {
   ) => void;
   /** Open a `repo-activity-<owner>/<repo>` tab idempotently and focus it. */
   openRepoActivity: (owner: string, repo: string) => void;
-  /** Open a `file-city-guide-<purl>` tab idempotently and focus it. */
+  /**
+   * Open a `file-city-guide-<purl>` tab idempotently and focus it.
+   * Optional `options` update guide modes (readme / week); turning one on
+   * clears the other. Omit options to open/focus without changing modes.
+   */
   openFileCityGuide: (
     payload: RepositorySelectedPayload,
-    readmeActive?: boolean,
-    readmePath?: string,
+    options?: {
+      readmeActive?: boolean;
+      readmePath?: string;
+      weekActive?: boolean;
+    },
   ) => void;
   /** Open the singleton `live-activity` tab and focus it. */
   openLiveActivity: () => void;
@@ -438,21 +445,40 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   const openFileCityGuide = useCallback(
     (
       payload: RepositorySelectedPayload,
-      readmeActive?: boolean,
-      readmePath?: string,
+      options?: {
+        readmeActive?: boolean;
+        readmePath?: string;
+        weekActive?: boolean;
+      },
     ) => {
       const { purl, github, localEntry } = payload;
       const tabId = `file-city-guide-${purl}`;
-      // If toggling README, update existing tab or create one if it doesn't exist yet.
-      if (readmeActive !== undefined) {
+      const hasModeUpdate =
+        options != null &&
+        (options.readmeActive !== undefined ||
+          options.weekActive !== undefined ||
+          options.readmePath !== undefined);
+
+      // Mode update: merge into existing tab or create one.
+      if (hasModeUpdate) {
+        let readmeActive = options.readmeActive;
+        let readmePath = options.readmePath;
+        let weekActive = options.weekActive;
+        // Mutual exclusivity — turning one mode on clears the other.
+        if (readmeActive === true) weekActive = false;
+        if (weekActive === true) readmeActive = false;
+
         setTabs((prev) => {
           const exists = prev.some((t) => t.id === tabId);
           if (exists) {
-            return prev.map((t) =>
-              t.id === tabId
-                ? { ...t, readmeActive, readmePath } as FileCityGuideTab
-                : t,
-            );
+            return prev.map((t) => {
+              if (t.id !== tabId) return t;
+              const next = { ...t } as FileCityGuideTab;
+              if (readmeActive !== undefined) next.readmeActive = readmeActive;
+              if (readmePath !== undefined) next.readmePath = readmePath;
+              if (weekActive !== undefined) next.weekActive = weekActive;
+              return next;
+            });
           }
           return [
             ...prev,
@@ -466,14 +492,17 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
               purl,
               github,
               localEntry,
-              readmeActive,
+              readmeActive: readmeActive ?? false,
               readmePath,
+              weekActive: weekActive ?? false,
             } as FileCityGuideTab,
           ];
         });
         setActiveTabId(tabId);
         return;
       }
+
+      // Open / focus without changing modes.
       openTab(tabId, () =>
         ({
           id: tabId,
@@ -486,6 +515,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
           github,
           localEntry,
           readmeActive: false,
+          weekActive: false,
         }) as FileCityGuideTab,
       );
     },

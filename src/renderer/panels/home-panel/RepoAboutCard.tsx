@@ -13,7 +13,7 @@
  * left-rail extract. For the full profile hub, see RepositoryProfilePanel (tab).
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   AlertCircle,
@@ -26,6 +26,7 @@ import {
   FolderOpen,
   FolderTree,
   GitBranch,
+  GitCommitHorizontal,
   GitFork,
   Loader2,
   RefreshCw,
@@ -38,7 +39,14 @@ import { parsePurl } from '@principal-ai/alexandria-core-library';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { RepositorySelectedPayload } from '../../events/repositorySelected';
 import { payloadFromGithub } from '../../events/repositorySelected';
-import { emitTerminalOpen } from '../../events/portalIntents';
+import {
+  emitTerminalOpen,
+  emitRepositoryGuideOpenReadme,
+  emitRepositoryGuideOpenWeek,
+  PORTAL_INTENTS,
+  type RepositoryGuideOpenReadmePayload,
+  type RepositoryGuideOpenWeekPayload,
+} from '../../events/portalIntents';
 import { GithubService } from '../../main-process-api/GithubService';
 import { GitService, type GitBranchStatus } from '../../main-process-api/GitService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
@@ -67,16 +75,32 @@ export interface RepoAboutCardProps {
   repo: RepositorySelectedPayload;
   /** Dismiss the card and return to the previous sub-view. */
   onDismiss: () => void;
-  /** Portal event emitter for terminal open intents etc. */
+  /** Portal event emitter for guide modes, terminal open intents, etc. */
   events: PanelEventEmitter;
-  /** README file path in the repo (e.g. "README.md") — null if unknown. */
-  readmePath?: string | null;
-  /** Called when the README toggle button is clicked. */
-  onOpenReadme?: () => void;
-  /** Whether README is currently active in the guide tab. */
-  readmeActive?: boolean;
   /** The user's base clone directory (e.g. ~/Developer). */
   baseDefaultDirectory?: string | null;
+}
+
+// localStorage helpers for README open preference per repo (owned by the card).
+function readmeOpenStorageKey(owner: string, repo: string): string {
+  return `principal:readmeOpen:${owner}/${repo}`;
+}
+function readReadmeOpenPref(owner: string, repo: string): boolean | null {
+  try {
+    const raw = localStorage.getItem(readmeOpenStorageKey(owner, repo));
+    if (raw === 'true') return true;
+    if (raw === 'false') return false;
+    return null; // never decided → default open
+  } catch {
+    return null;
+  }
+}
+function writeReadmeOpenPref(owner: string, repo: string, open: boolean): void {
+  try {
+    localStorage.setItem(readmeOpenStorageKey(owner, repo), String(open));
+  } catch {
+    /* ignore */
+  }
 }
 
 function relativeTime(iso: string): string {
@@ -101,9 +125,6 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   repo,
   onDismiss,
   events,
-  readmePath,
-  onOpenReadme,
-  readmeActive = false,
   baseDefaultDirectory,
 }) => {
   const { theme } = useTheme();
@@ -111,6 +132,158 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   const parsed = parsePurl(repo.purl);
   const owner = gh?.owner ?? parsed?.namespace ?? 'unknown';
   const name = gh?.name ?? parsed?.name ?? 'unknown';
+
+  // Guide mode — owned here (not HomeLeftPanel). Single 3-way switch:
+  // city | readme | week. Tab remains durable source of truth via intents.
+  type GuideMode = 'city' | 'readme' | 'week';
+  const [readmePath, setReadmePath] = useState<string | null>(null);
+  const [guideMode, setGuideMode] = useState<GuideMode>('city');
+
+  // Resolve root README path for this GitHub repo.
+  useEffect(() => {
+    if (!gh?.owner || !gh?.name) {
+      setReadmePath(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const latestCommit = await GithubService.getLatestCommit(gh.owner, gh.name);
+        if (cancelled || !latestCommit) return;
+        const filePaths = await GithubService.getFileTreeAtCommit(
+          gh.owner,
+          gh.name,
+          latestCommit.sha,
+        );
+        if (cancelled) return;
+        const readmePattern = /^readme(\.|$)/i;
+        const candidates = filePaths
+          .filter(
+            (f) =>
+              !f.includes('/') &&
+              readmePattern.test(f.split('/').pop() || ''),
+          )
+          .sort((a, b) => {
+            const aBase = a.split('/').pop() || a;
+            const bBase = b.split('/').pop() || b;
+            if (aBase === 'README.md') return -1;
+            if (bBase === 'README.md') return 1;
+            if (aBase.endsWith('.md')) return -1;
+            if (bBase.endsWith('.md')) return 1;
+            return 0;
+          });
+        if (!cancelled) setReadmePath(candidates[0] ?? null);
+      } catch {
+        if (!cancelled) setReadmePath(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gh?.owner, gh?.name]);
+
+  // Auto-open README on first visit (localStorage pref, default open).
+  useEffect(() => {
+    if (!gh || !readmePath) return;
+    const pref = readReadmeOpenPref(gh.owner, gh.name);
+    if (pref === false) {
+      setGuideMode((m) => (m === 'readme' ? 'city' : m));
+      return;
+    }
+    setGuideMode('readme');
+    writeReadmeOpenPref(gh.owner, gh.name, true);
+    emitRepositoryGuideOpenReadme(events, 'repo-about-card', {
+      purl: repo.purl,
+      github: repo.github,
+      localEntry: repo.localEntry,
+      readmeActive: true,
+      readmePath,
+    });
+    // Only re-run when repo identity / discovered path changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repo.purl, readmePath, gh?.owner, gh?.name]);
+
+  // Stay in sync when the guide tab (or another emitter) toggles modes.
+  useEffect(() => {
+    const onReadme = (event: { payload: RepositoryGuideOpenReadmePayload }) => {
+      if (String(event.payload.purl) !== String(repo.purl)) return;
+      if (event.payload.readmePath) setReadmePath(event.payload.readmePath);
+      if (event.payload.readmeActive) setGuideMode('readme');
+      else setGuideMode((m) => (m === 'readme' ? 'city' : m));
+    };
+    const onWeek = (event: { payload: RepositoryGuideOpenWeekPayload }) => {
+      if (String(event.payload.purl) !== String(repo.purl)) return;
+      if (event.payload.weekActive) setGuideMode('week');
+      else setGuideMode((m) => (m === 'week' ? 'city' : m));
+    };
+    events.on(PORTAL_INTENTS.repositoryGuideOpenReadme, onReadme);
+    events.on(PORTAL_INTENTS.repositoryGuideOpenWeek, onWeek);
+    return () => {
+      events.off(PORTAL_INTENTS.repositoryGuideOpenReadme, onReadme);
+      events.off(PORTAL_INTENTS.repositoryGuideOpenWeek, onWeek);
+    };
+  }, [events, repo.purl]);
+
+  const setMode = useCallback(
+    (next: GuideMode) => {
+      if (next === guideMode) return;
+      // Leaving readme/week requires turning that mode off on the tab.
+      if (guideMode === 'readme' && next !== 'readme') {
+        emitRepositoryGuideOpenReadme(events, 'repo-about-card', {
+          purl: repo.purl,
+          github: repo.github,
+          localEntry: repo.localEntry,
+          readmeActive: false,
+          readmePath: readmePath ?? undefined,
+        });
+      }
+      if (guideMode === 'week' && next !== 'week') {
+        emitRepositoryGuideOpenWeek(events, 'repo-about-card', {
+          purl: repo.purl,
+          github: repo.github,
+          localEntry: repo.localEntry,
+          weekActive: false,
+        });
+      }
+      if (next === 'readme') {
+        if (!readmePath) return;
+        setGuideMode('readme');
+        if (gh) writeReadmeOpenPref(gh.owner, gh.name, true);
+        emitRepositoryGuideOpenReadme(events, 'repo-about-card', {
+          purl: repo.purl,
+          github: repo.github,
+          localEntry: repo.localEntry,
+          readmeActive: true,
+          readmePath,
+        });
+        return;
+      }
+      if (next === 'week') {
+        if (!gh) return;
+        setGuideMode('week');
+        writeReadmeOpenPref(gh.owner, gh.name, false);
+        emitRepositoryGuideOpenWeek(events, 'repo-about-card', {
+          purl: repo.purl,
+          github: repo.github,
+          localEntry: repo.localEntry,
+          weekActive: true,
+        });
+        return;
+      }
+      // city
+      setGuideMode('city');
+      if (gh) writeReadmeOpenPref(gh.owner, gh.name, false);
+    },
+    [
+      guideMode,
+      events,
+      repo.purl,
+      repo.github,
+      repo.localEntry,
+      readmePath,
+      gh,
+    ],
+  );
 
   const [ownerAvatar, setOwnerAvatar] = useState<string | null>(null);
   const [ownerDisplayName, setOwnerDisplayName] = useState<string | null>(null);
@@ -1031,47 +1204,109 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
         </div>
       )}
 
-      {/* README toggle button */}
-      {readmePath && onOpenReadme && (
-        <button
-          type="button"
-          onClick={onOpenReadme}
-          aria-pressed={readmeActive}
-          title={readmeActive ? `Close ${readmePath} and show the city` : `Open ${readmePath}`}
+      {/* Guide mode 3-way switch — City | README | This week (equal-width segments) */}
+      {(readmePath || gh) && (
+        <div
+          role="radiogroup"
+          aria-label="File City guide mode"
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            padding: '6px 12px',
-            borderRadius: 6,
-            border: `1px solid ${readmeActive ? theme.colors.primary : theme.colors.border}`,
-            background: readmeActive
-              ? `color-mix(in srgb, ${theme.colors.primary} 14%, transparent)`
-              : theme.colors.backgroundSecondary,
-            color: readmeActive ? theme.colors.primary : theme.colors.text,
-            cursor: 'pointer',
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[1],
-            fontWeight: theme.fontWeights.medium,
-            transition: 'background 0.15s, border-color 0.15s, color 0.15s',
-          }}
-          onMouseEnter={(e) => {
-            if (!readmeActive) {
-              (e.currentTarget as HTMLElement).style.borderColor = theme.colors.primary;
-              (e.currentTarget as HTMLElement).style.color = theme.colors.primary;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!readmeActive) {
-              (e.currentTarget as HTMLElement).style.borderColor = theme.colors.border;
-              (e.currentTarget as HTMLElement).style.color = theme.colors.text;
-            }
+            display: 'flex',
+            width: '100%',
+            alignItems: 'stretch',
+            padding: 3,
+            borderRadius: 8,
+            border: `1px solid ${theme.colors.border}`,
+            background: theme.colors.backgroundSecondary,
+            gap: 2,
+            boxSizing: 'border-box',
           }}
         >
-          {readmeActive ? <Building2 size={15} /> : <FileText size={15} />}
-          {readmeActive ? 'City' : 'README'}
-        </button>
+          {(
+            [
+              {
+                id: 'city' as const,
+                label: 'City',
+                title: 'Show the file city',
+                icon: <Building2 size={14} />,
+                enabled: true,
+              },
+              {
+                id: 'readme' as const,
+                label: 'README',
+                title: readmePath
+                  ? `Open ${readmePath}`
+                  : 'No README found',
+                icon: <FileText size={14} />,
+                enabled: !!readmePath,
+              },
+              {
+                id: 'week' as const,
+                label: 'This week',
+                title: gh
+                  ? 'Show commits for this week so far'
+                  : 'Week view needs a GitHub repo',
+                icon: <GitCommitHorizontal size={14} />,
+                enabled: !!gh,
+              },
+            ] as const
+          ).map((opt) => {
+            const selected = guideMode === opt.id;
+            const disabled = !opt.enabled;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                disabled={disabled}
+                title={opt.title}
+                onClick={() => setMode(opt.id)}
+                style={{
+                  flex: '1 1 0',
+                  minWidth: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 5,
+                  padding: '6px 8px',
+                  border: 'none',
+                  borderRadius: 6,
+                  background: selected
+                    ? theme.colors.background
+                    : 'transparent',
+                  color: disabled
+                    ? theme.colors.textTertiary
+                    : selected
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary,
+                  boxShadow: selected
+                    ? `0 0 0 1px ${theme.colors.border}, 0 1px 2px rgba(0,0,0,0.08)`
+                    : 'none',
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: selected
+                    ? (theme.fontWeights.semibold ?? 600)
+                    : (theme.fontWeights.medium ?? 500),
+                  opacity: disabled ? 0.5 : 1,
+                  transition:
+                    'background 0.12s, color 0.12s, box-shadow 0.12s',
+                }}
+              >
+                {opt.icon}
+                <span
+                  style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {opt.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {/* Clone + Fork modals */}

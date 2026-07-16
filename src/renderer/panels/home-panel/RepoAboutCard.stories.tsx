@@ -236,16 +236,12 @@ export const NoClones: Story = {
 export const WithReadme: Story = {
   render: () => {
     const repo = createRepoPayload();
-    const [readmeActive, setReadmeActive] = React.useState(false);
     return (
       <Wrapper>
         <RepoAboutCard
           repo={repo}
           onDismiss={() => console.info('Dismissed')}
           events={new MockEventEmitter()}
-          readmePath="README.md"
-          onOpenReadme={() => setReadmeActive((prev) => !prev)}
-          readmeActive={readmeActive}
         />
       </Wrapper>
     );

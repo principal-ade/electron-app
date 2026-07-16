@@ -31,6 +31,8 @@ export const PORTAL_INTENTS = {
   repositoryGuideOpen: 'repository:guide-open',
   /** Open a File City guide tab with README active (or toggle it off). */
   repositoryGuideOpenReadme: 'repository:guide-open-readme',
+  /** Open a File City guide tab with week-commits mode active (or toggle it off). */
+  repositoryGuideOpenWeek: 'repository:guide-open-week',
   /** Open a user/org profile tab (collapses the legacy `user:profile-selected`). */
   ownerSelected: 'owner:selected',
   /** Open a collection profile tab. */
@@ -231,6 +233,28 @@ export function emitRepositoryGuideOpenReadme(
   });
 }
 
+/** Payload for {@link PORTAL_INTENTS.repositoryGuideOpenWeek}. */
+export interface RepositoryGuideOpenWeekPayload {
+  purl: Purl;
+  github?: GithubRepository;
+  localEntry?: AlexandriaEntry;
+  weekActive: boolean;
+}
+
+/** Emit a {@link PORTAL_INTENTS.repositoryGuideOpenWeek} intent. */
+export function emitRepositoryGuideOpenWeek(
+  events: PanelEventEmitter,
+  source: string,
+  payload: RepositoryGuideOpenWeekPayload,
+): void {
+  events.emit<RepositoryGuideOpenWeekPayload>({
+    type: PORTAL_INTENTS.repositoryGuideOpenWeek,
+    source,
+    timestamp: Date.now(),
+    payload,
+  });
+}
+
 /**
  * Forward the Projects open-intent subset from a panel's local bus onto the
  * portal bus, normalizing the two legacy owner events into one
@@ -263,6 +287,7 @@ export function installProjectsOpenForwarder(
     forward(PORTAL_INTENTS.repositorySelected),
     forward(PORTAL_INTENTS.repositoryGuideOpen),
     forward(PORTAL_INTENTS.repositoryGuideOpenReadme),
+    forward(PORTAL_INTENTS.repositoryGuideOpenWeek),
     forward(PORTAL_INTENTS.collectionSelected),
     forward(PORTAL_INTENTS.liveActivityOpen),
     forward(PORTAL_INTENTS.ownerActivityRequested),

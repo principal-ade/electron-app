@@ -194,8 +194,11 @@ export interface FileCityGuideTab extends BaseTab {
   purl: Purl;
   github?: GithubRepository;
   localEntry?: AlexandriaEntry;
+  /** README mode — mutually exclusive with {@link weekActive}. */
   readmeActive?: boolean;
   readmePath?: string;
+  /** Week-commits mode — mutually exclusive with {@link readmeActive}. */
+  weekActive?: boolean;
 }
 
 // ---------------------------------------------------------------------------
