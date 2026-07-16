@@ -924,7 +924,7 @@ const FileCityGuideTabContent: React.FC<{
   // Enter week mode immediately with `loading: true` so the panel header can show
   // centered fetch progress while GitHub detail calls complete.
   React.useEffect(() => {
-    if (!weekActive || !github?.owner || !github?.name) {
+    if (!weekActive || (!localPath && (!github?.owner || !github?.name))) {
       setWeekView(null);
       setWeekLoading(false);
       return;
@@ -946,71 +946,131 @@ const FileCityGuideTabContent: React.FC<{
 
     (async () => {
       try {
-        const list = await GithubService.getCommitsInDateRange(
-          github.owner,
-          github.name,
-          rangeStartIso,
-          asOfIso,
-        );
-        if (cancelled) return;
-
-        // Enrich each commit with per-file changes (list endpoint has no files[]).
         const commits: CommitView[] = [];
         const concurrency = 4;
-        for (let i = 0; i < list.length; i += concurrency) {
-          if (cancelled) return;
-          const batch = list.slice(i, i + concurrency);
-          const enriched = await Promise.all(
-            batch.map(async (c) => {
-              let files: CommitFileChange[] = [];
-              let additions = 0;
-              let deletions = 0;
-              try {
-                const changed = await GithubService.getChangedFilesForCommit(
-                  github.owner,
-                  github.name,
-                  c.sha,
-                );
-                for (const [path, info] of changed) {
-                  files.push({
-                    path,
-                    status: mapChangedStatus(info.status),
-                    additions: info.additions,
-                    deletions: info.deletions,
-                  });
-                  additions += info.additions;
-                  deletions += info.deletions;
-                }
-              } catch (err) {
-                console.warn(
-                  '[FileCityGuideTab] getChangedFilesForCommit failed',
-                  c.sha,
-                  err,
-                );
-              }
-              return {
-                sha: c.sha,
-                message: c.commit.message,
-                author: {
-                  name: c.commit.author?.name ?? c.author?.login ?? 'Unknown',
-                  login: c.author?.login,
-                  avatarUrl: c.author?.avatar_url,
-                },
-                authoredAt: c.commit.author?.date ?? asOfIso,
-                stats: {
-                  filesChanged: files.length,
-                  additions,
-                  deletions,
-                },
-                url: c.html_url,
-                files,
-              } satisfies CommitView;
-            }),
+
+        if (localPath) {
+          // Local clone — use git directly, no GitHub API calls needed.
+          const list = await GitService.getCommitsInDateRange(
+            localPath,
+            rangeStartIso,
+            asOfIso,
           );
-          commits.push(...enriched);
+          if (cancelled) return;
+
+          for (let i = 0; i < list.length; i += concurrency) {
+            if (cancelled) return;
+            const batch = list.slice(i, i + concurrency);
+            const enriched = await Promise.all(
+              batch.map(async (c) => {
+                let files: CommitFileChange[] = [];
+                let additions = 0;
+                let deletions = 0;
+                try {
+                  const changed = await GitService.getChangedFilesForCommit(
+                    localPath,
+                    c.hash,
+                  );
+                  for (const [path, info] of changed) {
+                    files.push({
+                      path,
+                      status: mapChangedStatus(info.status),
+                      additions: info.additions,
+                      deletions: info.deletions,
+                    });
+                    additions += info.additions;
+                    deletions += info.deletions;
+                  }
+                } catch (err) {
+                  console.warn(
+                    '[FileCityGuideTab] local getChangedFilesForCommit failed',
+                    c.hash,
+                    err,
+                  );
+                }
+                return {
+                  sha: c.hash,
+                  message: c.message,
+                  author: {
+                    name: c.author || 'Unknown',
+                  },
+                  authoredAt: c.date,
+                  stats: {
+                    filesChanged: files.length,
+                    additions,
+                    deletions,
+                  },
+                  files,
+                } satisfies CommitView;
+              }),
+            );
+            commits.push(...enriched);
+          }
+        } else if (github?.owner && github?.name) {
+          // No local clone — fetch from the GitHub API.
+          const list = await GithubService.getCommitsInDateRange(
+            github.owner,
+            github.name,
+            rangeStartIso,
+            asOfIso,
+          );
+          if (cancelled) return;
+
+          for (let i = 0; i < list.length; i += concurrency) {
+            if (cancelled) return;
+            const batch = list.slice(i, i + concurrency);
+            const enriched = await Promise.all(
+              batch.map(async (c) => {
+                let files: CommitFileChange[] = [];
+                let additions = 0;
+                let deletions = 0;
+                try {
+                  const changed = await GithubService.getChangedFilesForCommit(
+                    github.owner,
+                    github.name,
+                    c.sha,
+                  );
+                  for (const [path, info] of changed) {
+                    files.push({
+                      path,
+                      status: mapChangedStatus(info.status),
+                      additions: info.additions,
+                      deletions: info.deletions,
+                    });
+                    additions += info.additions;
+                    deletions += info.deletions;
+                  }
+                } catch (err) {
+                  console.warn(
+                    '[FileCityGuideTab] getChangedFilesForCommit failed',
+                    c.sha,
+                    err,
+                  );
+                }
+                return {
+                  sha: c.sha,
+                  message: c.commit.message,
+                  author: {
+                    name: c.commit.author?.name ?? c.author?.login ?? 'Unknown',
+                    login: c.author?.login,
+                    avatarUrl: c.author?.avatar_url,
+                  },
+                  authoredAt: c.commit.author?.date ?? asOfIso,
+                  stats: {
+                    filesChanged: files.length,
+                    additions,
+                    deletions,
+                  },
+                  url: c.html_url,
+                  files,
+                } satisfies CommitView;
+              }),
+            );
+            commits.push(...enriched);
+          }
         }
 
-        // Newest first (API is usually newest-first; re-sort to be sure).
+        // Newest first.
         commits.sort(
           (a, b) =>
             new Date(b.authoredAt).getTime() - new Date(a.authoredAt).getTime(),

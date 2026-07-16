@@ -259,9 +259,9 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
         return;
       }
       if (next === 'week') {
-        if (!gh) return;
+        if (!gh && !repo.localEntry) return;
         setGuideMode('week');
-        writeReadmeOpenPref(gh.owner, gh.name, false);
+        if (gh) writeReadmeOpenPref(gh.owner, gh.name, false);
         emitRepositoryGuideOpenWeek(events, 'repo-about-card', {
           purl: repo.purl,
           github: repo.github,
@@ -1242,11 +1242,11 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
               {
                 id: 'week' as const,
                 label: 'This week',
-                title: gh
+                title: gh || repo.localEntry
                   ? 'Show commits for this week so far'
-                  : 'Week view needs a GitHub repo',
+                  : 'Week view needs a GitHub repo or local clone',
                 icon: <GitCommitHorizontal size={14} />,
-                enabled: !!gh,
+                enabled: !!(gh || repo.localEntry),
               },
             ] as const
           ).map((opt) => {
