@@ -26,6 +26,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TrailLibraryService } from '../services/TrailLibraryService';
 import type { TrailIndexEntry } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
+import { getPrincipalBridgeUrl } from '../../shared/config/appBranding';
 import { emitTrailOpen } from '../events/portalIntents';
 import { useWorkspaceTabs } from '../principal-window/PortalTabsContext';
 
@@ -84,6 +85,17 @@ export const TrailsLeftPanel: React.FC<TrailsLeftPanelProps> = ({ events }) => {
       });
     },
     [events],
+  );
+
+  const handleDragStart = useCallback(
+    (e: React.DragEvent, entry: TrailIndexEntry) => {
+      if (!e.dataTransfer) return;
+      const title = entry.title?.trim() || 'Untitled trail';
+      const payload = `Use file-city trail "${title}" (id: ${entry.id}) as context — fetch via:\ncurl -s ${getPrincipalBridgeUrl()}/api/file-city/trail/${entry.id}`;
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', payload);
+    },
+    [],
   );
 
   const formatDate = (iso?: string) => {
@@ -279,6 +291,8 @@ export const TrailsLeftPanel: React.FC<TrailsLeftPanelProps> = ({ events }) => {
               return (
                 <div
                   key={entry.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, entry)}
                   onClick={() => handleOpen(entry)}
                   style={{
                     padding: '10px 12px',

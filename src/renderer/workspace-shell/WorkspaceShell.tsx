@@ -532,6 +532,15 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     }, 320);
   }, []);
 
+  // Switching the workspace surface (sidebar click) swaps the left panel, so
+  // the RepoAboutCard slide-in from a previous surface must not linger on top
+  // of it. Clear immediately — no exit animation — matching HomeLeftPanel's
+  // `home-panel:show-overview` behavior.
+  useEffect(() => {
+    setSelectedRepo(null);
+    setRepoCardExiting(false);
+  }, [activeView]);
+
   // bottom-bar content for cross-window tab transfer (principal → dev-workspace).
   const bottomBarContent = useMemo(() => {
     const hasRepo = activeTabDirectory
