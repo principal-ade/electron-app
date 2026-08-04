@@ -46,6 +46,7 @@ export enum GitHubAPIEvent {
   GET_FILE_TREE_AT_COMMIT = 'github:get-file-tree-at-commit',
   GET_CHANGED_FILES_FOR_COMMIT = 'github:get-changed-files-for-commit',
   GET_COMMIT_DIFF = 'github:get-commit-diff',
+  RESOLVE_AUTHOR_PROFILES = 'github:resolve-author-profiles',
 }
 
 // Config fetching types (formerly from ConfigAPI)
@@ -568,4 +569,10 @@ export interface GitHubAPI {
     repo: string,
     sha: string,
   ) => Promise<string>;
+  /** Resolve git author emails to GitHub profiles (login + avatar_url) */
+  resolveAuthorProfiles: (
+    owner: string,
+    repo: string,
+    emails: string[],
+  ) => Promise<Record<string, { login: string; avatarUrl: string }>>;
 }

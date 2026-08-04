@@ -432,4 +432,17 @@ export class GithubService {
   static async getCommitDiff(owner: string, repo: string, sha: string): Promise<string> {
     return window.mainProcess.github.getCommitDiff(owner, repo, sha);
   }
+
+  static async resolveAuthorProfiles(
+    owner: string,
+    repo: string,
+    emails: string[],
+  ): Promise<Map<string, { login: string; avatarUrl: string }>> {
+    const result = await window.mainProcess.github.resolveAuthorProfiles(
+      owner,
+      repo,
+      emails,
+    );
+    return new Map(Object.entries(result || {}));
+  }
 }

@@ -958,6 +958,23 @@ const FileCityGuideTabContent: React.FC<{
           );
           if (cancelled) return;
 
+          // Resolve author emails to GitHub profiles when possible.
+          let profiles: Map<string, { login: string; avatarUrl: string }> =
+            new Map();
+          if (github?.owner && github?.name && list.length > 0) {
+            const uniqueEmails = [
+              ...new Set(list.map((c) => c.authorEmail).filter(Boolean)),
+            ];
+            if (uniqueEmails.length > 0) {
+              profiles = await GithubService.resolveAuthorProfiles(
+                github.owner,
+                github.name,
+                uniqueEmails,
+              );
+            }
+          }
+          if (cancelled) return;
+
           for (let i = 0; i < list.length; i += concurrency) {
             if (cancelled) return;
             const batch = list.slice(i, i + concurrency);
@@ -988,11 +1005,15 @@ const FileCityGuideTabContent: React.FC<{
                     err,
                   );
                 }
+                const profile = profiles.get(c.authorEmail?.toLowerCase() ?? '');
                 return {
                   sha: c.hash,
                   message: c.message,
                   author: {
                     name: c.author || 'Unknown',
+                    ...(profile
+                      ? { login: profile.login, avatarUrl: profile.avatarUrl }
+                      : {}),
                   },
                   authoredAt: c.date,
                   stats: {

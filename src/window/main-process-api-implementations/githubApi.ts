@@ -274,4 +274,17 @@ export const githubAPI: GitHubAPI = {
       sha,
     );
   },
+
+  resolveAuthorProfiles: async (
+    owner: string,
+    repo: string,
+    emails: string[],
+  ) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.RESOLVE_AUTHOR_PROFILES,
+      owner,
+      repo,
+      emails,
+    );
+  },
 };

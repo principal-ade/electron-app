@@ -2809,6 +2809,49 @@ export class GitHubAdapter {
     return result.data;
   }
 
+  /**
+   * Resolve git author emails to GitHub profiles by fetching recent commits.
+   * Returns a map of email → { login, avatarUrl } for emails that match
+   * a GitHub account. Emails not found in the fetched commits are omitted.
+   */
+  async resolveAuthorProfiles(
+    owner: string,
+    repo: string,
+    emails: string[],
+  ): Promise<Record<string, { login: string; avatarUrl: string }>> {
+    if (emails.length === 0) return {};
+
+    // Fetch a batch of recent commits — the GitHub API returns author.login
+    // and author.avatar_url when the commit email is linked to a GitHub account.
+    const perPage = Math.min(emails.length * 5, 100);
+    const endpoint = `/repos/${owner}/${repo}/commits?per_page=${perPage}`;
+    const result = await this.makeGitHubAPICall(endpoint);
+
+    if (!result.success || !Array.isArray(result.data)) {
+      console.error('[GitHub] Failed to resolve author profiles:', result.error);
+      return {};
+    }
+
+    const emailSet = new Set(emails.map((e) => e.toLowerCase()));
+    const profiles: Record<string, { login: string; avatarUrl: string }> = {};
+
+    for (const commit of result.data as GitHubCommit[]) {
+      const email = commit.commit?.author?.email?.toLowerCase();
+      if (email && emailSet.has(email) && !profiles[email]) {
+        if (commit.author?.login && commit.author?.avatar_url) {
+          profiles[email] = {
+            login: commit.author.login,
+            avatarUrl: commit.author.avatar_url,
+          };
+        }
+      }
+      // Stop early once all emails are resolved.
+      if (Object.keys(profiles).length >= emailSet.size) break;
+    }
+
+    return profiles;
+  }
+
   async getRepoActivity(owner: string, repo: string, days = 7): Promise<CommitActivityCard[]> {
     const token = await this.getGitHubToken();
     const authHeader = token
@@ -3941,6 +3984,18 @@ export function registerGitHubIpcHandlers(
         return '';
       }
       return adapter.getCommitDiff(owner, repo, sha);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.RESOLVE_AUTHOR_PROFILES,
+    async (event, owner: string, repo: string, emails: string[]) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for RESOLVE_AUTHOR_PROFILES');
+        return {};
+      }
+      return adapter.resolveAuthorProfiles(owner, repo, emails);
     },
   );
 
