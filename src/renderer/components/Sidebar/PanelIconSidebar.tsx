@@ -4,11 +4,9 @@ import type { LucideIcon } from 'lucide-react';
 import {
   BookOpen,
   KanbanSquare,
-  Network,
   ToolCase,
   CheckCircle,
   Package,
-  Activity,
   Building2,
   PanelLeftClose,
   PanelLeftOpen,
@@ -77,22 +75,9 @@ export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'terminalSessions', Icon: Terminal, label: 'Term' },
   { id: 'packageComposition', Icon: Package, label: 'Info' },
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
-  { id: 'traceList', Icon: Activity, label: 'Traces' },
   { id: 'trails', Icon: Route, label: 'Trails' },
   { id: 'topics', Icon: Layers, label: 'Topics' },
   { id: 'agentsList', Icon: ToolCase, label: 'Skills' },
-  { id: 'canvasList', Icon: Network, label: 'Stories' },
-];
-
-/**
- * Panel icons for the Alexandria workspace left sidebar. Each id must match
- * a panel registered in AlexandriaWorkspaceLayout's `panels` array.
- */
-export const ALEXANDRIA_LEFT_PANEL_ICONS: PanelIconConfig[] = [
-  { id: 'workspace-repos', Icon: FolderTree, label: 'Projects' },
-  { id: 'trails', Icon: Route, label: 'Trails' },
-  { id: 'sessions', Icon: Activity, label: 'Sessions' },
-  { id: 'hook-debug', Icon: Plug, label: 'Hooks' },
 ];
 
 /**
@@ -110,7 +95,7 @@ export const RIGHT_PANEL_ICONS: PanelIconConfig[] = [
  * Cmd/Ctrl+digit shortcut). Panels that own a search input subscribe and
  * focus when `detail.panelId` matches their own id.
  */
-export const PANEL_FOCUS_SEARCH_EVENT = 'alexandria:focus-panel-search';
+export const PANEL_FOCUS_SEARCH_EVENT = 'principal:focus-panel-search';
 
 /**
  * PanelIconSidebar Component

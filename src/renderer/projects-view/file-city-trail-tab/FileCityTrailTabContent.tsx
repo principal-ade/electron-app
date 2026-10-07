@@ -90,7 +90,11 @@ const EMPTY_FILE_TREE: RepoFileTree = {
 // every fetch tick.
 const noopRefresh = async () => {};
 
-const makeSlice = <T,>(name: string, data: T, loading = false): DataSlice<T> => ({
+const makeSlice = <T,>(
+  name: string,
+  data: T,
+  loading = false,
+): DataSlice<T> => ({
   scope: 'repository',
   name,
   data,
@@ -99,16 +103,14 @@ const makeSlice = <T,>(name: string, data: T, loading = false): DataSlice<T> => 
   refresh: noopRefresh,
 });
 
-export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = ({
-  trailPayload,
-  repositoryPath,
-  events,
-  onCloseTrail,
-  mobileShowMap,
-}) => {
+export const FileCityTrailTabContent: React.FC<
+  FileCityTrailTabContentProps
+> = ({ trailPayload, repositoryPath, events, onCloseTrail, mobileShowMap }) => {
   const [fileTree, setFileTree] = useState<RepoFileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
-  const [lineCounts, setLineCounts] = useState<LineCountsSliceData | null>(null);
+  const [lineCounts, setLineCounts] = useState<LineCountsSliceData | null>(
+    null,
+  );
   const [lineCountsLoading, setLineCountsLoading] = useState(false);
   // Share-modal state. Opened from the brief card's title-row share icon —
   // the modal owns the actual API call (TrailShareService) and the
@@ -155,10 +157,7 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
       })
       .catch((err) => {
         if (cancelled) return;
-        console.error(
-          '[FileCityTrailTabContent] getFileTree failed',
-          err,
-        );
+        console.error('[FileCityTrailTabContent] getFileTree failed', err);
         setFileTree(null);
       })
       .finally(() => {
@@ -194,10 +193,7 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
       })
       .catch((err) => {
         if (cancelled) return;
-        console.error(
-          '[FileCityTrailTabContent] countLines failed',
-          err,
-        );
+        console.error('[FileCityTrailTabContent] countLines failed', err);
         setLineCounts(null);
       })
       .finally(() => {
@@ -251,7 +247,10 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
 
   const baseContext = useMemo<PanelContextValue>(() => {
     const repoMeta = repositoryPath
-      ? { name: repositoryPath.split('/').pop() || repositoryPath, path: repositoryPath }
+      ? {
+          name: repositoryPath.split('/').pop() || repositoryPath,
+          path: repositoryPath,
+        }
       : undefined;
     return {
       currentScope: repoMeta
@@ -371,9 +370,8 @@ export const FileCityTrailTabContent: React.FC<FileCityTrailTabContentProps> = (
           markerCount: trailPayload.markers?.length ?? 0,
           repoNames: trailPayload.repos?.map((r) => r.name) ?? [],
           hasDiffSnippets:
-            trailPayload.markers?.some(
-              (m) => m.snippet?.kind === 'diff',
-            ) ?? false,
+            trailPayload.markers?.some((m) => m.snippet?.kind === 'diff') ??
+            false,
           createdAt: new Date(0).toISOString(),
           updatedAt: new Date(0).toISOString(),
           sizeBytes: 0,

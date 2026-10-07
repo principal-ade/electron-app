@@ -8,12 +8,10 @@ import { UserPreferencesService } from '../../../main-process-api/UserPreference
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
 import {
   LayoutDashboard,
-  Layers,
   FolderPlus,
   FilePlus2,
   Server,
 } from 'lucide-react';
-import { WindowService } from '../../../main-process-api/WindowService';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 import { CreateRepositoryInWorkspaceModal } from '../../../panels/components/CreateRepositoryInWorkspaceModal';
 import { LocalhostProcessesModal } from './LocalhostProcessesModal';
@@ -63,7 +61,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
-  const [showOpenThreadButton, setShowOpenThreadButton] = useState(false);
   const [showCreateRepoButton, setShowCreateRepoButton] = useState(false);
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
     string | null
@@ -123,7 +120,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       }
 
       setShowPullMailbox(preferences.titlebarButtons?.pullMailbox ?? false);
-      setShowOpenThreadButton(preferences.titlebarButtons?.openThread ?? false);
       setShowCreateRepoButton(
         preferences.titlebarButtons?.createRepository ?? false,
       );
@@ -408,38 +404,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           >
             <FilePlus2 size={14} />
             Create
-          </button>
-        )}
-        {/* Open Thread button */}
-        {showOpenThreadButton && (
-          <button
-            onClick={() => WindowService.openEmptyThread()}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              backgroundColor: theme.colors.backgroundSecondary,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              cursor: 'pointer',
-              fontSize: theme.fontSizes[1],
-              fontWeight: 500,
-              fontFamily: theme.fonts.body,
-              transition: 'all 0.2s',
-              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-            }}
-            title="Open a new thread"
-          >
-            <Layers size={14} />
-            Open Thread
           </button>
         )}
         {showPullMailbox && <PullMailbox />}

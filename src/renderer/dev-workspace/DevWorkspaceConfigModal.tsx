@@ -34,10 +34,8 @@ const LEFT_ICON_LABELS: { key: keyof LeftSidebarConfig; label: string }[] = [
   { key: 'files', label: 'Files' },
   { key: 'terminalSessions', label: 'Terminal sessions' },
   { key: 'packageComposition', label: 'Package info' },
-  { key: 'canvasList', label: 'Stories' },
   { key: 'docs', label: 'Docs' },
   { key: 'agentsList', label: 'Skills / Agents' },
-  { key: 'traceList', label: 'Traces' },
   { key: 'trails', label: 'Trails' },
 ];
 
@@ -436,10 +434,8 @@ export const DEFAULT_DEV_WORKSPACE_CONFIG: DevWorkspaceConfig = {
     files: true,
     terminalSessions: false,
     packageComposition: false,
-    canvasList: false,
     docs: true,
     agentsList: true,
-    traceList: false,
     trails: true,
   },
   rightSidebarIcons: {

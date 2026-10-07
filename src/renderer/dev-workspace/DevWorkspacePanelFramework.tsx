@@ -17,16 +17,12 @@ import { ShellService } from '../main-process-api/ShellService';
 import {
   Sparkles,
   FileText,
-  LayoutDashboard,
-  Workflow,
   Code,
   GitBranch,
   Terminal,
-  Activity,
   History,
   X,
   Send,
-  Gauge,
   Building2,
   Image,
   Film,
@@ -39,7 +35,6 @@ import {
   type PanelLayout,
   type ConfigurablePanelLayoutHandle,
 } from '@principal-ade/panel-layouts';
-// CSS is bundled inline in principal-view-panels, no separate import needed
 // Note: file-city-panel CSS is bundled inline, no separate import needed
 // Note: file-editing-panels CSS is now inlined in JS, no separate import needed
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
@@ -68,22 +63,6 @@ import {
 import { SendTabButton } from '../move-tab/SendTabButton';
 import { useTabReceiver } from '../move-tab/useTabReceiver';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
-import {
-  panels as principalViewPanels,
-  TraceDetailsPanel,
-  CanvasEditorPanel,
-  StoryboardListPanel,
-  TraceListPanel,
-  MultiCanvasPanel,
-  DashboardPanel,
-  type CanvasEditorPanelProps,
-} from '@industry-theme/principal-view-panels';
-import type {
-  RegisteredTrace,
-  DiscoveredDashboard,
-} from '@principal-ai/principal-view-core';
-import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
-import type { FileInfo } from '@principal-ai/repository-abstraction';
 import {
   CodeCityPanel,
   type CodeCityPanelPropsTyped,
@@ -165,15 +144,11 @@ import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
   SkillSelectedPayload,
-  TraceSelectedPayload,
   AgentSelectedPayload,
   IssueSelectedPayload,
   FileOpenedPayload,
   MDXEditorPayload,
-  CanvasOpenPayload,
   DependencyGraphPayload,
-  MultiCanvasOpenPayload,
-  MultiCanvasInfo,
 } from './DevWorkspaceEvents.types';
 
 /**
@@ -193,38 +168,6 @@ interface MarkdownTab extends BaseTab {
   contentType: 'markdown';
   filePath: string;
   fileName: string;
-}
-
-/**
- * Tab type for editing canvas files (regular .canvas)
- */
-interface CanvasEditorTab extends BaseTab {
-  contentType: 'canvas-editor';
-  canvasId: string;
-  canvasPath: string;
-  canvasName: string;
-  canvasFileInfo?: FileInfo | null;
-}
-
-/**
- * Tab type for viewing canvas detail panels (.otel.canvas with testtraces)
- */
-interface CanvasTab extends BaseTab {
-  contentType: 'canvas-detail';
-  canvasId: string;
-  canvasPath: string;
-  canvasName: string;
-  canvasFileInfo?: FileInfo | null;
-  selectedNarrativeId?: string | null;
-  narrativePath?: string | null;
-  narrativeTemplate?: WorkflowTemplate | null;
-  narrativeFileInfo?: FileInfo | null;
-  // Trace focus fields - for highlighting matched spans when opened from TraceListPanel
-  selectedTraceId?: string | null;
-  highlightedSpanId?: string | null;
-  selectedScenarioId?: string | null;
-  /** Full trace object for template interpolation */
-  selectedTrace?: RegisteredTrace | null;
 }
 
 /**
@@ -283,24 +226,6 @@ interface DependencyGraphTab extends BaseTab {
 }
 
 /**
- * Tab type for trace details panel
- */
-interface TraceDetailsTab extends BaseTab {
-  contentType: 'trace-details';
-  traceId: string;
-  traceData?: RegisteredTrace; // Processed trace object for instant loading
-}
-
-/**
- * Tab type for multi-canvas view panel
- */
-interface MultiCanvasTab extends BaseTab {
-  contentType: 'multi-canvas';
-  canvases: MultiCanvasInfo[];
-  canvasType: 'otel' | 'regular';
-}
-
-/**
  * Tab type for Bruno API request panel
  */
 interface BrunoRequestTab extends BaseTab {
@@ -310,17 +235,6 @@ interface BrunoRequestTab extends BaseTab {
   request: BrunoRequest;
   environment?: Record<string, string>;
   environmentName?: string;
-}
-
-/**
- * Tab type for observability dashboard panel
- */
-interface DashboardTab extends BaseTab {
-  contentType: 'dashboard';
-  dashboardId: string;
-  dashboardPath: string;
-  dashboardName: string;
-  dashboard: DiscoveredDashboard;
 }
 
 /**
@@ -341,7 +255,7 @@ interface FileCityTrailTab extends BaseTab {
 }
 
 /**
- * Topic tab. Renders a curated trail bundle's description + trails rail
+ * Topic tab. Renders a topic brief and its projects rail
  * (`DevWorkspaceTopicTab`), opened from the Topics sidebar panel.
  */
 interface TopicTab extends BaseTab {
@@ -352,8 +266,8 @@ interface TopicTab extends BaseTab {
 
 /**
  * Local trail tab. Renders a single trail from the local library as its own
- * tab (`LocalTrailTabContent`), opened from a topic tab's trails rail — the
- * same per-trail-tab pattern the Topics view uses. Distinct from the
+ * tab (`LocalTrailTabContent`), opened from a trail library or another
+ * independent trail surface. Distinct from the
  * `file-city-trail` singleton explorer, which shows whichever trail is
  * currently activated in File City.
  */
@@ -383,18 +297,13 @@ type DevWorkspaceTab =
   | TerminalTab
   | SkillTab
   | MarkdownTab
-  | CanvasEditorTab
-  | CanvasTab
   | FileEditorTab
   | PierreFileTab
   | MediaTab
   | MDXEditorTab
   | GitDiffTab
   | DependencyGraphTab
-  | TraceDetailsTab
-  | MultiCanvasTab
   | BrunoRequestTab
-  | DashboardTab
   | FileCity3DTab
   | FileCityTrailTab
   | TopicTab
@@ -1077,20 +986,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Sync tabs to parent whenever they change (for RepositoryPanelProvider)
   useEffect(() => {
     const customTabs = tabs.filter((t) => t.contentType !== 'terminal');
-    const canvasTabs = customTabs.filter(
-      (t) =>
-        t.contentType === 'canvas-detail' || t.contentType === 'canvas-editor',
-    );
-    console.info(
-      '[DevWorkspace] syncing tabs to provider — total custom:',
-      customTabs.length,
-      'canvas tabs:',
-      canvasTabs.length,
-      canvasTabs.map((t) => ({
-        contentType: t.contentType,
-        canvasPath: (t as { canvasPath?: string }).canvasPath,
-      })),
-    );
     onTabsChange?.(customTabs);
   }, [tabs, onTabsChange]);
 
@@ -1204,7 +1099,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }
     })();
     clearIncomingTab();
-  }, [incomingTab, clearIncomingTab, terminalActions, terminalContext, terminalDirectory]);
+  }, [
+    incomingTab,
+    clearIncomingTab,
+    terminalActions,
+    terminalContext,
+    terminalDirectory,
+  ]);
 
   // bottom-bar content for cross-window tab transfer (dev-workspace → principal).
   const bottomBarContent = useMemo(() => {
@@ -1290,16 +1191,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     });
   }, []);
 
-  // Direct imports instead of array access to avoid type inference issues
-  const CanvasEditorPanelComponent =
-    CanvasEditorPanel as React.ComponentType<CanvasEditorPanelProps>;
-  const TraceViewerPanelComponent = principalViewPanels.find(
-    (p) => p.metadata?.id === 'principal-ai.trace-viewer',
-  )?.component; // Cannot convert - component not exported
-  // Note: CanvasDetailPanelComponent (WorkflowScenariosPanel) is no longer used
-  // CanvasEditorPanel now handles workflow scenarios via workflowTemplate prop (v0.12.1+)
-  const StoryboardListPanelComponent = StoryboardListPanel;
-  const TraceListPanelComponent = TraceListPanel;
   const FileCityPanelComponent = CodeCityPanel;
   const DocsPanelComponent = docsPanels[0]?.component; // Cannot convert - component not exported
   const LocalhostBrowserPanelComponent = localhostBrowserPanels.find(
@@ -1682,122 +1573,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         handleSpan.setStatus({ code: SpanStatusCode.OK });
         handleSpan.end();
       }),
-      // Trace detail - create tab instead of modal
-      events.on('trace:selected', (event) => {
-        const tracer = getTracer('principal-ade-dev-workspace');
-
-        // Ignore re-emitted events from tabs to prevent loop
-        if (event.source === 'tab') {
-          return;
-        }
-
-        const payload = event.payload as TraceSelectedPayload;
-
-        // Extract trace data
-        const trace = payload.trace;
-        if (!trace || !trace.traceId) {
-          return;
-        }
-
-        // OTEL: Start event dispatch span
-        const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
-          attributes: {
-            'event.name': 'trace:selected',
-            'event.source': event.source || 'unknown',
-          },
-        });
-
-        // OTEL: Add trigger event
-        dispatchSpan.addEvent('devworkspace.trigger.tab', {
-          'trigger.source': event.source || 'unknown',
-          'trigger.action': 'openTrace',
-        });
-
-        // OTEL: Add eventbus dispatch event
-        dispatchSpan.addEvent('devworkspace.eventbus.dispatch', {
-          'event.name': 'trace:selected',
-          'event.source': event.source || 'unknown',
-          'handlers.count': 1,
-        });
-
-        dispatchSpan.end();
-
-        // OTEL: Start tab handle span
-        const handleSpan = tracer.startSpan('devworkspace.tab.handle', {
-          attributes: {
-            'event.name': 'trace:selected',
-            'trace.id': trace.traceId,
-          },
-        });
-
-        // OTEL: Add handler event
-        handleSpan.addEvent('devworkspace.handler.tab', {
-          'event.name': 'trace:selected',
-          'event.source': event.source || 'unknown',
-        });
-
-        // OTEL: Add loop check event
-        handleSpan.addEvent('devworkspace.handler.loopCheck', {
-          'event.source': event.source || 'unknown',
-          skipped: false,
-        });
-
-        // Track tab info from callback
-        let tabExists = false;
-        let tabId = '';
-
-        setTabs((prevTabs) => {
-          // Check if tab already exists for this trace
-          const existingTab = prevTabs.find(
-            (t) =>
-              t.contentType === 'trace-details' &&
-              (t as TraceDetailsTab).traceId === trace.traceId,
-          );
-
-          if (existingTab) {
-            // Tab exists - focus it
-            tabExists = true;
-            tabId = existingTab.id;
-            setFocusTabId(existingTab.id);
-            return prevTabs; // No change to tabs array
-          }
-
-          // The trace is already a fully processed RegisteredTrace from TraceOrchestrator
-          // Just use it directly - no conversion needed
-          const registeredTrace = trace as RegisteredTrace;
-          const traceName =
-            registeredTrace.name || registeredTrace.traceId.substring(0, 8);
-
-          tabId = `trace-${registeredTrace.traceId}`;
-          const newTab: TraceDetailsTab = {
-            id: tabId,
-            label: traceName,
-            contentType: 'trace-details',
-            traceId: registeredTrace.traceId,
-            traceData: registeredTrace,
-            closable: true,
-          };
-          setFocusTabId(newTab.id);
-          return [...prevTabs, newTab];
-        });
-
-        // OTEL: Add tab lookup event
-        handleSpan.addEvent('devworkspace.tab.lookup', {
-          'tab.id': tabId || `trace-${trace.traceId}`,
-          'tab.exists': tabExists,
-        });
-
-        // OTEL: Add tab created event (only if new tab was created)
-        if (!tabExists) {
-          handleSpan.addEvent('devworkspace.tab.created', {
-            'tab.id': tabId || `trace-${trace.traceId}`,
-            'tab.contentType': 'trace-details',
-          });
-        }
-
-        handleSpan.setStatus({ code: SpanStatusCode.OK });
-        handleSpan.end();
-      }),
       // Agent detail - open AGENTS.md file in markdown tab
       events.on('agent:selected', async (event) => {
         const tracer = getTracer('principal-ade-dev-workspace');
@@ -2046,7 +1821,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // handle `file:opened`: markdown → MarkdownTab, media → MediaTab,
         // everything else → PierreFileTab (read-only source viewer).
         const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
-        const isMedia = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(filePath);
+        const isMedia =
+          /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(
+            filePath,
+          );
 
         // OTEL: Start event dispatch span
         const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
@@ -2098,9 +1876,21 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         setTabs((prevTabs) => {
           const existingTab = prevTabs.find((t) => {
-            if (t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath) return true;
-            if (t.contentType === 'media' && (t as MediaTab).filePath === filePath) return true;
-            if (t.contentType === 'pierre-file' && (t as PierreFileTab).filePath === filePath) return true;
+            if (
+              t.contentType === 'markdown' &&
+              (t as MarkdownTab).filePath === filePath
+            )
+              return true;
+            if (
+              t.contentType === 'media' &&
+              (t as MediaTab).filePath === filePath
+            )
+              return true;
+            if (
+              t.contentType === 'pierre-file' &&
+              (t as PierreFileTab).filePath === filePath
+            )
+              return true;
             return false;
           });
 
@@ -2155,7 +1945,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         });
 
         // OTEL: Add tab created event (only if new tab was created)
-        const contentTypeLabel = isMedia ? 'media' : isMarkdown ? 'markdown' : 'pierre-file';
+        const contentTypeLabel = isMedia
+          ? 'media'
+          : isMarkdown
+            ? 'markdown'
+            : 'pierre-file';
         if (!tabExists) {
           handleSpan.addEvent('devworkspace.tab.created', {
             'tab.id': tabId || `file-${sanitizedPath}`,
@@ -2449,246 +2243,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return [...prevTabs, newTab];
         });
       }),
-      // Canvas open - create tab (from storyboard-list-panel, canvas-list-panel, canvas-detail-panel, dashboard-panel)
-      events.on('custom', (event) => {
-        // Type the canvas payload
-        const payload = event.payload as CanvasOpenPayload;
-
-        // Only handle openCanvas action from known panel sources
-        const validSources = [
-          'storyboard-list-panel',
-          'canvas-list-panel',
-          'canvas-detail-panel',
-          'trace-list-panel',
-          'dashboard-panel',
-        ];
-        if (
-          payload.action !== 'openCanvas' ||
-          !validSources.includes(event.source)
-        ) {
-          return;
-        }
-        const {
-          canvasId,
-          canvas,
-          canvasFileInfo,
-          workflowId,
-          workflow,
-          workflowFileInfo,
-          traceId,
-          spanId,
-          scenarioId,
-          trace,
-        } = payload;
-
-        if (!canvasId || !canvas) {
-          return;
-        }
-
-        setTabs((prevTabs) => {
-          // Determine content type based on whether workflow data is present
-          // Both canvas and workflow clicks now use CanvasEditorPanel (v0.12.1+)
-          // Workflow clicks pass workflowTemplate to show ScenariosList side panel
-          const hasWorkflow = !!(workflowId && workflow);
-
-          // Check if tab already exists for this canvas (either canvas-editor or canvas-detail)
-          const existingTabIndex = prevTabs.findIndex((t) => {
-            // Look for any existing tab for this canvas
-            if (t.contentType === 'canvas-detail') {
-              return (t as CanvasTab).canvasId === canvasId;
-            } else if (t.contentType === 'canvas-editor') {
-              return (t as CanvasEditorTab).canvasId === canvasId;
-            }
-            return false;
-          });
-
-          if (existingTabIndex !== -1) {
-            // Existing tab found - update it with workflow information (or clear it)
-            const updatedTabs = [...prevTabs];
-            const existingTab = updatedTabs[existingTabIndex];
-
-            // Update tab with workflow info, or clear workflow props if just canvas clicked
-            if (hasWorkflow) {
-              updatedTabs[existingTabIndex] = {
-                ...existingTab,
-                id: existingTab.id, // Keep the same ID to avoid tab duplication
-                label: workflow?.name || workflowId || canvas.name || canvasId,
-                contentType: 'canvas-detail',
-                canvasId: canvasId,
-                canvasPath: canvas.path,
-                canvasName: canvas.name || canvasId,
-                canvasFileInfo: canvasFileInfo || null,
-                selectedNarrativeId: workflowId || null,
-                narrativePath: workflowFileInfo?.path || null,
-                narrativeTemplate: workflow || null,
-                narrativeFileInfo: workflowFileInfo || null,
-                // Update trace focus fields (for highlighting matched spans)
-                selectedTraceId: traceId || null,
-                highlightedSpanId: spanId || null,
-                selectedScenarioId: scenarioId || null,
-                selectedTrace: trace || null,
-              } as CanvasTab;
-            } else {
-              // Clear workflow props - show just the canvas editor
-              updatedTabs[existingTabIndex] = {
-                id: existingTab.id, // Keep the same ID
-                label: canvas.name || canvasId,
-                contentType: 'canvas-editor',
-                canvasId: canvasId,
-                canvasPath: canvas.path,
-                canvasName: canvas.name || canvasId,
-                canvasFileInfo: canvasFileInfo || null,
-                closable: existingTab.closable,
-              } as CanvasEditorTab;
-            }
-
-            setFocusTabId(existingTab.id);
-            return updatedTabs; // Tab updated, will be focused
-          }
-
-          // Create new canvas tab (use canvas-detail type if workflow present for proper rendering)
-          const _contentType = hasWorkflow ? 'canvas-detail' : 'canvas-editor';
-          const newTab: CanvasEditorTab | CanvasTab = hasWorkflow
-            ? ({
-                id: `canvas-${canvasId}`,
-                label: workflow?.name || workflowId || canvas.name || canvasId,
-                contentType: 'canvas-detail',
-                canvasId: canvasId,
-                canvasPath: canvas.path,
-                canvasName: canvas.name || canvasId,
-                canvasFileInfo: canvasFileInfo || null,
-                selectedNarrativeId: workflowId || null,
-                narrativePath: workflowFileInfo?.path || null,
-                narrativeTemplate: workflow || null,
-                narrativeFileInfo: workflowFileInfo || null,
-                // Trace focus fields (for highlighting matched spans from TraceListPanel)
-                selectedTraceId: traceId || null,
-                highlightedSpanId: spanId || null,
-                selectedScenarioId: scenarioId || null,
-                selectedTrace: trace || null,
-                closable: true,
-              } as CanvasTab)
-            : ({
-                id: `canvas-${canvasId}`,
-                label: canvas.name || canvasId,
-                contentType: 'canvas-editor',
-                canvasId: canvasId,
-                canvasPath: canvas.path,
-                canvasName: canvas.name || canvasId,
-                canvasFileInfo: canvasFileInfo || null,
-                closable: true,
-              } as CanvasEditorTab);
-          // Also request focus for new tabs to ensure consistent activation
-          setFocusTabId(newTab.id);
-          return [...prevTabs, newTab];
-        });
-      }),
-      // Multi-canvas open - create tab (from storyboard-list-panel "View All" button)
-      events.on('custom', (event) => {
-        const payload = event.payload as MultiCanvasOpenPayload;
-
-        // Only handle openMultiCanvas action from storyboard-list-panel
-        if (
-          payload.action !== 'openMultiCanvas' ||
-          event.source !== 'storyboard-list-panel'
-        ) {
-          return;
-        }
-        const { canvases, canvasType } = payload;
-
-        if (!canvases || canvases.length === 0) {
-          return;
-        }
-
-        setTabs((prevTabs) => {
-          // Check if multi-canvas tab already exists for this canvas type
-          const existingTabIndex = prevTabs.findIndex(
-            (t) =>
-              t.contentType === 'multi-canvas' &&
-              (t as MultiCanvasTab).canvasType === canvasType,
-          );
-
-          const tabId = `multi-canvas-${canvasType}`;
-          const tabLabel =
-            canvasType === 'otel'
-              ? 'All OTEL Canvases'
-              : 'All Architecture Canvases';
-
-          if (existingTabIndex !== -1) {
-            // Update existing tab with new canvases
-            const updatedTabs = [...prevTabs];
-            updatedTabs[existingTabIndex] = {
-              ...updatedTabs[existingTabIndex],
-              canvases,
-              canvasType,
-            } as MultiCanvasTab;
-            setFocusTabId(tabId);
-            return updatedTabs;
-          }
-
-          // Create new multi-canvas tab
-          const newTab: MultiCanvasTab = {
-            id: tabId,
-            label: tabLabel,
-            contentType: 'multi-canvas',
-            canvases,
-            canvasType,
-            closable: true,
-          };
-          setFocusTabId(newTab.id);
-          return [...prevTabs, newTab];
-        });
-      }),
-      // Dashboard open - create tab for dashboard panel
-      events.on('custom', (event) => {
-        const payload = event.payload as {
-          action?: string;
-          dashboardId?: string;
-          dashboard?: DiscoveredDashboard;
-        };
-
-        // Only handle openDashboard action from storyboard-list-panel
-        if (
-          payload.action !== 'openDashboard' ||
-          event.source !== 'storyboard-list-panel'
-        ) {
-          return;
-        }
-        const { dashboardId, dashboard } = payload;
-
-        if (!dashboardId || !dashboard) {
-          return;
-        }
-
-        setTabs((prevTabs) => {
-          // Check if dashboard tab already exists
-          const existingTabIndex = prevTabs.findIndex(
-            (t) =>
-              t.contentType === 'dashboard' &&
-              (t as DashboardTab).dashboardId === dashboardId,
-          );
-
-          if (existingTabIndex !== -1) {
-            // Focus existing tab
-            setFocusTabId(prevTabs[existingTabIndex].id);
-            return prevTabs;
-          }
-
-          // Create new dashboard tab
-          const newTab: DashboardTab = {
-            id: `dashboard-${dashboardId}`,
-            label: dashboard.name || dashboardId,
-            contentType: 'dashboard',
-            dashboardId,
-            dashboardPath: dashboard.path,
-            dashboardName: dashboard.name || dashboardId,
-            dashboard,
-            closable: true,
-          };
-          setFocusTabId(newTab.id);
-          return [...prevTabs, newTab];
-        });
-      }),
       // Bruno request selected - create tab for request panel
       events.on('principal-ade.bruno:request-selected', (event) => {
         // Ignore re-emitted events from tabs to prevent loop
@@ -2919,9 +2473,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     });
   }, [openTopicTab]);
 
-  // Open (or focus) a single trail as its own tab when a trail row is clicked
-  // in a topic tab's trails rail. One tab per trail id, deduped on re-open —
-  // mirrors `openTopicTab` and the Topics view's `openLocalTrail`.
+  // Open (or focus) a single trail as its own tab. One tab per trail id,
+  // deduped on re-open.
   const openLocalTrailTab = useCallback((trailId: string, title?: string) => {
     setTabs((prevTabs) => {
       const tabId = `local-trail-${trailId}`;
@@ -3060,10 +2613,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       case 'markdown':
       case 'mdx-editor':
         return <FileText size={14} />;
-      case 'canvas-editor':
-        return <LayoutDashboard size={14} />;
-      case 'canvas-detail':
-        return <Workflow size={14} />;
       case 'file-editor':
         return <Code size={14} />;
       case 'pierre-file':
@@ -3072,12 +2621,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return <GitBranch size={14} />;
       case 'dependency-graph':
         return <GitBranch size={14} />;
-      case 'trace-details':
-        return <Activity size={14} />;
       case 'bruno-request':
         return <Send size={14} />;
-      case 'dashboard':
-        return <Gauge size={14} />;
       case 'file-city-3d':
         return <Building2 size={14} />;
       case 'file-city-trail':
@@ -3094,21 +2639,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       default:
         return undefined; // Return undefined to fall back to tab.icon
     }
-  }, []);
-
-  // Render custom label for tabs - only override for canvas-detail to show workflow name
-  const renderTabLabel = useCallback((tab: DevWorkspaceTab) => {
-    if (tab.contentType === 'canvas-detail') {
-      const canvasTab = tab as CanvasTab;
-      // Use workflow name, falling back to workflow ID, then canvas name as last resort
-      return (
-        canvasTab.narrativeTemplate?.name ||
-        canvasTab.selectedNarrativeId ||
-        canvasTab.canvasName ||
-        undefined
-      );
-    }
-    return undefined; // Fall back to tab.label for all other tabs
   }, []);
 
   // Extended terminal actions with tab association support
@@ -3135,9 +2665,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           const fileName = markdownTab.filePath.split('/').pop() || 'Document';
           return { icon: <FileText size={14} />, title: fileName };
         }
-        case 'canvas-editor':
-        case 'canvas-detail':
-          return { icon: <LayoutDashboard size={14} />, title: tabData.label };
         case 'file-editor':
         case 'mdx-editor':
           return { icon: <Code size={14} />, title: tabData.label };
@@ -3236,134 +2763,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 }
                 width={width}
                 showEditButton
-              />
-            </div>
-          );
-        }
-
-        case 'canvas-editor': {
-          // Type assertion for TypeScript
-          const canvasEditorTab = tab as CanvasEditorTab;
-
-          if (!CanvasEditorPanelComponent) {
-            return (
-              <div
-                style={{ padding: '2rem', color: theme.colors.textSecondary }}
-              >
-                Canvas Editor panel not available
-              </div>
-            );
-          }
-
-          return (
-            <div
-              style={{
-                height: '100%',
-                width: '100%',
-                overflow: 'hidden',
-                position: 'relative',
-                display: 'flex', // TabbedTerminalPanel handles visibility
-                flexDirection: 'column',
-              }}
-            >
-              <CanvasEditorPanelComponent
-                context={contextRef.current}
-                actions={actionsRef.current}
-                events={eventsRef.current}
-                canvasPath={canvasEditorTab.canvasPath}
-                canvasName={canvasEditorTab.canvasName}
-                canvasFileInfo={canvasEditorTab.canvasFileInfo}
-              />
-            </div>
-          );
-        }
-
-        case 'canvas-detail': {
-          // Type assertion for TypeScript
-          const canvasTab = tab as CanvasTab;
-
-          // Use CanvasEditorPanel with workflow integration (v0.12.1+)
-          // This replaces WorkflowScenariosPanel with unified canvas+scenarios experience
-          if (!CanvasEditorPanelComponent) {
-            return (
-              <div
-                style={{ padding: '2rem', color: theme.colors.textSecondary }}
-              >
-                Canvas Editor panel not available
-              </div>
-            );
-          }
-
-          return (
-            <div
-              style={{
-                height: '100%',
-                width: '100%',
-                overflow: 'hidden',
-                position: 'relative',
-                display: 'flex', // TabbedTerminalPanel handles visibility
-                flexDirection: 'column',
-              }}
-            >
-              <CanvasEditorPanelComponent
-                context={contextRef.current}
-                actions={actionsRef.current}
-                events={eventsRef.current}
-                canvasPath={canvasTab.canvasPath}
-                canvasName={canvasTab.canvasName}
-                canvasFileInfo={canvasTab.canvasFileInfo}
-                // Workflow props - enables ScenariosList side panel
-                workflowTemplate={canvasTab.narrativeTemplate}
-                selectedWorkflowId={canvasTab.selectedNarrativeId}
-                workflowPath={canvasTab.narrativePath}
-                workflowFileInfo={canvasTab.narrativeFileInfo}
-                // Trace integration props - for auto-selecting scenario and template interpolation
-                selectedScenarioId={canvasTab.selectedScenarioId}
-                selectedTrace={canvasTab.selectedTrace}
-                traceMatchInfo={canvasTab.selectedTrace?.scenarioMatches?.map(
-                  (m) => ({
-                    scenarioId: m.scenarioId,
-                    matchType: (m.matchType || 'full') as 'full' | 'partial',
-                    coveragePercent: m.coveragePercent,
-                  }),
-                )}
-              />
-            </div>
-          );
-        }
-
-        case 'multi-canvas': {
-          // Type assertion for TypeScript
-          const multiCanvasTab = tab as MultiCanvasTab;
-
-          // Map canvases to canvasInfos format (id, path, label)
-          const canvasInfos = multiCanvasTab.canvases.map((c) => ({
-            id: c.id,
-            path: c.canvas.path,
-            label: c.label || c.canvas.name,
-          }));
-
-          return (
-            <div
-              style={{
-                height: '100%',
-                width: '100%',
-                overflow: 'hidden',
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                background: theme.colors.background,
-              }}
-            >
-              <MultiCanvasPanel
-                context={contextRef.current}
-                actions={actionsRef.current}
-                events={eventsRef.current}
-                canvasInfos={canvasInfos}
-                showGroups={true}
-                showControls={true}
-                showBackground={true}
-                showMinimap={true}
               />
             </div>
           );
@@ -3515,31 +2914,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
         }
 
-        case 'trace-details': {
-          // Type assertion for TypeScript
-          const traceDetailsTab = tab as TraceDetailsTab;
-
-          return (
-            <div
-              style={{
-                height: '100%',
-                width: '100%',
-                overflow: 'hidden',
-                position: 'relative',
-                display: 'flex', // TabbedTerminalPanel handles visibility
-                flexDirection: 'column',
-              }}
-            >
-              <TraceDetailsPanel
-                context={contextRef.current}
-                actions={actionsRef.current}
-                events={eventsRef.current}
-                selectedTrace={traceDetailsTab.traceData ?? null}
-              />
-            </div>
-          );
-        }
-
         case 'bruno-request': {
           // Type assertion for TypeScript
           const brunoRequestTab = tab as BrunoRequestTab;
@@ -3573,33 +2947,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 selectedRequestId={brunoRequestTab.requestId}
                 selectedEnvironment={brunoRequestTab.environment}
                 selectedEnvironmentName={brunoRequestTab.environmentName}
-              />
-            </div>
-          );
-        }
-
-        case 'dashboard': {
-          // Type assertion for TypeScript
-          const dashboardTab = tab as DashboardTab;
-
-          return (
-            <div
-              style={{
-                height: '100%',
-                width: '100%',
-                overflow: 'hidden',
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <DashboardPanel
-                context={contextRef.current}
-                actions={actionsRef.current}
-                events={eventsRef.current}
-                selectedDashboard={
-                  dashboardTab.dashboard as unknown as import('@principal-ai/principal-view-core').DiscoveredCanvas
-                }
               />
             </div>
           );
@@ -3662,7 +3009,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       theme,
       SkillDetailPanelComponent,
       MarkdownPanelComponent,
-      CanvasEditorPanelComponent,
       FileEditorPanelComponent,
       MDXEditorPanelComponent,
       GitDiffPanelComponent,
@@ -3722,7 +3068,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               onTabsChange={handleTabsChange}
               renderTabContent={renderTabContent}
               renderTabIcon={renderTabIcon}
-              renderTabLabel={renderTabLabel}
               width={terminalPanelWidth}
               requestFocusTabId={focusTabId}
               onFocusTabHandled={handleFocusTabHandled}
@@ -3741,78 +3086,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               getAssociatedHeader={getAssociatedHeader}
             />
           </div>
-        ),
-      },
-      {
-        id: 'traceViewer',
-        label: 'Trace Viewer',
-        content: TraceViewerPanelComponent ? (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <TraceViewerPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          </div>
-        ) : (
-          <div>Trace Viewer panel not available</div>
-        ),
-      },
-      {
-        id: 'canvasList',
-        label: 'Architecture',
-        content: StoryboardListPanelComponent ? (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <StoryboardListPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          </div>
-        ) : (
-          <div>Architecture panel not available</div>
-        ),
-      },
-      {
-        id: 'traceList',
-        label: 'Traces',
-        content: TraceListPanelComponent ? (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <TraceListPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          </div>
-        ) : (
-          <div>Trace List panel not available</div>
         ),
       },
       {
@@ -4590,8 +3863,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     // tabs is included so TabbedTerminalPanel receives updated tabs for canvas/skill/agent panels.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      CanvasEditorPanelComponent,
-      StoryboardListPanelComponent,
       FileCityPanelComponent,
       DocsPanelComponent,
       GitChangesPanelComponent,
@@ -4625,7 +3896,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       tabs,
       handleTabsChange,
       renderTabIcon,
-      renderTabLabel,
       focusTabId,
       handleFocusTabHandled,
       terminalPanelWidth,

@@ -356,9 +356,9 @@ export const WindowSwitcherApp: React.FC = () => {
     return position === -1 ? index : position;
   };
 
-  // Separate main window from workspace windows
+  // Separate the main window from other application windows.
   const mainWindow = windows.find((w) => w.primaryType === 'main');
-  const workspaceWindows = useMemo(
+  const secondaryWindows = useMemo(
     () => windows.filter((w) => w.primaryType !== 'main'),
     [windows]
   );
@@ -366,14 +366,14 @@ export const WindowSwitcherApp: React.FC = () => {
   // Get all currently occupied grid positions
   const occupiedPositions = useMemo(() => {
     const occupied = new Set<GridPosition>();
-    for (const win of workspaceWindows) {
+    for (const win of secondaryWindows) {
       const pos = gridPositions[win.id];
       if (pos !== undefined) {
         occupied.add(pos);
       }
     }
     return occupied;
-  }, [workspaceWindows, gridPositions]);
+  }, [secondaryWindows, gridPositions]);
 
   // Find next available grid position
   const findAvailablePosition = (excludeWindowId?: number): GridPosition => {
@@ -418,13 +418,13 @@ export const WindowSwitcherApp: React.FC = () => {
     let targetGridPos = pixelToNearestGrid(newX, newY);
 
     // Check if target is occupied by another window
-    const occupiedByOther = workspaceWindows.some(
+    const occupiedByOther = secondaryWindows.some(
       (w) => w.id !== windowId && gridPositions[w.id] === targetGridPos
     );
 
     if (occupiedByOther) {
       // Swap positions with the other window
-      const otherWindow = workspaceWindows.find((w) => gridPositions[w.id] === targetGridPos);
+      const otherWindow = secondaryWindows.find((w) => gridPositions[w.id] === targetGridPos);
       if (otherWindow) {
         setGridPositions((prev) => {
           const updated = {
@@ -606,7 +606,7 @@ export const WindowSwitcherApp: React.FC = () => {
         </div>
       )}
 
-      {/* Workspace cards */}
+      {/* Secondary window cards */}
       <div
         style={{
           position: 'absolute',
@@ -618,7 +618,7 @@ export const WindowSwitcherApp: React.FC = () => {
           paddingTop: mainWindow ? '60px' : '0',
         }}
       >
-        {workspaceWindows.length === 0 ? (
+        {secondaryWindows.length === 0 ? (
           <div
             className="empty-state"
             role="status"
@@ -627,10 +627,10 @@ export const WindowSwitcherApp: React.FC = () => {
               fontFamily: theme.fonts.body,
             }}
           >
-            No workspace windows open
+            No other windows open
           </div>
         ) : (
-          workspaceWindows.map((win, index) => {
+          secondaryWindows.map((win, index) => {
             const gridPos = getWindowGridPosition(win, index);
 
             // Initialize grid position if not set

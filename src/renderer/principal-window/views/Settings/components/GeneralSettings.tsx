@@ -28,7 +28,6 @@ export const GeneralSettings: React.FC = () => {
   const [presenceAutoConnect, setPresenceAutoConnect] = useState(
     USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
   );
-  const [showAlexandriaHookDebug, setShowAlexandriaHookDebug] = useState(false);
   const [showSendTabButton, setShowSendTabButton] = useState(false);
   const [quickOpenTarget, setQuickOpenTarget] = useState<'window' | 'terminal'>(
     'window',
@@ -65,9 +64,6 @@ export const GeneralSettings: React.FC = () => {
       setShowOnboardingButton(prefs.showOnboardingButton ?? false);
       setPresenceAutoConnect(
         prefs.presenceAutoConnect ?? USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
-      );
-      setShowAlexandriaHookDebug(
-        prefs.alexandriaWorkspace?.titlebar?.hookDebug ?? false,
       );
       setShowSendTabButton(prefs.showSendTabButton ?? false);
       setQuickOpenTarget(
@@ -488,58 +484,6 @@ export const GeneralSettings: React.FC = () => {
               />
             </label>
           </div>
-        </div>
-      </div>
-
-      {/* Alexandria Workspace */}
-      <div style={{ marginBottom: '32px' }}>
-        <h4
-          style={{
-            fontSize: '16px',
-            fontWeight: 600,
-            marginBottom: '16px',
-            color: theme.colors.text,
-          }}
-        >
-          Alexandria Workspace
-        </h4>
-        <div
-          style={{
-            backgroundColor: theme.colors.backgroundSecondary,
-            borderRadius: '12px',
-            padding: '20px',
-            border: `1px solid ${theme.colors.border}`,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              fontSize: '14px',
-              color: theme.colors.text,
-            }}
-          >
-            <span>Show Hook Debug segment in titlebar</span>
-            <input
-              type="checkbox"
-              checked={showAlexandriaHookDebug}
-              onChange={async (e) => {
-                const enabled = e.target.checked;
-                setShowAlexandriaHookDebug(enabled);
-                await UserPreferencesService.updatePreferences({
-                  alexandriaWorkspace: {
-                    titlebar: { hookDebug: enabled },
-                  },
-                });
-              }}
-              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-            />
-          </label>
         </div>
       </div>
 

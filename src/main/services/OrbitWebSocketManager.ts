@@ -13,6 +13,7 @@ import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
 import { deviceIdService } from './DeviceIdService';
 import { APP_BRANDING } from '../../shared/config/appBranding';
+import { requireHostedFeature } from './FeatureAvailabilityService';
 
 // Import Control Tower Core components
 import {
@@ -167,6 +168,7 @@ export class OrbitWebSocketManager {
     peers?: OrbitPeer[];
     error?: string;
   }> {
+    await requireHostedFeature('presenceAndCollaboration');
     // Create room ID from repo URL (e.g., "orbit:owner/repo")
     const roomId = `orbit:${this.normalizeRepoUrl(config.repoUrl)}`;
     const connectionId = `${roomId}:${windowId}`;
@@ -513,6 +515,12 @@ export class OrbitWebSocketManager {
 
     for (const id of toDisconnect) {
       this.disconnect(id);
+    }
+  }
+
+  disconnectAll(): void {
+    for (const connectionId of this.connections.keys()) {
+      void this.disconnect(connectionId);
     }
   }
 

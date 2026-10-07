@@ -7,11 +7,8 @@ import { ipcRenderer } from 'electron';
 import type {
   WindowAPI,
   RepositoryWindowState,
-  WorkspaceWindowState,
-  WindowReadyState,
   DevWorkspaceOptions,
   ExtensionWindowOptions,
-  AlexandriaWorkspaceOptions,
   TabTransferData,
   OpenTerminalTabPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
@@ -22,12 +19,6 @@ import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
  * Window API implementation for preload script
  */
 export const windowAPI: WindowAPI = {
-  /**
-   * Open Alexandria Workspace window
-   */
-  openAlexandriaWorkspace: (options: AlexandriaWorkspaceOptions) =>
-    ipcRenderer.invoke(WindowEvent.OPEN_ALEXANDRIA_WORKSPACE, options),
-
   /**
    * Focus the main window if it exists, otherwise create it
    */
@@ -79,49 +70,6 @@ export const windowAPI: WindowAPI = {
   },
 
   /**
-   * Get the currently open Alexandria workspace windows
-   */
-  getOpenWorkspaceWindows: () =>
-    ipcRenderer.invoke(WindowEvent.GET_OPEN_WORKSPACE_WINDOWS),
-
-  /**
-   * Listen for workspace window open/close changes
-   */
-  onWorkspaceWindowsChanged: (
-    callback: (workspaceWindows: WorkspaceWindowState[]) => void,
-  ) => {
-    const handler = (
-      _event: Electron.IpcRendererEvent,
-      workspaceWindows: WorkspaceWindowState[],
-    ) => {
-      callback(workspaceWindows);
-    };
-    ipcRenderer.on(WindowEvent.WORKSPACE_WINDOWS_CHANGED, handler);
-    return () => {
-      ipcRenderer.removeListener(
-        WindowEvent.WORKSPACE_WINDOWS_CHANGED,
-        handler,
-      );
-    };
-  },
-
-  /**
-   * Listen for any window reaching first paint (`ready-to-show`).
-   */
-  onWindowReady: (callback: (state: WindowReadyState) => void) => {
-    const handler = (
-      _event: Electron.IpcRendererEvent,
-      state: WindowReadyState,
-    ) => {
-      callback(state);
-    };
-    ipcRenderer.on(WindowEvent.WINDOW_READY, handler);
-    return () => {
-      ipcRenderer.removeListener(WindowEvent.WINDOW_READY, handler);
-    };
-  },
-
-  /**
    * Open a dev workspace window with the panel framework
    */
   openDevWorkspace: (options: DevWorkspaceOptions) =>
@@ -132,65 +80,6 @@ export const windowAPI: WindowAPI = {
    */
   openExtensionWindow: (options?: ExtensionWindowOptions) =>
     ipcRenderer.invoke(WindowEvent.OPEN_EXTENSION_WINDOW, options),
-
-  // Thread operations (ephemeral multi-repository sessions)
-
-  /**
-   * Add a repository to the current thread window
-   */
-  addRepositoryToThread: async (repositoryPath: string) => {
-    const windowId = await ipcRenderer.invoke(WindowEvent.GET_WINDOW_ID);
-    if (!windowId) {
-      return { success: false, error: 'Could not get window ID' };
-    }
-    return ipcRenderer.invoke(WindowEvent.ADD_REPOSITORY_TO_THREAD, {
-      windowId,
-      repositoryPath,
-    });
-  },
-
-  /**
-   * Remove a repository from the current thread window
-   */
-  removeRepositoryFromThread: async (repositoryPath: string) => {
-    const windowId = await ipcRenderer.invoke(WindowEvent.GET_WINDOW_ID);
-    if (!windowId) {
-      return { success: false, error: 'Could not get window ID' };
-    }
-    return ipcRenderer.invoke(WindowEvent.REMOVE_REPOSITORY_FROM_THREAD, {
-      windowId,
-      repositoryPath,
-    });
-  },
-
-  /**
-   * Listen for thread repository changes
-   */
-  onThreadRepositoriesChanged: (
-    callback: (event: {
-      repositoryPaths: string[];
-      addedPath?: string;
-      removedPath?: string;
-    }) => void,
-  ) => {
-    const handler = (
-      _event: Electron.IpcRendererEvent,
-      data: {
-        repositoryPaths: string[];
-        addedPath?: string;
-        removedPath?: string;
-      },
-    ) => {
-      callback(data);
-    };
-    ipcRenderer.on(WindowEvent.THREAD_REPOSITORIES_CHANGED, handler);
-    return () => {
-      ipcRenderer.removeListener(
-        WindowEvent.THREAD_REPOSITORIES_CHANGED,
-        handler,
-      );
-    };
-  },
 
   /**
    * Focus the main window and navigate to updates settings

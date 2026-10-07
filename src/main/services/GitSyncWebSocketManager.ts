@@ -22,6 +22,10 @@ import { deviceIdService } from './DeviceIdService';
 import { fastForwardService } from './FastForwardService';
 import jwt from 'jsonwebtoken';
 import { APP_BRANDING } from '../../shared/config/appBranding';
+import {
+  isHostedFeatureEnabled,
+  requireHostedFeature,
+} from './FeatureAvailabilityService';
 
 // Import Control Tower Core components
 import {
@@ -254,6 +258,10 @@ export class GitSyncWebSocketManager {
    * Returns null if no authenticated connection is available
    */
   private async getAuthenticatedClient(): Promise<BaseClient | null> {
+    if (!(await isHostedFeatureEnabled('presenceAndCollaboration'))) {
+      return null;
+    }
+
     // Find an authenticated connection
     const activeConnection = Array.from(this.connections.values()).find(
       (conn) =>
@@ -285,6 +293,7 @@ export class GitSyncWebSocketManager {
     message?: string;
     error?: string;
   }> {
+    await requireHostedFeature('presenceAndCollaboration');
     const connectionId = `${config.repoId}:${config.branch}`;
 
     // Check if already connected
@@ -908,6 +917,7 @@ export class GitSyncWebSocketManager {
     message?: string;
     error?: string;
   }> {
+    await requireHostedFeature('presenceAndCollaboration');
     const connectionId = '__presence_only__';
 
     // Check if already connected or connecting

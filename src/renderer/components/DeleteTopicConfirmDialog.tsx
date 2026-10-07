@@ -3,7 +3,6 @@ import { Trash2 } from 'lucide-react';
 
 interface DeleteTopicConfirmDialogProps {
   topicTitle: string;
-  workspaceFolderPath?: string;
   onConfirm: () => void;
   onCancel: () => void;
   busy?: boolean;
@@ -11,7 +10,7 @@ interface DeleteTopicConfirmDialogProps {
 
 export const DeleteTopicConfirmDialog: React.FC<
   DeleteTopicConfirmDialogProps
-> = ({ topicTitle, workspaceFolderPath, onConfirm, onCancel, busy }) => {
+> = ({ topicTitle, onConfirm, onCancel, busy }) => {
   const { theme } = useTheme();
 
   return (
@@ -81,26 +80,8 @@ export const DeleteTopicConfirmDialog: React.FC<
             fontFamily: theme.fonts.body,
           }}
         >
-          Are you sure you want to delete <strong>{topicTitle}</strong>? Its
-          linked workspace will be removed too.
+          Are you sure you want to delete <strong>{topicTitle}</strong>?
         </p>
-
-        {workspaceFolderPath && (
-          <p
-            style={{
-              margin: '0 0 16px 0',
-              fontSize: '13px',
-              color: theme.colors.textSecondary,
-              fontFamily: theme.fonts.monospace,
-              padding: '8px',
-              backgroundColor: theme.colors.backgroundSecondary,
-              borderRadius: '4px',
-              wordBreak: 'break-all',
-            }}
-          >
-            {workspaceFolderPath}
-          </p>
-        )}
 
         <p
           style={{

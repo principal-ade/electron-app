@@ -5,7 +5,7 @@ import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import { TopicsLeftPanel } from './TopicsLeftPanel';
 import { TopicService } from '../main-process-api/TopicService';
 import { TopicsTabsProvider } from '../principal-window/contexts/TopicsTabsContext';
-import type { Topic } from '@principal-ai/alexandria-core-library/types';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 
 // ---------- mock plumbing ----------
 //
@@ -47,7 +47,7 @@ const daysAgo = (n: number) =>
 
 const topic = (over: Partial<Topic> & Pick<Topic, 'id' | 'title'>): Topic => ({
   description: '',
-  trailIds: [],
+  repos: [],
   createdAt: daysAgo(10),
   updatedAt: hoursAgo(1),
   ...over,
@@ -57,28 +57,28 @@ const topicFixtures: Topic[] = [
   topic({
     id: 't-1',
     title: 'How the reconciler schedules work',
-    trailIds: ['a', 'b', 'c'],
+    repos: ['pkg:github/facebook/react', 'pkg:github/reactwg/react-18'],
     updatedAt: minutesAgo(8),
     status: { state: 'working' },
   }),
   topic({
     id: 't-2',
     title: 'App Router request lifecycle',
-    trailIds: ['d'],
+    repos: ['pkg:github/vercel/next.js'],
     updatedAt: hoursAgo(3),
     status: { state: 'paused', label: 'revisit after launch' },
   }),
   topic({
     id: 't-3',
     title: 'Control-flow narrowing, end to end',
-    trailIds: ['e', 'f'],
+    repos: ['pkg:github/microsoft/TypeScript'],
     updatedAt: daysAgo(2),
     status: { state: 'done-for-now' },
   }),
   topic({
     id: 't-4',
     title: 'Untriaged idea with no status',
-    trailIds: [],
+    repos: [],
     updatedAt: daysAgo(5),
   }),
 ];

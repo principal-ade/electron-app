@@ -10,42 +10,13 @@
 
 import type { Application, Request, Response } from 'express';
 import { upsertSection } from '@principal-ade/markdown-utils';
-import type { DraftTopic as Topic } from '@principal-ai/principal-view-core';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import type { TopicRegistryService } from '../stores/TopicRegistryService';
-import type { TrailStore } from '../file-city/trailStore';
-import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { validateTopicLinks } from './validateTopicLinks';
-import type { TrailIndexEntry } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import { TopicAPIEvent } from '../../shared/main-process-api-interfaces/TopicAPI';
 import type { TopicActivateEvent } from '../../shared/main-process-api-interfaces/TopicAPI';
 import { broadcastTopicEvent } from './tipc/topicRouter';
 import { focusedOrMainWindow } from '../window/modernWindowManager';
-
-/**
- * Lightweight summary of a trail attached to a topic. Mirrors the index
- * entry fields (no payload read) plus an `href` that tells the caller
- * where to fetch the full payload. `missing` covers ids that no longer
- * resolve in the local store (the topic remembers the id, the trail was
- * deleted) so the caller sees the dangling reference.
- */
-interface TopicTrailSummary {
-  id: string;
-  href: string;
-  title?: string;
-  summaryPreview?: string;
-  purpose?: TrailIndexEntry['purpose'];
-  markerCount?: number;
-  fileCount?: number;
-  signOffCount?: number;
-  repoNames?: string[];
-  createdAt?: string;
-  updatedAt?: string;
-  missing?: true;
-}
-
-function trailHref(id: string): string {
-  return `/api/file-city/trail/${encodeURIComponent(id)}`;
-}
 
 const DESCRIPTION_PREVIEW_MAX = 200;
 
@@ -57,67 +28,17 @@ function descriptionPreview(description?: string): string {
   return `${trimmed.slice(0, DESCRIPTION_PREVIEW_MAX - 1)}…`;
 }
 
-async function resolveTopicTrails(
-  topic: Topic,
-  trailStore: TrailStore,
-): Promise<TopicTrailSummary[]> {
-  const { entries } = await trailStore.list();
-  const byId = new Map(entries.map((e) => [e.id, e]));
-  return topic.trailIds.map((trailId) => {
-    const entry = byId.get(trailId);
-    if (!entry) {
-      return { id: trailId, href: trailHref(trailId), missing: true };
-    }
-    return {
-      id: entry.id,
-      href: trailHref(entry.id),
-      title: entry.title,
-      summaryPreview: entry.summaryPreview,
-      purpose: entry.purpose,
-      markerCount: entry.markerCount,
-      fileCount: entry.fileCount,
-      signOffCount: entry.signOffCount,
-      repoNames: entry.repoNames,
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt,
-    };
-  });
-}
-
 /**
- * Collect the repo purls a topic "claims" — the union of its explicitly
- * declared `repos` and the Alexandria purls of the repos its trails were
- * authored in. Used to scope link validation: a reference into a repo not in
- * this set is flagged as out-of-scope. Including `topic.repos` lets a
- * repo-scoped topic reference files in a repo it names even before any trail
- * from that repo is added. Trails whose repo isn't registered (or that are
- * repo-agnostic) simply don't contribute; an empty set means "don't scope-check"
- * (every purl is treated as in-scope).
+ * Use the topic's declared repository PURLs to scope link validation. An
+ * empty set means "don't scope-check" (every purl is treated as in-scope).
  */
-async function collectTopicRepoPurls(
-  topic: Topic,
-  trailStore: TrailStore,
-): Promise<string[]> {
-  const alexandria = AlexandriaRegistryService.getInstance();
-  const { entries } = await trailStore.list();
-  const byId = new Map(entries.map((e) => [e.id, e]));
-  const purls = new Set<string>();
-  for (const purl of topic.repos ?? []) {
-    if (typeof purl === 'string' && purl) purls.add(purl);
-  }
-  for (const trailId of topic.trailIds) {
-    const entry = byId.get(trailId);
-    if (!entry?.repositoryPath) continue;
-    const repo = await alexandria.getRepositoryByPath(entry.repositoryPath);
-    if (repo?.purl) purls.add(String(repo.purl));
-  }
-  return [...purls];
+function collectTopicRepoPurls(topic: Topic): string[] {
+  return (topic.repos ?? []).filter((purl) => typeof purl === 'string' && purl);
 }
 
 export function registerTopicRoutes(
   app: Application,
   registry: TopicRegistryService,
-  trailStore: TrailStore,
 ): void {
   // Create a local topic. The agent analogue of the in-app UI's "new topic"
   // affordance (TIPC topic_createTopic): a briefed terminal can mint a topic
@@ -125,8 +46,7 @@ export function registerTopicRoutes(
   // `repos` (PURL strings) so a caller can mint a topic *about a resolved repo*
   // rather than submitting a cross-repo task. The topic is local-only until
   // published from the app UI — `id`, timestamps, and `createdBy` are filled
-  // in by the registry when omitted. Returns the same `{ topic, trails }`
-  // shape as the read route so the caller can immediately link/append.
+  // in by the registry when omitted.
   app.post('/api/topics', async (req: Request, res: Response) => {
     const body =
       req.body && typeof req.body === 'object'
@@ -142,26 +62,12 @@ export function registerTopicRoutes(
       return;
     }
     const description =
-      body && typeof body.description === 'string' ? body.description : undefined;
-    let trailIds: string[] | undefined;
-    if (body && body.trailIds !== undefined) {
-      if (
-        !Array.isArray(body.trailIds) ||
-        !body.trailIds.every((t) => typeof t === 'string')
-      ) {
-        res.status(400).json({
-          success: false,
-          error: 'trailIds must be an array of strings',
-        });
-        return;
-      }
-      trailIds = body.trailIds as string[];
-    }
+      body && typeof body.description === 'string'
+        ? body.description
+        : undefined;
     // Repositories this topic is about, as PURL strings (e.g.
-    // `pkg:github/owner/repo`). Usually a topic's repo scope is *derived* from
-    // the repos its trails were authored in (see `collectTopicRepoPurls`), but a
-    // caller may set them explicitly — e.g. minting a topic scoped to a resolved
-    // repo instead of submitting a cross-repo task.
+    // `pkg:github/owner/repo`). A caller may set them explicitly — e.g. minting
+    // a topic scoped to a resolved repo instead of submitting a cross-repo task.
     let repos: string[] | undefined;
     if (body && body.repos !== undefined) {
       if (
@@ -184,25 +90,21 @@ export function registerTopicRoutes(
       const topic = await registry.createTopic({
         title,
         ...(description !== undefined ? { description } : {}),
-        ...(trailIds !== undefined ? { trailIds } : {}),
         ...(repos !== undefined ? { repos } : {}),
         ...(visibility !== undefined ? { visibility } : {}),
       });
       broadcastTopicEvent(TopicAPIEvent.TOPIC_ADDED, topic);
-      const trails = await resolveTopicTrails(topic, trailStore);
-      res.status(201).json({ success: true, topic, trails });
+      res.status(201).json({ success: true, topic });
     } catch (err) {
       console.error('[topicRoutes] create failed', err);
-      res
-        .status(500)
-        .json({ success: false, error: 'failed to create topic' });
+      res.status(500).json({ success: false, error: 'failed to create topic' });
     }
   });
 
   // List all local topics as lightweight summaries so a briefed agent can
   // *discover* topics, not just fetch one it was handed by id. Deliberately
-  // payload-free (no description body, no trail resolution) — it's a directory,
-  // not a detail view; callers GET /api/topics/:id for the full topic + trails.
+  // payload-free (no description body) — it's a directory, not a detail view;
+  // callers GET /api/topics/:id for the full topic.
   // Sorted newest-updated first. Supports `?q=` for a case-insensitive
   // substring filter over title + description.
   app.get('/api/topics', async (req: Request, res: Response) => {
@@ -221,7 +123,6 @@ export function registerTopicRoutes(
           href: `/api/topics/${encodeURIComponent(t.id)}`,
           title: t.title,
           descriptionPreview: descriptionPreview(t.description),
-          trailCount: t.trailIds.length,
           state: t.status?.state,
           createdAt: t.createdAt,
           updatedAt: t.updatedAt,
@@ -246,8 +147,7 @@ export function registerTopicRoutes(
         res.status(404).json({ success: false, error: 'unknown topic id' });
         return;
       }
-      const trails = await resolveTopicTrails(topic, trailStore);
-      res.json({ success: true, topic, trails });
+      res.json({ success: true, topic });
     } catch (err) {
       console.error('[topicRoutes] read failed', err);
       res.status(500).json({ success: false, error: 'failed to read topic' });
@@ -273,9 +173,10 @@ export function registerTopicRoutes(
           : null;
       const text = body && typeof body.text === 'string' ? body.text : '';
       if (text.length === 0) {
-        res
-          .status(400)
-          .json({ success: false, error: 'text (non-empty string) is required' });
+        res.status(400).json({
+          success: false,
+          error: 'text (non-empty string) is required',
+        });
         return;
       }
       try {
@@ -288,8 +189,7 @@ export function registerTopicRoutes(
         const description = prior.length > 0 ? `${prior}\n\n${text}` : text;
         const topic = await registry.updateTopic(id, { description });
         broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
-        const trails = await resolveTopicTrails(topic, trailStore);
-        res.json({ success: true, topic, trails });
+        res.json({ success: true, topic });
       } catch (err) {
         console.error('[topicRoutes] append failed', err);
         res
@@ -361,13 +261,13 @@ export function registerTopicRoutes(
           description: result.markdown,
         });
         broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
-        const trails = await resolveTopicTrails(topic, trailStore);
-        res.json({ success: true, topic, trails, action: result.action });
+        res.json({ success: true, topic, action: result.action });
       } catch (err) {
         console.error('[topicRoutes] section upsert failed', err);
-        res
-          .status(500)
-          .json({ success: false, error: 'failed to update description section' });
+        res.status(500).json({
+          success: false,
+          error: 'failed to update description section',
+        });
       }
     },
   );
@@ -433,7 +333,7 @@ export function registerTopicRoutes(
           res.status(404).json({ success: false, error: 'unknown topic id' });
           return;
         }
-        const topicRepoPurls = await collectTopicRepoPurls(topic, trailStore);
+        const topicRepoPurls = collectTopicRepoPurls(topic);
         const report = await validateTopicLinks(topic.description ?? '', {
           topicRepoPurls,
         });
@@ -450,9 +350,8 @@ export function registerTopicRoutes(
   // Permanently delete a local topic: removes the on-disk payload
   // (~/.principal/topics/<id>.json), its sync metadata, and drops it from the
   // registry's in-memory index. Windows showing it are notified via
-  // TOPIC_REMOVED so they can clear the tab. The topic's trails are left
-  // untouched (a topic is just a bundle of trail ids). Mirrors the trail
-  // DELETE route; the registry already owns the delete logic.
+  // TOPIC_REMOVED so they can clear the tab. The registry owns deletion of
+  // the topic and its local sync metadata.
   app.delete('/api/topics/:id', async (req: Request, res: Response) => {
     const id = String(req.params.id);
     if (!id) {

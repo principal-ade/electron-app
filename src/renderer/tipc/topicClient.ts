@@ -8,7 +8,6 @@
 
 import { createClient } from '@egoist/tipc/renderer';
 import type {
-  AddTrailInput,
   AppendDescriptionInput,
   AttachImageAssetInput,
   CreateTopicInput,
@@ -16,14 +15,11 @@ import type {
   FetchSharedTopicInput,
   FetchSharedTopicResult,
   GetTopicInput,
-  GetTopicsForTrailInput,
   LinkSessionInput,
   LinkSessionResult,
   LocalTopicRecord,
   PublishTopicInput,
   PublishTopicResult,
-  RemoveTrailInput,
-  ReorderTrailsInput,
   Topic,
   TopicRouterType,
   UpdateTopicInputArgs,
@@ -44,10 +40,6 @@ export interface TopicClient {
   /** Store a dropped image on the topic and append its `asset://` reference. */
   attachImageAsset: (input: AttachImageAssetInput) => Promise<Topic>;
   deleteTopic: (input: DeleteTopicInput) => Promise<boolean>;
-  addTrailToTopic: (input: AddTrailInput) => Promise<Topic>;
-  removeTrailFromTopic: (input: RemoveTrailInput) => Promise<Topic>;
-  reorderTopicTrails: (input: ReorderTrailsInput) => Promise<Topic>;
-  getTopicsForTrail: (input: GetTopicsForTrailInput) => Promise<Topic[]>;
   getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
   getRecords: () => Promise<LocalTopicRecord[]>;
   /**
@@ -59,7 +51,7 @@ export interface TopicClient {
   fetchSharedById: (
     input: FetchSharedTopicInput,
   ) => Promise<FetchSharedTopicResult>;
-  /** Publish a local topic to web-ade. Throws on failure (e.g. unshared trail). */
+  /** Publish a local topic to web-ade. Throws on failure. */
   publishTopic: (input: PublishTopicInput) => Promise<PublishTopicResult>;
   getSessionLinks: () => Promise<Record<string, string>>;
   /**
@@ -98,19 +90,13 @@ interface TipcTopicClient {
   topic_appendDescription: (input: AppendDescriptionInput) => Promise<Topic>;
   topic_attachImageAsset: (input: AttachImageAssetInput) => Promise<Topic>;
   topic_deleteTopic: (input: DeleteTopicInput) => Promise<boolean>;
-  topic_addTrailToTopic: (input: AddTrailInput) => Promise<Topic>;
-  topic_removeTrailFromTopic: (input: RemoveTrailInput) => Promise<Topic>;
-  topic_reorderTopicTrails: (input: ReorderTrailsInput) => Promise<Topic>;
-  topic_getTopicsForTrail: (input: GetTopicsForTrailInput) => Promise<Topic[]>;
   topic_getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
   topic_getRecords: () => Promise<LocalTopicRecord[]>;
   topic_getTopicFilePath: (input: GetTopicInput) => Promise<string | null>;
   topic_fetchSharedById: (
     input: FetchSharedTopicInput,
   ) => Promise<FetchSharedTopicResult>;
-  topic_publishTopic: (
-    input: PublishTopicInput,
-  ) => Promise<PublishTopicResult>;
+  topic_publishTopic: (input: PublishTopicInput) => Promise<PublishTopicResult>;
   topic_getSessionLinks: () => Promise<Record<string, string>>;
   topic_linkSession: (input: LinkSessionInput) => Promise<LinkSessionResult>;
 }
@@ -139,12 +125,6 @@ export const topicClient: TopicClient = {
   appendDescription: (input) => getTipcClient().topic_appendDescription(input),
   attachImageAsset: (input) => getTipcClient().topic_attachImageAsset(input),
   deleteTopic: (input) => getTipcClient().topic_deleteTopic(input),
-  addTrailToTopic: (input) => getTipcClient().topic_addTrailToTopic(input),
-  removeTrailFromTopic: (input) =>
-    getTipcClient().topic_removeTrailFromTopic(input),
-  reorderTopicTrails: (input) =>
-    getTipcClient().topic_reorderTopicTrails(input),
-  getTopicsForTrail: (input) => getTipcClient().topic_getTopicsForTrail(input),
   getRecord: (input) => getTipcClient().topic_getRecord(input),
   getRecords: () => getTipcClient().topic_getRecords(),
   getTopicFilePath: (input) => getTipcClient().topic_getTopicFilePath(input),
@@ -174,9 +154,4 @@ export const topicClient: TopicClient = {
   },
 };
 
-export type {
-  CreateTopicInput,
-  UpdateTopicInputArgs,
-  LocalTopicRecord,
-  Topic,
-};
+export type { CreateTopicInput, UpdateTopicInputArgs, LocalTopicRecord, Topic };

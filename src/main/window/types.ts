@@ -31,7 +31,6 @@ export interface WindowFeatures {
 export enum PrimaryWindowType {
   MAIN = 'main',
   REPOSITORY = 'repository',
-  WORKSPACE = 'workspace',
   DEV_WORKSPACE = 'dev-workspace',
   EXTENSION = 'extension',
   UNKNOWN = 'unknown',
@@ -46,23 +45,10 @@ export interface WindowMetadata {
   // For repositories
   remoteUrl?: string;
   localPath?: string;
-  // For workspaces
-  workspaceId?: string;
-  /**
-   * Topics this window hosts (workspace windows). Mirrored from the
-   * backing `Workspace.topicIds` at open time so trail routes can target
-   * windows by topic without re-resolving the workspace each time.
-   */
-  topicIds?: string[];
   // Original purpose string for backward compatibility
   purpose?: string;
   // Full AlexandriaEntry for rich display in window switcher
   alexandriaEntry?: AlexandriaEntry;
-  // For threads (ephemeral multi-repository sessions)
-  /** Repository paths currently in this thread */
-  threadRepositoryPaths?: string[];
-  /** Indicates this is an ephemeral thread (no workspace backing) */
-  isThread?: boolean;
 }
 
 /**
@@ -80,7 +66,6 @@ export interface IModernApplicationWindow {
   windowManagerAdapter?: ElectronWindowManagerAdapter;
   githubAdapter?: GitHubAdapter;
   /** Allow the next close to proceed and trigger it (post status-prompt). */
-  confirmClose(): void;
 }
 
 /**
@@ -163,12 +148,6 @@ export function isRepositoryWindow(windowId: number): boolean {
   );
 }
 
-export function isWorkspaceWindow(windowId: number): boolean {
-  return (
-    getWindowMetadata(windowId)?.primaryType === PrimaryWindowType.WORKSPACE
-  );
-}
-
 export function getRepositoryUrl(windowId: number): string | null {
   const metadata = getWindowMetadata(windowId);
   return metadata?.primaryType === PrimaryWindowType.REPOSITORY
@@ -180,13 +159,6 @@ export function getRepositoryLocalPath(windowId: number): string | null {
   const metadata = getWindowMetadata(windowId);
   return metadata?.primaryType === PrimaryWindowType.REPOSITORY
     ? (metadata.localPath ?? null)
-    : null;
-}
-
-export function getWorkspaceId(windowId: number): string | null {
-  const metadata = getWindowMetadata(windowId);
-  return metadata?.primaryType === PrimaryWindowType.WORKSPACE
-    ? (metadata.workspaceId ?? null)
     : null;
 }
 

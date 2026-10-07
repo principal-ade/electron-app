@@ -373,6 +373,10 @@ export class HttpEventServer extends EventEmitter {
       cline: 'event.http.cline_received',
       opencode: 'event.http.opencode_received',
       droid: 'event.http.droid_received',
+      pi: 'event.http.pi_received',
+      grok: 'event.http.grok_received',
+      codex: 'event.http.codex_received',
+      cursor: 'event.http.cursor_received',
     };
 
     // Setup routes for each supported agent

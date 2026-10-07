@@ -581,7 +581,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     TerminalService.onExit((terminalExit) => {
       events.emit({
         type: 'terminal:exit',
-        source: 'alexandria-workspace',
+        source: 'panel-context',
         timestamp: Date.now(),
         payload: terminalExit,
       });
@@ -1069,7 +1069,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           console.info('[PanelContext] Opening file:', absolutePath);
           events.emit({
             type: 'file:opened',
-            source: 'alexandria-workspace',
+            source: 'panel-context',
             timestamp: Date.now(),
             payload: { filePath: absolutePath },
           });
@@ -1080,7 +1080,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             console.info('[PanelContext] Opening repository by ID:', entryOrId);
             events.emit({
               type: 'repository:opened',
-              source: 'alexandria-workspace',
+              source: 'panel-context',
               timestamp: Date.now(),
               payload: { repositoryId: entryOrId },
             });
@@ -1101,7 +1101,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           console.info('[PanelContext] Opening git diff:', filePath, status);
           events.emit({
             type: 'git:diff',
-            source: 'alexandria-workspace',
+            source: 'panel-context',
             timestamp: Date.now(),
             payload: { filePath, status },
           });
@@ -1110,7 +1110,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           console.info('[PanelContext] Navigating to panel:', panelId);
           events.emit({
             type: 'panel:focus',
-            source: 'alexandria-workspace',
+            source: 'panel-context',
             timestamp: Date.now(),
             payload: { panelId },
           });
@@ -1162,7 +1162,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
                 // Forward terminal data to panel event bus
                 events.emit({
                   type: 'terminal:data',
-                  source: 'alexandria-workspace',
+                  source: 'panel-context',
                   timestamp: Date.now(),
                   payload: { sessionId, data },
                 });
@@ -1420,7 +1420,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             // Emit event
             events.emit({
               type: 'workspace:membership-changed',
-              source: 'alexandria-workspace',
+              source: 'panel-context',
               timestamp: Date.now(),
               payload: { repositoryId, workspaceId, action: 'removed' },
             });
@@ -1459,7 +1459,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           console.info('[PanelContext] Navigating to localhost:', port, path);
           events.emit({
             type: 'localhost:navigate',
-            source: 'alexandria-workspace',
+            source: 'panel-context',
             timestamp: Date.now(),
             payload: { port, path: path || '/' },
           });

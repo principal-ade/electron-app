@@ -357,7 +357,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
       // `topic:open` on the portal bus — its always-mounted listener opens the
       // tab in InboxTabsContext (whose state lives above the conditional
       // InboxView mount), so the tab survives the view switch. The panel
-      // self-fetches the topic and its trails from the bare id.
+      // self-fetches the topic brief from the bare id.
       events.emit({
         type: 'panel:switch',
         source: 'titlebar-search',

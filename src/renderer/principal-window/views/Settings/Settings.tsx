@@ -8,12 +8,14 @@ import {
   Puzzle,
   Sparkles,
   Shield,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { GeneralSettings } from './components/GeneralSettings';
 import { AIAssistantsSettings } from './components/AIAssistantsSettings';
 import { UpdatesSettings } from './components/UpdatesSettings';
 import { GeminiSettings } from './components/GeminiSettings';
 import { SecuritySettings } from './components/SecuritySettings';
+import { FeatureAvailabilitySettings } from './components/FeatureAvailabilitySettings';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
@@ -24,6 +26,7 @@ const SHOW_GEMINI_SETTINGS = false;
 export type SettingsCategory =
   | 'general'
   | 'security'
+  | 'feature-availability'
   | 'ai-assistants'
   | 'gemini'
   | 'updates';
@@ -193,6 +196,47 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
             >
               <Shield size={18} />
               Security
+            </button>
+
+            <button
+              onClick={() => setActiveCategory('feature-availability')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor:
+                  activeCategory === 'feature-availability'
+                    ? theme.colors.primary + '20'
+                    : 'transparent',
+                color:
+                  activeCategory === 'feature-availability'
+                    ? theme.colors.primary
+                    : theme.colors.text,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontSize: '14px',
+                fontWeight:
+                  activeCategory === 'feature-availability' ? 600 : 500,
+                textAlign: 'left',
+                width: '100%',
+              }}
+              onMouseEnter={(e) => {
+                if (activeCategory !== 'feature-availability') {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeCategory !== 'feature-availability') {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <SlidersHorizontal size={18} />
+              Feature Availability
             </button>
 
             <button
@@ -397,6 +441,9 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
         >
           {activeCategory === 'general' && <GeneralSettings />}
           {activeCategory === 'security' && <SecuritySettings />}
+          {activeCategory === 'feature-availability' && (
+            <FeatureAvailabilitySettings />
+          )}
           {activeCategory === 'ai-assistants' && <AIAssistantsSettings />}
           {SHOW_GEMINI_SETTINGS && activeCategory === 'gemini' && (
             <GeminiSettings />

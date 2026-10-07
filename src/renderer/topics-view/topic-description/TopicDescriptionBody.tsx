@@ -7,10 +7,8 @@
  * preview offers (text deletion, checkbox toggles, drag-to-append text, and
  * dragged-in image assets). It live-refreshes via `TopicService.onTopicChange`.
  *
- * This is the chrome-less body shared by:
- * - `TopicDescriptionSlideOver` (the Alexandria workspace "Braindump" slide-over,
- *   which wraps this in its absolute-positioned panel + header + Edit button), and
- * - `LocalTopicTabContent` (the Topics view tab, which wraps it in a title header).
+ * This is the chrome-less body shared by the Topics view and Dev Workspace
+ * topic tabs, which wrap it in their own headers.
  *
  * Renders a scrollable, full-height drop-zone (so a parent flex column should
  * give it `flex: 1`), plus the markdown link-resolution notice.
@@ -25,7 +23,7 @@ import {
   useDropZone,
   type PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
-import type { TopicAsset } from '@principal-ai/principal-view-core';
+import type { TopicAsset } from '@principal-ai/subsystems-core/node';
 import { TopicService } from '../../main-process-api/TopicService';
 import {
   describeRejection,
@@ -33,7 +31,6 @@ import {
   prepareImageAsset,
 } from './topicImageDrop';
 import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
-import { useWorkspaceFileIndex } from '../../hooks/useWorkspaceFileIndex';
 import { useRepoPurlResolver } from '../../hooks/useRepoPurlResolver';
 
 /**
@@ -147,13 +144,6 @@ export interface TopicDescriptionBodyProps {
   /** Event bus — used to open clicked doc links / mermaid blocks as tabs. */
   events: PanelEventEmitter;
   /**
-   * Workspace whose member repositories doc links resolve against. Topic notes
-   * span projects and usually have no single "current repo", so links are
-   * matched against the file trees of every repo in this workspace. Safe to
-   * omit (e.g. the Topics view tab) — links then open optimistically.
-   */
-  workspaceId?: string;
-  /**
    * Fallback repo for resolving links before the workspace file index has
    * loaded (the currently selected repo, when there is one).
    */
@@ -186,7 +176,6 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
   topicId,
   visible = true,
   events,
-  workspaceId,
   repositoryPath,
   onEdit,
   linkSource = 'topic-notes',
@@ -195,12 +184,10 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
   onTocAvailableChange,
 }) => {
   const { theme } = useTheme();
-  const { resolve } = useWorkspaceFileIndex(workspaceId);
   const { resolvePurl } = useRepoPurlResolver();
   const { onLinkClick, notice, dismissNotice, openCandidate } =
     useMarkdownLinkHandler({
       events,
-      resolve,
       resolvePurl,
       repositoryPath,
       source: linkSource,
@@ -675,12 +662,7 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
           >
             Loading…
           </div>
-        ) : description === null ? (
-          // Load in flight but still inside the grace period — render nothing
-          // rather than briefly flashing the "no description yet" empty state
-          // before the real content arrives.
-          null
-        ) : trimmed ? (
+        ) : description === null ? null : trimmed ? (
           // Cap the prose at a comfortable reading measure, centered within its
           // column. When the column is 800 wide (rail present) this reads as
           // left-aligned; when the column fills the view (rail collapsed) the

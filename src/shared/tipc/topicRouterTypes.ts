@@ -6,7 +6,7 @@
  */
 
 import type { ActionContext } from '@egoist/tipc/main';
-import type { DraftTopic as Topic } from '@principal-ai/principal-view-core';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import type {
   CreateTopicInput,
   FetchSharedTopicResult,
@@ -77,25 +77,6 @@ export interface AttachImageAssetInput {
 
 export interface DeleteTopicInput {
   id: string;
-}
-
-export interface AddTrailInput {
-  topicId: string;
-  trailId: string;
-}
-
-export interface RemoveTrailInput {
-  topicId: string;
-  trailId: string;
-}
-
-export interface ReorderTrailsInput {
-  topicId: string;
-  trailIds: string[];
-}
-
-export interface GetTopicsForTrailInput {
-  trailId: string;
 }
 
 /** Input to {@link TopicRouterType.topic_fetchSharedById}. */
@@ -173,30 +154,6 @@ export type TopicRouterType = Record<
       context: ActionContext;
       input: DeleteTopicInput;
     }) => Promise<boolean>;
-  };
-  topic_addTrailToTopic: {
-    action: (args: {
-      context: ActionContext;
-      input: AddTrailInput;
-    }) => Promise<Topic>;
-  };
-  topic_removeTrailFromTopic: {
-    action: (args: {
-      context: ActionContext;
-      input: RemoveTrailInput;
-    }) => Promise<Topic>;
-  };
-  topic_reorderTopicTrails: {
-    action: (args: {
-      context: ActionContext;
-      input: ReorderTrailsInput;
-    }) => Promise<Topic>;
-  };
-  topic_getTopicsForTrail: {
-    action: (args: {
-      context: ActionContext;
-      input: GetTopicsForTrailInput;
-    }) => Promise<Topic[]>;
   };
   topic_fetchSharedById: {
     action: (args: {

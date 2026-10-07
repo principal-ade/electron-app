@@ -4,7 +4,7 @@
  * Two-layer store:
  *
  * 1. Canonical topic payload: a file-per-topic `TopicStore` at
- *    `~/.principal/topics/`, owned by `@principal-ai/principal-view-core`.
+ *    `~/.principal/topics/`, owned by `@principal-ai/subsystems-core`.
  *
  * 2. Desktop-only sync metadata (origin, remoteId, visibility, timestamps)
  *    lives in a sidecar file `~/.alexandria/topics-sync.json` keyed by
@@ -14,8 +14,8 @@
  * {@link getTopics}; sync/publish UIs use {@link getRecord}/{@link getRecords}.
  */
 
-import type { DraftTopic as Topic } from '@principal-ai/principal-view-core';
-import { TopicStore, TOPICS_DIR } from '@principal-ai/principal-view-core/node';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
+import { TopicStore, TOPICS_DIR } from '@principal-ai/subsystems-core/node';
 import { homedir } from 'os';
 import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
@@ -25,31 +25,11 @@ import type {
   LocalTopicSync,
   PublishedTopicVisibility,
   PublishTopicResult,
-  TopicTrailPublishResult,
   UpdateTopicInput,
 } from '../../shared/main-process-api-interfaces/TopicAPI';
 
-import {
-  addTrailOnWebAde,
-  patchTopicOnWebAde,
-  publishTopicToWebAde,
-  removeTrailOnWebAde,
-  reorderTrailsOnWebAde,
-} from '../topics/topicShare';
+import { patchTopicOnWebAde, publishTopicToWebAde } from '../topics/topicShare';
 import { isPublishableRepoPurl } from '../../shared/topics/repoPurl';
-import { getTrailStore } from '../file-city/trailStore';
-import { TrailShareError } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
-
-/**
- * Pull the web-ade trail id out of a shared trail's `sharedUrl`
- * (`…/trail/{id}`). The desktop doesn't persist the server id as its own
- * field — `sharedUrl` (set by `markShared` at share time) is the record of
- * the trail's web-ade identity.
- */
-function trailIdFromSharedUrl(sharedUrl: string): string | null {
-  const match = sharedUrl.match(/\/trail\/([^/?#]+)/);
-  return match ? match[1] : null;
-}
 
 interface TopicsSyncFile {
   version: string;
@@ -114,7 +94,6 @@ export class TopicRegistryService {
       id: input.id,
       title: input.title,
       description: input.description,
-      trailIds: input.trailIds ?? [],
       createdBy: input.createdBy,
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.repos !== undefined ? { repos: input.repos } : {}),
@@ -200,79 +179,13 @@ export class TopicRegistryService {
     return removed;
   }
 
-  // ===== Trail membership =====
-
-  async addTrailToTopic(topicId: string, trailId: string): Promise<Topic> {
-    // Write-through when published: the remote add is gated (trail must be
-    // shared, no dupes, 50-cap) and throws on rejection, so local membership
-    // only changes after web-ade accepts it.
-    const existing = this.readSync(topicId);
-    if (existing?.remoteId) {
-      // Remote references the trail by its web-ade id; share the local trail
-      // first if it isn't already, then add by the resolved id.
-      const [remoteTrailId] = await this.resolveRemoteTrailIds([trailId], {
-        shareIfNeeded: true,
-      });
-      await addTrailOnWebAde(existing.remoteId, remoteTrailId);
-      const local = await this.topicStore.addTrailToTopic(topicId, trailId);
-      this.touchSynced(topicId, local.updatedAt);
-      return local;
-    }
-    const topic = await this.topicStore.addTrailToTopic(topicId, trailId);
-    this.touchSync(topicId, topic.updatedAt);
-    return topic;
-  }
-
-  async removeTrailFromTopic(topicId: string, trailId: string): Promise<Topic> {
-    const existing = this.readSync(topicId);
-    if (existing?.remoteId) {
-      // The trail is already in a published topic, so it's already shared —
-      // resolve its web-ade id (no re-share) and remove by that id.
-      const [remoteTrailId] = await this.resolveRemoteTrailIds([trailId], {
-        shareIfNeeded: false,
-      });
-      await removeTrailOnWebAde(existing.remoteId, remoteTrailId);
-      const local = await this.topicStore.removeTrailFromTopic(
-        topicId,
-        trailId,
-      );
-      this.touchSynced(topicId, local.updatedAt);
-      return local;
-    }
-    const topic = await this.topicStore.removeTrailFromTopic(topicId, trailId);
-    this.touchSync(topicId, topic.updatedAt);
-    return topic;
-  }
-
-  async reorderTopicTrails(
-    topicId: string,
-    trailIds: string[],
-  ): Promise<Topic> {
-    const existing = this.readSync(topicId);
-    if (existing?.remoteId) {
-      // Reorder is a permutation of already-shared trails — translate the
-      // local order into web-ade ids without sharing anything new.
-      const remoteOrder = await this.resolveRemoteTrailIds(trailIds, {
-        shareIfNeeded: false,
-      });
-      await reorderTrailsOnWebAde(existing.remoteId, remoteOrder);
-      const local = await this.topicStore.reorderTopicTrails(topicId, trailIds);
-      this.touchSynced(topicId, local.updatedAt);
-      return local;
-    }
-    const topic = await this.topicStore.reorderTopicTrails(topicId, trailIds);
-    this.touchSync(topicId, topic.updatedAt);
-    return topic;
-  }
-
   // ===== Publishing =====
 
   /**
    * Publish a local topic to web-ade and stamp the server-assigned id onto
    * `sync.remoteId`. After this, the topic is sync-gated — subsequent edits
    * write through to web-ade (see {@link updateTopic} et al.). Throws,
-   * leaving local state untouched, when the publish fails (e.g. a referenced
-   * trail isn't shared yet). Re-publishing an already-published topic is a
+   * leaving local state untouched when the publish fails. Re-publishing an already-published topic is a
    * no-op that just returns its current record + link.
    *
    * `visibility` is the web-ade audience (`'private' | 'public'`) — a per-publish
@@ -292,20 +205,8 @@ export class TopicRegistryService {
         url: this.topicUrl(existing.remoteId),
         record: { topic, sync: existing },
         visibility,
-        trailResults: [],
       };
     }
-
-    // A topic stores LOCAL trail ids, but web-ade references trails by their
-    // server-minted id. Resolve each: already-shared trails contribute the id
-    // from their `sharedUrl`; unshared ones are published now (sharing mints
-    // the id we then reference). `trailResults` collects the per-trail outcome
-    // so the renderer can show what happened to each.
-    const trailResults: TopicTrailPublishResult[] = [];
-    const remoteTrailIds = await this.resolveRemoteTrailIds(topic.trailIds, {
-      shareIfNeeded: true,
-      collect: trailResults,
-    });
 
     // Only portable repo PURLs cross the wire — machine-local ones
     // (`pkg:generic/local/...`) are meaningless to other readers and web-ade
@@ -315,7 +216,6 @@ export class TopicRegistryService {
     const published = await publishTopicToWebAde({
       title: topic.title,
       description: topic.description,
-      trailIds: remoteTrailIds,
       visibility,
       ...(topic.status !== undefined ? { status: topic.status } : {}),
       ...(publishableRepos !== undefined ? { repos: publishableRepos } : {}),
@@ -332,70 +232,7 @@ export class TopicRegistryService {
       url: published.url,
       record: { topic, sync },
       visibility,
-      trailResults,
     };
-  }
-
-  /**
-   * Translate a topic's LOCAL trail ids into the web-ade trail ids a
-   * published topic must reference. An already-shared trail contributes the
-   * id parsed from its `sharedUrl`; an unshared trail is published now (when
-   * `shareIfNeeded`) and contributes the id `share` returns. Throws a typed
-   * `TrailShareError` — surfaced to the user — when a trail can't be resolved
-   * (not in the local library, or unshared while `shareIfNeeded` is false).
-   */
-  private async resolveRemoteTrailIds(
-    localTrailIds: string[],
-    opts: { shareIfNeeded: boolean; collect?: TopicTrailPublishResult[] },
-  ): Promise<string[]> {
-    if (localTrailIds.length === 0) return [];
-    const store = getTrailStore();
-    const { entries } = await store.list();
-    const byId = new Map(entries.map((e) => [e.id, e]));
-
-    const remoteIds: string[] = [];
-    for (const localId of localTrailIds) {
-      const entry = byId.get(localId);
-      if (!entry) {
-        throw new TrailShareError(
-          'PAYLOAD_NOT_FOUND',
-          `Trail ${localId} isn't in your local library, so it can't be published with this topic.`,
-        );
-      }
-      if (entry.sharedAt && entry.sharedUrl) {
-        const webAdeId = trailIdFromSharedUrl(entry.sharedUrl);
-        if (!webAdeId) {
-          throw new TrailShareError(
-            'WEB_ADE_ERROR',
-            `Couldn't read the shared id for trail "${entry.title}".`,
-          );
-        }
-        remoteIds.push(webAdeId);
-        opts.collect?.push({
-          id: localId,
-          title: entry.title,
-          outcome: 'already-shared',
-        });
-      } else if (opts.shareIfNeeded) {
-        const result = await store.share(localId);
-        remoteIds.push(result.id);
-        opts.collect?.push({
-          id: localId,
-          title: entry.title,
-          outcome: 'published',
-        });
-      } else {
-        throw new TrailShareError(
-          'SHARE_NOT_FOUND',
-          `Trail "${entry.title}" must be shared before it can be on a published topic.`,
-        );
-      }
-    }
-    return remoteIds;
-  }
-
-  async getTopicsForTrail(trailId: string): Promise<Topic[]> {
-    return this.topicStore.getTopicsForTrail(trailId);
   }
 
   // ===== Agent session links =====
@@ -494,29 +331,6 @@ export class TopicRegistryService {
       delete file.records[topicId];
       this.writeSyncFile(file);
     }
-  }
-
-  /** Bump `locallyModifiedAt` without other changes. Used after trail edits. */
-  private touchSync(topicId: string, isoTimestamp: string): void {
-    const existing = this.readSync(topicId) ?? this.defaultSync(isoTimestamp);
-    this.writeSync(topicId, {
-      ...existing,
-      locallyModifiedAt: isoTimestamp,
-    });
-  }
-
-  /**
-   * Bump both `lastSyncedAt` and `locallyModifiedAt`. Used after a write-
-   * through edit lands on web-ade, so the two timestamps stay equal (the
-   * local copy is, by construction, identical to the just-confirmed remote).
-   */
-  private touchSynced(topicId: string, isoTimestamp: string): void {
-    const existing = this.readSync(topicId) ?? this.defaultSync(isoTimestamp);
-    this.writeSync(topicId, {
-      ...existing,
-      lastSyncedAt: isoTimestamp,
-      locallyModifiedAt: isoTimestamp,
-    });
   }
 
   /** Public web-ade URL for a published topic, from the same base the share

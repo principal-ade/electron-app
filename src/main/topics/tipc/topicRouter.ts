@@ -8,21 +8,17 @@
 
 import { tipc } from '@egoist/tipc/main';
 import { BrowserWindow } from 'electron';
-import type { DraftTopic as Topic } from '@principal-ai/principal-view-core';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import { TopicRegistryService } from '../../stores/TopicRegistryService';
 import { TopicAPIEvent } from '../../../shared/main-process-api-interfaces/TopicAPI';
 import type {
-  AddTrailInput,
   AppendDescriptionInput,
   AttachImageAssetInput,
   DeleteTopicInput,
   FetchSharedTopicInput,
   GetTopicInput,
-  GetTopicsForTrailInput,
   LinkSessionInput,
   PublishTopicInput,
-  RemoveTrailInput,
-  ReorderTrailsInput,
   UpdateTopicInputArgs,
 } from '../../../shared/tipc/topicRouterTypes';
 import { fetchSharedTopicById } from '../topicShare';
@@ -60,12 +56,6 @@ export const topicRouter = {
       return registryService.getTopic(input.id);
     }),
 
-  topic_getTopicsForTrail: t.procedure
-    .input<GetTopicsForTrailInput>()
-    .action(async ({ input }) => {
-      return registryService.getTopicsForTrail(input.trailId);
-    }),
-
   // Hydrate a topic published to web-ade by id. Unlike the queries above
   // (which read the local registry), this reaches the shared registry over
   // HTTP — the inbox's topic tab opens topics that may not exist locally.
@@ -77,8 +67,7 @@ export const topicRouter = {
 
   // Publish a local topic to web-ade and stamp its server id onto sync
   // metadata. Broadcast UPDATED so list/detail views reflect the now-shared
-  // state. Throws (rejecting the publish) when a referenced trail isn't
-  // shared yet — the renderer surfaces the typed error.
+  // state.
   topic_publishTopic: t.procedure
     .input<PublishTopicInput>()
     .action(async ({ input }) => {
@@ -211,39 +200,6 @@ export const topicRouter = {
         broadcastTopicEvent(TopicAPIEvent.TOPIC_REMOVED, { id: input.id });
       }
       return removed;
-    }),
-
-  topic_addTrailToTopic: t.procedure
-    .input<AddTrailInput>()
-    .action(async ({ input }) => {
-      const topic = await registryService.addTrailToTopic(
-        input.topicId,
-        input.trailId,
-      );
-      broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
-      return topic;
-    }),
-
-  topic_removeTrailFromTopic: t.procedure
-    .input<RemoveTrailInput>()
-    .action(async ({ input }) => {
-      const topic = await registryService.removeTrailFromTopic(
-        input.topicId,
-        input.trailId,
-      );
-      broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
-      return topic;
-    }),
-
-  topic_reorderTopicTrails: t.procedure
-    .input<ReorderTrailsInput>()
-    .action(async ({ input }) => {
-      const topic = await registryService.reorderTopicTrails(
-        input.topicId,
-        input.trailIds,
-      );
-      broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
-      return topic;
     }),
 
   // User-initiated session→topic link from the SessionsPanel. Mirrors the

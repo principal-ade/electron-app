@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React from 'react';
 import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
-import type { TopicStatus } from '@principal-ai/principal-view-core';
+import type { TopicStatus } from '@principal-ai/subsystems-core/node';
 import { TopicsPanel } from './TopicsPanel';
 import { TopicService } from '../../main-process-api/TopicService';
-import { TrailLibraryService } from '../../services/TrailLibraryService';
+import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import type { LocalTopicRecord } from '../../../shared/main-process-api-interfaces/TopicAPI';
 
 /**
  * `TopicsPanel` reads topic records through `TopicService.getRecords` and the
- * current repo's saved trails through `TrailLibraryService.list`. Each story
- * installs an in-memory dataset on those statics before render so the panel
+ * current repo through `AlexandriaService`. Each story installs an in-memory
+ * dataset on those statics before render so the panel
  * exercises the This repo / All toggle, search, status filter, and badges
  * without a running main process.
  */
@@ -30,7 +30,6 @@ const record = (
 ): LocalTopicRecord => ({
   topic: {
     description: '',
-    trailIds: [],
     createdAt: ago(7 * DAY),
     updatedAt: ago(2 * HOUR),
     ...partial,
@@ -43,8 +42,7 @@ const record = (
   },
 });
 
-// Trails saved against the current repo. Only `id` is read by the hook.
-const REPO_TRAIL_IDS = ['t-auth-1', 't-auth-2', 't-city-1'];
+const REPO_PURL = 'pkg:github/me/electron-app';
 
 const RECORDS: LocalTopicRecord[] = [
   // Entirely within this repo.
@@ -52,7 +50,7 @@ const RECORDS: LocalTopicRecord[] = [
     {
       id: 'topic-auth',
       title: 'Auth flow end-to-end',
-      trailIds: ['t-auth-1', 't-auth-2'],
+      repos: [REPO_PURL],
       status: status('working'),
       updatedAt: ago(20 * MIN),
     },
@@ -62,7 +60,7 @@ const RECORDS: LocalTopicRecord[] = [
   record({
     id: 'topic-city',
     title: 'File City rendering pipeline',
-    trailIds: ['t-city-1', 't-web-1', 't-web-2'],
+    repos: [REPO_PURL, 'pkg:github/me/web-ade'],
     status: status('paused'),
     updatedAt: ago(3 * HOUR),
   }),
@@ -70,14 +68,14 @@ const RECORDS: LocalTopicRecord[] = [
   record({
     id: 'topic-web',
     title: 'Web-ADE publish path',
-    trailIds: ['t-web-1', 't-web-3'],
+    repos: ['pkg:github/me/web-ade'],
     status: status('done-for-now'),
     updatedAt: ago(2 * DAY),
   }),
   record({
     id: 'topic-idea',
     title: 'Idea: cross-repo trail search',
-    trailIds: ['t-web-9'],
+    repos: ['pkg:github/me/other'],
     status: status('new-thought'),
     updatedAt: ago(5 * DAY),
   }),
@@ -85,7 +83,7 @@ const RECORDS: LocalTopicRecord[] = [
 
 function install(
   records: LocalTopicRecord[],
-  repoTrailIds: string[] = REPO_TRAIL_IDS,
+  repoPurl: string | null = REPO_PURL,
 ) {
   (
     TopicService as unknown as { getRecords: () => Promise<LocalTopicRecord[]> }
@@ -94,13 +92,15 @@ function install(
     TopicService as unknown as { onTopicChange: () => () => void }
   ).onTopicChange = () => () => {};
   (
-    TrailLibraryService as unknown as {
-      list: () => Promise<{ entries: Array<{ id: string }> }>;
+    AlexandriaService as unknown as {
+      getRepositoryByPath: typeof AlexandriaService.getRepositoryByPath;
     }
-  ).list = async () => ({ entries: repoTrailIds.map((id) => ({ id })) });
-  (
-    TrailLibraryService as unknown as { onLibraryChanged: () => () => void }
-  ).onLibraryChanged = () => () => {};
+  ).getRepositoryByPath = async () =>
+    repoPurl
+      ? ({ purl: repoPurl } as Awaited<
+          ReturnType<typeof AlexandriaService.getRepositoryByPath>
+        >)
+      : null;
 }
 
 const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -142,7 +142,7 @@ export const Populated: Story = {
 
 export const NoRepoOpen: Story = {
   render: () => {
-    install(RECORDS, []);
+    install(RECORDS, null);
     return (
       <Frame>
         <TopicsPanel />
@@ -153,8 +153,8 @@ export const NoRepoOpen: Story = {
 
 export const NoTopicsForRepo: Story = {
   render: () => {
-    // Repo has saved trails, but no topic references them.
-    install(RECORDS, ['t-unrelated']);
+    // No topic declares this repository.
+    install(RECORDS, 'pkg:github/me/unrelated');
     return (
       <Frame>
         <TopicsPanel repositoryPath={REPO} />
@@ -165,7 +165,7 @@ export const NoTopicsForRepo: Story = {
 
 export const Empty: Story = {
   render: () => {
-    install([], []);
+    install([], null);
     return (
       <Frame>
         <TopicsPanel repositoryPath={REPO} />

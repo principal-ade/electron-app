@@ -30,7 +30,7 @@ import {
   ListFilter,
   Plus,
 } from 'lucide-react';
-import type { Topic } from '@principal-ai/alexandria-core-library/types';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { NewTopicModal } from '../components/NewTopicModal';
 import { TopicService } from '../main-process-api/TopicService';
@@ -41,7 +41,7 @@ import {
   normalizeState,
   stateColor,
   type TopicStatusState,
-} from '../alexandria-workspace/topic-description-tab/topicStatusModel';
+} from '../topics-view/topic-description/topicStatusModel';
 import { getPrincipalBridgeUrl } from '../../shared/config/appBranding';
 
 /** Compact "x ago" relative time from an ISO timestamp. */
@@ -192,10 +192,9 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
     return visibleTopics.map((topic) => {
       const state = normalizeState(topic.status?.state);
       const color = stateColor(state, theme);
-      const trailCount = topic.trailIds.length;
+      const projectCount = topic.repos?.length ?? 0;
       const hovered = hoveredId === topic.id;
       const active = activeTabId === `local-topic-${topic.id}`;
-      const trailText = `${trailCount} ${trailCount === 1 ? 'trail' : 'trails'}`;
       const statusName = topic.status?.label || stateLabel(state);
       // Drag the topic into a terminal as an agent prompt that hydrates it
       // from the local bridge — mirrors the dev-workspace Topics panel.
@@ -283,7 +282,9 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {trailText}
+                {projectCount > 0
+                  ? `${projectCount} ${projectCount === 1 ? 'project' : 'projects'}`
+                  : 'No projects'}
               </span>
               <span style={{ flexShrink: 0 }}>{timeAgo(topic.updatedAt)}</span>
             </div>

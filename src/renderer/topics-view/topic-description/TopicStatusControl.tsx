@@ -11,15 +11,17 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import type { TopicStatus } from '@principal-ai/principal-view-core';
+import type { TopicStatus } from '@principal-ai/subsystems-core/node';
 import { TopicService } from '../../main-process-api/TopicService';
 import { useTheme } from '@principal-ade/industry-theme';
 import { normalizeState, type TopicStatusState } from './topicStatusModel';
 import { TopicStatusGraph } from './TopicStatusGraph';
 
-type RefKind = NonNullable<NonNullable<TopicStatus['waitingOn']>['ref']>['kind'];
+type RefKind = NonNullable<
+  NonNullable<TopicStatus['waitingOn']>['ref']
+>['kind'];
 
-const REF_KINDS: readonly RefKind[] = ['url', 'pr', 'issue', 'topic', 'trail'];
+const REF_KINDS: readonly RefKind[] = ['url', 'pr', 'issue', 'topic'];
 
 export interface TopicStatusControlProps {
   topicId: string;
@@ -36,10 +38,14 @@ export const TopicStatusControl: React.FC<TopicStatusControlProps> = ({
   // Local draft, seeded from the topic. Re-seeds when the topic changes (so
   // switching topics resets the form) but not on every prop change, so a live
   // refresh from onTopicChange won't clobber an in-progress edit.
-  const [state, setState] = useState<TopicStatusState>(normalizeState(status?.state));
+  const [state, setState] = useState<TopicStatusState>(
+    normalizeState(status?.state),
+  );
   const [label, setLabel] = useState(status?.label ?? '');
   const [note, setNote] = useState(status?.waitingOn?.note ?? '');
-  const [until, setUntil] = useState(status?.waitingOn?.until?.slice(0, 10) ?? '');
+  const [until, setUntil] = useState(
+    status?.waitingOn?.until?.slice(0, 10) ?? '',
+  );
   const [refKind, setRefKind] = useState<RefKind>(
     status?.waitingOn?.ref?.kind ?? 'url',
   );
@@ -72,7 +78,10 @@ export const TopicStatusControl: React.FC<TopicStatusControlProps> = ({
       if (overrides.note.trim()) waitingOn.note = overrides.note.trim();
       if (overrides.until.trim()) waitingOn.until = overrides.until.trim();
       if (overrides.refValue.trim())
-        waitingOn.ref = { kind: overrides.refKind, value: overrides.refValue.trim() };
+        waitingOn.ref = {
+          kind: overrides.refKind,
+          value: overrides.refValue.trim(),
+        };
       if (Object.keys(waitingOn).length > 0) next.waitingOn = waitingOn;
     }
     return next;

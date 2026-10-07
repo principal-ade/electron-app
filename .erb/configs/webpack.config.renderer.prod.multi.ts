@@ -36,11 +36,6 @@ const devWorkspaceEntryPath = path.join(
   'index.tsx',
 );
 const legacyEntryPath = path.join(webpackPaths.srcRendererPath, 'index.tsx');
-const alexandriaWorkspaceEntryPath = path.join(
-  webpackPaths.srcRendererPath,
-  'alexandria-workspace',
-  'index.tsx',
-);
 const titlebarEntryPath = path.join(
   webpackPaths.srcPath,
   'titlebar',
@@ -97,25 +92,6 @@ if (fs.existsSync(devWorkspaceEntryPath)) {
       isBrowser: false,
       isDevelopment: false,
     }),
-  );
-}
-
-// Register Alexandria Workspace entry when present
-if (fs.existsSync(alexandriaWorkspaceEntryPath)) {
-  entryPoints['alexandria-workspace'] = alexandriaWorkspaceEntryPath;
-  htmlPlugins.push(
-    new HtmlWebpackPlugin({
-      filename: 'alexandria-workspace.html',
-      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
-      chunks: ['alexandria-workspace'],
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true,
-      },
-      isBrowser: false,
-      isDevelopment: false,
-    })
   );
 }
 
@@ -403,6 +379,10 @@ const configuration: webpack.Configuration = {
     extensions: ['.js', '.jsx', '.json', '.ts', '.tsx'],
     modules: [webpackPaths.srcPath, 'node_modules'],
     alias: {
+      'module$': path.resolve(
+        webpackPaths.srcRendererPath,
+        'utils/nodeModuleShim.ts',
+      ),
       react: path.resolve(webpackPaths.rootPath, 'node_modules/react'),
       'react-dom': path.resolve(webpackPaths.rootPath, 'node_modules/react-dom'),
       'react/jsx-runtime': path.resolve(
@@ -420,6 +400,7 @@ const configuration: webpack.Configuration = {
     })],
     fallback: {
       fs: false,
+      os: false,
       path: require.resolve('path-browserify'),
       crypto: false,
       stream: require.resolve('stream-browserify'),

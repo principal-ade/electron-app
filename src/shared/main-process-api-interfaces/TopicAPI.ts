@@ -1,8 +1,8 @@
 /**
  * IPC API interface for Topic management.
  *
- * Topics are curated bundles of trails on a single subject. The canonical
- * Topic shape lives in @principal-ai/principal-view-core (DraftTopic); on the
+ * Topics are local subject briefs that can be published. The canonical
+ * Topic shape lives in @principal-ai/subsystems-core (DraftTopic); on the
  * desktop we wrap it in a LocalTopicRecord that carries sync metadata
  * (origin, remoteId, visibility, timestamps). Most consumers only need
  * the Topic; sync UIs ask for the full LocalTopicRecord.
@@ -12,7 +12,7 @@ import type {
   DraftTopic as Topic,
   TopicAsset,
   TopicStatus,
-} from '@principal-ai/principal-view-core';
+} from '@principal-ai/subsystems-core/node';
 
 /**
  * Sync metadata layered on top of the canonical Topic. Local-only — never
@@ -61,32 +61,15 @@ export interface FetchSharedTopicResult {
 export type PublishedTopicVisibility = 'private' | 'public';
 
 /**
- * Per-trail outcome for the trails a topic references, reported back after a
- * publish so the UI can show what happened to each (light publish detail).
- */
-export interface TopicTrailPublishResult {
-  /** Local trail id. */
-  id: string;
-  title?: string;
-  /**
-   * `'already-shared'` — the trail was already on web-ade, reused as-is.
-   * `'published'` — the trail was shared as part of this topic publish.
-   */
-  outcome: 'already-shared' | 'published';
-}
-
-/**
  * Result of publishing a local topic to web-ade. `url` is the public topic
  * link (for copy-to-clipboard); `record` is the local record after its
  * `sync.remoteId` was stamped, so the renderer reflects the now-shared state
- * without a refetch. `visibility` echoes the audience it was published with,
- * and `trailResults` reports what happened to each referenced trail.
+ * without a refetch. `visibility` echoes the audience it was published with.
  */
 export interface PublishTopicResult {
   url: string;
   record: LocalTopicRecord;
   visibility: PublishedTopicVisibility;
-  trailResults: TopicTrailPublishResult[];
 }
 
 export enum TopicEventType {
@@ -107,10 +90,6 @@ export enum TopicAPIEvent {
   CREATE = 'topic:create',
   UPDATE = 'topic:update',
   DELETE = 'topic:delete',
-  ADD_TRAIL = 'topic:add-trail',
-  REMOVE_TRAIL = 'topic:remove-trail',
-  REORDER_TRAILS = 'topic:reorder-trails',
-  GET_FOR_TRAIL = 'topic:get-for-trail',
   TOPIC_ADDED = 'topic:topic-added',
   TOPIC_UPDATED = 'topic:topic-updated',
   TOPIC_REMOVED = 'topic:topic-removed',
@@ -140,7 +119,6 @@ export interface TopicActivateEvent {
 export interface CreateTopicInput {
   title: string;
   description?: string;
-  trailIds?: string[];
   createdBy?: { githubId: number; githubLogin: string };
   /** Optional explicit id; defaults to a locally generated one. */
   id?: string;
@@ -150,8 +128,7 @@ export interface CreateTopicInput {
   status?: TopicStatus;
   /**
    * Repositories this topic is about, as PURL strings (e.g.
-   * `pkg:github/owner/repo`). Usually seeded from the topic's workspace, but a
-   * caller may set them explicitly (e.g. round-tripping a received shared topic).
+   * `pkg:github/owner/repo`). Declared by the topic itself.
    */
   repos?: string[];
 }
@@ -196,18 +173,6 @@ export interface TopicAPI {
   /** Patch title/description/visibility/createdBy. */
   updateTopic(id: string, updates: UpdateTopicInput): Promise<Topic>;
 
-  /** Permanently delete a topic. Does not cascade to trails. */
+  /** Permanently delete a topic. */
   deleteTopic(id: string): Promise<boolean>;
-
-  /** Append a trail to the topic's ordered list. Idempotent. */
-  addTrailToTopic(topicId: string, trailId: string): Promise<Topic>;
-
-  /** Remove a trail from the topic. Idempotent. */
-  removeTrailFromTopic(topicId: string, trailId: string): Promise<Topic>;
-
-  /** Replace the trail list with a permutation of the existing one. */
-  reorderTopicTrails(topicId: string, trailIds: string[]): Promise<Topic>;
-
-  /** Find topics that include the given trail. */
-  getTopicsForTrail(trailId: string): Promise<Topic[]>;
 }

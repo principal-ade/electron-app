@@ -60,22 +60,10 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
     },
   },
   {
-    id: 'canvas-editor',
-    name: 'Canvas Editor',
-    description: 'Canvas Editor, Terminal, File City',
-    layout: { left: 'canvasEditor', middle: 'terminal', right: 'fileCity' },
-  },
-  {
     id: 'docs-focused',
     name: 'Documentation Focus',
     description: 'Documentation, Terminal, Documentation',
     layout: { left: 'docs', middle: 'terminal', right: 'docs' },
-  },
-  {
-    id: 'terminal-focused',
-    name: 'Terminal Focus',
-    description: 'File City, Terminal, Canvas Editor',
-    layout: { left: 'fileCity', middle: 'terminal', right: 'canvasEditor' },
   },
   {
     id: 'storybook',
@@ -126,16 +114,6 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
       left: 'agentsList',
       middle: 'terminal',
       right: 'agentDetail',
-    },
-  },
-  {
-    id: 'canvas-viewer',
-    name: 'Canvas Viewer',
-    description: 'Architecture, Terminal, Canvas Editor',
-    layout: {
-      left: 'canvasList',
-      middle: 'terminal',
-      right: 'canvasEditor',
     },
   },
 ];

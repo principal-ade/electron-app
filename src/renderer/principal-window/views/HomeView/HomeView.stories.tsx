@@ -7,14 +7,10 @@ import { SkillLockService } from '../../../main-process-api/SkillLockService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { GitService } from '../../../main-process-api/GitService';
 import { TopicService } from '../../../main-process-api/TopicService';
-import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
-import type {
-  AlexandriaEntry,
-  Topic,
-  Workspace,
-} from '@principal-ai/alexandria-core-library/types';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 
 /**
  * HomeView is the trails entry/onboarding surface. It has three render
@@ -39,8 +35,6 @@ interface MockState {
   repositories?: AlexandriaEntry[];
   /** Topics returned by `TopicService.getTopics`. */
   topics?: Topic[];
-  /** Workspaces returned by `WorkspaceService.getWorkspaces`. */
-  workspaces?: Workspace[];
 }
 
 let activeMocks: MockState = { skillInstalled: false, trails: [] };
@@ -52,61 +46,78 @@ const withMocks = (state: MockState): void => {
 
 // ---------- static service patches (installed once) ----------
 
-(TrailLibraryService as unknown as { list: typeof TrailLibraryService.list }).list =
-  async () => ({ entries: activeMocks.trails });
-(TrailLibraryService as unknown as {
-  onLibraryChanged: typeof TrailLibraryService.onLibraryChanged;
-}).onLibraryChanged = () => () => {};
+(
+  TrailLibraryService as unknown as { list: typeof TrailLibraryService.list }
+).list = async () => ({ entries: activeMocks.trails });
+(
+  TrailLibraryService as unknown as {
+    onLibraryChanged: typeof TrailLibraryService.onLibraryChanged;
+  }
+).onLibraryChanged = () => () => {};
 
-(SkillLockService as unknown as {
-  isSkillInstalled: typeof SkillLockService.isSkillInstalled;
-}).isSkillInstalled = async () => activeMocks.skillInstalled;
-(SkillLockService as unknown as {
-  onSkillInstalled: typeof SkillLockService.onSkillInstalled;
-}).onSkillInstalled = () => () => {};
-(SkillLockService as unknown as {
-  onSkillUninstalled: typeof SkillLockService.onSkillUninstalled;
-}).onSkillUninstalled = () => () => {};
+(
+  SkillLockService as unknown as {
+    isSkillInstalled: typeof SkillLockService.isSkillInstalled;
+  }
+).isSkillInstalled = async () => activeMocks.skillInstalled;
+(
+  SkillLockService as unknown as {
+    onSkillInstalled: typeof SkillLockService.onSkillInstalled;
+  }
+).onSkillInstalled = () => () => {};
+(
+  SkillLockService as unknown as {
+    onSkillUninstalled: typeof SkillLockService.onSkillUninstalled;
+  }
+).onSkillUninstalled = () => () => {};
 
-(AlexandriaService as unknown as {
-  getRepositories: typeof AlexandriaService.getRepositories;
-}).getRepositories = async () => activeMocks.repositories ?? [];
+(
+  AlexandriaService as unknown as {
+    getRepositories: typeof AlexandriaService.getRepositories;
+  }
+).getRepositories = async () => activeMocks.repositories ?? [];
 
-(TopicService as unknown as { getTopics: typeof TopicService.getTopics }).getTopics =
-  async () => activeMocks.topics ?? [];
-(TopicService as unknown as {
-  onTopicChange: typeof TopicService.onTopicChange;
-}).onTopicChange = () => () => {};
+(
+  TopicService as unknown as { getTopics: typeof TopicService.getTopics }
+).getTopics = async () => activeMocks.topics ?? [];
+(
+  TopicService as unknown as {
+    onTopicChange: typeof TopicService.onTopicChange;
+  }
+).onTopicChange = () => () => {};
 
-(WorkspaceService as unknown as {
-  getWorkspaces: typeof WorkspaceService.getWorkspaces;
-}).getWorkspaces = async () => activeMocks.workspaces ?? [];
-(WorkspaceService as unknown as {
-  onWorkspaceChange: typeof WorkspaceService.onWorkspaceChange;
-}).onWorkspaceChange = () => () => {};
-(WorkspaceService as unknown as {
-  getRepositoriesInWorkspace: typeof WorkspaceService.getRepositoriesInWorkspace;
-}).getRepositoriesInWorkspace = async () => activeMocks.repositories ?? [];
-
-(UserPreferencesService as unknown as {
-  getPreferences: typeof UserPreferencesService.getPreferences;
-}).getPreferences = async () =>
+(
+  UserPreferencesService as unknown as {
+    getPreferences: typeof UserPreferencesService.getPreferences;
+  }
+).getPreferences = async () =>
   ({ baseDefaultDirectory: '/Users/fernando/Developer' }) as Awaited<
     ReturnType<typeof UserPreferencesService.getPreferences>
   >;
-(UserPreferencesService as unknown as {
-  onPreferencesUpdated: typeof UserPreferencesService.onPreferencesUpdated;
-}).onPreferencesUpdated = () => () => {};
+(
+  UserPreferencesService as unknown as {
+    onPreferencesUpdated: typeof UserPreferencesService.onPreferencesUpdated;
+  }
+).onPreferencesUpdated = () => () => {};
 
 // `Welcome <name>` in the header comes from the global git user.name.
-(GitService as unknown as { execCommand: typeof GitService.execCommand }).execCommand =
-  async () => ({ stdout: 'Fernando', stderr: '', code: 0, success: true });
+(
+  GitService as unknown as { execCommand: typeof GitService.execCommand }
+).execCommand = async () => ({
+  stdout: 'Fernando',
+  stderr: '',
+  code: 0,
+  success: true,
+});
 
 // ---------- fixtures ----------
 
-const minutesAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
-const hoursAgo = (n: number) => new Date(Date.now() - n * 3_600_000).toISOString();
-const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+const minutesAgo = (n: number) =>
+  new Date(Date.now() - n * 60_000).toISOString();
+const hoursAgo = (n: number) =>
+  new Date(Date.now() - n * 3_600_000).toISOString();
+const daysAgo = (n: number) =>
+  new Date(Date.now() - n * 86_400_000).toISOString();
 
 const REPO_PATH = '/Users/fernando/Developer/desktop-app/electron-app';
 const REPO_PATH_2 = '/Users/fernando/Developer/principal/terminal-panel';
@@ -177,20 +188,8 @@ const fixtureTopics: Topic[] = [
   {
     id: 'topic-1',
     title: 'Trails onboarding polish',
-    trailIds: ['t-today-1', 't-today-2'],
     createdAt: daysAgo(5),
     updatedAt: hoursAgo(3),
-  },
-];
-
-const fixtureWorkspaces: Workspace[] = [
-  {
-    id: 'ws-1',
-    name: 'Active Projects',
-    createdAt: Date.parse(daysAgo(10)),
-    updatedAt: Date.parse(hoursAgo(3)),
-    suggestedClonePath: '/Users/fernando/Developer',
-    topicIds: ['topic-1'],
   },
 ];
 
@@ -239,7 +238,7 @@ export const InstalledNoTrails: Story = {
 
 /**
  * Skills installed with saved trails: the trails dashboard — explored-repo
- * cards plus a topics section linked through a workspace.
+ * cards plus a topics section.
  */
 export const Dashboard: Story = {
   render: () => {
@@ -248,7 +247,6 @@ export const Dashboard: Story = {
       trails: fixtureTrails,
       repositories: fixtureRepositories,
       topics: fixtureTopics,
-      workspaces: fixtureWorkspaces,
     });
     return <HomeView />;
   },

@@ -51,6 +51,9 @@ const configuration: webpack.Configuration = {
 
       // Event worker bundles everything (no native modules)
       if (isEventWorker) {
+        if (request === '@principal-ai/agent-monitoring') {
+          return callback(null, `commonjs ${request}`);
+        }
         return callback();
       }
 

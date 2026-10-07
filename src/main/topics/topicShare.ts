@@ -1,12 +1,10 @@
 /**
  * Web-ade integration for published topics.
  *
- * Sibling of `file-city/trailShare.ts`, scoped to topics. Owns the HTTPS calls
- * against `/api/topics` (publish), `/api/topics/by-id/{id}` (read + edit), and
- * its `/trails` sub-routes (add/remove/reorder membership), translating HTTP
- * failures into the same typed `TrailShareError` the renderer already
- * discriminates on for shared trails (topics publish to the same registry, so
- * the error surface is shared rather than duplicated).
+ * Owns the HTTPS calls against `/api/topics` (publish) and
+ * `/api/topics/by-id/{id}` (read + edit), translating HTTP failures into the
+ * same typed `TrailShareError` the renderer already discriminates on for
+ * shared trails.
  *
  * Read (`fetchSharedTopicById`) is public-by-link, so its token is attached
  * opportunistically — present, it lets the server compute the per-user
@@ -25,13 +23,14 @@ import fetch from 'node-fetch';
 import type {
   DraftTopic as Topic,
   TopicStatus,
-} from '@principal-ai/principal-view-core';
+} from '@principal-ai/subsystems-core/node';
 import {
   TOKEN_KEYS,
   UnifiedSecureStorage,
 } from '../services/UnifiedSecureStorage';
 import { TrailShareError } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import type { FetchSharedTopicResult } from '../../shared/main-process-api-interfaces/TopicAPI';
+import { requireHostedFeature } from '../services/FeatureAvailabilityService';
 
 const apiBase = (): string =>
   process.env.WEB_ADE_API_URL || 'https://app.principal-ade.com/api';
@@ -85,9 +84,7 @@ async function readErrorBody(
 
 /**
  * Map a topic-route error response onto the shared `TrailShareError` codes.
- * `TRAIL_NOT_FOUND` (a topic referencing an unshared trail) collapses to
- * `SHARE_NOT_FOUND` — the server's message carries the specific trail, so the
- * code stays coarse while the text stays actionable.
+ * Server errors are represented with the same typed errors as shared trails.
  */
 function topicShareError(
   res: import('node-fetch').Response,
@@ -126,7 +123,7 @@ function topicShareError(
  * Shared request helper for the owner-gated topic calls: attaches the bearer
  * token, JSON-encodes the body when present, and maps non-2xx responses to a
  * `TrailShareError`. `context` is the verb phrase used in error messages
- * (e.g. "publish", "update", "add a trail to").
+ * (e.g. "publish", "update").
  */
 async function topicRequest<T>(
   method: string,
@@ -163,6 +160,7 @@ async function topicRequest<T>(
 export async function fetchSharedTopicById(
   id: string,
 ): Promise<FetchSharedTopicResult> {
+  await requireHostedFeature('trailTopicSharingAndInbox');
   const token = await getOptionalGithubToken();
   const url = `${apiBase()}/topics/by-id/${encodeURIComponent(id)}`;
   let res: import('node-fetch').Response;
@@ -197,8 +195,7 @@ export async function fetchSharedTopicById(
   return (await res.json()) as FetchSharedTopicResult;
 }
 
-/** Result of publishing a topic — the server-assigned id, its public URL, and
- *  the canonical record the server stored. */
+/** Result of publishing a topic — the server-assigned id, its URL, and record. */
 export interface PublishedTopic {
   id: string;
   url: string;
@@ -206,18 +203,16 @@ export interface PublishedTopic {
 }
 
 /**
- * Publish a topic to web-ade. The server mints its own id and gates the
- * referenced `trailIds` — every one must already be a shared trail, or the
- * call fails with a `SHARE_NOT_FOUND` naming the offending trail.
+ * Publish a topic to web-ade. The server mints its own id.
  */
 export async function publishTopicToWebAde(input: {
   title: string;
   description?: string;
-  trailIds: string[];
   status?: TopicStatus;
   repos?: string[];
   visibility?: 'private' | 'public';
 }): Promise<PublishedTopic> {
+  await requireHostedFeature('trailTopicSharingAndInbox');
   const json = await topicRequest<{ id: string; url: string; topic: Topic }>(
     'POST',
     '/topics',
@@ -225,7 +220,6 @@ export async function publishTopicToWebAde(input: {
     {
       title: input.title,
       description: input.description ?? '',
-      trailIds: input.trailIds,
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.repos !== undefined ? { repos: input.repos } : {}),
       ...(input.visibility !== undefined
@@ -247,53 +241,12 @@ export async function patchTopicOnWebAde(
     repos?: string[];
   },
 ): Promise<Topic> {
+  await requireHostedFeature('trailTopicSharingAndInbox');
   const json = await topicRequest<{ topic: Topic }>(
     'PATCH',
     `/topics/by-id/${encodeURIComponent(remoteId)}`,
     'update',
     updates,
-  );
-  return json.topic;
-}
-
-/** Append a (already-shared) trail to a published topic. */
-export async function addTrailOnWebAde(
-  remoteId: string,
-  trailId: string,
-): Promise<Topic> {
-  const json = await topicRequest<{ topic: Topic }>(
-    'POST',
-    `/topics/by-id/${encodeURIComponent(remoteId)}/trails`,
-    'add a trail to',
-    { trailId },
-  );
-  return json.topic;
-}
-
-/** Remove a trail from a published topic. */
-export async function removeTrailOnWebAde(
-  remoteId: string,
-  trailId: string,
-): Promise<Topic> {
-  const json = await topicRequest<{ topic: Topic }>(
-    'DELETE',
-    `/topics/by-id/${encodeURIComponent(remoteId)}/trails/${encodeURIComponent(trailId)}`,
-    'remove a trail from',
-  );
-  return json.topic;
-}
-
-/** Reorder a published topic's trails. The server requires the new list to be
- *  a permutation of the existing membership (no add/remove via reorder). */
-export async function reorderTrailsOnWebAde(
-  remoteId: string,
-  trailIds: string[],
-): Promise<Topic> {
-  const json = await topicRequest<{ topic: Topic }>(
-    'PATCH',
-    `/topics/by-id/${encodeURIComponent(remoteId)}/trails`,
-    'reorder trails in',
-    { trailIds },
   );
   return json.topic;
 }

@@ -67,6 +67,17 @@ export interface RepositoryUIState {
 }
 
 export interface UserPreferences {
+  /**
+   * Temporary availability switches for features that depend on unavailable
+   * hosted services. All default off for a new install.
+   */
+  featureAvailability?: {
+    repositoryInsightsAndCollections?: boolean;
+    trailTopicSharingAndInbox?: boolean;
+    presenceAndCollaboration?: boolean;
+    signIn?: boolean;
+  };
+
   // AI/LLM settings
   ollamaModel?: string; // Selected Ollama model for summarizing agent work
   ollamaModels?: string[]; // Multiple selected models for testing
@@ -152,20 +163,7 @@ export interface UserPreferences {
     theme?: boolean; // Show/hide theme dropdown in titlebar (default: false)
     customize?: boolean; // Show/hide theme customization button in titlebar (default: false)
     pullMailbox?: boolean; // Show/hide the pull mailbox in titlebar (default: false)
-    openThread?: boolean; // Show/hide the open thread button in titlebar (default: false)
     createRepository?: boolean; // Show/hide the create-repository button in the Principal titlebar (default: false)
-  };
-
-  // Alexandria Workspace window: visibility of titlebar segments.
-  // All toggles default to false (the segment is hidden until explicitly
-  // enabled).
-  alexandriaWorkspace?: {
-    titlebar?: {
-      // The "Hooks" left-panel segment that toggles the HookDebugPanel.
-      // It's a developer tool — gated off by default to keep the
-      // titlebar clean for normal use.
-      hookDebug?: boolean;
-    };
   };
 
   // Dev Workspace window: visibility of titlebar buttons and panel icon sidebars.
@@ -185,10 +183,8 @@ export interface UserPreferences {
       files?: boolean;
       terminalSessions?: boolean;
       packageComposition?: boolean;
-      canvasList?: boolean;
       docs?: boolean;
       agentsList?: boolean;
-      traceList?: boolean;
       trails?: boolean;
     };
     rightSidebarIcons?: {
@@ -359,6 +355,13 @@ export interface UserPreferences {
  */
 export const USER_PREFERENCE_DEFAULTS: {
   presenceAutoConnect: boolean;
+  featureAvailability: Required<NonNullable<UserPreferences['featureAvailability']>>;
 } = {
   presenceAutoConnect: false,
+  featureAvailability: {
+    repositoryInsightsAndCollections: false,
+    trailTopicSharingAndInbox: false,
+    presenceAndCollaboration: false,
+    signIn: false,
+  },
 };

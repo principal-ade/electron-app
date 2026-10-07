@@ -30,16 +30,14 @@ export interface BriefAgentDragPayload {
  * fetches the topic URL to learn what it's working on. We keep this short and
  * defer the read/append/section mechanics to the `topic-context` skill, which
  * auto-fires on this exact "Fetch …/api/topics/<id> to begin working on topic"
- * phrasing. The only thing no skill covers is attaching an authored trail, so
- * that's the one instruction we keep inline. Session linking is handled
- * out-of-band by the event server parsing the hook payload — the agent can't
- * observe it, so we don't mention it in the prompt.
+ * phrasing. Session linking is handled out-of-band by the event server parsing
+ * the hook payload — the agent can't observe it, so we don't mention it here.
  */
 export function buildBriefingText(payload: BriefAgentDragPayload): string {
   return [
-    `Fetch ${getPrincipalBridgeUrl()}/api/topics/${payload.topicId} to begin working on topic "${payload.topicTitle}". The response returns its description and trails.`,
+    `Fetch ${getPrincipalBridgeUrl()}/api/topics/${payload.topicId} to begin working on topic "${payload.topicTitle}". The response returns its description and declared projects.`,
     '',
-    `Use the topic-context skill to read this brief and leave context as you work. If you author a trail, include "topicId": "${payload.topicId}" in the POST body to attach it here.`,
+    'Use the topic-context skill to read this brief and leave context as you work.',
     '',
   ].join('\n');
 }

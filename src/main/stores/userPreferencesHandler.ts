@@ -71,6 +71,22 @@ export class UserPreferencesHandler {
       StaticNamespaces.USER_PREFERENCES,
     );
 
+    const wasCollaborationEnabled =
+      current.featureAvailability?.presenceAndCollaboration ?? false;
+    const isCollaborationEnabled =
+      updated.featureAvailability?.presenceAndCollaboration ?? false;
+    if (wasCollaborationEnabled && !isCollaborationEnabled) {
+      const { gitSyncWebSocketManager } = await import(
+        '../services/GitSyncWebSocketManager'
+      );
+      const { orbitWebSocketManager } = await import(
+        '../services/OrbitWebSocketManager'
+      );
+      gitSyncWebSocketManager.disconnectAll();
+      void gitSyncWebSocketManager.disconnectFromPresence();
+      orbitWebSocketManager.disconnectAll();
+    }
+
     // Notify all renderer windows that preferences changed
     if (notifyRenderers) {
       this.broadcastPreferencesChanged(updated);

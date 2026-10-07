@@ -6,7 +6,7 @@
  */
 
 import { useTheme } from '@principal-ade/industry-theme';
-import type { TopicStatus } from '@principal-ai/principal-view-core';
+import type { TopicStatus } from '@principal-ai/subsystems-core/node';
 
 export type TopicStatusState = TopicStatus['state'];
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
@@ -35,7 +35,9 @@ const KNOWN_STATES = new Set<string>(STATES.map((s) => s.value));
  * migration.
  */
 export function normalizeState(raw: string | undefined): TopicStatusState {
-  return raw && KNOWN_STATES.has(raw) ? (raw as TopicStatusState) : 'new-thought';
+  return raw && KNOWN_STATES.has(raw)
+    ? (raw as TopicStatusState)
+    : 'new-thought';
 }
 
 /** State color — keyed off the structured axis, matching the home-card pill.

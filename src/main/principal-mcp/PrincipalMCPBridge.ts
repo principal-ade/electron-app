@@ -215,7 +215,7 @@ export class PrincipalMCPBridge extends EventEmitter {
           {
             name: 'documents',
             description:
-              "Open a document into the currently-focused window. Acts when that window is a doc-capable surface — the principal window's Inbox/Projects views, the dev-workspace, or the Alexandria-workspace. Within the principal window the active view decides renderer-side whether the doc lands; a focused non-terminal view or any other window is a no-op. There is no cold-start path — the route targets an already-open, already-focused window.",
+              "Open a document into the currently-focused window. Acts when that window is a doc-capable surface — the principal window's Inbox/Projects views or the dev-workspace. Within the principal window the active view decides renderer-side whether the doc lands; a focused non-terminal view or any other window is a no-op. There is no cold-start path — the route targets an already-open, already-focused window.",
             routes: [
               {
                 method: 'POST',
@@ -1212,11 +1212,7 @@ export class PrincipalMCPBridge extends EventEmitter {
     // ============================================
     // TOPIC ROUTES
     // ============================================
-    registerTopicRoutes(
-      this.app,
-      TopicRegistryService.getInstance(),
-      getTrailStore(),
-    );
+    registerTopicRoutes(this.app, TopicRegistryService.getInstance());
 
     // ============================================
     // REPO REGISTRY ROUTES

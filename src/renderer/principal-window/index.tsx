@@ -20,10 +20,7 @@ mermaid.initialize({
 });
 // @ts-expect-error - mermaid is not a standard window property
 window.mermaid = mermaid;
-// Required by FileCityTrailExplorerPanel's sequence-view (xyflow). The
-// dev-workspace bundle gets this implicitly via @industry-theme/principal-view-panels,
-// whose JS bundle inlines and injects these rules on module load; principal-window
-// never imports that package, so without this the trail explorer renders unstyled.
+// Required by FileCityTrailExplorerPanel's sequence-view (xyflow).
 import '@xyflow/react/dist/style.css';
 
 const container = document.getElementById('root');

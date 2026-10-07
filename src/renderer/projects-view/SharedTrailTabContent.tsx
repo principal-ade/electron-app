@@ -11,8 +11,7 @@
  *
  * Extracted from ProjectsPanelFramework so both the Projects (feed) view and the
  * Inbox view can reuse it. The presentational half (`SharedTrailViewer`) is
- * split out so callers that already hold a payload — e.g. the inbox's topic
- * tab, which fetches a topic's trails up front — can render the city without
+ * split out so callers that already hold a payload can render the city without
  * re-fetching.
  */
 

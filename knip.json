@@ -17,7 +17,6 @@
     "src/renderer/quick-open/index.tsx",
     "src/renderer/window-switcher/index.tsx",
     "src/renderer/dev-workspace/index.tsx",
-    "src/renderer/alexandria-workspace/index.tsx",
     "src/renderer/extension-window/index.tsx",
     "src/event-processing-server/server.ts",
     "src/event-processing-server/worker-entry.ts"

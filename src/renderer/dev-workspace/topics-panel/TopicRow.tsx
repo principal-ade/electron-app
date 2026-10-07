@@ -7,7 +7,7 @@ import {
   STATES,
   normalizeState,
   stateColor,
-} from '../../alexandria-workspace/topic-description-tab/topicStatusModel';
+} from '../../topics-view/topic-description/topicStatusModel';
 
 /** Compact "x ago" relative time from an ISO timestamp. */
 function timeAgo(iso: string): string {
@@ -31,7 +31,7 @@ const stateLabel = (state: string): string =>
 
 export interface TopicRowProps {
   record: LocalTopicRecord;
-  /** Topic's trails reach beyond the current repo (cross-repo bundle). */
+  /** Topic includes repos beyond the current repository. */
   multiRepo?: boolean;
   onOpen: (topicId: string, title?: string) => void;
 }
@@ -72,10 +72,9 @@ export const TopicRow: React.FC<TopicRowProps> = ({
   const topic = record.topic;
   const state = normalizeState(topic.status?.state);
   const color = stateColor(state, theme);
-  const trailCount = topic.trailIds.length;
+  const repoCount = topic.repos?.length ?? 0;
   const shared = Boolean(record.sync.remoteId);
   const statusName = topic.status?.label || stateLabel(state);
-  const trailText = `${trailCount} ${trailCount === 1 ? 'trail' : 'trails'}`;
 
   // Drag the topic into a terminal as an agent prompt that hydrates it from the
   // local bridge — mirrors the Trails panel's drag-to-context behavior.
@@ -103,9 +102,7 @@ export const TopicRow: React.FC<TopicRowProps> = ({
         padding: '12px 16px',
         border: 'none',
         borderBottom: `1px solid ${theme.colors.border}`,
-        background: hovered
-          ? theme.colors.backgroundSecondary
-          : 'transparent',
+        background: hovered ? theme.colors.backgroundSecondary : 'transparent',
         cursor: 'pointer',
         textAlign: 'left',
         color: theme.colors.text,
@@ -149,17 +146,23 @@ export const TopicRow: React.FC<TopicRowProps> = ({
             color: theme.colors.textMuted,
           }}
         >
-          <span style={{ flexShrink: 0 }}>{trailText}</span>
-          <span aria-hidden style={{ opacity: 0.5 }}>
-            ·
-          </span>
+          {repoCount > 0 && (
+            <span style={{ flexShrink: 0 }}>
+              {repoCount} {repoCount === 1 ? 'project' : 'projects'}
+            </span>
+          )}
+          {repoCount > 0 && (
+            <span aria-hidden style={{ opacity: 0.5 }}>
+              ·
+            </span>
+          )}
           <span style={{ flexShrink: 0 }}>{timeAgo(topic.updatedAt)}</span>
           {multiRepo && (
             <Badge
               theme={theme}
               icon={<GitFork size={11} />}
               label="Multi-repo"
-              title="This topic's trails span more than the current repository"
+              title="This topic includes multiple projects"
             />
           )}
           {shared && (

@@ -1,6 +1,6 @@
 /**
  * Document API — open a document into a window that already hosts a tabbed
- * terminal (the dev-workspace and Alexandria-workspace surfaces).
+ * terminal (the dev-workspace surface).
  *
  * The Principal MCP Bridge exposes `POST /api/document/open`. When the
  * currently-focused window is a doc-tab-capable surface, the route pushes an

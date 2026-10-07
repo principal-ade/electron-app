@@ -2,7 +2,7 @@
  * useOpenRepositoryWindows
  *
  * Tracks which repository / dev-workspace windows currently have a window open,
- * mirroring {@link useOpenWorkspaceWindow}'s "what's open" half: seed once from
+ * seed once from
  * `WindowService.getOpenRepositoryWindows()`, then stay live off the
  * `onRepositoryWindowsChanged` broadcast (which carries the full open list on
  * every open/close).

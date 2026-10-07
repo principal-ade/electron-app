@@ -230,13 +230,10 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
         });
         const directory = getSessionDirectory(session);
         if (directory) {
-          const entry = await AlexandriaService.getRepositoryByPath(directory);
-          if (entry) {
-            await WindowService.openDevWorkspace({ alexandriaEntry: entry });
-          } else {
-            // Fallback: open as a thread if not in Alexandria registry
-            await WindowService.openThread(directory);
-          }
+          const entry =
+            (await AlexandriaService.getRepositoryByPath(directory)) ??
+            (await AlexandriaService.registerRepository(directory));
+          await WindowService.openDevWorkspace({ alexandriaEntry: entry });
         }
       }
       span.end();

@@ -208,6 +208,10 @@ const configuration: webpack.Configuration = {
       util: false,
     },
     alias: {
+      'module$': path.resolve(
+        webpackPaths.srcRendererPath,
+        'utils/nodeModuleShim.ts',
+      ),
       react: path.resolve(webpackPaths.rootPath, 'node_modules/react'),
       'react-dom': path.resolve(webpackPaths.rootPath, 'node_modules/react-dom'),
       process: require.resolve('process/browser.js'),

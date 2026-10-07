@@ -3,7 +3,7 @@
  * (Inbox / Projects feed) from the Principal MCP Bridge.
  *
  * The principal-window frameworks don't carry a panel `context`/`actions` the
- * way the dev-workspace / alexandria-workspace layouts do, so this wrapper
+ * way the dev-workspace layout does, so this wrapper
  * supplies the minimal surface `MarkdownPanel` actually needs: an `actions`
  * with `readFile`, and a minimal `context`. `MarkdownPanel` reads nothing else
  * off `context`, so a lightweight scope stub is sufficient.

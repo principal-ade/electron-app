@@ -6,6 +6,7 @@ import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { UnifiedSecureStorage, TOKEN_KEYS } from '../services/UnifiedSecureStorage';
+import { requireHostedFeature } from '../services/FeatureAvailabilityService';
 
 export interface GitCommitHistoryEntry {
   hash: string;
@@ -708,6 +709,7 @@ export class GitRepositoryService {
     repo: string,
     lineCounts: Record<string, number>
   ): Promise<void> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     const fileCount = Object.keys(lineCounts).length;
     if (fileCount === 0) return;
 

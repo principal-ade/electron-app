@@ -22,7 +22,7 @@ import {
   normalizeState,
   stateColor,
   type TopicStatusState,
-} from '../../alexandria-workspace/topic-description-tab/topicStatusModel';
+} from '../../topics-view/topic-description/topicStatusModel';
 import { useTopicLibrary } from './useTopicLibrary';
 import { TopicRow } from './TopicRow';
 import { TOPIC_EVENT, type TopicOpenEvent } from './topic-events';
@@ -112,15 +112,9 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
     return () => document.removeEventListener('mousedown', onDown);
   }, [statusMenuOpen]);
 
-  const isMultiRepo = useCallback(
-    (record: LocalTopicRecord): boolean => {
-      if (library.repoTrailIds.size === 0) return false;
-      const ids = record.topic.trailIds;
-      const inRepo = ids.filter((id) => library.repoTrailIds.has(id)).length;
-      return inRepo > 0 && inRepo < ids.length;
-    },
-    [library.repoTrailIds],
-  );
+  const isMultiRepo = useCallback((record: LocalTopicRecord): boolean => {
+    return (record.topic.repos?.length ?? 0) > 1;
+  }, []);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -607,7 +601,7 @@ const EmptyState: React.FC<{
     >
       <div>No topics yet.</div>
       <div style={{ fontSize: theme.fontSizes[0] }}>
-        Bundle trails into a topic to get started:
+        Create a topic brief and scope it to one or more projects:
       </div>
       <pre
         style={{
@@ -625,7 +619,7 @@ const EmptyState: React.FC<{
       >
         {`curl -XPOST ${getPrincipalBridgeUrl()}/api/topics \\
   -H 'content-type: application/json' \\
-  -d '{ "title": "My topic", "trailIds": [] }'`}
+  -d '{ "title": "My topic", "repos": [] }'`}
       </pre>
     </div>
   );

@@ -98,6 +98,7 @@ import { GithubService } from '../main-process-api/GithubService';
 import { GitService } from '../main-process-api/GitService';
 import { WebAdeService } from '../main-process-api/WebAdeService';
 import { ApiProxyService } from '../main-process-api/ApiProxyService';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
 import { SharedTrailTabContent } from './SharedTrailTabContent';
@@ -1382,6 +1383,17 @@ const UserProfileTabContent: React.FC<{
 
       getUserActivity: async (username: string) => {
         try {
+          const preferences = await UserPreferencesService.getPreferences();
+          if (
+            !preferences.featureAvailability
+              ?.repositoryInsightsAndCollections
+          ) {
+            return {
+              recentCommits: [],
+              contributions: [],
+              contributedRepos: [],
+            };
+          }
           const authService = SecureAuthService.getInstance();
           const authResult = await authService.checkAuth();
 
@@ -1637,6 +1649,13 @@ const OrgProfileTabContent: React.FC<{
 
       getOrgActivity: async (orgName: string) => {
         try {
+          const preferences = await UserPreferencesService.getPreferences();
+          if (
+            !preferences.featureAvailability
+              ?.repositoryInsightsAndCollections
+          ) {
+            return new Map<string, number>();
+          }
           const authService = SecureAuthService.getInstance();
           const authResult = await authService.checkAuth();
 

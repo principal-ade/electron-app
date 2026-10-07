@@ -12,7 +12,3 @@ export type { default as OnboardingButtonType } from './OnboardingButton';
 
 export { GitSyncStatusIndicator } from './GitSyncStatusIndicator';
 export type { GitSyncStatusIndicatorProps } from './GitSyncStatusIndicator';
-
-// Window-specific titlebars
-export { AlexandriaWorkspaceTitlebar } from './AlexandriaWorkspaceTitlebar';
-export type { AlexandriaWorkspaceTitlebarProps } from './AlexandriaWorkspaceTitlebar';

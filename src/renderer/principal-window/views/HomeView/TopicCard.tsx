@@ -1,22 +1,17 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTheme } from '@principal-ade/industry-theme';
-import type { TopicStatus } from '@principal-ai/principal-view-core';
+import type { TopicStatus } from '@principal-ai/subsystems-core/node';
 
 /** The structured status axis — derived from the core lib's inline union. */
 type TopicStatusState = TopicStatus['state'];
 import {
   Clock,
-  FolderGit2,
   Link2,
-  Route,
   Share2,
-  Sparkles,
   Trash2,
 } from 'lucide-react';
 import type { TopicsDashboardTopicEntry } from './TopicsDashboard';
-import { tildifyPath } from '../../../utils/tildifyPath';
-import '../../../styles/window-open-feedback.css';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
 
@@ -45,7 +40,10 @@ function statusPresentation(
     case 'waiting':
       return { defaultLabel: 'Waiting', color: theme.colors.info };
     case 'done-for-now':
-      return { defaultLabel: 'Done for now', color: theme.colors.textSecondary };
+      return {
+        defaultLabel: 'Done for now',
+        color: theme.colors.textSecondary,
+      };
     case 'deprecated':
       return { defaultLabel: 'Deprecated', color: theme.colors.error };
     case 'abandoned':
@@ -137,28 +135,16 @@ export function TopicCard({
       : null;
   // An open window is itself a status, so the "Open" badge stands in for the
   // status pill — suppress the pill while the topic is open to avoid doubling up.
-  const showStatusPill =
-    showStatus &&
-    !topic.isOpen &&
-    !topic.isOpening &&
-    !!(status && statusPres && statusInfo);
+  const showStatusPill = showStatus && !!(status && statusPres && statusInfo);
 
   // The "Open" badge and the transient "Opening…" badge are mutually exclusive:
   // `isOpen` (window created) flips true a beat before `isOpening` (window
   // first paint) clears, so without this they'd briefly show together. Opening
   // takes precedence. The "Shared" badge collapses to its icon whenever either
   // indicator already occupies the row.
-  const showOpen = !!topic.isOpen && !topic.isOpening;
-  const collapseShared = showOpen || !!topic.isOpening;
-
   // Badges sit in the top-right corner of the card, on the title row. A long
   // topic name truncates with an ellipsis to make room for them.
-  const hasBadges =
-    showStatusPill ||
-    topic.isOpen ||
-    topic.isOpening ||
-    topic.published ||
-    topic.isNew;
+  const hasBadges = showStatusPill || topic.published;
   const badges = hasBadges ? (
     <span
       style={{
@@ -168,49 +154,6 @@ export function TopicCard({
         flex: '0 0 auto',
       }}
     >
-      {topic.isOpening && (
-        <span
-          title="Opening workspace window…"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '1px 6px',
-            fontSize: theme.fontSizes[0],
-            fontFamily: theme.fonts.body,
-            color: theme.colors.primary,
-            border: `1px solid ${theme.colors.primary}`,
-            borderRadius: 5,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <span
-            className="wof-pulse-dot"
-            style={{ background: theme.colors.primary }}
-          />
-          Opening…
-        </span>
-      )}
-      {topic.isNew && !topic.isOpening && (
-        <span
-          title="No local workspace yet — opening creates one"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 3,
-            padding: '1px 6px',
-            fontSize: theme.fontSizes[0],
-            fontFamily: theme.fonts.body,
-            color: theme.colors.info,
-            border: `1px solid ${theme.colors.info}`,
-            borderRadius: 5,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <Sparkles size={10} />
-          New
-        </span>
-      )}
       {showStatusPill && statusInfo && statusPres && (
         <span
           title={statusInfo.tooltip}
@@ -244,7 +187,7 @@ export function TopicCard({
           </span>
         </span>
       )}
-      {(showOpen || topic.published) && (
+      {topic.published && (
         <span
           style={{
             display: 'inline-flex',
@@ -253,53 +196,22 @@ export function TopicCard({
             color: theme.colors.primary,
           }}
         >
-          {showOpen && (
-            <span
-              title="Window open"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 3,
-                padding: '1px 6px',
-                fontSize: theme.fontSizes[0],
-                fontFamily: theme.fonts.body,
-                border: `1px solid ${theme.colors.primary}`,
-                borderRadius: 5,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Open
-            </span>
-          )}
-          {topic.published &&
-            // When an open/opening indicator is already present we collapse the
-            // "Shared" badge to just its icon to keep the row from getting
-            // crowded.
-            (collapseShared ? (
-              <span
-                aria-label="Shared"
-                style={{ display: 'inline-flex', alignItems: 'center' }}
-              >
-                <Share2 size={14} />
-              </span>
-            ) : (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 3,
-                  padding: '1px 6px',
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts.body,
-                  border: `1px solid ${theme.colors.primary}`,
-                  borderRadius: 5,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <Share2 size={10} />
-                Shared
-              </span>
-            ))}
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 3,
+              padding: '1px 6px',
+              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts.body,
+              border: `1px solid ${theme.colors.primary}`,
+              borderRadius: 5,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <Share2 size={10} />
+            Shared
+          </span>
         </span>
       )}
     </span>
@@ -398,133 +310,6 @@ export function TopicCard({
             </span>
           )}
         </div>
-        {topic.projectRepos?.length ||
-        topic.folderPath ||
-        topic.trailCount ? (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              minWidth: 0,
-            }}
-          >
-            {topic.projectRepos && topic.projectRepos.length > 0 ? (
-              <div
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  flexWrap: 'nowrap',
-                  gap: 8,
-                  color: theme.colors.textTertiary,
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[0],
-                  minWidth: 0,
-                  overflowX: 'auto',
-                  overflowY: 'hidden',
-                  whiteSpace: 'nowrap',
-                }}
-                onWheel={(e) => {
-                  if (e.deltaY !== 0 && e.deltaX === 0) {
-                    e.currentTarget.scrollLeft += e.deltaY;
-                  }
-                }}
-                title={topic.projectRepos
-                  .map((r) =>
-                    r.ownerLogin ? `${r.ownerLogin}/${r.name}` : r.name,
-                  )
-                  .join(', ')}
-              >
-                {topic.projectRepos.map((r) => (
-                  <span
-                    key={`${r.ownerLogin ?? ''}/${r.name}`}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      minWidth: 0,
-                      flex: '0 0 auto',
-                    }}
-                  >
-                    {r.ownerLogin ? (
-                      <img
-                        src={`https://github.com/${r.ownerLogin}.png?size=40`}
-                        alt={r.ownerLogin}
-                        width={14}
-                        height={14}
-                        style={{
-                          borderRadius: 4,
-                          flex: '0 0 auto',
-                          border: `1px solid ${theme.colors.border}`,
-                        }}
-                      />
-                    ) : (
-                      <FolderGit2 size={12} />
-                    )}
-                    <span
-                      style={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        minWidth: 0,
-                      }}
-                    >
-                      {r.name}
-                    </span>
-                  </span>
-                ))}
-              </div>
-            ) : topic.folderPath ? (
-              <div
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  color: theme.colors.textTertiary,
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[0],
-                  minWidth: 0,
-                }}
-                title={tildifyPath(topic.folderPath)}
-              >
-                <span
-                  style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    minWidth: 0,
-                  }}
-                >
-                  {tildifyPath(topic.folderPath)}
-                </span>
-              </div>
-            ) : null}
-            {/* Trail count stays right-aligned on the meta row; the status
-                badges now live in the card's top-right corner. */}
-            {topic.trailCount ? (
-              <div
-                style={{
-                  marginLeft: 'auto',
-                  flex: '0 0 auto',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  color: theme.colors.textTertiary,
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[0],
-                }}
-                title={`${topic.trailCount} ${
-                  topic.trailCount === 1 ? 'trail' : 'trails'
-                }`}
-              >
-                <Route size={12} />
-                {topic.trailCount}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
       </button>
       {boardMode && onDelete && !topic.published && (
         <button

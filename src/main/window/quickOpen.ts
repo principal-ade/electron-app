@@ -12,7 +12,6 @@ import {
   getWindowsByType,
   getRepositoryUrl,
   getRepositoryLocalPath,
-  getWorkspaceId,
 } from './types';
 import { openDevWorkspaceWindow } from './devWorkspaceWindowHandlers';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -39,7 +38,7 @@ interface GitHubSearchResult {
 
 interface QuickOpenItem {
   id: string;
-  type: 'repository' | 'workspace' | 'github';
+  type: 'repository' | 'github';
   name: string;
   description?: string;
   remoteUrl?: string;
@@ -231,7 +230,7 @@ class QuickOpen {
   }
 
   /**
-   * Load repositories and workspaces
+   * Load registered repositories
    */
   private async loadItems(): Promise<void> {
     try {
@@ -239,9 +238,6 @@ class QuickOpen {
 
       // Get currently open windows
       const openRepoWindowIds = getWindowsByType(PrimaryWindowType.REPOSITORY);
-      const openWorkspaceWindowIds = getWindowsByType(
-        PrimaryWindowType.WORKSPACE,
-      );
 
       const openRepoWindows = openRepoWindowIds.map((id) => ({
         id,
@@ -249,24 +245,13 @@ class QuickOpen {
         localPath: getRepositoryLocalPath(id),
       }));
 
-      const openWorkspaceIds = openWorkspaceWindowIds
-        .map((id) => ({ windowId: id, workspaceId: getWorkspaceId(id) }))
-        .filter(
-          (item): item is { windowId: number; workspaceId: string } =>
-            item.workspaceId !== null,
-        );
 
-      // Load repositories and workspaces from Alexandria in parallel
+      // Load registered repositories from Alexandria.
       const {
         AlexandriaRegistryService,
       } = require('../stores/AlexandriaRegistryService');
       const service = AlexandriaRegistryService.getInstance();
-
-      // Load repos and workspaces in parallel for better performance
-      const [repositories, workspaces] = await Promise.all([
-        service.getRepositories(),
-        service.getWorkspaces(),
-      ]);
+      const repositories = await service.getRepositories();
 
       // Add repositories to items
       for (const repo of repositories) {
@@ -299,22 +284,6 @@ class QuickOpen {
         });
       }
 
-      // Add workspaces to items
-      for (const workspace of workspaces) {
-        const openWorkspace = openWorkspaceIds.find(
-          (w) => w.workspaceId === workspace.id,
-        );
-        items.push({
-          id: workspace.id,
-          type: 'workspace',
-          name: workspace.name,
-          description: workspace.description,
-          isOpen: !!openWorkspace,
-          openWindowId: openWorkspace?.windowId,
-          lastOpenedAt: workspace.lastOpenedAt,
-        });
-      }
-
       // Sort items: open windows first, then by lastOpenedAt (most recent first)
       items.sort((a, b) => {
         // Open items come first
@@ -328,7 +297,7 @@ class QuickOpen {
       });
 
       log.info(
-        `[Quick Open] Loaded ${items.length} items (${repositories.length} repos, ${workspaces.length} workspaces)`,
+        `[Quick Open] Loaded ${items.length} repositories`,
       );
 
       // Send items to renderer
@@ -408,9 +377,7 @@ export function setupQuickOpenHandlers(): void {
 
     const openTarget = await getQuickOpenTarget();
 
-    // Terminal mode: open a terminal tab in the principal window for local
-    // repositories. Workspaces still open as their own window (no single cwd).
-    // Repos without a local path fall back to the window path below.
+    // Terminal mode opens a terminal tab in the principal window.
     if (
       openTarget === 'terminal' &&
       item.type === 'repository' &&
@@ -440,88 +407,6 @@ export function setupQuickOpenHandlers(): void {
           alexandriaEntry: item.alexandriaEntry,
         });
         log.info(`[Quick Open] Opening dev workspace for ${item.name}`);
-      } else if (item.type === 'workspace') {
-        // Open workspace window directly from main process
-        const {
-          createSpecialWindow,
-          focusExistingSpecialWindow,
-        } = require('./modernWindowManager');
-        const { resolveHtmlPath } = require('../util');
-        const { PrimaryWindowType } = require('./types');
-
-        const workspaceId = item.id;
-        const windowName = `alexandria-workspace-${workspaceId}`;
-
-        // Belt-and-braces: the outer `item.openWindowId` check already
-        // catches the common reuse case, but a stale item (no openWindowId
-        // populated for a workspace whose window is in fact open) would
-        // otherwise hit createSpecialWindow's duplicate-purpose throw.
-        const existing = focusExistingSpecialWindow(windowName);
-        if (existing) {
-          log.info(
-            `[Quick Open] Focused existing workspace window for ${item.name}`,
-          );
-          return;
-        }
-
-        // Fetch workspace name from the registry
-        let workspaceName = 'Alexandria Workspace';
-        try {
-          const {
-            AlexandriaRegistryService,
-          } = require('../stores/AlexandriaRegistryService');
-          const service = AlexandriaRegistryService.getInstance();
-          const workspace = await service.getWorkspace(workspaceId);
-          if (workspace?.name) {
-            workspaceName = workspace.name;
-          }
-        } catch (error) {
-          log.error('[Quick Open] Failed to fetch workspace name:', error);
-        }
-
-        // Create metadata for workspace window
-        const metadata = {
-          primaryType: PrimaryWindowType.WORKSPACE,
-          displayName: workspaceName,
-          workspaceId,
-          purpose: windowName,
-        };
-
-        const window = createSpecialWindow(
-          windowName,
-          {
-            width: 1280,
-            height: 832,
-            minWidth: 1024,
-            minHeight: 720,
-            title: workspaceName,
-          },
-          {
-            fileSystemAdapter: true,
-            windowManagerAdapter: true,
-            githubAdapter: true,
-            contentSecurityPolicy: true,
-            externalLinkHandler: true,
-            menu: true,
-            maximizeOnShow: true,
-          },
-          metadata,
-        );
-
-        if (window) {
-          // Register window with terminal manager to receive terminal events
-          const { terminalManager } = await import('../terminal');
-          terminalManager?.setMainWindow(window.window);
-          log.info(
-            `[Quick Open] Registered Alexandria Workspace window ${window.window.id} with terminal manager`,
-          );
-
-          // Pass workspace ID to the window via URL parameter
-          const encodedWorkspaceId = encodeURIComponent(workspaceId);
-          const url = `${resolveHtmlPath('alexandria-workspace.html')}?workspaceId=${encodedWorkspaceId}`;
-          window.window.loadURL(url);
-          log.info(`[Quick Open] Opening workspace window for ${item.name}`);
-        }
       }
     }
   });

@@ -446,7 +446,6 @@ export interface TopicInboxSnapshot {
   title: string;
   /** First ~140 chars of the topic description, plaintext. */
   descriptionPreview: string;
-  trailCount: number;
   createdAt: string;
   updatedAt: string;
 }

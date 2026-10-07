@@ -9,49 +9,20 @@
 
 import type {
   RepositoryWindowState,
-  WorkspaceWindowState,
-  WindowReadyState,
   DevWorkspaceOptions,
   ExtensionWindowOptions,
-  AlexandriaWorkspaceOptions,
   TabTransferData,
   OpenTerminalTabPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 // Re-export for convenience
-export type {
-  RepositoryWindowState,
-  WorkspaceWindowState,
-  WindowReadyState,
-  TabTransferData,
-  OpenTerminalTabPayload,
-};
+export type { RepositoryWindowState, TabTransferData, OpenTerminalTabPayload };
 
 /**
  * Service for managing application windows
  */
 export class WindowService {
-  /**
-   * Open Alexandria Workspace window
-   * Opens a dedicated window for managing a workspace and its repository members
-   * Can open with a specific workspace, or create a temporary workspace for a single repository
-   * @param options - Options for opening the workspace (workspaceId, repositoryPath, etc.)
-   */
-  static async openAlexandriaWorkspace(
-    options: AlexandriaWorkspaceOptions,
-  ): Promise<void> {
-    try {
-      await window.mainProcess.window.openAlexandriaWorkspace(options);
-    } catch (error) {
-      console.error(
-        '[WindowService] Failed to open Alexandria Workspace window:',
-        error,
-      );
-      throw new Error('Failed to open Alexandria Workspace window');
-    }
-  }
-
   /**
    * Get the current window's ID
    * @returns The Electron BrowserWindow ID
@@ -195,63 +166,6 @@ export class WindowService {
   }
 
   /**
-   * Get the currently open Alexandria workspace windows
-   * @returns One entry per live workspace window (empty array on failure)
-   */
-  static async getOpenWorkspaceWindows(): Promise<WorkspaceWindowState[]> {
-    try {
-      return await window.mainProcess.window.getOpenWorkspaceWindows();
-    } catch (error) {
-      console.error(
-        '[WindowService] Failed to get open workspace windows:',
-        error,
-      );
-      return [];
-    }
-  }
-
-  /**
-   * Listen for workspace window open/close changes
-   * @param callback - Called with the full list of open workspace windows
-   * @returns Unsubscribe function
-   */
-  static onWorkspaceWindowsChanged(
-    callback: (workspaceWindows: WorkspaceWindowState[]) => void,
-  ): () => void {
-    try {
-      return window.mainProcess.window.onWorkspaceWindowsChanged(callback);
-    } catch (error) {
-      console.error(
-        '[WindowService] Failed to register workspace windows listener:',
-        error,
-      );
-      return () => {};
-    }
-  }
-
-  /**
-   * Listen for any window reaching first paint (`ready-to-show`). The true
-   * "the window is now visible" confirmation — fires after the IPC open call
-   * resolves and after the window is created, so it's what an "opening…"
-   * affordance should wait on before clearing.
-   * @param callback - Called with the ready window's identity
-   * @returns Unsubscribe function
-   */
-  static onWindowReady(
-    callback: (state: WindowReadyState) => void,
-  ): () => void {
-    try {
-      return window.mainProcess.window.onWindowReady(callback);
-    } catch (error) {
-      console.error(
-        '[WindowService] Failed to register window-ready listener:',
-        error,
-      );
-      return () => {};
-    }
-  }
-
-  /**
    * Open a dev workspace window with the panel framework
    * @param options - Options containing the Alexandria entry for the repository
    * @returns Window ID if successful, null otherwise
@@ -283,93 +197,6 @@ export class WindowService {
     }
   }
 
-  // Thread operations (ephemeral multi-repository sessions)
-
-  /**
-   * Open a thread for a single repository
-   * Creates an ephemeral session that can be expanded with additional repositories
-   * @param repositoryPath - Path to the repository
-   */
-  static async openThread(repositoryPath: string): Promise<void> {
-    return this.openAlexandriaWorkspace({ repositoryPath });
-  }
-
-  /**
-   * Open an empty thread with no initial repositories
-   * Creates an ephemeral session that can have repositories added later
-   */
-  static async openEmptyThread(): Promise<void> {
-    return this.openAlexandriaWorkspace({ openEmptyThread: true });
-  }
-
-  /**
-   * Add a repository to the current thread window
-   * @param repositoryPath - Path to the repository to add
-   * @returns Result indicating success or failure
-   */
-  static async addRepositoryToThread(
-    repositoryPath: string,
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      return await window.mainProcess.window.addRepositoryToThread(
-        repositoryPath,
-      );
-    } catch (error) {
-      console.error(
-        '[WindowService] Failed to add repository to thread:',
-        error,
-      );
-      return { success: false, error: 'Failed to add repository to thread' };
-    }
-  }
-
-  /**
-   * Remove a repository from the current thread window
-   * @param repositoryPath - Path to the repository to remove
-   * @returns Result indicating success or failure
-   */
-  static async removeRepositoryFromThread(
-    repositoryPath: string,
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      return await window.mainProcess.window.removeRepositoryFromThread(
-        repositoryPath,
-      );
-    } catch (error) {
-      console.error(
-        '[WindowService] Failed to remove repository from thread:',
-        error,
-      );
-      return {
-        success: false,
-        error: 'Failed to remove repository from thread',
-      };
-    }
-  }
-
-  /**
-   * Listen for thread repository changes
-   * @param callback - Called when repositories are added/removed from the thread
-   * @returns Unsubscribe function
-   */
-  static onThreadRepositoriesChanged(
-    callback: (event: {
-      repositoryPaths: string[];
-      addedPath?: string;
-      removedPath?: string;
-    }) => void,
-  ): () => void {
-    try {
-      return window.mainProcess.window.onThreadRepositoriesChanged(callback);
-    } catch (error) {
-      console.error(
-        '[WindowService] Failed to register thread repositories listener:',
-        error,
-      );
-      return () => {};
-    }
-  }
-
   /**
    * Send a tab to another window.
    * @param data - The tab transfer payload
@@ -387,9 +214,7 @@ export class WindowService {
    * @param callback - Called with the tab transfer data
    * @returns Unsubscribe function
    */
-  static onTabReceived(
-    callback: (data: TabTransferData) => void,
-  ): () => void {
+  static onTabReceived(callback: (data: TabTransferData) => void): () => void {
     try {
       return window.mainProcess.window.onTabReceived(callback);
     } catch (error) {

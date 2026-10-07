@@ -38,8 +38,8 @@ export interface SharedTrailTab extends BaseTab {
 
 /**
  * Local trail tab — a trail from the on-disk library, opened in-place (e.g. a
- * freshly authored trail, or one picked from a topic's Trails rail). Carries
- * only the id; the panel self-fetches the payload + repositoryPath.
+ * freshly authored trail). Carries only the id; the panel self-fetches the
+ * payload + repositoryPath.
  */
 export interface LocalTrailTab extends BaseTab {
   contentType: 'local-trail';
@@ -84,7 +84,7 @@ export interface InboxHomeTab extends BaseTab {
 
 /**
  * Topic tab — a topic published to web-ade, opened from an inbox row. Carries
- * only the id; `TopicTabContent` self-fetches the topic and its trails.
+ * only the id; `TopicTabContent` self-fetches the topic brief.
  */
 export interface TopicTab extends BaseTab {
   contentType: 'topic';

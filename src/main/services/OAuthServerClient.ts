@@ -18,6 +18,7 @@ import {
   type AuthEndpoints,
 } from './AuthProvider';
 import { APP_BRANDING } from '../../shared/config/appBranding';
+import { requireHostedFeature } from './FeatureAvailabilityService';
 
 // Declare global type for browser open function override
 declare global {
@@ -98,6 +99,7 @@ export class OAuthServerClient {
 
   async authenticate(deviceId?: string): Promise<AuthResult> {
     try {
+      await requireHostedFeature('signIn');
       // 1. Start auth flow with server
       const providerName = getAuthProviderName();
       console.log(
@@ -265,6 +267,7 @@ export class OAuthServerClient {
     githubUserId?: number,
   ): Promise<AuthResult> {
     try {
+      await requireHostedFeature('signIn');
       console.log('[OAuthServerClient] Refreshing access token...');
       console.log(
         `[OAuthServerClient] Using refresh endpoint: ${this.endpoints.refresh}`,
@@ -371,6 +374,7 @@ export class OAuthServerClient {
     updatedAt: number;
   } | null> {
     try {
+      await requireHostedFeature('signIn');
       const url = new URL(`${this.serverUrl}/api/auth/token/current`);
       url.searchParams.set('github_user_id', String(githubUserId));
       url.searchParams.set('device_id', deviceId);

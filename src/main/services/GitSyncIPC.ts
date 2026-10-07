@@ -20,6 +20,7 @@ import {
   gitSyncWebSocketManager,
   GitSyncMessage,
 } from './GitSyncWebSocketManager';
+import { requireHostedFeature } from './FeatureAvailabilityService';
 
 class GitSyncIPC {
   constructor() {
@@ -182,6 +183,7 @@ class GitSyncIPC {
         data?: unknown;
         error?: string;
       }> => {
+        await requireHostedFeature('presenceAndCollaboration');
         console.log('[GitSyncIPC] Fetching server presence');
 
         try {
@@ -318,6 +320,7 @@ class GitSyncIPC {
         meta?: unknown;
         error?: string;
       }> => {
+        await requireHostedFeature('presenceAndCollaboration');
         console.log('[GitSyncIPC] Fetching webhook events, limit:', limit);
 
         try {

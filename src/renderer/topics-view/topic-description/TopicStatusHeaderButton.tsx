@@ -19,7 +19,7 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ChevronDown } from 'lucide-react';
-import type { TopicStatus } from '@principal-ai/principal-view-core';
+import type { TopicStatus } from '@principal-ai/subsystems-core/node';
 import { TopicService } from '../../main-process-api/TopicService';
 import { TopicEventType } from '../../../shared/main-process-api-interfaces/TopicAPI';
 import { normalizeState, stateColor, STATES } from './topicStatusModel';
@@ -49,7 +49,10 @@ export const TopicStatusHeaderButton: React.FC<
       if (!cancelled) setStatus(topic?.status);
     })();
     const unsubscribe = TopicService.onTopicChange((event) => {
-      if (event.type === TopicEventType.UPDATED && event.topic?.id === topicId) {
+      if (
+        event.type === TopicEventType.UPDATED &&
+        event.topic?.id === topicId
+      ) {
         setStatus(event.topic.status);
       }
     });

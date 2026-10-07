@@ -5,10 +5,7 @@
  * used throughout the DevWorkspace panel framework.
  */
 
-import type { FileInfo } from '@principal-ai/repository-abstraction';
-import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
 import type { Skill } from '@industry-theme/agent-panels';
-import type { RegisteredTrace } from '@principal-ai/principal-view-core';
 import type { PackageLayer } from '@industry-theme/repository-composition-panels';
 
 /**
@@ -39,14 +36,6 @@ export interface TaskSelectedPayload {
 export interface SkillSelectedPayload {
   skill?: Skill;
   skillId?: string;
-}
-
-/**
- * Payload when a trace is selected for detail view
- */
-export interface TraceSelectedPayload {
-  trace?: RegisteredTrace;
-  traceId?: string;
 }
 
 /**
@@ -87,55 +76,8 @@ export interface MDXEditorPayload {
 }
 
 /**
- * Payload when opening a canvas
- * Can include workflow information for detail view
- */
-export interface CanvasOpenPayload {
-  action?: string;
-  canvasId?: string;
-  canvas?: {
-    name: string;
-    path: string;
-  };
-  canvasFileInfo?: FileInfo | null;
-  workflowId?: string;
-  workflow?: WorkflowTemplate | null;
-  workflowFileInfo?: FileInfo | null;
-  // Trace focus fields - sent by TraceListPanel when opening from matched spans
-  traceId?: string;
-  spanId?: string;
-  scenarioId?: string;
-  /** Full trace object for template interpolation and scenario matching */
-  trace?: RegisteredTrace;
-}
-
-/**
  * Payload for dependency graph events
  */
 export interface DependencyGraphPayload {
   packages: PackageLayer[];
-}
-
-/**
- * Canvas info for multi-canvas view
- */
-export interface MultiCanvasInfo {
-  id: string;
-  canvas: {
-    id: string;
-    name: string;
-    path: string;
-  };
-  label?: string;
-  fileInfo?: FileInfo | null;
-}
-
-/**
- * Payload when opening multi-canvas view
- * Emitted by StoryboardListPanel "View All" button
- */
-export interface MultiCanvasOpenPayload {
-  action: 'openMultiCanvas';
-  canvases: MultiCanvasInfo[];
-  canvasType: 'otel' | 'regular';
 }

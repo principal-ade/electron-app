@@ -17,7 +17,9 @@ const Harness: React.FC<{ initial: TopicStatusState }> = ({ initial }) => {
   const { theme } = useTheme();
   const [value, setValue] = React.useState<TopicStatusState>(initial);
   return (
-    <div style={{ width: 460, padding: 16, background: theme.colors.background }}>
+    <div
+      style={{ width: 460, padding: 16, background: theme.colors.background }}
+    >
       <TopicStatusGraph value={value} onSelect={setValue} theme={theme} />
       <div
         style={{

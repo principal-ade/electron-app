@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
@@ -66,6 +67,14 @@ async function _getDeviceId(): Promise<string> {
 
 // Exchange GitHub token for JWT user discovery token
 async function getUserToken(githubToken: string): Promise<string> {
+  const preferences = await UserPreferencesService.getPreferences();
+  if (
+    !preferences.featureAvailability?.presenceAndCollaboration
+  ) {
+    throw new Error(
+      'Remote terminal token exchange is disabled in Feature Availability settings.',
+    );
+  }
   const authServerUrl =
     process.env.AUTH_SERVER_URL || 'https://auth.principal-ade.com';
 

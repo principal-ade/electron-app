@@ -1,25 +1,19 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Check, Copy, List, PanelsTopLeft } from 'lucide-react';
+import { Check, Copy, List } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
-import { TopicDescriptionBody } from '../../alexandria-workspace/topic-description-tab/TopicDescriptionBody';
-import { TopicStatusHeaderButton } from '../../alexandria-workspace/topic-description-tab/TopicStatusHeaderButton';
-import { TopicTrailsRail } from '../../alexandria-workspace/topic-description-tab/TopicTrailsRail';
+import { TopicDescriptionBody } from '../../topics-view/topic-description/TopicDescriptionBody';
+import { TopicStatusHeaderButton } from '../../topics-view/topic-description/TopicStatusHeaderButton';
+import { TopicProjectsRail } from '../../topics-view/topic-description/TopicProjectsRail';
 import { TopicService } from '../../main-process-api/TopicService';
-import { WorkspaceService } from '../../main-process-api/WorkspaceService';
-import { useOpenWorkspaceWindow } from '../../hooks/useOpenWorkspaceWindow';
-import { TRAIL_EVENT, type TrailOpenEvent } from '../trail-events';
-import '../../styles/window-open-feedback.css';
 
 export interface DevWorkspaceTopicTabProps {
   topicId: string;
-  /** Tab label / heading; also seeds a new workspace's name. */
+  /** Tab label / heading. */
   title?: string;
   /** Gates the description body's open-time fetch; pass the tab's active flag. */
   isActive: boolean;
   events: PanelEventEmitter;
-  /** Workspace whose repos the topic's doc links resolve against (optional). */
-  workspaceId?: string;
   /** Current repo, used as a link-resolution fallback (optional). */
   repositoryPath?: string;
 }
@@ -27,22 +21,16 @@ export interface DevWorkspaceTopicTabProps {
 /**
  * Tab content for a topic opened from the dev-workspace Topics panel. Reuses
  * the chrome-less {@link TopicDescriptionBody} for the markdown description and
- * the shared {@link TopicTrailsRail} for the trails list. Clicking a trail
- * opens it as its own `local-trail` tab — the panel framework listens for the
- * {@link TRAIL_EVENT.open} emit — mirroring how the Topics view opens a trail
- * tab rather than activating it in File City.
+ * the topic's declared project list.
  *
- * The header mirrors the Topics view's `LocalTopicTabContent`: title, an
- * optional table-of-contents toggle, and an "Open in Workspace" button that
- * promotes the topic into an Alexandria workspace window — a *different* window
- * from this dev-workspace, so the affordance is meaningful here.
+ * The header mirrors the Topics view's `LocalTopicTabContent`: title and an
+ * optional table-of-contents toggle.
  */
 export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
   topicId,
   title,
   isActive,
   events,
-  workspaceId,
   repositoryPath,
 }) => {
   const { theme } = useTheme();
@@ -76,39 +64,6 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
       if (copyResetRef.current) clearTimeout(copyResetRef.current);
     },
     [],
-  );
-
-  // Promote this topic to a full Alexandria workspace window — a distinct
-  // window from this dev-workspace. The resolver (find-or-create the topic's
-  // workspace) runs inside the hook's `opening` phase, and `openTopicIds` tells
-  // us when a window for this topic is already open so the button can show a
-  // persistent state.
-  const { open, status, openTopicIds } = useOpenWorkspaceWindow();
-  const isWorkspaceOpen = openTopicIds.has(topicId);
-  const openInWorkspace = React.useCallback(() => {
-    void open(async () => {
-      const workspaces = await WorkspaceService.getWorkspaces();
-      const existing = workspaces.find((w) => w.topicIds?.includes(topicId));
-      if (existing) return existing.id;
-      const topic = await TopicService.getTopic(topicId);
-      const created = await WorkspaceService.createWorkspace({
-        name: title || topic?.title || 'Topic',
-        topicIds: [topicId],
-      });
-      return created.id;
-    });
-  }, [open, topicId, title]);
-
-  const openTrail = useCallback(
-    (id: string, trailTitle: string) => {
-      events.emit<TrailOpenEvent>({
-        type: TRAIL_EVENT.open,
-        source: 'topic-tab',
-        timestamp: Date.now(),
-        payload: { trailId: id, title: trailTitle },
-      });
-    },
-    [events],
   );
 
   return (
@@ -203,73 +158,10 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
             <List size={16} />
           </button>
         )}
-        <button
-          type="button"
-          onClick={openInWorkspace}
-          disabled={status === 'opening'}
-          title={
-            isWorkspaceOpen
-              ? 'This topic has a workspace window open — click to focus it'
-              : 'Open this topic in an Alexandria workspace window'
-          }
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            flexShrink: 0,
-            padding: '6px 12px',
-            borderRadius: 6,
-            border: `1px solid ${
-              isWorkspaceOpen || status === 'opened'
-                ? theme.colors.primary
-                : theme.colors.border
-            }`,
-            background: theme.colors.backgroundSecondary,
-            color:
-              isWorkspaceOpen || status === 'opened'
-                ? theme.colors.primary
-                : theme.colors.text,
-            cursor: status === 'opening' ? 'default' : 'pointer',
-            opacity: status === 'opening' ? 0.8 : 1,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[1],
-            fontWeight: 600,
-            whiteSpace: 'nowrap',
-            transition: 'color 0.15s ease, border-color 0.15s ease',
-          }}
-        >
-          {status === 'opening' ? (
-            <>
-              <span
-                className="wof-pulse-dot"
-                style={{ background: theme.colors.primary }}
-              />
-              Opening…
-            </>
-          ) : status === 'opened' ? (
-            <>
-              <Check size={14} />
-              Opened
-            </>
-          ) : isWorkspaceOpen ? (
-            <>
-              <span
-                className="wof-open-dot"
-                style={{ background: theme.colors.primary }}
-              />
-              Workspace open
-            </>
-          ) : (
-            <>
-              <PanelsTopLeft size={14} />
-              Open in Workspace
-            </>
-          )}
-        </button>
         <TopicStatusHeaderButton topicId={topicId} />
       </div>
 
-      {/* Body: description on the left, trails rail on the right. */}
+      {/* Body: topic description and its declared project list. */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <div
           style={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex' }}
@@ -278,7 +170,6 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
             topicId={topicId}
             visible={isActive}
             events={events}
-            workspaceId={workspaceId}
             repositoryPath={repositoryPath}
             tocOpen={tocOpen}
             onCloseToc={closeToc}
@@ -286,11 +177,7 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
           />
         </div>
 
-        <TopicTrailsRail
-          topicId={topicId}
-          onOpenTrail={openTrail}
-          width={260}
-        />
+        <TopicProjectsRail topicId={topicId} width={260} />
       </div>
     </div>
   );

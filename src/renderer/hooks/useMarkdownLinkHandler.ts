@@ -8,7 +8,7 @@
  *  - external links (`https:`, `mailto:`, ...) open in the OS browser
  *  - in-document `#anchor` links are left to the renderer (scroll), ignored here
  *  - repo-relative links resolve to an absolute path and emit `file:opened`,
- *    which the Alexandria workspace turns into a `markdown-doc` tab.
+ *    which the host window turns into a document tab.
  *
  * Validation (does the file exist?), PURL enrichment, and the cross-project
  * "Add this project" flow are deliberately out of scope here and land in later
@@ -19,8 +19,15 @@
 import { useCallback, useState } from 'react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { ShellService } from '../main-process-api/ShellService';
-import type { ResolvedDocLink } from './useWorkspaceFileIndex';
 import type { PurlResolution } from '../../shared/utils/resolvePurlLink';
+
+export interface ResolvedDocLink {
+  status: 'resolved' | 'missing' | 'ambiguous' | 'no-index';
+  path: string;
+  filePath?: string;
+  repositoryPath?: string;
+  candidates?: { filePath: string; repositoryPath: string; repoName: string }[];
+}
 
 /** Schemes handed off to the OS browser rather than resolved as docs. */
 const EXTERNAL_SCHEME = /^(https?:|mailto:|tel:|vscode:)/i;
@@ -76,10 +83,9 @@ export interface MarkdownLinkHandlerOptions {
    */
   basePath?: string;
   /**
-   * Resolver (e.g. from `useWorkspaceFileIndex`) that maps a repo-relative path
-   * to a concrete repo + absolute path via file-tree membership. When provided
-   * it takes precedence — this is how topic notes resolve links across the
-   * workspace's member repos. A `no-index` result falls back to the
+   * Optional resolver that maps a repo-relative path to a concrete repo +
+   * absolute path via file-tree membership. When provided it takes precedence.
+   * A `no-index` result falls back to the
    * `basePath`/`repositoryPath` join below so the handler degrades gracefully
    * while trees are still loading.
    */

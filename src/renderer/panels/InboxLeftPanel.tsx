@@ -383,7 +383,9 @@ export const InboxLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {isOwn ? 'shared by you' : `from @${entry.sender.githubLogin}`}
+                  {isOwn
+                    ? 'shared by you'
+                    : `from @${entry.sender.githubLogin}`}
                 </span>
                 {noteCount > 0 && (
                   <span style={{ flexShrink: 0 }}>
@@ -460,7 +462,6 @@ export const InboxLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
     return topicEntries.map((entry) => {
       const unread = entry.readAt === null;
       const title = entry.snapshot?.title || 'Topic';
-      const trailCount = entry.snapshot?.trailCount ?? 0;
       return (
         <button
           key={entry.topicId}
@@ -532,9 +533,6 @@ export const InboxLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
                 }}
               >
                 from @{entry.sender.githubLogin}
-                {trailCount > 0
-                  ? ` · ${trailCount} trail${trailCount === 1 ? '' : 's'}`
-                  : ''}
               </span>
               <span style={{ flexShrink: 0 }}>{timeAgo(entry.sentAt)}</span>
             </div>
@@ -808,7 +806,13 @@ export const InboxLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
               ? [{ value: 'recent', label: 'Recently Visited' }]
               : []),
           ]}
-          value={homePanelPrefs.recentlyVisited ? mode : (mode === 'recent' ? 'inbox' : mode)}
+          value={
+            homePanelPrefs.recentlyVisited
+              ? mode
+              : mode === 'recent'
+                ? 'inbox'
+                : mode
+          }
           onChange={(value) => setMode(value as InboxMode)}
           theme={theme}
           variant="pill-flat"

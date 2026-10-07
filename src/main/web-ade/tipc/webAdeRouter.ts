@@ -26,6 +26,7 @@ import type {
   GetTopicInboxInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
+import { requireHostedFeature } from '../../services/FeatureAvailabilityService';
 
 // Create a shared service instance
 const webAdeService = new WebAdeService();
@@ -38,6 +39,7 @@ export const webAdeRouter = {
   // ===========================================================================
 
   isAuthenticated: t.procedure.action(async () => {
+    await requireHostedFeature('signIn');
     return webAdeService.isAuthenticated();
   }),
 
@@ -48,6 +50,7 @@ export const webAdeRouter = {
   getGithubTree: t.procedure
     .input<GetTreeInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.getGithubTree(input);
     }),
 
@@ -58,6 +61,7 @@ export const webAdeRouter = {
   getRepoContributions: t.procedure
     .input<GetRepoContributionsInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.getRepoContributions(input);
     }),
 
@@ -68,6 +72,7 @@ export const webAdeRouter = {
   getUserActivity: t.procedure
     .input<GetUserActivityInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.getUserActivity(input);
     }),
 
@@ -78,30 +83,35 @@ export const webAdeRouter = {
   getStarredCollections: t.procedure
     .input<GetStarredCollectionsInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.getStarredCollections(input.includeItems ?? true);
     }),
 
   getOwnerStarredCollections: t.procedure
     .input<GetOwnerStarredCollectionsInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.getOwnerStarredCollections(input.owner, input.includeItems ?? true);
     }),
 
   createCollection: t.procedure
     .input<CreateCollectionInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.createCollection(input.name, input.description, input.icon);
     }),
 
   addRepoToCollection: t.procedure
     .input<AddRepoToCollectionInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.addRepoToCollection(input.collectionId, input.owner, input.repo);
     }),
 
   removeRepoFromCollection: t.procedure
     .input<RemoveRepoFromCollectionInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.removeRepoFromCollection(input.collectionId, input.owner, input.repo);
     }),
 
@@ -112,6 +122,7 @@ export const webAdeRouter = {
   getPinnedRepositories: t.procedure
     .input<GetPinnedRepositoriesInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.getPinnedRepositories(input.username);
     }),
 
@@ -122,12 +133,14 @@ export const webAdeRouter = {
   explainCommits: t.procedure
     .input<ExplainCommitsInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.explainCommits(input);
     }),
 
   explainWorkingChanges: t.procedure
     .input<ExplainWorkingChangesInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.explainWorkingChanges(input);
     }),
 
@@ -136,40 +149,47 @@ export const webAdeRouter = {
   // ===========================================================================
 
   getRecentlyVisitedTrails: t.procedure.action(async () => {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     return webAdeService.getRecentlyVisitedTrails();
   }),
 
   getInbox: t.procedure
     .input<GetInboxInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('trailTopicSharingAndInbox');
       return webAdeService.getInbox(input);
     }),
 
   getInboxUnreadCount: t.procedure.action(async () => {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     return webAdeService.getInboxUnreadCount();
   }),
 
   deleteInboxEntry: t.procedure
     .input<DeleteInboxEntryInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('trailTopicSharingAndInbox');
       return webAdeService.deleteInboxEntry(input);
     }),
 
   markInboxEntryRead: t.procedure
     .input<MarkInboxEntryReadInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('trailTopicSharingAndInbox');
       return webAdeService.markInboxEntryRead(input);
     }),
 
   sendTrail: t.procedure
     .input<SendTrailInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('trailTopicSharingAndInbox');
       return webAdeService.sendTrail(input);
     }),
 
   getSent: t.procedure
     .input<GetSentInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('trailTopicSharingAndInbox');
       return webAdeService.getSent(input);
     }),
 
@@ -180,10 +200,12 @@ export const webAdeRouter = {
   getTopicInbox: t.procedure
     .input<GetTopicInboxInput>()
     .action(async ({ input }) => {
+      await requireHostedFeature('trailTopicSharingAndInbox');
       return webAdeService.getTopicInbox(input);
     }),
 
   getTopicInboxUnreadCount: t.procedure.action(async () => {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     return webAdeService.getTopicInboxUnreadCount();
   }),
 };

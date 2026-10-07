@@ -59,11 +59,6 @@ const devWorkspaceEntryPath = path.join(
   'index.tsx',
 );
 const legacyEntryPath = path.join(webpackPaths.srcRendererPath, 'index.tsx');
-const alexandriaWorkspaceEntryPath = path.join(
-  webpackPaths.srcRendererPath,
-  'alexandria-workspace',
-  'index.tsx',
-);
 const titlebarEntryPath = path.join(
   webpackPaths.srcPath,
   'titlebar',
@@ -90,7 +85,7 @@ if (fs.existsSync(principalEntryPath)) {
       },
       isBrowser: false,
       isDevelopment: true,
-    })
+    }),
   );
 }
 
@@ -102,25 +97,6 @@ if (fs.existsSync(devWorkspaceEntryPath)) {
       filename: 'dev-workspace.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['dev-workspace'],
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true,
-      },
-      isBrowser: false,
-      isDevelopment: true,
-    }),
-  );
-}
-
-// Register Alexandria Workspace entry when present
-if (fs.existsSync(alexandriaWorkspaceEntryPath)) {
-  entryPoints['alexandria-workspace'] = alexandriaWorkspaceEntryPath;
-  htmlPlugins.push(
-    new HtmlWebpackPlugin({
-      filename: 'alexandria-workspace.html',
-      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
-      chunks: ['alexandria-workspace'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
@@ -183,7 +159,7 @@ htmlPlugins.push(
     },
     isBrowser: false,
     isDevelopment: true,
-  })
+  }),
 );
 
 const configuration: webpack.Configuration = {
@@ -354,12 +330,17 @@ const configuration: webpack.Configuration = {
     modules: [webpackPaths.srcPath, 'node_modules'],
     alias: {
       react: path.resolve(webpackPaths.rootPath, 'node_modules/react'),
-      'react-dom': path.resolve(webpackPaths.rootPath, 'node_modules/react-dom'),
+      'react-dom': path.resolve(
+        webpackPaths.rootPath,
+        'node_modules/react-dom',
+      ),
       '@shared': path.resolve(webpackPaths.srcRendererPath, 'shared'),
     },
-    plugins: [new TsconfigPathsPlugins({
-      configFile: path.resolve(__dirname, '../../tsconfig.renderer.json'),
-    })],
+    plugins: [
+      new TsconfigPathsPlugins({
+        configFile: path.resolve(__dirname, '../../tsconfig.renderer.json'),
+      }),
+    ],
     fallback: {
       fs: false,
       path: require.resolve('path-browserify'),
@@ -373,9 +354,7 @@ const configuration: webpack.Configuration = {
     },
   },
 
-  ignoreWarnings: [
-    /Critical dependency: require function is used in a way/,
-  ],
+  ignoreWarnings: [/Critical dependency: require function is used in a way/],
 
   plugins: [
     ...(skipDLLs
@@ -440,13 +419,9 @@ const configuration: webpack.Configuration = {
       rewrites: [
         { from: /^\/principal.html/, to: '/principal.html' },
         { from: /^\/dev-workspace.html/, to: '/dev-workspace.html' },
-        {
-          from: /^\/alexandria-workspace.html/,
-          to: '/alexandria-workspace.html',
-        },
         { from: /^\/index.html/, to: '/index.html' },
-        { from: /./, to: '/index.html' }
-      ]
+        { from: /./, to: '/index.html' },
+      ],
     },
     setupMiddlewares(middlewares: any) {
       // Prevent duplicate process spawns if setupMiddlewares is called multiple times

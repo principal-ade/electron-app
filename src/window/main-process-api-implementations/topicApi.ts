@@ -6,7 +6,7 @@
  */
 
 import { ipcRenderer } from 'electron';
-import type { DraftTopic as Topic } from '@principal-ai/principal-view-core';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import {
   TopicAPIEvent,
   TopicEventType,
@@ -22,16 +22,10 @@ const tipcInvoke = <T>(method: string, input?: unknown): Promise<T> => {
 
 export const topicAPI: TopicAPI = {
   onTopicChange: (callback: (event: TopicChangeEvent) => void) => {
-    const handleAdded = (
-      _event: Electron.IpcRendererEvent,
-      data: Topic,
-    ) => {
+    const handleAdded = (_event: Electron.IpcRendererEvent, data: Topic) => {
       callback({ type: TopicEventType.ADDED, topic: data });
     };
-    const handleUpdated = (
-      _event: Electron.IpcRendererEvent,
-      data: Topic,
-    ) => {
+    const handleUpdated = (_event: Electron.IpcRendererEvent, data: Topic) => {
       callback({ type: TopicEventType.UPDATED, topic: data });
     };
     const handleRemoved = (
@@ -62,16 +56,4 @@ export const topicAPI: TopicAPI = {
     tipcInvoke('updateTopic', { id, updates }),
 
   deleteTopic: (id: string) => tipcInvoke('deleteTopic', { id }),
-
-  addTrailToTopic: (topicId: string, trailId: string) =>
-    tipcInvoke('addTrailToTopic', { topicId, trailId }),
-
-  removeTrailFromTopic: (topicId: string, trailId: string) =>
-    tipcInvoke('removeTrailFromTopic', { topicId, trailId }),
-
-  reorderTopicTrails: (topicId: string, trailIds: string[]) =>
-    tipcInvoke('reorderTopicTrails', { topicId, trailIds }),
-
-  getTopicsForTrail: (trailId: string) =>
-    tipcInvoke('getTopicsForTrail', { trailId }),
 };

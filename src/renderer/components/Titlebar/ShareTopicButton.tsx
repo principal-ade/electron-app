@@ -4,21 +4,17 @@ import { Check, Loader2, UploadCloud } from 'lucide-react';
 import type {
   LocalTopicRecord,
   PublishedTopicVisibility,
-  TopicTrailPublishResult,
 } from '../../../shared/main-process-api-interfaces/TopicAPI';
 import { TopicService } from '../../main-process-api/TopicService';
-import { TrailLibraryService } from '../../services/TrailLibraryService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { ShareTopicModal } from './ShareTopicModal';
-import type { TopicTrailPlan } from './ShareTopicModal';
 
 /**
  * Titlebar action that publishes the workspace's topic to web-ade.
  *
  * Two states, keyed on `sync.remoteId`:
  *  - **Unshared** — clicking publishes via `TopicService.publishTopic`, then
- *    copies the returned link. On failure (e.g. a referenced trail isn't
- *    shared yet) the publish is rejected and the error surfaces in the label;
+ *    copies the returned link. On failure the error surfaces in the label;
  *    nothing changes locally.
  *  - **Shared** — clicking re-copies the topic's public link. Edits to a
  *    shared topic write through to web-ade elsewhere (TopicRegistryService);
@@ -43,15 +39,11 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [plan, setPlan] = useState<{ trails: TopicTrailPlan[] }>({
-    trails: [],
-  });
   // Set on a successful publish while the modal is open, so the modal can show
-  // a confirmation (link, audience, per-trail results) instead of closing.
+  // a confirmation with the link and audience instead of closing.
   const [publishResult, setPublishResult] = useState<{
     url: string;
     visibility: PublishedTopicVisibility;
-    trails: TopicTrailPublishResult[];
   } | null>(null);
   // Mirrors `topicSharing.skipPublishConfirm` — when true, an unblocked publish
   // skips the educational modal. Read once on mount and kept current via the
@@ -153,12 +145,10 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
           /* clipboard denied — still published */
         }
         if (modalOpen) {
-          // Keep the modal open to confirm success (link, audience, per-trail
-          // results) rather than closing it silently.
+          // Keep the modal open to confirm success rather than closing it silently.
           setPublishResult({
             url: result.url,
             visibility: result.visibility,
-            trails: result.trailResults,
           });
           setStatus('idle');
         } else {
@@ -195,32 +185,12 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
       return;
     }
 
-    // Resolve each of the topic's trails to its publish status so the modal
-    // can list them. A topic stores local trail ids; the library lookup gives
-    // titles + sharedAt. Trails missing from the library are 'unresolved' and
-    // block the publish.
-    const { entries } = await TrailLibraryService.list();
-    const byId = new Map(entries.map((e) => [e.id, e]));
-    const trails: TopicTrailPlan[] = record.topic.trailIds.map((trailId) => {
-      const entry = byId.get(trailId);
-      if (!entry) return { id: trailId, title: trailId, status: 'unresolved' };
-      return {
-        id: trailId,
-        title: entry.title || trailId,
-        status: entry.sharedAt ? 'shared' : 'toPublish',
-      };
-    });
-    const hasUnresolved = trails.some((t) => t.status === 'unresolved');
-
-    // The modal shows on every publish so sharing is never silent. The only
-    // exception is when the user has opted out *and* nothing is blocking —
-    // a blocked publish (unresolved trails) must always surface the modal so
-    // its explanation shows.
-    if (skipConfirmRef.current && !hasUnresolved) {
+    // The modal shows on every publish so sharing is never silent. Users may
+    // opt out of the confirmation after the first time.
+    if (skipConfirmRef.current) {
       await runPublish();
       return;
     }
-    setPlan({ trails });
     setErrorMsg(null);
     setPublishResult(null);
     setModalOpen(true);
@@ -320,7 +290,6 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
       {modalOpen && record && (
         <ShareTopicModal
           topicTitle={record.topic.title}
-          trails={plan.trails}
           busy={status === 'publishing'}
           error={errorMsg}
           result={publishResult}

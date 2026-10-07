@@ -26,11 +26,6 @@ const principalEntryPath = path.join(
   'principal-window',
   'index.tsx',
 );
-const alexandriaWorkspaceEntryPath = path.join(
-  webpackPaths.srcRendererPath,
-  'alexandria-workspace',
-  'index.tsx',
-);
 const windowSwitcherEntryPath = path.join(
   webpackPaths.srcRendererPath,
   'window-switcher',
@@ -64,25 +59,6 @@ if (fs.existsSync(principalEntryPath)) {
       filename: 'principal.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['principal'],
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true,
-      },
-      isBrowser: false,
-      isDevelopment: false,
-    })
-  );
-}
-
-// Add Alexandria Workspace entry if it exists
-if (fs.existsSync(alexandriaWorkspaceEntryPath)) {
-  entryPoints['alexandria-workspace'] = alexandriaWorkspaceEntryPath;
-  htmlPlugins.push(
-    new HtmlWebpackPlugin({
-      filename: 'alexandria-workspace.html',
-      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
-      chunks: ['alexandria-workspace'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,

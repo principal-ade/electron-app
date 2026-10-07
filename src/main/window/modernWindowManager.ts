@@ -37,22 +37,12 @@ import {
   getMainWindowId,
 } from './types';
 
-import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
-
 // Re-export for backward compatibility
 export { applicationWindows, specialWindows } from './types';
 export type { WindowFeatures } from './types';
 
 // Track if titlebar IPC handlers have been registered
 let titlebarHandlersRegistered = false;
-
-// Set once the user has confirmed an app-wide quit. The workspace window's
-// close interceptor (below) steps aside while this is true, so quitting closes
-// every window instead of being blocked by the per-window status prompt.
-let appQuitting = false;
-export function markAppQuitting(): void {
-  appQuitting = true;
-}
 
 /**
  * Modern Application Window class
@@ -67,11 +57,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
   public windowManagerAdapter?: ElectronWindowManagerAdapter;
   public githubAdapter?: GitHubAdapter;
   private menuBuilder?: MenuBuilder;
-
-  // Set true once the renderer has confirmed a workspace-window close (after
-  // the pre-dismiss status prompt). Lets the next `close` event through instead
-  // of re-prompting. See the `close` interceptor in setupWindowBehaviors.
-  private allowClose = false;
 
   constructor(
     options?: BrowserWindowConstructorOptions,
@@ -197,10 +182,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         }
       }
 
-      // Capture before the map entry is removed below.
-      const wasWorkspaceWindow =
-        this.metadata?.primaryType === PrimaryWindowType.WORKSPACE;
-
       // Clean up file system watchers before removing from map
       if (this.fileSystemAdapter) {
         console.log(
@@ -276,20 +257,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
           });
       }
 
-      // Tell the home view a topic window closed so it can drop the "open"
-      // indicator on the matching topic card.
-      if (wasWorkspaceWindow) {
-        import('./modernWindowHandlers')
-          .then((module) => {
-            module.broadcastWorkspaceWindowsChanged?.();
-          })
-          .catch((error) => {
-            console.error(
-              '[ModernWindow] Error broadcasting workspace window change:',
-              error,
-            );
-          });
-      }
     });
   }
 
@@ -637,56 +604,14 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       this.window.show();
       showSpan.end();
 
-      // Confirm first paint to any renderer waiting on this window to open
-      // (e.g. an "opening…" affordance). Fired for every window type; the
-      // payload carries workspace/topic identity so listeners can correlate.
-      sendToAllWindows(WindowEvent.WINDOW_READY, {
-        windowId: this.window.id,
-        primaryType: this.metadata.primaryType,
-        workspaceId: this.metadata.workspaceId,
-        topicIds: this.metadata.topicIds ?? [],
-      });
-
       // Close splash screen when main window is ready
       if (splashScreen.isShowing()) {
         splashScreen.close();
       }
     });
 
-    // Workspace windows prompt for a status update before they're dismissed:
-    // hold the close, ask the renderer to surface the info modal, and wait for
-    // it to confirm (which flips `allowClose` and closes again). Skipped during
-    // an app-wide quit or restart, and for every non-workspace window, which
-    // close normally.
-    this.window.on('close', (event) => {
-      if (
-        this.allowClose ||
-        appQuitting ||
-        isRestarting ||
-        this.metadata?.primaryType !== PrimaryWindowType.WORKSPACE
-      ) {
-        return;
-      }
-      event.preventDefault();
-      if (!this.window.isDestroyed()) {
-        this.window.webContents.send(WindowEvent.WORKSPACE_BEFORE_CLOSE);
-      }
-    });
-
     // Setup titlebar IPC handlers for this window
     this.setupTitlebarHandlers();
-  }
-
-  /**
-   * Allow the next `close` to proceed and trigger it. Called from the
-   * renderer's confirm-close path once the user has finished with the
-   * pre-dismiss status prompt.
-   */
-  public confirmClose(): void {
-    this.allowClose = true;
-    if (!this.window.isDestroyed()) {
-      this.window.close();
-    }
   }
 
   private setupTitlebarHandlers(): void {
@@ -747,15 +672,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         return win ? win.isMaximized() : false;
       });
 
-      // Confirm a workspace-window close after the pre-dismiss status prompt.
-      // The renderer invokes this once the user picks "Close window"; we flip
-      // the originating window's `allowClose` and close it for real.
-      ipcMain.handle(WindowEvent.WORKSPACE_CONFIRM_CLOSE, (event) => {
-        const win = BrowserWindow.fromWebContents(event.sender);
-        if (!win) return false;
-        applicationWindows.get(win.id)?.confirmClose();
-        return true;
-      });
     }
 
     // Always set up window-specific maximize state change listeners

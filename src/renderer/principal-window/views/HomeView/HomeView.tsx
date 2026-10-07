@@ -22,10 +22,7 @@ import { GithubService } from '../../../main-process-api/GithubService';
 import { SkillLockService } from '../../../main-process-api/SkillLockService';
 import { ShellService } from '../../../main-process-api/ShellService';
 import { TopicService } from '../../../main-process-api/TopicService';
-import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { WindowService } from '../../../main-process-api/WindowService';
-import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
-import { useOpenWorkspaceWindow } from '../../../hooks/useOpenWorkspaceWindow';
 import { useOpenRepositoryWindows } from '../../../hooks/useOpenRepositoryWindows';
 import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
@@ -37,15 +34,15 @@ import type { TrailIndexEntry } from '../../../../shared/main-process-api-interf
 import type { SkillLockFile } from '../../../../shared/main-process-api-interfaces/SkillLockAPI';
 import type {
   AlexandriaEntry,
-  Topic,
-  Workspace,
 } from '@principal-ai/alexandria-core-library/types';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import {
   TopicsDashboard,
   type TopicsDashboardTopicEntry,
 } from './TopicsDashboard';
 import { OpenProjectCard, type OpenProjectEntry } from './OpenProjectCard';
 import { getPrincipalBridgeUrl } from '../../../../shared/config/appBranding';
+import { useTopicsTabs } from '../../contexts/TopicsTabsContext';
 
 const trailRepoLabel = (repositoryPath: string | undefined): string => {
   if (!repositoryPath) return 'No repo';
@@ -111,7 +108,7 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
     name: 'create-topic',
     title: 'Create Topic',
     description:
-      'Create a topic — a curated bundle of trails on one subject, with a description that doubles as the working brief for agents pointed at it.',
+      'Create a topic — a subject brief scoped to its declared projects, with a description that doubles as the working brief for agents pointed at it.',
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/create-topic`,
     source: TRAIL_SKILL_SOURCE,
     Icon: Plus,
@@ -120,7 +117,7 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
     name: 'topic-context',
     title: 'Topic Context',
     description:
-      'Read the topic an agent was briefed on and keep its description current — fetch the topic and its trails, append discovered context, or replace a status section in place.',
+      'Read the topic an agent was briefed on and keep its description current — fetch the topic, append discovered context, or replace a status section in place.',
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/topic-context`,
     source: TRAIL_SKILL_SOURCE,
     Icon: Layers,
@@ -166,8 +163,7 @@ const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
   {
     name: 'principal-ai-desktop-app-tools',
     title: 'Principal Desktop App Tools',
-    description:
-      `Canonical reference for the app's local bridge — the HTTP surface at ${getPrincipalBridgeUrl()} that agents use to push trails, create topics, and leave notes on documents, plus the conventions every call shares.`,
+    description: `Canonical reference for the app's local bridge — the HTTP surface at ${getPrincipalBridgeUrl()} that agents use to push trails, create topics, and leave notes on documents, plus the conventions every call shares.`,
     url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/principal-ai-desktop-app-tools`,
     source: TRAIL_SKILL_SOURCE,
     Icon: Plug,
@@ -276,24 +272,7 @@ export function HomeView() {
   const [publishedTopicIds, setPublishedTopicIds] = useState<Set<string>>(
     new Set(),
   );
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [workspaceRepos, setWorkspaceRepos] = useState<
-    Map<string, AlexandriaEntry[]>
-  >(new Map());
-  const [defaultBaseDirectory, setDefaultBaseDirectory] = useState<
-    string | null
-  >(null);
-  // Open-a-workspace flow + feedback, shared with the topic tab's button via
-  // the same hook. `openWorkspaceIds` (live) drives the persistent "open"
-  // indicator; `openStatus` + `openingTopicId` drive the transient "Opening…"
-  // indicator on the card being opened; `openTopicWorkspace` is the action
-  // onSelectTopic fires.
-  const {
-    open: openTopicWorkspace,
-    status: openStatus,
-    activeKey: openingTopicId,
-    openWorkspaceIds,
-  } = useOpenWorkspaceWindow();
+  const { openTopic: openTopicInTopicsView } = useTopicsTabs();
 
   // Topic modal state.
   const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
@@ -442,111 +421,22 @@ export function HomeView() {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    const refresh = () => {
-      WorkspaceService.getWorkspaces()
-        .then((list) => {
-          if (!cancelled) setWorkspaces(list);
-        })
-        .catch((err) => {
-          console.error('[HomeView] Failed to load workspaces:', err);
-        });
-    };
-    refresh();
-    const unsubscribe = WorkspaceService.onWorkspaceChange(refresh);
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const targetIds = workspaces
-      .filter((w) => (w.topicIds?.length ?? 0) > 0)
-      .map((w) => w.id);
-    if (targetIds.length === 0) {
-      setWorkspaceRepos((prev) => (prev.size === 0 ? prev : new Map()));
-      return;
-    }
-    Promise.all(
-      targetIds.map((id) =>
-        WorkspaceService.getRepositoriesInWorkspace(id)
-          .then((repos) => [id, repos] as const)
-          .catch((err) => {
-            console.error(
-              '[HomeView] Failed to load repos for workspace',
-              id,
-              err,
-            );
-            return [id, [] as AlexandriaEntry[]] as const;
-          }),
-      ),
-    ).then((pairs) => {
-      if (cancelled) return;
-      setWorkspaceRepos(new Map(pairs));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaces]);
-
-  useEffect(() => {
-    let cancelled = false;
-    UserPreferencesService.getPreferences()
-      .then((prefs) => {
-        if (!cancelled)
-          setDefaultBaseDirectory(prefs.baseDefaultDirectory || null);
-      })
-      .catch(() => {});
-    const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
-      setDefaultBaseDirectory(prefs.baseDefaultDirectory || null);
-    });
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
-
   const dashboardTopicEntries = useMemo<TopicsDashboardTopicEntry[]>(() => {
     const sorted = [...topics].sort((a, b) =>
       b.updatedAt.localeCompare(a.updatedAt),
     );
     return sorted.map((t) => {
-      const workspace = workspaces.find((w) => w.topicIds?.includes(t.id));
-      const repos = workspace ? (workspaceRepos.get(workspace.id) ?? []) : [];
-      const projectRepos = repos.map((repo) => ({
-        name: repo.github?.name ?? repo.name ?? trailRepoLabel(repo.path),
-        ownerLogin: repo.github?.owner,
-      }));
       return {
         key: t.id,
         title: t.title,
         updatedAt: t.updatedAt,
-        folderPath:
-          workspace?.suggestedClonePath ?? defaultBaseDirectory ?? undefined,
-        projectRepos: projectRepos.length > 0 ? projectRepos : undefined,
         published: publishedTopicIds.has(t.id),
-        trailCount: t.trailIds.length,
-        isOpen: workspace ? openWorkspaceIds.has(workspace.id) : false,
-        // Transient: this card's workspace is mid-open (click → first paint).
-        isOpening: openStatus === 'opening' && openingTopicId === t.id,
-        // No local workspace yet — drives the "New" badge. Opening the topic
-        // materializes one (see onSelectTopic), at which point this flips off.
-        isNew: !workspace,
         status: t.status,
       };
     });
   }, [
     topics,
-    workspaces,
-    workspaceRepos,
-    defaultBaseDirectory,
     publishedTopicIds,
-    openWorkspaceIds,
-    openStatus,
-    openingTopicId,
   ]);
 
   // Show the dashboard once the user has any content to land on — a topic, an
@@ -721,7 +611,9 @@ export function HomeView() {
         const { fullyInstalled, failures } = await installSkillsByName([name]);
         if (!fullyInstalled.has(name)) {
           throw new Error(
-            failures.length > 0 ? failures.join('; ') : `Failed to update ${name}.`,
+            failures.length > 0
+              ? failures.join('; ')
+              : `Failed to update ${name}.`,
           );
         }
         // INSTALL_SKILL's skill:installed broadcast drives recheck(), which
@@ -1330,27 +1222,9 @@ export function HomeView() {
               {hasDashboardContent ? (
                 <TopicsDashboard
                   topicEntries={dashboardTopicEntries}
-                  onSelectTopic={(entry) => {
-                    // Routed through the shared open-with-feedback hook (keyed
-                    // by topic id so only this card shows "Opening…"). The
-                    // resolver materializes a workspace on first open: topics
-                    // minted over the bridge (the `POST /api/topics` route
-                    // creates only the topic) — and, in future, topics shared
-                    // to us — have no local workspace until now. The
-                    // CREATE_WORKSPACE broadcast refreshes the dashboard
-                    // (dropping its "New" badge) on its own.
-                    void openTopicWorkspace(async () => {
-                      const existing = workspaces.find((w) =>
-                        w.topicIds?.includes(entry.key),
-                      );
-                      if (existing) return existing.id;
-                      const created = await WorkspaceService.createWorkspace({
-                        name: entry.title,
-                        topicIds: [entry.key],
-                      });
-                      return created.id;
-                    }, entry.key);
-                  }}
+                  onSelectTopic={(entry) =>
+                    openTopicInTopicsView(entry.key, entry.title)
+                  }
                   onCreateTopic={() => setIsNewTopicOpen(true)}
                   onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
                 />
@@ -1427,7 +1301,6 @@ export function HomeView() {
       {pendingDeleteTopic && (
         <DeleteTopicConfirmDialog
           topicTitle={pendingDeleteTopic.title}
-          workspaceFolderPath={pendingDeleteTopic.folderPath}
           busy={deletingTopic}
           onCancel={() => {
             if (deletingTopic) return;
@@ -1439,20 +1312,6 @@ export function HomeView() {
             setDeletingTopic(true);
             void (async () => {
               try {
-                const linked = workspaces.filter((w) =>
-                  w.topicIds?.includes(target.key),
-                );
-                await Promise.all(
-                  linked.map((w) =>
-                    WorkspaceService.deleteWorkspace(w.id).catch((err) => {
-                      console.error(
-                        '[HomeView] Failed to delete workspace for topic:',
-                        target.key,
-                        err,
-                      );
-                    }),
-                  ),
-                );
                 await TopicService.deleteTopic(target.key);
               } catch (err) {
                 console.error('[HomeView] Failed to delete topic:', err);

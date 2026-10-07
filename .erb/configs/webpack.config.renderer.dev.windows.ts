@@ -51,11 +51,6 @@ const principalEntryPath = path.join(
   'index.tsx',
 );
 const legacyEntryPath = path.join(webpackPaths.srcRendererPath, 'index.tsx');
-const alexandriaWorkspaceEntryPath = path.join(
-  webpackPaths.srcRendererPath,
-  'alexandria-workspace',
-  'index.tsx',
-);
 const titlebarEntryPath = path.join(
   webpackPaths.srcPath,
   'titlebar',
@@ -104,25 +99,6 @@ if (fs.existsSync(principalEntryPath)) {
       filename: 'principal.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['principal'], // Only include principal chunk
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true,
-      },
-      isBrowser: false,
-      isDevelopment: true,
-    })
-  );
-}
-
-// Add Alexandria Workspace entry if it exists
-if (fs.existsSync(alexandriaWorkspaceEntryPath)) {
-  entryPoints['alexandria-workspace'] = alexandriaWorkspaceEntryPath;
-  htmlPlugins.push(
-    new HtmlWebpackPlugin({
-      filename: 'alexandria-workspace.html',
-      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
-      chunks: ['alexandria-workspace'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
@@ -408,6 +384,10 @@ const configuration: webpack.Configuration = {
       '.mjs': ['.mjs', '.mts'],
     },
     alias: {
+      'module$': path.resolve(
+        webpackPaths.srcRendererPath,
+        'utils/nodeModuleShim.ts',
+      ),
       react: path.resolve(webpackPaths.rootPath, 'node_modules/react'),
       'react-dom': path.resolve(webpackPaths.rootPath, 'node_modules/react-dom'),
       'react/jsx-runtime': path.resolve(webpackPaths.rootPath, 'node_modules/react/jsx-runtime'),
@@ -417,6 +397,7 @@ const configuration: webpack.Configuration = {
     plugins: [new TsconfigPathsPlugins()],
     fallback: {
       fs: false,
+      os: false,
       path: false,
       crypto: false,
       stream: require.resolve('stream-browserify'),
@@ -546,8 +527,6 @@ const configuration: webpack.Configuration = {
       rewrites: [
         { from: /^\/principal.html/, to: '/principal.html' },
         {
-          from: /^\/alexandria-workspace.html/,
-          to: '/alexandria-workspace.html',
         },
         {
           from: /^\/dev-workspace.html/,

@@ -7,6 +7,7 @@
 
 import fetch from 'node-fetch';
 import { authService } from './AuthService';
+import { requireHostedFeature } from './FeatureAvailabilityService';
 import type {
   GetTreeInput,
   GetTreeResponse,
@@ -52,6 +53,7 @@ export class WebAdeService {
    * Check if user is authenticated (has a valid GitHub token)
    */
   async isAuthenticated(): Promise<boolean> {
+    await requireHostedFeature('signIn');
     try {
       const token = await this.getToken();
       return token !== null;
@@ -81,6 +83,7 @@ export class WebAdeService {
    * Uses web-ade's multi-layer caching (memory → Redis → S3 → GitHub)
    */
   async getGithubTree(input: GetTreeInput): Promise<GetTreeResponse> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -128,6 +131,7 @@ export class WebAdeService {
    * Fetches commits and aggregates them by day
    */
   async getRepoContributions(input: GetRepoContributionsInput): Promise<RepoContributionsResponse> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -167,6 +171,7 @@ export class WebAdeService {
    * Returns collections with optional items (repos and users)
    */
   async getStarredCollections(includeItems: boolean = true): Promise<StarredCollection[]> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -212,6 +217,7 @@ export class WebAdeService {
     owner: string,
     includeItems = true,
   ): Promise<OwnerStarredCollectionsResponse> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     const token = await this.getToken();
     const params = includeItems ? '' : '?include_items=false';
     const url = `${this.baseUrl}/github/owner/${encodeURIComponent(owner)}/starred-collections${params}`;
@@ -240,6 +246,7 @@ export class WebAdeService {
    * Create a new starred collection
    */
   async createCollection(name: string, description?: string, icon?: string): Promise<StarredCollection> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -278,6 +285,7 @@ export class WebAdeService {
    * Add a repository to a starred collection
    */
   async addRepoToCollection(collectionId: string, owner: string, repo: string): Promise<void> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -317,6 +325,7 @@ export class WebAdeService {
    * Remove a repository from a starred collection
    */
   async removeRepoFromCollection(collectionId: string, owner: string, repo: string): Promise<void> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -353,6 +362,7 @@ export class WebAdeService {
    * Returns array of "owner/repo" strings
    */
   async getPinnedRepositories(username: string): Promise<string[]> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -392,6 +402,7 @@ export class WebAdeService {
    * Fetches recent commit activity and contribution calendar for a GitHub user
    */
   async getUserActivity(input: GetUserActivityInput): Promise<UserActivityResponse> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -434,12 +445,14 @@ export class WebAdeService {
   }
 
   async explainCommits(input: ExplainCommitsInput): Promise<ExplainCommitsResponse> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     return this.postSseExplain('/api/explain-commits', input, 'explain-commits');
   }
 
   async explainWorkingChanges(
     input: ExplainWorkingChangesInput,
   ): Promise<ExplainWorkingChangesResponse> {
+    await requireHostedFeature('repositoryInsightsAndCollections');
     return this.postSseExplain(
       '/api/explain-working-changes',
       input,
@@ -495,6 +508,7 @@ export class WebAdeService {
    * resolve it from AuthService. Returns empty if we can't (signed out / no id).
    */
   async getRecentlyVisitedTrails(): Promise<ListRecentlyVisitedTrailsResponse> {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     const token = await this.getToken();
     const user = await authService.getCurrentUser();
     const githubId = user?.id;
@@ -533,6 +547,7 @@ export class WebAdeService {
    * Auth'd by the GitHub token; the server resolves the recipient.
    */
   async getInbox(input: GetInboxInput = {}): Promise<ListInboxResponse> {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -577,6 +592,7 @@ export class WebAdeService {
    * Fetch just the unread inbox count — cheap badge poll.
    */
   async getInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -616,6 +632,7 @@ export class WebAdeService {
    * (`INBOX_NOT_FOUND`) is treated as success: the entry is already gone.
    */
   async deleteInboxEntry(input: DeleteInboxEntryInput): Promise<void> {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -659,6 +676,7 @@ export class WebAdeService {
   async markInboxEntryRead(
     input: MarkInboxEntryReadInput,
   ): Promise<MarkInboxEntryReadResponse> {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -698,6 +716,7 @@ export class WebAdeService {
    * sender. One row per trail, recipients merged across resends.
    */
   async getSent(input: GetSentInput = {}): Promise<ListSentResponse> {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -743,6 +762,7 @@ export class WebAdeService {
    * unknown/invalid logins come back in `failed[]`.
    */
   async sendTrail(input: SendTrailInput): Promise<SendTrailResponse> {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -796,6 +816,7 @@ export class WebAdeService {
   async getTopicInbox(
     input: GetTopicInboxInput = {},
   ): Promise<ListTopicInboxResponse> {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -843,6 +864,7 @@ export class WebAdeService {
    * {@link getInboxUnreadCount}.
    */
   async getTopicInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');

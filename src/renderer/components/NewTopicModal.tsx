@@ -1,11 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Check, FolderOpen, Library, X } from 'lucide-react';
-import { FileSystemService } from '../main-process-api/FileSystemService';
+import { Check, Library, X } from 'lucide-react';
 import { TopicService } from '../main-process-api/TopicService';
-import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
-import { WindowService } from '../main-process-api/WindowService';
-import { WorkspaceService } from '../main-process-api/WorkspaceService';
 
 interface NewTopicModalProps {
   isOpen: boolean;
@@ -15,11 +11,8 @@ interface NewTopicModalProps {
 /**
  * Create a new topic.
  *
- * v1 flow: ask only for a title. Submit creates a `Topic` record AND a
- * sibling `Workspace` whose `topicIds` references it, then opens a new
- * Alexandria workspace window pointed at the workspace. Repository
- * membership stays derived — picking a starting repo is not part of the
- * UX for now.
+ * Topics are standalone subject briefs. They no longer create or open a
+ * workspace when created.
  */
 export const NewTopicModal: React.FC<NewTopicModalProps> = ({
   isOpen,
@@ -27,9 +20,6 @@ export const NewTopicModal: React.FC<NewTopicModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const [title, setTitle] = useState('');
-  const [formPath, setFormPath] = useState('');
-  const [baseDirectory, setBaseDirectory] = useState<string | null>(null);
-  const [pathManuallyEdited, setPathManuallyEdited] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,28 +27,10 @@ export const NewTopicModal: React.FC<NewTopicModalProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setTitle('');
-      setFormPath('');
-      setPathManuallyEdited(false);
       setError(null);
       setIsSubmitting(false);
     }
   }, [isOpen]);
-
-  // Load the user's base default directory when the modal opens so we can
-  // suggest a sensible clone path.
-  useEffect(() => {
-    if (!isOpen) return;
-    UserPreferencesService.getPreferences().then((prefs) => {
-      setBaseDirectory(prefs.baseDefaultDirectory || null);
-    });
-  }, [isOpen]);
-
-  // Default the directory to the user's base directory until they pick
-  // something else.
-  useEffect(() => {
-    if (pathManuallyEdited || !baseDirectory) return;
-    setFormPath(baseDirectory);
-  }, [baseDirectory, pathManuallyEdited]);
 
   const handleCreate = useCallback(async () => {
     const trimmed = title.trim();
@@ -71,23 +43,7 @@ export const NewTopicModal: React.FC<NewTopicModalProps> = ({
     setError(null);
 
     try {
-      // 1. Create the topic (persisted via the canonical TopicManager +
-      //    desktop-only sync sidecar).
-      const topic = await TopicService.createTopic({ title: trimmed });
-
-      // 2. Create a workspace whose only topic is this one. Multi-topic
-      //    support extends `topicIds` later; v1 is always single-topic.
-      const workspace = await WorkspaceService.createWorkspace({
-        name: trimmed,
-        topicIds: [topic.id],
-        suggestedClonePath: formPath.trim() || undefined,
-      });
-
-      // 3. Open the new workspace window.
-      await WindowService.openAlexandriaWorkspace({
-        workspaceId: workspace.id,
-      });
-
+      await TopicService.createTopic({ title: trimmed });
       onClose();
     } catch (err) {
       console.error('[NewTopicModal] Failed to create topic:', err);
@@ -96,23 +52,7 @@ export const NewTopicModal: React.FC<NewTopicModalProps> = ({
       );
       setIsSubmitting(false);
     }
-  }, [title, formPath, onClose]);
-
-  const handleBrowseDirectory = useCallback(async () => {
-    try {
-      const result = await FileSystemService.selectDirectory({
-        title: 'Select Topic Directory',
-        buttonLabel: 'Select Directory',
-        properties: ['openDirectory', 'createDirectory'],
-      });
-      if (result && !result.canceled && result.filePaths?.[0]) {
-        setFormPath(result.filePaths[0]);
-        setPathManuallyEdited(true);
-      }
-    } catch (err) {
-      console.error('[NewTopicModal] Error selecting directory:', err);
-    }
-  }, []);
+  }, [title, onClose]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -230,60 +170,6 @@ export const NewTopicModal: React.FC<NewTopicModalProps> = ({
           }}
         />
 
-        {/* Directory — where the topic's workspace will live on disk. */}
-        <label
-          style={{
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.textSecondary,
-            marginBottom: 6,
-          }}
-        >
-          Directory
-        </label>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-          <input
-            type="text"
-            value={formPath}
-            onChange={(e) => {
-              setFormPath(e.target.value);
-              setPathManuallyEdited(true);
-            }}
-            placeholder={baseDirectory || '/path/to/topic'}
-            disabled={isSubmitting}
-            style={{
-              flex: 1,
-              background: theme.colors.backgroundSecondary,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: 8,
-              padding: '10px 12px',
-              color: theme.colors.text,
-              fontSize: theme.fontSizes[1],
-              fontFamily: theme.fonts.monospace,
-              outline: 'none',
-            }}
-          />
-          <button
-            type="button"
-            onClick={handleBrowseDirectory}
-            disabled={isSubmitting}
-            style={{
-              background: theme.colors.backgroundTertiary,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: 8,
-              padding: '0 14px',
-              color: theme.colors.text,
-              cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              fontSize: theme.fontSizes[1],
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <FolderOpen size={14} />
-            Browse…
-          </button>
-        </div>
         {error && (
           <div
             style={{

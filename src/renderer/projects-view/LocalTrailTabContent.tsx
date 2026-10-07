@@ -21,7 +21,7 @@ import type {
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
-import { FileCityTrailTabContent } from '../alexandria-workspace/file-city-trail-tab/FileCityTrailTabContent';
+import { FileCityTrailTabContent } from './file-city-trail-tab/FileCityTrailTabContent';
 import { TrailLibraryService } from '../services/TrailLibraryService';
 
 export const LocalTrailTabContent: React.FC<{

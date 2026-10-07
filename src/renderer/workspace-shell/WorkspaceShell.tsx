@@ -189,7 +189,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     string | null
   >(null);
   const [showSendTabButton, setShowSendTabButton] = useState(false);
-  const [selectedRepo, setSelectedRepo] = useState<RepositorySelectedPayload | null>(null);
+  const [selectedRepo, setSelectedRepo] =
+    useState<RepositorySelectedPayload | null>(null);
   const [repoCardExiting, setRepoCardExiting] = useState(false);
 
   // Refs so renderTabContent stays stable across renders.
@@ -201,8 +202,15 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   });
 
   // The shared workspace tab bucket (the persistent host's tab list).
-  const { tabs, setTabs, activeTabId, setActiveTabId, openMarkdownDoc, openSourceFile, openMedia } =
-    useWorkspaceTabs();
+  const {
+    tabs,
+    setTabs,
+    activeTabId,
+    setActiveTabId,
+    openMarkdownDoc,
+    openSourceFile,
+    openMedia,
+  } = useWorkspaceTabs();
   // The Inbox/Topics left panels emit open intents on the portal bus
   // (PortalIntentBridge turns them into tabs).
   const { events: portalEvents } = usePortalEvents();
@@ -341,18 +349,13 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             <HomePanel
               icon={<Layers size={32} />}
               title="Your topics"
-              body="Topics bundle related trails on one subject. Pick a topic from the panel on the left to read its description here."
+              body="Topics are subject briefs scoped to projects. Pick one from the panel on the left to read its description here."
             />
           );
         case 'topic': {
           const topicTab = tab as TopicTab;
           return (
-            <TopicTabContent
-              key={topicTab.id}
-              topicId={topicTab.topicId}
-              events={eventsRef.current}
-              repositories={repositoriesRef.current}
-            />
+            <TopicTabContent key={topicTab.id} topicId={topicTab.topicId} />
           );
         }
         case 'local-topic': {
@@ -411,7 +414,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   }, [events, activityActions]);
 
   // "Open a terminal here" from the Projects left panel + repository profile
-  // tab. Mirrors the dev-workspace flow (AlexandriaWorkspaceLayout): create — or
+  // tab. Mirrors the dev-workspace flow: create — or
   // reuse, since `createTerminalSession` dedupes by context — a session rooted at
   // the path, then point `requestFocusTabId` at the `tab-restored-<id>` tab the
   // TabbedTerminalPanel materializes from `terminalSessions`. Appending a
@@ -453,11 +456,20 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         );
         setRequestFocusTabId(`tab-restored-${sessionId}`);
       } catch (err) {
-        console.error('[WorkspaceShell] Failed to create session for incoming tab:', err);
+        console.error(
+          '[WorkspaceShell] Failed to create session for incoming tab:',
+          err,
+        );
       }
     })();
     clearIncomingTab();
-  }, [incomingTab, clearIncomingTab, terminalActions, terminalCtx.terminalContext, terminalDirectory]);
+  }, [
+    incomingTab,
+    clearIncomingTab,
+    terminalActions,
+    terminalCtx.terminalContext,
+    terminalDirectory,
+  ]);
 
   // Find the active terminal tab's directory for the "show project" button.
   const activeTabDirectory = useMemo(() => {
@@ -646,7 +658,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       const filePath = event.payload?.filePath;
       if (!filePath) return;
       const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
-      const isMedia = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(filePath);
+      const isMedia =
+        /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(
+          filePath,
+        );
       if (isMarkdown) {
         openMarkdownDoc(filePath, event.payload?.repositoryPath);
       } else if (isMedia) {
@@ -697,10 +712,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
                       : 'Topics',
         content:
           activeView === 'home-panel' ? (
-            <HomeLeftPanel
-              repositories={repositories}
-              events={events}
-            />
+            <HomeLeftPanel repositories={repositories} events={events} />
           ) : activeView === 'projects' ? (
             <ProjectsLeftPanel
               repositories={repositories}

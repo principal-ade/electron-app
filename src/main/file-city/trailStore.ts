@@ -42,6 +42,7 @@ import {
   listSharedTrails,
   shareTrail,
 } from './trailShare';
+import { requireHostedFeature } from '../services/FeatureAvailabilityService';
 import { applicationWindows, getMainWindowId } from '../window/types';
 
 export interface SetOptions {
@@ -171,6 +172,7 @@ export class TrailStore {
     id: string,
     options?: TrailShareOptions,
   ): Promise<FileCityTrailShareResult> {
+    await requireHostedFeature('trailTopicSharingAndInbox');
     // Create-once: a trail publishes to web-ade exactly once. If this id was
     // already shared, reuse that publication instead of minting a second
     // web-ade id — every POST /api/trails mints a fresh id, and each id has
@@ -233,7 +235,9 @@ export class TrailStore {
   listShared(
     options?: TrailListSharedOptions,
   ): Promise<TrailListSharedResult> {
-    return listSharedTrails(options);
+    return requireHostedFeature('trailTopicSharingAndInbox').then(() =>
+      listSharedTrails(options),
+    );
   }
 
   fetchShared(
@@ -241,11 +245,15 @@ export class TrailStore {
     repo: string,
     id: string,
   ): Promise<FileCityTrailFetchSharedResult> {
-    return fetchSharedTrail(owner, repo, id);
+    return requireHostedFeature('trailTopicSharingAndInbox').then(() =>
+      fetchSharedTrail(owner, repo, id),
+    );
   }
 
   fetchSharedById(id: string): Promise<FileCityTrailFetchSharedByIdResult> {
-    return fetchSharedTrailById(id);
+    return requireHostedFeature('trailTopicSharingAndInbox').then(() =>
+      fetchSharedTrailById(id),
+    );
   }
 
   /**
@@ -254,7 +262,9 @@ export class TrailStore {
    * disk store. Persistence + id/timestamp assignment happen server-side.
    */
   createSharedNote(id: string, draft: TrailNoteDraft): Promise<TrailNote> {
-    return createSharedTrailNote(id, draft);
+    return requireHostedFeature('trailTopicSharingAndInbox').then(() =>
+      createSharedTrailNote(id, draft),
+    );
   }
 
   /**
@@ -326,29 +336,6 @@ export function sendToRepoWindows(
 }
 
 /**
- * Push an IPC event to renderer windows hosting a specific topic.
- * Workspace windows stamp `metadata.topicIds` at open time from the
- * backing `Workspace.topicIds`; this helper fans out to any window whose
- * metadata lists `topicId`. Returns the number of windows the event was
- * delivered to. Sends nothing (and returns 0) for an undefined topicId.
- */
-export function sendToTopicWindows(
-  eventName: FileCityTrailEvent,
-  payload: unknown,
-  topicId: string | undefined,
-): number {
-  if (!topicId) return 0;
-  let delivered = 0;
-  for (const appWindow of applicationWindows.values()) {
-    if (!appWindow.metadata?.topicIds?.includes(topicId)) continue;
-    if (appWindow.window.isDestroyed()) continue;
-    appWindow.window.webContents.send(eventName, payload);
-    delivered += 1;
-  }
-  return delivered;
-}
-
-/**
  * Push an IPC event to the principal window. The principal window doesn't
  * carry a repo `localPath`, so `sendToRepoWindows` skips it — but it hosts
  * the cross-repo `TrailsView` Recents listener and needs `LIBRARY_CHANGED`
@@ -369,15 +356,11 @@ export function sendToPrincipalWindow(
 
 /**
  * Fan LIBRARY_CHANGED out to every window that could be rendering the
- * trail: its repo's dev-workspace windows, workspace windows hosting a
- * topic that contains it, and the principal window. Only LIBRARY_CHANGED
- * is sent — never PAYLOAD_SET, whose consumers open/focus trail tabs; a
+ * trail: its repo's dev-workspace windows and the principal window. Only
+ * LIBRARY_CHANGED is sent — never PAYLOAD_SET, whose consumers open/focus trail tabs; a
  * background persistence hint must not move UI. Fire-and-forget: callers
  * don't await, and failures only log.
  *
- * TopicRegistryService is resolved lazily because it statically imports
- * `getTrailStore` from this module; a top-level import back would create
- * a load-order-sensitive cycle.
  */
 async function broadcastLibraryChangedForTrail(
   store: TrailStore,
@@ -394,18 +377,6 @@ async function broadcastLibraryChangedForTrail(
     sendToPrincipalWindow(FileCityTrailEvent.LIBRARY_CHANGED, {
       repositoryPath,
     });
-    const { TopicRegistryService } = await import(
-      '../stores/TopicRegistryService'
-    );
-    const topics =
-      await TopicRegistryService.getInstance().getTopicsForTrail(trailId);
-    for (const topic of topics) {
-      sendToTopicWindows(
-        FileCityTrailEvent.LIBRARY_CHANGED,
-        { repositoryPath },
-        topic.id,
-      );
-    }
   } catch (err) {
     console.error(
       '[TrailStore] LIBRARY_CHANGED broadcast failed for trail',

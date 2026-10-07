@@ -9,7 +9,7 @@
 // Mirror the TopicAPI contract this service wraps: the tipc client returns the
 // desktop DraftTopic (which carries `repos`, `status`, assets), not the older
 // alexandria-core Topic. Aliasing keeps every method's `Topic` in sync with it.
-import type { DraftTopic as Topic } from '@principal-ai/principal-view-core';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import type {
   CreateTopicInput,
   FetchSharedTopicResult,
@@ -78,31 +78,6 @@ export class TopicService {
     return topicClient.deleteTopic({ id });
   }
 
-  static async addTrailToTopic(
-    topicId: string,
-    trailId: string,
-  ): Promise<Topic> {
-    return topicClient.addTrailToTopic({ topicId, trailId });
-  }
-
-  static async removeTrailFromTopic(
-    topicId: string,
-    trailId: string,
-  ): Promise<Topic> {
-    return topicClient.removeTrailFromTopic({ topicId, trailId });
-  }
-
-  static async reorderTopicTrails(
-    topicId: string,
-    trailIds: string[],
-  ): Promise<Topic> {
-    return topicClient.reorderTopicTrails({ topicId, trailIds });
-  }
-
-  static async getTopicsForTrail(trailId: string): Promise<Topic[]> {
-    return topicClient.getTopicsForTrail({ trailId });
-  }
-
   /**
    * Hydrate a topic published to web-ade by id. Used by the inbox's topic
    * tab, which opens topics that may not exist in the local registry.
@@ -114,8 +89,7 @@ export class TopicService {
 
   /**
    * Publish a local topic to web-ade, stamping its server id onto sync
-   * metadata so subsequent edits write through. Rejects (leaving the local
-   * topic unchanged) when a referenced trail isn't shared yet.
+   * metadata so subsequent edits write through.
    */
   static async publishTopic(
     id: string,

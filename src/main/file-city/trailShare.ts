@@ -39,6 +39,7 @@ import type {
   TrailNote,
   TrailNoteDraft,
 } from '@industry-theme/file-city-panel';
+import { requireHostedFeature } from '../services/FeatureAvailabilityService';
 
 const SLUG_REGEX = /^[A-Za-z0-9._-]+$/;
 const MAX_PAYLOAD_BYTES = 10 * 1024 * 1024;
@@ -379,6 +380,7 @@ export async function shareTrail(
   id: string,
   options: TrailShareOptions = {},
 ): Promise<FileCityTrailShareResult> {
+  await requireHostedFeature('trailTopicSharingAndInbox');
   const payload = await deps.loadPayload(id);
   if (!payload) {
     throw new TrailShareError(
@@ -420,6 +422,7 @@ export async function shareTrail(
 export async function listSharedTrails(
   options: TrailListSharedOptions = {},
 ): Promise<TrailListSharedResult> {
+  await requireHostedFeature('trailTopicSharingAndInbox');
   let owner = options.owner;
   let repo = options.repo;
   if (!owner || !repo) {
@@ -446,6 +449,7 @@ export async function fetchSharedTrail(
   repo: string,
   id: string,
 ): Promise<FileCityTrailFetchSharedResult> {
+  await requireHostedFeature('trailTopicSharingAndInbox');
   const token = await getGithubToken();
   return fetchFromWebAde(owner, repo, id, token);
 }
@@ -482,6 +486,7 @@ async function fetchByIdFromWebAde(
 export async function fetchSharedTrailById(
   id: string,
 ): Promise<FileCityTrailFetchSharedByIdResult> {
+  await requireHostedFeature('trailTopicSharingAndInbox');
   const token = await getGithubToken();
   return fetchByIdFromWebAde(id, token);
 }
@@ -529,6 +534,7 @@ export async function createSharedTrailNote(
   id: string,
   draft: TrailNoteDraft,
 ): Promise<TrailNote> {
+  await requireHostedFeature('trailTopicSharingAndInbox');
   const token = await getGithubToken();
   return createNoteOnWebAde(id, draft, token);
 }

@@ -1,5 +1,5 @@
 /**
- * Alexandria Workspace Change Monitor
+ * Alexandria Repository Change Monitor
  *
  * Monitors workspace file changes and broadcasts repository update events.
  * IPC handlers have been migrated to TIPC router in src/main/alexandria/tipc/
@@ -19,12 +19,12 @@ const MonitoringInternalEvent = {
 } as const;
 
 /**
- * Alexandria Workspace Change Monitor
+ * Alexandria Repository Change Monitor
  *
  * Listens for file changes in .alexandria directories and broadcasts
  * repository update events to all windows.
  */
-export class AlexandriaWorkspaceMonitor {
+export class AlexandriaRepositoryMonitor {
   private registryService: AlexandriaRegistryService;
   private updateTimers: Map<string, NodeJS.Timeout> = new Map();
 
@@ -150,16 +150,16 @@ export class AlexandriaWorkspaceMonitor {
 }
 
 // Singleton instance
-let workspaceMonitor: AlexandriaWorkspaceMonitor | null = null;
+let repositoryMonitor: AlexandriaRepositoryMonitor | null = null;
 
 /**
- * Initialize Alexandria workspace monitoring
+ * Initialize Alexandria repository monitoring
  * This sets up listeners for file changes in .alexandria directories
  */
 export function initializeAlexandriaMonitoring(): void {
-  if (!workspaceMonitor) {
-    workspaceMonitor = new AlexandriaWorkspaceMonitor();
-    console.log('[Alexandria] Workspace monitoring initialized');
+  if (!repositoryMonitor) {
+    repositoryMonitor = new AlexandriaRepositoryMonitor();
+    console.log('[Alexandria] Repository monitoring initialized');
   }
 }
 
