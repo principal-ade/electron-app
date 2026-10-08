@@ -31,8 +31,6 @@ import type {
   OwnerActivityTab,
   RepoActivityTab,
   FileCityGuideTab,
-  SharedTrailTab,
-  LocalTrailTab,
   MarkdownDocTab,
   SourceFileTab,
   MediaTab,
@@ -49,16 +47,14 @@ import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 /**
  * The unified workspace tab union hosted by `WorkspaceShell` — the superset of
  * the former Projects (`FeedTab`), Inbox and Topics unions (deduped; all three
- * carried `TerminalTab` and the trail/markdown tabs).
+ * carried `TerminalTab` and the markdown tabs).
  */
 export type WorkspaceTab =
   | TerminalTab
   | InboxHomeTab
   | TopicsHomeTab
-  | SharedTrailTab
   | TopicTab
   | LocalTopicTab
-  | LocalTrailTab
   | MarkdownDocTab
   | SourceFileTab
   | MediaTab
@@ -89,15 +85,11 @@ export interface WorkspaceTabsContextValue {
   setTabs: React.Dispatch<React.SetStateAction<WorkspaceTab[]>>;
   activeTabId: string | null;
   setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
-  // Trails / topics / docs
-  /** Open a `shared-trail-<trailId>` tab (a web-ade trail). */
-  openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
+  // Topics / docs
   /** Open a `topic-<topicId>` tab (a published web-ade topic). */
   openWebAdeTopic: (topicId: string, title?: string) => void;
   /** Open a `local-topic-<topicId>` tab (an on-disk topic). */
   openLocalTopic: (topicId: string, title?: string) => void;
-  /** Open a `local-trail-<trailId>` tab. */
-  openLocalTrail: (trailId: string, title?: string) => void;
   /** Open a `markdown-doc-<filePath>` tab. */
   openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
   /** Open a `source-file-<filePath>` tab (read-only code viewer). */
@@ -153,8 +145,6 @@ export interface ProjectsTabsContextValue {
   setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
   openProjectInfo: (payload: RepositorySelectedPayload) => void;
   openUserProfile: (username: string, email?: string) => void;
-  openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
-  openLocalTrail: (trailId: string, title?: string) => void;
   openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
 }
 
@@ -164,9 +154,7 @@ export interface InboxTabsContextValue {
   setTabs: React.Dispatch<React.SetStateAction<WorkspaceTab[]>>;
   activeTabId: string | null;
   setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
-  openSharedTrail: (trailId: string, owner?: string, repo?: string) => void;
   openTopic: (topicId: string, title?: string) => void;
-  openLocalTrail: (trailId: string, title?: string) => void;
   openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
 }
 
@@ -177,7 +165,6 @@ export interface TopicsTabsContextValue {
   activeTabId: string | null;
   setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
   openTopic: (topicId: string, title?: string) => void;
-  openLocalTrail: (trailId: string, title?: string) => void;
 }
 
 const WorkspaceTabsContext = createContext<WorkspaceTabsContextValue | null>(
@@ -210,25 +197,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     setActiveTabId(tabId);
   }, []);
 
-  const openSharedTrail = useCallback(
-    (trailId: string, owner?: string, repo?: string) => {
-      openTab(
-        `shared-trail-${trailId}`,
-        () =>
-          ({
-            id: `shared-trail-${trailId}`,
-            label: repo ? `${owner}/${repo}` : 'Shared trail',
-            contentType: 'shared-trail',
-            closable: true,
-            trailId,
-            owner,
-            repo,
-          }) as SharedTrailTab,
-      );
-    },
-    [openTab],
-  );
-
   const openWebAdeTopic = useCallback(
     (topicId: string, title?: string) => {
       openTab(
@@ -259,23 +227,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
             topicId,
             title,
           }) as LocalTopicTab,
-      );
-    },
-    [openTab],
-  );
-
-  const openLocalTrail = useCallback(
-    (trailId: string, title?: string) => {
-      openTab(
-        `local-trail-${trailId}`,
-        () =>
-          ({
-            id: `local-trail-${trailId}`,
-            label: title || 'Trail',
-            contentType: 'local-trail',
-            closable: true,
-            trailId,
-          }) as LocalTrailTab,
       );
     },
     [openTab],
@@ -598,10 +549,8 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       setTabs,
       activeTabId,
       setActiveTabId,
-      openSharedTrail,
       openWebAdeTopic,
       openLocalTopic,
-      openLocalTrail,
       openMarkdownDoc,
       openSourceFile,
       openMedia,
@@ -619,10 +568,8 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [
       tabs,
       activeTabId,
-      openSharedTrail,
       openWebAdeTopic,
       openLocalTopic,
-      openLocalTrail,
       openMarkdownDoc,
       openSourceFile,
       openMedia,
@@ -665,8 +612,7 @@ export function useWorkspaceTabs(): WorkspaceTabsContextValue {
 
 /**
  * Back-compat: the Projects surface's view of the shared workspace bucket
- * (consumed by the titlebar repo/user picker and IntegratedShell's trail
- * handoff).
+ * (consumed by the titlebar repo/user picker).
  */
 export function useProjectsTabs(): ProjectsTabsContextValue {
   const ws = useWorkspaceTabs();
@@ -678,8 +624,6 @@ export function useProjectsTabs(): ProjectsTabsContextValue {
       setActiveTabId: ws.setActiveTabId,
       openProjectInfo: ws.openProjectInfo,
       openUserProfile: ws.openUserProfile,
-      openSharedTrail: ws.openSharedTrail,
-      openLocalTrail: ws.openLocalTrail,
       openMarkdownDoc: ws.openMarkdownDoc,
     }),
     [ws],
@@ -698,9 +642,7 @@ export function useInboxTabs(): InboxTabsContextValue {
       setTabs: ws.setTabs,
       activeTabId: ws.activeTabId,
       setActiveTabId: ws.setActiveTabId,
-      openSharedTrail: ws.openSharedTrail,
       openTopic: ws.openWebAdeTopic,
-      openLocalTrail: ws.openLocalTrail,
       openMarkdownDoc: ws.openMarkdownDoc,
     }),
     [ws],
@@ -720,7 +662,6 @@ export function useTopicsTabs(): TopicsTabsContextValue {
       activeTabId: ws.activeTabId,
       setActiveTabId: ws.setActiveTabId,
       openTopic: ws.openLocalTopic,
-      openLocalTrail: ws.openLocalTrail,
     }),
     [ws],
   );

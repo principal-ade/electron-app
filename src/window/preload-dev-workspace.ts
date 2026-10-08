@@ -37,7 +37,6 @@ import { localhostDetectionAPI } from './main-process-api-implementations/localh
 import { otelCollectorApi } from './main-process-api-implementations/otelCollectorApi';
 import { gitAPI } from './main-process-api-implementations/gitApi';
 import { fileCityImageAPI } from './main-process-api-implementations/fileCityImageApi';
-import { fileCityTrailAPI } from './main-process-api-implementations/fileCityTrailApi';
 import { documentNotesAPI } from './main-process-api-implementations/documentNotesApi';
 import { documentAPI } from './main-process-api-implementations/documentApi';
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
@@ -68,7 +67,6 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   otelCollector: otelCollectorApi,
   git: gitAPI,
   fileCityImage: fileCityImageAPI,
-  fileCityTrail: fileCityTrailAPI,
   documentNotes: documentNotesAPI,
   document: documentAPI,
   skillLock: skillLockAPI,

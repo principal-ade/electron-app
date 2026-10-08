@@ -21,7 +21,6 @@ export interface DevWorkspaceConfig {
 
 const TITLEBAR_BUTTON_LABELS: { key: keyof TitlebarConfig; label: string }[] = [
   { key: 'fileCity3D', label: '3D City button' },
-  { key: 'trail', label: 'Trail button' },
   { key: 'traces', label: 'Traces dropdown' },
   { key: 'sync', label: 'Sync button' },
   { key: 'focus', label: 'Focus mode button' },
@@ -36,7 +35,6 @@ const LEFT_ICON_LABELS: { key: keyof LeftSidebarConfig; label: string }[] = [
   { key: 'packageComposition', label: 'Package info' },
   { key: 'docs', label: 'Docs' },
   { key: 'agentsList', label: 'Skills / Agents' },
-  { key: 'trails', label: 'Trails' },
 ];
 
 const RIGHT_ICON_LABELS: { key: keyof RightSidebarConfig; label: string }[] = [
@@ -422,7 +420,6 @@ export const DevWorkspaceConfigModal: React.FC<
 export const DEFAULT_DEV_WORKSPACE_CONFIG: DevWorkspaceConfig = {
   titlebar: {
     fileCity3D: false,
-    trail: false,
     traces: false,
     sync: false,
     focus: true,
@@ -436,7 +433,6 @@ export const DEFAULT_DEV_WORKSPACE_CONFIG: DevWorkspaceConfig = {
     packageComposition: false,
     docs: true,
     agentsList: true,
-    trails: true,
   },
   rightSidebarIcons: {
     fileCity: true,

@@ -78,7 +78,7 @@ export class TopicRegistryService {
   /**
    * Absolute on-disk path of a topic's JSON in the file-per-topic store
    * (`~/.principal/topics/<id>.json`). Returns `null` for an unknown topic.
-   * Mirrors the trail store's `getFilePath`, backing the topic header's
+   * Mirrors the topic store's path derivation, backing the topic header's
    * "Copy path" action.
    */
   async getTopicFilePath(id: string): Promise<string | null> {

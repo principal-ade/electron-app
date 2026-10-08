@@ -81,9 +81,7 @@ import { registerSkillLockHandlers } from './skills/skillLockHandlers';
 import { registerSkillEditingHandlers } from './skills/skillEditingHandlers';
 import { registerFileCityImageHandlers } from './stores/FileCityImageService';
 import { registerBrunoHandlers } from './bruno/brunoHandlers';
-import { registerTrailHandlers } from './file-city/trailStore';
 import { registerDocumentNotesHandlers } from './document-notes/documentNotesHandlers';
-import { registerOpenCodeConvertHandlers } from './opencode/openCodeConvertHandlers';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
@@ -195,9 +193,7 @@ const registerAllIpcHandlers = async () => {
   registerStoreHandlers();
   await registerRepositoryMonitoringHandlers(); // Register repository monitoring handlers
   registerFileCityImageHandlers(); // Register File City image generation handlers
-  registerTrailHandlers(); // Register File City trail IPC handlers
   registerDocumentNotesHandlers(); // Register document-notes IPC handlers
-  registerOpenCodeConvertHandlers(); // Register OpenCode convert (detect/run) IPC handlers
   registerOtelCollectorHandlers(); // Register OTEL collector handlers
   registerCLIBridgeHandlers(); // Register CLI Bridge diagnostics handlers
   registerSecretHandlers();

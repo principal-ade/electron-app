@@ -18,7 +18,6 @@ import {
   Plug,
   Github,
   FolderTree,
-  Route,
   Layers,
 } from 'lucide-react';
 
@@ -75,7 +74,6 @@ export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'terminalSessions', Icon: Terminal, label: 'Term' },
   { id: 'packageComposition', Icon: Package, label: 'Info' },
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
-  { id: 'trails', Icon: Route, label: 'Trails' },
   { id: 'topics', Icon: Layers, label: 'Topics' },
   { id: 'agentsList', Icon: ToolCase, label: 'Skills' },
 ];

@@ -18,11 +18,6 @@ import type {
   GetPinnedRepositoriesInput,
   ExplainCommitsInput,
   ExplainWorkingChangesInput,
-  GetInboxInput,
-  DeleteInboxEntryInput,
-  MarkInboxEntryReadInput,
-  SendTrailInput,
-  GetSentInput,
   GetTopicInboxInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
@@ -145,54 +140,6 @@ export const webAdeRouter = {
     }),
 
   // ===========================================================================
-  // Trail Inbox + Recently Visited
-  // ===========================================================================
-
-  getRecentlyVisitedTrails: t.procedure.action(async () => {
-    await requireHostedFeature('trailTopicSharingAndInbox');
-    return webAdeService.getRecentlyVisitedTrails();
-  }),
-
-  getInbox: t.procedure
-    .input<GetInboxInput>()
-    .action(async ({ input }) => {
-      await requireHostedFeature('trailTopicSharingAndInbox');
-      return webAdeService.getInbox(input);
-    }),
-
-  getInboxUnreadCount: t.procedure.action(async () => {
-    await requireHostedFeature('trailTopicSharingAndInbox');
-    return webAdeService.getInboxUnreadCount();
-  }),
-
-  deleteInboxEntry: t.procedure
-    .input<DeleteInboxEntryInput>()
-    .action(async ({ input }) => {
-      await requireHostedFeature('trailTopicSharingAndInbox');
-      return webAdeService.deleteInboxEntry(input);
-    }),
-
-  markInboxEntryRead: t.procedure
-    .input<MarkInboxEntryReadInput>()
-    .action(async ({ input }) => {
-      await requireHostedFeature('trailTopicSharingAndInbox');
-      return webAdeService.markInboxEntryRead(input);
-    }),
-
-  sendTrail: t.procedure
-    .input<SendTrailInput>()
-    .action(async ({ input }) => {
-      await requireHostedFeature('trailTopicSharingAndInbox');
-      return webAdeService.sendTrail(input);
-    }),
-
-  getSent: t.procedure
-    .input<GetSentInput>()
-    .action(async ({ input }) => {
-      await requireHostedFeature('trailTopicSharingAndInbox');
-      return webAdeService.getSent(input);
-    }),
-
   // ===========================================================================
   // Topic Inbox
   // ===========================================================================
@@ -200,12 +147,12 @@ export const webAdeRouter = {
   getTopicInbox: t.procedure
     .input<GetTopicInboxInput>()
     .action(async ({ input }) => {
-      await requireHostedFeature('trailTopicSharingAndInbox');
+      await requireHostedFeature('topicSharing');
       return webAdeService.getTopicInbox(input);
     }),
 
   getTopicInboxUnreadCount: t.procedure.action(async () => {
-    await requireHostedFeature('trailTopicSharingAndInbox');
+    await requireHostedFeature('topicSharing');
     return webAdeService.getTopicInboxUnreadCount();
   }),
 };

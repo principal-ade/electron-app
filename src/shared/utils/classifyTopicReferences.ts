@@ -58,7 +58,7 @@ export interface TopicReferenceReport {
 }
 
 export interface ClassifyOptions {
-  /** The topic's declared repo purls (e.g. union of trail-marker `repo`s). */
+  /** The topic's declared repo purls. */
   topicRepoPurls?: string[];
 }
 

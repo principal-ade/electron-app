@@ -2,8 +2,7 @@
  * Compact relative-time formatter — "just now", "5m ago", "3h ago", "2d ago",
  * "4mo ago", "1y ago". Returns '' for an unparseable timestamp.
  *
- * Previously lived in the TrailsView/TrailCard module; extracted to a shared
- * util when TrailsView was folded into the WorkspaceShell (Increment 4).
+ * Shared by surfaces that show timestamps.
  */
 export const formatRelativeTime = (iso: string): string => {
   const t = Date.parse(iso);

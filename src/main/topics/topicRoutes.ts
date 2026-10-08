@@ -1,7 +1,7 @@
 /**
  * Express routes for topic lookup over HTTP. Mounted on the Principal MCP
  * Bridge so an agent (running in a terminal we briefed) can fetch the topic
- * it was just linked to and read its title, description, and trail list.
+ * it was just linked to and read its title, description, and project scope.
  *
  * The act of fetching is also the link signal: the event server parses the
  * topic id out of the agent's curl URL and writes `{sessionId → topicId}`
@@ -42,7 +42,7 @@ export function registerTopicRoutes(
 ): void {
   // Create a local topic. The agent analogue of the in-app UI's "new topic"
   // affordance (TIPC topic_createTopic): a briefed terminal can mint a topic
-  // to bundle the trails it's about to author. May also be scoped to explicit
+  // to collect related findings. May also be scoped to explicit
   // `repos` (PURL strings) so a caller can mint a topic *about a resolved repo*
   // rather than submitting a cross-repo task. The topic is local-only until
   // published from the app UI — `id`, timestamps, and `createdBy` are filled
@@ -272,8 +272,7 @@ export function registerTopicRoutes(
     },
   );
 
-  // Open a topic in the running app. The topic analogue of the trail activate
-  // route (`POST /api/file-city/trail/activate`): a briefed terminal can ask
+  // Open a topic in the running app: a briefed terminal can ask
   // the app to surface a topic it just authored or linked. Unlike the
   // `TOPIC_*` registry broadcasts (which fan out to every window), this targets
   // a single window — whichever one the user currently has focused — and asks

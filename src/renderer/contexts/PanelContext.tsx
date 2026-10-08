@@ -145,7 +145,7 @@ interface ExtendedPanelActions extends PanelActions {
   openLocalRepository?: (entryOrId: AlexandriaEntry | string) => Promise<void>;
   // Active file management for markdown panel
   setActiveFile?: (filePath: string | null) => Promise<void>;
-  // File operations for panels (e.g., principal-view-panels, MarkdownPanel)
+  // File operations for host panels and MarkdownPanel.
   // REQUIRED for MarkdownPanel - matches framework signature
   readFile: (path: string) => Promise<string>;
 }
@@ -1574,7 +1574,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           }
         },
 
-        // File operations for panels (e.g., principal-view-panels Architecture panel)
+        // File operations for host panels.
         // Returns string directly to match framework signature
         readFile: async (path: string): Promise<string> => {
           const repoPath = repository?.path || workspace?.path || '';

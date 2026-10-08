@@ -2,9 +2,9 @@
  * Portal tab contract — the tab interfaces shared across the Projects / Inbox /
  * Topics workspace surfaces.
  *
- * `SharedTrailTab`, `LocalTrailTab`, and `MarkdownDocTab` were historically
- * declared 2–3× (once per framework) with identical shapes. They're defined
- * once here so the surfaces — and the unified `WorkspaceTab` union (see
+ * `MarkdownDocTab` was historically declared 2–3× (once per framework) with
+ * identical shapes. It's defined once here so the surfaces — and the unified
+ * `WorkspaceTab` union (see
  * docs/portal-unification.md, Increment 3) — share a single definition.
  *
  * The Inbox/Topics landing + topic tab types (`InboxHomeTab`, `TopicTab`,
@@ -22,29 +22,6 @@ import type {
 } from '@principal-ai/alexandria-core-library';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
-
-/**
- * Shared trail tab — a trail published to web-ade (e.g. opened from an inbox
- * row, a recently-visited row, or a pasted `…/trail/{id}` URL). NOT in the local
- * trail library; carries only the id, and the panel self-fetches the payload
- * (resolving owner/repo).
- */
-export interface SharedTrailTab extends BaseTab {
-  contentType: 'shared-trail';
-  trailId: string;
-  owner?: string;
-  repo?: string;
-}
-
-/**
- * Local trail tab — a trail from the on-disk library, opened in-place (e.g. a
- * freshly authored trail). Carries only the id; the panel self-fetches the
- * payload + repositoryPath.
- */
-export interface LocalTrailTab extends BaseTab {
-  contentType: 'local-trail';
-  trailId: string;
-}
 
 /**
  * Markdown document tab — a doc opened in-place from the Principal MCP Bridge
@@ -77,7 +54,7 @@ export interface MediaTab extends BaseTab {
   filePath: string;
 }
 
-/** Landing tab for the Inbox surface — a hint to pick a trail from the left. */
+/** Landing tab for the Inbox surface — a hint to pick a topic from the left. */
 export interface InboxHomeTab extends BaseTab {
   contentType: 'inbox-home';
 }
@@ -246,8 +223,6 @@ export type FeedTab =
   | OwnerActivityTab
   | RepoActivityTab
   | FileCityGuideTab
-  | SharedTrailTab
-  | LocalTrailTab
   | MarkdownDocTab
   | SourceFileTab
   | MediaTab;

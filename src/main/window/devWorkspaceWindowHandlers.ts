@@ -39,14 +39,6 @@ const DEV_WORKSPACE_PURPOSE = 'dev-workspace';
 export interface DevWorkspaceOptions {
   /** Full Alexandria entry with repository metadata */
   alexandriaEntry: AlexandriaEntry;
-  /**
-   * Trail id to auto-open in the trail tab on mount. Forwarded to the
-   * renderer via the URL hash so the first-render flow can open the tab
-   * without depending on persisted "active" state. Only meaningful for
-   * freshly-created windows; if the window is already open, IPC
-   * PAYLOAD_SET broadcasts handle re-targeting instead.
-   */
-  openTrailId?: string;
 }
 
 /**
@@ -203,10 +195,7 @@ export async function openDevWorkspaceWindow(
 
   // Load the dev-workspace HTML - pass the full Alexandria entry
   const encodedData = encodeURIComponent(JSON.stringify(alexandriaEntry));
-  const openTrailSuffix = options.openTrailId
-    ? `?openTrailId=${encodeURIComponent(options.openTrailId)}`
-    : '';
-  const url = `${resolveHtmlPath('dev-workspace.html')}#init/${encodedData}${openTrailSuffix}`;
+  const url = `${resolveHtmlPath('dev-workspace.html')}#init/${encodedData}`;
 
   console.log(
     `[DevWorkspaceWindow] Window ${appWindow.window.id} loading: ${url}`,

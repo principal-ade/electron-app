@@ -75,7 +75,7 @@ export const HOME_NAV_CARDS: HomeNavCardMeta[] = [
     key: 'recent',
     icon: <History size={18} />,
     label: 'Recently Visited',
-    description: "Trails, topics, and projects you've opened",
+    description: "Projects you've opened",
     requiresPrincipal: true,
   },
 ];

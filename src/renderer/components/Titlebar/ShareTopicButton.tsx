@@ -157,7 +157,7 @@ export const ShareTopicButton: React.FC<ShareTopicButtonProps> = ({
         }
       } catch (err) {
         setStatus('idle');
-        // The typed TrailShareError loses its class crossing IPC, but its message
+        // The typed sharing error loses its class crossing IPC, but its message
         // survives — surface it so the real reason (e.g. "description exceeds
         // 8000 chars", "sign in to GitHub") shows instead of a generic string.
         setErrorMsg(

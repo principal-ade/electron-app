@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 // This file contains complex panel orchestration logic that is difficult to split
 // without breaking the tight coupling between panel state, tabs, and terminal context.
 // TODO: Consider extracting panel definitions to separate files in future refactor.
@@ -66,7 +65,6 @@ import { UserPreferencesService } from '../main-process-api/UserPreferencesServi
 import {
   CodeCityPanel,
   type CodeCityPanelPropsTyped,
-  type BaseTrailIndexEntry,
 } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as localhostBrowserPanels } from '@industry-theme/localhost-panels';
@@ -113,7 +111,6 @@ import { SourceFileTabContent } from '../panels/SourceFileTabContent';
 import { MediaTabContent } from '../panels/MediaTabContent';
 import { FilesPanel } from './files-panel';
 import { FileCityPanel } from './file-city-panel';
-import { FileCityTrailPanel } from './file-city-trail-panel';
 import type { Repository } from '../../shared/types/repository.types';
 import {
   PanelIconSidebar,
@@ -125,21 +122,11 @@ import type { StorybookManager } from '../hooks/useStorybookManager';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
 import { GitConfigPanel } from './git-config-panel';
-import { TrailsPanel } from './trails-panel';
-import { ShareTrailModal } from './trails-panel/ShareTrailModal';
-import { TrailService } from '../services/TrailService';
 import { DocumentService } from '../services/DocumentService';
-import {
-  TRAIL_EVENT,
-  type TrailActivatedEvent,
-  type TrailClearedEvent,
-  type TrailOpenEvent,
-} from './trail-events';
 import { TopicsPanel } from './topics-panel/TopicsPanel';
 import { DevWorkspaceTopicTab } from './topics-panel/DevWorkspaceTopicTab';
 import { TOPIC_EVENT, type TopicOpenEvent } from './topics-panel/topic-events';
 import { topicClient } from '../tipc/topicClient';
-import { LocalTrailTabContent } from '../projects-view/LocalTrailTabContent';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -246,34 +233,12 @@ interface FileCity3DTab extends BaseTab {
 }
 
 /**
- * File City Trail tab. Mounts the parallel trail explorer panel
- * (`FileCityTrailPanel`). The trail-specific state lives inside that
- * panel — this tab is just a marker.
- */
-interface FileCityTrailTab extends BaseTab {
-  contentType: 'file-city-trail';
-}
-
-/**
  * Topic tab. Renders a topic brief and its projects rail
  * (`DevWorkspaceTopicTab`), opened from the Topics sidebar panel.
  */
 interface TopicTab extends BaseTab {
   contentType: 'topic';
   topicId: string;
-  title?: string;
-}
-
-/**
- * Local trail tab. Renders a single trail from the local library as its own
- * tab (`LocalTrailTabContent`), opened from a trail library or another
- * independent trail surface. Distinct from the
- * `file-city-trail` singleton explorer, which shows whichever trail is
- * currently activated in File City.
- */
-interface LocalTrailTab extends BaseTab {
-  contentType: 'local-trail';
-  trailId: string;
   title?: string;
 }
 
@@ -305,9 +270,7 @@ type DevWorkspaceTab =
   | DependencyGraphTab
   | BrunoRequestTab
   | FileCity3DTab
-  | FileCityTrailTab
-  | TopicTab
-  | LocalTrailTab;
+  | TopicTab;
 
 /**
  * History item for right panel document viewing
@@ -437,80 +400,6 @@ const FileCity3DTabContent: React.FC = () => {
   );
 };
 
-/**
- * Renders the parallel trail explorer panel. Mirrors the FileCity3D tab
- * pattern — uses the repository panel provider so the trail panel sees
- * fileTree/lineCounts/repository directly.
- */
-const FileCityTrailTabContent: React.FC = () => {
-  const { context, actions, events } = useRepositoryPanelProvider();
-  const repositoryPath = context.currentScope?.repository?.path ?? null;
-  const trailPayload = context.trail?.data ?? null;
-  const [shareModalTrail, setShareModalTrail] =
-    useState<BaseTrailIndexEntry | null>(null);
-
-  // Deselect the active trail. RepositoryPanelContext listens for this
-  // event and flips its `trail` slice to null, so the explorer re-enters
-  // its idle state (aggregate highlight layers) without an IPC round trip.
-  const handleCloseTrail = useCallback(() => {
-    events.emit<TrailClearedEvent>({
-      type: TRAIL_EVENT.cleared,
-      source: 'file-city-trail-tab',
-      timestamp: Date.now(),
-      payload: { repositoryPath: repositoryPath ?? undefined },
-    });
-  }, [events, repositoryPath]);
-
-  // Synthesize a manifest entry from the live payload so the share modal
-  // (which only reads id/title/markerCount/hasDiffSnippets) can render
-  // without an extra `TrailLibraryService.list` round trip.
-  const handleShareTrail = useCallback(() => {
-    if (!trailPayload) return;
-    const entry: BaseTrailIndexEntry = {
-      id: trailPayload.id,
-      title: trailPayload.title || 'Untitled trail',
-      summaryPreview: (trailPayload.summary ?? '').slice(0, 200),
-      markerCount: trailPayload.markers?.length ?? 0,
-      repoNames: trailPayload.repos?.map((r) => r.name) ?? [],
-      hasDiffSnippets:
-        trailPayload.markers?.some((m) => m.snippet?.kind === 'diff') ?? false,
-      createdAt: new Date(0).toISOString(),
-      updatedAt: new Date(0).toISOString(),
-      sizeBytes: 0,
-    };
-    setShareModalTrail(entry);
-  }, [trailPayload]);
-
-  return (
-    <div
-      style={{
-        height: '100%',
-        width: '100%',
-        overflow: 'hidden',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <FileCityTrailPanel
-        context={context}
-        actions={actions}
-        events={events}
-        onCloseTrail={handleCloseTrail}
-        onShareTrail={handleShareTrail}
-        briefSide="leading"
-      />
-      {shareModalTrail && repositoryPath && (
-        <ShareTrailModal
-          trail={shareModalTrail}
-          repositoryPath={repositoryPath}
-          onClose={() => setShareModalTrail(null)}
-        />
-      )}
-    </div>
-  );
-};
-
 const FileCityWithHighlights: React.FC<{
   context: ReturnType<typeof useRepositoryPanelProvider>['context'];
   actions: ReturnType<typeof useRepositoryPanelProvider>['actions'];
@@ -521,12 +410,6 @@ const FileCityWithHighlights: React.FC<{
 
   // Create merged context for File City panel (includes agent highlight layers)
   const fileCityPanelContext = useMemo(() => {
-    const sc = (context as { storyboardContext?: { data: unknown } })
-      .storyboardContext;
-    console.info(
-      '[FileCityWithHighlights] building context — storyboardContext.data:',
-      sc?.data ?? 'null/undefined',
-    );
     return {
       ...context,
       // Add agent highlight layers as a typed slice property
@@ -2403,32 +2286,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return unsubscribe;
   }, [events]);
 
-  // Parallel handler for the trail explorer panel. Same marker-tab pattern.
-  const openFileCityTrailTab = useCallback(() => {
-    setTabs((prevTabs) => {
-      const existing = prevTabs.find(
-        (t) => t.contentType === 'file-city-trail',
-      );
-      if (existing) {
-        setFocusTabId(existing.id);
-        return prevTabs;
-      }
-      const newTab: FileCityTrailTab = {
-        id: 'file-city-trail',
-        label: 'File City Trail',
-        contentType: 'file-city-trail',
-        closable: true,
-      };
-      setFocusTabId(newTab.id);
-      return [...prevTabs, newTab];
-    });
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = events.on('file-city-trail:open', openFileCityTrailTab);
-    return unsubscribe;
-  }, [events, openFileCityTrailTab]);
-
   // Open (or focus) a topic tab when a row is clicked in the Topics sidebar
   // panel. One tab per topic id, deduped on re-open.
   const openTopicTab = useCallback((topicId: string, title?: string) => {
@@ -2473,37 +2330,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     });
   }, [openTopicTab]);
 
-  // Open (or focus) a single trail as its own tab. One tab per trail id,
-  // deduped on re-open.
-  const openLocalTrailTab = useCallback((trailId: string, title?: string) => {
-    setTabs((prevTabs) => {
-      const tabId = `local-trail-${trailId}`;
-      const existing = prevTabs.find((t) => t.id === tabId);
-      if (existing) {
-        setFocusTabId(existing.id);
-        return prevTabs;
-      }
-      const newTab: LocalTrailTab = {
-        id: tabId,
-        label: title || 'Trail',
-        contentType: 'local-trail',
-        trailId,
-        title,
-        closable: true,
-      };
-      setFocusTabId(newTab.id);
-      return [...prevTabs, newTab];
-    });
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = events.on<TrailOpenEvent>(TRAIL_EVENT.open, (event) => {
-      const { trailId, title } = event.payload;
-      if (trailId) openLocalTrailTab(trailId, title);
-    });
-    return unsubscribe;
-  }, [events, openLocalTrailTab]);
-
   // Bridge handoff: a doc pushed from the Principal MCP Bridge
   // (POST /api/document/open) arrives as an OPEN_DOCUMENT IPC when this
   // dev-workspace window is focused. Re-emit it onto the panel event bus as a
@@ -2520,44 +2346,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       });
     });
   }, [events]);
-
-  // Auto-open the trail tab when this window was opened with a trail
-  // id, and whenever a trail activation arrives for this window's repo
-  // after mount. Three sources:
-  //   - `?openTrailId=<id>` URL arg — set by main when this window was
-  //     opened from POST /trail or POST /trail/activate. Replaces the
-  //     old race fix that relied on a persisted "active" pointer.
-  //   - IPC `PAYLOAD_SET` — pushed by route handlers via
-  //     `sendToRepoWindows` to retarget an already-open window.
-  //   - Renderer event `file-city-trail:activated` — emitted when a user
-  //     clicks a row in the Trails sidebar in this same window.
-  useEffect(() => {
-    const myRepo = context.currentScope?.repository?.path ?? null;
-    const matches = (nextRepo: string | undefined | null): boolean =>
-      !nextRepo || nextRepo === myRepo;
-
-    if (TrailService.getOpenTrailId()) {
-      openFileCityTrailTab();
-    }
-
-    const offIpc = TrailService.onPayloadSet(({ repositoryPath: nextRepo }) => {
-      if (!matches(nextRepo)) return;
-      openFileCityTrailTab();
-    });
-
-    const offRenderer = events.on<TrailActivatedEvent>(
-      TRAIL_EVENT.activated,
-      (event) => {
-        if (!matches(event.payload.repositoryPath)) return;
-        openFileCityTrailTab();
-      },
-    );
-
-    return () => {
-      offIpc();
-      offRenderer();
-    };
-  }, [context.currentScope?.repository?.path, openFileCityTrailTab, events]);
 
   // Listen for terminal session selection from TerminalSessionsPanel
   useEffect(() => {
@@ -2624,8 +2412,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       case 'bruno-request':
         return <Send size={14} />;
       case 'file-city-3d':
-        return <Building2 size={14} />;
-      case 'file-city-trail':
         return <Building2 size={14} />;
       case 'topic':
         return <Layers size={14} />;
@@ -2956,10 +2742,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return <FileCity3DTabContent />;
         }
 
-        case 'file-city-trail': {
-          return <FileCityTrailTabContent />;
-        }
-
         case 'topic': {
           const topicTab = tab as TopicTab;
           return (
@@ -2971,16 +2753,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               repositoryPath={
                 contextRef.current?.currentScope?.repository?.path
               }
-            />
-          );
-        }
-
-        case 'local-trail': {
-          const trailTab = tab as LocalTrailTab;
-          return (
-            <LocalTrailTabContent
-              trailId={trailTab.trailId}
-              events={eventsRef.current}
             />
           );
         }
@@ -3557,16 +3329,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         content: (
           <GitConfigPanel
             repositoryPath={context.currentScope?.repository?.path}
-          />
-        ),
-      },
-      {
-        id: 'trails',
-        label: 'Trails',
-        content: (
-          <TrailsPanel
-            repositoryPath={context.currentScope?.repository?.path}
-            events={events}
           />
         ),
       },

@@ -2,20 +2,20 @@
  * PrincipalPortal
  *
  * The persistent base layer of the principal window: the swappable
- * left-panel + tabbed-terminal workspace surfaces (Projects / Inbox / Topics /
- * Trails). It is mounted *underneath* the standalone views (Home, Settings,
+ * left-panel + tabbed-terminal workspace surfaces (Projects / Inbox / Topics).
+ * It is mounted *underneath* the standalone views (Home, Settings,
  * Monitor, …), which `IntegratedShell` renders as overlays on top of it.
  *
  * Because the portal stays mounted while an overlay is up, switching to Home
  * and back is a pure visibility flip — open tabs, terminals, and scroll state
  * survive with no hoisting required.
  *
- * Every workspace surface — Projects, Inbox, Topics, Drawings, and Trails — is
+ * Every workspace surface — Projects, Inbox, Topics, Drawings, and Skills — is
  * now one persistent `WorkspaceShell`: a single tabbed-terminal host (one
  * `terminal:workspace` scope, one `useWorkspaceTabs()` bucket) whose left panel
  * swaps by `activeView`. Switching between them keeps the shell — and its open
- * tabs + terminal — mounted, so e.g. a drawing or trail tab persists while you
- * move between surfaces (Increment 3 + the Drawings/Trails fast-follows; see
+ * tabs + terminal — mounted, so e.g. a drawing tab persists while you
+ * move between surfaces (Increment 3 + the Drawings/Skills fast-follows; see
  * docs/portal-unification.md).
  */
 import React from 'react';
@@ -28,7 +28,6 @@ export type WorkspaceView =
   | 'inbox'
   | 'topics'
   | 'drawings'
-  | 'trails'
   | 'skills';
 
 export const WORKSPACE_VIEWS: WorkspaceView[] = [
@@ -37,7 +36,6 @@ export const WORKSPACE_VIEWS: WorkspaceView[] = [
   'inbox',
   'topics',
   'drawings',
-  'trails',
   'skills',
 ];
 
@@ -63,7 +61,6 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
         workspaceView === 'inbox' ||
         workspaceView === 'topics' ||
         workspaceView === 'drawings' ||
-        workspaceView === 'trails' ||
         workspaceView === 'skills') && (
         <WorkspaceShell activeView={workspaceView} />
       )}

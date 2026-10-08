@@ -74,7 +74,7 @@ const RECORDS: LocalTopicRecord[] = [
   }),
   record({
     id: 'topic-idea',
-    title: 'Idea: cross-repo trail search',
+    title: 'Idea: cross-repo topic search',
     repos: ['pkg:github/me/other'],
     status: status('new-thought'),
     updatedAt: ago(5 * DAY),

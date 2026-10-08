@@ -10,8 +10,8 @@ export interface UseTopicLibraryResult {
   refresh: () => Promise<void>;
   /**
    * True when the topic's `repos` include the current window's repository PURL —
-   * a direct membership check now that {@link Topic.repos} exists (no trail-walk
-   * heuristic). Always false when no repo is open or the repo has no PURL.
+   * a direct membership check against the topic's declared repositories.
+   * Always false when no repo is open or the repo has no PURL.
    */
   isInThisRepo: (record: LocalTopicRecord) => boolean;
 }

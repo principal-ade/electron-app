@@ -41,7 +41,7 @@ import { FollowersFollowingSubView } from './sub-views/FollowersFollowingSubView
 
 // ---------------------------------------------------------------------------
 // HomeLeftPanel — the home left rail, the user-based sibling of the
-// owner/repo explorer's TrailListPane. Uses the shared SlidePane for
+// owner/repo explorer. Uses the shared SlidePane for
 // animated carousel navigation between the overview and destination views.
 // ---------------------------------------------------------------------------
 

@@ -17,8 +17,6 @@ import {
   BookMarked,
   Radio,
   Wrench,
-  Route,
-  Footprints,
   FileText,
   Compass,
 } from 'lucide-react';
@@ -42,8 +40,6 @@ import {
 } from '../utils/alexandriaIdentity';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import type {
-  SharedTrailTab,
-  LocalTrailTab,
   MarkdownDocTab,
   SourceFileTab,
   MediaTab,
@@ -101,8 +97,6 @@ import { ApiProxyService } from '../main-process-api/ApiProxyService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
-import { SharedTrailTabContent } from './SharedTrailTabContent';
-import { LocalTrailTabContent } from './LocalTrailTabContent';
 import { SecureAuthService } from '../services/SecureAuthService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
@@ -1793,10 +1787,6 @@ export function renderProjectsTabIcon(tab: FeedTab): React.ReactNode {
       return <Radio size={14} />;
     case 'file-city-guide':
       return <Compass size={14} />;
-    case 'shared-trail':
-      return <Route size={14} />;
-    case 'local-trail':
-      return <Footprints size={14} />;
     case 'markdown-doc':
       return <FileText size={14} />;
     default:
@@ -1932,28 +1922,6 @@ export function renderProjectsTabContent(
           source={{ kind: 'repo', owner: repoTab.owner, repo: repoTab.repo }}
           events={events}
           actions={commitActivityPanelActions}
-        />
-      );
-    }
-    case 'shared-trail': {
-      const trailTab = tab as SharedTrailTab;
-      return (
-        <SharedTrailTabContent
-          key={trailTab.id}
-          trailId={trailTab.trailId}
-          events={events}
-          repositories={repositories}
-          briefSide="leading"
-        />
-      );
-    }
-    case 'local-trail': {
-      const trailTab = tab as LocalTrailTab;
-      return (
-        <LocalTrailTabContent
-          key={trailTab.id}
-          trailId={trailTab.trailId}
-          events={events}
         />
       );
     }

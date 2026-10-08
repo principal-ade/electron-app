@@ -2,7 +2,7 @@
  * Express route for opening a document into the focused window.
  * Mounted on the Principal MCP Bridge.
  *
- * Unlike trails, documents are NOT routed by repo/topic to a specific window.
+ * Documents are NOT routed by repo/topic to a specific window.
  * The contract is deliberately narrow: open the doc in whichever window is
  * *currently focused*, when that window is one of the primary surfaces that
  * can host a doc tab next to a tabbed terminal — the principal window

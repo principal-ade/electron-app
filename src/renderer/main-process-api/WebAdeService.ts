@@ -15,19 +15,9 @@ import type {
   ExplainCommitsResponse,
   ExplainWorkingChangesInput,
   ExplainWorkingChangesResponse,
-  ListRecentlyVisitedTrailsResponse,
-  GetInboxInput,
-  ListInboxResponse,
-  InboxUnreadCountResponse,
-  DeleteInboxEntryInput,
-  MarkInboxEntryReadInput,
-  MarkInboxEntryReadResponse,
-  SendTrailInput,
-  SendTrailResponse,
-  GetSentInput,
-  ListSentResponse,
   GetTopicInboxInput,
   ListTopicInboxResponse,
+  TopicInboxUnreadCountResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -123,61 +113,6 @@ export class WebAdeService {
   }
 
   /**
-   * Get the signed-in user's recently visited trails (newest first).
-   */
-  static async getRecentlyVisitedTrails(): Promise<ListRecentlyVisitedTrailsResponse> {
-    return webAdeClient.getRecentlyVisitedTrails();
-  }
-
-  /**
-   * Get the signed-in user's trail inbox (shared trails sent to them).
-   */
-  static async getInbox(input: GetInboxInput = {}): Promise<ListInboxResponse> {
-    return webAdeClient.getInbox(input);
-  }
-
-  /**
-   * Get just the unread inbox count.
-   */
-  static async getInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
-    return webAdeClient.getInboxUnreadCount();
-  }
-
-  /**
-   * Remove one delivered trail from the signed-in user's inbox. Deletes only
-   * the inbox row, not the underlying trail.
-   */
-  static async deleteInboxEntry(input: DeleteInboxEntryInput): Promise<void> {
-    return webAdeClient.deleteInboxEntry(input);
-  }
-
-  /**
-   * Mark one delivered trail in the signed-in user's inbox as read. Clears the
-   * attention dot / "(N new)" badge server-side by stamping `readAt` and
-   * advancing the notes watermark. Idempotent.
-   */
-  static async markInboxEntryRead(
-    input: MarkInboxEntryReadInput,
-  ): Promise<MarkInboxEntryReadResponse> {
-    return webAdeClient.markInboxEntryRead(input);
-  }
-
-  /**
-   * Send a shared trail to one or more GitHub-login recipients.
-   * `shareId` is the web-ade share id (parsed from the share URL).
-   */
-  static async sendTrail(input: SendTrailInput): Promise<SendTrailResponse> {
-    return webAdeClient.sendTrail(input);
-  }
-
-  /**
-   * Get the signed-in user's sent trails (the outbox).
-   */
-  static async getSent(input: GetSentInput = {}): Promise<ListSentResponse> {
-    return webAdeClient.getSent(input);
-  }
-
-  /**
    * Get the signed-in user's topic inbox (topics sent to them).
    */
   static async getTopicInbox(
@@ -189,7 +124,7 @@ export class WebAdeService {
   /**
    * Get just the unread topic-inbox count.
    */
-  static async getTopicInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
+  static async getTopicInboxUnreadCount(): Promise<TopicInboxUnreadCountResponse> {
     return webAdeClient.getTopicInboxUnreadCount();
   }
 }

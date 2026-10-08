@@ -143,29 +143,7 @@ console.log(example);
           Promise.resolve({ path: _repoPath, name: 'mock' }),
         getRepositoryByPath: (_repoPath: string) => Promise.resolve(null),
       },
-      // TrailsView reads the saved-trail library through this surface
-      // (TrailLibraryService). Empty list / null payload by default; stories
-      // monkey-patch TrailLibraryService directly for fixture data.
-      fileCityTrail: {
-        list: (_repoPath?: string) => Promise.resolve({ entries: [] }),
-        load: (_id: string) => Promise.resolve(null),
-        activate: (_id: string) => Promise.resolve(null),
-        delete: (_id: string) =>
-          Promise.resolve({ found: false, repositoryPath: undefined }),
-        onLibraryChanged: (_cb: any) => () => {},
-      },
-      // OpenCode convert spike. TrailsView subscribes to onProgress on mount
-      // (unconditionally), so this must return a real unsubscribe.
-      openCodeConvert: {
-        onProgress: (_cb: any) => () => {},
-        detect: () =>
-          Promise.resolve({ installed: false, authed: false }),
-        runPrompt: (_input: any) =>
-          Promise.resolve({ ok: false, durationMs: 0 }),
-        convertTrail: (_id: string) =>
-          Promise.resolve({ ok: false, durationMs: 0 }),
-      },
-      // Skill lock surface — TrailsView reads the lock file to gate the
+      // Skill lock surface — the skill browser reads the lock file to gate the
       // install screen vs the post-install landing.
       skillLock: {
         getSkillLock: () => Promise.resolve(null),
@@ -174,7 +152,7 @@ console.log(example);
         onSkillUpdated: (_cb: any) => () => {},
       },
       // Github + git + shell — only invoked from user-driven actions
-      // (Install Skills, Add Project, prompt-idea card). Provide enough so
+      // (Install Skills, Add Project). Provide enough so
       // the buttons don't blow up if a story driver clicks them.
       github: {
         getTree: () =>
@@ -230,8 +208,7 @@ console.log(example);
         requestDataPort: () => Promise.resolve(),
         onPortReady: () => () => {},
       },
-      // WindowService.openDevWorkspace — invoked when the user starts a trail
-      // from the brief. No-op in storybook.
+      // WindowService.openDevWorkspace — no-op in storybook.
       window: {
         openDevWorkspace: () => Promise.resolve({ success: true }),
       },

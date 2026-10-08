@@ -11,7 +11,7 @@
  * list of surfaces with `makeSlideDirection` so going "forward" enters from the
  * right and going "back" enters from the left.
  *
- * This is a shared component intended for reuse across surfaces (Home, Trails,
+ * This is a shared component intended for reuse across surfaces (Home,
  * Topics, etc.).
  */
 

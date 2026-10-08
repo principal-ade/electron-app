@@ -18,10 +18,10 @@ const FEATURE_GROUPS: Array<{
       'Cached repository trees, contribution data, profile activity, pinned repositories, starred collections, and commit explanations.',
   },
   {
-    key: 'trailTopicSharingAndInbox',
-    label: 'Trail/topic sharing & inbox',
+    key: 'topicSharing',
+    label: 'Topic sharing & inbox',
     description:
-      'Publishing and opening shared trails or topics, trail notes and delivery, inbox, sent items, and recently visited trails.',
+      'Publishing and opening shared topics, including the topic inbox.',
   },
   {
     key: 'presenceAndCollaboration',
@@ -92,7 +92,7 @@ export const FeatureAvailabilitySettings: React.FC = () => {
         }}
       >
         Enable only the hosted features whose services are available. These
-        switches do not affect local repositories, trails, topics, or terminals.
+        switches do not affect local repositories, topics, or terminals.
       </p>
       <div
         style={{

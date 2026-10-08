@@ -20,9 +20,6 @@ mermaid.initialize({
 });
 // @ts-expect-error - mermaid is not a standard window property
 window.mermaid = mermaid;
-// Required by FileCityTrailExplorerPanel's sequence-view (xyflow).
-import '@xyflow/react/dist/style.css';
-
 const container = document.getElementById('root');
 if (!container) {
   throw new Error('Failed to find root element');

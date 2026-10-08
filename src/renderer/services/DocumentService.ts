@@ -3,7 +3,6 @@
  * Wraps `window.mainProcess.document` so components/hooks never touch the
  * preload surface directly.
  *
- * Sibling: `TrailService` (active trail payload + warm-start handoff).
  */
 
 import type { OpenDocumentEnvelope } from '../../shared/main-process-api-interfaces/DocumentAPI';

@@ -703,7 +703,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
  */
 export async function createWindow(
   options?: BrowserWindowConstructorOptions,
-  mainOptions?: { openTrailId?: string },
 ): Promise<ModernApplicationWindow | null> {
   const tracer = getTracer('principal-ade-main');
   const isMainWindow = !options || Object.keys(options).length === 0;
@@ -748,11 +747,7 @@ export async function createWindow(
     // Load content - use principal.html for main window
     const htmlFileName = isMainWindow ? 'principal.html' : 'index.html';
     const baseHtmlPath = resolveHtmlPath(htmlFileName);
-    const openTrailSuffix =
-      isMainWindow && mainOptions?.openTrailId
-        ? `#openTrailId=${encodeURIComponent(mainOptions.openTrailId)}`
-        : '';
-    const htmlPath = `${baseHtmlPath}${openTrailSuffix}`;
+    const htmlPath = baseHtmlPath;
     appWindow.window.loadURL(htmlPath);
     console.log(`[ModernWindow] Window ${appWindow.id} loading: ${htmlPath}`);
 
@@ -903,14 +898,8 @@ export function createSpecialWindow(
  * Focus the main window if it exists, otherwise create it
  * This is useful for "new window" operations that should show the main window
  *
- * When `openTrailId` is provided it is baked into the principal.html URL as
- * `#openTrailId=<id>` on cold start so `IntegratedShell` can switch to the
- * Trails view at first render. Warm starts (existing main window) ignore the
- * arg — broadcasts (`LIBRARY_CHANGED`) are the warm-path delivery mechanism.
  */
-export async function focusOrCreateMainWindow(
-  options?: { openTrailId?: string },
-): Promise<IModernApplicationWindow | null> {
+export async function focusOrCreateMainWindow(): Promise<IModernApplicationWindow | null> {
   const mainId = getMainWindowId();
 
   // If main window exists, focus it
@@ -938,7 +927,7 @@ export async function focusOrCreateMainWindow(
 
   // No main window exists, create one
   console.log('[ModernWindow] No main window exists, creating new one');
-  return await createWindow(undefined, options);
+  return await createWindow(undefined);
 }
 
 /**

@@ -90,7 +90,6 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
         packageRoot=""
         repoLabel={repoLabel}
         repositoryPath={repositoryPath}
-        events={events}
         onFileOpen={(cityPath) => {
           const relativePath = stripRootPath(cityPath, rootPath);
           if (isOverlayable(relativePath)) {

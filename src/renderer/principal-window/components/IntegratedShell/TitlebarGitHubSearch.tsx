@@ -17,7 +17,6 @@ import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { usePortalEvents } from '../../PortalEventContext';
 import { useProjectsTabs } from '../../contexts/ProjectsTabsContext';
 import {
-  emitTrailOpen,
   emitTopicOpen,
   emitTerminalOpen,
 } from '../../../events/portalIntents';
@@ -32,11 +31,10 @@ import {
 type ParsedTitlebarUrl =
   | { type: 'user'; username: string }
   | { type: 'repo'; owner: string; name: string }
-  | { type: 'trail'; id: string }
   | { type: 'topic'; id: string };
 
-// web-ade shares trails as flat `…/trail/{uuid}` links and topics as
-// `…/topic/{id}`. Match the production host plus any `*.principal-ade.com`
+// web-ade shares topics as `…/topic/{id}`. Match the production host plus any
+// `*.principal-ade.com`
 // (covers preview/dev origins) and localhost for local web-ade.
 const isWebAdeHost = (hostname: string): boolean =>
   hostname === 'app.principal-ade.com' ||
@@ -44,17 +42,12 @@ const isWebAdeHost = (hostname: string): boolean =>
   hostname === 'localhost' ||
   hostname === '127.0.0.1';
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 // Topic ids aren't UUIDs (e.g. `topic-1780187765886-n2uii5c5i`); accept the
 // url-safe id charset web-ade uses.
 const TOPIC_ID_RE = /^[A-Za-z0-9._-]+$/;
 
 const parseTitlebarUrl = (input: string): ParsedTitlebarUrl | null => {
   const trimmed = input.trim();
-  // A bare trail UUID (no surrounding URL) is a valid paste target too.
-  if (UUID_RE.test(trimmed)) return { type: 'trail', id: trimmed };
   // Bare topic ids are prefixed (`topic-…`), so they're unambiguous as well.
   if (trimmed.startsWith('topic-') && TOPIC_ID_RE.test(trimmed))
     return { type: 'topic', id: trimmed };
@@ -62,13 +55,10 @@ const parseTitlebarUrl = (input: string): ParsedTitlebarUrl | null => {
     const urlStr = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
     const url = new URL(urlStr);
     if (isWebAdeHost(url.hostname)) {
-      const trailMatch = url.pathname.match(/\/trail\/([0-9a-f-]+)/i);
-      if (trailMatch && UUID_RE.test(trailMatch[1]))
-        return { type: 'trail', id: trailMatch[1] };
       const topicMatch = url.pathname.match(/\/topic\/([A-Za-z0-9._-]+)/i);
       if (topicMatch) return { type: 'topic', id: topicMatch[1] };
       // web-ade mirrors GitHub's `…/{owner}/{repo}` (and `…/{user}`) paths, so
-      // a non-trail/topic link like `app.principal-ade.com/owner/repo` resolves
+      // a non-topic link like `app.principal-ade.com/owner/repo` resolves
       // to the same repo/user as the equivalent github.com link.
       // (falls through to the shared owner/repo parsing below)
     } else if (url.hostname !== 'github.com') {
@@ -234,7 +224,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
     (entry: AlexandriaEntry) => {
       // Reveal the workspace shell (the persistent terminal-tab host under the
       // Home/Settings overlays), then open a terminal rooted at the checkout.
-      // Mirrors how trail/topic opens switch view before emitting on the portal
+      // Mirrors how topic opens switch view before emitting on the portal
       // bus; the shell listens for `terminal:open` on that bus.
       events.emit({
         type: 'panel:switch',
@@ -326,30 +316,6 @@ export const TitlebarGitHubSearch: React.FC = () => {
     [events, openProjectInfo, clearSearch],
   );
 
-  const openTrailById = useCallback(
-    (id: string) => {
-      // A pasted trail URL is someone else's published trail — not in the
-      // local library. Open it as a tab (next to repo profiles), which
-      // self-fetches the payload and conveys its remote-ness. Switch to the
-      // projects view first, then emit `trail:open` on the portal bus — its
-      // always-mounted listener (PortalIntentBridge) opens the tab in the shared
-      // host regardless of which surface is showing, so it never drops.
-      events.emit({
-        type: 'panel:switch',
-        source: 'titlebar-search',
-        timestamp: Date.now(),
-        payload: { view: 'projects' },
-      });
-      emitTrailOpen(portalEvents, 'titlebar-search', {
-        trailId: id,
-        source: 'shared',
-        surface: 'projects',
-      });
-      clearSearch();
-    },
-    [events, portalEvents, clearSearch],
-  );
-
   const openTopicById = useCallback(
     (id: string) => {
       // A pasted topic link is a published web-ade topic. Topic tabs render in
@@ -384,9 +350,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
           ? `@${parsed.username}`
           : parsed.type === 'repo'
             ? `${parsed.owner}/${parsed.name}`
-            : parsed.type === 'topic'
-              ? 'topic'
-              : 'trail';
+            : 'topic';
       const message = `Opening ${entity}`;
       const duration = message.length * 30 + 250;
       setFlashLabel(message);
@@ -398,12 +362,10 @@ export const TitlebarGitHubSearch: React.FC = () => {
           openRepoByOwnerName(parsed.owner, parsed.name);
         } else if (parsed.type === 'topic') {
           openTopicById(parsed.id);
-        } else {
-          openTrailById(parsed.id);
         }
       }, duration);
     },
-    [openUserByUsername, openRepoByOwnerName, openTrailById, openTopicById],
+    [openUserByUsername, openRepoByOwnerName, openTopicById],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

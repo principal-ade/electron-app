@@ -7,7 +7,6 @@ import type { PanelLayout } from '@principal-ade/panels';
 export type InteractiveShellNavigationView =
   | 'home'
   | 'home-panel'
-  | 'trails'
   | 'inbox'
   | 'topics'
   | 'projects'
@@ -73,7 +72,7 @@ export interface UserPreferences {
    */
   featureAvailability?: {
     repositoryInsightsAndCollections?: boolean;
-    trailTopicSharingAndInbox?: boolean;
+    topicSharing?: boolean;
     presenceAndCollaboration?: boolean;
     signIn?: boolean;
   };
@@ -171,7 +170,6 @@ export interface UserPreferences {
   devWorkspace?: {
     titlebar?: {
       fileCity3D?: boolean;
-      trail?: boolean;
       traces?: boolean;
       sync?: boolean;
       focus?: boolean;
@@ -185,7 +183,6 @@ export interface UserPreferences {
       packageComposition?: boolean;
       docs?: boolean;
       agentsList?: boolean;
-      trails?: boolean;
     };
     rightSidebarIcons?: {
       fileCity?: boolean;
@@ -256,28 +253,6 @@ export interface UserPreferences {
   // Interactive shell preferences
   interactiveShell?: {
     activeNavigationView?: InteractiveShellNavigationView;
-  };
-
-  // Trails view preferences
-  trails?: {
-    // Brief-layout switch state — workspace-global so the reader's
-    // layout / hide-map choice persists across trail clicks, repo
-    // switches, and app restarts. `layout` mirrors the upstream
-    // panel's `TrailBriefLayout` ('split' | 'diagram'); we don't
-    // import the type here to keep this shared types file free of
-    // renderer-side panel-package deps.
-    briefLayout?: {
-      layout: 'split' | 'diagram';
-      hideMap: boolean;
-    };
-    // Home dashboard "All topics" mode — when true, the Projects section is
-    // hidden and every topic is shown. Persisted so the choice survives view
-    // switches and app restarts. Default false.
-    showAllTopics?: boolean;
-    // Home dashboard topics layout — 'list' is the sorted grid, 'kanban' is the
-    // status board. Persisted so the choice survives view switches and app
-    // restarts. Default 'list'.
-    topicsViewMode?: 'list' | 'kanban';
   };
 
   // Topic sharing preferences
@@ -360,7 +335,7 @@ export const USER_PREFERENCE_DEFAULTS: {
   presenceAutoConnect: false,
   featureAvailability: {
     repositoryInsightsAndCollections: false,
-    trailTopicSharingAndInbox: false,
+    topicSharing: false,
     presenceAndCollaboration: false,
     signIn: false,
   },

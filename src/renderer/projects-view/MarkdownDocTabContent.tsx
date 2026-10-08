@@ -8,7 +8,7 @@
  * with `readFile`, and a minimal `context`. `MarkdownPanel` reads nothing else
  * off `context`, so a lightweight scope stub is sufficient.
  *
- * Sibling: `SharedTrailTabContent`, `LocalTrailTabContent`.
+ * Sibling: the other project-tab content wrappers.
  */
 
 import React, { useMemo } from 'react';

@@ -6,7 +6,7 @@
  *
  * Registration is the programmatic analogue of the "Add repository" UI
  * affordance: it derives the display name + remote from the repo's git config,
- * exactly like the auto-register side effect in trailRoutes.ensureDevWorkspaceWindow.
+ * consistently with the window-manager repository registration path.
  */
 
 import { promises as fs } from 'fs';
@@ -78,7 +78,7 @@ function summarizeEntry(entry: AlexandriaEntry): RepoSummary {
 /**
  * Is there a git repo at `repoPath`? `.git` is a directory for a normal
  * clone and a file for worktrees / submodules — accept either. Mirrors the
- * guard in trailRoutes so the two registration paths agree on what counts.
+ * repository registration's guard so all callers agree on what counts.
  */
 async function hasGitDir(repoPath: string): Promise<boolean> {
   try {

@@ -126,8 +126,6 @@ export interface DevWorkspaceTitlebarProps {
   onShowGitChanges?: () => void;
   /** Callback to open FileCity 3D visualization as a tab */
   onOpenFileCity3D?: () => void;
-  /** Callback to open the parallel File City Trail panel as a tab */
-  onOpenFileCityTrail?: () => void;
   // Terminal implementation toggle
   terminalImplementation?: 'xterm' | 'ghostty';
   onToggleTerminalImplementation?: () => void;
@@ -171,7 +169,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   selectedSource,
   onShowGitChanges,
   onOpenFileCity3D,
-  onOpenFileCityTrail,
   terminalImplementation,
   onToggleTerminalImplementation,
   isLeftCollapsed = false,
@@ -351,45 +348,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 >
                   <Building2 size={14} />
                   <span>3D City</span>
-                </button>
-              )}
-
-              {/* File City Trail Button */}
-              {onOpenFileCityTrail && config.titlebar.trail && (
-                <button
-                  onClick={onOpenFileCityTrail}
-                  title="Open File City Trail explorer"
-                  style={{
-                    // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                    WebkitAppRegion: 'no-drag',
-                    background: theme.colors.backgroundTertiary,
-                    border: `1px solid ${theme.colors.border}`,
-                    color: theme.colors.textSecondary,
-                    cursor: 'pointer',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'all 0.2s',
-                    fontSize: `${theme.fontSizes[1]}px`,
-                    fontWeight: theme.fontWeights.medium,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundSecondary;
-                    e.currentTarget.style.borderColor = theme.colors.primary;
-                    e.currentTarget.style.color = theme.colors.text;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                    e.currentTarget.style.color = theme.colors.textSecondary;
-                  }}
-                >
-                  <Building2 size={14} />
-                  <span>Trail</span>
                 </button>
               )}
 

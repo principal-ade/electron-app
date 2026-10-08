@@ -24,19 +24,9 @@ import type {
   ExplainCommitsResponse,
   ExplainWorkingChangesInput,
   ExplainWorkingChangesResponse,
-  ListRecentlyVisitedTrailsResponse,
-  GetInboxInput,
-  ListInboxResponse,
-  InboxUnreadCountResponse,
-  DeleteInboxEntryInput,
-  MarkInboxEntryReadInput,
-  MarkInboxEntryReadResponse,
-  SendTrailInput,
-  SendTrailResponse,
-  GetSentInput,
-  ListSentResponse,
   GetTopicInboxInput,
   ListTopicInboxResponse,
+  TopicInboxUnreadCountResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
@@ -75,20 +65,9 @@ export interface WebAdeClient {
     input: ExplainWorkingChangesInput,
   ) => Promise<ExplainWorkingChangesResponse>;
 
-  // Trail Inbox + Recently Visited
-  getRecentlyVisitedTrails: () => Promise<ListRecentlyVisitedTrailsResponse>;
-  getInbox: (input: GetInboxInput) => Promise<ListInboxResponse>;
-  getInboxUnreadCount: () => Promise<InboxUnreadCountResponse>;
-  deleteInboxEntry: (input: DeleteInboxEntryInput) => Promise<void>;
-  markInboxEntryRead: (
-    input: MarkInboxEntryReadInput,
-  ) => Promise<MarkInboxEntryReadResponse>;
-  sendTrail: (input: SendTrailInput) => Promise<SendTrailResponse>;
-  getSent: (input: GetSentInput) => Promise<ListSentResponse>;
-
   // Topic Inbox
   getTopicInbox: (input: GetTopicInboxInput) => Promise<ListTopicInboxResponse>;
-  getTopicInboxUnreadCount: () => Promise<InboxUnreadCountResponse>;
+  getTopicInboxUnreadCount: () => Promise<TopicInboxUnreadCountResponse>;
 }
 
 // =============================================================================
@@ -162,24 +141,9 @@ export type {
   ExplainCommitsInput,
   ExplainCommitsResponse,
   ExplainCommitData,
-  TrailRecentlyVisitedEntry,
-  ListRecentlyVisitedTrailsResponse,
-  InboxTrailSnapshot,
-  InboxIndexEntry,
-  GetInboxInput,
-  ListInboxResponse,
-  InboxUnreadCountResponse,
-  DeleteInboxEntryInput,
-  MarkInboxEntryReadInput,
-  MarkInboxEntryReadResponse,
-  SendTrailInput,
-  SendTrailResponse,
-  GetSentInput,
-  ListSentResponse,
-  OutboxIndexEntry,
-  OutboxRecipient,
   TopicInboxSnapshot,
   TopicInboxIndexEntry,
   GetTopicInboxInput,
   ListTopicInboxResponse,
+  TopicInboxUnreadCountResponse,
 } from '../../shared/tipc/webAdeRouterTypes';

@@ -41,8 +41,8 @@ import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
-import type { RegisteredTrace, VersionSnapshot, OtelExportTraceServiceRequest, StoryboardContextSliceData } from '@principal-ai/principal-view-core';
-import { LocalRegistry, TraceOrchestrator, buildStoryboardContext } from '@principal-ai/principal-view-core';
+import type { RegisteredTrace, VersionSnapshot, OtelExportTraceServiceRequest } from '@principal-ai/principal-view-core';
+import { LocalRegistry, TraceOrchestrator } from '@principal-ai/principal-view-core';
 import { OtelCollectorService } from '../main-process-api/OtelCollectorService';
 import { RendererFileSystemAdapter } from '../utils/RendererFileSystemAdapter';
 import type {
@@ -52,14 +52,7 @@ import type {
   WorkspacesSlice,
 } from '@industry-theme/alexandria-panels';
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
-import type { FeedProjectSliceData, ActivityHeatmapSliceData, LineCountsSliceData, TrailPayload } from '@industry-theme/file-city-panel';
-import { TrailService } from '../services/TrailService';
-import { TrailLibraryService } from '../services/TrailLibraryService';
-import {
-  TRAIL_EVENT,
-  type TrailActivatedEvent,
-  type TrailClearedEvent,
-} from '../dev-workspace/trail-events';
+import type { FeedProjectSliceData, ActivityHeatmapSliceData, LineCountsSliceData } from '@industry-theme/file-city-panel';
 import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
 import type { BrunoRequest, BrunoResponse, BrunoEnvironment } from '@principal-ade/bruno-panels';
 import { BrunoService } from '../main-process-api/BrunoService';
@@ -232,8 +225,6 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   schematics: DataSlice<VersionSnapshot[]>;
   activityHeatmap: DataSlice<ActivityHeatmapSliceData | null>;
   lineCounts: DataSlice<LineCountsSliceData | null>;
-  storyboardContext: DataSlice<StoryboardContextSliceData | null>;
-  trail: DataSlice<TrailPayload | null>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -305,16 +296,6 @@ export const RepositoryPanelProvider: React.FC<
   // Track line counts data (for File City 3D building heights)
   const [lineCountsData, setLineCountsData] = useState<LineCountsSliceData | null>(null);
   const [lineCountsLoading, setLineCountsLoading] = useState(false);
-
-  // Trail payload state — owned here (always mounted) so the trail tab,
-  // which only mounts when opened, receives the payload synchronously
-  // via context rather than racing the broadcast that triggered the
-  // tab-open.
-  const [trailData, setTrailData] = useState<TrailPayload | null>(null);
-
-  // Track storyboard context (for File City 3D storyboard highlighting)
-  const [storyboardContextData, setStoryboardContextData] = useState<StoryboardContextSliceData | null>(null);
-  const [storyboardContextLoading, setStoryboardContextLoading] = useState(false);
 
   // Track selected color mode for file city visualization
   const [fileCityColorMode, setFileCityColorMode] =
@@ -395,103 +376,6 @@ export const RepositoryPanelProvider: React.FC<
       onServiceTraceCountsChange(serviceTraceCounts, lastActiveService);
     }
   }, [serviceTraceCounts, lastActiveService, onServiceTraceCountsChange]);
-
-  // Update storyboard context when canvas/workflow tabs change
-  useEffect(() => {
-    const updateStoryboardContext = async () => {
-      // Type for canvas tab structure
-      interface CanvasTabLike {
-        contentType?: string;
-        canvasPath?: string;
-        canvasId?: string;
-        canvasName?: string;
-        narrativeTemplate?: { name?: string; scenarios?: Array<{ id: string; name?: string }> };
-        narrativePath?: string;
-        selectedNarrativeId?: string;
-        selectedScenarioId?: string;
-      }
-
-      console.info('[StoryboardContext] openTabs changed, total tabs:', (openTabs || []).length, 'contentTypes:', (openTabs || []).map((t) => (t as CanvasTabLike)?.contentType));
-
-      // Find canvas tabs in openTabs
-      const canvasTabs = (openTabs || []).filter((tab: unknown) => {
-        const t = tab as CanvasTabLike;
-        return t?.contentType === 'canvas-detail' || t?.contentType === 'canvas-editor';
-      });
-
-      console.info('[StoryboardContext] canvas tabs found:', canvasTabs.length, canvasTabs.map((t) => ({ contentType: (t as CanvasTabLike).contentType, canvasPath: (t as CanvasTabLike).canvasPath })));
-
-      // Find the active/visible canvas tab (last one in the array, or first with canvasPath)
-      const activeCanvasTab = canvasTabs.length > 0 ? (canvasTabs[canvasTabs.length - 1] as CanvasTabLike) : null;
-
-      // If no canvas tab, keep the last storyboard state (don't clear it)
-      // This allows the File City to continue highlighting files when switching to implementation files
-      if (!activeCanvasTab || !activeCanvasTab.canvasPath) {
-        console.info('[StoryboardContext] no active canvas tab — keeping last storyboard state');
-        return;
-      }
-
-      console.info('[StoryboardContext] active canvas tab:', { contentType: activeCanvasTab.contentType, canvasPath: activeCanvasTab.canvasPath, hasNarrativeTemplate: !!activeCanvasTab.narrativeTemplate, selectedScenarioId: activeCanvasTab.selectedScenarioId });
-
-      try {
-        setStoryboardContextLoading(true);
-
-        // Load and parse the canvas file
-        const canvasContent = await FileSystemService.readFile(activeCanvasTab.canvasPath);
-        if (!canvasContent?.content) {
-          console.warn('[StoryboardContext] Failed to read canvas file:', activeCanvasTab.canvasPath);
-          return;
-        }
-
-        const canvas = JSON.parse(canvasContent.content);
-        const otelNodes = (canvas.nodes || []).filter((n: { type?: string }) => n.type === 'otel-event');
-        const nodesWithFiles = otelNodes.filter((n: { otel?: { files?: unknown[] } }) => (n.otel?.files?.length ?? 0) > 0);
-        console.info('[StoryboardContext] canvas parsed — total nodes:', (canvas.nodes || []).length, 'otel-event nodes:', otelNodes.length, 'nodes with otel.files:', nodesWithFiles.length);
-
-        // Build the full storyboard context
-        // Note: openTabs is typed as unknown[], but buildStoryboardContext handles validation
-        const storyboard = {
-          id: activeCanvasTab.canvasId || activeCanvasTab.canvasPath,
-          name: activeCanvasTab.canvasName || 'Canvas',
-          path: activeCanvasTab.canvasPath,
-        };
-
-        const workflow = activeCanvasTab.narrativeTemplate ? {
-          template: activeCanvasTab.narrativeTemplate,
-          path: activeCanvasTab.narrativePath || '',
-        } : undefined;
-
-        const scenario = activeCanvasTab.selectedScenarioId && workflow ?
-          (workflow.template as { scenarios?: Array<{ id: string }> }).scenarios?.find(
-            (s) => s.id === activeCanvasTab.selectedScenarioId
-          )
-          : undefined;
-
-        // buildStoryboardContext handles type validation internally
-        const context = buildStoryboardContext({
-          canvas,
-          storyboard,
-          workflow: workflow as never,
-          scenario: scenario as never,
-        });
-
-        const manifest = (context as { manifest?: { nodeToFiles?: Map<string, string[]> } })?.manifest;
-        const manifestSize = manifest?.nodeToFiles?.size ?? 0;
-        console.info('[StoryboardContext] context built — manifest nodeToFiles size:', manifestSize, 'storyboard:', context?.storyboard?.name, 'workflow:', context?.workflow?.name, 'scenario:', context?.scenario);
-        if (manifestSize === 0) {
-          console.warn('[StoryboardContext] manifest is empty — canvas nodes may be missing otel.files entries');
-        }
-
-        setStoryboardContextData(context);
-      } catch (error) {
-        console.error('[StoryboardContext] Failed to build storyboard context:', error);
-      } finally {
-        setStoryboardContextLoading(false);
-      }
-    };
-
-    updateStoryboardContext();
-  }, [openTabs]);
 
   // Track schematics (version snapshots from LocalRegistry)
   const [schematicsData, setSchematicsData] = useState<VersionSnapshot[]>([]);
@@ -953,62 +837,6 @@ export const RepositoryPanelProvider: React.FC<
 
     fetchLineCounts();
   }, [repositoryPath]);
-
-  // Subscribe to trail state for this repository. Updates flow from four
-  // sources:
-  //   1. `?openTrailId=` URL arg (fresh-window bootstrap) — load by id.
-  //   2. IPC `PAYLOAD_SET` — external POSTs to the trail route.
-  //   3. IPC `PAYLOAD_CLEARED` — trail deleted on disk; self-filter by id.
-  //   4. Renderer events on `events` — in-window sidebar activate/clear.
-  // Owning state here (always mounted) eliminates the race with the
-  // trail tab, which only mounts on demand.
-  useEffect(() => {
-    let cancelled = false;
-    const matches = (nextRepo: string | undefined | null): boolean =>
-      !nextRepo || nextRepo === repositoryPath;
-
-    const openId = TrailService.getOpenTrailId();
-    if (openId) {
-      TrailLibraryService.load(openId).then((loaded) => {
-        if (cancelled || !loaded) return;
-        setTrailData(loaded);
-      });
-    }
-
-    const offSet = TrailService.onPayloadSet(({ payload, repositoryPath: nextRepo }) => {
-      if (!matches(nextRepo)) return;
-      setTrailData(payload);
-    });
-
-    const offCleared = TrailService.onPayloadCleared(({ id, repositoryPath: nextRepo }) => {
-      if (!matches(nextRepo)) return;
-      setTrailData((prev) => (prev?.id === id ? null : prev));
-    });
-
-    const offActivated = events.on<TrailActivatedEvent>(
-      TRAIL_EVENT.activated,
-      (event) => {
-        if (!matches(event.payload.repositoryPath)) return;
-        setTrailData(event.payload.payload);
-      },
-    );
-
-    const offClearedLocal = events.on<TrailClearedEvent>(
-      TRAIL_EVENT.cleared,
-      (event) => {
-        if (!matches(event.payload.repositoryPath)) return;
-        setTrailData(null);
-      },
-    );
-
-    return () => {
-      cancelled = true;
-      offSet();
-      offCleared();
-      offActivated?.();
-      offClearedLocal?.();
-    };
-  }, [repositoryPath, events]);
 
   // Fetch all Alexandria repositories (for Local Projects panel) and subscribe to changes
   useEffect(() => {
@@ -3178,21 +3006,6 @@ export const RepositoryPanelProvider: React.FC<
     [activityHeatmapData, activityHeatmapLoading],
   );
 
-  // Trail payload slice — single in-flight trail per window. No refresh
-  // action: the source of truth is the broadcast stream + URL arg, not
-  // a pull. Reads come straight from the locally-held state.
-  const trailSlice = useMemo<DataSlice<TrailPayload | null>>(
-    () => ({
-      scope: 'repository' as const,
-      name: 'trail',
-      data: trailData,
-      loading: false,
-      error: null,
-      refresh: async () => {},
-    }),
-    [trailData],
-  );
-
   // Line counts slice (for CodeCityPanel building heights)
   const lineCountsSlice = useMemo<DataSlice<LineCountsSliceData | null>>(
     () => ({
@@ -3233,22 +3046,6 @@ export const RepositoryPanelProvider: React.FC<
       },
     }),
     [lineCountsData, lineCountsLoading],
-  );
-
-  // Storyboard context slice (for File City 3D storyboard highlighting)
-  const storyboardContextSlice = useMemo<DataSlice<StoryboardContextSliceData | null>>(
-    () => ({
-      scope: 'repository' as const,
-      name: 'storyboardContext',
-      data: storyboardContextData,
-      loading: storyboardContextLoading,
-      error: null,
-      refresh: async () => {
-        // Refresh is handled by the useEffect watching openTabs
-        // No manual refresh needed
-      },
-    }),
-    [storyboardContextData, storyboardContextLoading],
   );
 
   // Empty slices Map for backward compatibility with PanelContextValue interface
@@ -3325,8 +3122,6 @@ export const RepositoryPanelProvider: React.FC<
       schematics: schematicsSlice,
       activityHeatmap: activityHeatmapSlice,
       lineCounts: lineCountsSlice,
-      storyboardContext: storyboardContextSlice,
-      trail: trailSlice,
     }),
     [
       repositoryPath,
@@ -3361,8 +3156,6 @@ export const RepositoryPanelProvider: React.FC<
       schematicsSlice,
       activityHeatmapSlice,
       lineCountsSlice,
-      storyboardContextSlice,
-      trailSlice,
     ],
   );
 

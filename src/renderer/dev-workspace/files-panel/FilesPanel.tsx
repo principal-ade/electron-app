@@ -39,8 +39,8 @@ type FileFilter = 'all' | 'touched';
  *
  * The scope system itself is NOT gone — `ScopeManagerProvider` is still mounted
  * by DevWorkspaceApp and consumed by the File City explorer. This panel simply
- * no longer reads or writes scopes. Areas authored in the trail view are the
- * intended future on-ramp to formalized scopes; until that lands, the file tree
+ * no longer reads or writes scopes. Areas authored in the File City explorer
+ * are the intended on-ramp to formalized scopes; until that lands, the file tree
  * stays scope-agnostic.
  */
 export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {

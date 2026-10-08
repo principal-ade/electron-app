@@ -19,7 +19,6 @@ import { UserPreferencesService } from '../../../main-process-api/UserPreference
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { SecureAuthService } from '../../../services/SecureAuthService';
-import { TrailService } from '../../../services/TrailService';
 import type { InteractiveShellNavigationView } from '../../../../shared/types/userPreferences.types';
 import type { QuickCommand } from '@principal-ade/panel-layouts';
 import {
@@ -28,8 +27,6 @@ import {
 } from '@principal-ade/panel-layouts';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { usePortalEvents } from '../../PortalEventContext';
-import { useProjectsTabs } from '../../contexts/ProjectsTabsContext';
-import { useInboxTabs } from '../../contexts/InboxTabsContext';
 import { useTopicsTabs } from '../../contexts/TopicsTabsContext';
 import { topicClient } from '../../../tipc/topicClient';
 import { OnboardingWizard } from '../../../components/OnboardingWizard/OnboardingWizard';
@@ -45,7 +42,6 @@ export type NavigationView = InteractiveShellNavigationView;
 const VIEW_OPTIONS = [
   'home',
   'home-panel',
-  'trails',
   'inbox',
   'topics',
   'projects',
@@ -123,7 +119,7 @@ const getViewDefaults = (
 
 export const IntegratedShell: React.FC = () => {
   const [activeView, setActiveView] = useState<NavigationView>('home');
-  // The workspace surface (projects/inbox/topics/trails) shown in the
+  // The workspace surface (projects/inbox/topics) shown in the
   // persistent PrincipalPortal beneath any standalone overlay. Stays `null`
   // until the user first visits a workspace view, so a cold start that lands
   // on Home doesn't eagerly mount a workspace (and its terminals). Once set it
@@ -137,8 +133,6 @@ export const IntegratedShell: React.FC = () => {
   const { theme, mode } = useTheme();
   const { events } = usePrincipalEvents();
   const { events: portalEvents } = usePortalEvents();
-  const { openLocalTrail: openLocalTrailInFeed } = useProjectsTabs();
-  const { openLocalTrail: openLocalTrailInInbox } = useInboxTabs();
   const { openTopic: openTopicInTopicsView } = useTopicsTabs();
 
   // Live mirror of activeView so the SHOW_IN_PRINCIPAL listener — which
@@ -178,7 +172,6 @@ export const IntegratedShell: React.FC = () => {
   const [viewCollapsedStates, setViewCollapsedStates] = useState<
     Record<string, { left: boolean; right: boolean }>
   >({
-    trails: { left: false, right: false },
     inbox: { left: false, right: false },
     topics: { left: false, right: false },
     'home-panel': { left: false, right: false },
@@ -198,19 +191,11 @@ export const IntegratedShell: React.FC = () => {
 
   // Load saved navigation view and panel states on mount
   useEffect(() => {
-    // Cold-start handoff from main: if this window was opened via
-    // focusOrCreateMainWindow({ openTrailId }) the trail id sits on the URL
-    // hash. Switch to the Trails surface and open the trail as a tab (the
-    // saved pref doesn't get to override the explicit bootstrap).
-    const bootstrapTrailId = TrailService.getOpenTrailId();
     const loadPreferences = async () => {
       try {
         const prefs = await UserPreferencesService.getPreferences();
 
-        if (bootstrapTrailId) {
-          setActiveView('trails');
-          openLocalTrailInFeed(bootstrapTrailId);
-        } else if (prefs.interactiveShell?.activeNavigationView) {
+        if (prefs.interactiveShell?.activeNavigationView) {
           // Cast to string to handle legacy values from storage
           const savedView = prefs.interactiveShell.activeNavigationView as string;
           // Migrate removed views to 'projects' (removed 2026-04-19 in commit b742f44b2).
@@ -262,36 +247,6 @@ export const IntegratedShell: React.FC = () => {
     loadPreferences();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Warm-start handoff from the bridge: trailRoutes sends SHOW_IN_PRINCIPAL
-  // after focusOrCreateMainWindow when the principal window was already
-  // open (cold starts ride the URL hash above instead).
-  //
-  // All surfaces share one tab bucket, so the trail opens as a tab regardless of
-  // the active surface. Projects and Inbox use their own open variant (feed vs.
-  // inbox flavor) and keep the user there; every other workspace surface
-  // (trails/topics/drawings/skills) keeps them there too via the shared bucket.
-  // Only switch to the Trails surface when on a standalone overlay (home/
-  // settings/…), where the workspace portal is hidden and the new tab would
-  // otherwise be invisible.
-  useEffect(() => {
-    const unsubscribe = TrailService.onShowInPrincipal(({ trailId, title }) => {
-      const view = activeViewRef.current;
-      if (view === 'projects') {
-        openLocalTrailInFeed(trailId, title);
-        return;
-      }
-      if (view === 'inbox') {
-        openLocalTrailInInbox(trailId, title);
-        return;
-      }
-      if (!isWorkspaceView(view)) {
-        setActiveView('trails');
-      }
-      openLocalTrailInFeed(trailId, title);
-    });
-    return unsubscribe;
-  }, [openLocalTrailInFeed, openLocalTrailInInbox]);
-
   // Topic activate from the bridge: topicRoutes' POST /api/topics/:id/activate
   // targeted this (focused) window. Topics share the one workspace tab bucket
   // (useTopicsTabs → useWorkspaceTabs), so the tab opens regardless of which
@@ -308,18 +263,6 @@ export const IntegratedShell: React.FC = () => {
     });
     return unsubscribe;
   }, [openTopicInTopicsView]);
-
-  // HomeView dashboard click → switch to the Trails surface (its left-panel
-  // trail list). The old per-repo pre-select (a repo card's `repoPath` opening
-  // that repo's File City map grid) is dropped with the map gallery; the simple
-  // trail list isn't repo-scoped. Revisit if/when an All-Maps surface lands.
-  useEffect(() => {
-    const handler = () => {
-      setActiveView('trails');
-    };
-    window.addEventListener('home:open-in-trails', handler);
-    return () => window.removeEventListener('home:open-in-trails', handler);
-  }, []);
 
   // Listen for navigate to updates events from other windows
   useEffect(() => {
@@ -591,7 +534,6 @@ export const IntegratedShell: React.FC = () => {
         case 'reset':
           setActiveView('home');
           setViewCollapsedStates({
-            trails: { left: false, right: false },
             projects: { left: false, right: false },
             'home-panel': { left: false, right: false },
             onboarding: { left: false, right: false },
@@ -651,7 +593,6 @@ export const IntegratedShell: React.FC = () => {
       events.on('panel:reset-layout', () => {
         setActiveView('home');
         setViewCollapsedStates({
-          trails: { left: false, right: false },
           projects: { left: false, right: false },
           'home-panel': { left: false, right: false },
           onboarding: { left: false, right: false },
@@ -742,12 +683,6 @@ export const IntegratedShell: React.FC = () => {
           rightSidebarCollapsed={rightSidebarCollapsed}
           onToggleRightSidebar={handleToggleRightSidebar}
           hideSearch={false}
-          onAddProject={
-            activeView === 'trails'
-              ? () =>
-                  window.dispatchEvent(new CustomEvent('trails:add-project'))
-              : undefined
-          }
           onShowOnboardingWizard={() => setShowOnboardingWizard(true)}
         />
 

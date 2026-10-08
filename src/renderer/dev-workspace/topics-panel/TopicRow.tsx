@@ -77,7 +77,7 @@ export const TopicRow: React.FC<TopicRowProps> = ({
   const statusName = topic.status?.label || stateLabel(state);
 
   // Drag the topic into a terminal as an agent prompt that hydrates it from the
-  // local bridge — mirrors the Trails panel's drag-to-context behavior.
+  // local bridge so the terminal can hydrate the topic as context.
   const handleDragStart = (e: React.DragEvent) => {
     if (!e.dataTransfer) return;
     const title = topic.title || 'Untitled topic';

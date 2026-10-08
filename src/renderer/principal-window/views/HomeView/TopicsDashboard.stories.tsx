@@ -22,7 +22,7 @@ const topics: TopicsDashboardTopicEntry[] = [
   },
   {
     key: 'topic-working',
-    title: 'Trails subsystem',
+    title: 'Subsystem architecture',
     updatedAt: daysAgo(1),
     status: { state: 'working' },
   },

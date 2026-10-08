@@ -154,8 +154,7 @@ export const ShareTopicModal: React.FC<ShareTopicModalProps> = ({
           <div style={panelStyle}>
             <div>
               Publish <strong>{topicTitle}</strong> to web-ade. Topic sharing
-              includes its description and declared projects, not runtime
-              trails.
+              includes its description and declared projects.
             </div>
             <div
               style={{

@@ -139,7 +139,7 @@ export function TopicsDashboard({
         title={topicEntries.length > 0 ? undefined : 'Your topics'}
         subtitle={
           topicEntries.length === 0
-            ? 'Curated sets of trails on a shared subject.'
+            ? 'Curated briefs for a shared subject.'
             : undefined
         }
         action={

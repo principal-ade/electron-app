@@ -7,7 +7,6 @@ import {
   Radio,
   ToolCase,
   GraduationCap,
-  Footprints,
   Inbox,
   Layers,
   PenTool,
@@ -111,7 +110,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
     let active = true;
     const refresh = () =>
-      WebAdeService.getInboxUnreadCount()
+      WebAdeService.getTopicInboxUnreadCount()
         .then((result) => {
           if (active) setInboxUnread(result.count);
         })
@@ -206,7 +205,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       label: 'Inbox',
       badgeCount: inboxUnread,
     },
-    { id: 'trails', icon: <Footprints size={20} />, label: 'Trails' },
     { id: 'topics', icon: <Layers size={20} />, label: 'Topics' },
     { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },
     { id: 'drawings', icon: <PenTool size={20} />, label: 'Drawings' },

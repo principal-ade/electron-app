@@ -14,8 +14,6 @@ export interface RepositoryWindowState {
 export interface DevWorkspaceOptions {
   /** Full Alexandria entry with repository metadata */
   alexandriaEntry: AlexandriaEntry;
-  /** Trail to auto-open in a freshly-created repository window. */
-  openTrailId?: string;
 }
 
 export interface ExtensionWindowOptions {

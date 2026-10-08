@@ -21,17 +21,7 @@ import type {
   ExplainCommitsResponse,
   ExplainWorkingChangesInput,
   ExplainWorkingChangesResponse,
-  ListRecentlyVisitedTrailsResponse,
-  GetInboxInput,
-  ListInboxResponse,
-  InboxUnreadCountResponse,
-  DeleteInboxEntryInput,
-  MarkInboxEntryReadInput,
-  MarkInboxEntryReadResponse,
-  SendTrailInput,
-  SendTrailResponse,
-  GetSentInput,
-  ListSentResponse,
+  TopicInboxUnreadCountResponse,
   GetTopicInboxInput,
   ListTopicInboxResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
@@ -503,320 +493,14 @@ export class WebAdeService {
   }
 
   /**
-   * Fetch the signed-in user's "recently visited" trails.
-   * The web-ade route keys on the numeric GitHub id (not the token), so we
-   * resolve it from AuthService. Returns empty if we can't (signed out / no id).
-   */
-  async getRecentlyVisitedTrails(): Promise<ListRecentlyVisitedTrailsResponse> {
-    await requireHostedFeature('trailTopicSharingAndInbox');
-    const token = await this.getToken();
-    const user = await authService.getCurrentUser();
-    const githubId = user?.id;
-    if (!githubId) {
-      // Not signed in, or the stored auth predates id capture.
-      return { entries: [] };
-    }
-
-    const url = `${this.baseUrl}/trails/recently-visited/by-user/${githubId}`;
-
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch recently-visited trails: ${response.status} ${response.statusText}`,
-        );
-      }
-
-      const data = (await response.json()) as Partial<ListRecentlyVisitedTrailsResponse>;
-      return { entries: Array.isArray(data?.entries) ? data.entries : [] };
-    } catch (error) {
-      console.error('[WebADE] Failed to fetch recently-visited trails:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Fetch the signed-in user's trail inbox (shared trails sent to them).
-   * Auth'd by the GitHub token; the server resolves the recipient.
-   */
-  async getInbox(input: GetInboxInput = {}): Promise<ListInboxResponse> {
-    await requireHostedFeature('trailTopicSharingAndInbox');
-    const token = await this.getToken();
-    if (!token) {
-      throw new Error('Not authenticated - no GitHub token available');
-    }
-
-    const params = new URLSearchParams();
-    if (input.limit != null) params.set('limit', String(input.limit));
-    if (input.cursor) params.set('cursor', input.cursor);
-    if (input.unreadOnly) params.set('unreadOnly', 'true');
-    const query = params.toString();
-    const url = `${this.baseUrl}/trails/inbox${query ? `?${query}` : ''}`;
-
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('Authentication failed - token may be invalid or expired');
-        }
-        throw new Error(`Failed to fetch inbox: ${response.status} ${response.statusText}`);
-      }
-
-      const data = (await response.json()) as Partial<ListInboxResponse>;
-      return {
-        entries: Array.isArray(data?.entries) ? data.entries : [],
-        unreadCount: typeof data?.unreadCount === 'number' ? data.unreadCount : 0,
-        ...(data?.cursor ? { cursor: data.cursor } : {}),
-      };
-    } catch (error) {
-      console.error('[WebADE] Failed to fetch inbox:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Fetch just the unread inbox count — cheap badge poll.
-   */
-  async getInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
-    await requireHostedFeature('trailTopicSharingAndInbox');
-    const token = await this.getToken();
-    if (!token) {
-      throw new Error('Not authenticated - no GitHub token available');
-    }
-
-    const url = `${this.baseUrl}/trails/inbox/unread-count`;
-
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('Authentication failed - token may be invalid or expired');
-        }
-        throw new Error(
-          `Failed to fetch inbox unread count: ${response.status} ${response.statusText}`,
-        );
-      }
-
-      const data = (await response.json()) as Partial<InboxUnreadCountResponse>;
-      return { count: typeof data?.count === 'number' ? data.count : 0 };
-    } catch (error) {
-      console.error('[WebADE] Failed to fetch inbox unread count:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Remove one delivered trail from the signed-in user's inbox. Deletes only
-   * the inbox row — the underlying shared trail stays readable by id. A 404
-   * (`INBOX_NOT_FOUND`) is treated as success: the entry is already gone.
-   */
-  async deleteInboxEntry(input: DeleteInboxEntryInput): Promise<void> {
-    await requireHostedFeature('trailTopicSharingAndInbox');
-    const token = await this.getToken();
-    if (!token) {
-      throw new Error('Not authenticated - no GitHub token available');
-    }
-
-    const url = `${this.baseUrl}/trails/inbox/${encodeURIComponent(input.trailId)}`;
-
-    try {
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('Authentication failed - token may be invalid or expired');
-        }
-        if (response.status === 404) {
-          return; // Already gone — treat as success (idempotent).
-        }
-        throw new Error(
-          `Failed to delete inbox entry: ${response.status} ${response.statusText}`,
-        );
-      }
-    } catch (error) {
-      console.error('[WebADE] Failed to delete inbox entry:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Mark one delivered trail in the signed-in user's inbox as read. The server
-   * stamps `readAt` and advances the notes watermark so the attention dot and
-   * "(N new)" badge clear. Idempotent on the server (a re-read preserves the
-   * original timestamp). A 404 (`INBOX_NOT_FOUND`) means the entry is already
-   * gone — surfaced to the caller so it can resync.
-   */
-  async markInboxEntryRead(
-    input: MarkInboxEntryReadInput,
-  ): Promise<MarkInboxEntryReadResponse> {
-    await requireHostedFeature('trailTopicSharingAndInbox');
-    const token = await this.getToken();
-    if (!token) {
-      throw new Error('Not authenticated - no GitHub token available');
-    }
-
-    const url = `${this.baseUrl}/trails/inbox/${encodeURIComponent(input.trailId)}/read`;
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('Authentication failed - token may be invalid or expired');
-        }
-        throw new Error(
-          `Failed to mark inbox entry read: ${response.status} ${response.statusText}`,
-        );
-      }
-
-      const data = (await response.json()) as Partial<MarkInboxEntryReadResponse>;
-      return { readAt: data.readAt ?? new Date().toISOString() };
-    } catch (error) {
-      console.error('[WebADE] Failed to mark inbox entry read:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Fetch the signed-in user's "sent" trails (the outbox — trails they've
-   * shared with others). Auth'd by the GitHub token; the server resolves the
-   * sender. One row per trail, recipients merged across resends.
-   */
-  async getSent(input: GetSentInput = {}): Promise<ListSentResponse> {
-    await requireHostedFeature('trailTopicSharingAndInbox');
-    const token = await this.getToken();
-    if (!token) {
-      throw new Error('Not authenticated - no GitHub token available');
-    }
-
-    const params = new URLSearchParams();
-    if (input.limit != null) params.set('limit', String(input.limit));
-    if (input.cursor) params.set('cursor', input.cursor);
-    const query = params.toString();
-    const url = `${this.baseUrl}/trails/sent${query ? `?${query}` : ''}`;
-
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('Authentication failed - token may be invalid or expired');
-        }
-        throw new Error(`Failed to fetch sent items: ${response.status} ${response.statusText}`);
-      }
-
-      const data = (await response.json()) as Partial<ListSentResponse>;
-      return {
-        entries: Array.isArray(data?.entries) ? data.entries : [],
-        ...(data?.cursor ? { cursor: data.cursor } : {}),
-      };
-    } catch (error) {
-      console.error('[WebADE] Failed to fetch sent items:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send a shared trail to one or more GitHub-login recipients. Auth'd by
-   * the GitHub token; the server resolves owner/repo from the share id and
-   * gates on the sender's repo read access. Partial delivery is non-fatal —
-   * unknown/invalid logins come back in `failed[]`.
-   */
-  async sendTrail(input: SendTrailInput): Promise<SendTrailResponse> {
-    await requireHostedFeature('trailTopicSharingAndInbox');
-    const token = await this.getToken();
-    if (!token) {
-      throw new Error('Not authenticated - no GitHub token available');
-    }
-
-    const url = `${this.baseUrl}/trails/by-id/${encodeURIComponent(input.shareId)}/send`;
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          recipients: input.recipients,
-          ...(input.comment ? { comment: input.comment } : {}),
-        }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('Authentication failed - token may be invalid or expired');
-        }
-        let detail = `${response.status} ${response.statusText}`;
-        try {
-          const err = (await response.json()) as { error?: string };
-          if (err?.error) detail = err.error;
-        } catch {
-          // Non-JSON error body — keep the status line.
-        }
-        throw new Error(`Failed to send trail: ${detail}`);
-      }
-
-      const data = (await response.json()) as Partial<SendTrailResponse>;
-      return {
-        delivered: Array.isArray(data?.delivered) ? data.delivered : [],
-        failed: Array.isArray(data?.failed) ? data.failed : [],
-      };
-    } catch (error) {
-      console.error('[WebADE] Failed to send trail:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Fetch the signed-in user's topic inbox (topics sent to them). Mirrors
-   * {@link getInbox} on the topic side; the server resolves the recipient from
-   * the GitHub token and gates private topics to creator/recipient.
+   * Fetch the signed-in user's topic inbox (topics sent to them). The server
+   * resolves the recipient from the GitHub token and gates private topics to
+   * creator/recipient.
    */
   async getTopicInbox(
     input: GetTopicInboxInput = {},
   ): Promise<ListTopicInboxResponse> {
-    await requireHostedFeature('trailTopicSharingAndInbox');
+    await requireHostedFeature('topicSharing');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -860,11 +544,10 @@ export class WebAdeService {
   }
 
   /**
-   * Fetch just the unread topic-inbox count — cheap badge poll. Mirrors
-   * {@link getInboxUnreadCount}.
+   * Fetch just the unread topic-inbox count — a cheap badge poll.
    */
-  async getTopicInboxUnreadCount(): Promise<InboxUnreadCountResponse> {
-    await requireHostedFeature('trailTopicSharingAndInbox');
+  async getTopicInboxUnreadCount(): Promise<TopicInboxUnreadCountResponse> {
+    await requireHostedFeature('topicSharing');
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -890,7 +573,7 @@ export class WebAdeService {
         );
       }
 
-      const data = (await response.json()) as Partial<InboxUnreadCountResponse>;
+      const data = (await response.json()) as Partial<TopicInboxUnreadCountResponse>;
       return { count: typeof data?.count === 'number' ? data.count : 0 };
     } catch (error) {
       console.error('[WebADE] Failed to fetch topic inbox unread count:', error);

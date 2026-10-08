@@ -1,20 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
-  BookOpen,
   Check,
   Compass,
   Download,
   ExternalLink,
-  Footprints,
   Layers,
   PenTool,
   Plug,
   Plus,
   RefreshCw,
-  Search,
-  Share2,
-  Telescope,
 } from 'lucide-react';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { GitService } from '../../../main-process-api/GitService';
@@ -24,13 +19,10 @@ import { ShellService } from '../../../main-process-api/ShellService';
 import { TopicService } from '../../../main-process-api/TopicService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { useOpenRepositoryWindows } from '../../../hooks/useOpenRepositoryWindows';
-import { TrailLibraryService } from '../../../services/TrailLibraryService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { NewTopicModal } from '../../../components/NewTopicModal';
 import { DeleteTopicConfirmDialog } from '../../../components/DeleteTopicConfirmDialog';
-import { TrailPromptIdeas } from '../../components/TrailPromptIdeas';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
-import type { TrailIndexEntry } from '../../../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import type { SkillLockFile } from '../../../../shared/main-process-api-interfaces/SkillLockAPI';
 import type {
   AlexandriaEntry,
@@ -44,33 +36,30 @@ import { OpenProjectCard, type OpenProjectEntry } from './OpenProjectCard';
 import { getPrincipalBridgeUrl } from '../../../../shared/config/appBranding';
 import { useTopicsTabs } from '../../contexts/TopicsTabsContext';
 
-const trailRepoLabel = (repositoryPath: string | undefined): string => {
+const repoPathLabel = (repositoryPath: string | undefined): string => {
   if (!repositoryPath) return 'No repo';
   const trimmed = repositoryPath.replace(/[\\/]+$/, '');
   const idx = trimmed.search(/[\\/](?!.*[\\/])/);
   return idx >= 0 ? trimmed.slice(idx + 1) : trimmed;
 };
 
-const TRAIL_SKILL_REPO_OWNER = 'principal-ai';
-const TRAIL_SKILL_REPO_NAME = 'skills';
-const TRAIL_SKILL_BRANCH = 'main';
-const TRAIL_SKILL_GITHUB_URL = `https://github.com/${TRAIL_SKILL_REPO_OWNER}/${TRAIL_SKILL_REPO_NAME}`;
+const SKILL_REPO_OWNER = 'principal-ai';
+const SKILL_REPO_NAME = 'skills';
+const SKILL_BRANCH = 'main';
+const SKILL_GITHUB_URL = `https://github.com/${SKILL_REPO_OWNER}/${SKILL_REPO_NAME}`;
 // Normalized "owner/repo" source recorded in the skill lock file for skills that
 // ship from the shared principal-ai/skills repo. Used to confirm an installed
 // skill came from the expected repo, not just that *some* skill of the same name
 // is present — see matchInstalledFromLock.
-const TRAIL_SKILL_SOURCE = `${TRAIL_SKILL_REPO_OWNER}/${TRAIL_SKILL_REPO_NAME}`;
+const SKILL_SOURCE = `${SKILL_REPO_OWNER}/${SKILL_REPO_NAME}`;
 
-const TRAIL_INSTALL_SKILL_NAMES = [
-  'convert-investigation',
-  'author-investigation-trail',
-  'author-informative-trail',
+const TOPIC_SKILL_NAMES = [
   'create-topic',
   'topic-context',
 ] as const;
 
-const TRAIL_SKILL_DETAILS: ReadonlyArray<{
-  name: (typeof TRAIL_INSTALL_SKILL_NAMES)[number];
+const TOPIC_SKILL_DETAILS: ReadonlyArray<{
+  name: (typeof TOPIC_SKILL_NAMES)[number];
   title: string;
   description: string;
   url: string;
@@ -78,39 +67,12 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
   Icon: React.ComponentType<{ size?: number; color?: string }>;
 }> = [
   {
-    name: 'author-investigation-trail',
-    title: 'Author Investigation Trail',
-    description:
-      'Capture an investigation as you debug — records the files, calls, and findings you walked through so the chain of reasoning is preserved.',
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/author-investigation-trail`,
-    source: TRAIL_SKILL_SOURCE,
-    Icon: Search,
-  },
-  {
-    name: 'author-informative-trail',
-    title: 'Author Informative Trail',
-    description:
-      'Lay a guided tour through the code to explain how a feature or system works, so a teammate can follow the path without reverse-engineering it.',
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/author-informative-trail`,
-    source: TRAIL_SKILL_SOURCE,
-    Icon: BookOpen,
-  },
-  {
-    name: 'convert-investigation',
-    title: 'Convert Investigation',
-    description:
-      'Turn a raw investigation trail into a polished, shareable spec — cleans up the trail and forwards it through the convert pipeline.',
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/convert-investigation`,
-    source: TRAIL_SKILL_SOURCE,
-    Icon: Share2,
-  },
-  {
     name: 'create-topic',
     title: 'Create Topic',
     description:
       'Create a topic — a subject brief scoped to its declared projects, with a description that doubles as the working brief for agents pointed at it.',
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/create-topic`,
-    source: TRAIL_SKILL_SOURCE,
+    url: `${SKILL_GITHUB_URL}/tree/${SKILL_BRANCH}/create-topic`,
+    source: SKILL_SOURCE,
     Icon: Plus,
   },
   {
@@ -118,8 +80,8 @@ const TRAIL_SKILL_DETAILS: ReadonlyArray<{
     title: 'Topic Context',
     description:
       'Read the topic an agent was briefed on and keep its description current — fetch the topic, append discovered context, or replace a status section in place.',
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/topic-context`,
-    source: TRAIL_SKILL_SOURCE,
+    url: `${SKILL_GITHUB_URL}/tree/${SKILL_BRANCH}/topic-context`,
+    source: SKILL_SOURCE,
     Icon: Layers,
   },
 ];
@@ -140,14 +102,13 @@ interface SkillDetail {
   Icon: React.ComponentType<{ size?: number; color?: string }>;
 }
 
-// Optional skills are NOT installed as part of the required trail bundle. They
+// Optional skills are installed individually. They
 // surface in the footer as individually installable add-ons, and show up among
 // the "Installed Skills" badges once present.
 const OPTIONAL_SKILL_NAMES = [
   'excalidraw-drawings',
   'principal-ai-desktop-app-tools',
   'file-city-tours',
-  'search-local-topics-trails',
 ] as const;
 
 const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
@@ -156,16 +117,16 @@ const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
     title: 'Excalidraw Drawings',
     description:
       "Find and edit the app's Excalidraw drawings on disk — locate the .excalidraw JSON under ~/.alexandria/drawings and edit a diagram directly so an agent can collaborate on it.",
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/excalidraw-drawings`,
-    source: TRAIL_SKILL_SOURCE,
+    url: `${SKILL_GITHUB_URL}/tree/${SKILL_BRANCH}/excalidraw-drawings`,
+    source: SKILL_SOURCE,
     Icon: PenTool,
   },
   {
     name: 'principal-ai-desktop-app-tools',
     title: 'Principal Desktop App Tools',
-    description: `Canonical reference for the app's local bridge — the HTTP surface at ${getPrincipalBridgeUrl()} that agents use to push trails, create topics, and leave notes on documents, plus the conventions every call shares.`,
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/principal-ai-desktop-app-tools`,
-    source: TRAIL_SKILL_SOURCE,
+    description: `Canonical reference for the app's local bridge — the HTTP surface at ${getPrincipalBridgeUrl()} that agents use to create topics and leave notes on documents, plus the conventions every call shares.`,
+    url: `${SKILL_GITHUB_URL}/tree/${SKILL_BRANCH}/principal-ai-desktop-app-tools`,
+    source: SKILL_SOURCE,
     Icon: Plug,
   },
   {
@@ -173,32 +134,22 @@ const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
     title: 'File City Tours',
     description:
       "Create and validate guided introduction tours for File City visualizations — build onboarding walkthroughs that highlight a codebase's architecture with interactive highlights, actions, and color modes.",
-    // file-city-tours ships from the shared principal-ai/skills repo, same as the
-    // trail skills above — installSkillsByName fetches every skill from there.
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/file-city-tours`,
-    source: TRAIL_SKILL_SOURCE,
+    // file-city-tours ships from the shared principal-ai/skills repo.
+    url: `${SKILL_GITHUB_URL}/tree/${SKILL_BRANCH}/file-city-tours`,
+    source: SKILL_SOURCE,
     Icon: Compass,
-  },
-  {
-    name: 'search-local-topics-trails',
-    title: 'Search Local Topics & Trails',
-    description:
-      'Search the on-disk trail and topic indexes by title, summary, repo, or recency, then open a matching trail — a read-only way to find the local trails and topics already saved on this machine.',
-    url: `${TRAIL_SKILL_GITHUB_URL}/tree/${TRAIL_SKILL_BRANCH}/search-local-topics-trails`,
-    source: TRAIL_SKILL_SOURCE,
-    Icon: Telescope,
   },
 ];
 
 /** Every skill the home view knows how to display or install. */
 const ALL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
-  ...TRAIL_SKILL_DETAILS,
+  ...TOPIC_SKILL_DETAILS,
   ...OPTIONAL_SKILL_DETAILS,
 ];
 
 /** Names whose install state the home view tracks (required + optional). */
 const TRACKED_SKILL_NAMES: ReadonlyArray<string> = [
-  ...TRAIL_INSTALL_SKILL_NAMES,
+  ...TOPIC_SKILL_NAMES,
   ...OPTIONAL_SKILL_NAMES,
 ];
 
@@ -246,11 +197,11 @@ export function HomeView() {
     void loadGitUserName();
   }, [loadGitUserName]);
 
-  const [skillInstalled, setSkillInstalled] = useState<boolean | null>(null);
+  const [topicSkillsInstalled, setTopicSkillsInstalled] = useState<boolean | null>(null);
   const [installedSkillNames, setInstalledSkillNames] = useState<Set<string>>(
     new Set(),
   );
-  const [installingSkill, setInstallingSkill] = useState(false);
+  const [installingTopicSkills, setInstallingTopicSkills] = useState(false);
   const [skillInstallError, setSkillInstallError] = useState<string | null>(
     null,
   );
@@ -259,12 +210,11 @@ export function HomeView() {
   const [installingOptional, setInstallingOptional] = useState<Set<string>>(
     new Set(),
   );
-  const [showSkillDetails, setShowSkillDetails] = useState(false);
+  const [showTopicSkillDetails, setShowTopicSkillDetails] = useState(false);
   const [skillUpdates, setSkillUpdates] = useState<Set<string>>(new Set());
   const [updatingSkills, setUpdatingSkills] = useState<Set<string>>(new Set());
 
-  // Dashboard data sources. Mirrors what TrailsView used to load.
-  const [recentTrails, setRecentTrails] = useState<TrailIndexEntry[]>([]);
+  // Dashboard data sources.
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   // Ids of topics published to web-ade (sync.remoteId present), from the
@@ -306,7 +256,7 @@ export function HomeView() {
       const repo = repositories.find((r) => r.path === path);
       out.push({
         key: path,
-        label: repo?.github?.name ?? repo?.name ?? trailRepoLabel(path),
+        label: repo?.github?.name ?? repo?.name ?? repoPathLabel(path),
         ownerLogin: repo?.github?.owner,
       });
     }
@@ -329,30 +279,6 @@ export function HomeView() {
         err,
       );
     }
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const result = await TrailLibraryService.list();
-        if (cancelled) return;
-        const sorted = [...result.entries].sort(
-          (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt),
-        );
-        setRecentTrails(sorted);
-      } catch (error) {
-        console.error('[HomeView] Failed to load recent trails:', error);
-      }
-    };
-    void load();
-    const off = TrailLibraryService.onLibraryChanged(() => {
-      void load();
-    });
-    return () => {
-      cancelled = true;
-      off();
-    };
   }, []);
 
   useEffect(() => {
@@ -439,11 +365,6 @@ export function HomeView() {
     publishedTopicIds,
   ]);
 
-  // Show the dashboard once the user has any content to land on — a topic, an
-  // open project, or trails. Otherwise fall back to the prompt-idea cards.
-  const hasDashboardContent =
-    topics.length > 0 || openProjects.length > 0 || recentTrails.length > 0;
-
   const installedSkillDetails = useMemo(
     () => ALL_SKILL_DETAILS.filter((s) => installedSkillNames.has(s.name)),
     [installedSkillNames],
@@ -464,14 +385,13 @@ export function HomeView() {
         if (!cancelled) {
           const installed = matchInstalledFromLock(lockFile);
           setInstalledSkillNames(installed);
-          // The trail dashboard gates on the required bundle only.
-          setSkillInstalled(
-            TRAIL_INSTALL_SKILL_NAMES.every((name) => installed.has(name)),
+          setTopicSkillsInstalled(
+            TOPIC_SKILL_NAMES.every((name) => installed.has(name)),
           );
         }
       } catch (error) {
         console.error('[HomeView] Failed to load skill state:', error);
-        if (!cancelled) setSkillInstalled(false);
+        if (!cancelled) setTopicSkillsInstalled(false);
       }
     })();
     return () => {
@@ -479,7 +399,7 @@ export function HomeView() {
     };
   }, []);
 
-  // Checks installed trail skills for available updates by comparing each
+  // Checks installed tracked skills for available updates by comparing each
   // skill's on-disk files against the source's current blobs (CHECK_SKILL_UPDATES).
   // Populates the set of skill names with updates.
   const refreshSkillUpdates = useCallback(async () => {
@@ -509,8 +429,8 @@ export function HomeView() {
         const lockFile = await SkillLockService.getLockFile();
         const installed = matchInstalledFromLock(lockFile);
         setInstalledSkillNames(installed);
-        setSkillInstalled(
-          TRAIL_INSTALL_SKILL_NAMES.every((name) => installed.has(name)),
+        setTopicSkillsInstalled(
+          TOPIC_SKILL_NAMES.every((name) => installed.has(name)),
         );
         void refreshSkillUpdates();
       } catch (error) {
@@ -541,9 +461,9 @@ export function HomeView() {
       names: ReadonlyArray<string>,
     ): Promise<{ fullyInstalled: Set<string>; failures: string[] }> => {
       const treeResult = await GithubService.getTree(
-        TRAIL_SKILL_REPO_OWNER,
-        TRAIL_SKILL_REPO_NAME,
-        TRAIL_SKILL_BRANCH,
+        SKILL_REPO_OWNER,
+        SKILL_REPO_NAME,
+        SKILL_BRANCH,
       );
       if (!treeResult?.success || !treeResult.data) {
         throw new Error('Could not fetch skills repository tree.');
@@ -576,7 +496,7 @@ export function HomeView() {
         let skillSucceededOnce = false;
         for (const destination of destinations) {
           const result = await GithubService.installSkill({
-            githubUrl: TRAIL_SKILL_GITHUB_URL,
+            githubUrl: SKILL_GITHUB_URL,
             skillPath: skillName,
             destination,
             skillName,
@@ -636,24 +556,23 @@ export function HomeView() {
     [installSkillsByName],
   );
 
-  const handleInstallSkill = useCallback(async () => {
-    setInstallingSkill(true);
+  const handleInstallTopicSkills = useCallback(async () => {
+    setInstallingTopicSkills(true);
     setSkillInstallError(null);
     try {
-      const { fullyInstalled, failures } = await installSkillsByName(
-        TRAIL_INSTALL_SKILL_NAMES,
-      );
+      const { fullyInstalled, failures } =
+        await installSkillsByName(TOPIC_SKILL_NAMES);
       if (fullyInstalled.size === 0) {
         throw new Error(
           failures.length > 0
             ? failures.join('; ')
-            : 'Failed to install trail skills.',
+              : 'Failed to install topic skills.',
         );
       }
-      const allInstalled = TRAIL_INSTALL_SKILL_NAMES.every((name) =>
+      const allInstalled = TOPIC_SKILL_NAMES.every((name) =>
         fullyInstalled.has(name),
       );
-      setSkillInstalled(allInstalled);
+      setTopicSkillsInstalled(allInstalled);
       if (failures.length > 0) {
         setSkillInstallError(`Partial install: ${failures.join('; ')}`);
       }
@@ -663,7 +582,7 @@ export function HomeView() {
         error instanceof Error ? error.message : 'Install failed.',
       );
     } finally {
-      setInstallingSkill(false);
+      setInstallingTopicSkills(false);
     }
   }, [installSkillsByName]);
 
@@ -983,13 +902,13 @@ export function HomeView() {
           overflowY: 'auto',
         }}
       >
-        {skillInstalled === false && (
+        {topicSkillsInstalled === false && (
           <div style={{ flex: '0 0 auto', marginTop: '9vh' }}>
             {welcomeHeader}
           </div>
         )}
 
-        {skillInstalled === false && (
+        {topicSkillsInstalled === false && (
           <div
             style={{
               flex: '0 0 auto',
@@ -1010,9 +929,9 @@ export function HomeView() {
               }}
             >
               <button
-                onClick={() => void handleInstallSkill()}
-                disabled={installingSkill}
-                title="Installs the trail skills (convert-investigation, author-investigation-trail, author-informative-trail, topic-context) to ~/.claude/skills and ~/.agents/skills. Cursor and Windsurf also read skills from ~/.agents/skills."
+                onClick={() => void handleInstallTopicSkills()}
+                disabled={installingTopicSkills}
+                title="Installs the create-topic and topic-context skills to ~/.claude/skills and ~/.agents/skills. Cursor and Windsurf also read skills from ~/.agents/skills."
                 style={{
                   width: 360,
                   padding: 36,
@@ -1021,8 +940,8 @@ export function HomeView() {
                   backgroundColor: theme.colors.backgroundSecondary,
                   color: theme.colors.text,
                   fontFamily: theme.fonts.body,
-                  cursor: installingSkill ? 'default' : 'pointer',
-                  opacity: installingSkill ? 0.7 : 1,
+                  cursor: installingTopicSkills ? 'default' : 'pointer',
+                  opacity: installingTopicSkills ? 0.7 : 1,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -1031,29 +950,31 @@ export function HomeView() {
                   transition: 'border-color 150ms ease',
                 }}
                 onMouseEnter={(e) => {
-                  if (installingSkill) return;
+                  if (installingTopicSkills) return;
                   e.currentTarget.style.borderColor = theme.colors.primary;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = theme.colors.border;
                 }}
               >
-                <Footprints size={36} color={theme.colors.primary} />
+                <Layers size={36} color={theme.colors.primary} />
                 <div
                   style={{
                     fontSize: theme.fontSizes[3],
                     fontWeight: theme.fontWeights.semibold,
                   }}
                 >
-                  {installingSkill ? 'Installing…' : 'Install Trail Skills'}
+                  {installingTopicSkills
+                    ? 'Installing…'
+                    : 'Install Topic Skills'}
                 </div>
               </button>
             </div>
 
             <button
               type="button"
-              onClick={() => setShowSkillDetails((prev) => !prev)}
-              aria-expanded={showSkillDetails}
+              onClick={() => setShowTopicSkillDetails((prev) => !prev)}
+              aria-expanded={showTopicSkillDetails}
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -1071,7 +992,7 @@ export function HomeView() {
               What skills
             </button>
 
-            {showSkillDetails && (
+            {showTopicSkillDetails && (
               <div
                 style={{
                   display: 'flex',
@@ -1082,7 +1003,7 @@ export function HomeView() {
                   maxWidth: 1080,
                 }}
               >
-                {TRAIL_SKILL_DETAILS.map((skill) => {
+                {TOPIC_SKILL_DETAILS.map((skill) => {
                   const SkillIcon = skill.Icon;
                   return (
                     <button
@@ -1169,7 +1090,7 @@ export function HomeView() {
           </div>
         )}
 
-        {skillInstalled === true && (
+        {topicSkillsInstalled === true && (
           <div
             style={{
               display: 'grid',
@@ -1219,18 +1140,14 @@ export function HomeView() {
                 flexDirection: 'column',
               }}
             >
-              {hasDashboardContent ? (
-                <TopicsDashboard
-                  topicEntries={dashboardTopicEntries}
-                  onSelectTopic={(entry) =>
-                    openTopicInTopicsView(entry.key, entry.title)
-                  }
-                  onCreateTopic={() => setIsNewTopicOpen(true)}
-                  onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
-                />
-              ) : (
-                <TrailPromptIdeas />
-              )}
+              <TopicsDashboard
+                topicEntries={dashboardTopicEntries}
+                onSelectTopic={(entry) =>
+                  openTopicInTopicsView(entry.key, entry.title)
+                }
+                onCreateTopic={() => setIsNewTopicOpen(true)}
+                onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
+              />
             </div>
 
             {/* Right rail: open projects. Rendered only when there's
@@ -1282,7 +1199,7 @@ export function HomeView() {
 
         {/* Pre-install welcome state keeps the skills as a centered bottom
             footer; once installed they move into the right rail above. */}
-        {skillInstalled === false && installedSkillsBlock(false)}
+        {topicSkillsInstalled === false && installedSkillsBlock(false)}
       </div>
 
       <GitGlobalConfigModal

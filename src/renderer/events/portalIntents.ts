@@ -19,8 +19,6 @@ import type { RepositorySelectedPayload } from './repositorySelected';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 export const PORTAL_INTENTS = {
-  /** Open a trail (a shared web-ade trail, or a local on-disk trail) as a tab. */
-  trailOpen: 'trail:open',
   /** Open a topic as a tab. */
   topicOpen: 'topic:open',
   /** Open a markdown document as a tab. */
@@ -56,28 +54,11 @@ export type PortalIntentName =
  * surfaces collapse into one tab list in Increment 3, after which routing by
  * surface goes away.
  */
-export type PortalSurface = 'projects' | 'inbox' | 'topics' | 'trails';
-
-/** Payload for {@link PORTAL_INTENTS.trailOpen}. */
-export interface TrailOpenPayload {
-  trailId: string;
-  /**
-   * `shared` = a web-ade trail (carries owner/repo for its file tree);
-   * `local` = a trail from the on-disk library.
-   */
-  source: 'shared' | 'local';
-  /** Destination surface (which bucket opens the tab). */
-  surface: PortalSurface;
-  owner?: string;
-  repo?: string;
-  title?: string;
-}
-
 /** Payload for {@link PORTAL_INTENTS.topicOpen}. */
 export interface TopicOpenPayload {
   topicId: string;
   /** Destination surface (which bucket opens the tab). */
-  surface: PortalSurface;
+  surface: 'projects' | 'inbox' | 'topics';
   title?: string;
 }
 
@@ -85,20 +66,6 @@ export interface TopicOpenPayload {
 export interface DocOpenPayload {
   filePath: string;
   repositoryPath?: string;
-}
-
-/** Emit a {@link PORTAL_INTENTS.trailOpen} intent. */
-export function emitTrailOpen(
-  events: PanelEventEmitter,
-  source: string,
-  payload: TrailOpenPayload,
-): void {
-  events.emit<TrailOpenPayload>({
-    type: PORTAL_INTENTS.trailOpen,
-    source,
-    timestamp: Date.now(),
-    payload,
-  });
 }
 
 /** Emit a {@link PORTAL_INTENTS.topicOpen} intent. */
@@ -133,8 +100,8 @@ export function emitDocOpen(
 // Projects-surface open intents
 //
 // The Projects surface opens a richer set of tabs (repo / owner / collection
-// profiles, activity tabs). Unlike Inbox/Topics — whose left panels emit trail/
-// topic intents straight onto the portal bus — the Projects panels (left panel
+// profiles, activity tabs). Unlike Inbox/Topics — whose left panels emit topic
+// intents straight onto the portal bus — the Projects panels (left panel
 // AND persistent tab content) emit these on their single local `events` prop,
 // mixed with genuine intra-surface chatter (refresh, profile-link, commit-review
 // overlay). `installProjectsOpenForwarder` is the typed boundary that lifts just

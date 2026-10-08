@@ -2,8 +2,7 @@
  * WorkspaceShell
  *
  * The persistent host for every workspace surface — Projects, Inbox, Topics,
- * Drawings, Trails, and Skills (portal-unification Increment 3 + the
- * Drawings/Trails/Skills fast-follows). It replaces the separate per-view
+ * Drawings, and Skills. It replaces the separate per-view
  * frameworks / overlays with ONE shell:
  *
  * - one tabbed-terminal host reading the shared `useWorkspaceTabs()` bucket, so
@@ -79,7 +78,6 @@ import { useProjectsHost } from '../projects-view/useProjectsHost';
 import { DrawingsLeftPanel } from '../drawings-view/DrawingsLeftPanel';
 import { DrawingTabContent } from '../drawings-view/DrawingTabContent';
 import { useDrawingsHost } from '../drawings-view/useDrawingsHost';
-import { TrailsLeftPanel } from '../trails-view/TrailsLeftPanel';
 import { SkillBrowserPanelProvider } from '../principal-window/views/SkillBrowserView/SkillBrowserPanelProvider';
 import { SkillsSurfaceProvider } from '../skills-view/SkillsSurfaceContext';
 import { SkillsLeftPanel } from '../skills-view/SkillsLeftPanel';
@@ -104,7 +102,6 @@ export type WorkspaceView =
   | 'inbox'
   | 'topics'
   | 'drawings'
-  | 'trails'
   | 'skills';
 
 /** Centered landing hint shown by the `inbox-home` / `topics-home` tabs. */
@@ -291,7 +288,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const terminalDirectory = baseDefaultDirectory || process.env.HOME || '/';
 
   const renderTabIcon = useCallback((tab: WorkspaceTab) => {
-    // Projects owns the icons for its tabs + the shared trail/doc tabs.
+    // Projects owns the icons for its tabs + the shared document tabs.
     const projectsIcon = renderProjectsTabIcon(tab as FeedTab);
     if (projectsIcon) return projectsIcon;
     switch (tab.contentType) {
@@ -327,7 +324,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
 
   const renderTabContent = useCallback(
     (tab: WorkspaceTab, _isActive: boolean) => {
-      // Projects renders its own tabs + the shared trail/doc tabs (one source of
+      // Projects renders its own tabs + the shared document tabs (one source of
       // truth). It returns null for the Inbox/Topics landing + topic tabs below.
       const projectsContent = renderProjectsTabContent(tab as FeedTab, {
         events: eventsRef.current,
@@ -340,8 +337,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           return (
             <HomePanel
               icon={<Inbox size={32} />}
-              title="Your trail inbox"
-              body="Shared trails sent to you and trails you've recently visited show up in the panel on the left. Pick one to open it here."
+              title="Your inbox"
+              body="Topics shared with you appear in the panel on the left. Pick one to open it here."
             />
           );
         case 'topics-home':
@@ -626,7 +623,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     };
     events.on(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
     // The titlebar search lives outside the shell, so it can only reach the
-    // portal bus (like its trail/topic opens). Listen there too so a local-clone
+    // portal bus (like its topic opens). Listen there too so a local-clone
     // pick from the titlebar materializes a terminal tab in this host.
     portalEvents.on(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
     return () => {
@@ -648,7 +645,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   // (`useMarkdownLinkHandler`, used by topic descriptions and other markdown
   // surfaces here) resolves a click — including purl links — to a file and
   // emits `file:opened` on this bus. Route by extension, mirroring how the
-  // dev / alexandria workspaces handle their own `file:opened`.
+  // Dev Workspace handles its own `file:opened` events.
   useEffect(() => {
     const handleFileOpened = (event: {
       source?: string;
@@ -705,9 +702,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
                 ? 'Inbox'
                 : activeView === 'drawings'
                   ? 'Drawings'
-                  : activeView === 'trails'
-                    ? 'Trails'
-                    : activeView === 'skills'
+                  : activeView === 'skills'
                       ? 'Skills'
                       : 'Topics',
         content:
@@ -725,8 +720,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             <InboxLeftPanel events={portalEvents} />
           ) : activeView === 'drawings' ? (
             <DrawingsLeftPanel events={events} />
-          ) : activeView === 'trails' ? (
-            <TrailsLeftPanel events={portalEvents} />
           ) : activeView === 'skills' ? (
             <SkillsLeftPanel />
           ) : (
@@ -894,7 +887,7 @@ export const WorkspaceShell: React.FC<{ activeView: WorkspaceView }> = ({
   const { theme } = useTheme();
   const events = useMemo(() => new PanelEventBus(), []);
 
-  // Local repositories — used to resolve a clone for shared-trail file trees.
+  // Local repositories used by project and topic surfaces.
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
   useEffect(() => {
     let cancelled = false;

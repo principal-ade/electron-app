@@ -8,7 +8,6 @@ import { UserPreferencesService } from '../../../main-process-api/UserPreference
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
 import {
   LayoutDashboard,
-  FolderPlus,
   FilePlus2,
   Server,
 } from 'lucide-react';
@@ -39,7 +38,6 @@ interface IntegratedTitlebarProps {
   showRightSidebarControl?: boolean;
   onShowOnboardingWizard?: () => void;
   hideSearch?: boolean;
-  onAddProject?: () => void;
   /** Toggle the Dashboard overlay (`home` view) on/off. */
   onToggleHome?: () => void;
   /** Whether the Dashboard overlay is currently showing (drives the toggled state). */
@@ -55,7 +53,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   showRightSidebarControl = false,
   onShowOnboardingWizard,
   hideSearch = false,
-  onAddProject,
   onToggleHome,
   isHomeActive = false,
 }) => {
@@ -331,42 +328,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             >
               {localhostServerCount}
             </span>
-          </button>
-        )}
-        {/* Add a project — only rendered when the host view wires it up
-            (currently TrailsView via a window-event bridge). */}
-        {onAddProject && (
-          <button
-            onClick={onAddProject}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              backgroundColor: theme.colors.backgroundSecondary,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              cursor: 'pointer',
-              fontSize: theme.fontSizes[1],
-              fontWeight: 500,
-              fontFamily: theme.fonts.body,
-              transition: 'all 0.2s',
-              WebkitAppRegion:
-                'no-drag' as React.CSSProperties['WebkitAppRegion'],
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundSecondary;
-            }}
-            title="Pick a folder to add — we'll find any git repos inside"
-          >
-            <FolderPlus size={14} />
-            Add a project
           </button>
         )}
         {/* Create Repository — gated by titlebarButtons.createRepository.

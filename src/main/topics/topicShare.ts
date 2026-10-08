@@ -3,8 +3,7 @@
  *
  * Owns the HTTPS calls against `/api/topics` (publish) and
  * `/api/topics/by-id/{id}` (read + edit), translating HTTP failures into the
- * same typed `TrailShareError` the renderer already discriminates on for
- * shared trails.
+ * typed topic-sharing errors.
  *
  * Read (`fetchSharedTopicById`) is public-by-link, so its token is attached
  * opportunistically — present, it lets the server compute the per-user
@@ -28,9 +27,27 @@ import {
   TOKEN_KEYS,
   UnifiedSecureStorage,
 } from '../services/UnifiedSecureStorage';
-import { TrailShareError } from '../../shared/main-process-api-interfaces/FileCityTrailAPI';
 import type { FetchSharedTopicResult } from '../../shared/main-process-api-interfaces/TopicAPI';
 import { requireHostedFeature } from '../services/FeatureAvailabilityService';
+
+type TopicShareErrorCode =
+  | 'NO_GITHUB_TOKEN'
+  | 'NO_REPO_ACCESS'
+  | 'SHARE_NOT_FOUND'
+  | 'INVALID_PAYLOAD'
+  | 'WEB_ADE_ERROR'
+  | 'NETWORK_ERROR';
+
+class TopicShareError extends Error {
+  constructor(
+    public readonly code: TopicShareErrorCode,
+    message: string,
+    public readonly details?: { status?: number; code?: string; cause?: string },
+  ) {
+    super(message);
+    this.name = 'TopicShareError';
+  }
+}
 
 const apiBase = (): string =>
   process.env.WEB_ADE_API_URL || 'https://app.principal-ade.com/api';
@@ -58,7 +75,7 @@ async function getOptionalGithubToken(): Promise<string | null> {
 async function getRequiredGithubToken(): Promise<string> {
   const token = await getOptionalGithubToken();
   if (!token) {
-    throw new TrailShareError(
+    throw new TopicShareError(
       'NO_GITHUB_TOKEN',
       'Sign in to GitHub before sharing a topic.',
     );
@@ -83,37 +100,35 @@ async function readErrorBody(
 }
 
 /**
- * Map a topic-route error response onto the shared `TrailShareError` codes.
- * Server errors are represented with the same typed errors as shared trails.
+ * Map a topic-route error response onto the topic-sharing error codes.
  */
 function topicShareError(
   res: import('node-fetch').Response,
   body: WebAdeErrorBody,
   context: string,
-): TrailShareError {
+): TopicShareError {
   const message =
     body.error || `Web-ade topic ${context} failed with status ${res.status}`;
   if (res.status === 401 || body.code === 'NOT_AUTHENTICATED') {
-    return new TrailShareError('NO_GITHUB_TOKEN', message);
+    return new TopicShareError('NO_GITHUB_TOKEN', message);
   }
   if (
     res.status === 403 ||
     body.code === 'NOT_OWNER' ||
     body.code === 'NO_REPO_ACCESS'
   ) {
-    return new TrailShareError('NO_REPO_ACCESS', message);
+    return new TopicShareError('NO_REPO_ACCESS', message);
   }
   if (
     res.status === 404 ||
-    body.code === 'NOT_FOUND' ||
-    body.code === 'TRAIL_NOT_FOUND'
+    body.code === 'NOT_FOUND'
   ) {
-    return new TrailShareError('SHARE_NOT_FOUND', message);
+    return new TopicShareError('SHARE_NOT_FOUND', message);
   }
   if (body.code === 'INVALID_PAYLOAD' || body.code === 'INVALID_REQUEST') {
-    return new TrailShareError('INVALID_PAYLOAD', message);
+    return new TopicShareError('INVALID_PAYLOAD', message);
   }
-  return new TrailShareError('WEB_ADE_ERROR', message, {
+  return new TopicShareError('WEB_ADE_ERROR', message, {
     status: res.status,
     code: body.code,
   });
@@ -122,7 +137,7 @@ function topicShareError(
 /**
  * Shared request helper for the owner-gated topic calls: attaches the bearer
  * token, JSON-encodes the body when present, and maps non-2xx responses to a
- * `TrailShareError`. `context` is the verb phrase used in error messages
+ * `TopicShareError`. `context` is the verb phrase used in error messages
  * (e.g. "publish", "update").
  */
 async function topicRequest<T>(
@@ -144,7 +159,7 @@ async function topicRequest<T>(
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch (err) {
-    throw new TrailShareError(
+    throw new TopicShareError(
       'NETWORK_ERROR',
       `Could not reach web-ade to ${context} the topic.`,
       { cause: err instanceof Error ? err.message : String(err) },
@@ -160,7 +175,7 @@ async function topicRequest<T>(
 export async function fetchSharedTopicById(
   id: string,
 ): Promise<FetchSharedTopicResult> {
-  await requireHostedFeature('trailTopicSharingAndInbox');
+  await requireHostedFeature('topicSharing');
   const token = await getOptionalGithubToken();
   const url = `${apiBase()}/topics/by-id/${encodeURIComponent(id)}`;
   let res: import('node-fetch').Response;
@@ -169,7 +184,7 @@ export async function fetchSharedTopicById(
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
   } catch (err) {
-    throw new TrailShareError(
+    throw new TopicShareError(
       'NETWORK_ERROR',
       'Could not reach web-ade to fetch the topic.',
       { cause: err instanceof Error ? err.message : String(err) },
@@ -181,12 +196,12 @@ export async function fetchSharedTopicById(
     const message =
       body.error || `Web-ade topic fetch failed with status ${res.status}`;
     if (res.status === 404 || body.code === 'NOT_FOUND') {
-      throw new TrailShareError('SHARE_NOT_FOUND', message);
+      throw new TopicShareError('SHARE_NOT_FOUND', message);
     }
     if (res.status === 403 || body.code === 'NO_REPO_ACCESS') {
-      throw new TrailShareError('NO_REPO_ACCESS', message);
+      throw new TopicShareError('NO_REPO_ACCESS', message);
     }
-    throw new TrailShareError('WEB_ADE_ERROR', message, {
+    throw new TopicShareError('WEB_ADE_ERROR', message, {
       status: res.status,
       code: body.code,
     });
@@ -212,7 +227,7 @@ export async function publishTopicToWebAde(input: {
   repos?: string[];
   visibility?: 'private' | 'public';
 }): Promise<PublishedTopic> {
-  await requireHostedFeature('trailTopicSharingAndInbox');
+  await requireHostedFeature('topicSharing');
   const json = await topicRequest<{ id: string; url: string; topic: Topic }>(
     'POST',
     '/topics',
@@ -241,7 +256,7 @@ export async function patchTopicOnWebAde(
     repos?: string[];
   },
 ): Promise<Topic> {
-  await requireHostedFeature('trailTopicSharingAndInbox');
+  await requireHostedFeature('topicSharing');
   const json = await topicRequest<{ topic: Topic }>(
     'PATCH',
     `/topics/by-id/${encodeURIComponent(remoteId)}`,

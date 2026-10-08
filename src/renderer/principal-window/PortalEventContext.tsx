@@ -2,8 +2,8 @@
  * Portal Event Context
  *
  * The portal-scoped `PanelEventBus` for the principal window — the bus that
- * carries view-agnostic *content-open* intents (`trail:open`, `topic:open`,
- * `doc:open`; see `events/portalIntents.ts`). It is the "what content opens"
+ * carries view-agnostic *content-open* intents (`topic:open`, `doc:open`; see
+ * `events/portalIntents.ts`). It is the "what content opens"
  * channel, deliberately separate from `PrincipalEventContext` (`principalEvents`),
  * which stays the "which surface is showing" channel for window chrome /
  * navigation (`panel:switch`, …). See docs/portal-unification.md (bus model
