@@ -1,8 +1,14 @@
 import { ipcMain, shell } from 'electron';
-import { exec, type ExecException } from 'child_process';
+import { exec, spawn, type ExecException } from 'child_process';
+import { existsSync, realpathSync } from 'fs';
 import { promisify } from 'util';
 import * as os from 'os';
-import { ShellAPIEvent } from '../../shared/main-process-api-interfaces/ShellAPI';
+import {
+  ShellAPIEvent,
+  type StudioLaunchOptions,
+  type StudioLaunchResult,
+  type StudioLaunchMode,
+} from '../../shared/main-process-api-interfaces/ShellAPI';
 import path from 'path';
 import {
   DEFAULT_EDITOR,
@@ -16,6 +22,214 @@ import {
 } from '../../shared/types/terminal.types';
 
 const execAsync = promisify(exec);
+
+// ---------------------------------------------------------------------------
+// Subsystems Studio launch
+// ---------------------------------------------------------------------------
+
+/**
+ * Default location of the Studio source checkout. Overridable via
+ * PRINCIPAL_STUDIO_REPO so the button isn't tied to one machine's layout.
+ */
+const STUDIO_REPO_DIR =
+  process.env.PRINCIPAL_STUDIO_REPO ??
+  path.join(os.homedir(), 'Developer/principal-ai/subsystem-modeling');
+
+/** The dev-served package inside the monorepo (`bun start` runs Electrobun). */
+const STUDIO_DEV_DIR = path.join(STUDIO_REPO_DIR, 'packages/subsystems-studio');
+
+/**
+ * Build an environment whose PATH includes the locations where `bun`,
+ * Homebrew, and globally-installed npm CLIs live. GUI apps launched by Finder
+ * don't inherit the user's shell PATH, so we add the common spots explicitly.
+ */
+function buildStudioEnv(): NodeJS.ProcessEnv {
+  const extraPaths = [
+    path.join(os.homedir(), '.bun', 'bin'),
+    path.join(os.homedir(), '.local', 'bin'),
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+  ];
+  const existing = (process.env.PATH ?? '').split(':').filter(Boolean);
+  for (const dir of extraPaths) {
+    if (!existing.includes(dir)) existing.push(dir);
+  }
+  const env: NodeJS.ProcessEnv = { ...process.env, PATH: existing.join(':') };
+
+  // Strip the desktop app's Node/tooling vars. The main process runs with
+  // NODE_OPTIONS="-r ts-node/register ..." (and TS_NODE_*), which the Studio
+  // dev server's own node subprocess can't resolve — it dies with
+  // "Cannot find module 'ts-node/register'" before it can launch.
+  delete env.NODE_OPTIONS;
+  delete env.TS_NODE_PROJECT;
+  delete env.TS_NODE_TRANSPILE_ONLY;
+  delete env.ELECTRON_RUN_AS_NODE;
+
+  return env;
+}
+
+/** Resolve an executable by scanning a PATH-style env value. */
+function findInPath(command: string, env: NodeJS.ProcessEnv): string | null {
+  for (const dir of (env.PATH ?? '').split(':').filter(Boolean)) {
+    const candidate = path.join(dir, command);
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+/**
+ * Locate the published Studio bundle. Prefers an explicit override, then the
+ * common global npm roots (where the principal-ai CLI installs its optional
+ * dependency).
+ */
+function resolveInstalledStudioBin(): string | null {
+  const override = process.env.PRINCIPAL_STUDIO_BIN;
+  if (override && existsSync(override)) return override;
+
+  const roots = [
+    process.env.PRINCIPAL_STUDIO_NPM_ROOT,
+    '/opt/homebrew/lib/node_modules',
+    '/usr/local/lib/node_modules',
+    path.join(os.homedir(), '.npm-global', 'lib', 'node_modules'),
+  ].filter((root): root is string => Boolean(root));
+
+  const relCandidates = [
+    '@principal-ai/subsystems-studio/bin/subsystems-studio.cjs',
+    '@principal-ai/principal-studio-cli/node_modules/@principal-ai/subsystems-studio/bin/subsystems-studio.cjs',
+  ];
+  for (const root of roots) {
+    for (const rel of relCandidates) {
+      const candidate = path.join(root, rel);
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  return null;
+}
+
+/**
+ * Spawn a detached process and watch it briefly so fast failures surface to the
+ * UI. Resolves with an error string when the child errors or exits non-zero
+ * within the grace window; otherwise resolves `undefined` and leaves the child
+ * running detached.
+ */
+function spawnDetachedChecked(
+  command: string,
+  args: string[],
+  options: { cwd?: string; env: NodeJS.ProcessEnv; graceMs?: number },
+): Promise<string | undefined> {
+  const graceMs = options.graceMs ?? 1500;
+  return new Promise((resolve) => {
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: options.env,
+      detached: true,
+      stdio: 'ignore',
+    });
+
+    const finish = (error?: string) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      child.removeAllListeners('exit');
+      child.removeAllListeners('error');
+      if (!error) child.unref();
+      resolve(error);
+    };
+
+    timer = setTimeout(() => finish(), graceMs);
+
+    child.on('error', (error) => {
+      console.error('[ShellHandler] Studio launch failed:', error);
+      finish(error.message);
+    });
+    child.on('exit', (code) => {
+      if (code && code !== 0) {
+        finish(`Process exited with code ${code}`);
+      } else {
+        // Exited cleanly (e.g. a focus/forwarding no-op) — treat as success.
+        finish();
+      }
+    });
+  });
+}
+
+async function launchStudio(
+  options: StudioLaunchOptions,
+): Promise<StudioLaunchResult> {
+  const mode: StudioLaunchMode = options?.mode === 'dev' ? 'dev' : 'installed';
+  const env = buildStudioEnv();
+
+  if (mode === 'dev') {
+    const devDir = options.devPath ?? STUDIO_DEV_DIR;
+    if (!existsSync(devDir)) {
+      return {
+        success: false,
+        mode,
+        error: `Studio source checkout not found at ${devDir}. Pass devPath or set PRINCIPAL_STUDIO_REPO.`,
+      };
+    }
+    const bun = findInPath('bun', env);
+    if (!bun) {
+      return {
+        success: false,
+        mode,
+        error: 'Could not find "bun" on PATH. Install it from https://bun.sh',
+      };
+    }
+    const error = await spawnDetachedChecked(bun, ['start'], {
+      cwd: devDir,
+      env,
+    });
+    return error
+      ? { success: false, mode, error, target: `${bun} start (${devDir})` }
+      : { success: true, mode, target: `${bun} start (${devDir})` };
+  }
+
+  // Installed: prefer the principal-ai CLI, invoked through its real path.
+  // When reached via a global bin symlink the CLI can't resolve its own
+  // optionalDependency, so resolving the symlink first restores both launching
+  // and focus-if-already-running.
+  const cli = findInPath('principal-ai', env);
+  if (cli) {
+    let cliReal = cli;
+    try {
+      cliReal = realpathSync(cli);
+    } catch {
+      // Keep the path as found.
+    }
+    const error = await spawnDetachedChecked(cliReal, ['open-studio'], {
+      env,
+    });
+    if (!error) {
+      return { success: true, mode, target: `${cliReal} open-studio` };
+    }
+    console.warn(
+      '[ShellHandler] principal-ai open-studio failed; falling back to bundle:',
+      error,
+    );
+  }
+
+  // Fallback: launch the bundle shim directly. This opens Studio when it isn't
+  // already running; if it is, the app will report the port conflict.
+  const studioBin = resolveInstalledStudioBin();
+  if (studioBin) {
+    const error = await spawnDetachedChecked(studioBin, [], { env });
+    return error
+      ? { success: false, mode, error, target: studioBin }
+      : { success: true, mode, target: studioBin };
+  }
+
+  return {
+    success: false,
+    mode,
+    error:
+      'Could not find an installed Studio. Install the principal-ai CLI or @principal-ai/subsystems-studio, or use the dev option.',
+  };
+}
 
 export function setupShellHandlers() {
   // Handle opening URLs in browser
@@ -539,4 +753,19 @@ export function setupShellHandlers() {
       return { success: false, error: message };
     }
   });
+
+  // Launch Subsystems Studio (dev checkout or installed build)
+  ipcMain.handle(
+    ShellAPIEvent.LAUNCH_STUDIO,
+    async (_, options: StudioLaunchOptions): Promise<StudioLaunchResult> => {
+      try {
+        return launchStudio(options ?? { mode: 'installed' });
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to launch Studio';
+        console.error('[ShellHandler] Error launching Studio:', error);
+        return { success: false, error: message };
+      }
+    },
+  );
 }

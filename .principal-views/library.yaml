@@ -72,14 +72,6 @@ resources:
     owned-scopes:
       - principal-ade-dev-workspace
       - file-city-renderer
-  principal-ade-alexandria:
-    service.name: principal-ade-alexandria
-    service.version: 0.0.410
-    deployment.environment: development
-    project: principal-ade
-    description: Alexandria Workspace - knowledge base
-    owned-scopes:
-      - principal-ade-alexandria
   principal-ade-storybook:
     service.name: principal-ade-storybook
     service.version: 0.0.410
@@ -135,12 +127,6 @@ nodeComponents:
     tags:
       - window
     color: "#3B82F6"
-  alexandria-workspace:
-    defaultLabel: Alexandria Workspace
-    description: Knowledge base workspace for code exploration
-    tags:
-      - window
-    color: "#60A5FA"
   dev-workspace:
     defaultLabel: Dev Workspace
     description: Development environment window

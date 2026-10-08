@@ -768,7 +768,7 @@
         "attributes": {
           "source_window": {
             "type": "string",
-            "description": "Window where button was clicked: principal, dev-workspace, alexandria-workspace"
+            "description": "Window where button was clicked: principal or dev-workspace"
           }
         }
       },

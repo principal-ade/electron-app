@@ -5,6 +5,13 @@
 
 import type { EditorId } from '../../shared/types/editor.types';
 import type { TerminalId } from '../../shared/types/terminal.types';
+import type {
+  StudioLaunchMode,
+  StudioLaunchOptions,
+  StudioLaunchResult,
+} from '../../shared/main-process-api-interfaces/ShellAPI';
+
+export type { StudioLaunchMode, StudioLaunchOptions, StudioLaunchResult };
 
 export class ShellService {
   /**
@@ -199,5 +206,16 @@ export class ShellService {
   ): Promise<{ success: boolean; error?: string }> {
     console.info(`[ShellService] Moving to trash: ${filePath}`);
     return window.mainProcess.shell.moveToTrash(filePath);
+  }
+
+  /**
+   * Launch Subsystems Studio from either the local source checkout (dev) or
+   * the published build (installed). Non-blocking.
+   */
+  static async launchStudio(
+    options: StudioLaunchOptions,
+  ): Promise<StudioLaunchResult> {
+    console.info(`[ShellService] Launching Studio (${options.mode})`);
+    return window.mainProcess.shell.launchStudio(options);
   }
 }

@@ -13,6 +13,28 @@ export enum ShellAPIEvent {
   CLEAR_PATH_CACHE = 'terminal:clearPathCache',
   OPEN_KEYCHAIN_ACCESS = 'shell:open-keychain-access',
   OPEN_PRIVACY_SETTINGS = 'shell:open-privacy-settings',
+  LAUNCH_STUDIO = 'shell:launch-studio',
+}
+
+/** How to launch Subsystems Studio. */
+export type StudioLaunchMode = 'dev' | 'installed';
+
+export interface StudioLaunchOptions {
+  /** `dev` runs the source checkout, `installed` runs the published build. */
+  mode: StudioLaunchMode;
+  /**
+   * Override the path to the Studio source checkout (dev mode only). When
+   * omitted the main process uses its default checkout location.
+   */
+  devPath?: string;
+}
+
+export interface StudioLaunchResult {
+  success: boolean;
+  mode?: StudioLaunchMode;
+  /** What was launched (command + path), for diagnostics. */
+  target?: string;
+  error?: string;
 }
 export interface ShellAPI {
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
@@ -101,4 +123,11 @@ export interface ShellAPI {
    * No-op on non-macOS platforms.
    */
   openPrivacySettings: () => Promise<{ success: boolean; error?: string }>;
+
+  /**
+   * Launch Subsystems Studio, either from the local source checkout (dev) or
+   * the published build (installed). Non-blocking: the launched app runs
+   * detached from the desktop app.
+   */
+  launchStudio: (options: StudioLaunchOptions) => Promise<StudioLaunchResult>;
 }

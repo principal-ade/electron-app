@@ -9,7 +9,7 @@
 ## 1. RepositoryPanelContext
 
 **File:** `src/renderer/contexts/RepositoryPanelContext.tsx`
-**Used By:** DevWorkspace panels, Alexandria workspace
+**Used By:** Dev Workspace panels and repository/project features
 **Migration Status:** ✅ **MIGRATED** - Direct slice properties added
 
 ### Slices Provided

@@ -33,7 +33,7 @@ note CRUD. Everything else reuses the dev-workspace wrapper.
 | # | File | Mounts | Note CRUD source | Optimistic fix |
 |---|------|--------|------------------|----------------|
 | 1 | `src/renderer/dev-workspace/file-city-trail-panel/FileCityTrailPanel.tsx` | upstream `FileCityTrailExplorerPanel` | builds `trailActions` internally | ✅ has fix |
-| 2 | `src/renderer/alexandria-workspace/file-city-trail-tab/FileCityTrailTabContent.tsx` | upstream `FileCityTrailExplorerPanel` | builds `trailActions` internally | ✅ has fix (reference impl) |
+| 2 | `src/renderer/projects-view/file-city-trail-tab/FileCityTrailTabContent.tsx` | upstream `FileCityTrailExplorerPanel` | builds `trailActions` internally | ✅ has fix |
 | 3 | `src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx:547` | the wrapper (`FileCityTrailPanel`) | inherits from wrapper | ✅ inherits |
 | 4 | `src/renderer/principal-window/views/TrailsView/TrailsView.tsx:385` | the wrapper (`FileCityTrailPanel`) | inherits from wrapper | ✅ inherits |
 | 5 | `src/renderer/feed-view/SharedTrailTabContent.tsx:235` | the wrapper (`FileCityTrailPanel`) | inherits from wrapper | ✅ inherits |
@@ -72,16 +72,15 @@ after the fix, optimistically updates there too.
 
 ## Concern 2 — two near-identical trail components (`TabContent` vs `Panel`)
 
-`FileCityTrailTabContent.tsx` (Alexandria) and `FileCityTrailPanel.tsx`
-(dev-workspace wrapper) do substantially the same job — mount the upstream panel,
+`FileCityTrailTabContent.tsx` (topic tab) and `FileCityTrailPanel.tsx`
+(Dev Workspace wrapper) do substantially the same job — mount the upstream panel,
 supply `fileTree` / `lineCounts` / `trail` slices, wire note CRUD, handle close /
 share — and now carry duplicate copies of the `notesOverride` optimistic logic.
 
 Key differences observed:
 - **Input shape:** `TabContent` takes a `trailPayload` prop directly and fetches
-  its own `fileTree`/`lineCounts` (Alexandria isn't repo-scoped). `Panel` reads
-  everything from a `context.trail` DataSlice supplied by `RepositoryPanelProvider`
-  (dev-workspace is repo-scoped).
+  its own `fileTree`/`lineCounts`. `Panel` reads everything from a
+  `context.trail` DataSlice supplied by `RepositoryPanelProvider`.
 - **Share UX:** `TabContent` owns a `TrailShareModal`; `Panel` delegates via an
   `onShareTrail` callback.
 

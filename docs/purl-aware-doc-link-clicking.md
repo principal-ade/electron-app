@@ -62,7 +62,7 @@ The terminal overlay
 (`dev-workspace/file-city-panel/FloatingTerminalOverlay.tsx:283`) is
 external-URL-only (`ShellService.openExternal`) and excluded.
 
-All three windows need the identical full resolver. The only per-surface
+Both current windows need the identical full resolver. The only per-surface
 variables are **wired?** (does it use `useMarkdownLinkHandler` yet) and **local
 hint** (any `repositoryPath`/`workspaceId` to bias clone selection — optional).
 
@@ -84,16 +84,8 @@ hint** (any `repositoryPath`/`workspaceId` to bias clone selection — optional)
 | DevWorkspaceTopicTab → TopicDescriptionBody | `dev-workspace/topics-panel/DevWorkspaceTopicTab.tsx` → `TopicDescriptionBody.tsx:191` | `workspaceId` → multi-repo index + `repositoryPath` | ✓ (local) |
 | DevWorkspaceTopicTab → TopicTabContent (published) | same | published topic | ✗ |
 
-### Alexandria workspace window — `alexandria-workspace/AlexandriaWorkspaceLayout.tsx`
-
-| Surface | File:line | Local hint available | Wired? |
-|---|---|---|---|
-| MarkdownPanel | `AlexandriaWorkspaceLayout.tsx:694` | `repositoryPath` + doc `basePath` | ✓ |
-| AlexandriaTopicTabContent / TopicDescriptionSlideOver → TopicDescriptionBody | `alexandria-workspace/topic-tab/AlexandriaTopicTabContent.tsx:263` → `TopicDescriptionBody.tsx:191` | `workspaceId` → multi-repo index + `repositoryPath` | ✓ (local) |
-| AlexandriaTopicTabContent → TopicTabContent (published) | same | published topic | ✗ |
-
 **The pattern:** `TopicDescriptionBody` (local topics) and `MarkdownPanel`
-(on-disk docs) are already wired and recur in all three windows — landing the
+(on-disk docs) are already wired in both current windows — landing the
 resolver lights them up everywhere at once. The unwired surfaces
 (`TopicTabContent`, `RepositoryProfilePanel`, `RepoExplainOverlay`) need the
 hook added. None of this changes *what* resolution they need — it's uniform; the
@@ -155,12 +147,11 @@ path). So what actually happens to a doc-link click depends on the window's
 | Window | `file:opened` listener | Non-markdown behavior |
 |---|---|---|
 | **Dev workspace** | `DevWorkspacePanelFramework.tsx:1957` | **Silently dropped** — early-returns unless `.md`/`.mdx` (`:1970`) |
-| **Alexandria workspace** | `AlexandriaWorkspaceLayout.tsx:1291` | **Routes by type** — md→`markdown-doc`, media→`media`, else→`source-file` (PierreFileView, read-only) |
 | **Principal** | `WorkspaceShell.tsx:345` → `openMarkdownDoc` | **Markdown only** — non-md never opens |
 
-So the *same* purl link to `src/foo.ts` works in an Alexandria window, silently
-does nothing in a dev-workspace window, and does nothing in the principal window.
-This contradicts the "uniform everywhere" goal as much as the resolver gap does.
+The same purl link to `src/foo.ts` is silently dropped in the dev-workspace
+window and does nothing in the principal window. This contradicts the
+"uniform everywhere" goal as much as the resolver gap does.
 
 ### The richer router (dev-workspace `file:open`, `:2124`) — the model to generalize
 
@@ -177,12 +168,11 @@ The dev-workspace `file:open` handler is the most complete type map:
 
 Notes that matter for purl links:
 
-- **No shared classifier.** Each window reimplements its own extension checks;
-  the markdown and media lists already drift (Alexandria's md regex includes
-  `.markdown`, dev-workspace's doesn't). A purl-aware open should introduce one
-  shared `classifyFileForViewer(path)` helper, not a fourth copy.
+- **No shared classifier.** Each window reimplements its own extension checks.
+  A purl-aware open should introduce one shared `classifyFileForViewer(path)`
+  helper, not another copy.
 - **Read-only vs editable.** Following a doc *reference* should default to
-  **read-only** (Alexandria's `source-file` model), not the dev-workspace
+  **read-only** (the existing source viewer), not the dev-workspace
   `file-editor` (editable) default. You're navigating a citation, not editing.
 - **Binaries** have no in-app viewer → native open (or a notice). Fine, but the
   `file:opened` path doesn't do this today; only `file:open` does.
@@ -194,8 +184,8 @@ For purl-aware clicking to behave uniformly, the **open side needs the same
 
 1. A shared `classifyFileForViewer(path)` → `markdown | media | source | native`
    (one helper, kills the drift).
-2. Each window's `file:opened` listener routes *all* types through it (Alexandria
-   nearly does; dev-workspace and principal must stop being markdown-only),
+2. Each window's `file:opened` listener routes *all* types through it;
+   dev-workspace and principal must stop being markdown-only,
    defaulting non-markdown to a **read-only** viewer.
 3. Doc-link opens are read-only by intent.
 
@@ -254,7 +244,7 @@ arm later doesn't churn every call site.
 
 **Phase 3 — roll out to every surface (by adoption status, not by window)**
 Resolution + routing are identical everywhere, so this is purely about *who's wired*:
-- **Already wired** (`TopicDescriptionBody`, `MarkdownPanel` — all three windows):
+- **Already wired** (`TopicDescriptionBody`, `MarkdownPanel` — both current windows):
   light up automatically when Phases 1–2 land; no per-surface work.
 - **Unwired** — add `useMarkdownLinkHandler` + `MarkdownLinkNotice`:
   `TopicTabContent` (published topics, highest value), then

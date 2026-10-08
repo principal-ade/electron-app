@@ -110,22 +110,6 @@
       }
     },
     {
-      "id": "alexandria-workspace-window",
-      "type": "text",
-      "x": 720,
-      "y": 150,
-      "width": 220,
-      "height": 80,
-      "text": "Alexandria Workspace\n(alexandria-workspace.html)",
-      "pv": {
-        "nodeType": "workspace-window",
-        "shape": "rectangle",
-        "references": [
-          "src/main/window/modernWindowHandlers.ts"
-        ]
-      }
-    },
-    {
       "id": "extension-browser-window",
       "type": "text",
       "x": 0,
@@ -244,14 +228,6 @@
       "fromNode": "window-manager",
       "fromSide": "bottom",
       "toNode": "dev-workspace-window",
-      "toSide": "top",
-      "edgeType": "uses"
-    },
-    {
-      "id": "manager-to-alexandria",
-      "fromNode": "window-manager",
-      "fromSide": "bottom",
-      "toNode": "alexandria-workspace-window",
       "toSide": "top",
       "edgeType": "uses"
     },

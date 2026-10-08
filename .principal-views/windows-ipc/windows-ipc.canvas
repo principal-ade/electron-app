@@ -22,10 +22,6 @@
       "label": "Repo Manager",
       "color": "#3B82F6"
     },
-    "alexandria-workspace": {
-      "label": "Alexandria Workspace",
-      "color": "#60A5FA"
-    },
     "dev-workspace": {
       "label": "Dev Workspace",
       "color": "#93C5FD"
@@ -144,19 +140,6 @@
       "text": "Repo Manager",
       "pv": {
         "nodeType": "repo-manager",
-        "shape": "rectangle"
-      }
-    },
-    {
-      "id": "alexandria-workspace",
-      "type": "text",
-      "x": 263,
-      "y": 50,
-      "width": 180,
-      "height": 60,
-      "text": "Alexandria Workspace",
-      "pv": {
-        "nodeType": "alexandria-workspace",
         "shape": "rectangle"
       }
     },
@@ -331,15 +314,6 @@
     {
       "id": "repo-renders-renderer",
       "fromNode": "repo-manager",
-      "fromSide": "bottom",
-      "toNode": "renderer-process",
-      "toSide": "top",
-      "label": "loads",
-      "edgeType": "renders"
-    },
-    {
-      "id": "alexandria-renders-renderer",
-      "fromNode": "alexandria-workspace",
       "fromSide": "bottom",
       "toNode": "renderer-process",
       "toSide": "top",

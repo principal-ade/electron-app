@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document analyzes the performance bottlenecks in opening repository and workspace windows, and proposes architectural improvements to decouple blocking operations from window initialization.
+This document analyzes the performance bottlenecks in opening repository windows and proposes architectural improvements to decouple blocking operations from window initialization.
 
 ## Current Architecture
 
@@ -88,39 +88,6 @@ graph TD
     style I fill:#f96,stroke:#333,stroke-width:2px
     style K fill:#f96,stroke:#333,stroke-width:2px
     style L fill:#f96,stroke:#333,stroke-width:2px
-```
-
-### Workspace Window Opening Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Renderer
-    participant IPC
-    participant Handler as WindowHandler
-    participant Registry as AlexandriaRegistry
-    participant Window as BrowserWindow
-
-    User->>Renderer: Open Workspace
-    Renderer->>IPC: OPEN_ALEXANDRIA_WORKSPACE
-    IPC->>Handler: Handle request
-
-    Handler->>Registry: getWorkspace(workspaceId)
-    Note over Registry: Fetch workspace name (50-200ms)
-    Registry-->>Handler: Workspace data
-
-    Handler->>Window: createSpecialWindow()
-    Note over Window: Create BrowserWindow<br/>Initialize adapters (setImmediate)
-
-    Note over Handler: No setTimeout needed
-    Handler->>Window: loadURL(alexandria-workspace.html)
-
-    Window->>Window: Load HTML/CSS/JS
-    Window->>Window: Parse React app
-    Window->>Window: ready-to-show event
-    Window->>User: Window visible!
-
-    Note over User,Window: Total time: 500-1500ms (faster!)
 ```
 
 ## Problem Analysis

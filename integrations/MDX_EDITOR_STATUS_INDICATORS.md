@@ -317,7 +317,7 @@ openGitDiff: (filePath: string, status?: string) => {
   console.log('[DEBUG] Emitting git:diff:', { filePath, status });
   events.emit({
     type: 'git:diff',
-    source: 'alexandria-workspace',
+    source: 'panel-context',
     timestamp: Date.now(),
     payload: { filePath, status },
   });

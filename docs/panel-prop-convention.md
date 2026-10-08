@@ -16,7 +16,7 @@ Every panel is driven by **exactly three structured inputs**: `context`, `action
 
 ## Why a 4th prop is a problem here
 
-electron-app slots panels into **configurable** hosts (e.g. `WorkspacePanelComponent`, the left workspace slot in `AlexandriaWorkspaceLayout.tsx`). Any panel can be configured into that slot. The host passes the standard triad; it does not know about panel-specific props.
+electron-app slots panels into **configurable** hosts such as the Dev Workspace panel framework. A panel can be configured into a host slot. The host passes the standard triad; it does not know about panel-specific props.
 
 The framework does **not** validate props — TypeScript and React destructuring are the only enforcement. So:
 
@@ -27,15 +27,6 @@ The convention-pure fix for cross-cutting data is to carry it through `context` 
 
 ## Known exceptions / deviations
 
-### `activeTerminalRepoPath` — a 4th prop on the workspace slot
-*(Currently in the working tree, not yet merged.)*
-
-- `AlexandriaWorkspaceLayout.tsx:605` computes which repo's terminal tab is visible.
-- It is passed as a 4th prop to the configurable left panel: `AlexandriaWorkspaceLayout.tsx:1343` → `<WorkspacePanelComponent context={…} actions={…} events={…} activeTerminalRepoPath={…} />`.
-- `RecentRepositoriesPanel.tsx:318-328` declares `activeTerminalRepoPath?: string | null` to receive it, then threads it to each `RepositoryCard` (`isActiveTerminal`).
-
-This works because the slot currently always renders `RecentRepositoriesPanel`, but it breaks the configurability contract: a different panel in that slot would silently ignore the prop. **Candidate to migrate into `context`.**
-
 ### `activeFile` slice is mandatory for `@industry-theme` panels
 `context.activeFile: DataSlice<ActiveFileSlice>` (`PanelContext.tsx:190`) and the `setActiveFile` action look unused locally but **cannot be removed** — third-party panels (`@industry-theme/file-editing-panels`, `@industry-theme/xterm-terminal-panel`, …) require them as part of the context contract.
 
@@ -43,6 +34,6 @@ This works because the slot currently always renders `RecentRepositoriesPanel`, 
 
 - `docs/panel-architecture.md`, `docs/panel-implementation-guide.md` — broader panel architecture.
 - `docs/PANEL_EVENTS_HANDLED_BY_HOST.md` — host-side event handling.
-- `docs/PANEL_FRAMEWORK_MIGRATION_ELECTRON_APP.md`, `docs/PANEL_ARRAY_MIGRATION.md` — framework migration history.
+- `docs/PANEL_FRAMEWORK_MIGRATION_ELECTRON_APP.md` — framework migration history.
 
 This doc is scoped specifically to the **prop contract** (context/actions/events) and its exceptions; see the above for architecture/events/migration detail.

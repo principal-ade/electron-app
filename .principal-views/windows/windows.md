@@ -29,7 +29,6 @@ The window system needs to:
 | Window | Purpose | Entry Point |
 |--------|---------|-------------|
 | Dev Workspace | Development environment | dev-workspace.html |
-| Alexandria Workspace | Document workspace | alexandria-workspace.html |
 
 ### Viewer Windows
 

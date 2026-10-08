@@ -25,7 +25,6 @@ An **instrumentation scope** in OpenTelemetry identifies the boundary where trac
 |-------|--------|-------------|
 | `principal-ade-principal-window` | Principal Window | Main app shell with auth, workspaces, settings |
 | `principal-ade-dev-workspace` | Dev Workspace | Development environment with panels and terminal |
-| `principal-ade-alexandria` | Alexandria | Knowledge base and code exploration workspace |
 | `principal-ade-extension` | Extension Window | Browser extension host |
 | `principal-ade-splash-screen` | Splash Screen | App loading screen |
 | `principal-ade-window-switcher` | Window Switcher | Quick window navigation overlay |
@@ -98,12 +97,8 @@ Spans are organized into namespaces within each scope:
 - `terminal.panel.*` - Terminal panel UI
 - `ipc.invoke.*` - IPC requests to main
 
-### principal-ade-alexandria (Alexandria)
-- `alexandria.*` - Knowledge base UI
-- `quality.panel.*` - Quality analysis UI
-- `ipc.invoke.*` - IPC requests to main
-
 ### principal-ade-principal-window (Principal Window)
+- `alexandria.*` - Alexandria repository operations
 - `trace.viewer.*` - Trace visualization
 - `ipc.invoke.*` - IPC requests to main
 
@@ -116,7 +111,6 @@ The previous architecture defined ~20 logical "scopes" that were actually just n
 | `terminal-activity` | `principal-ade-main` spans |
 | `terminal-session` | `principal-ade-main` spans |
 | `window-manager` | `principal-ade-main` `window.*` spans |
-| `quality-panel` | `principal-ade-alexandria` spans |
 | `trace-viewer` | `principal-ade-principal-window` spans |
 | `terminal.daemon` | `principal-ade-daemon` spans |
 | `devworkspace` | `principal-ade-dev-workspace` spans |

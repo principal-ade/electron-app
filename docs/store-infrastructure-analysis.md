@@ -276,7 +276,7 @@ actions.openFile(filePath);
 actions.createTerminalSession({ cwd: context.repositoryPath });
 
 // Events
-events.emit({ type: 'file:opened', source: 'alexandria-workspace', payload: {...} });
+events.emit({ type: 'file:opened', source: 'panel-context', payload: {...} });
 ```
 
 #### Other Contexts

@@ -134,21 +134,6 @@
       }
     },
     {
-      "id": "principal-ade-alexandria",
-      "type": "otel-scope",
-      "x": -269,
-      "y": -356,
-      "width": 280,
-      "height": 140,
-      "label": "Principal Ade Alexandria",
-      "color": "#A855F7",
-      "otel": {
-        "scope": "principal-ade-alexandria",
-        "description": "Alexandria Workspace - knowledge base and code exploration",
-        "status": "draft"
-      }
-    },
-    {
       "id": "principal-ade-extension",
       "type": "otel-scope",
       "x": -347,
@@ -372,14 +357,6 @@
       "toSide": "left",
       "label": "spawns",
       "edgeType": "worker-message"
-    },
-    {
-      "id": "edge-principal-ade-alexandria-principal-ade-main-1773847831768",
-      "fromNode": "principal-ade-alexandria",
-      "toNode": "principal-ade-main",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "edgeType": "ipc"
     },
     {
       "id": "edge-principal-ade-event-processor-principal-ade-main-1773847831770",

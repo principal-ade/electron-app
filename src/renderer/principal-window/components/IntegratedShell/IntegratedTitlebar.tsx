@@ -14,6 +14,7 @@ import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 import { CreateRepositoryInWorkspaceModal } from '../../../panels/components/CreateRepositoryInWorkspaceModal';
 import { LocalhostProcessesModal } from './LocalhostProcessesModal';
 import { LocalhostDetectionService } from '../../../main-process-api/LocalhostDetectionService';
+import { StudioHeaderButton } from '../../../components/Titlebar/StudioHeaderButton';
 
 declare global {
   interface Window {
@@ -341,6 +342,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           </button>
         )}
         {showPullMailbox && <PullMailbox />}
+        <StudioHeaderButton theme={theme} />
         <ThemeSelector />
         {showSidebarControl && onToggleSidebar && (
           <ViewSidebarControls

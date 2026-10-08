@@ -1,7 +1,10 @@
 import { ipcRenderer } from 'electron';
 import type { EditorId } from '../../shared/types/editor.types';
 import type { TerminalId } from '../../shared/types/terminal.types';
-import { ShellAPIEvent } from '../../shared/main-process-api-interfaces/ShellAPI';
+import {
+  ShellAPIEvent,
+  type StudioLaunchOptions,
+} from '../../shared/main-process-api-interfaces/ShellAPI';
 
 export const shellAPI = {
   // Open URL in external browser
@@ -74,4 +77,8 @@ export const shellAPI = {
   // Open macOS System Settings → Privacy & Security pane
   openPrivacySettings: async () =>
     ipcRenderer.invoke(ShellAPIEvent.OPEN_PRIVACY_SETTINGS),
+
+  // Launch Subsystems Studio (dev source checkout or installed build)
+  launchStudio: async (options: StudioLaunchOptions) =>
+    ipcRenderer.invoke(ShellAPIEvent.LAUNCH_STUDIO, options),
 };
