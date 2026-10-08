@@ -6,7 +6,7 @@
  * The contract is deliberately narrow: open the doc in whichever window is
  * *currently focused*, when that window is one of the primary surfaces that
  * can host a doc tab next to a tabbed terminal — the principal window
- * (Inbox / Projects views) or the dev-workspace.
+ * (Projects / Topics views) or the dev-workspace.
  *
  * The main process can't see which *view* the principal window is showing, so
  * the final gate is renderer-side: each terminal framework subscribes to
@@ -29,7 +29,7 @@ import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 
 /**
  * Primary window types that can host a doc tab next to a tabbed terminal:
- * the principal window (MAIN — Inbox/Projects views) and the dev-workspace.
+ * the principal window (MAIN — Projects/Topics views) and the dev-workspace.
  * Gating on `primaryType` rather than the
  * `features.terminalManager` boolean, which is an unreliable proxy (set on
  * MAIN, unset on the WORKSPACE window that actually renders a terminal).

@@ -1,11 +1,15 @@
 # Topic Images (drag-and-drop screenshots)
 
-> Status: **In progress** (themed-markdown hook shipped in 0.1.98) · Last updated: 2026-06-08
+> Status: **Local-only feature** · Last updated: 2026-06-08
+>
+> Desktop topic publishing, shared-topic links, and Topic Inbox were removed.
+> Any remote-publishing plans below are obsolete; a future sharing design (for
+> example, GitHub Gists) is not implemented.
 
 Let users attach **screenshots** to topics — primarily of Storybook stories — by
 dragging an image file into the topic description editor. Images are stored
-**on the topic, referenced from the description**, and must survive publishing to
-web-ade.
+**on the local topic, referenced from the description**, and render in the
+desktop app.
 
 This is a screenshot-sharing feature, not a general asset store: the drop zone
 **rejects large images up front** (see validation caps), so the bytes a topic
@@ -14,11 +18,10 @@ carries stay small by construction.
 ## Goal & scope
 
 - **In scope:** human drags a screenshot (image file) into the topic description
-  surface; it renders in the desktop app; it publishes to web-ade and renders
-  there too.
+  surface; it renders in the desktop app.
 - **Out of scope (for now):** agent/Playwright capture, live Storybook embeds,
-  video/other media. The data shape leaves room for these later
-  (`source.storyId`, `mime`) but we are not building them.
+  video/other media, and remote topic sharing. The data shape leaves room for
+  future image sources (`source.storyId`, `mime`) but we are not building them.
 
 ## Core decision
 
@@ -50,7 +53,7 @@ interface TopicAsset {
   id: string;       // content hash → free dedup, stable asset:// target
   mime: string;     // "image/png"
   data?: string;    // base64 bytes (present locally + on publish)
-  url?: string;     // resolvable URL (web-ade may offload to S3 later)
+  url?: string;     // optional hosted URL if remote asset support is added later
   alt?: string;
   source?: { storyId?: string; storybookUrl?: string }; // future: re-capture / open live
 }
@@ -62,8 +65,7 @@ interface Topic {
 ```
 
 Resolver rule: prefer `url`, else build a data-URL from `data`. This keeps a
-local topic (data-only) and a published one (url, if offloaded) both renderable
-and "interchangeable on read."
+  local topic (data-only) renderable without a network service.
 
 ## Architecture (4 repos)
 
@@ -71,8 +73,8 @@ and "interchangeable on read."
 |---|---|---|
 | themed-markdown | `/Users/griever/Developer/web-ade/industry-themed-markdown` | Renders the description in **both** apps; needs an image-resolver hook |
 | alexandria-core-library | `/Users/griever/Developer/backlog-adaptation/alexandria-core-library` | Owns the canonical `Topic` type; add `assets` |
-| electron-app | `/Users/griever/Developer/desktop-app/electron-app` | Drag-drop capture (size-capped), render wiring, publish |
-| web-ade | `/Users/griever/Developer/web-ade/web-ade` | Accept/store/serve `assets`; render with the same hook |
+| electron-app | `/Users/griever/Developer/desktop-app/electron-app` | Drag-drop capture (size-capped), local storage, render wiring |
+| web-ade | `/Users/griever/Developer/web-ade/web-ade` | Historical remote-rendering plan; not part of the current feature |
 
 ### Flow
 
@@ -82,8 +84,6 @@ screenshot → drag image file onto description editor
   → hashes bytes, writes the asset onto topic.assets (persisted in topics.json)
   → inserts ![alt](asset://<hash>) into description markdown
   → IndustryMarkdownSlide resolves asset://<hash> via transformImageUri → <img>
-  → on publish: topic.assets included in POST /api/topics payload
-  → web-ade stores assets in topic JSON (S3), serves on GET, renders same way
 ```
 
 ### Key reference points (verified)
@@ -102,10 +102,8 @@ screenshot → drag image file onto description editor
 - **Desktop render:** `IndustryMarkdownSlide` (from `themed-markdown`) in the
   slide-over; existing `useMarkdownLinkHandler` intercepts the `file:` scheme — the
   pattern to mirror for assets.
-- **Desktop publish:** `topicShare.ts:206` — `POST /api/topics` sends a
-  hand-picked `{ title, description, trailIds, status }`; `assets` must be added
-  explicitly. Base URL `WEB_ADE_API_URL || https://app.principal-ade.com/api`,
-  Bearer token.
+- **Desktop remote publishing:** removed; no Web-ADE topic publishing API is
+  part of the desktop app.
 - **web-ade storage:** `web-ade/src/lib/topics/s3-storage.ts` — whole topic as
   JSON at `topics/_by-id/{id}.json` (ETag read-modify-write). No image/blob infra
   exists today. `TopicPayload` in `web-ade/src/lib/topics/types.ts:48`.
@@ -137,10 +135,10 @@ screenshot → drag image file onto description editor
   dropped `image/*` files (mime allow-list + 2 MB cap), hashes (SHA-256) and
   base64-encodes them. `TopicDescriptionSlideOver.tsx` composes a file-drop
   handler over `useDropZone` (which ignores `dataTransfer.files`), rejects with a
-  transient banner, and calls the new `topic_attachImageAsset` route. That route
-  stores the asset inline on the topic (deduped by hash) and appends the
-  `asset://<id>` reference. Published topics are rejected for now (Slice 2). Now
-  that core-lib ships `assets`, the route uses the real `Topic.assets` type (no
+  dropped image handler over `useDropZone` (which ignores `dataTransfer.files`), rejects with a
+  transient banner, and calls the `topic_attachImageAsset` route. That route
+  stores the asset inline on the local topic (deduped by hash) and appends the
+  `asset://<id>` reference. Now
   cast); `UpdateTopicInput` carries `assets?: TopicAsset[]`.
 - [x] **electron-app (render):** bumped `themed-markdown` to `0.1.98` and pass
   `transformImageUri` into the slide-over's `IndustryMarkdownSlide` — resolves
@@ -149,35 +147,13 @@ screenshot → drag image file onto description editor
 
 _Exit criteria: screenshot → drag → renders, fully local._
 
-### Slice 2 — publish
+### Remote sharing
 
-- [ ] **electron-app (publish):** add `assets` to the `POST /api/topics` payload
-  (`topicShare.ts:206`); read straight from `topic.assets` at publish time.
-- [ ] **electron-app (published-topic edits):** attaching an image to an
-  *already-published* topic is currently **rejected** by `topic_attachImageAsset`.
-  Lift that once the write-through path carries assets — today
-  `TopicRegistryService.updateTopic` (`:141`) pushes only `{title, description,
-  status}` to web-ade and reconciles the local copy from that response, so a
-  naive attach would push the `asset://` ref to the remote with no bytes behind
-  it and drop `assets` locally. The remote PATCH + reconcile must include
-  `assets` too.
-- [ ] **web-ade:** accept + validate `assets` (cap count / total bytes / mime) on
-  POST/PATCH; **start by inlining bytes in the topic JSON** (`data` field —
-  matches the S3-blob-per-topic model, no new upload infra); return on GET; pass
-  `transformImageUri` to `IndustryMarkdownSlide` in `topic/[id]/page.tsx`.
-- [ ] **test — persistence across sharing:** verify assets round-trip both ways:
-  (a) publish a topic that already has local images → bytes land in web-ade's
-  topic JSON and render on the web; (b) attach an image to an already-published
-  topic → it writes through and survives a desktop re-fetch (`fetchSharedById`)
-  without dropping `assets` or dangling the `asset://` ref.
-
-_Exit criteria: publish a topic with an image → renders on web-ade; assets
-survive the desktop↔web round-trip in both directions._
+Not implemented. The former Web-ADE publishing and shared-link flow has been
+removed; a future replacement is a separate design decision.
 
 ### Later / optional
 
-- [ ] web-ade S3-media offload: split bytes to `topics/_media/{topicId}/{assetId}`,
-  return `url`. Reversible — the `url` field already accommodates it.
 - [ ] Prune `topic.assets` entries when their `![](asset://…)` node is removed
   from the description (deleting a topic already drops its assets, since they live
   on the topic).

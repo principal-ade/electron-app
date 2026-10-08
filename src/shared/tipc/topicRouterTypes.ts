@@ -9,10 +9,6 @@ import type { ActionContext } from '@egoist/tipc/main';
 import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import type {
   CreateTopicInput,
-  FetchSharedTopicResult,
-  LocalTopicRecord,
-  PublishedTopicVisibility,
-  PublishTopicResult,
   UpdateTopicInput,
 } from '../main-process-api-interfaces/TopicAPI';
 
@@ -24,9 +20,6 @@ export type {
   Topic,
   CreateTopicInput,
   UpdateTopicInput,
-  LocalTopicRecord,
-  FetchSharedTopicResult,
-  PublishTopicResult,
 };
 
 export type {
@@ -77,18 +70,6 @@ export interface AttachImageAssetInput {
 
 export interface DeleteTopicInput {
   id: string;
-}
-
-/** Input to {@link TopicRouterType.topic_fetchSharedById}. */
-export interface FetchSharedTopicInput {
-  id: string;
-}
-
-/** Input to {@link TopicRouterType.topic_publishTopic}. */
-export interface PublishTopicInput {
-  id: string;
-  /** Audience to publish with. Defaults are applied by the caller (renderer). */
-  visibility: PublishedTopicVisibility;
 }
 
 export interface LinkSessionInput {
@@ -155,35 +136,11 @@ export type TopicRouterType = Record<
       input: DeleteTopicInput;
     }) => Promise<boolean>;
   };
-  topic_fetchSharedById: {
-    action: (args: {
-      context: ActionContext;
-      input: FetchSharedTopicInput;
-    }) => Promise<FetchSharedTopicResult>;
-  };
-  topic_publishTopic: {
-    action: (args: {
-      context: ActionContext;
-      input: PublishTopicInput;
-    }) => Promise<PublishTopicResult>;
-  };
-  topic_getRecord: {
-    action: (args: {
-      context: ActionContext;
-      input: GetTopicInput;
-    }) => Promise<LocalTopicRecord | null>;
-  };
   topic_getTopicFilePath: {
     action: (args: {
       context: ActionContext;
       input: GetTopicInput;
     }) => Promise<string | null>;
-  };
-  topic_getRecords: {
-    action: (args: {
-      context: ActionContext;
-      input?: void;
-    }) => Promise<LocalTopicRecord[]>;
   };
   topic_getSessionLinks: {
     action: (args: {

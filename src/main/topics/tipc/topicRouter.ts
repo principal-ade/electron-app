@@ -15,13 +15,10 @@ import type {
   AppendDescriptionInput,
   AttachImageAssetInput,
   DeleteTopicInput,
-  FetchSharedTopicInput,
   GetTopicInput,
   LinkSessionInput,
-  PublishTopicInput,
   UpdateTopicInputArgs,
 } from '../../../shared/tipc/topicRouterTypes';
-import { fetchSharedTopicById } from '../topicShare';
 import type { SessionLinkedEvent } from '../../../shared/main-process-api-interfaces/TopicAPI';
 import type { CreateTopicInput } from '../../../shared/main-process-api-interfaces/TopicAPI';
 
@@ -56,35 +53,6 @@ export const topicRouter = {
       return registryService.getTopic(input.id);
     }),
 
-  // Hydrate a topic published to web-ade by id. Unlike the queries above
-  // (which read the local registry), this reaches the shared registry over
-  // HTTP — the inbox's topic tab opens topics that may not exist locally.
-  topic_fetchSharedById: t.procedure
-    .input<FetchSharedTopicInput>()
-    .action(async ({ input }) => {
-      return fetchSharedTopicById(input.id);
-    }),
-
-  // Publish a local topic to web-ade and stamp its server id onto sync
-  // metadata. Broadcast UPDATED so list/detail views reflect the now-shared
-  // state.
-  topic_publishTopic: t.procedure
-    .input<PublishTopicInput>()
-    .action(async ({ input }) => {
-      const result = await registryService.publishTopic(
-        input.id,
-        input.visibility,
-      );
-      broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, result.record.topic);
-      return result;
-    }),
-
-  topic_getRecord: t.procedure
-    .input<GetTopicInput>()
-    .action(async ({ input }) => {
-      return registryService.getRecord(input.id);
-    }),
-
   // Absolute on-disk path of the topic's JSON in the file-per-topic store.
   // Returns null for an unknown topic or while the legacy blob is still the
   // backend. Backs the topic header's "Copy path" action.
@@ -93,10 +61,6 @@ export const topicRouter = {
     .action(async ({ input }) => {
       return registryService.getTopicFilePath(input.id);
     }),
-
-  topic_getRecords: t.procedure.action(async () => {
-    return registryService.getRecords();
-  }),
 
   topic_getSessionLinks: t.procedure.action(async () => {
     return registryService.getSessionLinks();
@@ -150,10 +114,6 @@ export const topicRouter = {
   // the topic (deduped by content hash) and append the `asset://` reference the
   // themed-markdown resolver swaps for an <img> at render. Atomic read-modify-
   // write + broadcast, mirroring topic_appendDescription.
-  //
-  // Published topics are rejected for now: pushing assets to web-ade is Slice 2
-  // (see the feature doc), and the updateTopic write-through gate would send the
-  // `asset://` ref to the remote where it has no bytes to resolve.
   topic_attachImageAsset: t.procedure
     .input<AttachImageAssetInput>()
     .action(async ({ input }) => {
@@ -162,17 +122,11 @@ export const topicRouter = {
         throw new Error('asset (id, mime, data) is required');
       }
 
-      const record = await registryService.getRecord(topicId);
-      if (!record) {
+      const existing = await registryService.getTopic(topicId);
+      if (!existing) {
         throw new Error(`Unknown topic id: ${topicId}`);
       }
-      if (record.sync.remoteId) {
-        throw new Error(
-          'Attaching images to a published topic is not supported yet',
-        );
-      }
 
-      const existing = record.topic;
       // Content-hash dedup: the same screenshot dropped twice is stored once and
       // referenced N times from the description.
       const current = existing.assets ?? [];

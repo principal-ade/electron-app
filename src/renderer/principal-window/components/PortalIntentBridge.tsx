@@ -8,13 +8,12 @@
  * surface isn't the active view still lands — which a per-view framework
  * listener couldn't guarantee.
  *
- * Portal-unification Increment 3: Projects, Inbox and Topics share ONE bucket,
- * so this is the lone materializer for all three surfaces. Topic intents
- * still discriminate the surface-specific cases (web-ade `topic` vs local
- * `local-topic`); the Projects open intents (repo / owner / collection /
- * activity / live-activity) are surface-agnostic. The Projects panels emit those
- * on their local bus; `installProjectsOpenForwarder` (in the shell) lifts them
- * onto the portal bus where this bridge picks them up.
+ * Portal-unification Increment 3: Projects and Topics share ONE bucket, so
+ * this is the lone materializer for workspace open intents. The Projects open
+ * intents (repo / owner / collection / activity / live-activity) are
+ * surface-agnostic. The Projects panels emit those on their local bus;
+ * `installProjectsOpenForwarder` (in the shell) lifts them onto the portal bus
+ * where this bridge picks them up.
  *
  * This renders nothing.
  */
@@ -41,13 +40,7 @@ export const PortalIntentBridge: React.FC = () => {
   useEffect(() => {
     const handleTopicOpen = (event: { payload: TopicOpenPayload }) => {
       const p = event.payload;
-      // The one surface distinction that survives: Inbox opens published
-      // web-ade topics, Topics opens on-disk local topics.
-      if (p.surface === 'topics') {
-        ws.openLocalTopic(p.topicId, p.title);
-      } else if (p.surface === 'inbox') {
-        ws.openWebAdeTopic(p.topicId, p.title);
-      }
+      ws.openLocalTopic(p.topicId, p.title);
     };
 
     const handleRepositorySelected = (event: {

@@ -12,14 +12,9 @@ import type {
   AttachImageAssetInput,
   CreateTopicInput,
   DeleteTopicInput,
-  FetchSharedTopicInput,
-  FetchSharedTopicResult,
   GetTopicInput,
   LinkSessionInput,
   LinkSessionResult,
-  LocalTopicRecord,
-  PublishTopicInput,
-  PublishTopicResult,
   Topic,
   TopicRouterType,
   UpdateTopicInputArgs,
@@ -40,19 +35,11 @@ export interface TopicClient {
   /** Store a dropped image on the topic and append its `asset://` reference. */
   attachImageAsset: (input: AttachImageAssetInput) => Promise<Topic>;
   deleteTopic: (input: DeleteTopicInput) => Promise<boolean>;
-  getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
-  getRecords: () => Promise<LocalTopicRecord[]>;
   /**
    * Absolute on-disk path of a topic's JSON (`~/.principal/topics/<id>.json`).
    * `null` for an unknown topic.
    */
   getTopicFilePath: (input: GetTopicInput) => Promise<string | null>;
-  /** Hydrate a topic published to web-ade by id. Throws on 404 / no-access. */
-  fetchSharedById: (
-    input: FetchSharedTopicInput,
-  ) => Promise<FetchSharedTopicResult>;
-  /** Publish a local topic to web-ade. Throws on failure. */
-  publishTopic: (input: PublishTopicInput) => Promise<PublishTopicResult>;
   getSessionLinks: () => Promise<Record<string, string>>;
   /**
    * User-initiated session→topic link. Idempotent — returns
@@ -90,13 +77,7 @@ interface TipcTopicClient {
   topic_appendDescription: (input: AppendDescriptionInput) => Promise<Topic>;
   topic_attachImageAsset: (input: AttachImageAssetInput) => Promise<Topic>;
   topic_deleteTopic: (input: DeleteTopicInput) => Promise<boolean>;
-  topic_getRecord: (input: GetTopicInput) => Promise<LocalTopicRecord | null>;
-  topic_getRecords: () => Promise<LocalTopicRecord[]>;
   topic_getTopicFilePath: (input: GetTopicInput) => Promise<string | null>;
-  topic_fetchSharedById: (
-    input: FetchSharedTopicInput,
-  ) => Promise<FetchSharedTopicResult>;
-  topic_publishTopic: (input: PublishTopicInput) => Promise<PublishTopicResult>;
   topic_getSessionLinks: () => Promise<Record<string, string>>;
   topic_linkSession: (input: LinkSessionInput) => Promise<LinkSessionResult>;
 }
@@ -125,11 +106,7 @@ export const topicClient: TopicClient = {
   appendDescription: (input) => getTipcClient().topic_appendDescription(input),
   attachImageAsset: (input) => getTipcClient().topic_attachImageAsset(input),
   deleteTopic: (input) => getTipcClient().topic_deleteTopic(input),
-  getRecord: (input) => getTipcClient().topic_getRecord(input),
-  getRecords: () => getTipcClient().topic_getRecords(),
   getTopicFilePath: (input) => getTipcClient().topic_getTopicFilePath(input),
-  fetchSharedById: (input) => getTipcClient().topic_fetchSharedById(input),
-  publishTopic: (input) => getTipcClient().topic_publishTopic(input),
   getSessionLinks: () => getTipcClient().topic_getSessionLinks(),
   linkSession: (input) => getTipcClient().topic_linkSession(input),
   onSessionLinked: (callback) => {
@@ -154,4 +131,4 @@ export const topicClient: TopicClient = {
   },
 };
 
-export type { CreateTopicInput, UpdateTopicInputArgs, LocalTopicRecord, Topic };
+export type { CreateTopicInput, UpdateTopicInputArgs, Topic };

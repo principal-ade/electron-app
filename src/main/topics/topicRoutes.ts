@@ -44,9 +44,8 @@ export function registerTopicRoutes(
   // affordance (TIPC topic_createTopic): a briefed terminal can mint a topic
   // to collect related findings. May also be scoped to explicit
   // `repos` (PURL strings) so a caller can mint a topic *about a resolved repo*
-  // rather than submitting a cross-repo task. The topic is local-only until
-  // published from the app UI — `id`, timestamps, and `createdBy` are filled
-  // in by the registry when omitted.
+  // rather than submitting a cross-repo task. `id`, timestamps, and `createdBy`
+  // are filled in by the registry when omitted.
   app.post('/api/topics', async (req: Request, res: Response) => {
     const body =
       req.body && typeof req.body === 'object'
@@ -82,16 +81,11 @@ export function registerTopicRoutes(
       }
       repos = body.repos as string[];
     }
-    const visibility =
-      body && (body.visibility === 'private' || body.visibility === 'sharable')
-        ? body.visibility
-        : undefined;
     try {
       const topic = await registry.createTopic({
         title,
         ...(description !== undefined ? { description } : {}),
         ...(repos !== undefined ? { repos } : {}),
-        ...(visibility !== undefined ? { visibility } : {}),
       });
       broadcastTopicEvent(TopicAPIEvent.TOPIC_ADDED, topic);
       res.status(201).json({ success: true, topic });

@@ -7,8 +7,8 @@
  * always-mounted PortalIntentBridge opens it as a tab (hosted by the persistent
  * WorkspaceShell) that renders the markdown description on the right.
  *
- * Unlike the inbox lists, this is not auth-gated — topics are read from the
- * local store, so there's no sign-in state. The list live-refreshes on any
+ * Topics are read from the local store, so there's no sign-in state. The list
+ * live-refreshes on any
  * `TopicService.onTopicChange` event.
  */
 
@@ -213,7 +213,6 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
           onClick={() =>
             emitTopicOpen(events, 'topics-left-panel', {
               topicId: topic.id,
-              surface: 'topics',
               title: topic.title,
             })
           }

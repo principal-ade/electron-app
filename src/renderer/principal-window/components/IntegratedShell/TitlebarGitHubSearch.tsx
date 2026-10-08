@@ -17,7 +17,6 @@ import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { usePortalEvents } from '../../PortalEventContext';
 import { useProjectsTabs } from '../../contexts/ProjectsTabsContext';
 import {
-  emitTopicOpen,
   emitTerminalOpen,
 } from '../../../events/portalIntents';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
@@ -30,40 +29,14 @@ import {
 
 type ParsedTitlebarUrl =
   | { type: 'user'; username: string }
-  | { type: 'repo'; owner: string; name: string }
-  | { type: 'topic'; id: string };
-
-// web-ade shares topics as `…/topic/{id}`. Match the production host plus any
-// `*.principal-ade.com`
-// (covers preview/dev origins) and localhost for local web-ade.
-const isWebAdeHost = (hostname: string): boolean =>
-  hostname === 'app.principal-ade.com' ||
-  hostname.endsWith('.principal-ade.com') ||
-  hostname === 'localhost' ||
-  hostname === '127.0.0.1';
-
-// Topic ids aren't UUIDs (e.g. `topic-1780187765886-n2uii5c5i`); accept the
-// url-safe id charset web-ade uses.
-const TOPIC_ID_RE = /^[A-Za-z0-9._-]+$/;
+  | { type: 'repo'; owner: string; name: string };
 
 const parseTitlebarUrl = (input: string): ParsedTitlebarUrl | null => {
   const trimmed = input.trim();
-  // Bare topic ids are prefixed (`topic-…`), so they're unambiguous as well.
-  if (trimmed.startsWith('topic-') && TOPIC_ID_RE.test(trimmed))
-    return { type: 'topic', id: trimmed };
   try {
     const urlStr = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
     const url = new URL(urlStr);
-    if (isWebAdeHost(url.hostname)) {
-      const topicMatch = url.pathname.match(/\/topic\/([A-Za-z0-9._-]+)/i);
-      if (topicMatch) return { type: 'topic', id: topicMatch[1] };
-      // web-ade mirrors GitHub's `…/{owner}/{repo}` (and `…/{user}`) paths, so
-      // a non-topic link like `app.principal-ade.com/owner/repo` resolves
-      // to the same repo/user as the equivalent github.com link.
-      // (falls through to the shared owner/repo parsing below)
-    } else if (url.hostname !== 'github.com') {
-      return null;
-    }
+    if (url.hostname !== 'github.com') return null;
     const parts = url.pathname.split('/').filter(Boolean);
     if (parts.length === 1) return { type: 'user', username: parts[0] };
     if (parts.length >= 2)
@@ -316,29 +289,6 @@ export const TitlebarGitHubSearch: React.FC = () => {
     [events, openProjectInfo, clearSearch],
   );
 
-  const openTopicById = useCallback(
-    (id: string) => {
-      // A pasted topic link is a published web-ade topic. Topic tabs render in
-      // the Inbox view (the shared-content surface), so switch there and emit
-      // `topic:open` on the portal bus — its always-mounted listener opens the
-      // tab in InboxTabsContext (whose state lives above the conditional
-      // InboxView mount), so the tab survives the view switch. The panel
-      // self-fetches the topic brief from the bare id.
-      events.emit({
-        type: 'panel:switch',
-        source: 'titlebar-search',
-        timestamp: Date.now(),
-        payload: { view: 'inbox' },
-      });
-      emitTopicOpen(portalEvents, 'titlebar-search', {
-        topicId: id,
-        surface: 'inbox',
-      });
-      clearSearch();
-    },
-    [events, portalEvents, clearSearch],
-  );
-
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLInputElement>) => {
       const pasted = e.clipboardData.getData('text');
@@ -348,9 +298,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
       const entity =
         parsed.type === 'user'
           ? `@${parsed.username}`
-          : parsed.type === 'repo'
-            ? `${parsed.owner}/${parsed.name}`
-            : 'topic';
+          : `${parsed.owner}/${parsed.name}`;
       const message = `Opening ${entity}`;
       const duration = message.length * 30 + 250;
       setFlashLabel(message);
@@ -358,14 +306,12 @@ export const TitlebarGitHubSearch: React.FC = () => {
         setFlashLabel(null);
         if (parsed.type === 'user') {
           openUserByUsername(parsed.username);
-        } else if (parsed.type === 'repo') {
+        } else {
           openRepoByOwnerName(parsed.owner, parsed.name);
-        } else if (parsed.type === 'topic') {
-          openTopicById(parsed.id);
         }
       }, duration);
     },
-    [openUserByUsername, openRepoByOwnerName, openTopicById],
+    [openUserByUsername, openRepoByOwnerName],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

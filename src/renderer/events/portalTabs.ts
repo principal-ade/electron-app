@@ -1,5 +1,5 @@
 /**
- * Portal tab contract — the tab interfaces shared across the Projects / Inbox /
+ * Portal tab contract — the tab interfaces shared across the Projects and
  * Topics workspace surfaces.
  *
  * `MarkdownDocTab` was historically declared 2–3× (once per framework) with
@@ -7,8 +7,8 @@
  * `WorkspaceTab` union (see
  * docs/portal-unification.md, Increment 3) — share a single definition.
  *
- * The Inbox/Topics landing + topic tab types (`InboxHomeTab`, `TopicTab`,
- * `TopicsHomeTab`, `LocalTopicTab`) live here too now that the persistent
+ * The Topics landing + topic tab types (`TopicsHomeTab`, `LocalTopicTab`) live
+ * here too now that the persistent
  * `WorkspaceShell` (not the retired per-view frameworks) renders them.
  */
 import type {
@@ -52,20 +52,6 @@ export interface SourceFileTab extends BaseTab {
 export interface MediaTab extends BaseTab {
   contentType: 'media';
   filePath: string;
-}
-
-/** Landing tab for the Inbox surface — a hint to pick a topic from the left. */
-export interface InboxHomeTab extends BaseTab {
-  contentType: 'inbox-home';
-}
-
-/**
- * Topic tab — a topic published to web-ade, opened from an inbox row. Carries
- * only the id; `TopicTabContent` self-fetches the topic brief.
- */
-export interface TopicTab extends BaseTab {
-  contentType: 'topic';
-  topicId: string;
 }
 
 /** Landing tab for the Topics surface — a hint to pick a topic from the left. */

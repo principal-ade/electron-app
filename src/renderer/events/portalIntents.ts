@@ -48,17 +48,9 @@ export const PORTAL_INTENTS = {
 export type PortalIntentName =
   (typeof PORTAL_INTENTS)[keyof typeof PORTAL_INTENTS];
 
-/**
- * Which workspace surface a content-open intent targets. The single tab-host
- * listener routes the intent to that surface's bucket. Transitional: the three
- * surfaces collapse into one tab list in Increment 3, after which routing by
- * surface goes away.
- */
 /** Payload for {@link PORTAL_INTENTS.topicOpen}. */
 export interface TopicOpenPayload {
   topicId: string;
-  /** Destination surface (which bucket opens the tab). */
-  surface: 'projects' | 'inbox' | 'topics';
   title?: string;
 }
 
@@ -100,7 +92,7 @@ export function emitDocOpen(
 // Projects-surface open intents
 //
 // The Projects surface opens a richer set of tabs (repo / owner / collection
-// profiles, activity tabs). Unlike Inbox/Topics — whose left panels emit topic
+// profiles, activity tabs). Unlike Topics — whose left panel emits topic
 // intents straight onto the portal bus — the Projects panels (left panel
 // AND persistent tab content) emit these on their single local `events` prop,
 // mixed with genuine intra-surface chatter (refresh, profile-link, commit-review

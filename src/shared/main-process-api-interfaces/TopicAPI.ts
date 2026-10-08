@@ -1,11 +1,8 @@
 /**
  * IPC API interface for Topic management.
  *
- * Topics are local subject briefs that can be published. The canonical
- * Topic shape lives in @principal-ai/subsystems-core (DraftTopic); on the
- * desktop we wrap it in a LocalTopicRecord that carries sync metadata
- * (origin, remoteId, visibility, timestamps). Most consumers only need
- * the Topic; sync UIs ask for the full LocalTopicRecord.
+ * Topics are local subject briefs. The canonical Topic shape lives in
+ * @principal-ai/subsystems-core (DraftTopic).
  */
 
 import type {
@@ -13,64 +10,6 @@ import type {
   TopicAsset,
   TopicStatus,
 } from '@principal-ai/subsystems-core/node';
-
-/**
- * Sync metadata layered on top of the canonical Topic. Local-only — never
- * crosses to the server. The web-ade Topic shape stays clean by living
- * inside `topic`; this wrapper carries everything sync-related around it.
- */
-export interface LocalTopicSync {
-  /** Where this record came from. `'local'` until we pull from remote. */
-  origin: 'local' | 'remote';
-  /** Server-assigned id, once published. Absent on local-only topics. */
-  remoteId?: string;
-  /**
-   * User intent for sharing. `'private'` = never auto-suggest publish;
-   * `'sharable'` = ok to push. Defaults to `'sharable'` for v1.
-   */
-  visibility: 'private' | 'sharable';
-  /** ISO 8601. Last successful push or pull. */
-  lastSyncedAt?: string;
-  /** ISO 8601. Local mtime for dirty detection vs lastSyncedAt. */
-  locallyModifiedAt: string;
-}
-
-export interface LocalTopicRecord {
-  topic: Topic;
-  sync: LocalTopicSync;
-}
-
-/**
- * Result of hydrating a published topic from web-ade by id. Mirrors the
- * `{ topic, bookmarked }` shape the `/api/topics/by-id/{id}` GET route returns.
- * Read access is public-by-link, so `bookmarked` is always `false` for
- * anonymous (signed-out) callers.
- */
-export interface FetchSharedTopicResult {
-  topic: Topic;
-  bookmarked: boolean;
-}
-
-/**
- * Audience a topic is published with on web-ade. Deliberately distinct from
- * {@link LocalTopicSync.visibility} (a local publish-*intent* flag): this is the
- * server-side access control — `'public'` = anyone with the link + shows in the
- * discovery feed; `'private'` = only the creator and explicit recipients, and
- * the link 404s for everyone else.
- */
-export type PublishedTopicVisibility = 'private' | 'public';
-
-/**
- * Result of publishing a local topic to web-ade. `url` is the public topic
- * link (for copy-to-clipboard); `record` is the local record after its
- * `sync.remoteId` was stamped, so the renderer reflects the now-shared state
- * without a refetch. `visibility` echoes the audience it was published with.
- */
-export interface PublishTopicResult {
-  url: string;
-  record: LocalTopicRecord;
-  visibility: PublishedTopicVisibility;
-}
 
 export enum TopicEventType {
   ADDED = 'added',
@@ -122,8 +61,6 @@ export interface CreateTopicInput {
   createdBy?: { githubId: number; githubLogin: string };
   /** Optional explicit id; defaults to a locally generated one. */
   id?: string;
-  /** Optional visibility intent; defaults to `'sharable'`. */
-  visibility?: 'private' | 'sharable';
   /** Optional initial workflow status; defaults to absent (treated as `active`). */
   status?: TopicStatus;
   /**
@@ -138,10 +75,8 @@ export interface UpdateTopicInput {
   title?: string;
   description?: string;
   createdBy?: { githubId: number; githubLogin: string };
-  visibility?: 'private' | 'sharable';
   /**
-   * New workflow status. Like title/description, this is canonical content
-   * that writes through to web-ade for published topics. See {@link TopicStatus}.
+   * New workflow status, persisted as part of the local topic.
    */
   status?: TopicStatus;
   /** Images attached to the topic (see {@link TopicAsset}). */
@@ -170,7 +105,7 @@ export interface TopicAPI {
   /** Create a topic. Server-assigned ids round-trip via the optional `id`. */
   createTopic(input: CreateTopicInput): Promise<Topic>;
 
-  /** Patch title/description/visibility/createdBy. */
+  /** Patch title/description/createdBy. */
   updateTopic(id: string, updates: UpdateTopicInput): Promise<Topic>;
 
   /** Permanently delete a topic. */

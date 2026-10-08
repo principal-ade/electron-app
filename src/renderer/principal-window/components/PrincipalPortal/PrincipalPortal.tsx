@@ -2,7 +2,7 @@
  * PrincipalPortal
  *
  * The persistent base layer of the principal window: the swappable
- * left-panel + tabbed-terminal workspace surfaces (Projects / Inbox / Topics).
+ * left-panel + tabbed-terminal workspace surfaces (Projects / Topics).
  * It is mounted *underneath* the standalone views (Home, Settings,
  * Monitor, …), which `IntegratedShell` renders as overlays on top of it.
  *
@@ -10,7 +10,7 @@
  * and back is a pure visibility flip — open tabs, terminals, and scroll state
  * survive with no hoisting required.
  *
- * Every workspace surface — Projects, Inbox, Topics, Drawings, and Skills — is
+ * Every workspace surface — Projects, Topics, Drawings, and Skills — is
  * now one persistent `WorkspaceShell`: a single tabbed-terminal host (one
  * `terminal:workspace` scope, one `useWorkspaceTabs()` bucket) whose left panel
  * swaps by `activeView`. Switching between them keeps the shell — and its open
@@ -25,7 +25,6 @@ import { WorkspaceShell } from '../../../workspace-shell/WorkspaceShell';
 export type WorkspaceView =
   | 'home-panel'
   | 'projects'
-  | 'inbox'
   | 'topics'
   | 'drawings'
   | 'skills';
@@ -33,7 +32,6 @@ export type WorkspaceView =
 export const WORKSPACE_VIEWS: WorkspaceView[] = [
   'home-panel',
   'projects',
-  'inbox',
   'topics',
   'drawings',
   'skills',
@@ -58,7 +56,6 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
     <div style={{ height: '100%', width: '100%', isolation: 'isolate' }}>
       {(workspaceView === 'home-panel' ||
         workspaceView === 'projects' ||
-        workspaceView === 'inbox' ||
         workspaceView === 'topics' ||
         workspaceView === 'drawings' ||
         workspaceView === 'skills') && (

@@ -1,6 +1,6 @@
 /**
  * Tab content for a markdown document opened into a tabbed-terminal framework
- * (Inbox / Projects feed) from the Principal MCP Bridge.
+ * (Projects / Topics) from the Principal MCP Bridge.
  *
  * The principal-window frameworks don't carry a panel `context`/`actions` the
  * way the dev-workspace layout does, so this wrapper

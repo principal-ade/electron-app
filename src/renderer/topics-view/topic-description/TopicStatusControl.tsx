@@ -6,8 +6,8 @@
  * is parked on (note / until / ref) so automations can later resolve it.
  *
  * Picking a node saves immediately; text fields save on blur. Persistence goes
- * through `TopicService.updateTopic`, which writes through to web-ade for
- * published topics — so `until` is entered as a date to stay ISO 8601.
+ * through `TopicService.updateTopic`, so `until` is entered as a date to stay
+ * ISO 8601.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';

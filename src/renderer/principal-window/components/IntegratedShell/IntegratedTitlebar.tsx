@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ThemeSelector } from './ThemeSelector';
-import { TitlebarUpdateInlineButton } from '../../../components/Titlebar/TitlebarUpdateInlineButton';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
 import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -36,7 +35,6 @@ interface IntegratedTitlebarProps {
   rightSidebarCollapsed?: boolean;
   onToggleRightSidebar?: () => void;
   showRightSidebarControl?: boolean;
-  onShowOnboardingWizard?: () => void;
   hideSearch?: boolean;
   /** Toggle the Dashboard overlay (`home` view) on/off. */
   onToggleHome?: () => void;
@@ -51,7 +49,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   rightSidebarCollapsed = false,
   onToggleRightSidebar,
   showRightSidebarControl = false,
-  onShowOnboardingWizard,
   hideSearch = false,
   onToggleHome,
   isHomeActive = false,
@@ -252,39 +249,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           gap: '8px',
         }}
       >
-        {/* Onboarding Wizard Button */}
-        {onShowOnboardingWizard && (
-          <button
-            onClick={onShowOnboardingWizard}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              backgroundColor: theme.colors.primary,
-              color: '#ffffff',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: theme.fontSizes[1],
-              fontWeight: 500,
-              fontFamily: theme.fonts.body,
-              transition: 'all 0.2s',
-              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.9';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1';
-            }}
-            title="Test Onboarding Wizard"
-          >
-            Onboarding Wizard
-          </button>
-        )}
-        {/* Update — visible only when an update is pending; downloads in place. */}
-        <TitlebarUpdateInlineButton />
         {/* Localhost processes — visible only when dev servers are detected.
             Opens the LocalhostProcessesView in a modal. */}
         {localhostServerCount > 0 && (

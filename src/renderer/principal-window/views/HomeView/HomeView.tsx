@@ -34,7 +34,10 @@ import {
 } from './TopicsDashboard';
 import { OpenProjectCard, type OpenProjectEntry } from './OpenProjectCard';
 import { getPrincipalBridgeUrl } from '../../../../shared/config/appBranding';
-import { useTopicsTabs } from '../../contexts/TopicsTabsContext';
+
+interface HomeViewProps {
+  onOpenTopic: (topicId: string, title: string) => void;
+}
 
 const repoPathLabel = (repositoryPath: string | undefined): string => {
   if (!repositoryPath) return 'No repo';
@@ -47,6 +50,7 @@ const SKILL_REPO_OWNER = 'principal-ai';
 const SKILL_REPO_NAME = 'skills';
 const SKILL_BRANCH = 'main';
 const SKILL_GITHUB_URL = `https://github.com/${SKILL_REPO_OWNER}/${SKILL_REPO_NAME}`;
+const TOPIC_SKILL_SETUP_SKIPPED_KEY = 'principal.topic-skill-setup-skipped';
 // Normalized "owner/repo" source recorded in the skill lock file for skills that
 // ship from the shared principal-ai/skills repo. Used to confirm an installed
 // skill came from the expected repo, not just that *some* skill of the same name
@@ -174,7 +178,7 @@ function matchInstalledFromLock(lockFile: SkillLockFile | null): Set<string> {
   );
 }
 
-export function HomeView() {
+export function HomeView({ onOpenTopic }: HomeViewProps) {
   const { theme } = useTheme();
 
   const [gitUserName, setGitUserName] = useState<string | null>(null);
@@ -198,6 +202,15 @@ export function HomeView() {
   }, [loadGitUserName]);
 
   const [topicSkillsInstalled, setTopicSkillsInstalled] = useState<boolean | null>(null);
+  const [topicSkillSetupSkipped, setTopicSkillSetupSkipped] = useState(() => {
+    try {
+      return (
+        window.localStorage.getItem(TOPIC_SKILL_SETUP_SKIPPED_KEY) === 'true'
+      );
+    } catch {
+      return false;
+    }
+  });
   const [installedSkillNames, setInstalledSkillNames] = useState<Set<string>>(
     new Set(),
   );
@@ -217,13 +230,6 @@ export function HomeView() {
   // Dashboard data sources.
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
-  // Ids of topics published to web-ade (sync.remoteId present), from the
-  // sync-aware records endpoint. Drives the "Shared" badge on topic cards.
-  const [publishedTopicIds, setPublishedTopicIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const { openTopic: openTopicInTopicsView } = useTopicsTabs();
-
   // Topic modal state.
   const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
 
@@ -306,27 +312,7 @@ export function HomeView() {
         console.error('[HomeView] Failed to load topics:', err);
       });
 
-    // Sync metadata isn't on the plain Topic, so the published set comes from
-    // the records endpoint. Refetched on every topic change — publishing
-    // fires TOPIC_UPDATED, and remoteId only appears on a reread.
-    const refreshPublishedIds = () => {
-      TopicService.getRecords()
-        .then((records) => {
-          if (cancelled) return;
-          setPublishedTopicIds(
-            new Set(
-              records.filter((r) => r.sync.remoteId).map((r) => r.topic.id),
-            ),
-          );
-        })
-        .catch((err) => {
-          console.error('[HomeView] Failed to load topic records:', err);
-        });
-    };
-    refreshPublishedIds();
-
     const unsubscribe = TopicService.onTopicChange((event) => {
-      refreshPublishedIds();
       if (event.type === 'added' && event.topic) {
         const topic = event.topic;
         setTopics((prev) =>
@@ -356,14 +342,10 @@ export function HomeView() {
         key: t.id,
         title: t.title,
         updatedAt: t.updatedAt,
-        published: publishedTopicIds.has(t.id),
         status: t.status,
       };
     });
-  }, [
-    topics,
-    publishedTopicIds,
-  ]);
+  }, [topics]);
 
   const installedSkillDetails = useMemo(
     () => ALL_SKILL_DETAILS.filter((s) => installedSkillNames.has(s.name)),
@@ -376,6 +358,9 @@ export function HomeView() {
       OPTIONAL_SKILL_DETAILS.filter((s) => !installedSkillNames.has(s.name)),
     [installedSkillNames],
   );
+  const showTopicSkillSetup =
+    topicSkillsInstalled === false && !topicSkillSetupSkipped;
+  const showDashboard = topicSkillsInstalled === true || topicSkillSetupSkipped;
 
   useEffect(() => {
     let cancelled = false;
@@ -902,13 +887,13 @@ export function HomeView() {
           overflowY: 'auto',
         }}
       >
-        {topicSkillsInstalled === false && (
+        {showTopicSkillSetup && (
           <div style={{ flex: '0 0 auto', marginTop: '9vh' }}>
             {welcomeHeader}
           </div>
         )}
 
-        {topicSkillsInstalled === false && (
+        {showTopicSkillSetup && (
           <div
             style={{
               flex: '0 0 auto',
@@ -970,6 +955,33 @@ export function HomeView() {
                 </div>
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  window.localStorage.setItem(
+                    TOPIC_SKILL_SETUP_SKIPPED_KEY,
+                    'true',
+                  );
+                } catch {
+                  // Keep the current-session choice even if storage is unavailable.
+                }
+                setTopicSkillSetupSkipped(true);
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: '6px 12px',
+                color: theme.colors.textSecondary,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Continue without installing
+            </button>
 
             <button
               type="button"
@@ -1090,7 +1102,7 @@ export function HomeView() {
           </div>
         )}
 
-        {topicSkillsInstalled === true && (
+        {showDashboard && (
           <div
             style={{
               display: 'grid',
@@ -1142,9 +1154,7 @@ export function HomeView() {
             >
               <TopicsDashboard
                 topicEntries={dashboardTopicEntries}
-                onSelectTopic={(entry) =>
-                  openTopicInTopicsView(entry.key, entry.title)
-                }
+                onSelectTopic={(entry) => onOpenTopic(entry.key, entry.title)}
                 onCreateTopic={() => setIsNewTopicOpen(true)}
                 onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
               />
@@ -1199,7 +1209,7 @@ export function HomeView() {
 
         {/* Pre-install welcome state keeps the skills as a centered bottom
             footer; once installed they move into the right rail above. */}
-        {topicSkillsInstalled === false && installedSkillsBlock(false)}
+        {showTopicSkillSetup && installedSkillsBlock(false)}
       </div>
 
       <GitGlobalConfigModal

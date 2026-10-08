@@ -7,7 +7,6 @@ import type { PanelLayout } from '@principal-ade/panels';
 export type InteractiveShellNavigationView =
   | 'home'
   | 'home-panel'
-  | 'inbox'
   | 'topics'
   | 'projects'
   | 'onboarding'
@@ -72,7 +71,6 @@ export interface UserPreferences {
    */
   featureAvailability?: {
     repositoryInsightsAndCollections?: boolean;
-    topicSharing?: boolean;
     presenceAndCollaboration?: boolean;
     signIn?: boolean;
   };
@@ -255,15 +253,6 @@ export interface UserPreferences {
     activeNavigationView?: InteractiveShellNavigationView;
   };
 
-  // Topic sharing preferences
-  topicSharing?: {
-    // Skip the publish-confirmation modal shown before a topic is shared to
-    // web-ade. Set when the user checks "Don't show this again" in
-    // ShareTopicModal. Default false — the educational modal shows every
-    // time until the user opts out.
-    skipPublishConfirm?: boolean;
-  };
-
   // Onboarding state and completion tracking
   onboarding?: OnboardingState;
 
@@ -335,7 +324,6 @@ export const USER_PREFERENCE_DEFAULTS: {
   presenceAutoConnect: false,
   featureAvailability: {
     repositoryInsightsAndCollections: false,
-    topicSharing: false,
     presenceAndCollaboration: false,
     signIn: false,
   },

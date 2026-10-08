@@ -4,8 +4,8 @@
  * The Projects surface's host-level concerns, hoisted out of the retired
  * `ProjectsPanelFramework` so the persistent `WorkspaceShell` can own them
  * (portal-unification Increment 3b). One instance runs for the lifetime of the
- * shell (across all three surfaces), so the Projects activity feed, git-status
- * refresh and delete modal stay live even while Inbox/Topics is the active view.
+ * shell across workspace surfaces, so the Projects activity feed, git-status
+ * refresh and delete modal stay live even while Topics is the active view.
  *
  * Responsibilities:
  * - the activity-feed data + a debounced refresh driven by git-status changes

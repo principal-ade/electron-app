@@ -15,9 +15,6 @@ import type {
   ExplainCommitsResponse,
   ExplainWorkingChangesInput,
   ExplainWorkingChangesResponse,
-  GetTopicInboxInput,
-  ListTopicInboxResponse,
-  TopicInboxUnreadCountResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -112,19 +109,4 @@ export class WebAdeService {
     return webAdeClient.explainWorkingChanges(input);
   }
 
-  /**
-   * Get the signed-in user's topic inbox (topics sent to them).
-   */
-  static async getTopicInbox(
-    input: GetTopicInboxInput = {},
-  ): Promise<ListTopicInboxResponse> {
-    return webAdeClient.getTopicInbox(input);
-  }
-
-  /**
-   * Get just the unread topic-inbox count.
-   */
-  static async getTopicInboxUnreadCount(): Promise<TopicInboxUnreadCountResponse> {
-    return webAdeClient.getTopicInboxUnreadCount();
-  }
 }

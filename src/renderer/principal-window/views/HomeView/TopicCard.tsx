@@ -8,7 +8,6 @@ type TopicStatusState = TopicStatus['state'];
 import {
   Clock,
   Link2,
-  Share2,
   Trash2,
 } from 'lucide-react';
 import type { TopicsDashboardTopicEntry } from './TopicsDashboard';
@@ -100,7 +99,7 @@ export interface TopicCardProps {
 
 /**
  * A single topic card for the dashboard's Topics grid: title, an optional
- * "Shared" badge, and either a repo-chip row (owner avatars + names) or a
+ * status badge, and either a repo-chip row (owner avatars + names) or a
  * tildified folder path. The trash icon fades in on hover when `onDelete`
  * is supplied.
  */
@@ -119,10 +118,10 @@ export function TopicCard({
   const [dragging, setDragging] = React.useState(false);
   // The trash button shares the card's top-right corner with the status
   // indicators, so fade the indicators out while it's revealed to avoid an
-  // overlap (deletion is hidden for shared topics, matching the trash guard).
+  // overlap.
   // Delete is a board-view affordance only — the flat list stays read-only on
   // hover so cards don't flash a trash button during a casual scan.
-  const trashVisible = boardMode && hovered && !!onDelete && !topic.published;
+  const trashVisible = boardMode && hovered && !!onDelete;
 
   // Status pill: color keys off the structured state, text off the custom
   // label (or a per-state default). An `active` topic with no label yields no
@@ -139,12 +138,10 @@ export function TopicCard({
 
   // The "Open" badge and the transient "Opening…" badge are mutually exclusive:
   // `isOpen` (window created) flips true a beat before `isOpening` (window
-  // first paint) clears, so without this they'd briefly show together. Opening
-  // takes precedence. The "Shared" badge collapses to its icon whenever either
-  // indicator already occupies the row.
+  // first paint) clears, so without this they'd briefly show together.
   // Badges sit in the top-right corner of the card, on the title row. A long
   // topic name truncates with an ellipsis to make room for them.
-  const hasBadges = showStatusPill || topic.published;
+  const hasBadges = showStatusPill;
   const badges = hasBadges ? (
     <span
       style={{
@@ -184,33 +181,6 @@ export function TopicCard({
             }}
           >
             {statusInfo.text}
-          </span>
-        </span>
-      )}
-      {topic.published && (
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            color: theme.colors.primary,
-          }}
-        >
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 3,
-              padding: '1px 6px',
-              fontSize: theme.fontSizes[0],
-              fontFamily: theme.fonts.body,
-              border: `1px solid ${theme.colors.primary}`,
-              borderRadius: 5,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <Share2 size={10} />
-            Shared
           </span>
         </span>
       )}
@@ -311,7 +281,7 @@ export function TopicCard({
           )}
         </div>
       </button>
-      {boardMode && onDelete && !topic.published && (
+      {boardMode && onDelete && (
         <button
           type="button"
           aria-label={`Delete topic ${topic.title}`}

@@ -1,15 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React from 'react';
 import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
-import type { TopicStatus } from '@principal-ai/subsystems-core/node';
+import type {
+  DraftTopic as Topic,
+  TopicStatus,
+} from '@principal-ai/subsystems-core/node';
 import { TopicsPanel } from './TopicsPanel';
 import { TopicService } from '../../main-process-api/TopicService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
-import type { LocalTopicRecord } from '../../../shared/main-process-api-interfaces/TopicAPI';
 
 /**
- * `TopicsPanel` reads topic records through `TopicService.getRecords` and the
- * current repo through `AlexandriaService`. Each story installs an in-memory
+ * `TopicsPanel` reads topics through `TopicService.getTopics` and the current
+ * repo through `AlexandriaService`. Each story installs an in-memory
  * dataset on those statics before render so the panel
  * exercises the This repo / All toggle, search, status filter, and badges
  * without a running main process.
@@ -24,40 +26,26 @@ const DAY = 24 * HOUR;
 
 const status = (state: TopicStatus['state']): TopicStatus => ({ state });
 
-const record = (
-  partial: Partial<LocalTopicRecord['topic']> & { id: string; title: string },
-  sync: Partial<LocalTopicRecord['sync']> = {},
-): LocalTopicRecord => ({
-  topic: {
-    description: '',
-    createdAt: ago(7 * DAY),
-    updatedAt: ago(2 * HOUR),
-    ...partial,
-  },
-  sync: {
-    origin: 'local',
-    visibility: 'sharable',
-    locallyModifiedAt: ago(2 * HOUR),
-    ...sync,
-  },
+const topic = (partial: Partial<Topic> & { id: string; title: string }): Topic => ({
+  description: '',
+  createdAt: ago(7 * DAY),
+  updatedAt: ago(2 * HOUR),
+  ...partial,
 });
 
 const REPO_PURL = 'pkg:github/me/electron-app';
 
-const RECORDS: LocalTopicRecord[] = [
+const TOPICS: Topic[] = [
   // Entirely within this repo.
-  record(
-    {
-      id: 'topic-auth',
-      title: 'Auth flow end-to-end',
-      repos: [REPO_PURL],
-      status: status('working'),
-      updatedAt: ago(20 * MIN),
-    },
-    { remoteId: 'remote-auth' }, // published → Shared badge
-  ),
-  // Spans this repo + another → Multi-repo badge, no remoteId.
-  record({
+  topic({
+    id: 'topic-auth',
+    title: 'Auth flow end-to-end',
+    repos: [REPO_PURL],
+    status: status('working'),
+    updatedAt: ago(20 * MIN),
+  }),
+  // Spans this repo + another → Multi-repo badge.
+  topic({
     id: 'topic-city',
     title: 'File City rendering pipeline',
     repos: [REPO_PURL, 'pkg:github/me/web-ade'],
@@ -65,14 +53,14 @@ const RECORDS: LocalTopicRecord[] = [
     updatedAt: ago(3 * HOUR),
   }),
   // No overlap with this repo → only under "All".
-  record({
+  topic({
     id: 'topic-web',
-    title: 'Web-ADE publish path',
+    title: 'Workspace integration work',
     repos: ['pkg:github/me/web-ade'],
     status: status('done-for-now'),
     updatedAt: ago(2 * DAY),
   }),
-  record({
+  topic({
     id: 'topic-idea',
     title: 'Idea: cross-repo topic search',
     repos: ['pkg:github/me/other'],
@@ -82,12 +70,12 @@ const RECORDS: LocalTopicRecord[] = [
 ];
 
 function install(
-  records: LocalTopicRecord[],
+  topics: Topic[],
   repoPurl: string | null = REPO_PURL,
 ) {
   (
-    TopicService as unknown as { getRecords: () => Promise<LocalTopicRecord[]> }
-  ).getRecords = async () => records;
+    TopicService as unknown as { getTopics: () => Promise<Topic[]> }
+  ).getTopics = async () => topics;
   (
     TopicService as unknown as { onTopicChange: () => () => void }
   ).onTopicChange = () => () => {};
@@ -131,7 +119,7 @@ type Story = StoryObj<typeof TopicsPanel>;
 
 export const Populated: Story = {
   render: () => {
-    install(RECORDS);
+    install(TOPICS);
     return (
       <Frame>
         <TopicsPanel repositoryPath={REPO} />
@@ -142,7 +130,7 @@ export const Populated: Story = {
 
 export const NoRepoOpen: Story = {
   render: () => {
-    install(RECORDS, null);
+    install(TOPICS, null);
     return (
       <Frame>
         <TopicsPanel />
@@ -154,7 +142,7 @@ export const NoRepoOpen: Story = {
 export const NoTopicsForRepo: Story = {
   render: () => {
     // No topic declares this repository.
-    install(RECORDS, 'pkg:github/me/unrelated');
+    install(TOPICS, 'pkg:github/me/unrelated');
     return (
       <Frame>
         <TopicsPanel repositoryPath={REPO} />

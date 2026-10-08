@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Share2, GitFork } from 'lucide-react';
-import type { LocalTopicRecord } from '../../../shared/main-process-api-interfaces/TopicAPI';
+import { GitFork } from 'lucide-react';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 import {
   STATES,
@@ -30,7 +30,7 @@ const stateLabel = (state: string): string =>
   STATES.find((s) => s.value === state)?.label ?? 'New Thought';
 
 export interface TopicRowProps {
-  record: LocalTopicRecord;
+  topic: Topic;
   /** Topic includes repos beyond the current repository. */
   multiRepo?: boolean;
   onOpen: (topicId: string, title?: string) => void;
@@ -63,17 +63,15 @@ const Badge: React.FC<{
 );
 
 export const TopicRow: React.FC<TopicRowProps> = ({
-  record,
+  topic,
   multiRepo,
   onOpen,
 }) => {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
-  const topic = record.topic;
   const state = normalizeState(topic.status?.state);
   const color = stateColor(state, theme);
   const repoCount = topic.repos?.length ?? 0;
-  const shared = Boolean(record.sync.remoteId);
   const statusName = topic.status?.label || stateLabel(state);
 
   // Drag the topic into a terminal as an agent prompt that hydrates it from the
@@ -163,14 +161,6 @@ export const TopicRow: React.FC<TopicRowProps> = ({
               icon={<GitFork size={11} />}
               label="Multi-repo"
               title="This topic includes multiple projects"
-            />
-          )}
-          {shared && (
-            <Badge
-              theme={theme}
-              icon={<Share2 size={11} />}
-              label="Shared"
-              title="Published to web-ade"
             />
           )}
         </div>

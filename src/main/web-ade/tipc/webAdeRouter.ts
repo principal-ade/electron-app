@@ -18,7 +18,6 @@ import type {
   GetPinnedRepositoriesInput,
   ExplainCommitsInput,
   ExplainWorkingChangesInput,
-  GetTopicInboxInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 import { requireHostedFeature } from '../../services/FeatureAvailabilityService';
@@ -139,20 +138,4 @@ export const webAdeRouter = {
       return webAdeService.explainWorkingChanges(input);
     }),
 
-  // ===========================================================================
-  // ===========================================================================
-  // Topic Inbox
-  // ===========================================================================
-
-  getTopicInbox: t.procedure
-    .input<GetTopicInboxInput>()
-    .action(async ({ input }) => {
-      await requireHostedFeature('topicSharing');
-      return webAdeService.getTopicInbox(input);
-    }),
-
-  getTopicInboxUnreadCount: t.procedure.action(async () => {
-    await requireHostedFeature('topicSharing');
-    return webAdeService.getTopicInboxUnreadCount();
-  }),
 };

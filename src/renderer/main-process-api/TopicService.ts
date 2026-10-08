@@ -12,10 +12,6 @@
 import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import type {
   CreateTopicInput,
-  FetchSharedTopicResult,
-  LocalTopicRecord,
-  PublishedTopicVisibility,
-  PublishTopicResult,
   TopicChangeEvent,
   UpdateTopicInput,
 } from '../../shared/main-process-api-interfaces/TopicAPI';
@@ -65,7 +61,6 @@ export class TopicService {
    * Store a screenshot dragged into a topic's description. Main stores the
    * bytes inline on the topic (deduped by content hash) and appends the
    * `asset://<id>` reference to the description, broadcasting TOPIC_UPDATED.
-   * Rejects for already-published topics (publish support is pending).
    */
   static async attachImageAsset(
     topicId: string,
@@ -76,36 +71,6 @@ export class TopicService {
 
   static async deleteTopic(id: string): Promise<boolean> {
     return topicClient.deleteTopic({ id });
-  }
-
-  /**
-   * Hydrate a topic published to web-ade by id. Used by the inbox's topic
-   * tab, which opens topics that may not exist in the local registry.
-   * Throws (via the IPC error path) on 404 / no-access.
-   */
-  static async fetchSharedById(id: string): Promise<FetchSharedTopicResult> {
-    return topicClient.fetchSharedById({ id });
-  }
-
-  /**
-   * Publish a local topic to web-ade, stamping its server id onto sync
-   * metadata so subsequent edits write through.
-   */
-  static async publishTopic(
-    id: string,
-    visibility: PublishedTopicVisibility,
-  ): Promise<PublishTopicResult> {
-    return topicClient.publishTopic({ id, visibility });
-  }
-
-  /** Full LocalTopicRecord including sync metadata (for sync UI). */
-  static async getRecord(id: string): Promise<LocalTopicRecord | null> {
-    return topicClient.getRecord({ id });
-  }
-
-  /** All LocalTopicRecords. */
-  static async getRecords(): Promise<LocalTopicRecord[]> {
-    return topicClient.getRecords();
   }
 
   /**

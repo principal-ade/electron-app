@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import {
   Check,
   ChevronDown,
@@ -16,7 +17,6 @@ import {
   X,
 } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
-import type { LocalTopicRecord } from '../../../shared/main-process-api-interfaces/TopicAPI';
 import {
   STATES,
   normalizeState,
@@ -61,7 +61,7 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
   const hasRepo = Boolean(repositoryPath);
 
   const thisRepoCount = useMemo(
-    () => library.records.filter((r) => library.isInThisRepo(r)).length,
+    () => library.topics.filter((topic) => library.isInThisRepo(topic)).length,
     [library],
   );
 
@@ -112,31 +112,31 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
     return () => document.removeEventListener('mousedown', onDown);
   }, [statusMenuOpen]);
 
-  const isMultiRepo = useCallback((record: LocalTopicRecord): boolean => {
-    return (record.topic.repos?.length ?? 0) > 1;
+  const isMultiRepo = useCallback((topic: Topic): boolean => {
+    return (topic.repos?.length ?? 0) > 1;
   }, []);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const scoped =
       view === 'thisRepo'
-        ? library.records.filter((r) => library.isInThisRepo(r))
-        : library.records;
+        ? library.topics.filter((topic) => library.isInThisRepo(topic))
+        : library.topics;
     return scoped
-      .filter((r) => {
+      .filter((topic) => {
         if (
           statusFilter.size > 0 &&
-          !statusFilter.has(normalizeState(r.topic.status?.state))
+          !statusFilter.has(normalizeState(topic.status?.state))
         ) {
           return false;
         }
         if (!q) return true;
         return (
-          r.topic.title.toLowerCase().includes(q) ||
-          (r.topic.description ?? '').toLowerCase().includes(q)
+          topic.title.toLowerCase().includes(q) ||
+          (topic.description ?? '').toLowerCase().includes(q)
         );
       })
-      .sort((a, b) => b.topic.updatedAt.localeCompare(a.topic.updatedAt));
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [library, view, query, statusFilter]);
 
   const statusTriggerLabel =
@@ -146,7 +146,7 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
         ? stateLabel([...statusFilter][0])
         : `${statusFilter.size} statuses`;
 
-  const ready = !library.loading || library.records.length > 0;
+  const ready = !library.loading || library.topics.length > 0;
 
   return (
     <div
@@ -211,7 +211,7 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
             value={view}
             onChange={setView}
             thisRepoCount={thisRepoCount}
-            allCount={library.records.length}
+            allCount={library.topics.length}
           />
         )}
 
@@ -441,16 +441,16 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
             view={view}
             hasRepo={hasRepo}
             filtered={query.trim().length > 0 || statusFilter.size > 0}
-            totalTopics={library.records.length}
+            totalTopics={library.topics.length}
             onShowAll={() => setView('all')}
           />
         )}
         {ready &&
-          visible.map((record) => (
+          visible.map((topic) => (
             <TopicRow
-              key={record.topic.id}
-              record={record}
-              multiRepo={isMultiRepo(record)}
+              key={topic.id}
+              topic={topic}
+              multiRepo={isMultiRepo(topic)}
               onOpen={handleOpen}
             />
           ))}

@@ -1,15 +1,14 @@
 /**
  * PortalTabsContext
  *
- * Owner of the workspace tab state. Portal-unification Increment 3: Projects,
- * Inbox, and Topics now share ONE persistent bucket — a single tab list +
+ * Owner of the workspace tab state. Portal-unification Increment 3: Projects
+ * and Topics share ONE persistent bucket — a single tab list +
  * `activeTabId` hosted by `WorkspaceShell`, so switching the left panel between
- * the three surfaces keeps your open tabs and a single terminal.
+ * the surfaces keeps your open tabs and a single terminal.
  *
  * `useWorkspaceTabs` is the shell's view of that bucket. The legacy per-surface
  * compat hooks still work — `useProjectsTabs` (repo/profile opens + the titlebar's
- * direct calls), `useInboxTabs` (web-ade `topic`) and `useTopicsTabs` (local
- * `local-topic`) all read the shared bucket.
+ * direct calls) and `useTopicsTabs` (local `local-topic`) read the shared bucket.
  */
 import React, {
   createContext,
@@ -34,8 +33,6 @@ import type {
   MarkdownDocTab,
   SourceFileTab,
   MediaTab,
-  InboxHomeTab,
-  TopicTab,
   TopicsHomeTab,
   LocalTopicTab,
   DrawingTab,
@@ -46,14 +43,11 @@ import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
  * The unified workspace tab union hosted by `WorkspaceShell` — the superset of
- * the former Projects (`FeedTab`), Inbox and Topics unions (deduped; all three
- * carried `TerminalTab` and the markdown tabs).
+ * the former Projects (`FeedTab`) and Topics unions (deduped).
  */
 export type WorkspaceTab =
   | TerminalTab
-  | InboxHomeTab
   | TopicsHomeTab
-  | TopicTab
   | LocalTopicTab
   | MarkdownDocTab
   | SourceFileTab
@@ -86,8 +80,6 @@ export interface WorkspaceTabsContextValue {
   activeTabId: string | null;
   setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
   // Topics / docs
-  /** Open a `topic-<topicId>` tab (a published web-ade topic). */
-  openWebAdeTopic: (topicId: string, title?: string) => void;
   /** Open a `local-topic-<topicId>` tab (an on-disk topic). */
   openLocalTopic: (topicId: string, title?: string) => void;
   /** Open a `markdown-doc-<filePath>` tab. */
@@ -148,16 +140,6 @@ export interface ProjectsTabsContextValue {
   openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
 }
 
-/** Back-compat shape for `useInboxTabs` (its `openTopic` = web-ade topic). */
-export interface InboxTabsContextValue {
-  tabs: WorkspaceTab[];
-  setTabs: React.Dispatch<React.SetStateAction<WorkspaceTab[]>>;
-  activeTabId: string | null;
-  setActiveTabId: React.Dispatch<React.SetStateAction<string | null>>;
-  openTopic: (topicId: string, title?: string) => void;
-  openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
-}
-
 /** Back-compat shape for `useTopicsTabs` (its `openTopic` = local topic). */
 export interface TopicsTabsContextValue {
   tabs: WorkspaceTab[];
@@ -172,7 +154,7 @@ const WorkspaceTabsContext = createContext<WorkspaceTabsContextValue | null>(
 );
 
 // ----------------------------------------------------------------------------
-// Shared workspace bucket (Projects + Inbox + Topics)
+// Shared workspace bucket (Projects + Topics)
 // ----------------------------------------------------------------------------
 
 const WORKSPACE_INITIAL_TABS: WorkspaceTab[] = [
@@ -196,23 +178,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     );
     setActiveTabId(tabId);
   }, []);
-
-  const openWebAdeTopic = useCallback(
-    (topicId: string, title?: string) => {
-      openTab(
-        `topic-${topicId}`,
-        () =>
-          ({
-            id: `topic-${topicId}`,
-            label: title || 'Topic',
-            contentType: 'topic',
-            closable: true,
-            topicId,
-          }) as TopicTab,
-      );
-    },
-    [openTab],
-  );
 
   const openLocalTopic = useCallback(
     (topicId: string, title?: string) => {
@@ -549,7 +514,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       setTabs,
       activeTabId,
       setActiveTabId,
-      openWebAdeTopic,
       openLocalTopic,
       openMarkdownDoc,
       openSourceFile,
@@ -568,7 +532,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [
       tabs,
       activeTabId,
-      openWebAdeTopic,
       openLocalTopic,
       openMarkdownDoc,
       openSourceFile,
@@ -624,25 +587,6 @@ export function useProjectsTabs(): ProjectsTabsContextValue {
       setActiveTabId: ws.setActiveTabId,
       openProjectInfo: ws.openProjectInfo,
       openUserProfile: ws.openUserProfile,
-      openMarkdownDoc: ws.openMarkdownDoc,
-    }),
-    [ws],
-  );
-}
-
-/**
- * Back-compat: the Inbox surface's view of the shared workspace bucket. Its
- * `openTopic` opens a web-ade `topic` tab.
- */
-export function useInboxTabs(): InboxTabsContextValue {
-  const ws = useWorkspaceTabs();
-  return useMemo(
-    () => ({
-      tabs: ws.tabs,
-      setTabs: ws.setTabs,
-      activeTabId: ws.activeTabId,
-      setActiveTabId: ws.setActiveTabId,
-      openTopic: ws.openWebAdeTopic,
       openMarkdownDoc: ws.openMarkdownDoc,
     }),
     [ws],

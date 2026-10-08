@@ -24,9 +24,6 @@ import type {
   ExplainCommitsResponse,
   ExplainWorkingChangesInput,
   ExplainWorkingChangesResponse,
-  GetTopicInboxInput,
-  ListTopicInboxResponse,
-  TopicInboxUnreadCountResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
@@ -65,9 +62,6 @@ export interface WebAdeClient {
     input: ExplainWorkingChangesInput,
   ) => Promise<ExplainWorkingChangesResponse>;
 
-  // Topic Inbox
-  getTopicInbox: (input: GetTopicInboxInput) => Promise<ListTopicInboxResponse>;
-  getTopicInboxUnreadCount: () => Promise<TopicInboxUnreadCountResponse>;
 }
 
 // =============================================================================
@@ -141,9 +135,4 @@ export type {
   ExplainCommitsInput,
   ExplainCommitsResponse,
   ExplainCommitData,
-  TopicInboxSnapshot,
-  TopicInboxIndexEntry,
-  GetTopicInboxInput,
-  ListTopicInboxResponse,
-  TopicInboxUnreadCountResponse,
 } from '../../shared/tipc/webAdeRouterTypes';

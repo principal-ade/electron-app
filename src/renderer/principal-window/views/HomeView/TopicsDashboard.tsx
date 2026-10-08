@@ -41,11 +41,6 @@ export interface TopicsDashboardTopicEntry {
   /** ISO 8601 — drives the "updated Xd ago" hint. */
   updatedAt: string;
   /**
-   * Whether this topic has been published to web-ade (its sync record carries
-   * a `remoteId`). Drives the "Shared" badge on the card.
-   */
-  published?: boolean;
-  /**
    * Optional workflow status (mirrors the canonical `Topic.status`). Drives the
    * status pill on the card and the list's working/paused prioritization.
    */
@@ -56,7 +51,7 @@ export interface TopicsDashboardProps {
   /**
    * Topics in recency order (newest first). The dashboard re-orders them into
    * the priority list itself (working → paused → recent). Ignored when the
-   * user is signed out — topics require auth.
+   * Topics are local and available without GitHub authentication.
    */
   topicEntries: TopicsDashboardTopicEntry[];
   /** Fired when the user clicks a topic row. */

@@ -94,7 +94,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   events,
 }) => {
   // Principal app OAuth — gates collections/recent and re-runs profile load.
-  const { user: authUser, isAuthenticated: isPrincipalSignedIn, login: principalLogin } = useAuthState();
+  const { user: authUser, isAuthenticated: isPrincipalSignedIn } = useAuthState();
   const homePanelPrefs = useHomePanelPreferences();
   const { theme } = useTheme();
   const [view, setView] = useState<HomeView>('home');
@@ -585,7 +585,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 onOpenFollowers={handleOpenFollowers}
                 onOpenFollowing={handleOpenFollowing}
                 isPrincipalSignedIn={isPrincipalSignedIn}
-                onLogin={() => principalLogin()}
               />
               <HomeNavCards
                 counts={counts}

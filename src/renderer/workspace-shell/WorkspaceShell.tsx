@@ -1,27 +1,26 @@
 /**
  * WorkspaceShell
  *
- * The persistent host for every workspace surface — Projects, Inbox, Topics,
+ * The persistent host for every workspace surface — Projects, Topics,
  * Drawings, and Skills. It replaces the separate per-view
  * frameworks / overlays with ONE shell:
  *
  * - one tabbed-terminal host reading the shared `useWorkspaceTabs()` bucket, so
  *   the open tabs (and the single terminal) persist when you swap the left panel;
- * - one terminal scope (`terminal:workspace`) instead of `terminal:feed` /
- *   `terminal:inbox` / `terminal:topics`;
- * - a swappable left panel chosen by `activeView` — the Projects feed list, the
- *   Inbox list, or the Topics list.
+ * - one terminal scope (`terminal:workspace`);
+ * - a swappable left panel chosen by `activeView` — the Projects feed or
+ *   Topics list.
  *
- * PrincipalPortal mounts ONE instance for the `projects`, `inbox` and `topics`
- * views, passing `activeView`; switching between them keeps this component (and
- * its terminal/tabs) mounted and only swaps the left panel.
+ * PrincipalPortal mounts ONE instance for the workspace views, passing
+ * `activeView`; switching between them keeps this component (and its
+ * terminal/tabs) mounted and only swaps the left panel.
  *
- * Projects carries more host machinery than Inbox/Topics — its activity feed,
+ * Projects carries more host machinery than Topics — its activity feed,
  * git-status refresh, delete modal and local→portal open-intent forwarder live
  * in `useProjectsHost`; its tab bodies render via `renderProjectsTabContent`.
  * The Projects panels emit open intents on the shell's LOCAL `events` bus (the
- * forwarder lifts them to the portal bus); Inbox/Topics emit straight on the
- * portal bus. See docs/portal-unification.md + docs/portal-view-migration.md.
+ * forwarder lifts them to the portal bus); Topics emits straight on the portal
+ * bus. See docs/portal-unification.md + docs/portal-view-migration.md.
  */
 
 import React, {
@@ -32,7 +31,7 @@ import React, {
   useEffect,
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Inbox, Layers, PenTool, ToolCase } from 'lucide-react';
+import { Layers, PenTool, ToolCase } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -64,11 +63,9 @@ import {
   type TerminalWorkingState,
   type TerminalPanelActions,
 } from '@industry-theme/xterm-terminal-panel';
-import { InboxLeftPanel } from '../panels/InboxLeftPanel';
 import { TopicsLeftPanel } from '../panels/TopicsLeftPanel';
 import { ProjectsLeftPanel } from '../panels/ProjectsLeftPanel';
 import { HomeLeftPanel } from '../panels/home-panel';
-import { TopicTabContent } from '../inbox-view/TopicTabContent';
 import { LocalTopicTabContent } from '../topics-view/LocalTopicTabContent';
 import {
   renderProjectsTabContent,
@@ -89,7 +86,7 @@ import {
 } from '../principal-window/PortalTabsContext';
 import { usePortalEvents } from '../principal-window/PortalEventContext';
 import { DocumentService } from '../services/DocumentService';
-import type { TopicTab, LocalTopicTab } from '../events/portalTabs';
+import type { LocalTopicTab } from '../events/portalTabs';
 import {
   PORTAL_INTENTS,
   type TerminalOpenPayload,
@@ -99,12 +96,11 @@ import {
 export type WorkspaceView =
   | 'home-panel'
   | 'projects'
-  | 'inbox'
   | 'topics'
   | 'drawings'
   | 'skills';
 
-/** Centered landing hint shown by the `inbox-home` / `topics-home` tabs. */
+/** Centered landing hint shown by the `topics-home` tab. */
 const HomePanel: React.FC<{
   icon: React.ReactNode;
   title: string;
@@ -208,16 +204,16 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     openSourceFile,
     openMedia,
   } = useWorkspaceTabs();
-  // The Inbox/Topics left panels emit open intents on the portal bus
+  // The Topics left panel emits open intents on the portal bus
   // (PortalIntentBridge turns them into tabs).
   const { events: portalEvents } = usePortalEvents();
 
   // Projects host concerns (activity feed, git-status refresh, delete modal,
   // and the local→portal open-intent forwarder). Runs for the shell's whole
   // lifetime across all surfaces so the Projects feed + delete modal stay live
-  // even while Inbox/Topics is showing. The Projects left panel + tab content
+  // even while Topics is showing. The Projects left panel + tab content
   // emit on the shell's local `events` bus (the forwarder lifts opens to the
-  // portal bus); Inbox/Topics emit straight on `portalEvents`.
+  // portal bus); Topics emits straight on `portalEvents`.
   const { feedMode, setFeedMode, activityCommits, deleteModal } =
     useProjectsHost({ events, repositories });
 
@@ -292,15 +288,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     const projectsIcon = renderProjectsTabIcon(tab as FeedTab);
     if (projectsIcon) return projectsIcon;
     switch (tab.contentType) {
-      case 'inbox-home':
-        return <Inbox size={14} />;
       case 'topics-home':
         return <Layers size={14} />;
-      case 'topic':
-        return <Layers size={14} />;
       case 'local-topic':
-        // Topics (published + local) share the Layers icon; FileText is the
-        // markdown-doc tab's icon, so a local topic must not reuse it.
         return <Layers size={14} />;
       case 'drawing':
         return <PenTool size={14} />;
@@ -325,7 +315,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const renderTabContent = useCallback(
     (tab: WorkspaceTab, _isActive: boolean) => {
       // Projects renders its own tabs + the shared document tabs (one source of
-      // truth). It returns null for the Inbox/Topics landing + topic tabs below.
+      // truth). It returns null for the Topics landing + topic tabs below.
       const projectsContent = renderProjectsTabContent(tab as FeedTab, {
         events: eventsRef.current,
         repositories: repositoriesRef.current,
@@ -333,14 +323,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       });
       if (projectsContent) return projectsContent;
       switch (tab.contentType) {
-        case 'inbox-home':
-          return (
-            <HomePanel
-              icon={<Inbox size={32} />}
-              title="Your inbox"
-              body="Topics shared with you appear in the panel on the left. Pick one to open it here."
-            />
-          );
         case 'topics-home':
           return (
             <HomePanel
@@ -349,12 +331,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               body="Topics are subject briefs scoped to projects. Pick one from the panel on the left to read its description here."
             />
           );
-        case 'topic': {
-          const topicTab = tab as TopicTab;
-          return (
-            <TopicTabContent key={topicTab.id} topicId={topicTab.topicId} />
-          );
-        }
         case 'local-topic': {
           const topicTab = tab as LocalTopicTab;
           return (
@@ -698,9 +674,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
                 : feedMode === 'organizations'
                   ? 'Team'
                   : 'Activity'
-              : activeView === 'inbox'
-                ? 'Inbox'
-                : activeView === 'drawings'
+              : activeView === 'drawings'
                   ? 'Drawings'
                   : activeView === 'skills'
                       ? 'Skills'
@@ -716,8 +690,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onFeedModeChange={setFeedMode}
               activityCommits={activityCommits}
             />
-          ) : activeView === 'inbox' ? (
-            <InboxLeftPanel events={portalEvents} />
           ) : activeView === 'drawings' ? (
             <DrawingsLeftPanel events={events} />
           ) : activeView === 'skills' ? (

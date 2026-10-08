@@ -42,7 +42,6 @@ export type NavigationView = InteractiveShellNavigationView;
 const VIEW_OPTIONS = [
   'home',
   'home-panel',
-  'inbox',
   'topics',
   'projects',
   'onboarding',
@@ -119,7 +118,7 @@ const getViewDefaults = (
 
 export const IntegratedShell: React.FC = () => {
   const [activeView, setActiveView] = useState<NavigationView>('home');
-  // The workspace surface (projects/inbox/topics) shown in the
+  // The workspace surface (projects/topics) shown in the
   // persistent PrincipalPortal beneath any standalone overlay. Stays `null`
   // until the user first visits a workspace view, so a cold start that lands
   // on Home doesn't eagerly mount a workspace (and its terminals). Once set it
@@ -172,7 +171,6 @@ export const IntegratedShell: React.FC = () => {
   const [viewCollapsedStates, setViewCollapsedStates] = useState<
     Record<string, { left: boolean; right: boolean }>
   >({
-    inbox: { left: false, right: false },
     topics: { left: false, right: false },
     'home-panel': { left: false, right: false },
     projects: { left: false, right: false },
@@ -198,10 +196,15 @@ export const IntegratedShell: React.FC = () => {
         if (prefs.interactiveShell?.activeNavigationView) {
           // Cast to string to handle legacy values from storage
           const savedView = prefs.interactiveShell.activeNavigationView as string;
-          // Migrate removed views to 'projects' (removed 2026-04-19 in commit b742f44b2).
+          // Migrate removed views to a supported workspace surface.
           // 'feed' is the former id for the Projects view, renamed 2026-06-17.
           const legacyViews = ['local-projects', 'remote-projects', 'starred-projects', 'network', 'feed'];
-          let view = legacyViews.includes(savedView) ? 'projects' : savedView;
+          let view =
+            savedView === 'inbox'
+              ? 'topics'
+              : legacyViews.includes(savedView)
+                ? 'projects'
+                : savedView;
           // Legacy Projects side-nav is hidden by default (showProjectsButton).
           // If the saved surface is projects but the button is off, land on Home.
           if (view === 'projects' && !(prefs.showProjectsButton ?? false)) {
@@ -416,6 +419,14 @@ export const IntegratedShell: React.FC = () => {
       activeView === 'home' ? (lastWorkspaceView ?? 'home-panel') : 'home'
     );
   }, [activeView, lastWorkspaceView, handleViewChange]);
+
+  const handleOpenDashboardTopic = useCallback(
+    (topicId: string, title: string) => {
+      handleViewChange('topics');
+      openTopicInTopicsView(topicId, title);
+    },
+    [handleViewChange, openTopicInTopicsView],
+  );
 
   // Save collapsed states when they change
   const handleToggleSidebar = useCallback(async () => {
@@ -683,7 +694,6 @@ export const IntegratedShell: React.FC = () => {
           rightSidebarCollapsed={rightSidebarCollapsed}
           onToggleRightSidebar={handleToggleRightSidebar}
           hideSearch={false}
-          onShowOnboardingWizard={() => setShowOnboardingWizard(true)}
         />
 
         {/* Main content area with rounded corners for Slack-style cutout */}
@@ -782,7 +792,9 @@ export const IntegratedShell: React.FC = () => {
                       boxShadow: '0 12px 48px rgba(0, 0, 0, 0.45)',
                     }}
                   >
-                    {overlayView === 'home' && <HomeView />}
+                    {overlayView === 'home' && (
+                      <HomeView onOpenTopic={handleOpenDashboardTopic} />
+                    )}
                     {overlayView === 'onboarding' && (
                       <OnboardingView
                         onComplete={() => handleViewChange('home-panel')}

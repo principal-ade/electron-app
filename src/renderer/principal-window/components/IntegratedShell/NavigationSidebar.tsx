@@ -2,20 +2,16 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   Settings,
   Activity,
-  User,
   Globe,
   Radio,
   ToolCase,
   GraduationCap,
-  Inbox,
   Layers,
   PenTool,
   Home,
 } from 'lucide-react';
-import { useAuth } from '../../../hooks/useAuthState';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { ShellService } from '../../../main-process-api/ShellService';
-import { WebAdeService } from '../../../main-process-api/WebAdeService';
 import type { NavigationView } from './IntegratedShell';
 import { useEffect, useState } from 'react';
 
@@ -41,7 +37,6 @@ interface NavItem {
   icon: React.ReactNode;
   label: string;
   position?: 'top' | 'bottom';
-  badgeCount?: number;
 }
 
 export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
@@ -49,14 +44,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   onViewChange,
 }) => {
   const { theme, mode } = useTheme();
-  const { isAuthenticated, user } = useAuth();
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showConnectionsButton, setShowConnectionsButton] = useState(false);
   const [showProcessesButton, setShowProcessesButton] = useState(false);
   // Legacy Projects surface — hidden by default in favor of Home panel.
   const [showProjectsButton, setShowProjectsButton] = useState(false);
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
-  const [inboxUnread, setInboxUnread] = useState(0);
   useEffect(() => {
     UserPreferencesService.getPreferences().then((prefs) => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
@@ -100,39 +93,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     };
   }, []);
 
-  // Poll the inbox unread count to drive the nav badge. Gated on auth so we
-  // never hit the token-protected endpoint while logged out.
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setInboxUnread(0);
-      return;
-    }
-
-    let active = true;
-    const refresh = () =>
-      WebAdeService.getTopicInboxUnreadCount()
-        .then((result) => {
-          if (active) setInboxUnread(result.count);
-        })
-        .catch(() => {
-          // Offline / transient failure — leave the last known count in place.
-        });
-
-    refresh();
-    const intervalId = setInterval(refresh, 60_000);
-    window.addEventListener('focus', refresh);
-
-    const handleInboxRead = () => refresh();
-    window.addEventListener('inbox-read', handleInboxRead);
-
-    return () => {
-      active = false;
-      clearInterval(intervalId);
-      window.removeEventListener('focus', refresh);
-      window.removeEventListener('inbox-read', handleInboxRead);
-    };
-  }, [isAuthenticated]);
-
   const backgroundColor =
     mode === 'dark' && theme.modes?.dark?.backgroundSecondary
       ? theme.modes.dark.backgroundSecondary
@@ -142,44 +102,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     mode === 'dark' && theme.modes?.dark?.accent
       ? theme.modes.dark.accent
       : theme.colors.accent;
-
-  // Create auth icon - either avatar or User icon
-  const authIcon =
-    isAuthenticated && user ? (
-      user.avatarUrl ? (
-        <img
-          src={user.avatarUrl}
-          alt={user.login}
-          style={{
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            objectFit: 'cover',
-            border: `1px solid ${theme.colors.border}`,
-          }}
-        />
-      ) : (
-        <div
-          style={{
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            backgroundColor: theme.colors.primary,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: theme.colors.background,
-            fontFamily: theme.fonts.body,
-            fontWeight: theme.fontWeights.semibold,
-            fontSize: theme.fontSizes[0],
-          }}
-        >
-          {user.login?.[0]?.toUpperCase() || 'U'}
-        </div>
-      )
-    ) : (
-      <User size={20} />
-    );
 
   const navItems: NavItem[] = [
     // Titlebar "Dashboard" toggles the HomeView overlay; this is the
@@ -199,12 +121,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           },
         ]
       : []),
-    {
-      id: 'inbox',
-      icon: <Inbox size={20} />,
-      label: 'Inbox',
-      badgeCount: inboxUnread,
-    },
     { id: 'topics', icon: <Layers size={20} />, label: 'Topics' },
     { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },
     { id: 'drawings', icon: <PenTool size={20} />, label: 'Drawings' },
@@ -254,7 +170,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       label: 'Settings',
       position: 'bottom',
     },
-    { id: 'auth', icon: authIcon, label: '', position: 'bottom' },
   ];
 
   const topItems = navItems.filter((item) => item.position !== 'bottom');
@@ -308,31 +223,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }}
       >
         {item.icon}
-        {item.badgeCount ? (
-          <span
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              minWidth: '16px',
-              height: '16px',
-              padding: '0 4px',
-              borderRadius: '8px',
-              background: theme.colors.primary,
-              color: theme.colors.background,
-              fontFamily: theme.fonts.monospace,
-              fontSize: theme.fontSizes[0],
-              fontWeight: 700,
-              lineHeight: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxSizing: 'border-box',
-            }}
-          >
-            {item.badgeCount > 99 ? '99+' : item.badgeCount}
-          </span>
-        ) : null}
       </div>
       {item.label && (
         <span

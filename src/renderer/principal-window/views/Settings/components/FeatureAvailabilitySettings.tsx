@@ -18,12 +18,6 @@ const FEATURE_GROUPS: Array<{
       'Cached repository trees, contribution data, profile activity, pinned repositories, starred collections, and commit explanations.',
   },
   {
-    key: 'topicSharing',
-    label: 'Topic sharing & inbox',
-    description:
-      'Publishing and opening shared topics, including the topic inbox.',
-  },
-  {
     key: 'presenceAndCollaboration',
     label: 'Presence & collaboration',
     description:

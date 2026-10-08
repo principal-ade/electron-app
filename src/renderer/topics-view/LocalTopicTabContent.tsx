@@ -2,7 +2,7 @@
  * LocalTopicTabContent
  *
  * Tab body for the Topics view — renders a single LOCAL topic (one from
- * `TopicService.getTopics`, not a published web-ade topic). The tab is a split:
+ * `TopicService.getTopics`). The tab is a split:
  * the topic's markdown description (via the shared `TopicDescriptionBody`)
  * fills the left, and a projects rail on the right lists its declared repos.
  *

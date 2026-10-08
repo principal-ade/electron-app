@@ -44,7 +44,6 @@ export interface UserAboutCardProps {
   onOpenFollowers?: () => void;
   onOpenFollowing?: () => void;
   isPrincipalSignedIn?: boolean;
-  onLogin?: () => void;
 }
 
 function Avatar({
@@ -109,7 +108,6 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
   onOpenFollowers,
   onOpenFollowing,
   isPrincipalSignedIn = false,
-  onLogin,
 }) => {
   const { theme } = useTheme();
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -450,29 +448,7 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
             </span>
           </div>
         )
-      ) : (
-        onLogin && (
-          <button
-            type="button"
-            onClick={onLogin}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              color: theme.colors.primary,
-              fontSize: theme.fontSizes[1],
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              font: 'inherit',
-            }}
-          >
-            <Github size={14} style={{ flexShrink: 0 }} />
-            Sign in with GitHub
-          </button>
-        )
-      )}
+      ) : null}
 
       {showAuthModal && (
         <div

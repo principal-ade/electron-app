@@ -11,9 +11,8 @@
  * `TopicService.onTopicChange` (edits from anywhere — this popover, the modal,
  * the home board — refresh the pill).
  *
- * The published/inbox surface (`TopicTabContent`) is intentionally not a
- * consumer: it renders someone else's web-ade topic over `fetchSharedById`,
- * which has no local record to write through.
+ * All topic tabs are backed by local topic records, so status changes write
+ * through to the same store.
  */
 
 import React from 'react';
