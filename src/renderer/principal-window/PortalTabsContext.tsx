@@ -37,6 +37,7 @@ import type {
   LocalTopicTab,
   DrawingTab,
   SkillTab,
+  SubsystemModelTab,
 } from '../events/portalTabs';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
 import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
@@ -67,7 +68,8 @@ export type WorkspaceTab =
   // Drawings
   | DrawingTab
   // Skills
-  | SkillTab;
+  | SkillTab
+  | SubsystemModelTab;
 
 // ----------------------------------------------------------------------------
 // Slice shapes
@@ -127,6 +129,8 @@ export interface WorkspaceTabsContextValue {
   }) => void;
   /** Open (or focus) the singleton `skill` detail tab; updates its label. */
   openSkill: (label: string) => void;
+  /** Open or focus a subsystem model tab. */
+  openSubsystemModel: (modelId: string, title: string) => void;
 }
 
 /** Back-compat shape for `useProjectsTabs` (titlebar + IntegratedShell). */
@@ -508,6 +512,24 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     setActiveTabId(id);
   }, []);
 
+  const openSubsystemModel = useCallback(
+    (modelId: string, title: string) => {
+      const id = `subsystem-model-${modelId}`;
+      openTab(
+        id,
+        () =>
+          ({
+            id,
+            label: title || 'Subsystem Model',
+            contentType: 'subsystem-model',
+            closable: true,
+            modelId,
+          }) as SubsystemModelTab,
+      );
+    },
+    [openTab],
+  );
+
   return useMemo<WorkspaceTabsContextValue>(
     () => ({
       tabs,
@@ -528,6 +550,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openLiveActivity,
       openDrawing,
       openSkill,
+      openSubsystemModel,
     }),
     [
       tabs,
@@ -546,6 +569,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openLiveActivity,
       openDrawing,
       openSkill,
+      openSubsystemModel,
     ],
   );
 }

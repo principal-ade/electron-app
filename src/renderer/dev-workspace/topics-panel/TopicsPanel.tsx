@@ -10,12 +10,12 @@ import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import {
   Check,
   ChevronDown,
-  Layers,
   ListFilter,
   RefreshCw,
   Search,
   X,
 } from 'lucide-react';
+import { TopicsIcon } from '../../components/TopicsIcon';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import {
   STATES,
@@ -170,7 +170,7 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Layers size={18} strokeWidth={1.5} />
+          <TopicsIcon size={18} strokeWidth={1.5} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2
               style={{

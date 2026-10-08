@@ -163,6 +163,15 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         zIndex: 100,
       }}
     >
+      {/* Current view's left sidebar toggle */}
+      {onToggleSidebar && (
+        <ViewSidebarControls
+          isCollapsed={sidebarCollapsed}
+          onToggle={onToggleSidebar}
+          style={{ marginLeft: '12px' }}
+        />
+      )}
+
       {/* Dashboard toggle — left side, clear of the macOS traffic lights. Opens
           the Dashboard overlay (`home` view), or drops back to the last
           workspace surface when it's already showing. Sidebar "Home" is the

@@ -11,12 +11,12 @@ import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   Building2,
-  FolderGit2,
   Github,
   Mail,
   MapPin,
   Users,
 } from 'lucide-react';
+import { useDelayedLoading } from '../../hooks/useDelayedLoading';
 
 export type UserAboutSource = 'github' | 'git';
 
@@ -40,7 +40,6 @@ export interface UserAboutInfo {
 export interface UserAboutCardProps {
   info: UserAboutInfo | null;
   loading?: boolean;
-  clonedCount?: number;
   onOpenFollowers?: () => void;
   onOpenFollowing?: () => void;
   isPrincipalSignedIn?: boolean;
@@ -104,15 +103,15 @@ const cardShell = (borderColor: string): React.CSSProperties => ({
 export const UserAboutCard: React.FC<UserAboutCardProps> = ({
   info,
   loading = false,
-  clonedCount,
   onOpenFollowers,
   onOpenFollowing,
   isPrincipalSignedIn = false,
 }) => {
   const { theme } = useTheme();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const showLoading = useDelayedLoading(loading);
 
-  if (!info) return loading ? <UserAboutCardSkeleton /> : null;
+  if (!info) return showLoading ? <UserAboutCardSkeleton /> : null;
 
   const source = info.source ?? 'github';
   const isGit = source === 'git';
@@ -315,24 +314,6 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
       >
         {info.bio || 'No bio yet.'}
       </p>
-
-      {/* Facts row: cloned count */}
-      {clonedCount != null && clonedCount > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            color: theme.colors.textMuted,
-            fontSize: theme.fontSizes[1],
-          }}
-        >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <FolderGit2 size={14} />
-            {clonedCount} cloned
-          </span>
-        </div>
-      )}
 
       {/* Company / location */}
       {(info.company || info.location) && (

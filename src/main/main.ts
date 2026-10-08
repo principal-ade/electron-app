@@ -27,6 +27,10 @@ import { initializeServices, shutdownServices } from './initialization';
 import { verifyRequiredAssets } from './util';
 // Defer SecureTokenIPC initialization to avoid early keychain access
 
+if (!app.isPackaged) {
+  app.setName('Principal AI Dev');
+}
+
 // Configure electron-log to use app-specific directory
 log.transports.file.resolvePathFn = () => {
   return path.join(app.getPath('logs'), 'main.log');

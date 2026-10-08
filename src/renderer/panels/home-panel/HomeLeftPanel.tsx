@@ -581,7 +581,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               <UserAboutCard
                 info={aboutUser}
                 loading={userLoading}
-                clonedCount={clonedPurls.size}
                 onOpenFollowers={handleOpenFollowers}
                 onOpenFollowing={handleOpenFollowing}
                 isPrincipalSignedIn={isPrincipalSignedIn}

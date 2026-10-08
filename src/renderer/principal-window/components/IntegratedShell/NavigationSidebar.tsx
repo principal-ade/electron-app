@@ -6,12 +6,14 @@ import {
   Radio,
   ToolCase,
   GraduationCap,
-  Layers,
   PenTool,
   Home,
+  Network,
 } from 'lucide-react';
+import { TopicsIcon } from '../../../components/TopicsIcon';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { ShellService } from '../../../main-process-api/ShellService';
+import { GithubService } from '../../../main-process-api/GithubService';
 import type { NavigationView } from './IntegratedShell';
 import { useEffect, useState } from 'react';
 
@@ -30,20 +32,80 @@ const DiscordIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
 interface NavigationSidebarProps {
   activeView: NavigationView;
   onViewChange: (view: NavigationView) => void;
+  leftPanelCollapsed: boolean;
+  onToggleLeftPanel: () => void;
+  repository?: { owner: string; name: string } | null;
+  isRepositoryActive?: boolean;
+  onSelectRepository?: () => void;
 }
 
 interface NavItem {
-  id: NavigationView;
+  id: NavigationView | 'repository';
   icon: React.ReactNode;
   label: string;
+  title?: string;
   position?: 'top' | 'bottom';
 }
+
+const RepositoryOwnerAvatar: React.FC<{ owner: string }> = ({ owner }) => {
+  const { theme } = useTheme();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAvatarUrl(null);
+    if (!owner) return;
+    GithubService.getUser(owner)
+      .then((user) => {
+        if (!cancelled) setAvatarUrl(user?.avatar_url ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setAvatarUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [owner]);
+
+  return avatarUrl ? (
+    <img
+      src={avatarUrl}
+      alt={`${owner} avatar`}
+      style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }}
+    />
+  ) : (
+    <span
+      aria-hidden="true"
+      style={{
+        width: 24,
+        height: 24,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '50%',
+        background: theme.colors.backgroundTertiary,
+        color: theme.colors.textSecondary,
+        fontSize: theme.fontSizes[1],
+        fontWeight: theme.fontWeights.semibold,
+      }}
+    >
+      {owner.charAt(0).toUpperCase() || 'R'}
+    </span>
+  );
+};
 
 export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   activeView,
   onViewChange,
+  leftPanelCollapsed,
+  onToggleLeftPanel,
+  repository,
+  isRepositoryActive = false,
+  onSelectRepository,
 }) => {
   const { theme, mode } = useTheme();
+  const [hoveredNavItemId, setHoveredNavItemId] =
+    useState<NavigationView | 'repository' | null>(null);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showConnectionsButton, setShowConnectionsButton] = useState(false);
   const [showProcessesButton, setShowProcessesButton] = useState(false);
@@ -111,6 +173,16 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       icon: <Home size={20} />,
       label: 'Home',
     },
+    ...(repository
+      ? [
+          {
+            id: 'repository' as const,
+            icon: <RepositoryOwnerAvatar owner={repository.owner} />,
+            label: repository.name,
+            title: `${repository.owner}/${repository.name}`,
+          },
+        ]
+      : []),
     // Legacy Projects surface — opt-in via Settings (showProjectsButton).
     ...(showProjectsButton
       ? [
@@ -121,8 +193,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           },
         ]
       : []),
-    { id: 'topics', icon: <Layers size={20} />, label: 'Topics' },
-    { id: 'skills', icon: <ToolCase size={20} />, label: 'Skills' },
+    {
+      id: 'subsystem-models',
+      icon: <Network size={20} />,
+      label: 'Models',
+    },
+    { id: 'topics', icon: <TopicsIcon />, label: 'Topics' },
     { id: 'drawings', icon: <PenTool size={20} />, label: 'Drawings' },
     ...(showOnboardingButton
       ? [
@@ -165,6 +241,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         ]
       : []),
     {
+      id: 'skills',
+      icon: <ToolCase size={20} />,
+      label: 'Skills',
+      position: 'bottom',
+    },
+    {
       id: 'settings',
       icon: <Settings size={20} />,
       label: 'Settings',
@@ -175,73 +257,93 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const topItems = navItems.filter((item) => item.position !== 'bottom');
   const bottomItems = navItems.filter((item) => item.position === 'bottom');
 
-  const renderNavItem = (item: NavItem) => (
-    <button
-      key={item.id}
-      className={`nav-item ${activeView === item.id ? 'active' : ''}`}
-      onClick={() => onViewChange(item.id)}
-      style={{
-        width: 'calc(100% - 20px)',
-        height: '64px',
-        margin: '4px 10px',
-        padding: '4px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '4px',
-        border: 'none',
-        background: 'transparent',
-        color:
-          activeView === item.id ? accentColor : theme.colors.textSecondary,
-        cursor: 'pointer',
-        position: 'relative',
-      }}
-    >
-      <div
+  const renderNavItem = (item: NavItem) => {
+    const active =
+      item.id === 'repository'
+        ? isRepositoryActive
+        : !isRepositoryActive && activeView === item.id;
+    const hovered = hoveredNavItemId === item.id;
+
+    return (
+      <button
+        key={item.id}
+        className={`nav-item ${active ? 'active' : ''}`}
+        onClick={() => {
+          if (active || leftPanelCollapsed) {
+            onToggleLeftPanel();
+          }
+          if (item.id === 'repository') {
+            onSelectRepository?.();
+          } else {
+            onViewChange(item.id);
+          }
+        }}
+        title={item.title ?? item.label}
+        onMouseEnter={() => setHoveredNavItemId(item.id)}
+        onMouseLeave={() => setHoveredNavItemId(null)}
         style={{
-          position: 'relative',
-          width: '36px',
-          height: '36px',
+          width: 'calc(100% - 20px)',
+          height: '64px',
+          margin: '4px 10px',
+          padding: '4px',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: '8px',
-          background:
-            activeView === item.id ? accentColor + '20' : 'transparent',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseEnter={(e) => {
-          if (activeView !== item.id) {
-            e.currentTarget.style.background = theme.colors.border;
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (activeView !== item.id) {
-            e.currentTarget.style.background = 'transparent';
-          }
+          gap: '4px',
+          border: 'none',
+          background: 'transparent',
+          color: active || hovered ? accentColor : theme.colors.textSecondary,
+          cursor: 'pointer',
+          position: 'relative',
+          transition: 'color 0.2s ease',
         }}
       >
-        {item.icon}
-      </div>
-      {item.label && (
-        <span
+        <div
           style={{
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[0],
-            fontWeight:
-              activeView === item.id
-                ? theme.fontWeights.semibold
-                : theme.fontWeights.body,
-            lineHeight: theme.lineHeights.tight,
-            textAlign: 'center',
+            position: 'relative',
+            width: '36px',
+            height: '36px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '8px',
+            background: active
+              ? `${accentColor}20`
+              : hovered
+                ? theme.colors.border
+                : 'transparent',
+            transition: 'all 0.2s ease',
           }}
         >
-          {item.label}
-        </span>
-      )}
-    </button>
-  );
+          {item.icon}
+        </div>
+        {item.label && (
+          <span
+            style={{
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[0],
+              fontWeight: active
+                ? theme.fontWeights.semibold
+                : theme.fontWeights.body,
+              lineHeight: theme.lineHeights.tight,
+              textAlign: 'center',
+            ...(item.id === 'repository'
+              ? {
+                  maxWidth: '68px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }
+              : {}),
+            }}
+          >
+            {item.label}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div

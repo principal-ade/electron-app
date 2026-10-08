@@ -9,8 +9,18 @@
  * Extracted from the former `DrawingsView` overlay's master list.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { PenTool, Plus, Trash2, Clock, Search, X, Copy, Check, RefreshCw } from 'lucide-react';
+import {
+  PenTool,
+  Plus,
+  Trash2,
+  Search,
+  X,
+  Copy,
+  Check,
+  RefreshCw,
+} from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { useDelayedLoading } from '../hooks/useDelayedLoading';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import {
   DRAWING_EVENTS,
@@ -34,8 +44,9 @@ export const DrawingsLeftPanel: React.FC<DrawingsLeftPanelProps> = ({
   const [drawingsDir, setDrawingsDir] = useState<string | null>(null);
   const [drawings, setDrawings] = useState<DrawingItem[]>([]);
   const [listLoading, setListLoading] = useState(true);
+  const showLoading = useDelayedLoading(listLoading);
   const [filterText, setFilterText] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   // Id of the drawing whose path was just copied, for transient button feedback.
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -148,327 +159,315 @@ export const DrawingsLeftPanel: React.FC<DrawingsLeftPanelProps> = ({
       )
     : drawings;
 
+  const spacing = {
+    xs: theme.space?.[1] || 4,
+    sm: theme.space?.[2] || 8,
+  };
+
+  const emptyState = (text: string) => (
+    <div
+      style={{
+        padding: `${spacing.sm * 3}px ${spacing.sm * 2}px`,
+        color: theme.colors.textSecondary,
+        fontFamily: theme.fonts.body,
+        fontSize: theme.fontSizes[1],
+        textAlign: 'center',
+      }}
+    >
+      {text}
+    </div>
+  );
+
   return (
     <div
       style={{
-        width: '100%',
         height: '100%',
+        width: '100%',
+        overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 0,
         backgroundColor: theme.colors.background,
-        fontFamily: theme.fonts.body,
       }}
     >
-      {/* List header */}
+      {/* Header: title + actions */}
       <div
         style={{
-          padding: '12px 16px',
-          borderBottom: `1px solid ${theme.colors.border}`,
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          backgroundColor: theme.colors.backgroundLight,
-          flexWrap: 'wrap',
+          gap: spacing.sm,
+          padding: spacing.sm,
           flexShrink: 0,
         }}
       >
-        <div
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}
+        <PenTool
+          size={16}
+          color={theme.colors.text}
+          style={{ marginLeft: 4 }}
+        />
+        <span
+          style={{
+            flex: 1,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            fontWeight: 600,
+            color: theme.colors.text,
+          }}
         >
-          <PenTool size={16} color={theme.colors.primary} />
-          <span
+          Drawings
+        </span>
+        <button
+          type="button"
+          onClick={handleNew}
+          title="New drawing"
+          aria-label="New drawing"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: spacing.xs,
+            background: 'transparent',
+            border: 'none',
+            color: theme.colors.textSecondary,
+            cursor: 'pointer',
+          }}
+        >
+          <Plus size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => void rescan()}
+          title="Refresh"
+          aria-label="Refresh drawings"
+          disabled={listLoading}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: spacing.xs,
+            background: 'transparent',
+            border: 'none',
+            color: theme.colors.textSecondary,
+            cursor: listLoading ? 'default' : 'pointer',
+          }}
+        >
+          <RefreshCw
+            size={14}
             style={{
-              fontSize: theme.fontSizes[1],
-              fontWeight: theme.fontWeights.semibold,
+              animation: listLoading ? 'spin 0.8s linear infinite' : undefined,
+            }}
+          />
+        </button>
+      </div>
+
+      {/* Filter */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing.sm,
+          padding: `0 ${spacing.sm}px ${spacing.sm}px`,
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            height: 30,
+            boxSizing: 'border-box',
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.sm,
+            padding: `0 ${spacing.sm}px`,
+            borderRadius: 6,
+            border: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.backgroundSecondary,
+          }}
+        >
+          <Search size={14} color={theme.colors.textSecondary} />
+          <input
+            type="text"
+            placeholder="Filter drawings"
+            value={filterText}
+            onChange={(event) => setFilterText(event.target.value)}
+            aria-label="Filter drawings"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
               color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
             }}
-          >
-            Drawings ({drawings.length})
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <button
-            onClick={() => void rescan()}
-            title="Refresh"
-            disabled={listLoading}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '4px',
-              border: 'none',
-              borderRadius: '4px',
-              backgroundColor: 'transparent',
-              color: theme.colors.textSecondary,
-              cursor: listLoading ? 'default' : 'pointer',
-            }}
-          >
-            <RefreshCw
-              size={16}
+          />
+          {filterText && (
+            <button
+              type="button"
+              onClick={() => setFilterText('')}
+              title="Clear filter"
+              aria-label="Clear filter"
               style={{
-                animation: listLoading ? 'spin 0.8s linear infinite' : undefined,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                background: 'transparent',
+                border: 'none',
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
               }}
-            />
-          </button>
-          <button
-            onClick={() => setShowSearch((s) => !s)}
-            title="Search"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '4px',
-              border: 'none',
-              borderRadius: '4px',
-              backgroundColor: showSearch
-                ? `${theme.colors.primary}20`
-                : 'transparent',
-              color: showSearch
-                ? theme.colors.primary
-                : theme.colors.textSecondary,
-              cursor: 'pointer',
-            }}
-          >
-            <Search size={16} />
-          </button>
-          <button
-            onClick={handleNew}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '4px 8px',
-              border: 'none',
-              borderRadius: '4px',
-              backgroundColor: theme.colors.primary,
-              color: theme.colors.background,
-              cursor: 'pointer',
-              fontSize: theme.fontSizes[0],
-              fontWeight: theme.fontWeights.medium,
-            }}
-          >
-            <Plus size={14} />
-            New
-          </button>
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
-        {showSearch && (
-          <div
-            style={{
-              width: '100%',
-              marginTop: '8px',
-              display: 'flex',
-              gap: '8px',
-            }}
-          >
-            <input
-              type="text"
-              placeholder="Filter drawings…"
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
-              autoFocus
-              style={{
-                flex: 1,
-                padding: '6px 10px',
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: '4px',
-                backgroundColor: theme.colors.background,
-                color: theme.colors.text,
-                fontSize: theme.fontSizes[0],
-                fontFamily: theme.fonts.body,
-                outline: 'none',
-              }}
-            />
-            {filterText && (
-              <button
-                onClick={() => setFilterText('')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '4px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  backgroundColor: 'transparent',
-                  color: theme.colors.textSecondary,
-                  cursor: 'pointer',
-                }}
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* List body */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '8px', minHeight: 0 }}>
-        {listLoading ? (
-          <div
-            style={{
-              padding: '20px',
-              textAlign: 'center',
-              color: theme.colors.textSecondary,
-              fontSize: theme.fontSizes[0],
-            }}
-          >
-            Loading…
-          </div>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        {listLoading && drawings.length === 0 ? (
+          showLoading ? emptyState('Loading…') : null
         ) : filtered.length === 0 ? (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '32px 20px',
-              color: theme.colors.textSecondary,
-              textAlign: 'center',
-            }}
-          >
-            <PenTool size={40} style={{ opacity: 0.3 }} />
-            <div style={{ fontWeight: theme.fontWeights.medium }}>
-              {filterText ? 'No matching drawings' : 'No drawings yet'}
-            </div>
-            {!filterText && (
-              <button
-                onClick={handleNew}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 14px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  backgroundColor: theme.colors.primary,
-                  color: theme.colors.background,
-                  cursor: 'pointer',
-                  fontSize: theme.fontSizes[1],
-                  fontWeight: theme.fontWeights.medium,
-                }}
-              >
-                <Plus size={16} />
-                Create Drawing
-              </button>
-            )}
-          </div>
+          emptyState(
+            filterText
+              ? 'No drawings match this filter.'
+              : 'No drawings yet. Use + to create one.',
+          )
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {filtered.map((item) => (
+          filtered.map((item) => {
+            const hovered = hoveredId === item.id;
+            return (
               <div
                 key={item.id}
-                onClick={() => handleOpen(item)}
+                onMouseEnter={() => setHoveredId(item.id)}
+                onMouseLeave={() => setHoveredId(null)}
                 style={{
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: `1px solid ${theme.colors.border}`,
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  cursor: 'pointer',
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
+                  alignItems: 'flex-start',
+                  gap: spacing.sm,
+                  width: '100%',
+                  padding: `${spacing.sm * 1.5}px ${spacing.sm * 2}px`,
+                  backgroundColor:
+                    hovered ? theme.colors.backgroundSecondary : 'transparent',
+                  border: 'none',
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                  transition: 'background-color 0.15s ease',
                 }}
               >
-                <div
+                <button
+                  type="button"
+                  onClick={() => handleOpen(item)}
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '8px',
+                    alignItems: 'flex-start',
+                    gap: spacing.sm,
+                    flex: 1,
+                    minWidth: 0,
+                    padding: 0,
+                    background: 'transparent',
+                    border: 'none',
+                    color: theme.colors.text,
+                    cursor: 'pointer',
+                    textAlign: 'left',
                   }}
                 >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      minWidth: 0,
-                    }}
-                  >
-                    <PenTool size={14} color={theme.colors.primary} />
-                    <span
+                  <PenTool
+                    size={14}
+                    color={theme.colors.primary}
+                    style={{ flexShrink: 0, marginTop: 3 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
                       style={{
-                        fontSize: theme.fontSizes[1],
-                        fontWeight: theme.fontWeights.medium,
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[2],
+                        fontWeight: 500,
                         color: theme.colors.text,
+                        marginBottom: 2,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
                       }}
                     >
                       {item.name}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '2px',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <button
-                      onClick={(e) => handleCopyPath(item, e)}
-                      title={
-                        copiedId === item.id ? 'Path copied' : 'Copy file path'
-                      }
+                    </div>
+                    <div
                       style={{
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '4px',
-                        border: 'none',
-                        borderRadius: '4px',
-                        backgroundColor: 'transparent',
-                        color:
-                          copiedId === item.id
-                            ? theme.colors.primary
-                            : theme.colors.textSecondary,
-                        cursor: 'pointer',
+                        alignItems: 'baseline',
+                        gap: spacing.sm,
+                        fontFamily: theme.fonts.monospace,
+                        fontSize: theme.fontSizes[1],
+                        color: theme.colors.textMuted,
                       }}
                     >
-                      {copiedId === item.id ? (
-                        <Check size={14} />
-                      ) : (
-                        <Copy size={14} />
+                      <span style={{ flex: 1, minWidth: 0 }}>Drawing</span>
+                      {item.lastModified && (
+                        <span style={{ flexShrink: 0 }}>
+                          {formatDate(item.lastModified)}
+                        </span>
                       )}
-                    </button>
-                    <button
-                      onClick={(e) => handleDelete(item, e)}
-                      title="Delete drawing"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '4px',
-                        border: 'none',
-                        borderRadius: '4px',
-                        backgroundColor: 'transparent',
-                        color: theme.colors.textSecondary,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    </div>
                   </div>
-                </div>
-                {item.lastModified && (
-                  <div
+                </button>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    flexShrink: 0,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={(event) => handleCopyPath(item, event)}
+                    title={
+                      copiedId === item.id ? 'Path copied' : 'Copy file path'
+                    }
+                    aria-label={`Copy path for ${item.name}`}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
-                      fontSize: theme.fontSizes[0],
-                      color: theme.colors.textSecondary,
+                      justifyContent: 'center',
+                      padding: spacing.xs,
+                      border: 'none',
+                      background: 'transparent',
+                      color:
+                        copiedId === item.id
+                          ? theme.colors.primary
+                          : theme.colors.textSecondary,
+                      cursor: 'pointer',
                     }}
                   >
-                    <Clock size={10} />
-                    <span>{formatDate(item.lastModified)}</span>
-                  </div>
-                )}
+                    {copiedId === item.id ? (
+                      <Check size={14} />
+                    ) : (
+                      <Copy size={14} />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(event) => handleDelete(item, event)}
+                    title="Delete drawing"
+                    aria-label={`Delete ${item.name}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: spacing.xs,
+                      border: 'none',
+                      background: 'transparent',
+                      color: theme.colors.textSecondary,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })
         )}
       </div>
     </div>

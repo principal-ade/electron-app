@@ -16,7 +16,8 @@ export type InteractiveShellNavigationView =
   | 'processes'
   | 'connections'
   | 'skills'
-  | 'drawings';
+  | 'drawings'
+  | 'subsystem-models';
 
 // Onboarding state types
 export interface OnboardingCardState {

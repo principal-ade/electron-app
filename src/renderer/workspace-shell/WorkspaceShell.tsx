@@ -31,7 +31,8 @@ import React, {
   useEffect,
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Layers, PenTool, ToolCase } from 'lucide-react';
+import { Network, PenTool, ToolCase } from 'lucide-react';
+import { TopicsIcon } from '../components/TopicsIcon';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -79,7 +80,9 @@ import { SkillBrowserPanelProvider } from '../principal-window/views/SkillBrowse
 import { SkillsSurfaceProvider } from '../skills-view/SkillsSurfaceContext';
 import { SkillsLeftPanel } from '../skills-view/SkillsLeftPanel';
 import { SkillDetailTabContent } from '../skills-view/SkillDetailTabContent';
-import type { FeedTab, DrawingTab } from '../events/portalTabs';
+import { SubsystemModelsLeftPanel } from '../subsystem-models/SubsystemModelsLeftPanel';
+import { SubsystemModelTabContent } from '../subsystem-models/SubsystemModelTabContent';
+import type { FeedTab, DrawingTab, SubsystemModelTab } from '../events/portalTabs';
 import {
   useWorkspaceTabs,
   type WorkspaceTab,
@@ -98,7 +101,8 @@ export type WorkspaceView =
   | 'projects'
   | 'topics'
   | 'drawings'
-  | 'skills';
+  | 'skills'
+  | 'subsystem-models';
 
 /** Centered landing hint shown by the `topics-home` tab. */
 const HomePanel: React.FC<{
@@ -145,6 +149,10 @@ interface WorkspaceShellInnerProps {
   repositories: AlexandriaEntry[];
   collapsed: { left: boolean; right: boolean };
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
+  selectedRepository: RepositorySelectedPayload | null;
+  isRepositoryPanelActive: boolean;
+  onOpenRepository: (repository: RepositorySelectedPayload) => void;
+  onCloseRepository: () => void;
   layout: PanelLayout;
   panelSizes: { left: number; middle: number; right: number };
   onPanelSizesChange: (sizes: {
@@ -160,6 +168,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   repositories,
   collapsed,
   onCollapsedChange,
+  selectedRepository,
+  isRepositoryPanelActive,
+  onOpenRepository,
+  onCloseRepository,
   layout,
   panelSizes,
   onPanelSizesChange,
@@ -182,9 +194,25 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     string | null
   >(null);
   const [showSendTabButton, setShowSendTabButton] = useState(false);
-  const [selectedRepo, setSelectedRepo] =
-    useState<RepositorySelectedPayload | null>(null);
-  const [repoCardExiting, setRepoCardExiting] = useState(false);
+
+  useEffect(() => {
+    if (collapsed.left === isLeftCollapsed) return;
+
+    if (collapsed.left) {
+      panelLayoutRef.current?.collapsePanel('left');
+    } else {
+      panelLayoutRef.current?.expandPanel('left');
+      const currentLayout = panelLayoutRef.current?.getLayout();
+      if (currentLayout && currentLayout.left < 20) {
+        panelLayoutRef.current?.setLayout({
+          left: 25,
+          middle: 75,
+          right: currentLayout.right,
+        });
+      }
+    }
+    setIsLeftCollapsed(collapsed.left);
+  }, [collapsed.left, isLeftCollapsed]);
 
   // Refs so renderTabContent stays stable across renders.
   const eventsRef = useRef(events);
@@ -289,13 +317,15 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     if (projectsIcon) return projectsIcon;
     switch (tab.contentType) {
       case 'topics-home':
-        return <Layers size={14} />;
+        return <TopicsIcon size={14} />;
       case 'local-topic':
-        return <Layers size={14} />;
+        return <TopicsIcon size={14} />;
       case 'drawing':
         return <PenTool size={14} />;
       case 'skill':
         return <ToolCase size={14} />;
+      case 'subsystem-model':
+        return <Network size={14} />;
       default:
         return null;
     }
@@ -326,7 +356,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         case 'topics-home':
           return (
             <HomePanel
-              icon={<Layers size={32} />}
+              icon={<TopicsIcon size={32} />}
               title="Your topics"
               body="Topics are subject briefs scoped to projects. Pick one from the panel on the left to read its description here."
             />
@@ -352,6 +382,15 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               path={drawingTab.path}
               name={drawingTab.name}
               events={eventsRef.current}
+            />
+          );
+        }
+        case 'subsystem-model': {
+          const modelTab = tab as SubsystemModelTab;
+          return (
+            <SubsystemModelTabContent
+              key={modelTab.id}
+              modelId={modelTab.modelId}
             />
           );
         }
@@ -489,8 +528,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         entry,
         matchingEntries.length > 0 ? matchingEntries : undefined,
       );
-      setSelectedRepo(payload);
-      setRepoCardExiting(false);
+      onOpenRepository(payload);
       // Expand the left panel if collapsed.
       if (isLeftCollapsed) {
         panelLayoutRef.current?.expandPanel('left');
@@ -505,26 +543,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     findEntryForDirectory,
     repositories,
     isLeftCollapsed,
+    onOpenRepository,
     onCollapsedChange,
     collapsed.right,
   ]);
-
-  const dismissRepoCard = useCallback(() => {
-    setRepoCardExiting(true);
-    setTimeout(() => {
-      setSelectedRepo(null);
-      setRepoCardExiting(false);
-    }, 320);
-  }, []);
-
-  // Switching the workspace surface (sidebar click) swaps the left panel, so
-  // the RepoAboutCard slide-in from a previous surface must not linger on top
-  // of it. Clear immediately — no exit animation — matching HomeLeftPanel's
-  // `home-panel:show-overview` behavior.
-  useEffect(() => {
-    setSelectedRepo(null);
-    setRepoCardExiting(false);
-  }, [activeView]);
 
   // bottom-bar content for cross-window tab transfer (principal → dev-workspace).
   const bottomBarContent = useMemo(() => {
@@ -666,7 +688,11 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       {
         id: 'workspace-list',
         label:
-          activeView === 'home-panel'
+          isRepositoryPanelActive && selectedRepository
+            ? selectedRepository.github?.name ??
+              selectedRepository.localEntry?.github?.name ??
+              'Repository'
+            : activeView === 'home-panel'
             ? 'Home'
             : activeView === 'projects'
               ? feedMode === 'collections'
@@ -677,10 +703,19 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               : activeView === 'drawings'
                   ? 'Drawings'
                   : activeView === 'skills'
-                      ? 'Skills'
-                      : 'Topics',
+                ? 'Skills'
+                : activeView === 'subsystem-models'
+                  ? 'Subsystem Models'
+                  : 'Topics',
         content:
-          activeView === 'home-panel' ? (
+          isRepositoryPanelActive && selectedRepository ? (
+            <RepoAboutCard
+              repo={selectedRepository}
+              onDismiss={onCloseRepository}
+              events={events}
+              baseDefaultDirectory={baseDefaultDirectory}
+            />
+          ) : activeView === 'home-panel' ? (
             <HomeLeftPanel repositories={repositories} events={events} />
           ) : activeView === 'projects' ? (
             <ProjectsLeftPanel
@@ -694,6 +729,11 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             <DrawingsLeftPanel events={events} />
           ) : activeView === 'skills' ? (
             <SkillsLeftPanel />
+          ) : activeView === 'subsystem-models' ? (
+            <SubsystemModelsLeftPanel
+              events={portalEvents}
+              activeTabId={activeTabId}
+            />
           ) : (
             <TopicsLeftPanel events={portalEvents} />
           ),
@@ -752,6 +792,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     ],
     [
       activeView,
+      isRepositoryPanelActive,
+      selectedRepository,
+      onCloseRepository,
       portalEvents,
       events,
       repositories,
@@ -774,6 +817,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       renderTabContent,
       renderTabIcon,
       bottomBarContent,
+      baseDefaultDirectory,
       theme,
     ],
   );
@@ -805,42 +849,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             theme={theme}
             onPanelResize={handlePanelResize}
           />
-          {/* RepoAboutCard overlay — slides in over the left panel when a
-              project is selected from the terminal bottom bar. */}
-          {selectedRepo && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '25%',
-                height: '100%',
-                zIndex: 10,
-                overflowY: 'auto',
-                background: theme.colors.background,
-                animation: repoCardExiting
-                  ? 'repoAboutSlideOut 320ms ease forwards'
-                  : 'repoAboutSlideIn 320ms ease',
-              }}
-            >
-              <style>{`
-                @keyframes repoAboutSlideIn {
-                  from { transform: translateX(-100%); }
-                  to   { transform: translateX(0); }
-                }
-                @keyframes repoAboutSlideOut {
-                  from { transform: translateX(0); }
-                  to   { transform: translateX(-100%); }
-                }
-              `}</style>
-              <RepoAboutCard
-                repo={selectedRepo}
-                onDismiss={dismissRepoCard}
-                events={events}
-                baseDefaultDirectory={baseDefaultDirectory}
-              />
-            </div>
-          )}
           {/* Projects repository delete modal — always mounted with the shell. */}
           {deleteModal}
         </div>
@@ -853,8 +861,22 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
  * WorkspaceShell — self-contained host (owns its local event bus, repositories
  * load, layout state) wrapped in a single `terminal:workspace` TerminalProvider.
  */
-export const WorkspaceShell: React.FC<{ activeView: WorkspaceView }> = ({
+export const WorkspaceShell: React.FC<{
+  activeView: WorkspaceView;
+  leftSidebarCollapsed: boolean;
+  onLeftSidebarCollapsedChange: (collapsed: boolean) => void;
+  selectedRepository: RepositorySelectedPayload | null;
+  isRepositoryPanelActive: boolean;
+  onOpenRepository: (repository: RepositorySelectedPayload) => void;
+  onCloseRepository: () => void;
+}> = ({
   activeView,
+  leftSidebarCollapsed,
+  onLeftSidebarCollapsedChange,
+  selectedRepository,
+  isRepositoryPanelActive,
+  onOpenRepository,
+  onCloseRepository,
 }) => {
   const { theme } = useTheme();
   const events = useMemo(() => new PanelEventBus(), []);
@@ -895,7 +917,10 @@ export const WorkspaceShell: React.FC<{ activeView: WorkspaceView }> = ({
     middle: 'terminal',
     right: 'placeholder',
   });
-  const [collapsed, setCollapsed] = useState({ left: false, right: false });
+  const collapsed = { left: leftSidebarCollapsed, right: false };
+  const setCollapsed = (next: { left: boolean; right: boolean }) => {
+    onLeftSidebarCollapsedChange(next.left);
+  };
   const [panelSizes, setPanelSizes] = useState({
     left: 25,
     middle: 75,
@@ -923,6 +948,10 @@ export const WorkspaceShell: React.FC<{ activeView: WorkspaceView }> = ({
           repositories={repositories}
           collapsed={collapsed}
           onCollapsedChange={setCollapsed}
+          selectedRepository={selectedRepository}
+          isRepositoryPanelActive={isRepositoryPanelActive}
+          onOpenRepository={onOpenRepository}
+          onCloseRepository={onCloseRepository}
           layout={layout}
           panelSizes={panelSizes}
           onPanelSizesChange={setPanelSizes}

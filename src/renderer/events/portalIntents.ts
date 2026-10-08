@@ -43,6 +43,8 @@ export const PORTAL_INTENTS = {
   repositoryActivityRequested: 'repository:activity-requested',
   /** Open a terminal tab rooted at a local directory. */
   terminalOpen: 'terminal:open',
+  /** Open a local subsystem model in a workspace tab. */
+  subsystemModelOpen: 'subsystem-model:open',
 } as const;
 
 export type PortalIntentName =
@@ -52,6 +54,26 @@ export type PortalIntentName =
 export interface TopicOpenPayload {
   topicId: string;
   title?: string;
+}
+
+/** Payload for {@link PORTAL_INTENTS.subsystemModelOpen}. */
+export interface SubsystemModelOpenPayload {
+  modelId: string;
+  title: string;
+}
+
+/** Emit a {@link PORTAL_INTENTS.subsystemModelOpen} intent. */
+export function emitSubsystemModelOpen(
+  events: PanelEventEmitter,
+  source: string,
+  payload: SubsystemModelOpenPayload,
+): void {
+  events.emit<SubsystemModelOpenPayload>({
+    type: PORTAL_INTENTS.subsystemModelOpen,
+    source,
+    timestamp: Date.now(),
+    payload,
+  });
 }
 
 /** Payload for {@link PORTAL_INTENTS.docOpen}. */

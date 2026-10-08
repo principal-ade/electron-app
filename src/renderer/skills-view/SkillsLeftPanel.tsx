@@ -17,12 +17,14 @@ import { SkillBrowserViewHeader } from '../principal-window/views/SkillBrowserVi
 import { SkillsRepoOnboarding } from '../principal-window/views/SkillBrowserView/SkillsRepoOnboarding';
 import { RecentSkillsPanel } from '../principal-window/views/SkillBrowserView/RecentSkillsPanel';
 import { useSkillsSurface } from './SkillsSurfaceContext';
+import { useDelayedLoading } from '../hooks/useDelayedLoading';
 
 export const SkillsLeftPanel: React.FC = () => {
   const { theme } = useTheme();
   const s = useSkillsSurface();
+  const showLoading = useDelayedLoading(s.checkingConfig);
 
-  if (s.checkingConfig) {
+  if (showLoading) {
     return (
       <div
         style={{

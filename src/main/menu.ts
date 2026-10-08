@@ -60,18 +60,19 @@ export default class MenuBuilder {
   }
 
   buildDarwinTemplate(): MenuItemConstructorOptions[] {
+    const applicationName = app.getName();
     const subMenuAbout: DarwinMenuItemConstructorOptions = {
-      label: 'Principal AI',
+      label: applicationName,
       submenu: [
         {
-          label: 'About Principal AI',
+          label: `About ${applicationName}`,
           selector: 'orderFrontStandardAboutPanel:',
         },
         { type: 'separator' },
         { label: 'Services', submenu: [] },
         { type: 'separator' },
         {
-          label: 'Hide Principal AI',
+          label: `Hide ${applicationName}`,
           accelerator: 'Command+H',
           selector: 'hide:',
         },

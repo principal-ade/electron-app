@@ -31,6 +31,7 @@ import {
   type RepositoryActivityRequestedPayload,
   type RepositoryGuideOpenReadmePayload,
   type RepositoryGuideOpenWeekPayload,
+  type SubsystemModelOpenPayload,
 } from '../../events/portalIntents';
 
 export const PortalIntentBridge: React.FC = () => {
@@ -41,6 +42,12 @@ export const PortalIntentBridge: React.FC = () => {
     const handleTopicOpen = (event: { payload: TopicOpenPayload }) => {
       const p = event.payload;
       ws.openLocalTopic(p.topicId, p.title);
+    };
+
+    const handleSubsystemModelOpen = (event: {
+      payload: SubsystemModelOpenPayload;
+    }) => {
+      ws.openSubsystemModel(event.payload.modelId, event.payload.title);
     };
 
     const handleRepositorySelected = (event: {
@@ -104,6 +111,10 @@ export const PortalIntentBridge: React.FC = () => {
     };
 
     events.on(PORTAL_INTENTS.topicOpen, handleTopicOpen);
+    events.on(
+      PORTAL_INTENTS.subsystemModelOpen,
+      handleSubsystemModelOpen,
+    );
     events.on(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
     events.on(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
     events.on(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);
@@ -115,6 +126,10 @@ export const PortalIntentBridge: React.FC = () => {
     events.on(PORTAL_INTENTS.repositoryActivityRequested, handleRepoActivity);
     return () => {
       events.off(PORTAL_INTENTS.topicOpen, handleTopicOpen);
+      events.off(
+        PORTAL_INTENTS.subsystemModelOpen,
+        handleSubsystemModelOpen,
+      );
       events.off(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
       events.off(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
       events.off(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);

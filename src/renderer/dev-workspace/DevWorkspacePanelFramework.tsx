@@ -25,10 +25,10 @@ import {
   Building2,
   Image,
   Film,
-  Layers,
   ExternalLink,
   AlertCircle,
 } from 'lucide-react';
+import { TopicsIcon } from '../components/TopicsIcon';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -2414,7 +2414,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       case 'file-city-3d':
         return <Building2 size={14} />;
       case 'topic':
-        return <Layers size={14} />;
+        return <TopicsIcon size={14} />;
       case 'media': {
         const mediaTab = tab as MediaTab;
         const isVideo = /\.(mp4|webm|mov|avi|mkv|ogv)$/i.test(

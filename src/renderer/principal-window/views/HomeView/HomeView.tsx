@@ -5,12 +5,12 @@ import {
   Compass,
   Download,
   ExternalLink,
-  Layers,
   PenTool,
   Plug,
   Plus,
   RefreshCw,
 } from 'lucide-react';
+import { TopicsIcon } from '../../../components/TopicsIcon';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { GitService } from '../../../main-process-api/GitService';
 import { GithubService } from '../../../main-process-api/GithubService';
@@ -86,7 +86,7 @@ const TOPIC_SKILL_DETAILS: ReadonlyArray<{
       'Read the topic an agent was briefed on and keep its description current — fetch the topic, append discovered context, or replace a status section in place.',
     url: `${SKILL_GITHUB_URL}/tree/${SKILL_BRANCH}/topic-context`,
     source: SKILL_SOURCE,
-    Icon: Layers,
+    Icon: TopicsIcon,
   },
 ];
 
@@ -942,7 +942,7 @@ export function HomeView({ onOpenTopic }: HomeViewProps) {
                   e.currentTarget.style.borderColor = theme.colors.border;
                 }}
               >
-                <Layers size={36} color={theme.colors.primary} />
+                <TopicsIcon size={36} color={theme.colors.primary} />
                 <div
                   style={{
                     fontSize: theme.fontSizes[3],

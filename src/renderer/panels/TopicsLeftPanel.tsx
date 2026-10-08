@@ -21,7 +21,6 @@ import React, {
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
-  Layers,
   RefreshCw,
   Search,
   X,
@@ -30,10 +29,12 @@ import {
   ListFilter,
   Plus,
 } from 'lucide-react';
+import { TopicsIcon } from '../components/TopicsIcon';
 import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { NewTopicModal } from '../components/NewTopicModal';
 import { TopicService } from '../main-process-api/TopicService';
+import { useDelayedLoading } from '../hooks/useDelayedLoading';
 import { emitTopicOpen } from '../events/portalIntents';
 import { useTopicsTabs } from '../principal-window/contexts/TopicsTabsContext';
 import {
@@ -74,6 +75,7 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
   const { activeTabId } = useTopicsTabs();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
+  const showLoading = useDelayedLoading(loading);
   const [error, setError] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -181,7 +183,9 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
   );
 
   const renderList = () => {
-    if (loading && topics.length === 0) return emptyState('Loading…');
+    if (loading && topics.length === 0) {
+      return showLoading ? emptyState('Loading…') : null;
+    }
     if (error) return emptyState(error);
     if (topics.length === 0) {
       return emptyState('No topics yet. Topics you create appear here.');
@@ -314,7 +318,11 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
           flexShrink: 0,
         }}
       >
-        <Layers size={16} color={theme.colors.text} />
+        <TopicsIcon
+          size={16}
+          color={theme.colors.text}
+          style={{ marginLeft: 4 }}
+        />
         <span
           style={{
             flex: 1,
@@ -340,7 +348,7 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
             cursor: 'pointer',
           }}
         >
-          <Plus size={16} />
+          <Plus size={14} />
         </button>
         <button
           onClick={() => void load()}

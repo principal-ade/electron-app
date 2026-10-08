@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Theme } from '@principal-ade/industry-theme';
-import type { LucideIcon } from 'lucide-react';
+import type { LucideProps } from 'lucide-react';
 import {
   BookOpen,
   KanbanSquare,
@@ -18,15 +18,15 @@ import {
   Plug,
   Github,
   FolderTree,
-  Layers,
 } from 'lucide-react';
+import { TopicsIcon } from '../TopicsIcon';
 
 /**
  * Panel icon configuration
  */
 export interface PanelIconConfig {
   id: string;
-  Icon: LucideIcon;
+  Icon: React.ComponentType<Pick<LucideProps, 'size' | 'strokeWidth'>>;
   label: string;
 }
 
@@ -74,7 +74,7 @@ export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'terminalSessions', Icon: Terminal, label: 'Term' },
   { id: 'packageComposition', Icon: Package, label: 'Info' },
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
-  { id: 'topics', Icon: Layers, label: 'Topics' },
+  { id: 'topics', Icon: TopicsIcon, label: 'Topics' },
   { id: 'agentsList', Icon: ToolCase, label: 'Skills' },
 ];
 

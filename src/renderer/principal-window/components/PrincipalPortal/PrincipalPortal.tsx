@@ -20,6 +20,7 @@
  */
 import React from 'react';
 import { WorkspaceShell } from '../../../workspace-shell/WorkspaceShell';
+import type { RepositorySelectedPayload } from '../../../events/repositorySelected';
 
 /** The workspace surfaces hosted by the portal (vs. standalone overlays). */
 export type WorkspaceView =
@@ -27,7 +28,8 @@ export type WorkspaceView =
   | 'projects'
   | 'topics'
   | 'drawings'
-  | 'skills';
+  | 'skills'
+  | 'subsystem-models';
 
 export const WORKSPACE_VIEWS: WorkspaceView[] = [
   'home-panel',
@@ -35,6 +37,7 @@ export const WORKSPACE_VIEWS: WorkspaceView[] = [
   'topics',
   'drawings',
   'skills',
+  'subsystem-models',
 ];
 
 /** Type guard: is this navigation view a portal-hosted workspace surface? */
@@ -44,10 +47,22 @@ export const isWorkspaceView = (view: string): view is WorkspaceView =>
 export interface PrincipalPortalProps {
   /** Which workspace surface to show in the portal. */
   workspaceView: WorkspaceView;
+  leftSidebarCollapsed: boolean;
+  onLeftSidebarCollapsedChange: (collapsed: boolean) => void;
+  selectedRepository: RepositorySelectedPayload | null;
+  isRepositoryPanelActive: boolean;
+  onOpenRepository: (repository: RepositorySelectedPayload) => void;
+  onCloseRepository: () => void;
 }
 
 export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
   workspaceView,
+  leftSidebarCollapsed,
+  onLeftSidebarCollapsedChange,
+  selectedRepository,
+  isRepositoryPanelActive,
+  onOpenRepository,
+  onCloseRepository,
 }) => {
   return (
     // `isolation: isolate` keeps each workspace surface's internal z-indexes
@@ -58,8 +73,17 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
         workspaceView === 'projects' ||
         workspaceView === 'topics' ||
         workspaceView === 'drawings' ||
-        workspaceView === 'skills') && (
-        <WorkspaceShell activeView={workspaceView} />
+        workspaceView === 'skills' ||
+        workspaceView === 'subsystem-models') && (
+        <WorkspaceShell
+          activeView={workspaceView}
+          leftSidebarCollapsed={leftSidebarCollapsed}
+          onLeftSidebarCollapsedChange={onLeftSidebarCollapsedChange}
+          selectedRepository={selectedRepository}
+          isRepositoryPanelActive={isRepositoryPanelActive}
+          onOpenRepository={onOpenRepository}
+          onCloseRepository={onCloseRepository}
+        />
       )}
     </div>
   );

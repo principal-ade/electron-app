@@ -195,6 +195,12 @@ export interface SkillTab extends BaseTab {
   contentType: 'skill';
 }
 
+/** Read-only subsystem model graph tab. */
+export interface SubsystemModelTab extends BaseTab {
+  contentType: 'subsystem-model';
+  modelId: string;
+}
+
 /** Union of all tab types the Projects surface renders. */
 export type FeedTab =
   | TerminalTab

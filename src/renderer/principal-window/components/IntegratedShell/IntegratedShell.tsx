@@ -29,6 +29,7 @@ import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { usePortalEvents } from '../../PortalEventContext';
 import { useTopicsTabs } from '../../contexts/TopicsTabsContext';
 import { topicClient } from '../../../tipc/topicClient';
+import type { RepositorySelectedPayload } from '../../../events/repositorySelected';
 import { OnboardingWizard } from '../../../components/OnboardingWizard/OnboardingWizard';
 import {
   emitTerminalOpen,
@@ -52,6 +53,7 @@ const VIEW_OPTIONS = [
   'connections',
   'skills',
   'drawings',
+  'subsystem-models',
 ];
 
 // Quick commands for the command palette autocomplete
@@ -118,6 +120,10 @@ const getViewDefaults = (
 
 export const IntegratedShell: React.FC = () => {
   const [activeView, setActiveView] = useState<NavigationView>('home');
+  const [selectedRepository, setSelectedRepository] =
+    useState<RepositorySelectedPayload | null>(null);
+  const [isRepositoryPanelActive, setIsRepositoryPanelActive] =
+    useState(false);
   // The workspace surface (projects/topics) shown in the
   // persistent PrincipalPortal beneath any standalone overlay. Stays `null`
   // until the user first visits a workspace view, so a cold start that lands
@@ -183,8 +189,12 @@ export const IntegratedShell: React.FC = () => {
     skills: { left: false, right: false },
   });
 
-  // Get current view's collapsed states
-  const sidebarCollapsed = viewCollapsedStates[activeView]?.left ?? false;
+  // The titlebar left-panel toggle controls the visible workspace's panel,
+  // including while a standalone overlay is displayed above that workspace.
+  const sidebarView = isWorkspaceView(activeView)
+    ? activeView
+    : (lastWorkspaceView ?? activeView);
+  const sidebarCollapsed = viewCollapsedStates[sidebarView]?.left ?? false;
   const rightSidebarCollapsed = viewCollapsedStates[activeView]?.right ?? false;
 
   // Load saved navigation view and panel states on mount
@@ -384,6 +394,7 @@ export const IntegratedShell: React.FC = () => {
   // Save navigation view when it changes
   const handleViewChange = useCallback(async (view: NavigationView) => {
     setActiveView(view);
+    setIsRepositoryPanelActive(false);
 
     // Clear settings category when navigating away from settings
     if (view !== 'settings') {
@@ -411,6 +422,27 @@ export const IntegratedShell: React.FC = () => {
     }
   }, [preferencesLoaded]);
 
+  const handleOpenRepository = useCallback(
+    (repository: RepositorySelectedPayload) => {
+      setSelectedRepository(repository);
+      setIsRepositoryPanelActive(true);
+    },
+    [],
+  );
+
+  const handleSelectRepository = useCallback(() => {
+    if (!selectedRepository) return;
+    if (!isWorkspaceView(activeView) && lastWorkspaceView) {
+      void handleViewChange(lastWorkspaceView);
+    }
+    setIsRepositoryPanelActive(true);
+  }, [selectedRepository, activeView, lastWorkspaceView, handleViewChange]);
+
+  const handleCloseRepository = useCallback(() => {
+    setSelectedRepository(null);
+    setIsRepositoryPanelActive(false);
+  }, []);
+
   // Toggle the Dashboard overlay from the titlebar: open Dashboard if we're not already
   // on it, otherwise drop back to the last workspace surface (or Projects on a
   // cold start that never opened one).
@@ -432,12 +464,12 @@ export const IntegratedShell: React.FC = () => {
   const handleToggleSidebar = useCallback(async () => {
     const newCollapsed = !sidebarCollapsed;
 
-    // Update state for current view
+    // Update state for the view whose left panel is actually visible.
     setViewCollapsedStates((prev) => {
-      const previousState = prev[activeView] ?? getViewDefaults(activeView);
+      const previousState = prev[sidebarView] ?? getViewDefaults(sidebarView);
       return {
         ...prev,
-        [activeView]: {
+        [sidebarView]: {
           ...previousState,
           left: newCollapsed,
         },
@@ -446,7 +478,7 @@ export const IntegratedShell: React.FC = () => {
 
     if (preferencesLoaded) {
       try {
-        const viewKey = getViewKey(activeView);
+        const viewKey = getViewKey(sidebarView);
         if (viewKey) {
           const collapsedUpdate: { left?: boolean; right?: boolean } = {
             left: newCollapsed,
@@ -463,7 +495,22 @@ export const IntegratedShell: React.FC = () => {
         console.error('Failed to save sidebar collapsed state:', error);
       }
     }
-  }, [sidebarCollapsed, activeView, preferencesLoaded]);
+  }, [sidebarCollapsed, sidebarView, preferencesLoaded]);
+
+  const handlePortalCollapsedChange = useCallback(
+    (left: boolean) => {
+      if (!lastWorkspaceView) return;
+      setViewCollapsedStates((prev) => {
+        const previousState =
+          prev[lastWorkspaceView] ?? getViewDefaults(lastWorkspaceView);
+        return {
+          ...prev,
+          [lastWorkspaceView]: { ...previousState, left },
+        };
+      });
+    },
+    [lastWorkspaceView],
+  );
 
   const handleToggleRightSidebar = useCallback(async () => {
     const newCollapsed = !rightSidebarCollapsed;
@@ -681,6 +728,26 @@ export const IntegratedShell: React.FC = () => {
       <NavigationSidebar
         activeView={activeView}
         onViewChange={handleViewChange}
+        leftPanelCollapsed={sidebarCollapsed}
+        onToggleLeftPanel={() => {
+          void handleToggleSidebar();
+        }}
+        repository={
+          selectedRepository
+            ? {
+                owner:
+                  selectedRepository.github?.owner ??
+                  selectedRepository.localEntry?.github?.owner ??
+                  '',
+                name:
+                  selectedRepository.github?.name ??
+                  selectedRepository.localEntry?.github?.name ??
+                  'Repository',
+              }
+            : null
+        }
+        isRepositoryActive={isRepositoryPanelActive}
+        onSelectRepository={handleSelectRepository}
       />
 
       <div className="main-content">
@@ -744,7 +811,17 @@ export const IntegratedShell: React.FC = () => {
               cold start on Home doesn't eagerly boot a workspace.
             */}
             {lastWorkspaceView && (
-              <PrincipalPortal workspaceView={lastWorkspaceView} />
+              <PrincipalPortal
+                workspaceView={lastWorkspaceView}
+                leftSidebarCollapsed={
+                  viewCollapsedStates[lastWorkspaceView]?.left ?? false
+                }
+                onLeftSidebarCollapsedChange={handlePortalCollapsedChange}
+                selectedRepository={selectedRepository}
+                isRepositoryPanelActive={isRepositoryPanelActive}
+                onOpenRepository={handleOpenRepository}
+                onCloseRepository={handleCloseRepository}
+              />
             )}
 
             {/*
