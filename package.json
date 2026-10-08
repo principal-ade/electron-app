@@ -210,7 +210,7 @@
     "@principal-ade/panel-framework-core": "^0.5.1",
     "@principal-ade/panel-layouts": "^0.4.8",
     "@principal-ade/panels": "^1.0.88",
-    "@principal-ai/agent-monitoring": "^0.3.45",
+    "@principal-ai/agent-monitoring": "^0.3.46",
     "@principal-ai/alexandria-core-library": "^0.7.0",
     "@principal-ai/codebase-composition": "^0.2.58",
     "@principal-ai/control-tower-core": "^0.6.2",
