@@ -184,8 +184,8 @@ try {
     const version = mainPackageJson.version;
     const buildDir = path.join(projectRoot, 'release', 'build');
 
-    // Create GitHub release on landing-page repo
-    const repo = 'principal-ade/landing-page';
+    // Create GitHub release on electron-app repo
+    const repo = 'principal-ade/electron-app';
     try {
       execSync(`gh release create v${version} --repo ${repo} --title "v${version}" --generate-notes`, {
         cwd: projectRoot,

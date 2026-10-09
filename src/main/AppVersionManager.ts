@@ -105,7 +105,7 @@ export default class AppVersionManager {
       autoUpdater.setFeedURL({
         provider: 'github',
         owner: 'principal-ade',
-        repo: 'landing-page',
+        repo: 'electron-app',
       });
       log.info('[AppUpdater] Update feed URL configured for GitHub releases');
     } catch (error) {
@@ -190,7 +190,7 @@ export default class AppVersionManager {
 
       // Add event to check span - this fires when the actual HTTP request begins
       this.activeCheckSpan?.addEvent('app_updates.github.request_started', {
-        feed_url: 'github:principal-ade/landing-page',
+        feed_url: 'github:principal-ade/electron-app',
       });
     });
 

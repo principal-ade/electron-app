@@ -7,7 +7,7 @@ The electron app uses **electron-updater** with GitHub Releases to provide autom
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌────────────────────┐
 │  UpdatesSettings │ --> │ AppVersionManager │ --> │  GitHub Releases   │
-│  (React UI)      │     │  Service (IPC)   │     │  (landing-page)    │
+│  (React UI)      │     │  Service (IPC)   │     │  (electron-app)    │
 └─────────────────┘     └──────────────────┘     └────────────────────┘
          ↑                       ↑
          │                       │
@@ -95,7 +95,7 @@ The UI provides user-friendly messages for common errors:
 ## GitHub Releases Integration
 
 Updates are served from:
-- **Repository**: `principal-ade/landing-page`
+- **Repository**: `principal-ade/electron-app`
 - **Provider**: GitHub Releases
 - **Manifest**: `latest-mac.yml`, `latest.yml`
 
