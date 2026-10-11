@@ -71,6 +71,7 @@ const mockActions: InProgressRepoCardActions = {
     return filesByRepo[name] ?? [];
   },
   getAheadCommits: async () => [],
+  getBehindCommits: async () => [],
   pushBranch: async () => ({ success: true, message: 'pushed' }),
   explainWorkingChanges: async (input) => {
     await delay(900);
@@ -90,6 +91,7 @@ const emptyActions: InProgressRepoCardActions = {
   getFileTreeForLocalRepo: async () => null,
   getWorkingChanges: async () => [],
   getAheadCommits: async () => [],
+  getBehindCommits: async () => [],
   pushBranch: async () => ({ success: true, message: 'pushed' }),
   explainWorkingChanges: async () => ({ text: '' }),
 };

@@ -2852,6 +2852,42 @@ export class GitHubAdapter {
     return profiles;
   }
 
+  /**
+   * List commits reachable from `head` but not `base` (GitHub compare API),
+   * carrying the author's login + avatar_url. Used for "behind remote" commits.
+   */
+  async compareCommits(
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+  ): Promise<
+    Array<{
+      sha: string;
+      message: string;
+      authorLogin: string;
+      authorAvatarUrl?: string;
+      committedAt: string;
+    }>
+  > {
+    const endpoint = `/repos/${owner}/${repo}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`;
+    const result = await this.makeGitHubAPICall(endpoint);
+
+    if (!result.success || !result.data) {
+      console.error('[GitHub] compareCommits failed:', result.error);
+      return [];
+    }
+
+    const data = result.data as { commits?: GitHubCommit[] };
+    return (data.commits ?? []).map((c) => ({
+      sha: c.sha,
+      message: c.commit?.message?.split('\n')[0] ?? '',
+      authorLogin: c.author?.login ?? c.commit?.author?.name ?? 'unknown',
+      authorAvatarUrl: c.author?.avatar_url,
+      committedAt: c.commit?.author?.date ?? '',
+    }));
+  }
+
   async getRepoActivity(owner: string, repo: string, days = 7): Promise<CommitActivityCard[]> {
     const token = await this.getGitHubToken();
     const authHeader = token
@@ -3996,6 +4032,18 @@ export function registerGitHubIpcHandlers(
         return {};
       }
       return adapter.resolveAuthorProfiles(owner, repo, emails);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.COMPARE_COMMITS,
+    async (event, owner: string, repo: string, base: string, head: string) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for COMPARE_COMMITS');
+        return [];
+      }
+      return adapter.compareCommits(owner, repo, base, head);
     },
   );
 

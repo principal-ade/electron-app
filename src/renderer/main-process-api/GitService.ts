@@ -30,6 +30,8 @@ export interface GitCommitInfo {
   message: string;
   author: string;
   date: string;
+  /** Author email (%ae) — the key for resolving a GitHub avatar. */
+  email?: string;
 }
 
 export type GitCommitFileStatus = 'A' | 'M' | 'D' | 'R' | 'C' | 'T';
@@ -853,16 +855,42 @@ export class GitService {
       const result = await window.mainProcess.git.execCommand(directory, [
         'log',
         '@{u}..HEAD',
-        '--format="%H|%s|%an|%aI"',
+        '--format="%H|%s|%an|%ae|%aI"',
       ]);
       const lines = result.stdout.trim().split('\n').filter(Boolean);
       return lines.map((line) => {
         const cleanLine = line.replace(/^"|"$/g, '');
-        const [hash, message, author, date] = cleanLine.split('|');
-        return { hash, message, author, date };
+        const [hash, message, author, email, date] = cleanLine.split('|');
+        return { hash, message, author, email, date };
       });
     } catch (error) {
       console.warn('[GitService] Failed to get ahead commits:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get the commits the upstream is ahead of the current branch by — i.e.
+   * commits on the remote that aren't local yet.
+   * Returns an empty array if there is no upstream or nothing behind.
+   */
+  static async getBehindCommits(
+    directory: string,
+  ): Promise<GitCommitInfo[]> {
+    try {
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'log',
+        'HEAD..@{u}',
+        '--format="%H|%s|%an|%ae|%aI"',
+      ]);
+      const lines = result.stdout.trim().split('\n').filter(Boolean);
+      return lines.map((line) => {
+        const cleanLine = line.replace(/^"|"$/g, '');
+        const [hash, message, author, email, date] = cleanLine.split('|');
+        return { hash, message, author, email, date };
+      });
+    } catch (error) {
+      console.warn('[GitService] Failed to get behind commits:', error);
       return [];
     }
   }

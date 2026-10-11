@@ -2,9 +2,8 @@
  * InProgressActivityPanel
  *
  * Grid-view panel that lists repositories with uncommitted working-tree
- * changes. Each repo is shown as a square card in a responsive grid.
- * Clicking a card opens InProgressRepoDetailModal with full file/commit
- * details.
+ * changes. Each repo is shown as a square card in a two-column grid; the card's
+ * Changes / ahead / behind affordances reveal lists inline over the map.
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -14,13 +13,11 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import { emitTerminalOpen } from '../events/portalIntents';
 import {
   InProgressRepoCard,
   type InProgressRepoCardActions,
   type InProgressSummary,
 } from './InProgressRepoCard';
-import { InProgressRepoDetailModal } from './InProgressRepoDetailModal';
 
 export interface InProgressActivityPanelProps {
   repositories: AlexandriaEntry[];
@@ -60,7 +57,6 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
   const [statusMap, setStatusMap] = useState<Map<string, GitStatusWithFiles>>(new Map());
   const [loaded, setLoaded] = useState(false);
   const [dismissedPaths, setDismissedPaths] = useState<Set<string>>(new Set());
-  const [selectedRepoPath, setSelectedRepoPath] = useState<string | null>(null);
 
   const entryByPath = useMemo(() => {
     const map = new Map<string, AlexandriaEntry>();
@@ -135,17 +131,6 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
     return rows;
   }, [statusMap, entryByPath, dismissedPaths]);
 
-  const handleOpenRepo = useCallback(
-    (repoPath: string) => {
-      const entry = entryByPath.get(repoPath);
-      emitTerminalOpen(events, 'in-progress-activity-panel', {
-        directory: repoPath,
-        label: entry?.name,
-      });
-    },
-    [entryByPath, events],
-  );
-
   const handleDismiss = useCallback((repoPath: string) => {
     setDismissedPaths((prev) => {
       if (prev.has(repoPath)) return prev;
@@ -153,24 +138,10 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
       next.add(repoPath);
       return next;
     });
-    setSelectedRepoPath(null);
     RepositoryMonitoringService.refreshRepository(repoPath).catch((err) => {
       console.warn('[InProgressActivityPanel] Failed to refresh after push:', err);
     });
   }, []);
-
-  const handleSelectRepo = useCallback((repoPath: string) => {
-    setSelectedRepoPath(repoPath);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setSelectedRepoPath(null);
-  }, []);
-
-  const selectedRow = useMemo(() => {
-    if (!selectedRepoPath) return null;
-    return dirtyRows.find((r) => r.summary.repoPath === selectedRepoPath) ?? null;
-  }, [selectedRepoPath, dirtyRows]);
 
   return (
     <div
@@ -208,7 +179,7 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
               gap: spacing.md,
             }}
           >
@@ -216,29 +187,15 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
               <InProgressRepoCard
                 key={summary.repoPath}
                 summary={summary}
-                onOpen={() => handleOpenRepo(summary.repoPath)}
                 onDismiss={handleDismiss}
                 events={events}
                 entry={entry}
                 actions={actions}
-                onSelect={handleSelectRepo}
               />
             ))}
           </div>
         )}
       </div>
-
-      {selectedRow && (
-        <InProgressRepoDetailModal
-          isOpen={true}
-          onClose={handleCloseModal}
-          summary={selectedRow.summary}
-          actions={actions}
-          events={events}
-          entry={selectedRow.entry}
-          onDismiss={handleDismiss}
-        />
-      )}
     </div>
   );
 };

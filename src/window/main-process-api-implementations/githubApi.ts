@@ -287,4 +287,19 @@ export const githubAPI: GitHubAPI = {
       emails,
     );
   },
+
+  compareCommits: async (
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+  ) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.COMPARE_COMMITS,
+      owner,
+      repo,
+      base,
+      head,
+    );
+  },
 };

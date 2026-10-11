@@ -39,6 +39,7 @@ const baseActions = (files: InProgressChangedFile[]): InProgressRepoCardActions 
     return files;
   },
   getAheadCommits: async () => [],
+  getBehindCommits: async () => [],
   pushBranch: async () => ({ success: true, message: 'pushed' }),
 });
 
@@ -46,6 +47,7 @@ const noChangesActions: InProgressRepoCardActions = {
   getFileTreeForLocalRepo: async () => null,
   getWorkingChanges: async () => [],
   getAheadCommits: async () => [],
+  getBehindCommits: async () => [],
   pushBranch: async () => ({ success: true, message: 'pushed' }),
 };
 
@@ -129,12 +131,10 @@ const InProgressRepoCardStory: React.FC<StoryWrapperProps> = ({
   return (
     <InProgressRepoCard
       summary={summary}
-      onOpen={() => console.info('[Story] onOpen')}
       dimmed={dimmed}
       entry={entry}
       events={events}
       actions={actions}
-      onSelect={(repoPath) => console.info('[Story] onSelect:', repoPath)}
     />
   );
 };

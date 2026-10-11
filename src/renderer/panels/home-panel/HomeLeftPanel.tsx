@@ -10,7 +10,7 @@
  * "Cloned only" is a switch inside Your Projects, not its own card.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SlidePane, makeSlideDirection } from '../../components/SlidePane';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -31,6 +31,9 @@ import { useHomePanelPreferences } from '../../hooks/useHomePanelPreferences';
 import { useWorkspaceTabs } from '../../principal-window/PortalTabsContext';
 import { UserAboutCard, type UserAboutInfo } from './UserAboutCard';
 import { RepoAboutCard } from './RepoAboutCard';
+import { InProgressBar } from './InProgressBar';
+import { useInProgressCount } from './useInProgressCount';
+import { HomeSearchBar, HomeSearchResults } from './HomeSearch';
 import { HomeNavCards, type HomeNavKey, type HomeNavCardCounts } from './HomeNavCards';
 import { HomeClonedSubView } from './sub-views/HomeClonedSubView';
 import { HomeProjectsSubView, type ProjectSection } from './sub-views/HomeProjectsSubView';
@@ -100,7 +103,34 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const [view, setView] = useState<HomeView>('home');
   const [selectedRepo, setSelectedRepo] = useState<RepositorySelectedPayload | null>(null);
   const [repoCardExiting, setRepoCardExiting] = useState(false);
-  const { openUserProfile } = useWorkspaceTabs();
+  const { openUserProfile, openInProgress, tabs } = useWorkspaceTabs();
+
+  // Count of repos with uncommitted changes, shown in the In Progress bar.
+  const inProgressCount = useInProgressCount(repositories);
+  // Hide the bar's Open button when the In Progress tab is already open.
+  const inProgressOpen = tabs.some((t) => t.id === 'in-progress-activity');
+
+  // Search across projects / clones / starred. The nav cards hide while a
+  // query is active.
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchActive = searchQuery.trim().length > 0;
+
+  // Starred repos are fetched lazily the first time the user searches.
+  const [starredRepos, setStarredRepos] = useState<GitHubRepository[] | null>(
+    null,
+  );
+  const starredRequestedRef = useRef(false);
+  const ensureStarred = useCallback(() => {
+    if (starredRequestedRef.current) return;
+    starredRequestedRef.current = true;
+    GithubService.getUserStarredRepositories({ perPage: 100 })
+      .then((r) => setStarredRepos(r))
+      .catch(() => setStarredRepos([]));
+  }, []);
+
+  useEffect(() => {
+    if (searchActive) ensureStarred();
+  }, [searchActive, ensureStarred]);
 
   // Base directory for off-convention detection
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
@@ -585,14 +615,38 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 onOpenFollowing={handleOpenFollowing}
                 isPrincipalSignedIn={isPrincipalSignedIn}
               />
-              <HomeNavCards
-                counts={counts}
-                activeView={null}
-                isPrincipalSignedIn={isPrincipalSignedIn}
-                showCollections={homePanelPrefs.collections}
-                showRecentlyVisited={homePanelPrefs.recentlyVisited}
-                onOpenView={(key) => go(key)}
+              {/* Full-width status row under the card: opens the singleton
+                  `in-progress-activity` workspace tab; shows the count. */}
+              <InProgressBar
+                count={inProgressCount}
+                onOpen={openInProgress}
+                isOpen={inProgressOpen}
               />
+              {/* Search bar — first thing under the In Progress line. */}
+              <HomeSearchBar
+                query={searchQuery}
+                onQueryChange={setSearchQuery}
+                onFocus={ensureStarred}
+              />
+              {searchActive ? (
+                <HomeSearchResults
+                  query={searchQuery}
+                  projectSections={projectSections}
+                  repositories={repositories}
+                  starredRepos={starredRepos}
+                  onSelectRepo={emitRepoSelected}
+                  onSelectEntry={emitLocalEntrySelected}
+                />
+              ) : (
+                <HomeNavCards
+                  counts={counts}
+                  activeView={null}
+                  isPrincipalSignedIn={isPrincipalSignedIn}
+                  showCollections={homePanelPrefs.collections}
+                  showRecentlyVisited={homePanelPrefs.recentlyVisited}
+                  onOpenView={(key) => go(key)}
+                />
+              )}
             </div>
           ) : view === 'projects' ? (
             <HomeProjectsSubView

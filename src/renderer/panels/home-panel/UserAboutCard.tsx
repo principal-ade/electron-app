@@ -2,7 +2,7 @@
  * UserAboutCard
  *
  * Profile card at the top of the Home left panel.
- * - source: 'github' — full GitHub profile (avatar, @login, bio, stats…)
+ * - source: 'github' — full GitHub profile (avatar, @login, stats…)
  * - source: 'git'    — local git identity (user.name / user.email) when the
  *                      user is not signed in via the GitHub CLI / API
  */
@@ -92,12 +92,12 @@ function Avatar({
   );
 }
 
-const cardShell = (borderColor: string): React.CSSProperties => ({
+const cardShell = (background: string): React.CSSProperties => ({
   padding: '20px 20px 16px',
   display: 'flex',
   flexDirection: 'column',
   gap: 12,
-  borderBottom: `1px solid ${borderColor}`,
+  background,
 });
 
 export const UserAboutCard: React.FC<UserAboutCardProps> = ({
@@ -133,7 +133,7 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
   if (isGit) {
     const displayName = info.name || info.email || 'Git';
     return (
-      <div style={cardShell(theme.colors.border)}>
+      <div style={cardShell(theme.colors.backgroundSecondary)}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           <div style={{ flexShrink: 0 }}>
             <Avatar displayName={displayName} />
@@ -217,7 +217,7 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
   const displayName = info.name || info.login;
 
   return (
-    <div style={cardShell(theme.colors.border)}>
+    <div style={cardShell(theme.colors.backgroundSecondary)}>
       {/* Identity: avatar + name + @login + source badge */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
         <a
@@ -301,19 +301,6 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
           <Github size={20} />
         </button>
       </div>
-
-      {/* Bio */}
-      <p
-        style={{
-          margin: 0,
-          color: info.bio ? theme.colors.text : theme.colors.textMuted,
-          fontSize: theme.fontSizes[2],
-          lineHeight: 1.4,
-          fontStyle: info.bio ? undefined : 'italic',
-        }}
-      >
-        {info.bio || 'No bio yet.'}
-      </p>
 
       {/* Company / location */}
       {(info.company || info.location) && (
@@ -532,7 +519,7 @@ function UserAboutCardSkeleton() {
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
-        borderBottom: `1px solid ${theme.colors.border}`,
+        background: theme.colors.backgroundSecondary,
       }}
       aria-busy="true"
     >
@@ -551,8 +538,6 @@ function UserAboutCardSkeleton() {
           <div style={bar(90, 12)} />
         </div>
       </div>
-      <div style={bar('100%', 14)} />
-      <div style={bar('60%', 14)} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={bar(96, 12)} />
         <div style={bar(64, 12)} />

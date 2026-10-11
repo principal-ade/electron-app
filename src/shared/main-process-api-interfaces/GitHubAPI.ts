@@ -47,6 +47,7 @@ export enum GitHubAPIEvent {
   GET_CHANGED_FILES_FOR_COMMIT = 'github:get-changed-files-for-commit',
   GET_COMMIT_DIFF = 'github:get-commit-diff',
   RESOLVE_AUTHOR_PROFILES = 'github:resolve-author-profiles',
+  COMPARE_COMMITS = 'github:compare-commits',
 }
 
 // Config fetching types (formerly from ConfigAPI)
@@ -575,4 +576,22 @@ export interface GitHubAPI {
     repo: string,
     emails: string[],
   ) => Promise<Record<string, { login: string; avatarUrl: string }>>;
+  /**
+   * List commits reachable from `head` but not `base` (branch-aware), with the
+   * author's GitHub login + avatar_url — used to show remote (behind) commits.
+   */
+  compareCommits: (
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+  ) => Promise<
+    Array<{
+      sha: string;
+      message: string;
+      authorLogin: string;
+      authorAvatarUrl?: string;
+      committedAt: string;
+    }>
+  >;
 }

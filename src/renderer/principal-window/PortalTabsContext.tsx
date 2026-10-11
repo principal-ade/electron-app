@@ -121,6 +121,8 @@ export interface WorkspaceTabsContextValue {
   ) => void;
   /** Open the singleton `live-activity` tab and focus it. */
   openLiveActivity: () => void;
+  /** Open the singleton `in-progress-activity` tab and focus it. */
+  openInProgress: () => void;
   /** Open (or focus) a `drawing` tab, deduped by drawing id. */
   openDrawing: (payload: {
     drawingId: string;
@@ -455,6 +457,19 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     );
   }, [openTab]);
 
+  const openInProgress = useCallback(() => {
+    openTab(
+      'in-progress-activity',
+      () =>
+        ({
+          id: 'in-progress-activity',
+          label: 'In Progress',
+          contentType: 'in-progress-activity',
+          closable: true,
+        }) as InProgressActivityTab,
+    );
+  }, [openTab]);
+
   // Deduped by the `drawingId` *field* (not the tab id) so a freshly-created
   // drawing — whose tab keeps its `new-<uuid>` tab id but whose `drawingId` is
   // rewritten to the real file id on first save — focuses instead of duplicating.
@@ -548,6 +563,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openRepoActivity,
       openFileCityGuide,
       openLiveActivity,
+      openInProgress,
       openDrawing,
       openSkill,
       openSubsystemModel,
@@ -567,6 +583,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openRepoActivity,
       openFileCityGuide,
       openLiveActivity,
+      openInProgress,
       openDrawing,
       openSkill,
       openSubsystemModel,

@@ -445,4 +445,17 @@ export class GithubService {
     );
     return new Map(Object.entries(result || {}));
   }
+
+  /**
+   * List commits reachable from `head` but not `base`, with the author's GitHub
+   * login + avatar_url (branch-aware). Used for "behind remote" commits.
+   */
+  static async compareCommits(
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+  ) {
+    return window.mainProcess.github.compareCommits(owner, repo, base, head);
+  }
 }
