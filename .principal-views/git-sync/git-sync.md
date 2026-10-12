@@ -189,6 +189,4 @@ GitHub webhooks flow through the traffic controller:
 
 ## Related Documentation
 
-- `docs/turn-based-sync-brief.md` - Original feature brief
 - `docs/features/webhook-notifications.md` - Webhook architecture
-- `.principal-views/user-feed-panel/user-feed-panel.otel.canvas` - Related presence events

@@ -308,7 +308,6 @@ Look for:
 
 ## References
 
-- **Investigation Doc**: `docs/filetree-staleness-investigation.md`
 - **Architecture Doc**: `docs/REPOSITORY_MONITORING_ARCHITECTURE.md`
 - **Data Flow Doc**: `docs/file-operations-data-flow.md`
 - **Canvas**: `.principal-views/filetree-sync/filetree-sync.otel.canvas`
