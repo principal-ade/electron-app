@@ -2,6 +2,7 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { FolderGit2 } from 'lucide-react';
 import { parsePurl } from '@principal-ai/alexandria-core-library';
+import { repoDisplayNameFromPurl } from '../../../shared/topics/repoPurl';
 import { TopicService } from '../../main-process-api/TopicService';
 import {
   ProjectRepoCard,
@@ -22,11 +23,7 @@ function projectFromPurl(purl: string): ProjectEntry | null {
       data: { repoName: parsed.name, ownerLogin: parsed.namespace },
     };
   }
-  const segments = parsed.name.split('-').filter(Boolean);
-  return {
-    purl,
-    data: { repoName: segments[segments.length - 1] || parsed.name },
-  };
+  return { purl, data: { repoName: repoDisplayNameFromPurl(purl) } };
 }
 
 export interface TopicProjectsRailProps {

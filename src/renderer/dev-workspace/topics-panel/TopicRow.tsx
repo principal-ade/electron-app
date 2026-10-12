@@ -4,6 +4,10 @@ import { GitFork } from 'lucide-react';
 import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 import {
+  repoDisplayLabel,
+  repoDisplayNameFromPurl,
+} from '../../../shared/topics/repoPurl';
+import {
   STATES,
   normalizeState,
   stateColor,
@@ -71,7 +75,10 @@ export const TopicRow: React.FC<TopicRowProps> = ({
   const [hovered, setHovered] = useState(false);
   const state = normalizeState(topic.status?.state);
   const color = stateColor(state, theme);
-  const repoCount = topic.repos?.length ?? 0;
+  const repoNames = (topic.repos ?? []).map(repoDisplayNameFromPurl);
+  // Inline may collapse (`web, api, +2 more`); the tooltip always lists them all.
+  const repoLabel = repoDisplayLabel(topic.repos);
+  const repoTitle = repoNames.join(', ');
   const statusName = topic.status?.label || stateLabel(state);
 
   // Drag the topic into a terminal as an agent prompt that hydrates it from the
@@ -108,18 +115,6 @@ export const TopicRow: React.FC<TopicRowProps> = ({
         transition: 'background-color 0.15s ease',
       }}
     >
-      {/* Status dot — the topic's "aliveness" axis color. */}
-      <div
-        style={{
-          width: 8,
-          height: 8,
-          marginTop: 5,
-          borderRadius: '50%',
-          flexShrink: 0,
-          backgroundColor: color,
-        }}
-        title={statusName}
-      />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -144,12 +139,33 @@ export const TopicRow: React.FC<TopicRowProps> = ({
             color: theme.colors.textMuted,
           }}
         >
-          {repoCount > 0 && (
-            <span style={{ flexShrink: 0 }}>
-              {repoCount} {repoCount === 1 ? 'project' : 'projects'}
+          {/* Status dot — the topic's "aliveness" axis color. */}
+          <span
+            aria-hidden
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              flexShrink: 0,
+              backgroundColor: color,
+            }}
+            title={statusName}
+          />
+          {repoLabel && (
+            <span
+              title={repoTitle || undefined}
+              style={{
+                flexShrink: 1,
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {repoLabel}
             </span>
           )}
-          {repoCount > 0 && (
+          {repoLabel && (
             <span aria-hidden style={{ opacity: 0.5 }}>
               ·
             </span>

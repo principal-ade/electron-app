@@ -4,6 +4,29 @@
   width: 100%;
 }
 
+/*
+ * Frameless-window drag region vs. body-portaled overlays
+ * -------------------------------------------------------
+ * The custom titlebar is a `-webkit-app-region: drag` region (see
+ * components/Titlebar). The window is frameless, so Electron derives the
+ * draggable area from that region. Crucially, that region is a *screen area*:
+ * it is computed without accounting for content portaled to <body> (e.g.
+ * themed-markdown's mermaid/HTML modals, which `createPortal(..., body)`).
+ *
+ * The symptom: an overlay that overlaps the titlebar band (top ~56px) has a
+ * dead strip across it — a pointer *press* there is consumed to start a window
+ * drag instead of reaching the overlay, while hover/move still dispatch. That
+ * makes close buttons near the top of such overlays feel "half clickable".
+ *
+ * Fix: opt every body-portaled overlay (and its subtree) out of the drag
+ * region. #root — the app chrome, including the titlebar's own drag area — is
+ * intentionally left alone so window dragging keeps working.
+ */
+body > :not(#root),
+body > :not(#root) * {
+  -webkit-app-region: no-drag;
+}
+
 @layer base {
   body {
     background: transparent;

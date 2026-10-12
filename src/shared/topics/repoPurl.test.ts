@@ -1,4 +1,8 @@
-import { repoPurlFromEntry } from './repoPurl';
+import {
+  repoDisplayLabel,
+  repoDisplayNameFromPurl,
+  repoPurlFromEntry,
+} from './repoPurl';
 import {
   createLocalRepoPurl,
   type AlexandriaEntry,
@@ -50,5 +54,58 @@ describe('repoPurlFromEntry', () => {
 
   it('returns null when nothing identifies the repo', () => {
     expect(repoPurlFromEntry(entry({}))).toBeNull();
+  });
+});
+
+describe('repoDisplayNameFromPurl', () => {
+  it('names a provider repo by its last path segment', () => {
+    expect(repoDisplayNameFromPurl('pkg:github/acme/web')).toBe('web');
+    expect(repoDisplayNameFromPurl('pkg:gitlab/acme/platform/api')).toBe('api');
+  });
+
+  it('names a local repo by the final path segment of the encoded path', () => {
+    expect(
+      repoDisplayNameFromPurl(createLocalRepoPurl('/Users/me/dev/widgets')),
+    ).toBe('widgets');
+  });
+
+  it('takes the last segment when the local path itself contains hyphens', () => {
+    // `encodePathForPurl` flattens `/` and `-` to the same character, so a
+    // hyphenated folder name is not recoverable from the PURL — this pins the
+    // heuristic (last dash-delimited segment) that the projects rail shares.
+    expect(
+      repoDisplayNameFromPurl(createLocalRepoPurl('/Users/me/dev/my-app')),
+    ).toBe('app');
+  });
+
+  it('falls back to the raw string when the purl is unparseable', () => {
+    expect(repoDisplayNameFromPurl('not-a-purl')).toBe('not-a-purl');
+  });
+});
+
+describe('repoDisplayLabel', () => {
+  it('returns null when a topic declares no repos', () => {
+    expect(repoDisplayLabel(undefined)).toBeNull();
+    expect(repoDisplayLabel([])).toBeNull();
+  });
+
+  it('joins repo names in declaration order', () => {
+    expect(
+      repoDisplayLabel(['pkg:github/acme/web', 'pkg:github/acme/api']),
+    ).toBe('web, api');
+  });
+
+  it('collapses to a `+N more` tail past the max', () => {
+    expect(
+      repoDisplayLabel(
+        [
+          'pkg:github/acme/a',
+          'pkg:github/acme/b',
+          'pkg:github/acme/c',
+          'pkg:github/acme/d',
+        ],
+        2,
+      ),
+    ).toBe('a, b, +2 more');
   });
 });

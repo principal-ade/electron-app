@@ -372,11 +372,6 @@ export const DrawingsLeftPanel: React.FC<DrawingsLeftPanelProps> = ({
                     textAlign: 'left',
                   }}
                 >
-                  <PenTool
-                    size={14}
-                    color={theme.colors.primary}
-                    style={{ flexShrink: 0, marginTop: 3 }}
-                  />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{

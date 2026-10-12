@@ -44,6 +44,10 @@ import {
   type TopicStatusState,
 } from '../topics-view/topic-description/topicStatusModel';
 import { getPrincipalBridgeUrl } from '../../shared/config/appBranding';
+import {
+  repoDisplayLabel,
+  repoDisplayNameFromPurl,
+} from '../../shared/topics/repoPurl';
 
 /** Compact "x ago" relative time from an ISO timestamp. */
 function timeAgo(iso: string): string {
@@ -196,7 +200,10 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
     return visibleTopics.map((topic) => {
       const state = normalizeState(topic.status?.state);
       const color = stateColor(state, theme);
-      const projectCount = topic.repos?.length ?? 0;
+      const repoNames = (topic.repos ?? []).map(repoDisplayNameFromPurl);
+      // Inline may collapse (`web, api, +2 more`); the tooltip lists them all.
+      const repoLabel = repoDisplayLabel(topic.repos);
+      const repoTitle = repoNames.join(', ');
       const hovered = hoveredId === topic.id;
       const active = activeTabId === `local-topic-${topic.id}`;
       const statusName = topic.status?.label || stateLabel(state);
@@ -239,18 +246,6 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
             transition: 'background-color 0.15s ease',
           }}
         >
-          {/* Status dot — the topic's "aliveness" axis color. */}
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              marginTop: 6,
-              borderRadius: '50%',
-              flexShrink: 0,
-              backgroundColor: color,
-            }}
-            title={statusName}
-          />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
@@ -276,7 +271,21 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
                 color: theme.colors.textMuted,
               }}
             >
+              {/* Status dot — the topic's "aliveness" axis color. */}
               <span
+                aria-hidden
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                  alignSelf: 'center',
+                  backgroundColor: color,
+                }}
+                title={statusName}
+              />
+              <span
+                title={repoTitle || undefined}
                 style={{
                   flex: 1,
                   minWidth: 0,
@@ -285,9 +294,7 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {projectCount > 0
-                  ? `${projectCount} ${projectCount === 1 ? 'project' : 'projects'}`
-                  : 'No projects'}
+                {repoLabel ?? 'No projects'}
               </span>
               <span style={{ flexShrink: 0 }}>{timeAgo(topic.updatedAt)}</span>
             </div>
