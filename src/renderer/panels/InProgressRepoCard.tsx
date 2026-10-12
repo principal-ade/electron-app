@@ -17,6 +17,9 @@ import {
   Check,
   FolderGit2,
   GitBranch,
+  List,
+  ListTree,
+  Search,
   User,
   X,
 } from 'lucide-react';
@@ -30,6 +33,10 @@ import {
   type HighlightLayer,
 } from '@principal-ai/file-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import { useFileTree } from '@pierre/trees/react';
+import type { GitStatusEntry } from '@pierre/trees';
+import { ThemedFileTree } from '../components/shared/ThemedFileTree';
+import { WorkingTreeFileOverlay } from '../dev-workspace/file-city-panel/FileCityExplorer/WorkingTreeFileOverlay';
 
 const DIFF_ADD_COLOR = '#2ea043';
 const DIFF_REMOVE_COLOR = '#cf222e';
@@ -137,14 +144,12 @@ const statusLabel: Record<InProgressFileStatus, string> = {
 function CardActionButton({
   children,
   onClick,
-  title,
   variant = 'secondary',
   tall = false,
   active = false,
 }: {
   children: React.ReactNode;
   onClick: () => void;
-  title?: string;
   variant?: 'primary' | 'secondary';
   tall?: boolean;
   active?: boolean;
@@ -156,7 +161,6 @@ function CardActionButton({
     <button
       type="button"
       onClick={onClick}
-      title={title}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -221,6 +225,68 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
   const [aheadCommitsLoaded, setAheadCommitsLoaded] = useState(false);
   const [behindCommits, setBehindCommits] = useState<InProgressAheadCommit[]>([]);
   const [behindCommitsLoaded, setBehindCommitsLoaded] = useState(false);
+  // Changed-files overlay view: file tree (default) or a flat list.
+  const [changesView, setChangesView] = useState<'list' | 'tree'>('tree');
+  // Repo-relative path whose working-tree diff overlay is open (null = closed).
+  const [diffFilePath, setDiffFilePath] = useState<string | null>(null);
+  // Repo-relative path currently hovered in the changes list/tree (shown as a
+  // path readout over the map, under the header).
+  const [hoveredPath, setHoveredPath] = useState<string | null>(null);
+  // Whether the map pointer is over a building/district (vs open background).
+  const [mapHoveredPart, setMapHoveredPart] = useState(false);
+  // Pointer presence: over the map area, and over the strip itself (so you can
+  // hover the map to reveal the search, then reach the input to type).
+  const [mapPointerInside, setMapPointerInside] = useState(false);
+  const [stripPointerInside, setStripPointerInside] = useState(false);
+  // Search query that highlights matching files on the map by path.
+  const [mapSearch, setMapSearch] = useState('');
+  // Whether the search matches are shown as a clickable list over the map.
+  const [showSearchList, setShowSearchList] = useState(false);
+
+  // File City map hover → the path readout (shown repo-relative, like the list).
+  // Falls back to the hovered directory when no building is under the cursor.
+  const handleMapHover = useCallback(
+    (info: {
+      hoveredBuilding: { path: string } | null;
+      hoveredDistrict: { path: string } | null;
+    }) => {
+      setMapHoveredPart(Boolean(info.hoveredBuilding || info.hoveredDistrict));
+      const p =
+        info.hoveredBuilding?.path ?? info.hoveredDistrict?.path ?? null;
+      if (!p) {
+        setHoveredPath(null);
+        return;
+      }
+      const root = summary.repoPath.replace(/\/+$/, '');
+      setHoveredPath(p.startsWith(`${root}/`) ? p.slice(root.length + 1) : p);
+    },
+    [summary.repoPath],
+  );
+
+  // Open a file in a workspace tab. The workspace shell routes `file:opened` by
+  // extension (markdown / media / source).
+  const emitOpenFile = useCallback(
+    (path: string) => {
+      if (!events) return;
+      const root = summary.repoPath.replace(/\/+$/, '');
+      const filePath = path.startsWith('/') ? path : `${root}/${path}`;
+      events.emit({
+        type: 'file:opened',
+        source: 'in-progress-repo-card',
+        timestamp: Date.now(),
+        payload: { filePath, repositoryPath: summary.repoPath },
+      });
+    },
+    [events, summary.repoPath],
+  );
+
+  // Clicking a building on the map opens the file in a workspace tab.
+  const handleMapFileClick = useCallback(
+    (path: string, type: 'file' | 'directory') => {
+      if (type === 'file') emitOpenFile(path);
+    },
+    [emitOpenFile],
+  );
   // Which ahead/behind indicator is hovered (they only tint on hover/selected).
   const [metaHovered, setMetaHovered] = useState<
     null | 'ahead' | 'behind' | 'branch'
@@ -422,6 +488,43 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
     return layers;
   }, [changedFiles]);
 
+  // Files whose path matches the map search (also drives the highlight layer).
+  const searchMatches = useMemo<string[]>(() => {
+    const q = mapSearch.trim().toLowerCase();
+    if (!q || !cityData) return [];
+    return cityData.buildings
+      .filter((b) => b.path.toLowerCase().includes(q))
+      .map((b) => b.path);
+  }, [mapSearch, cityData]);
+
+  const searchHighlightLayer = useMemo<HighlightLayer | null>(() => {
+    if (searchMatches.length === 0) return null;
+    return {
+      id: 'search',
+      name: 'Matches',
+      enabled: true,
+      color: theme.colors.accent,
+      priority: 20,
+      items: searchMatches.map((path) => ({
+        path,
+        type: 'file' as const,
+        renderStrategy: 'glow' as const,
+      })),
+    };
+  }, [searchMatches, theme.colors.accent]);
+
+  const mapHighlightLayers = useMemo<HighlightLayer[]>(
+    () =>
+      searchHighlightLayer
+        ? [...highlightLayers, searchHighlightLayer]
+        : highlightLayers,
+    [highlightLayers, searchHighlightLayer],
+  );
+
+  // The search reveals only while the pointer is over the map (or the strip).
+  const mapActive = mapPointerInside || stripPointerInside;
+  const showMapSearch = mapActive && !(mapHoveredPart && hoveredPath);
+
   const handleOpenProfile = useCallback(() => {
     if (!events) return;
     if (entry) {
@@ -586,7 +689,6 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                   onMouseEnter={() => setMetaHovered('branch')}
                   onMouseLeave={() => setMetaHovered(null)}
                   disabled={!branchTarget}
-                  title={branchTarget ? 'Show commits' : undefined}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -616,7 +718,6 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                   }
                   onMouseEnter={() => setMetaHovered('ahead')}
                   onMouseLeave={() => setMetaHovered(null)}
-                  title="Show unpushed commits"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -644,7 +745,6 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                   }
                   onMouseEnter={() => setMetaHovered('behind')}
                   onMouseLeave={() => setMetaHovered(null)}
-                  title="Show commits you're behind on"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -687,7 +787,6 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
             onClick={() =>
               setOverlay((o) => (o === 'changes' ? null : 'changes'))
             }
-            title="Show changed files"
           >
             Changes
           </CardActionButton>
@@ -765,12 +864,42 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
           overflow: 'hidden',
           position: 'relative',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          flexDirection: 'column',
           backgroundColor: theme.colors.background,
         }}
       >
-        {cityLoading ? (
+        {/* Reserved strip under the header: the hovered path, else the map search. */}
+        <div
+          style={{ flexShrink: 0, height: 33 }}
+          onMouseEnter={() => setStripPointerInside(true)}
+          onMouseLeave={() => setStripPointerInside(false)}
+        >
+          {mapHoveredPart && hoveredPath ? (
+            <OverlayPathBar path={hoveredPath} />
+          ) : showMapSearch ? (
+            <MapSearchBar
+              value={mapSearch}
+              onChange={setMapSearch}
+              showList={showSearchList}
+              onToggleList={() => setShowSearchList((v) => !v)}
+            />
+          ) : null}
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}
+          onMouseEnter={() => setMapPointerInside(true)}
+          onMouseLeave={() => setMapPointerInside(false)}
+        >
+          {cityLoading ? (
           <div
             style={{
               display: 'flex',
@@ -786,7 +915,9 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
         ) : cityData ? (
           <ArchitectureMapHighlightLayers
             cityData={cityData}
-            highlightLayers={highlightLayers}
+            highlightLayers={mapHighlightLayers}
+            onHover={handleMapHover}
+            onFileClick={handleMapFileClick}
             fullSize
             showFileNames={false}
             canvasBackgroundColor={theme.colors.background}
@@ -796,11 +927,33 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
           <FolderGit2 size={48} color={theme.colors.textMuted} style={{ opacity: 0.3 }} />
         )}
 
+        {showSearchList && searchMatches.length > 0 && (
+          <MapSearchList
+            matches={searchMatches}
+            rootPath={summary.repoPath}
+            onOpen={emitOpenFile}
+          />
+        )}
+        </div>
+
         {overlay === 'changes' && (
           <CardOverlay
             title={`${totals.fileCount} changed file${totals.fileCount !== 1 ? 's' : ''}`}
+            headerRight={
+              <ChangesViewSwitch value={changesView} onChange={setChangesView} />
+            }
           >
-            <ChangedFilesList files={changedFiles} />
+            {changesView === 'tree' ? (
+              <ChangedFilesTree
+                files={changedFiles}
+                onSelectFile={setDiffFilePath}
+              />
+            ) : (
+              <ChangedFilesList
+                files={changedFiles}
+                onSelectFile={setDiffFilePath}
+              />
+            )}
           </CardOverlay>
         )}
         {overlay === 'ahead' && (
@@ -828,6 +981,14 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
           </CardOverlay>
         )}
       </div>
+
+      {diffFilePath && (
+        <WorkingTreeFileOverlay
+          repositoryPath={summary.repoPath}
+          filePath={diffFilePath}
+          onClose={() => setDiffFilePath(null)}
+        />
+      )}
     </div>
   );
 };
@@ -838,10 +999,12 @@ export default InProgressRepoCard;
 function CardOverlay({
   title,
   onClose,
+  headerRight,
   children,
 }: {
   title: string;
   onClose?: () => void;
+  headerRight?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const { theme } = useTheme();
@@ -882,11 +1045,11 @@ function CardOverlay({
         >
           {title}
         </span>
+        {headerRight}
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            title="Close"
             aria-label="Close"
             style={{
               flexShrink: 0,
@@ -904,7 +1067,18 @@ function CardOverlay({
           </button>
         )}
       </div>
-      <div style={{ flex: 1, overflow: 'auto', padding: 8 }}>{children}</div>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflow: 'auto',
+          padding: 8,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -924,7 +1098,173 @@ function OverlayEmpty({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ChangedFilesList({ files }: { files: InProgressChangedFile[] }) {
+/** Full repo-relative path readout, shown over the map on row hover. */
+function OverlayPathBar({ path }: { path: string }) {
+  const { theme } = useTheme();
+  return (
+    <div
+      style={{
+        flexShrink: 0,
+        padding: '6px 8px',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        backgroundColor: `color-mix(in srgb, ${theme.colors.backgroundSecondary} 55%, transparent)`,
+        color: theme.colors.text,
+        fontFamily: theme.fonts.monospace,
+        fontSize: theme.fontSizes[1],
+        lineHeight: '20px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {path}
+    </div>
+  );
+}
+
+/** Path search shown in the strip under the header; matches highlight on the map. */
+function MapSearchBar({
+  value,
+  onChange,
+  showList,
+  onToggleList,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  showList: boolean;
+  onToggleList: () => void;
+}) {
+  const { theme } = useTheme();
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'stretch',
+        height: '100%',
+        boxSizing: 'border-box',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        backgroundColor: `color-mix(in srgb, ${theme.colors.backgroundSecondary} 55%, transparent)`,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          flex: 1,
+          minWidth: 0,
+          padding: '0 8px',
+        }}
+      >
+        <Search
+          size={12}
+          style={{ flexShrink: 0, color: theme.colors.textMuted }}
+        />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Highlight files by path…"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: 'transparent',
+            outline: 'none',
+            border: 'none',
+            color: theme.colors.text,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[0],
+          }}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={onToggleList}
+        aria-pressed={showList}
+        title={showList ? 'Hide list' : 'Show list'}
+        style={{
+          flexShrink: 0,
+          padding: '0 10px',
+          border: 'none',
+          borderLeft: `1px solid ${theme.colors.border}`,
+          borderRadius: 0,
+          background: showList
+            ? `color-mix(in srgb, ${theme.colors.accent} 14%, transparent)`
+            : 'transparent',
+          color: showList ? theme.colors.accent : theme.colors.textMuted,
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[0],
+          fontWeight: 600,
+          cursor: 'pointer',
+        }}
+      >
+        Show list
+      </button>
+    </div>
+  );
+}
+
+/** Clickable list of map-search matches, shown over the map. */
+function MapSearchList({
+  matches,
+  rootPath,
+  onOpen,
+}: {
+  matches: string[];
+  rootPath: string;
+  onOpen: (path: string) => void;
+}) {
+  const { theme } = useTheme();
+  const root = rootPath.replace(/\/+$/, '');
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 30,
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: `color-mix(in srgb, ${theme.colors.background} 92%, transparent)`,
+      }}
+    >
+      <div style={{ flex: 1, overflow: 'auto', padding: 8 }}>
+        {matches.map((path) => {
+          const rel = path.startsWith(`${root}/`)
+            ? path.slice(root.length + 1)
+            : path;
+          return (
+            <div
+              key={path}
+              onClick={() => onOpen(path)}
+              title={rel}
+              style={{
+                padding: '2px 4px',
+                cursor: 'pointer',
+                fontFamily: theme.fonts.monospace,
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.text,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                borderRadius: 4,
+              }}
+            >
+              {rel}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ChangedFilesList({
+  files,
+  onSelectFile,
+}: {
+  files: InProgressChangedFile[];
+  onSelectFile: (path: string) => void;
+}) {
   const { theme } = useTheme();
   if (files.length === 0) {
     return <OverlayEmpty>No working-tree changes.</OverlayEmpty>;
@@ -934,6 +1274,7 @@ function ChangedFilesList({ files }: { files: InProgressChangedFile[] }) {
       {files.map((file) => (
         <div
           key={`${file.path}:${file.staged ? 's' : 'u'}`}
+          onClick={() => onSelectFile(file.path)}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -941,6 +1282,7 @@ function ChangedFilesList({ files }: { files: InProgressChangedFile[] }) {
             padding: '2px 4px',
             fontFamily: theme.fonts.monospace,
             fontSize: theme.fontSizes[0],
+            cursor: 'pointer',
           }}
         >
           <span
@@ -990,6 +1332,138 @@ function ChangedFilesList({ files }: { files: InProgressChangedFile[] }) {
       ))}
     </div>
   );
+}
+
+/** List / Tree segmented switch shown in the Changes overlay header. */
+function ChangesViewSwitch({
+  value,
+  onChange,
+}: {
+  value: 'list' | 'tree';
+  onChange: (value: 'list' | 'tree') => void;
+}) {
+  const { theme } = useTheme();
+  const options: Array<{
+    key: 'list' | 'tree';
+    label: string;
+    icon: React.ReactNode;
+  }> = [
+    { key: 'list', label: 'List', icon: <List size={12} /> },
+    { key: 'tree', label: 'Tree', icon: <ListTree size={12} /> },
+  ];
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        flexShrink: 0,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: 6,
+        overflow: 'hidden',
+      }}
+    >
+      {options.map((opt) => {
+        const active = value === opt.key;
+        return (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => onChange(opt.key)}
+            aria-pressed={active}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '2px 8px',
+              border: 'none',
+              background: active
+                ? `color-mix(in srgb, ${theme.colors.primary} 14%, transparent)`
+                : 'transparent',
+              color: active ? theme.colors.primary : theme.colors.textMuted,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.semibold,
+              cursor: 'pointer',
+            }}
+          >
+            {opt.icon}
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Changed files rendered as a Pierre file tree with git-status coloring. */
+function ChangedFilesTree({
+  files,
+  onSelectFile,
+}: {
+  files: InProgressChangedFile[];
+  onSelectFile: (path: string) => void;
+}) {
+  const paths = useMemo(
+    () => Array.from(new Set(files.map((f) => f.path))).sort(),
+    [files],
+  );
+
+  // One status per path — Pierre stores a single status per path.
+  const gitStatus = useMemo<GitStatusEntry[]>(
+    () =>
+      Array.from(
+        new Map(files.map((f) => [f.path, f.status] as const)).entries(),
+      ).map(([path, status]) => ({ path, status })),
+    [files],
+  );
+
+  // Open every ancestor folder so the (small) change set is visible.
+  const initialExpandedPaths = useMemo(() => {
+    const dirs = new Set<string>();
+    for (const p of paths) {
+      const segments = p.split('/');
+      for (let i = 1; i < segments.length; i += 1) {
+        const dir = segments.slice(0, i).join('/');
+        if (dir) dirs.add(dir);
+      }
+    }
+    return Array.from(dirs);
+  }, [paths]);
+
+  const modelRef = useRef<ReturnType<typeof useFileTree>['model'] | null>(null);
+  const { model } = useFileTree({
+    paths,
+    search: false,
+    initialExpandedPaths,
+    gitStatus,
+    onSelectionChange: (selected) => {
+      const next = selected[0];
+      if (!next) return;
+      const item = modelRef.current?.getItem(next);
+      if (item && item.isDirectory()) return;
+      onSelectFile(next);
+    },
+  });
+  modelRef.current = model;
+
+  // useFileTree builds the model once and ignores later option changes, so push
+  // path/status updates imperatively when the change set changes.
+  const firstSync = useRef(true);
+  useEffect(() => {
+    if (firstSync.current) {
+      firstSync.current = false;
+      return;
+    }
+    model.resetPaths(paths, { initialExpandedPaths });
+  }, [model, paths, initialExpandedPaths]);
+  useEffect(() => {
+    model.setGitStatus(gitStatus);
+  }, [model, gitStatus]);
+
+  if (files.length === 0) {
+    return <OverlayEmpty>No working-tree changes.</OverlayEmpty>;
+  }
+
+  return <ThemedFileTree model={model} gitStatusColors />;
 }
 
 function CommitList({

@@ -157,7 +157,6 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
         <button
           type="button"
           onClick={() => onQueryChange('')}
-          title="Clear search"
           aria-label="Clear search"
           style={{
             flexShrink: 0,

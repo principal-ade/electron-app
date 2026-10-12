@@ -57,7 +57,6 @@ export const InProgressBar: React.FC<InProgressBarProps> = ({
         <button
           type="button"
           onClick={onOpen}
-          title="Open In Progress"
           style={{
             flexShrink: 0,
             padding: '6px 12px',
