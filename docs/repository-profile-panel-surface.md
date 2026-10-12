@@ -4,8 +4,7 @@
 > portal intent → `project-info` tab → `RepositoryProfileTabContent` →
 > `RepositoryProfilePanel`. This doc is about *this* surface only — not
 > web-ade’s `FileCityGuidePanel` or `RepoAboutCard` (see those repos’ surface
-> docs). For the older actions/context migration notes, see
-> [repository-profile-panel-architecture.md](./repository-profile-panel-architecture.md).
+> docs).
 
 ## What it is
 
