@@ -120,6 +120,7 @@ import {
 import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarButton';
 import type { StorybookManager } from '../hooks/useStorybookManager';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
+import { useTerminalImplementation } from '../hooks/useTerminalImplementation';
 import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
 import { GitConfigPanel } from './git-config-panel';
 import { DocumentService } from '../services/DocumentService';
@@ -508,6 +509,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(collapsed.left);
   const [isRightCollapsed, setIsRightCollapsed] = useState(collapsed.right);
   const [showSendTabButton, setShowSendTabButton] = useState(false);
+  const terminalImplementation = useTerminalImplementation();
 
   useEffect(() => {
     let isMounted = true;
@@ -2836,6 +2838,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               events={events}
               terminalContext={terminalContext}
               directory={terminalDirectory}
+              renderer={terminalImplementation}
               initialTabs={tabs}
               onTabsChange={handleTabsChange}
               renderTabContent={renderTabContent}

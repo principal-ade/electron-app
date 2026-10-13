@@ -226,7 +226,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [currentBranch, setCurrentBranch] = useState<string | undefined>();
   const [terminalImplementation, setTerminalImplementation] = useState<
     'xterm' | 'ghostty'
-  >('xterm');
+  >('ghostty');
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: true, right: true });
   const [sidebarsHidden, setSidebarsHidden] = useState(false);

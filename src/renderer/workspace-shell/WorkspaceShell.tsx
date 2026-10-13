@@ -49,6 +49,7 @@ import {
   useTerminalActivity,
 } from '../contexts/TerminalContext';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { useTerminalImplementation } from '../hooks/useTerminalImplementation';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { WindowService } from '../main-process-api/WindowService';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
@@ -194,6 +195,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     string | null
   >(null);
   const [showSendTabButton, setShowSendTabButton] = useState(false);
+  const terminalImplementation = useTerminalImplementation();
 
   useEffect(() => {
     if (collapsed.left === isLeftCollapsed) return;
@@ -749,6 +751,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               events={events}
               terminalContext={terminalCtx.terminalContext}
               directory={terminalDirectory}
+              renderer={terminalImplementation}
               getRepoInfo={getRepoInfo}
               workingStates={workingStates}
               initialTabs={tabs}

@@ -35,6 +35,7 @@ import { BaseDirectorySetupPanel } from './components/BaseDirectorySetupPanel';
 import { ONBOARDING_CARDS } from './data/onboardingCards';
 import type { OnboardingState } from './types/onboarding.types';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
+import { useTerminalImplementation } from '../../../hooks/useTerminalImplementation';
 import { useTerminalLinkHandler } from '../../../hooks/useTerminalLinkHandler';
 
 /**
@@ -112,6 +113,7 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
   const [tabs, setTabs] = useState<OnboardingTab[]>([]);
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
+  const terminalImplementation = useTerminalImplementation();
 
   // Layout configuration
   const layout: PanelLayout = useMemo(
@@ -353,6 +355,7 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
             events={events}
             terminalContext={terminalCtx.terminalContext}
             directory={terminalDirectory}
+            renderer={terminalImplementation}
             workingStates={workingStates}
             initialTabs={tabs}
             onTabsChange={handleTabsChange}

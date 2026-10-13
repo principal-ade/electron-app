@@ -32,6 +32,9 @@ export const GeneralSettings: React.FC = () => {
   const [quickOpenTarget, setQuickOpenTarget] = useState<'window' | 'terminal'>(
     'window',
   );
+  const [terminalImplementation, setTerminalImplementation] = useState<
+    'xterm' | 'ghostty'
+  >('ghostty');
   const [isClearing, setIsClearing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
@@ -68,6 +71,9 @@ export const GeneralSettings: React.FC = () => {
       setShowSendTabButton(prefs.showSendTabButton ?? false);
       setQuickOpenTarget(
         prefs.quickOpenTarget === 'terminal' ? 'terminal' : 'window',
+      );
+      setTerminalImplementation(
+        prefs.terminalImplementation === 'xterm' ? 'xterm' : 'ghostty',
       );
     };
 
@@ -330,6 +336,62 @@ export const GeneralSettings: React.FC = () => {
                 {label}
               </option>
             ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Terminal Renderer */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Terminal Renderer
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <p
+            style={{
+              fontSize: '14px',
+              color: theme.colors.textSecondary,
+              marginBottom: '12px',
+            }}
+          >
+            Choose the terminal engine. Ghostty runs Ghostty's VT engine via
+            WebAssembly; XTerm uses xterm.js.
+          </p>
+          <select
+            value={terminalImplementation}
+            onChange={async (e) => {
+              const value = e.target.value as 'xterm' | 'ghostty';
+              setTerminalImplementation(value);
+              await UserPreferencesService.updatePreferences({
+                terminalImplementation: value,
+              });
+            }}
+            style={{
+              padding: '10px 14px',
+              borderRadius: '8px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              cursor: 'pointer',
+              fontSize: '14px',
+              minWidth: '200px',
+            }}
+          >
+            <option value="ghostty">Ghostty (default)</option>
+            <option value="xterm">XTerm</option>
           </select>
         </div>
       </div>

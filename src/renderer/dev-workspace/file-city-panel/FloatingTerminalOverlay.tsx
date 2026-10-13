@@ -8,6 +8,7 @@ import type {
   TerminalPanelActions,
   TerminalPanelProps,
 } from '@industry-theme/xterm-terminal-panel';
+import { useTerminalImplementation } from '../../hooks/useTerminalImplementation';
 import {
   ChevronDown,
   ChevronUp,
@@ -54,6 +55,7 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
   });
   const [isResizing, setIsResizing] = React.useState(false);
   const [maximized, setMaximized] = React.useState(false);
+  const terminalImplementation = useTerminalImplementation();
   const containerRef = React.useRef<HTMLDivElement | null>(null);
 
   const handleResizeMouseDown = React.useCallback(
@@ -277,6 +279,7 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
             actions={actions}
             sessionContext={OVERLAY_SESSION_CONTEXT}
             cwd={cwd}
+            renderer={terminalImplementation}
             transparent
             backgroundColor="rgba(0, 0, 0, 0)"
             // No panel event bus here — open clicked links directly.

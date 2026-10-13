@@ -106,7 +106,7 @@ export interface UserPreferences {
   /** Default terminal for opening shells */
   defaultTerminal?: TerminalId;
   /** Terminal implementation for panel framework mode */
-  terminalImplementation?: 'xterm' | 'ghostty'; // default: 'xterm'
+  terminalImplementation?: 'xterm' | 'ghostty'; // default: 'ghostty'
   /** Show the terminal implementation toggle button in dev-workspace titlebar (default: false) */
   showTerminalImplementationToggle?: boolean;
   /** Use PTY daemon for terminal sessions (default: false). Requires app restart to take effect. */
