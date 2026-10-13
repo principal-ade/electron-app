@@ -80,38 +80,6 @@ class MockEventEmitter implements PanelEventEmitter {
   }
 }
 
-// Generate mock activity data for heatmap (full year - 365 days)
-const generateMockActivityData = (intensity: 'low' | 'medium' | 'high' = 'medium'): Map<string, number> => {
-  const activityMap = new Map<string, number>();
-  const today = new Date();
-  const daysToGenerate = 365; // Full year
-
-  const maxCommits = intensity === 'low' ? 20 : intensity === 'medium' ? 50 : 100;
-
-  for (let i = 0; i < daysToGenerate; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    const dateKey = date.toISOString().split('T')[0];
-
-    // Random activity with some patterns
-    const dayOfWeek = date.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const baseChance = isWeekend ? 0.4 : 0.8;
-
-    // Add some seasonal variation
-    const monthOfYear = date.getMonth();
-    const isHolidaySeason = monthOfYear === 11 || monthOfYear === 0; // December or January
-    const seasonalMultiplier = isHolidaySeason ? 0.6 : 1.0;
-
-    if (Math.random() < baseChance * seasonalMultiplier) {
-      const commits = Math.floor(Math.random() * maxCommits) + 1;
-      activityMap.set(dateKey, commits);
-    }
-  }
-
-  return activityMap;
-};
-
 // Generate mock contributors
 const createMockContributors = (count: number = 5): Contributor[] => {
   const contributors: Contributor[] = [
@@ -245,7 +213,6 @@ const createMockOrgProfile = (
     location: 'San Francisco, CA',
     twitterHandle: 'github',
     websiteUrl: 'https://github.com',
-    activityData: generateMockActivityData('high'),
     totalCommits: 54321,
     publicRepos: 342,
     members: 1247,
@@ -281,11 +248,6 @@ const MockOrgProfilePanel: React.FC<{
         ...orgData,
         orgName: org,
       };
-    },
-    getOrgActivity: async () => {
-      // Simulate async delay
-      await new Promise((resolve) => setTimeout(resolve, 150));
-      return orgData?.activityData || new Map<string, number>();
     },
     getOrgRepositories: async (org: string) => {
       // Simulate async delay
@@ -371,7 +333,6 @@ export const HighActivity = {
         location: 'San Francisco, CA',
         twitterHandle: 'vercel',
         websiteUrl: 'https://vercel.com',
-        activityData: generateMockActivityData('high'),
         totalCommits: 123456,
         publicRepos: 567,
         members: 234,
@@ -393,7 +354,6 @@ export const MinimalProfile = {
         twitterHandle: undefined,
         websiteUrl: undefined,
         description: undefined,
-        activityData: generateMockActivityData('low'),
         totalCommits: 234,
         publicRepos: 12,
         members: 5,
@@ -412,7 +372,6 @@ export const NewOrg = {
         name: 'New Startup Inc.',
         description: 'Building the next generation of developer tools.',
         location: 'Remote',
-        activityData: generateMockActivityData('low'),
         totalCommits: 89,
         publicRepos: 3,
         members: 8,
@@ -452,10 +411,6 @@ export const Loading: Story = {
         await new Promise((resolve) => setTimeout(resolve, 10000));
         return createMockOrgProfile();
       },
-      getOrgActivity: async () => {
-        await new Promise((resolve) => setTimeout(resolve, 10000));
-        return new Map<string, number>();
-      },
       openFile: async () => {},
     };
 
@@ -486,10 +441,6 @@ export const Error: Story = {
         await new Promise((resolve) => setTimeout(resolve, 500));
         throw new globalThis.Error('Failed to load organization profile. Please try again.');
       },
-      getOrgActivity: async () => {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        return new Map<string, number>();
-      },
       openFile: async () => {},
     };
 
@@ -518,9 +469,6 @@ export const Empty: Story = {
       getOrgProfile: async () => {
         return createMockOrgProfile();
       },
-      getOrgActivity: async () => {
-        return new Map<string, number>();
-      },
       openFile: async () => {},
     };
 
@@ -547,7 +495,6 @@ export const CompleteProfile = {
         location: 'Redmond, WA',
         twitterHandle: 'Microsoft',
         websiteUrl: 'https://opensource.microsoft.com',
-        activityData: generateMockActivityData('high'),
         totalCommits: 234567,
         publicRepos: 2847,
         members: 4234,
@@ -563,7 +510,6 @@ export const LongDescription = {
     <OrgProfilePanelStory
       orgData={createMockOrgProfile({
         description: 'We are a global organization dedicated to building innovative open source software that empowers developers around the world. Our mission is to create tools, frameworks, and platforms that enable developers to build amazing applications. We believe in the power of community and collaboration, and we are committed to making our software accessible to everyone. Join us in building the future of technology.',
-        activityData: generateMockActivityData('medium'),
       })}
     />
   ),
@@ -582,7 +528,6 @@ export const Enterprise = {
         location: 'Mountain View, CA',
         twitterHandle: 'Google',
         websiteUrl: 'https://opensource.google',
-        activityData: generateMockActivityData('high'),
         totalCommits: 567890,
         publicRepos: 1234,
         members: 8942,

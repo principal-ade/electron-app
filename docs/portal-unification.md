@@ -83,8 +83,7 @@ this work. Discriminate trail kind via payload, not separate event names.
 | Intent | Payload (sketch) | Emitters today | Opens |
 |---|---|---|---|
 | `repository:selected` | `{ repositoryPath?, owner, repo }` | ProjectsLeftPanel, ProjectsList, profile panels | repo profile tab |
-| `owner:selected` | `{ owner, kind: 'user' \| 'org' }` | FollowingList, OrganizationsList, profile panels | user/org profile tab |
-| `collection:selected` | `{ collectionId }` | CollectionsList, CollectionProfilePanel | collection profile tab |
+| `owner:selected` | `{ owner, kind: 'user' \| 'org' }` | OrganizationsList, profile panels | user/org profile tab |
 | `commit:review-selected` | `{ repoPath, commit }` | activity cards | commit review tab |
 | `live-activity:open` | `{ owner? }` | CoworkersList, OrganizationsList | live activity tab |
 | `owner:activity-requested` | `{ owner }` | CoworkersList | owner activity tab |
@@ -103,7 +102,7 @@ listener; do not fold them into the intent union:
   `repository-profile:delete-requested`, `…:delete-clone-requested`,
   `…:clone-completed`, `repository:opened/updated/deleted`
 - Data toggles/sync: `star:repo-toggled`, `follow:user-toggled`,
-  `collections:updated`, `activity:refresh-requested`,
+  `activity:refresh-requested`,
   `activity:time-filter-changed`, `repository:filter-changed`
 - Layout/chrome (principalEvents): `panel:switch`, `panel:toggle`,
   `panel:reset-layout`, `panel:expand-all/collapse-all`
@@ -119,7 +118,7 @@ listener; do not fold them into the intent union:
   `installProjectsOpenForwarder` normalizes both legacy events into it (3b). The
   remaining emit-site cleanup — making the panels emit `owner:selected{kind}`
   directly instead of the two legacy events — is a follow-up. (Straggler emitters:
-  ProjectsLeftPanel, ProjectsList, CollectionProfilePanel, RepoActivityCard,
+  ProjectsLeftPanel, ProjectsList, RepoActivityCard,
   OrgProfilePanel, RepositoryProfilePanel.)
 - [ ] Decide `trail:open` payload discriminator (`source: 'shared' | 'local'`)
   vs two events. Recommendation: one event + discriminator.
@@ -244,7 +243,7 @@ each green on `main`:**
 ### Bus topology for Projects opens (decided 2026-06-27)
 
 The doc's canonical-intent table already lists `repository:selected` /
-`owner:selected` / `collection:selected` / `live-activity:open` /
+`owner:selected` / `live-activity:open` /
 `owner:activity-requested` / `repository:activity-requested` as portal tab-open
 intents, so those are now **typed members of `PORTAL_INTENTS`**, materialized by
 the lone always-mounted `PortalIntentBridge` into the shared bucket. The legacy

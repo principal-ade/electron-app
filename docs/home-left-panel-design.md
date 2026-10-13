@@ -10,7 +10,7 @@
 Users who primarily **browse** repositories (rather than clone/develop them)
 need a landing surface that feels like the web app's home page — a profile card
 and a set of nav cards that drill into their projects, starred repos,
-collections, and recent items. The existing Projects left
+and recent items. The existing Projects left
 panel is clone/dev-oriented (auth settings, feed modes, terminal forwarders);
 this new panel is browse-oriented and sits **alongside** Projects as a separate
 workspace surface.
@@ -27,7 +27,6 @@ The web app's home left panel (`web-ade/src/components/home/`) is a
 | `HomeNavCards.tsx` | `src/renderer/panels/home-panel/HomeNavCards.tsx` |
 | `HomeProjectsView.tsx` | `src/renderer/panels/home-panel/sub-views/HomeProjectsSubView.tsx` |
 | `HomeStarredView.tsx` | `src/renderer/panels/home-panel/sub-views/HomeStarredSubView.tsx` |
-| `HomeCollectionsView.tsx` | `src/renderer/panels/home-panel/sub-views/HomeCollectionsSubView.tsx` |
 | `HomeRecentlyVisitedView.tsx` | `src/renderer/panels/home-panel/sub-views/HomeRecentSubView.tsx` |
 | `SlidePane.tsx` | `src/renderer/components/SlidePane/SlidePane.tsx` (shared) |
 | `RailPaneHeader.tsx` | `src/renderer/panels/home-panel/sub-views/SubViewHeader.tsx` |
@@ -69,7 +68,6 @@ IntegratedShell (owns activeView state)
                  │    ├── [view='projects']  → HomeProjectsSubView (+ Cloned only switch)
                  │    ├── [view='other-clones'] → HomeClonedSubView
                  │    ├── [view='starred']   → HomeStarredSubView
-                 │    ├── [view='collections'] → HomeCollectionsSubView
                  │    └── [view='recent']    → HomeRecentSubView
                  └── (emits repository:selected on the shell's local events bus)
 ```
@@ -92,7 +90,7 @@ keys. The Home panel's ordering:
 
 ```ts
 const HOME_SLIDE_ORDER = [
-  'home', 'projects', 'other-clones', 'starred', 'collections', 'recent',
+  'home', 'projects', 'other-clones', 'starred', 'recent',
 ];
 ```
 
@@ -115,7 +113,6 @@ The overview shows two stacked blocks:
      switch filters to repos that already have a local Alexandria clone
    - Other Clones → local clones whose owner is not the user / their orgs
    - Starred Projects → flat starred repo list with filter + sort
-   - Collections → starred collections from web-ade (Principal sign-in)
    - Recently Visited → recent projects from localStorage (Principal sign-in)
 
    Bookmarks and Trails/Topics are available on their own sidebar surfaces
@@ -132,7 +129,6 @@ inside the SlidePane — only the active view is mounted.
 | Projects | `GithubService.getUserRepositories` + `getOrgRepositories` | Grouped by owner; **Cloned only** switch vs local Alexandria entries |
 | Other Clones | `repositories` filtered by non-owned owners | StarredRepoCard rows; untracked + third-party local clones |
 | Starred | `GithubService.getUserStarredRepositories` | Filter + sort (A-Z / Stars / Updated) |
-| Collections | `WebAdeService.getStarredCollections` | Flat list; create/detail deferred; Principal sign-in required |
 | Recent | `localStorage.getItem('recent-repositories')` | Projects only; trails deferred; Principal sign-in required |
 
 ## Integration contract
@@ -163,8 +159,7 @@ the existing `payloadFromGithub` / `payloadFromLocalEntry` helpers from
 in `RepositoryProfilePanel` at `getInitials(repositoryData.name)` because
 `repositoryData` was `undefined`. The fix: split `full_name` into owner/name,
 match against local clones (`repositories` prop), and build the payload with
-the shared helpers — the same pattern used by `ProjectsList` and
-`StarredReposList`.
+the shared helpers — the same pattern used by `ProjectsList`.
 
 ## Decisions locked
 
@@ -191,7 +186,6 @@ the shared helpers — the same pattern used by `ProjectsList` and
 | Gap | Status | Notes |
 | --- | --- | --- |
 | Recently visited — trails | Deferred | Only projects from localStorage; trails deferred until a recent-trails listing is available |
-| Collections — create/detail | Deferred | Collection create modal and detail drilldown are not wired yet |
 | Repo click → right pane | Not wired | `repository:selected` is emitted but the right pane in `WorkspaceShell` is a placeholder; the profile panel renders as a tab via the forwarder |
 
 ## File inventory
@@ -205,13 +199,12 @@ the shared helpers — the same pattern used by `ProjectsList` and
 | `src/renderer/components/SlidePane/index.ts` | Barrel export |
 | `src/renderer/panels/home-panel/HomeLeftPanel.tsx` | Main orchestrator + data fetching |
 | `src/renderer/panels/home-panel/UserAboutCard.tsx` | GitHub profile card |
-| `src/renderer/panels/home-panel/HomeNavCards.tsx` | 6 nav cards |
+| `src/renderer/panels/home-panel/HomeNavCards.tsx` | Nav cards |
 | `src/renderer/panels/home-panel/languageColors.ts` | Language color helper |
 | `src/renderer/panels/home-panel/index.ts` | Barrel export |
 | `src/renderer/panels/home-panel/sub-views/SubViewHeader.tsx` | Shared back-header for sub-views |
 | `src/renderer/panels/home-panel/sub-views/HomeProjectsSubView.tsx` | Projects sub-view |
 | `src/renderer/panels/home-panel/sub-views/HomeStarredSubView.tsx` | Starred sub-view |
-| `src/renderer/panels/home-panel/sub-views/HomeCollectionsSubView.tsx` | Collections sub-view |
 
 | `src/renderer/panels/home-panel/sub-views/HomeRecentSubView.tsx` | Recently visited sub-view |
 

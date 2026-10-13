@@ -14,7 +14,7 @@ repository identity (purl). It combines:
 - Profile chrome (heatmap banner, owner avatar, stats, description)
 - Local clone lifecycle (list clones, open workspace, terminal, delete, clone/fork)
 - Git status / branch sync per clone
-- Star + collections
+- Star
 - Contributors (and optional ownership layers)
 - An embedded File City built **inside the panel** (local and/or remote trees) —
   **not** a mount of `FileCityGuidePanel`
@@ -153,7 +153,7 @@ portal for opens). Design inventory:
 | City | Built from local and/or remote trees; git-status layers when local |
 | README | Fetched for remote-only; `DocumentView` |
 | Contributors | List + optional ownership hover coloring on city |
-| Star / collect | GitHub star; add/remove Principal collections |
+| Star | GitHub star |
 | Playback | Commit highlight playback over city (today/week/year) |
 
 ## Explicit non-goals (this surface)

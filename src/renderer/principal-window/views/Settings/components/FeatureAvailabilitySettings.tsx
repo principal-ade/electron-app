@@ -13,9 +13,9 @@ const FEATURE_GROUPS: Array<{
 }> = [
   {
     key: 'repositoryInsightsAndCollections',
-    label: 'Repository insights & collections',
+    label: 'Repository insights',
     description:
-      'Cached repository trees, contribution data, profile activity, pinned repositories, starred collections, and commit explanations.',
+      'Cached repository trees, contribution data, profile activity, pinned repositories, and commit explanations.',
   },
   {
     key: 'presenceAndCollaboration',

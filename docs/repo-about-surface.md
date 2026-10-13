@@ -14,7 +14,7 @@ view:
 1. **`UserAboutCard`** — the signed-in user's GitHub profile (avatar, login,
    bio, stats). Always visible at the top.
 2. **`HomeNavCards`** — clickable nav cards (Projects, Other Clones, Starred,
-   Collections, Recent).
+   Recent).
 
 When the user selects a repo from any sub-view, the `RepoAboutCard` slides in
 from the right over the sub-view (which stays mounted with `pointerEvents:

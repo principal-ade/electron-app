@@ -9,8 +9,7 @@ import { webAdeClient } from '../tipc/webAdeClient';
 import type {
   GetTreeResponse,
   RepoContributionsResponse,
-  StarredCollection,
-  OwnerStarredCollectionsResponse,
+  UserActivityResponse,
   ExplainCommitsInput,
   ExplainCommitsResponse,
   ExplainWorkingChangesInput,
@@ -22,13 +21,6 @@ import type {
  * Provides high-level methods for web-ade API operations.
  */
 export class WebAdeService {
-  /**
-   * Check if user is authenticated (has valid GitHub token)
-   */
-  static async isAuthenticated(): Promise<boolean> {
-    return webAdeClient.isAuthenticated();
-  }
-
   /**
    * Get repository file tree from GitHub via web-ade's cached endpoint
    * Uses web-ade's multi-layer caching (memory → Redis → S3 → GitHub)
@@ -51,44 +43,17 @@ export class WebAdeService {
   }
 
   /**
-   * Get user's starred collections from web-ade API
-   * @param includeItems - Whether to include items (repos and users) in collections (default: true)
+   * Get user activity (recent commits + contribution heatmap) for a GitHub user.
+   * @param username - GitHub username
+   * @param contributionDays - Days of contribution heatmap data (default: 365)
+   * @param activityDays - Days of recent commit activity (default: 1)
    */
-  static async getStarredCollections(includeItems = true): Promise<StarredCollection[]> {
-    return webAdeClient.getStarredCollections({ includeItems });
-  }
-
-  /**
-   * Get the public starred collections owned by a specific GitHub user or org.
-   * @param owner - GitHub login of the user or organization
-   * @param includeItems - Whether to include items (repos and users) in collections (default: true)
-   */
-  static async getOwnerStarredCollections(
-    owner: string,
-    includeItems = true,
-  ): Promise<OwnerStarredCollectionsResponse> {
-    return webAdeClient.getOwnerStarredCollections({ owner, includeItems });
-  }
-
-  /**
-   * Create a new starred collection
-   */
-  static async createCollection(name: string, description?: string, icon?: string): Promise<StarredCollection> {
-    return webAdeClient.createCollection({ name, description, icon });
-  }
-
-  /**
-   * Add a repository to a starred collection
-   */
-  static async addRepoToCollection(collectionId: string, owner: string, repo: string): Promise<void> {
-    return webAdeClient.addRepoToCollection({ collectionId, owner, repo });
-  }
-
-  /**
-   * Remove a repository from a starred collection
-   */
-  static async removeRepoFromCollection(collectionId: string, owner: string, repo: string): Promise<void> {
-    return webAdeClient.removeRepoFromCollection({ collectionId, owner, repo });
+  static async getUserActivity(
+    username: string,
+    contributionDays = 365,
+    activityDays = 1,
+  ): Promise<UserActivityResponse> {
+    return webAdeClient.getUserActivity({ username, contributionDays, activityDays });
   }
 
   /**

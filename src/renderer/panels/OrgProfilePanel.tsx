@@ -18,8 +18,6 @@ import {
   Github,
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
-import { OwnerCollectionsTab } from './OwnerCollectionsTab';
-import { useHomePanelPreferences } from '../hooks/useHomePanelPreferences';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import {
   payloadFromGithub,
@@ -47,7 +45,6 @@ export interface OrgProfileData {
   location?: string;
   twitterHandle?: string;
   websiteUrl?: string;
-  activityData: Map<string, number>; // date -> commit count
   totalCommits: number;
   publicRepos: number;
   members: number;
@@ -72,11 +69,6 @@ export interface OrgProfilePanelActions extends PanelActions {
    * Get GitHub organization profile
    */
   getOrgProfile: (orgName: string) => Promise<OrgProfileData>;
-
-  /**
-   * Get organization activity/contribution data
-   */
-  getOrgActivity: (orgName: string) => Promise<Map<string, number>>;
 
   /**
    * Get organization's repositories (optional)
@@ -104,110 +96,6 @@ interface OrgProfilePanelProps {
   actions: OrgProfilePanelActions;
   events: PanelEventEmitter;
 }
-
-/**
- * Activity Heatmap Banner Component
- * Height-driven: calculates square size based on container height
- */
-const ActivityHeatmap: React.FC<{
-  activityData: Map<string, number>;
-  theme: ReturnType<typeof useTheme>['theme'];
-  bannerHeight?: number; // Height of the banner in pixels
-}> = ({ activityData, theme, bannerHeight = 160 }) => {
-  // Calculate square size based on banner height
-  // Formula: (height - vertical padding) / 7 days - gap
-  const squareSize = useMemo(() => {
-    const verticalPadding = 8; // 0px top + 8px bottom
-    const gap = 3;
-    const availableHeight = bannerHeight - verticalPadding;
-    const totalGaps = 6 * gap; // 6 gaps between 7 days
-    return Math.floor((availableHeight - totalGaps) / 7);
-  }, [bannerHeight]);
-
-  const weeks = useMemo(() => {
-    const today = new Date();
-    const daysToShow = 365; // Full year
-    const days: Array<{ date: string; count: number; dayOfWeek: number }> = [];
-
-    for (let i = daysToShow - 1; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateKey = date.toISOString().split('T')[0];
-      const count = activityData.get(dateKey) || 0;
-      days.push({ date: dateKey, count, dayOfWeek: date.getDay() });
-    }
-
-    // Group into weeks
-    const weekGroups: Array<Array<{ date: string; count: number; dayOfWeek: number }>> = [];
-    let currentWeek: Array<{ date: string; count: number; dayOfWeek: number }> = [];
-
-    days.forEach((day) => {
-      if (day.dayOfWeek === 0 && currentWeek.length > 0) {
-        weekGroups.push(currentWeek);
-        currentWeek = [];
-      }
-      currentWeek.push(day);
-    });
-
-    if (currentWeek.length > 0) {
-      weekGroups.push(currentWeek);
-    }
-
-    return weekGroups;
-  }, [activityData]);
-
-  const maxCount = useMemo(() => {
-    let max = 0;
-    activityData.forEach((count) => {
-      if (count > max) max = count;
-    });
-    return max || 1;
-  }, [activityData]);
-
-  const getColor = (count: number): string => {
-    if (count === 0) return `${theme.colors.border}30`;
-    const intensity = Math.min(count / maxCount, 1);
-    const alpha = Math.floor(20 + intensity * 80); // 20-100% opacity
-    return `${theme.colors.primary}${alpha.toString(16).padStart(2, '0')}`;
-  };
-
-  const gap = 3;
-  const borderRadius = Math.max(2, Math.floor(squareSize * 0.2)); // Scale border radius with square size
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        gap,
-        padding: '0 16px 8px 16px',
-        width: '100%',
-        height: '100%',
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        alignItems: 'center',
-      }}
-    >
-      {weeks.map((week) => (
-        <div key={week[0]?.date ?? `week-${week.length}`} style={{ display: 'flex', flexDirection: 'column', gap, flexShrink: 0 }}>
-          {week.map((day) => (
-            <div
-              key={day.date}
-              style={{
-                width: squareSize,
-                height: squareSize,
-                borderRadius,
-                backgroundColor: getColor(day.count),
-                transition: 'all 0.2s ease',
-                flexShrink: 0,
-              }}
-              title={`${day.date}: ${day.count} commits`}
-            />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-};
 
 /**
  * Format number with k/m suffix
@@ -251,7 +139,6 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   events,
 }) => {
   const { theme } = useTheme();
-  const homePanelPrefs = useHomePanelPreferences();
   const org = context.currentScope?.org;
 
   // Panel manages its own profile data state
@@ -273,7 +160,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [panelWidth, setPanelWidth] = useState<number>(0);
   const [pinnedRepoNames, setPinnedRepoNames] = useState<string[]>([]);
-  type OrgTab = 'repositories' | 'pinned' | 'collections';
+  type OrgTab = 'repositories' | 'pinned';
   const [activeTab, setActiveTab] = useState<OrgTab>('repositories');
 
   const spacing = useMemo(
@@ -326,19 +213,10 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
 
     const fetchProfile = async () => {
       try {
-        // Fetch profile and activity in parallel
-        const [profile, activity] = await Promise.all([
-          actions.getOrgProfile(org.orgName),
-          actions.getOrgActivity(org.orgName),
-        ]);
+        const profile = await actions.getOrgProfile(org.orgName);
 
         if (!cancelled) {
-          // Merge activity data into profile
-          const profileWithActivity: OrgProfileData = {
-            ...profile,
-            activityData: activity,
-          };
-          setOrgData(profileWithActivity);
+          setOrgData(profile);
         }
       } catch (err) {
         if (!cancelled) {
@@ -510,7 +388,6 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
     location: undefined,
     twitterHandle: undefined,
     websiteUrl: undefined,
-    activityData: new Map(),
     totalCommits: 0,
     publicRepos: 0,
     members: 0,
@@ -530,23 +407,11 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
         backgroundColor: theme.colors.background,
       }}
     >
-      {/* Banner with Activity Heatmap - Fixed at top */}
-      <div
-        style={{
-          position: 'relative',
-          height: 170,
-          overflow: 'hidden',
-          flexShrink: 0,
-        }}
-      >
-        <ActivityHeatmap activityData={displayData.activityData} theme={theme} bannerHeight={170} />
-      </div>
-
       {/* Profile Header - Fixed, no scroll */}
-      <div style={{ padding: spacing.md, marginTop: -60, position: 'relative', flexShrink: 0, display: 'flex', gap: spacing.md, alignItems: 'stretch' }}>
+      <div style={{ padding: spacing.md, position: 'relative', flexShrink: 0, display: 'flex', gap: spacing.md, alignItems: 'stretch' }}>
         {/* Left column */}
         <div style={{ flexShrink: 0 }}>
-        {/* Avatar Section - positioned to overlap banner */}
+        {/* Avatar Section */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md, marginBottom: spacing.md }}>
           {/* Avatar */}
           <div
@@ -927,28 +792,6 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
         >
           Repositories
         </button>
-        {homePanelPrefs.collections && (
-        <button
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: `${spacing.sm}px ${spacing.md}px`,
-            fontSize: theme.fontSizes[2],
-            fontFamily: theme.fonts?.body,
-            fontWeight: theme.fontWeights?.semibold ?? 600,
-            color: activeTab === 'collections' ? theme.colors.primary : theme.colors.textSecondary,
-            borderBottom: activeTab === 'collections' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            marginBottom: -1,
-          }}
-          onClick={() => setActiveTab('collections')}
-          onMouseEnter={(e) => { if (activeTab !== 'collections') e.currentTarget.style.color = theme.colors.text; }}
-          onMouseLeave={(e) => { if (activeTab !== 'collections') e.currentTarget.style.color = theme.colors.textSecondary; }}
-        >
-          Collections
-        </button>
-        )}
         {isNarrow && pinnedRepoNames.length > 0 && (
           <button
             style={{
@@ -1102,19 +945,6 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
               })}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Collections Tab - Scrollable section */}
-      {homePanelPrefs.collections && activeTab === 'collections' && org && (
-        <div
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            padding: `${spacing.md}px`,
-          }}
-        >
-          <OwnerCollectionsTab ownerLogin={org.orgName} events={events} />
         </div>
       )}
 

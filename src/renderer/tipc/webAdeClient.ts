@@ -12,13 +12,8 @@ import type {
   GetTreeResponse,
   GetRepoContributionsInput,
   RepoContributionsResponse,
-  GetStarredCollectionsInput,
-  GetOwnerStarredCollectionsInput,
-  OwnerStarredCollectionsResponse,
-  CreateCollectionInput,
-  AddRepoToCollectionInput,
-  RemoveRepoFromCollectionInput,
-  StarredCollection,
+  GetUserActivityInput,
+  UserActivityResponse,
   GetPinnedRepositoriesInput,
   ExplainCommitsInput,
   ExplainCommitsResponse,
@@ -35,23 +30,14 @@ import type {
  * This provides typed access to all Web-ADE operations.
  */
 export interface WebAdeClient {
-  // Authentication
-  isAuthenticated: () => Promise<boolean>;
-
   // GitHub Tree API (via web-ade)
   getGithubTree: (input: GetTreeInput) => Promise<GetTreeResponse>;
 
   // GitHub Repository Contributions (via web-ade)
   getRepoContributions: (input: GetRepoContributionsInput) => Promise<RepoContributionsResponse>;
 
-  // Starred Collections
-  getStarredCollections: (input: GetStarredCollectionsInput) => Promise<StarredCollection[]>;
-  getOwnerStarredCollections: (
-    input: GetOwnerStarredCollectionsInput,
-  ) => Promise<OwnerStarredCollectionsResponse>;
-  createCollection: (input: CreateCollectionInput) => Promise<StarredCollection>;
-  addRepoToCollection: (input: AddRepoToCollectionInput) => Promise<void>;
-  removeRepoFromCollection: (input: RemoveRepoFromCollectionInput) => Promise<void>;
+  // User Activity
+  getUserActivity: (input: GetUserActivityInput) => Promise<UserActivityResponse>;
 
   // Pinned Repositories
   getPinnedRepositories: (input: GetPinnedRepositoriesInput) => Promise<string[]>;
@@ -122,15 +108,8 @@ export type {
   GetRepoContributionsInput,
   RepoContributionsResponse,
   DailyContribution,
-  GetStarredCollectionsInput,
-  GetOwnerStarredCollectionsInput,
-  OwnerStarredCollectionsResponse,
-  CreateCollectionInput,
-  AddRepoToCollectionInput,
-  RemoveRepoFromCollectionInput,
-  StarredCollection,
-  StarredCollectionRepo,
-  StarredCollectionUser,
+  GetUserActivityInput,
+  UserActivityResponse,
   GetPinnedRepositoriesInput,
   ExplainCommitsInput,
   ExplainCommitsResponse,

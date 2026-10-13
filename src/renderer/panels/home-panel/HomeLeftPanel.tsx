@@ -6,7 +6,7 @@
  * (GitHub profile) and HomeNavCards. Clicking a card slides to that sub-view;
  * a back button slides back to the overview.
  *
- * Nav order: Your Projects → Other Clones → Starred → (Principal) Collections / Recent.
+ * Nav order: Your Projects → Other Clones → Starred → (Principal) Recent.
  * "Cloned only" is a switch inside Your Projects, not its own card.
  */
 
@@ -38,7 +38,6 @@ import { HomeNavCards, type HomeNavKey, type HomeNavCardCounts } from './HomeNav
 import { HomeClonedSubView } from './sub-views/HomeClonedSubView';
 import { HomeProjectsSubView, type ProjectSection } from './sub-views/HomeProjectsSubView';
 import { HomeStarredSubView } from './sub-views/HomeStarredSubView';
-import { HomeCollectionsSubView } from './sub-views/HomeCollectionsSubView';
 import { HomeRecentSubView } from './sub-views/HomeRecentSubView';
 import { FollowersFollowingSubView } from './sub-views/FollowersFollowingSubView';
 
@@ -56,7 +55,6 @@ const HOME_SLIDE_ORDER: readonly HomeView[] = [
   'projects',
   'other-clones',
   'starred',
-  'collections',
   'recent',
 ];
 const homeSlideDirection = makeSlideDirection(HOME_SLIDE_ORDER as readonly string[]);
@@ -96,7 +94,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   repositories,
   events,
 }) => {
-  // Principal app OAuth — gates collections/recent and re-runs profile load.
+  // Principal app OAuth — gates recent and re-runs profile load.
   const { user: authUser, isAuthenticated: isPrincipalSignedIn } = useAuthState();
   const homePanelPrefs = useHomePanelPreferences();
   const { theme } = useTheme();
@@ -165,15 +163,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // Also drop back when the feature flag is off (shouldn't be reachable, but
   // defensive). Clear selected repo card.
   useEffect(() => {
-    if (
-      !isPrincipalSignedIn &&
-      (view === 'collections' || view === 'recent')
-    ) {
-      setView('home');
-      setSelectedRepo(null);
-      setRepoCardExiting(false);
-    }
-    if (view === 'collections' && !homePanelPrefs.collections) {
+    if (!isPrincipalSignedIn && view === 'recent') {
       setView('home');
       setSelectedRepo(null);
       setRepoCardExiting(false);
@@ -183,7 +173,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       setSelectedRepo(null);
       setRepoCardExiting(false);
     }
-  }, [isPrincipalSignedIn, view, homePanelPrefs.collections, homePanelPrefs.recentlyVisited]);
+  }, [isPrincipalSignedIn, view, homePanelPrefs.recentlyVisited]);
 
   // Keep selectedRepo.localClones in sync when the registry changes (e.g. after
   // a clone is deleted via the RepoAboutCard delete button). Without this the
@@ -642,7 +632,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                   counts={counts}
                   activeView={null}
                   isPrincipalSignedIn={isPrincipalSignedIn}
-                  showCollections={homePanelPrefs.collections}
                   showRecentlyVisited={homePanelPrefs.recentlyVisited}
                   onOpenView={(key) => go(key)}
                 />
@@ -670,11 +659,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               key="starred"
               onBack={() => go('home')}
               onSelectRepo={(repo) => emitRepoSelected(repo)}
-            />
-          ) : view === 'collections' && isPrincipalSignedIn && homePanelPrefs.collections ? (
-            <HomeCollectionsSubView
-              key="collections"
-              onBack={() => go('home')}
             />
           ) : view === 'recent' && isPrincipalSignedIn && homePanelPrefs.recentlyVisited ? (
             <HomeRecentSubView

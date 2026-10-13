@@ -21,7 +21,6 @@ import type {
   Purl,
 } from '@principal-ai/alexandria-core-library';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
-import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
  * Markdown document tab — a doc opened in-place from the Principal MCP Bridge
@@ -125,12 +124,6 @@ export interface OrgProfileTab extends BaseTab {
   orgName: string;
 }
 
-/** Collection profile tab — a collection's repos and users. */
-export interface CollectionProfileTab extends BaseTab {
-  contentType: 'collection-profile';
-  collection: StarredCollection;
-}
-
 /** Owner activity tab — a user/org's commit activity. */
 export interface OwnerActivityTab extends BaseTab {
   contentType: 'owner-activity';
@@ -211,7 +204,6 @@ export type FeedTab =
   | ProjectInfoTab
   | UserProfileTab
   | OrgProfileTab
-  | CollectionProfileTab
   | OwnerActivityTab
   | RepoActivityTab
   | FileCityGuideTab

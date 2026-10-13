@@ -20,8 +20,6 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
-import { OwnerCollectionsTab } from './OwnerCollectionsTab';
-import { useHomePanelPreferences } from '../hooks/useHomePanelPreferences';
 import {
   CommitActivityPanel,
   type CommitActivityPanelActions,
@@ -368,7 +366,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   commitActivityActions,
 }) => {
   const { theme } = useTheme();
-  const homePanelPrefs = useHomePanelPreferences();
   const user = context.currentScope?.user;
 
   // Panel manages its own profile data state
@@ -389,7 +386,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   const [isFollowLoading, setIsFollowLoading] = useState(false);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'pinned' | 'collections'>('activity');
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'pinned'>('activity');
 
   // Panel width for responsive pinned column
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1230,32 +1227,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         >
           Activity
         </button>
-        {homePanelPrefs.collections && (
-        <button
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: `${spacing.sm}px ${spacing.md}px`,
-            fontSize: theme.fontSizes[2],
-            fontFamily: theme.fonts?.body,
-            fontWeight: theme.fontWeights?.semibold ?? 600,
-            color: activeTab === 'collections' ? theme.colors.primary : theme.colors.textSecondary,
-            borderBottom: activeTab === 'collections' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            marginBottom: -1,
-          }}
-          onClick={() => setActiveTab('collections')}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'collections') e.currentTarget.style.color = theme.colors.text;
-          }}
-          onMouseLeave={(e) => {
-            if (activeTab !== 'collections') e.currentTarget.style.color = theme.colors.textSecondary;
-          }}
-        >
-          Collections
-        </button>
-        )}
         {isNarrow && pinnedRepoNames.length > 0 && (
           <button
             style={{
@@ -1301,13 +1272,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               hideHeader
               actions={commitActivityActions}
             />
-          </div>
-        )}
-
-        {/* Collections Tab */}
-        {homePanelPrefs.collections && activeTab === 'collections' && userData && (
-          <div style={{ marginTop: spacing.md }}>
-            <OwnerCollectionsTab ownerLogin={userData.username} events={events} />
           </div>
         )}
 

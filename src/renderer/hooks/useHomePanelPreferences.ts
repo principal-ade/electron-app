@@ -2,12 +2,10 @@ import { useState, useEffect } from 'react';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
 export interface HomePanelPreferences {
-  collections: boolean;
   recentlyVisited: boolean;
 }
 
 const DEFAULT: HomePanelPreferences = {
-  collections: false,
   recentlyVisited: false,
 };
 
@@ -22,7 +20,6 @@ export function useHomePanelPreferences(): HomePanelPreferences {
       if (cancelled) return;
       const hp = all.homePanel;
       setPrefs({
-        collections: hp?.collections ?? false,
         recentlyVisited: hp?.recentlyVisited ?? false,
       });
     };
@@ -32,7 +29,6 @@ export function useHomePanelPreferences(): HomePanelPreferences {
     const unsubscribe = UserPreferencesService.onPreferencesUpdated((all) => {
       const hp = all.homePanel;
       setPrefs({
-        collections: hp?.collections ?? false,
         recentlyVisited: hp?.recentlyVisited ?? false,
       });
     });

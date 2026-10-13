@@ -9,11 +9,6 @@ import { tipc } from '@egoist/tipc/main';
 import type {
   GetTreeInput,
   GetRepoContributionsInput,
-  GetStarredCollectionsInput,
-  GetOwnerStarredCollectionsInput,
-  CreateCollectionInput,
-  AddRepoToCollectionInput,
-  RemoveRepoFromCollectionInput,
   GetUserActivityInput,
   GetPinnedRepositoriesInput,
   ExplainCommitsInput,
@@ -28,15 +23,6 @@ const webAdeService = new WebAdeService();
 const t = tipc.create();
 
 export const webAdeRouter = {
-  // ===========================================================================
-  // Authentication
-  // ===========================================================================
-
-  isAuthenticated: t.procedure.action(async () => {
-    await requireHostedFeature('signIn');
-    return webAdeService.isAuthenticated();
-  }),
-
   // ===========================================================================
   // GitHub Tree API (via web-ade's cached endpoint)
   // ===========================================================================
@@ -68,45 +54,6 @@ export const webAdeRouter = {
     .action(async ({ input }) => {
       await requireHostedFeature('repositoryInsightsAndCollections');
       return webAdeService.getUserActivity(input);
-    }),
-
-  // ===========================================================================
-  // Starred Collections
-  // ===========================================================================
-
-  getStarredCollections: t.procedure
-    .input<GetStarredCollectionsInput>()
-    .action(async ({ input }) => {
-      await requireHostedFeature('repositoryInsightsAndCollections');
-      return webAdeService.getStarredCollections(input.includeItems ?? true);
-    }),
-
-  getOwnerStarredCollections: t.procedure
-    .input<GetOwnerStarredCollectionsInput>()
-    .action(async ({ input }) => {
-      await requireHostedFeature('repositoryInsightsAndCollections');
-      return webAdeService.getOwnerStarredCollections(input.owner, input.includeItems ?? true);
-    }),
-
-  createCollection: t.procedure
-    .input<CreateCollectionInput>()
-    .action(async ({ input }) => {
-      await requireHostedFeature('repositoryInsightsAndCollections');
-      return webAdeService.createCollection(input.name, input.description, input.icon);
-    }),
-
-  addRepoToCollection: t.procedure
-    .input<AddRepoToCollectionInput>()
-    .action(async ({ input }) => {
-      await requireHostedFeature('repositoryInsightsAndCollections');
-      return webAdeService.addRepoToCollection(input.collectionId, input.owner, input.repo);
-    }),
-
-  removeRepoFromCollection: t.procedure
-    .input<RemoveRepoFromCollectionInput>()
-    .action(async ({ input }) => {
-      await requireHostedFeature('repositoryInsightsAndCollections');
-      return webAdeService.removeRepoFromCollection(input.collectionId, input.owner, input.repo);
     }),
 
   // ===========================================================================

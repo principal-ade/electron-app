@@ -41,7 +41,7 @@ import { useWorkspaceTabs } from '../principal-window/PortalTabsContext';
 import { usePortalEvents } from '../principal-window/PortalEventContext';
 import { installProjectsOpenForwarder } from '../events/portalIntents';
 
-export type FeedMode = 'my-activity' | 'collections' | 'organizations';
+export type FeedMode = 'my-activity' | 'organizations';
 
 export interface ProjectsHost {
   feedMode: FeedMode;

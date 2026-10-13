@@ -2,7 +2,7 @@
  * ProjectsLeftPanel
  *
  * Left panel for the Projects surface that contains the feed mode selector
- * and different list views (my activity, collections with subtabs, team with organizations and coworkers).
+ * and different list views (my activity, team with organizations and coworkers).
  * All sub-components stay mounted to avoid reloading data on mode switch.
  */
 
@@ -12,9 +12,6 @@ import { Github, ChevronDown, ChevronUp, Settings, FolderOpen } from 'lucide-rea
 import { SegmentedControl } from '../components/SegmentedControl';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { StarredReposList } from './StarredReposList';
-import { CollectionsList } from './CollectionsList';
-import { FollowingList } from './FollowingList';
 import { OrganizationsList } from './OrganizationsList';
 import { CoworkersList } from './CoworkersList';
 import { ProjectsList } from './ProjectsList';
@@ -22,7 +19,6 @@ import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCowork
 import { useTeamActivity } from '../hooks/useTeamActivity';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { useAuthState } from '../hooks/useAuthState';
-import { useHomePanelPreferences } from '../hooks/useHomePanelPreferences';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
@@ -41,9 +37,9 @@ export interface ProjectsLeftPanelProps {
   /** Event bus for panel communication */
   events: PanelEventEmitter;
   /** Feed mode */
-  feedMode: 'my-activity' | 'collections' | 'organizations';
+  feedMode: 'my-activity' | 'organizations';
   /** Callback when feed mode changes */
-  onFeedModeChange: (mode: 'my-activity' | 'collections' | 'organizations') => void;
+  onFeedModeChange: (mode: 'my-activity' | 'organizations') => void;
   /** Full activity commits for team activity tracking */
   activityCommits?: ActivityCommit[];
 }
@@ -57,27 +53,11 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const { user: currentUser, login, logout } = useAuthState();
-  const homePanelPrefs = useHomePanelPreferences();
 
   const spacing = {
     xs: theme.space?.[1] || 4,
     sm: theme.space?.[2] || 8,
   };
-
-  // State for collections subtab
-  const [collectionsSubtab, setCollectionsSubtab] = useState<'starred' | 'following' | 'collections'>('starred');
-
-  // Collections live on the OAuth backend, so the subtab is only available when
-  // signed in via OAuth (currentUser comes from useAuthState). When signed out,
-  // fall back to Starred so a previously-selected Collections tab doesn't leave
-  // the pane blank.
-  const isOAuthSignedIn = !!currentUser;
-  const effectiveSubtab =
-    !isOAuthSignedIn && collectionsSubtab === 'collections' ? 'starred' : collectionsSubtab;
-
-  // When the collections feature flag is off, force feed mode away from 'collections'.
-  const effectiveFeedMode =
-    !homePanelPrefs.collections && feedMode === 'collections' ? 'my-activity' : feedMode;
 
   // Local git identity (shown when signed out)
   const [localGitName, setLocalGitName] = useState<string | null>(null);
@@ -653,12 +633,9 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
             options={[
               { value: 'my-activity', label: 'My Projects' },
               { value: 'organizations', label: 'Team' },
-              ...(homePanelPrefs.collections
-                ? [{ value: 'collections', label: 'Social' }]
-                : []),
             ]}
-            value={effectiveFeedMode}
-            onChange={(value) => onFeedModeChange(value as 'my-activity' | 'collections' | 'organizations')}
+            value={feedMode}
+            onChange={(value) => onFeedModeChange(value as 'my-activity' | 'organizations')}
             theme={theme}
             variant="underline"
           />
@@ -670,7 +647,7 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
         {/* My Activity - Projects List */}
         <div
           style={{
-            display: effectiveFeedMode === 'my-activity' ? 'flex' : 'none',
+            display: feedMode === 'my-activity' ? 'flex' : 'none',
             height: '100%',
             width: '100%',
             flexDirection: 'column',
@@ -683,83 +660,10 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
           />
         </div>
 
-        {/* Collections Tab with Subtabs */}
-        <div
-          style={{
-            display: effectiveFeedMode === 'collections' ? 'flex' : 'none',
-            height: '100%',
-            width: '100%',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Second-level segmented control for subtabs */}
-          <div
-            style={{
-              padding: spacing.sm,
-              backgroundColor: theme.colors.background,
-              flexShrink: 0,
-            }}
-          >
-            <SegmentedControl
-              options={[
-                { value: 'starred', label: 'Starred' },
-                { value: 'following', label: 'Following' },
-                // Collections require an OAuth sign-in.
-                ...(isOAuthSignedIn
-                  ? [{ value: 'collections', label: 'Collections' }]
-                  : []),
-              ]}
-              value={effectiveSubtab}
-              onChange={(value) => setCollectionsSubtab(value as 'starred' | 'following' | 'collections')}
-              theme={theme}
-              variant="pill-flat"
-            />
-          </div>
-
-          {/* Subtab content container - all mounted, only visibility changes */}
-          <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-            {/* Starred subtab */}
-            <div
-              style={{
-                display: effectiveSubtab === 'starred' ? 'block' : 'none',
-                height: '100%',
-                width: '100%',
-              }}
-            >
-              <StarredReposList events={events} />
-            </div>
-
-            {/* Following subtab */}
-            <div
-              style={{
-                display: effectiveSubtab === 'following' ? 'block' : 'none',
-                height: '100%',
-                width: '100%',
-              }}
-            >
-              <FollowingList events={events} />
-            </div>
-
-            {/* Collections subtab — only mounted when signed in via OAuth */}
-            {isOAuthSignedIn && (
-              <div
-                style={{
-                  display: effectiveSubtab === 'collections' ? 'block' : 'none',
-                  height: '100%',
-                  width: '100%',
-                }}
-              >
-                <CollectionsList events={events} />
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Organizations & Coworkers */}
         <div
           style={{
-            display: effectiveFeedMode === 'organizations' ? 'flex' : 'none',
+            display: feedMode === 'organizations' ? 'flex' : 'none',
             height: '100%',
             width: '100%',
             flexDirection: 'column',

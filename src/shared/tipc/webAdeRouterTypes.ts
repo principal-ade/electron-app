@@ -22,45 +22,6 @@ export interface GetRepoContributionsInput {
   repo: string;
 }
 
-export interface GetStarredCollectionsInput {
-  includeItems?: boolean;
-}
-
-export interface GetOwnerStarredCollectionsInput {
-  owner: string;
-  includeItems?: boolean;
-}
-
-export interface OwnerStarredCollectionsResponse {
-  owner: {
-    login: string;
-    id: number;
-    avatar_url: string;
-    name: string | null;
-    type: 'User' | 'Organization';
-  };
-  collections: StarredCollection[];
-  version: number;
-}
-
-export interface AddRepoToCollectionInput {
-  collectionId: string;
-  owner: string;
-  repo: string;
-}
-
-export interface RemoveRepoFromCollectionInput {
-  collectionId: string;
-  owner: string;
-  repo: string;
-}
-
-export interface CreateCollectionInput {
-  name: string;
-  description?: string;
-  icon?: string;
-}
-
 // =============================================================================
 // Response Types
 // =============================================================================
@@ -121,34 +82,6 @@ export interface RepoContributionsResponse {
   totalCommits: number;
   pagesFetched: number;
   contributorsUsed: number;
-}
-
-export interface StarredCollectionRepo {
-  owner: string;
-  repo: string;
-  addedAt: string;
-}
-
-export interface StarredCollectionUser {
-  login: string;
-  addedAt: string;
-}
-
-export interface StarredCollection {
-  id: string;
-  name: string;
-  icon?: string;
-  description?: string;
-  ownerType?: 'user' | 'org';
-  ownerLogin?: string;
-  repos: StarredCollectionRepo[];
-  users: StarredCollectionUser[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface StarredCollectionsResponse {
-  collections: StarredCollection[];
 }
 
 // =============================================================================
@@ -263,12 +196,6 @@ export type WebAdeRouterType = Record<
     }) => Promise<unknown>;
   }
 > & {
-  isAuthenticated: {
-    action: (args: {
-      context: ActionContext;
-      input?: void;
-    }) => Promise<boolean>;
-  };
   getGithubTree: {
     action: (args: {
       context: ActionContext;
@@ -280,36 +207,6 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: GetRepoContributionsInput;
     }) => Promise<RepoContributionsResponse>;
-  };
-  getStarredCollections: {
-    action: (args: {
-      context: ActionContext;
-      input: GetStarredCollectionsInput;
-    }) => Promise<StarredCollection[]>;
-  };
-  getOwnerStarredCollections: {
-    action: (args: {
-      context: ActionContext;
-      input: GetOwnerStarredCollectionsInput;
-    }) => Promise<OwnerStarredCollectionsResponse>;
-  };
-  createCollection: {
-    action: (args: {
-      context: ActionContext;
-      input: CreateCollectionInput;
-    }) => Promise<StarredCollection>;
-  };
-  addRepoToCollection: {
-    action: (args: {
-      context: ActionContext;
-      input: AddRepoToCollectionInput;
-    }) => Promise<void>;
-  };
-  removeRepoFromCollection: {
-    action: (args: {
-      context: ActionContext;
-      input: RemoveRepoFromCollectionInput;
-    }) => Promise<void>;
   };
   getUserActivity: {
     action: (args: {

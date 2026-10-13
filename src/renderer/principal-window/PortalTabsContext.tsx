@@ -26,7 +26,6 @@ import type {
   ProjectInfoTab,
   UserProfileTab,
   OrgProfileTab,
-  CollectionProfileTab,
   OwnerActivityTab,
   RepoActivityTab,
   FileCityGuideTab,
@@ -40,7 +39,6 @@ import type {
   SubsystemModelTab,
 } from '../events/portalTabs';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
-import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
  * The unified workspace tab union hosted by `WorkspaceShell` — the superset of
@@ -61,7 +59,6 @@ export type WorkspaceTab =
   | ProjectInfoTab
   | UserProfileTab
   | OrgProfileTab
-  | CollectionProfileTab
   | OwnerActivityTab
   | RepoActivityTab
   | FileCityGuideTab
@@ -97,8 +94,6 @@ export interface WorkspaceTabsContextValue {
   openUserProfile: (username: string, email?: string) => void;
   /** Open an `org-profile-<orgName>` tab idempotently and focus it. */
   openOrgProfile: (orgName: string) => void;
-  /** Open a `collection-profile-<id>` tab idempotently and focus it. */
-  openCollectionProfile: (collection: StarredCollection) => void;
   /** Open an `owner-activity-<login>` tab idempotently and focus it. */
   openOwnerActivity: (
     login: string,
@@ -306,23 +301,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
             closable: true,
             orgName,
           }) as OrgProfileTab,
-      );
-    },
-    [openTab],
-  );
-
-  const openCollectionProfile = useCallback(
-    (collection: StarredCollection) => {
-      openTab(
-        `collection-profile-${collection.id}`,
-        () =>
-          ({
-            id: `collection-profile-${collection.id}`,
-            label: collection.name,
-            contentType: 'collection-profile',
-            closable: true,
-            collection,
-          }) as CollectionProfileTab,
       );
     },
     [openTab],
@@ -558,7 +536,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openProjectInfo,
       openUserProfile,
       openOrgProfile,
-      openCollectionProfile,
       openOwnerActivity,
       openRepoActivity,
       openFileCityGuide,
@@ -578,7 +555,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openProjectInfo,
       openUserProfile,
       openOrgProfile,
-      openCollectionProfile,
       openOwnerActivity,
       openRepoActivity,
       openFileCityGuide,

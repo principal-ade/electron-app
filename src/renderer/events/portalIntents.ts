@@ -16,7 +16,6 @@ import type {
   Purl,
 } from '@principal-ai/alexandria-core-library';
 import type { RepositorySelectedPayload } from './repositorySelected';
-import type { StarredCollection } from '../../shared/tipc/webAdeRouterTypes';
 
 export const PORTAL_INTENTS = {
   /** Open a topic as a tab. */
@@ -33,8 +32,6 @@ export const PORTAL_INTENTS = {
   repositoryGuideOpenWeek: 'repository:guide-open-week',
   /** Open a user/org profile tab (collapses the legacy `user:profile-selected`). */
   ownerSelected: 'owner:selected',
-  /** Open a collection profile tab. */
-  collectionSelected: 'collection:selected',
   /** Open the live-activity tab. */
   liveActivityOpen: 'live-activity:open',
   /** Open an owner (user/org) commit-activity tab. */
@@ -113,7 +110,7 @@ export function emitDocOpen(
 // ---------------------------------------------------------------------------
 // Projects-surface open intents
 //
-// The Projects surface opens a richer set of tabs (repo / owner / collection
+// The Projects surface opens a richer set of tabs (repo / owner
 // profiles, activity tabs). Unlike Topics — whose left panel emits topic
 // intents straight onto the portal bus — the Projects panels (left panel
 // AND persistent tab content) emit these on their single local `events` prop,
@@ -136,11 +133,6 @@ export interface OwnerSelectedPayload {
   kind: 'user' | 'org';
   /** Email hint carried by the legacy `user:profile-selected` path. */
   email?: string;
-}
-
-/** Payload for {@link PORTAL_INTENTS.collectionSelected}. */
-export interface CollectionSelectedPayload {
-  collection: StarredCollection;
 }
 
 /** Payload for {@link PORTAL_INTENTS.ownerActivityRequested}. */
@@ -269,7 +261,6 @@ export function installProjectsOpenForwarder(
     forward(PORTAL_INTENTS.repositoryGuideOpen),
     forward(PORTAL_INTENTS.repositoryGuideOpenReadme),
     forward(PORTAL_INTENTS.repositoryGuideOpenWeek),
-    forward(PORTAL_INTENTS.collectionSelected),
     forward(PORTAL_INTENTS.liveActivityOpen),
     forward(PORTAL_INTENTS.ownerActivityRequested),
     forward(PORTAL_INTENTS.repositoryActivityRequested),

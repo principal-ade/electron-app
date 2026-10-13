@@ -297,10 +297,8 @@ export interface UserPreferences {
   };
 
   // Home panel feature flags — when false (default) the corresponding
-  // collections / recently-visited surfaces are hidden throughout the app.
+  // recently-visited surfaces are hidden throughout the app.
   homePanel?: {
-    /** Show the Collections nav card, sub-view, profile tabs, and collect button. */
-    collections?: boolean;
     /** Show the Recently Visited nav card, sub-view, and inbox tab. */
     recentlyVisited?: boolean;
   };

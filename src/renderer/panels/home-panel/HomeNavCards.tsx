@@ -2,7 +2,7 @@
  * HomeNavCards
  *
  * Clickable navigation cards on the Home panel's default view.
- * Order: Your Projects → Other Clones → Starred → (Principal) Collections / Recent.
+ * Order: Your Projects → Other Clones → Starred → (Principal) Recent.
  * "Cloned only" lives as a switch inside Your Projects, not a separate card.
  */
 
@@ -12,7 +12,6 @@ import {
   FolderGit2,
   HardDrive,
   History,
-  Layers,
   Star,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
@@ -21,7 +20,6 @@ export type HomeNavKey =
   | 'projects'
   | 'other-clones'
   | 'starred'
-  | 'collections'
   | 'recent'
   | 'followers'
   | 'following';
@@ -30,7 +28,6 @@ export interface HomeNavCardCounts {
   projects?: number | null;
   'other-clones'?: number | null;
   starred?: number | null;
-  collections?: number | null;
   recent?: number | null;
   followers?: number | null;
   following?: number | null;
@@ -65,13 +62,6 @@ export const HOME_NAV_CARDS: HomeNavCardMeta[] = [
     description: "Repositories you've starred",
   },
   {
-    key: 'collections',
-    icon: <Layers size={18} />,
-    label: 'Collections',
-    description: 'Your curated collections of repos',
-    requiresPrincipal: true,
-  },
-  {
     key: 'recent',
     icon: <History size={18} />,
     label: 'Recently Visited',
@@ -84,10 +74,9 @@ export interface HomeNavCardsProps {
   counts?: HomeNavCardCounts;
   activeView?: HomeNavKey | null;
   onOpenView: (key: HomeNavKey) => void;
-  /** Principal (app OAuth) sign-in — gates collections / recently visited. */
+  /** Principal (app OAuth) sign-in — gates recently visited. */
   isPrincipalSignedIn?: boolean;
   /** Feature flags — when false the corresponding card is hidden. */
-  showCollections?: boolean;
   showRecentlyVisited?: boolean;
 }
 
@@ -96,14 +85,12 @@ export const HomeNavCards: React.FC<HomeNavCardsProps> = ({
   activeView = null,
   onOpenView,
   isPrincipalSignedIn = false,
-  showCollections = false,
   showRecentlyVisited = false,
 }) => {
   const { theme } = useTheme();
 
   const cards = HOME_NAV_CARDS.filter((card) => {
     if (card.requiresPrincipal && !isPrincipalSignedIn) return false;
-    if (card.key === 'collections' && !showCollections) return false;
     if (card.key === 'recent' && !showRecentlyVisited) return false;
     return true;
   });

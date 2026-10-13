@@ -14,7 +14,6 @@ import {
   FolderGit2,
   User,
   Building2,
-  BookMarked,
   Radio,
   Wrench,
   FileText,
@@ -47,7 +46,6 @@ import type {
   ProjectInfoTab,
   UserProfileTab,
   OrgProfileTab,
-  CollectionProfileTab,
   OwnerActivityTab,
   RepoActivityTab,
   FileCityGuideTab,
@@ -93,14 +91,11 @@ import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
 import { GithubService } from '../main-process-api/GithubService';
 import { GitService } from '../main-process-api/GitService';
 import { WebAdeService } from '../main-process-api/WebAdeService';
-import { ApiProxyService } from '../main-process-api/ApiProxyService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
-import { SecureAuthService } from '../services/SecureAuthService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
-import { CollectionProfilePanel } from '../panels/CollectionProfilePanel';
 import { CommitActivityPanel } from '../panels/CommitActivityPanel';
 import { commitActivityPanelActions } from '../panels/commitActivityPanelActions';
 import { InProgressActivityPanel } from '../panels/InProgressActivityPanel';
@@ -108,40 +103,6 @@ import { inProgressActivityPanelActions } from '../panels/inProgressActivityPane
 import { MarkdownDocTabContent } from './MarkdownDocTabContent';
 import { SourceFileTabContent } from '../panels/SourceFileTabContent';
 import { MediaTabContent } from '../panels/MediaTabContent';
-
-/**
- * User activity response from Principal ADE API
- */
-interface UserActivityResponse {
-  user: {
-    login: string;
-    name: string | null;
-    avatarUrl: string;
-    followersCount: number;
-  };
-  activity: Array<{
-    id: string;
-    type: 'commit' | 'pr_merged' | 'pr_opened' | 'issue_opened';
-    timestamp: string;
-    repository: string;
-    metadata?: {
-      commitCount?: number;
-      additions?: number;
-      deletions?: number;
-    };
-  }>;
-  contributions: Array<{
-    date: string;
-    count: number;
-  }>;
-  contributedRepos?: Array<{
-    nameWithOwner: string;
-    owner: string;
-    name: string;
-    commitCount: number;
-    lastContributedAt: string;
-  }>;
-}
 
 // `localClones` isn't on the formal AlexandriaEntry type — some entries
 // carry it as a renderer-side extension. Falls back to a single-clone array
@@ -1382,101 +1343,15 @@ const UserProfileTabContent: React.FC<{
             !preferences.featureAvailability
               ?.repositoryInsightsAndCollections
           ) {
-            return {
-              recentCommits: [],
-              contributions: [],
-              contributedRepos: [],
-            };
-          }
-          const authService = SecureAuthService.getInstance();
-          const authResult = await authService.checkAuth();
-
-          if (!authResult.authenticated || !authResult.token) {
-            return {
-              recentCommits: [],
-              contributions: [],
-              contributedRepos: [],
-            };
+            return { recentCommits: [], contributions: [], contributedRepos: [] };
           }
 
-          const activityResult =
-            await ApiProxyService.call<UserActivityResponse>({
-              endpoint: `https://app.principal-ade.com/api/github/user/${username}/activity?contributionDays=365&activityDays=1`,
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${authResult.token}`,
-              },
-            });
-
-          const activityResponse = activityResult?.data;
-
-          // Extract contributions for heatmap
-          const contributions: Array<{ date: string; count: number }> = [];
-          if (activityResponse?.contributions) {
-            activityResponse.contributions.forEach(
-              (contrib: { date: string; count: number }) => {
-                contributions.push({
-                  date: contrib.date,
-                  count: contrib.count,
-                });
-              },
-            );
-          }
-
-          // Extract recent commits (filter activity to only commits)
-          const recentCommits: Array<{
-            id: string;
-            timestamp: string;
-            repository: string;
-            repositoryUrl?: string;
-            ownerType?: 'User' | 'Organization';
-            isPrivate?: boolean;
-            commitCount: number;
-            additions?: number;
-            deletions?: number;
-          }> = [];
-
-          if (activityResponse?.activity) {
-            activityResponse.activity
-              .filter((event) => event.type === 'commit')
-              .forEach((event) => {
-                recentCommits.push({
-                  id: event.id,
-                  timestamp: event.timestamp,
-                  repository: event.repository,
-                  // These fields may not be in the current interface but are optional
-                  repositoryUrl: undefined,
-                  ownerType: undefined,
-                  isPrivate: undefined,
-                  commitCount: event.metadata?.commitCount || 1,
-                  additions: event.metadata?.additions,
-                  deletions: event.metadata?.deletions,
-                });
-              });
-          }
-
-          // Extract contributed repos and add missing fields
-          const contributedRepos: Array<{
-            nameWithOwner: string;
-            owner: string;
-            name: string;
-            url: string;
-            commitCount: number;
-            lastContributedAt: string;
-            isPrivate: boolean;
-            ownerType: 'User' | 'Organization';
-          }> = (activityResponse?.contributedRepos || []).map((repo) => ({
-            nameWithOwner: repo.nameWithOwner,
-            owner: repo.owner,
-            name: repo.name,
-            url: `https://github.com/${repo.owner}/${repo.name}`,
-            commitCount: repo.commitCount,
-            lastContributedAt: repo.lastContributedAt,
-            isPrivate: false, // API doesn't provide this, default to false
-            ownerType: 'User', // API doesn't provide this, default to User
-          }));
-
-          return { recentCommits, contributions, contributedRepos };
+          const activity = await WebAdeService.getUserActivity(username);
+          return {
+            recentCommits: activity.recentCommits,
+            contributions: activity.contributions,
+            contributedRepos: activity.contributedRepos,
+          };
         } catch (err) {
           console.error('Failed to fetch user activity:', err);
           return { recentCommits: [], contributions: [], contributedRepos: [] };
@@ -1641,48 +1516,6 @@ const OrgProfileTabContent: React.FC<{
         };
       },
 
-      getOrgActivity: async (orgName: string) => {
-        try {
-          const preferences = await UserPreferencesService.getPreferences();
-          if (
-            !preferences.featureAvailability
-              ?.repositoryInsightsAndCollections
-          ) {
-            return new Map<string, number>();
-          }
-          const authService = SecureAuthService.getInstance();
-          const authResult = await authService.checkAuth();
-
-          if (!authResult.authenticated || !authResult.token) {
-            return new Map<string, number>();
-          }
-
-          const activityResult =
-            await ApiProxyService.call<UserActivityResponse>({
-              endpoint: `https://app.principal-ade.com/api/github/org/${orgName}/activity?contributionDays=365&activityDays=1`,
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${authResult.token}`,
-              },
-            });
-
-          const activityResponse = activityResult?.data;
-          const activityData = new Map<string, number>();
-          if (activityResponse?.contributions) {
-            activityResponse.contributions.forEach(
-              (contrib: { date: string; count: number }) => {
-                activityData.set(contrib.date, contrib.count);
-              },
-            );
-          }
-
-          return activityData;
-        } catch (err) {
-          console.error('Failed to fetch org activity:', err);
-          return new Map<string, number>();
-        }
-      },
-
       getOrgRepositories: async (orgName: string) => {
         try {
           const repos = await GithubService.getOrgRepositories(orgName, {
@@ -1780,8 +1613,6 @@ export function renderProjectsTabIcon(tab: FeedTab): React.ReactNode {
       return <User size={14} />;
     case 'org-profile':
       return <Building2 size={14} />;
-    case 'collection-profile':
-      return <BookMarked size={14} />;
     case 'owner-activity':
     case 'repo-activity':
       return <Radio size={14} />;
@@ -1886,16 +1717,6 @@ export function renderProjectsTabContent(
           orgName={orgTab.orgName}
           events={events}
           repositories={repositories}
-        />
-      );
-    }
-    case 'collection-profile': {
-      const collectionTab = tab as CollectionProfileTab;
-      return (
-        <CollectionProfilePanel
-          key={collectionTab.collection.id}
-          collection={collectionTab.collection}
-          events={events}
         />
       );
     }
