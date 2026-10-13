@@ -32,6 +32,7 @@ const mockCommitActivityActions: CommitActivityPanelActions = {
   explainCommits: async () => ({ text: 'Mock explanation for Storybook.' }),
   getOwnerActivity: async () => [],
   getRepoActivity: async () => [],
+  getOwnerIsOrg: async () => false,
 };
 
 const mockUserOrgs: GitHubOrganization[] = [

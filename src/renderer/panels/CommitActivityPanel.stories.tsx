@@ -174,6 +174,7 @@ const makeMockActions = (cards: CommitActivityCard[]): CommitActivityPanelAction
   }),
   getOwnerActivity: async () => cards,
   getRepoActivity: async () => cards,
+  getOwnerIsOrg: async () => false,
 });
 
 const makeNeverResolvingActions = (): CommitActivityPanelActions => ({

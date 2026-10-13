@@ -13,6 +13,7 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { GithubService } from '../main-process-api/GithubService';
 import {
   InProgressRepoCard,
   type InProgressRepoCardActions,
@@ -31,7 +32,11 @@ interface DirtyRow {
   summary: InProgressSummary;
 }
 
-function statusToSummary(entry: AlexandriaEntry, status: GitStatusWithFiles): InProgressSummary {
+function statusToSummary(
+  entry: AlexandriaEntry,
+  status: GitStatusWithFiles,
+  isOwnerOrg: boolean | undefined,
+): InProgressSummary {
   return {
     repoPath: String(entry.path),
     repoName: entry.name,
@@ -41,7 +46,7 @@ function statusToSummary(entry: AlexandriaEntry, status: GitStatusWithFiles): In
     behindCount: status.behind,
     githubOwner: entry.github?.owner,
     githubRepoName: entry.github?.name ?? entry.name,
-    isOwnerOrg: undefined,
+    isOwnerOrg,
     lastEditAt: status.lastChangedAt ? new Date(status.lastChangedAt) : undefined,
   };
 }
@@ -65,6 +70,48 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
     }
     return map;
   }, [repositories]);
+
+  // Owner → is-org lookup, so the card's avatar opens the right profile
+  // (OrgProfilePanel vs UserProfilePanel). GitHub's user endpoint reports
+  // `type: 'Organization'` for orgs. Mirrors ActivityFeedCardPanel.
+  const githubOwners = useMemo(() => {
+    const owners = new Set<string>();
+    for (const repo of repositories) {
+      if (repo.github?.owner) owners.add(repo.github.owner);
+    }
+    return Array.from(owners);
+  }, [repositories]);
+
+  const [ownerIsOrgMap, setOwnerIsOrgMap] = useState<Map<string, boolean>>(new Map());
+
+  useEffect(() => {
+    if (githubOwners.length === 0) return;
+    let cancelled = false;
+
+    const fetchOwnerTypes = async () => {
+      const next = new Map<string, boolean>();
+      await Promise.all(
+        githubOwners.map(async (owner) => {
+          try {
+            const user = await GithubService.getUser(owner);
+            next.set(owner, user?.type === 'Organization');
+          } catch (error) {
+            console.warn(
+              `[InProgressActivityPanel] Failed to resolve owner type for ${owner}:`,
+              error,
+            );
+            next.set(owner, false);
+          }
+        }),
+      );
+      if (!cancelled) setOwnerIsOrgMap(next);
+    };
+
+    void fetchOwnerTypes();
+    return () => {
+      cancelled = true;
+    };
+  }, [githubOwners]);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,11 +172,20 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
       if (dismissedPaths.has(path)) continue;
       const entry = entryByPath.get(path);
       if (!entry) continue;
-      rows.push({ entry, status, summary: statusToSummary(entry, status) });
+      const owner = entry.github?.owner;
+      rows.push({
+        entry,
+        status,
+        summary: statusToSummary(
+          entry,
+          status,
+          owner ? ownerIsOrgMap.get(owner) : undefined,
+        ),
+      });
     }
     rows.sort((a, b) => a.summary.repoName.localeCompare(b.summary.repoName));
     return rows;
-  }, [statusMap, entryByPath, dismissedPaths]);
+  }, [statusMap, entryByPath, dismissedPaths, ownerIsOrgMap]);
 
   const handleDismiss = useCallback((repoPath: string) => {
     setDismissedPaths((prev) => {

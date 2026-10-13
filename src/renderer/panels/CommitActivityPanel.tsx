@@ -40,6 +40,12 @@ export interface CommitActivityPanelActions extends RepoActivityCardActions {
     owner: string,
     repo: string,
   ) => Promise<CommitActivityCard[]>;
+  /**
+   * Resolve whether a GitHub owner login is an organization. Owner feeds know
+   * this from `source.accountType`; repo feeds need the lookup so the owner
+   * avatar routes to the org vs user profile.
+   */
+  getOwnerIsOrg: (owner: string) => Promise<boolean>;
 }
 
 interface CommitActivityPanelProps {
@@ -76,7 +82,10 @@ interface HourlyGroup {
   repos: RepoActivitySummary[];
 }
 
-function cardsToHourlyGroups(cards: CommitActivityCard[]): HourlyGroup[] {
+function cardsToHourlyGroups(
+  cards: CommitActivityCard[],
+  isOwnerOrg: boolean | undefined,
+): HourlyGroup[] {
   // Group cards by hourBucket, then by repo within each hour
   const hourMap = new Map<string, Map<string, RepoActivitySummary>>();
 
@@ -98,6 +107,7 @@ function cardsToHourlyGroups(cards: CommitActivityCard[]): HourlyGroup[] {
         commitCount: 0,
         githubOwner: card.repo.owner,
         githubRepoName: card.repo.name,
+        isOwnerOrg,
       };
       repoMap.set(key, summary);
     }
@@ -182,6 +192,36 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
   const sourceOwner = source.kind === 'repo' ? source.owner : undefined;
   const sourceRepo = source.kind === 'repo' ? source.repo : undefined;
 
+  // Owner → is-org, so the owner avatar opens the right profile. Owner feeds
+  // know it from `accountType`; repo feeds need a lookup. Mirrors
+  // InProgressActivityPanel / ActivityFeedCardPanel.
+  const [repoOwnerIsOrg, setRepoOwnerIsOrg] = useState<boolean | undefined>(undefined);
+
+  useEffect(() => {
+    if (sourceKind !== 'repo' || sourceOwner === undefined) return;
+    let cancelled = false;
+
+    actions
+      .getOwnerIsOrg(sourceOwner)
+      .then((isOrg) => {
+        if (!cancelled) setRepoOwnerIsOrg(isOrg);
+      })
+      .catch((err) => {
+        console.warn(
+          `[CommitActivityPanel] Failed to resolve owner type for ${sourceOwner}:`,
+          err,
+        );
+        if (!cancelled) setRepoOwnerIsOrg(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceKind, sourceOwner, actions]);
+
+  const ownerIsOrg =
+    sourceKind === 'owner' ? sourceAccountType === 'Organization' : repoOwnerIsOrg;
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -212,7 +252,10 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
     return () => { cancelled = true; };
   }, [sourceKind, sourceLogin, sourceAccountType, sourceOwner, sourceRepo, actions]);
 
-  const hourlyGroups = useMemo(() => cardsToHourlyGroups(cards), [cards]);
+  const hourlyGroups = useMemo(
+    () => cardsToHourlyGroups(cards, ownerIsOrg),
+    [cards, ownerIsOrg],
+  );
 
   // Listen for repo explain requests from cards
   useEffect(() => {
@@ -314,7 +357,7 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
         <div
           onClick={() => {
             const owner = source.kind === 'owner' ? source.login : source.owner;
-            const isOrg = source.kind === 'owner' && source.accountType === 'Organization';
+            const isOrg = ownerIsOrg === true;
             events.emit({
               type: 'owner:selected',
               source: 'commit-activity-panel',
@@ -332,7 +375,7 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
             style={{
               width: 40,
               height: 40,
-              borderRadius: source.kind === 'owner' && source.accountType === 'Organization'
+              borderRadius: ownerIsOrg === true
                 ? theme.radii?.[3] || 6
                 : '50%',
               border: `1px solid ${theme.colors.border}`,
