@@ -208,6 +208,18 @@ console.log(example);
         requestDataPort: () => Promise.resolve(),
         onPortReady: () => () => {},
       },
+      // Process registry / bridge — used by ProcessesLeftPanel once wired to a
+      // service. Prop-driven stories don't hit this, but stubbing it keeps
+      // future service-backed stories from throwing on invoke/undefined.
+      processes: {
+        list: () => Promise.resolve([]),
+        run: () => Promise.resolve({ id: 'mock-process' }),
+        restart: () => Promise.resolve({ success: true }),
+        stop: () => Promise.resolve({ success: true }),
+        kill: () => Promise.resolve({ success: true }),
+        remove: () => Promise.resolve({ success: true }),
+        onProcessChange: () => () => {},
+      },
       // WindowService.openDevWorkspace — no-op in storybook.
       window: {
         openDevWorkspace: () => Promise.resolve({ success: true }),
