@@ -32,8 +32,6 @@ export const PORTAL_INTENTS = {
   repositoryGuideOpenWeek: 'repository:guide-open-week',
   /** Open a user/org profile tab (collapses the legacy `user:profile-selected`). */
   ownerSelected: 'owner:selected',
-  /** Open the live-activity tab. */
-  liveActivityOpen: 'live-activity:open',
   /** Open a repository commit-activity tab. */
   repositoryActivityRequested: 'repository:activity-requested',
   /** Open a terminal tab rooted at a local directory. */
@@ -253,7 +251,6 @@ export function installProjectsOpenForwarder(
     forward(PORTAL_INTENTS.repositoryGuideOpen),
     forward(PORTAL_INTENTS.repositoryGuideOpenReadme),
     forward(PORTAL_INTENTS.repositoryGuideOpenWeek),
-    forward(PORTAL_INTENTS.liveActivityOpen),
     forward(PORTAL_INTENTS.repositoryActivityRequested),
   ];
 

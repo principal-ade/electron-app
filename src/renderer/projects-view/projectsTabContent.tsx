@@ -9,7 +9,6 @@
 import React from 'react';
 import {
   GitCommit,
-  Users,
   Activity,
   FolderGit2,
   User,
@@ -56,7 +55,6 @@ import {
   RepositoryProfilePanel,
   type RepositoryProfileData,
 } from '../panels/RepositoryProfilePanel';
-import { ActivityCitiesPanel } from '../panels/ActivityCitiesPanel';
 import {
   FileCityGuidePanel,
   type CommitFileChange,
@@ -1600,8 +1598,6 @@ export function renderProjectsTabIcon(tab: FeedTab): React.ReactNode {
   switch (tab.contentType) {
     case 'commit-review':
       return <GitCommit size={14} />;
-    case 'live-activity':
-      return <Users size={14} />;
     case 'activity-feed':
       return <Activity size={14} />;
     case 'in-progress-activity':
@@ -1644,9 +1640,6 @@ export function renderProjectsTabContent(
           commit={reviewTab.commit}
         />
       );
-    }
-    case 'live-activity': {
-      return <ActivityCitiesPanel />;
     }
     case 'activity-feed': {
       return (

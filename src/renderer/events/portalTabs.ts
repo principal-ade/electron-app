@@ -88,11 +88,6 @@ export interface CommitReviewTab extends BaseTab {
   commit: ActivityCommit;
 }
 
-/** Live activity tab — real-time presence and repository activity. */
-export interface LiveActivityTab extends BaseTab {
-  contentType: 'live-activity';
-}
-
 /** Activity feed tab — the main activity feed with repository cards. */
 export interface ActivityFeedTab extends BaseTab {
   contentType: 'activity-feed';
@@ -191,7 +186,6 @@ export interface SubsystemModelTab extends BaseTab {
 export type FeedTab =
   | TerminalTab
   | CommitReviewTab
-  | LiveActivityTab
   | ActivityFeedTab
   | InProgressActivityTab
   | ProjectInfoTab

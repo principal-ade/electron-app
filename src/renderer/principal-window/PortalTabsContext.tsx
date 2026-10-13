@@ -21,7 +21,6 @@ import type { TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import type {
   ActivityFeedTab,
   CommitReviewTab,
-  LiveActivityTab,
   InProgressActivityTab,
   ProjectInfoTab,
   UserProfileTab,
@@ -52,7 +51,6 @@ export type WorkspaceTab =
   | MediaTab
   // Projects
   | CommitReviewTab
-  | LiveActivityTab
   | ActivityFeedTab
   | InProgressActivityTab
   | ProjectInfoTab
@@ -107,8 +105,6 @@ export interface WorkspaceTabsContextValue {
       weekActive?: boolean;
     },
   ) => void;
-  /** Open the singleton `live-activity` tab and focus it. */
-  openLiveActivity: () => void;
   /** Open the singleton `in-progress-activity` tab and focus it. */
   openInProgress: () => void;
   /** Open (or focus) a `drawing` tab, deduped by drawing id. */
@@ -397,19 +393,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [openTab],
   );
 
-  const openLiveActivity = useCallback(() => {
-    openTab(
-      'live-activity',
-      () =>
-        ({
-          id: 'live-activity',
-          label: 'Live Activity',
-          contentType: 'live-activity',
-          closable: true,
-        }) as LiveActivityTab,
-    );
-  }, [openTab]);
-
   const openInProgress = useCallback(() => {
     openTab(
       'in-progress-activity',
@@ -513,7 +496,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openOrgProfile,
       openRepoActivity,
       openFileCityGuide,
-      openLiveActivity,
       openInProgress,
       openDrawing,
       openSkill,
@@ -531,7 +513,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openOrgProfile,
       openRepoActivity,
       openFileCityGuide,
-      openLiveActivity,
       openInProgress,
       openDrawing,
       openSkill,

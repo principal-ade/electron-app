@@ -10,7 +10,7 @@
  *
  * Portal-unification Increment 3: Projects and Topics share ONE bucket, so
  * this is the lone materializer for workspace open intents. The Projects open
- * intents (repo / owner / activity / live-activity) are
+ * intents (repo / owner / activity) are
  * surface-agnostic. The Projects panels emit those on their local bus;
  * `installProjectsOpenForwarder` (in the shell) lifts them onto the portal bus
  * where this bridge picks them up.
@@ -86,10 +86,6 @@ export const PortalIntentBridge: React.FC = () => {
       }
     };
 
-    const handleLiveActivityOpen = () => {
-      ws.openLiveActivity();
-    };
-
     const handleRepoActivity = (event: {
       payload: RepositoryActivityRequestedPayload;
     }) => {
@@ -106,7 +102,6 @@ export const PortalIntentBridge: React.FC = () => {
     events.on(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);
     events.on(PORTAL_INTENTS.repositoryGuideOpenWeek, handleRepositoryGuideOpenWeek);
     events.on(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
-    events.on(PORTAL_INTENTS.liveActivityOpen, handleLiveActivityOpen);
     events.on(PORTAL_INTENTS.repositoryActivityRequested, handleRepoActivity);
     return () => {
       events.off(PORTAL_INTENTS.topicOpen, handleTopicOpen);
@@ -119,7 +114,6 @@ export const PortalIntentBridge: React.FC = () => {
       events.off(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);
       events.off(PORTAL_INTENTS.repositoryGuideOpenWeek, handleRepositoryGuideOpenWeek);
       events.off(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
-      events.off(PORTAL_INTENTS.liveActivityOpen, handleLiveActivityOpen);
       events.off(
         PORTAL_INTENTS.repositoryActivityRequested,
         handleRepoActivity,
