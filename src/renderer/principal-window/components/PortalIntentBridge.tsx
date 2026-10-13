@@ -26,7 +26,6 @@ import {
   type TopicOpenPayload,
   type RepositorySelectedPayload,
   type OwnerSelectedPayload,
-  type OwnerActivityRequestedPayload,
   type RepositoryActivityRequestedPayload,
   type RepositoryGuideOpenReadmePayload,
   type RepositoryGuideOpenWeekPayload,
@@ -91,12 +90,6 @@ export const PortalIntentBridge: React.FC = () => {
       ws.openLiveActivity();
     };
 
-    const handleOwnerActivity = (event: {
-      payload: OwnerActivityRequestedPayload;
-    }) => {
-      ws.openOwnerActivity(event.payload.login, event.payload.accountType);
-    };
-
     const handleRepoActivity = (event: {
       payload: RepositoryActivityRequestedPayload;
     }) => {
@@ -114,7 +107,6 @@ export const PortalIntentBridge: React.FC = () => {
     events.on(PORTAL_INTENTS.repositoryGuideOpenWeek, handleRepositoryGuideOpenWeek);
     events.on(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
     events.on(PORTAL_INTENTS.liveActivityOpen, handleLiveActivityOpen);
-    events.on(PORTAL_INTENTS.ownerActivityRequested, handleOwnerActivity);
     events.on(PORTAL_INTENTS.repositoryActivityRequested, handleRepoActivity);
     return () => {
       events.off(PORTAL_INTENTS.topicOpen, handleTopicOpen);
@@ -128,7 +120,6 @@ export const PortalIntentBridge: React.FC = () => {
       events.off(PORTAL_INTENTS.repositoryGuideOpenWeek, handleRepositoryGuideOpenWeek);
       events.off(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
       events.off(PORTAL_INTENTS.liveActivityOpen, handleLiveActivityOpen);
-      events.off(PORTAL_INTENTS.ownerActivityRequested, handleOwnerActivity);
       events.off(
         PORTAL_INTENTS.repositoryActivityRequested,
         handleRepoActivity,

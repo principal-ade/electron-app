@@ -26,7 +26,6 @@ import type {
   ProjectInfoTab,
   UserProfileTab,
   OrgProfileTab,
-  OwnerActivityTab,
   RepoActivityTab,
   FileCityGuideTab,
   MarkdownDocTab,
@@ -59,7 +58,6 @@ export type WorkspaceTab =
   | ProjectInfoTab
   | UserProfileTab
   | OrgProfileTab
-  | OwnerActivityTab
   | RepoActivityTab
   | FileCityGuideTab
   // Drawings
@@ -94,11 +92,6 @@ export interface WorkspaceTabsContextValue {
   openUserProfile: (username: string, email?: string) => void;
   /** Open an `org-profile-<orgName>` tab idempotently and focus it. */
   openOrgProfile: (orgName: string) => void;
-  /** Open an `owner-activity-<login>` tab idempotently and focus it. */
-  openOwnerActivity: (
-    login: string,
-    accountType: 'User' | 'Organization',
-  ) => void;
   /** Open a `repo-activity-<owner>/<repo>` tab idempotently and focus it. */
   openRepoActivity: (owner: string, repo: string) => void;
   /**
@@ -301,24 +294,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
             closable: true,
             orgName,
           }) as OrgProfileTab,
-      );
-    },
-    [openTab],
-  );
-
-  const openOwnerActivity = useCallback(
-    (login: string, accountType: 'User' | 'Organization') => {
-      openTab(
-        `owner-activity-${login}`,
-        () =>
-          ({
-            id: `owner-activity-${login}`,
-            label: `@${login}`,
-            contentType: 'owner-activity',
-            closable: true,
-            login,
-            accountType,
-          }) as OwnerActivityTab,
       );
     },
     [openTab],
@@ -536,7 +511,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openProjectInfo,
       openUserProfile,
       openOrgProfile,
-      openOwnerActivity,
       openRepoActivity,
       openFileCityGuide,
       openLiveActivity,
@@ -555,7 +529,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openProjectInfo,
       openUserProfile,
       openOrgProfile,
-      openOwnerActivity,
       openRepoActivity,
       openFileCityGuide,
       openLiveActivity,

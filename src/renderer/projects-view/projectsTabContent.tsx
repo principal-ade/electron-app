@@ -46,7 +46,6 @@ import type {
   ProjectInfoTab,
   UserProfileTab,
   OrgProfileTab,
-  OwnerActivityTab,
   RepoActivityTab,
   FileCityGuideTab,
   FeedTab,
@@ -1613,7 +1612,6 @@ export function renderProjectsTabIcon(tab: FeedTab): React.ReactNode {
       return <User size={14} />;
     case 'org-profile':
       return <Building2 size={14} />;
-    case 'owner-activity':
     case 'repo-activity':
       return <Radio size={14} />;
     case 'file-city-guide':
@@ -1717,21 +1715,6 @@ export function renderProjectsTabContent(
           orgName={orgTab.orgName}
           events={events}
           repositories={repositories}
-        />
-      );
-    }
-    case 'owner-activity': {
-      const ownerTab = tab as OwnerActivityTab;
-      return (
-        <CommitActivityPanel
-          key={ownerTab.id}
-          source={{
-            kind: 'owner',
-            login: ownerTab.login,
-            accountType: ownerTab.accountType,
-          }}
-          events={events}
-          actions={commitActivityPanelActions}
         />
       );
     }

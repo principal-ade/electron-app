@@ -86,7 +86,6 @@ this work. Discriminate trail kind via payload, not separate event names.
 | `owner:selected` | `{ owner, kind: 'user' \| 'org' }` | OrganizationsList, profile panels | user/org profile tab |
 | `commit:review-selected` | `{ repoPath, commit }` | activity cards | commit review tab |
 | `live-activity:open` | `{ owner? }` | CoworkersList, OrganizationsList | live activity tab |
-| `owner:activity-requested` | `{ owner }` | CoworkersList | owner activity tab |
 | `repository:activity-requested` | `{ repo }` | activity cards | repo activity tab |
 | `trail:open` **[NEW]** | `{ trailId, source: 'shared' \| 'local', owner?, repo? }` | **InboxLeftPanel, TopicsLeftPanel, LocalTopicTabContent (today: direct `useTabs()` calls)** | trail tab (`FileCityTrailPanel`) |
 | `topic:open` **[NEW]** | `{ topicId, title? }` | **InboxLeftPanel, TopicsLeftPanel (today: direct calls)** | topic tab |
@@ -244,7 +243,7 @@ each green on `main`:**
 
 The doc's canonical-intent table already lists `repository:selected` /
 `owner:selected` / `live-activity:open` /
-`owner:activity-requested` / `repository:activity-requested` as portal tab-open
+`repository:activity-requested` as portal tab-open
 intents, so those are now **typed members of `PORTAL_INTENTS`**, materialized by
 the lone always-mounted `PortalIntentBridge` into the shared bucket. The legacy
 `user:profile-selected` straggler is collapsed into `owner:selected{ kind }`.

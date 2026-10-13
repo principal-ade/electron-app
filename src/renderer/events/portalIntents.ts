@@ -34,8 +34,6 @@ export const PORTAL_INTENTS = {
   ownerSelected: 'owner:selected',
   /** Open the live-activity tab. */
   liveActivityOpen: 'live-activity:open',
-  /** Open an owner (user/org) commit-activity tab. */
-  ownerActivityRequested: 'owner:activity-requested',
   /** Open a repository commit-activity tab. */
   repositoryActivityRequested: 'repository:activity-requested',
   /** Open a terminal tab rooted at a local directory. */
@@ -133,12 +131,6 @@ export interface OwnerSelectedPayload {
   kind: 'user' | 'org';
   /** Email hint carried by the legacy `user:profile-selected` path. */
   email?: string;
-}
-
-/** Payload for {@link PORTAL_INTENTS.ownerActivityRequested}. */
-export interface OwnerActivityRequestedPayload {
-  login: string;
-  accountType: 'User' | 'Organization';
 }
 
 /** Payload for {@link PORTAL_INTENTS.repositoryActivityRequested}. */
@@ -262,7 +254,6 @@ export function installProjectsOpenForwarder(
     forward(PORTAL_INTENTS.repositoryGuideOpenReadme),
     forward(PORTAL_INTENTS.repositoryGuideOpenWeek),
     forward(PORTAL_INTENTS.liveActivityOpen),
-    forward(PORTAL_INTENTS.ownerActivityRequested),
     forward(PORTAL_INTENTS.repositoryActivityRequested),
   ];
 

@@ -124,13 +124,6 @@ export interface OrgProfileTab extends BaseTab {
   orgName: string;
 }
 
-/** Owner activity tab — a user/org's commit activity. */
-export interface OwnerActivityTab extends BaseTab {
-  contentType: 'owner-activity';
-  login: string;
-  accountType: 'User' | 'Organization';
-}
-
 /** Repo activity tab — a repository's commit activity. */
 export interface RepoActivityTab extends BaseTab {
   contentType: 'repo-activity';
@@ -204,7 +197,6 @@ export type FeedTab =
   | ProjectInfoTab
   | UserProfileTab
   | OrgProfileTab
-  | OwnerActivityTab
   | RepoActivityTab
   | FileCityGuideTab
   | MarkdownDocTab
