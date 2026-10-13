@@ -810,6 +810,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       renderTabIcon,
       bottomBarContent,
       baseDefaultDirectory,
+      terminalImplementation,
       theme,
     ],
   );
