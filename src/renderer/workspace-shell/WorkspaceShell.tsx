@@ -242,8 +242,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   // even while Topics is showing. The Projects left panel + tab content
   // emit on the shell's local `events` bus (the forwarder lifts opens to the
   // portal bus); Topics emits straight on `portalEvents`.
-  const { feedMode, setFeedMode, activityCommits, deleteModal } =
-    useProjectsHost({ events, repositories });
+  const { deleteModal } = useProjectsHost({ events, repositories });
 
   // Drawings host glue (open/save/delete → shared tab bucket).
   useDrawingsHost({ events });
@@ -695,9 +694,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             : activeView === 'home-panel'
             ? 'Home'
             : activeView === 'projects'
-              ? feedMode === 'organizations'
-                ? 'Team'
-                : 'Activity'
+              ? 'Activity'
               : activeView === 'drawings'
                   ? 'Drawings'
                   : activeView === 'skills'
@@ -719,9 +716,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             <ProjectsLeftPanel
               repositories={repositories}
               events={events}
-              feedMode={feedMode}
-              onFeedModeChange={setFeedMode}
-              activityCommits={activityCommits}
             />
           ) : activeView === 'drawings' ? (
             <DrawingsLeftPanel events={events} />
@@ -796,9 +790,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       portalEvents,
       events,
       repositories,
-      feedMode,
-      setFeedMode,
-      activityCommits,
       terminalPanelContext,
       terminalActions,
       terminalCtx.terminalContext,

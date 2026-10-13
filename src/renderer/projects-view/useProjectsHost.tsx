@@ -8,8 +8,6 @@
  * refresh and delete modal stay live even while Topics is the active view.
  *
  * Responsibilities:
- * - the activity-feed data + a debounced refresh driven by git-status changes
- *   (feeding the left panel's team-activity view);
  * - the initial dirty-check that flips the Recent-Activity landing to In-Progress
  *   when the workspace has uncommitted work and the user hasn't navigated yet;
  * - the repository delete modal (opened by `repository-profile:delete*` events
@@ -25,13 +23,11 @@
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { DeleteAlexandriaEntryModal } from '../panels/components/DeleteAlexandriaEntryModal';
@@ -41,13 +37,7 @@ import { useWorkspaceTabs } from '../principal-window/PortalTabsContext';
 import { usePortalEvents } from '../principal-window/PortalEventContext';
 import { installProjectsOpenForwarder } from '../events/portalIntents';
 
-export type FeedMode = 'my-activity' | 'organizations';
-
 export interface ProjectsHost {
-  feedMode: FeedMode;
-  setFeedMode: React.Dispatch<React.SetStateAction<FeedMode>>;
-  /** Activity commits feeding the left panel's team-activity tracking. */
-  activityCommits: ActivityCommit[];
   /** The always-mounted delete-confirmation modal element. */
   deleteModal: React.ReactNode;
 }
@@ -61,48 +51,6 @@ export function useProjectsHost({
 }): ProjectsHost {
   const { tabs, setTabs, activeTabId, setActiveTabId } = useWorkspaceTabs();
   const { events: portalEvents } = usePortalEvents();
-
-  const [feedMode, setFeedMode] = useState<FeedMode>('my-activity');
-
-  // --- Activity feed + git-status-driven refresh ---------------------------
-  const activityFeed = useActivityFeed(repositories, 20, 10, 100);
-
-  const alexandriaRepoPaths = useMemo(
-    () => new Set(repositories.filter((r) => r.path).map((r) => String(r.path))),
-    [repositories],
-  );
-
-  const refreshFnRef = useRef(activityFeed.refresh);
-  useEffect(() => {
-    refreshFnRef.current = activityFeed.refresh;
-  }, [activityFeed.refresh]);
-
-  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debouncedRefresh = useCallback(() => {
-    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
-    // 2000ms gives git time to finalize the commit and make it queryable.
-    refreshTimeoutRef.current = setTimeout(() => refreshFnRef.current(), 2000);
-  }, []);
-
-  const alexandriaRepoPathsRef = useRef(alexandriaRepoPaths);
-  useEffect(() => {
-    alexandriaRepoPathsRef.current = alexandriaRepoPaths;
-  }, [alexandriaRepoPaths]);
-
-  // Passive git-status subscription (no watch acquisition): refresh the feed
-  // data when a registered repo changes.
-  useEffect(() => {
-    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
-      (status) => {
-        if (alexandriaRepoPathsRef.current.has(String(status.repoPath))) {
-          debouncedRefresh();
-        }
-      },
-    );
-    return () => {
-      unsubscribe();
-    };
-  }, [debouncedRefresh]);
 
   // --- Initial dirty-check: flip Recent Activity → In Progress -------------
   const didCheckInitialDirtyRef = useRef(false);
@@ -320,9 +268,6 @@ export function useProjectsHost({
   );
 
   return {
-    feedMode,
-    setFeedMode,
-    activityCommits: activityFeed.commits,
     deleteModal,
   };
 }
