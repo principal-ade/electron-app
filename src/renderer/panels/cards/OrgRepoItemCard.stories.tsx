@@ -91,3 +91,35 @@ export const List: Story = {
     );
   },
 };
+
+export const WithSync: Story = {
+  render: () => (
+    <Wrapper>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <OrgRepoItemCard
+          repo={createMockRepo({ name: 'ahead-repo' })}
+          isCloned
+          isDirty
+          sync={{ ahead: 3 }}
+          onClick={() => console.info('clicked')}
+          onOpenTerminal={() => console.info('terminal')}
+        />
+        <OrgRepoItemCard
+          repo={createMockRepo({ name: 'behind-repo' })}
+          isCloned
+          sync={{ behind: 2 }}
+          onClick={() => console.info('clicked')}
+          onOpenTerminal={() => console.info('terminal')}
+        />
+        <OrgRepoItemCard
+          repo={createMockRepo({ name: 'diverged-repo' })}
+          isCloned
+          isDirty
+          sync={{ ahead: 2, behind: 5 }}
+          onClick={() => console.info('clicked')}
+          onOpenTerminal={() => console.info('terminal')}
+        />
+      </div>
+    </Wrapper>
+  ),
+};

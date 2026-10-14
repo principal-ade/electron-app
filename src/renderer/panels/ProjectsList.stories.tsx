@@ -13,11 +13,11 @@ import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonit
 //
 // ProjectsList draws from two independent sources, both mocked here:
 //
-//  1. useGithubProjects() fans out to four GithubService calls
+//  1. useGithubProjects() fans out to five GithubService calls
 //     (getCurrentUser / getUserOrganizations / getUserRepositories /
-//     getOrgRepositories). Every one must resolve or the panel sits on
-//     "Loading projects…". We rewire all four to read from a mutable
-//     `activeMocks` cell, swapped per-story.
+//     getOrgRepositories / getUserStarredRepositories). Every one must resolve
+//     or the panel sits on "Loading projects…". We rewire all five to read from
+//     a mutable `activeMocks` cell, swapped per-story.
 //  2. The `repositories` prop carries local clones (AlexandriaEntry[]); a
 //     clone is "dirty" when RepositoryMonitoringService.getGitStatusWithFiles
 //     reports isDirty, so we stub that to read from a per-story dirty-path set
@@ -28,6 +28,8 @@ type MockState = {
   orgs: string[];
   /** GitHub repos returned for the user + every org, keyed nowhere — the hook dedupes by full_name. */
   githubRepos: GitHubRepository[] | 'pending' | 'reject';
+  /** Starred repos (may be third-party repos the user doesn't own). */
+  starredRepos: GitHubRepository[];
   /** Absolute paths whose clone should report as dirty. */
   dirtyPaths: Set<string>;
 };
@@ -36,6 +38,7 @@ let activeMocks: MockState = {
   currentUser: null,
   orgs: [],
   githubRepos: [],
+  starredRepos: [],
   dirtyPaths: new Set(),
 };
 
@@ -45,6 +48,7 @@ const withMocks = (state: Partial<MockState>): void => {
     currentUser: null,
     orgs: [],
     githubRepos: [],
+    starredRepos: [],
     dirtyPaths: new Set(),
     ...state,
   };
@@ -89,6 +93,11 @@ const asOrg = (login: string) => ({
     getOrgRepositories: typeof GithubService.getOrgRepositories;
   }
 ).getOrgRepositories = async () => [];
+(
+  GithubService as unknown as {
+    getUserStarredRepositories: typeof GithubService.getUserStarredRepositories;
+  }
+).getUserStarredRepositories = async () => activeMocks.starredRepos;
 
 (
   RepositoryMonitoringService as unknown as {
@@ -211,6 +220,18 @@ const localFixtures: AlexandriaEntry[] = [
   } as unknown as AlexandriaEntry,
 ];
 
+// Starred repos: a third-party repo the user doesn't own (so it only appears
+// because it's starred), plus one the user owns (so it's marked, not duplicated).
+const starredFixtures: GitHubRepository[] = [
+  ghRepo('sindresorhus', 'awesome', {
+    description: 'A curated list of awesome things',
+    owner: { login: 'sindresorhus', avatar_url: '', type: 'User' },
+  }),
+  ghRepo('octocat', 'dotfiles', {
+    owner: { login: 'octocat', avatar_url: '', type: 'User' },
+  }),
+];
+
 // ---------- meta ----------
 
 const meta: Meta<typeof ProjectsList> = {
@@ -234,8 +255,10 @@ type Story = StoryObj<typeof meta>;
 /**
  * The full "My Projects" list: GitHub repos across the signed-in user
  * (octocat) plus the acme-corp and principal-ade orgs, merged with three
- * local clones. principal-ade is the user's own/member org so it sorts first
- * with a badge; web-ade's clone is dirty, so it shows under "In Progress".
+ * local clones and two starred repos. principal-ade is the user's own/member
+ * org so it sorts first with a badge. The filter chips are Owned / Cloned /
+ * Starred; "sindresorhus/awesome" only appears under Starred (it isn't owned
+ * or cloned).
  */
 export const Default: Story = {
   render: () => {
@@ -243,6 +266,7 @@ export const Default: Story = {
       currentUser: 'octocat',
       orgs: ['principal-ade', 'acme-corp'],
       githubRepos: githubFixtures,
+      starredRepos: starredFixtures,
       dirtyPaths: new Set(['/Users/dev/code/web-ade']),
     });
     return <ProjectsList commits={[]} repositories={localFixtures} events={events} />;

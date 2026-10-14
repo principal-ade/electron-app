@@ -108,15 +108,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showConnectionsButton, setShowConnectionsButton] = useState(false);
   const [showProcessesButton, setShowProcessesButton] = useState(false);
-  // Legacy Projects surface — hidden by default in favor of Home panel.
-  const [showProjectsButton, setShowProjectsButton] = useState(false);
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   useEffect(() => {
     UserPreferencesService.getPreferences().then((prefs) => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowConnectionsButton(prefs.showConnectionsButton ?? false);
       setShowProcessesButton(prefs.showProcessesButton ?? false);
-      setShowProjectsButton(prefs.showProjectsButton ?? false);
       setShowOnboardingButton(prefs.showOnboardingButton ?? false);
     });
 
@@ -131,9 +128,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }
         if ('showProcessesButton' in detail) {
           setShowProcessesButton(detail.showProcessesButton ?? false);
-        }
-        if ('showProjectsButton' in detail) {
-          setShowProjectsButton(detail.showProjectsButton ?? false);
         }
         if ('showOnboardingButton' in detail) {
           setShowOnboardingButton(detail.showOnboardingButton ?? false);
@@ -182,16 +176,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           },
         ]
       : []),
-    // Legacy Projects surface — opt-in via Settings (showProjectsButton).
-    ...(showProjectsButton
-      ? [
-          {
-            id: 'projects' as NavigationView,
-            icon: <GitIcon size={20} />,
-            label: 'Projects',
-          },
-        ]
-      : []),
+    // Projects surface — the clone/dev-oriented browser.
+    {
+      id: 'projects' as NavigationView,
+      icon: <GitIcon size={20} />,
+      label: 'Projects',
+    },
     {
       id: 'subsystem-models',
       icon: <Network size={20} />,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Circle, Cloud, Download, Eraser, FolderGit2, FolderTree, Lock, Terminal } from 'lucide-react';
+import { ArrowDown, ArrowUp, Circle, Cloud, Download, Eraser, FolderGit2, FolderTree, Lock, Terminal } from 'lucide-react';
 
 export interface OrgRepoItemCardData {
   name: string;
@@ -38,6 +38,12 @@ export interface OrgRepoItemCardProps {
    * When omitted the row is not draggable.
    */
   dragText?: string;
+  /**
+   * Sync state vs the upstream remote. When provided, a right-aligned indicator
+   * renders showing the commit counts for whichever of `ahead` / `behind` is
+   * greater than zero. Omitted (or both zero) → no indicator.
+   */
+  sync?: { ahead?: number; behind?: number };
 }
 
 export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
@@ -52,11 +58,16 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   offConvention = false,
   onRelocate,
   dragText,
+  sync,
 }) => {
   const { theme } = useTheme();
   const spacing = { xs: 4, sm: 8, md: 16 };
 
   const [hovered, setHovered] = useState(false);
+
+  const ahead = sync?.ahead ?? 0;
+  const behind = sync?.behind ?? 0;
+  const showSync = ahead > 0 || behind > 0;
 
   return (
     <div
@@ -299,6 +310,51 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
         >
           <Eraser size={14} />
         </button>
+      )}
+
+      {/* Sync indicator, far right (after the row actions): ↑ahead / ↓behind
+          vs the upstream remote. Only renders when there's something to show. */}
+      {showSync && (
+        <span
+          style={{
+            flexShrink: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontFamily: theme.fonts.monospace,
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textSecondary,
+          }}
+        >
+          {ahead > 0 && (
+            <span
+              title={`${ahead} commit${ahead === 1 ? '' : 's'} ahead of remote`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 2,
+                color: theme.colors.info,
+              }}
+            >
+              <ArrowUp size={12} />
+              {ahead}
+            </span>
+          )}
+          {behind > 0 && (
+            <span
+              title={`${behind} commit${behind === 1 ? '' : 's'} behind remote`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 2,
+                color: theme.colors.warning,
+              }}
+            >
+              <ArrowDown size={12} />
+              {behind}
+            </span>
+          )}
+        </span>
       )}
     </div>
   );

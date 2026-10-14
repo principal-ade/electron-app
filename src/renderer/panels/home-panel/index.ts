@@ -7,6 +7,7 @@ export type {
   HomeSearchBarProps,
   HomeSearchResultsProps,
 } from './HomeSearch';
-export { useInProgressCount } from './useInProgressCount';
+export { useInProgressRepos } from './useInProgressRepos';
+export type { InProgressRepo } from './useInProgressRepos';
 export { RepoAboutCard } from './RepoAboutCard';
 export type { RepoAboutCardProps } from './RepoAboutCard';

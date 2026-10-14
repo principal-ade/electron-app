@@ -7,9 +7,9 @@
  * path so a repo that is, say, both owned and cloned shows up once with both
  * tags.
  *
- * `HomeSearchBar` is always rendered (the first thing under the In Progress
- * line). `HomeSearchResults` renders only while the query is non-empty; the
- * caller hides the nav cards in that case.
+ * `HomeSearchBar` is always rendered (first thing under the In Progress line).
+ * `HomeSearchResults` renders only while the query is non-empty; the caller
+ * shows the in-progress repo list instead when the query is empty.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -17,7 +17,17 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { FolderGit2, HardDrive, Search, Star, X } from 'lucide-react';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
-import type { ProjectSection } from './sub-views/HomeProjectsSubView';
+
+/**
+ * A grouped set of GitHub repos (the user's own + one per org). Built by
+ * HomeLeftPanel and flattened by the search below.
+ */
+export interface ProjectSection {
+  key: string;
+  label: string;
+  avatar_url?: string;
+  repos: GitHubRepository[];
+}
 
 type SearchKind = 'project' | 'clone' | 'starred';
 

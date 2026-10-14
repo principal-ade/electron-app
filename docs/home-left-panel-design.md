@@ -1,6 +1,6 @@
-# Home Left Panel — Web-App-Style Browse Surface for the Principal Window
+# Home Left Panel — Browse Surface for the Principal Window
 
-> **Intended design** for the new `home-panel` workspace view: a SlidePane-driven
+> **Intended design** for the `home-panel` workspace view: a SlidePane-driven
 > left panel that mirrors the web app's home left rail, giving browse-only users
 > a familiar starting point. This doc is the source of truth for the target
 > shape, the component inventory, and the integration contract.
@@ -8,12 +8,14 @@
 ## Goal & motivation
 
 Users who primarily **browse** repositories (rather than clone/develop them)
-need a landing surface that feels like the web app's home page — a profile card
-and a set of nav cards that drill into their projects, starred repos,
-and recent items. The existing Projects left
-panel is clone/dev-oriented (auth settings, feed modes, terminal forwarders);
-this new panel is browse-oriented and sits **alongside** Projects as a separate
-workspace surface.
+need a landing surface that feels like the web app's home page. The Home panel is
+profile-and-work oriented: the signed-in user's profile card, a search across
+every repo they can reach, and the list of repositories they are currently
+working in (uncommitted changes / unpushed commits).
+
+The **Projects** surface (`ProjectsLeftPanel`) is the clone/dev-oriented
+counterpart — the repo browser with the Owned / Cloned / Starred filters. Home
+sits **alongside** it as a separate workspace surface.
 
 ### What we copied from the web app
 
@@ -24,13 +26,8 @@ The web app's home left panel (`web-ade/src/components/home/`) is a
 | --- | --- |
 | `HomeLeftPanel.tsx` | `src/renderer/panels/home-panel/HomeLeftPanel.tsx` |
 | `UserAboutCard.tsx` | `src/renderer/panels/home-panel/UserAboutCard.tsx` |
-| `HomeNavCards.tsx` | `src/renderer/panels/home-panel/HomeNavCards.tsx` |
-| `HomeProjectsView.tsx` | `src/renderer/panels/home-panel/sub-views/HomeProjectsSubView.tsx` |
-| `HomeStarredView.tsx` | `src/renderer/panels/home-panel/sub-views/HomeStarredSubView.tsx` |
-| `HomeRecentlyVisitedView.tsx` | `src/renderer/panels/home-panel/sub-views/HomeRecentSubView.tsx` |
 | `SlidePane.tsx` | `src/renderer/components/SlidePane/SlidePane.tsx` (shared) |
-| `RailPaneHeader.tsx` | `src/renderer/panels/home-panel/sub-views/SubViewHeader.tsx` |
-| `languageColors.ts` | `src/renderer/panels/home-panel/languageColors.ts` |
+| `RailPaneHeader.tsx` | `src/renderer/panels/home-panel/sub-views/FollowersFollowingSubView.tsx` (inline header) |
 
 ### What we deliberately changed
 
@@ -39,13 +36,13 @@ The web app's home left panel (`web-ade/src/components/home/`) is a
    classes to inline styles.
 
 2. **`SlidePane` is a shared component.** Extracted to
-   `src/renderer/components/SlidePane/` so other surfaces (Trails, Topics) can
-   reuse the same animated carousel without re-implementing it.
+   `src/renderer/components/SlidePane/` so other surfaces can reuse the same
+   animated carousel without re-implementing it.
 
 3. **Data fetching is self-contained.** The web app fetches all data in
    `SignedInHome.tsx` (a connected wrapper). The electron app's `HomeLeftPanel`
    fetches its own data using existing services (`GithubService`,
-   `WebAdeService`, `TopicService`) and the `useAuthState` hook.
+   `RepositoryMonitoringService`) plus the `useAuthState` hook.
 
 4. **View ID is `home-panel`, not `home`.** The existing `home` NavigationView
    is the overlay `HomeView` dashboard (toggled from the titlebar as
@@ -59,18 +56,27 @@ The web app's home left panel (`web-ade/src/components/home/`) is a
 
 ```
 IntegratedShell (owns activeView state)
-  ├── NavigationSidebar (new Home icon button at top)
+  ├── NavigationSidebar (Home icon button at top)
   └── PrincipalPortal
        └── WorkspaceShell (activeView === 'home-panel')
             └── HomeLeftPanel
-                 ├── SlidePane (shared animated carousel)
-                 │    ├── [view='home']  → UserAboutCard + HomeNavCards
-                 │    ├── [view='projects']  → HomeProjectsSubView (+ Cloned only switch)
-                 │    ├── [view='other-clones'] → HomeClonedSubView
-                 │    ├── [view='starred']   → HomeStarredSubView
-                 │    └── [view='recent']    → HomeRecentSubView
-                 └── (emits repository:selected on the shell's local events bus)
+                 ├── UserAboutCard        (profile; followers/following links)
+                 ├── InProgressBar        ("N in progress" + Open → In Progress tab)
+                 ├── HomeSearchBar        (always)
+                 ├── HomeSearchResults    (while a query is active)
+                 ├── OrgSectionHeaderCard + OrgRepoItemCard
+                 │                        (in-progress rows, grouped by owner; empty query)
+                 ├── RepoAboutCard         (slides over when a repo is selected)
+                 └── FollowersFollowingSubView (followers / following)
 ```
+
+Data flow for the in-progress list: `useInProgressRepos` asks
+`RepositoryMonitoringService.getGitStatusWithFiles(path)` for every local repo,
+keeps those with a dirty tree or `ahead > 0`, and stays live via
+`onGitStatusChanged`. The In Progress tab renders the same set as File City
+cards (`InProgressRepoCard`); the Home rail renders it with the Projects-surface
+presentation — grouped by owner (`OrgSectionHeaderCard`) with `OrgRepoItemCard`
+rows.
 
 ### The SlidePane carousel
 
@@ -90,7 +96,7 @@ keys. The Home panel's ordering:
 
 ```ts
 const HOME_SLIDE_ORDER = [
-  'home', 'projects', 'other-clones', 'starred', 'recent',
+  'home', 'followers', 'following',
 ];
 ```
 
@@ -100,36 +106,43 @@ about the Home panel's specific views.
 
 ### The default "home" view
 
-The overview shows two stacked blocks:
+Stacked top to bottom:
 
 1. **`UserAboutCard`** — the signed-in user's GitHub profile (avatar, name,
    @login, bio, public repo count, join date, company, location,
    followers/following). Includes a skeleton loading state. Fetches via
-   `GithubService.getCurrentUser()` + `useAuthState()`.
+   `GithubService.getCurrentUser()` + `useAuthState()`, falling back to the
+   global git identity when GitHub isn't available. The followers / following
+   links slide to their sub-views.
 
-2. **`HomeNavCards`** — clickable cards, each with an icon, label,
-   description, optional count badge, and a chevron-right:
-   - Your Projects → grouped repos (user's own + org repos); **Cloned only**
-     switch filters to repos that already have a local Alexandria clone
-   - Other Clones → local clones whose owner is not the user / their orgs
-   - Starred Projects → flat starred repo list with filter + sort
-   - Recently Visited → recent projects from localStorage (Principal sign-in)
+2. **`InProgressBar`** — a full-width status row: "N in progress" (or "Nothing
+   in progress") with an **Open** button that opens the singleton
+   `in-progress-activity` workspace tab. `N` is `useInProgressRepos().length`.
 
-   Bookmarks and Trails/Topics are available on their own sidebar surfaces
-   and are not duplicated here.
+3. **`HomeSearchBar`** — always rendered. Searches across three sources ("Your
+   Projects" GitHub repos, local clones, and starred repos), merging by
+   `full_name` / path so a repo that is both owned and cloned shows once with
+   both tags. Starred repos are fetched lazily on first search.
+
+4. **In-progress rows** — while the search is empty, the list of repos with
+   uncommitted changes or unpushed commits, grouped by owner with the Projects
+   surface's `OrgSectionHeaderCard` (avatar + owner + repo count) and rendered
+   with its `OrgRepoItemCard` rows (repo icon + "In Progress" dirty dot, name,
+   a right-aligned `↑ahead` / `↓behind` remote indicator, and hover-revealed
+   open-terminal / drag-to-terminal affordances). The
+   signed-in login's owner sorts first; "Untracked" last. Clicking a row opens
+   the repo profile tab. When a query is active, `HomeSearchResults` replaces the
+   list.
 
 ### Sub-views
 
-Each sub-view leads with a `SubViewHeader` (back chevron + label + count) and
-contains its own scrollable content. All sub-views are rendered conditionally
-inside the SlidePane — only the active view is mounted.
+Followers / Following slide in from the profile card via the shared `SlidePane`;
+only the active view is mounted.
 
 | Sub-view | Data source | Notes |
 | --- | --- | --- |
-| Projects | `GithubService.getUserRepositories` + `getOrgRepositories` | Grouped by owner; **Cloned only** switch vs local Alexandria entries |
-| Other Clones | `repositories` filtered by non-owned owners | StarredRepoCard rows; untracked + third-party local clones |
-| Starred | `GithubService.getUserStarredRepositories` | Filter + sort (A-Z / Stars / Updated) |
-| Recent | `localStorage.getItem('recent-repositories')` | Projects only; trails deferred; Principal sign-in required |
+| Followers | `GithubService.getUserFollowers(login)` | Flat list; clicking a user opens their profile tab |
+| Following | `GithubService.getUserFollowing(login)` | Flat list; clicking a user opens their profile tab |
 
 ## Integration contract
 
@@ -144,15 +157,21 @@ every place that enumerates workspace surfaces:
 | `src/renderer/principal-window/components/PrincipalPortal/PrincipalPortal.tsx` | Added `'home-panel'` to `WorkspaceView` union + `WORKSPACE_VIEWS` array + routing guard |
 | `src/renderer/workspace-shell/WorkspaceShell.tsx` | Added `'home-panel'` to `WorkspaceView` type; renders `HomeLeftPanel` when `activeView === 'home-panel'`; label maps to `'Home'` |
 | `src/renderer/principal-window/components/IntegratedShell/NavigationSidebar.tsx` | Added `{ id: 'home-panel', icon: <Home />, label: 'Home' }` as the first top nav item |
-| `src/renderer/principal-window/components/IntegratedShell/IntegratedShell.tsx` | Added `'home-panel'` to `VIEW_OPTIONS`, `viewCollapsedStates` defaults, and both reset handlers |
+| `src/renderer/principal-window/components/IntegratedShell/IntegratedShell.tsx` | Added `'home-panel'` to `viewCollapsedStates` defaults + reset handlers |
 
 ### Event contract
 
-The Home panel emits `repository:selected` on the shell's **local** `events`
-bus (the `PanelEventEmitter` passed as a prop from `WorkspaceShell`). The
-payload must be a `RepositorySelectedPayload` (not a plain object) — built via
-the existing `payloadFromGithub` / `payloadFromLocalEntry` helpers from
-`src/renderer/events/repositorySelected.ts`.
+The Home panel emits open intents on the shell's **local** `events` bus (the
+`PanelEventEmitter` passed as a prop from `WorkspaceShell`). Payloads must be the
+typed payloads (not plain objects) — built via the existing
+`payloadFromGithub` / `payloadFromLocalEntry` helpers from
+`src/renderer/events/repositorySelected.ts`. `installProjectsOpenForwarder`
+lifts the open-intent subset onto the portal bus.
+
+- `repository:selected` — an in-progress row is clicked → repo profile tab.
+- `repository:guide-open` — a search result is clicked → File City guide tab.
+- `owner:selected` — an in-progress row's avatar, or a followers/following user
+  → user/org profile tab.
 
 **This is the contract that was broken in the initial implementation** (sending
 `{ repositoryId: full_name }` instead of the proper payload), causing a crash
@@ -163,17 +182,17 @@ the shared helpers — the same pattern used by `ProjectsList`.
 
 ## Decisions locked
 
-- **Separate button, not a replacement.** The Home panel gets its own icon in
-  the `NavigationSidebar` alongside (before) Projects. Both remain accessible.
-  Projects is clone/dev-oriented; Home is browse-oriented.
+- **Separate button.** The Home panel has its own icon in the
+  `NavigationSidebar` alongside (before) Projects. Projects is clone/dev-oriented;
+  Home is profile-and-work oriented.
 
-- **Animated slide transitions.** Sub-views slide in/out via the shared
-  `SlidePane` component with a 320ms CSS `translateX` animation. Direction is
-  determined by the positional ordering array.
+- **Search + in-progress, not nav cards.** The Home panel does not duplicate
+  project/clone/starred *browsing* with nav cards; the search bar covers finding
+  a repo, and the panel below it is the in-progress list. The **Projects**
+  surface remains the clone/dev browser for users who enable it.
 
-- **`SlidePane` is shared.** Lives in `src/renderer/components/SlidePane/` so
-  other surfaces can reuse it. The component is generic — it knows nothing
-  about the Home panel's specific views.
+- **Animated slide transitions.** Followers / Following slide in/out via the
+  shared `SlidePane` component with a 320ms CSS `translateX` animation.
 
 - **`home-panel` as the view ID.** Avoids collision with the existing `home`
   overlay view (the `HomeView` dashboard toggled from the titlebar as
@@ -185,12 +204,9 @@ the shared helpers — the same pattern used by `ProjectsList`.
 
 | Gap | Status | Notes |
 | --- | --- | --- |
-| Recently visited — trails | Deferred | Only projects from localStorage; trails deferred until a recent-trails listing is available |
 | Repo click → right pane | Not wired | `repository:selected` is emitted but the right pane in `WorkspaceShell` is a placeholder; the profile panel renders as a tab via the forwarder |
 
 ## File inventory
-
-### New files
 
 | File | Purpose |
 | --- | --- |
@@ -198,22 +214,12 @@ the shared helpers — the same pattern used by `ProjectsList`.
 | `src/renderer/components/SlidePane/makeSlideDirection.ts` | Direction resolver helper |
 | `src/renderer/components/SlidePane/index.ts` | Barrel export |
 | `src/renderer/panels/home-panel/HomeLeftPanel.tsx` | Main orchestrator + data fetching |
-| `src/renderer/panels/home-panel/UserAboutCard.tsx` | GitHub profile card |
-| `src/renderer/panels/home-panel/HomeNavCards.tsx` | Nav cards |
-| `src/renderer/panels/home-panel/languageColors.ts` | Language color helper |
+| `src/renderer/panels/home-panel/UserAboutCard.tsx` | GitHub / git profile card |
+| `src/renderer/panels/home-panel/InProgressBar.tsx` | In-progress status row + Open button |
+| `src/renderer/panels/home-panel/useInProgressRepos.ts` | In-progress list (git-status backed) |
+| `src/renderer/panels/cards/OrgRepoItemCard.tsx` | In-progress repo row (shared with the Projects surface) |
+| `src/renderer/panels/cards/OrgSectionHeaderCard.tsx` | Owner section header for the grouped rows (shared) |
+| `src/renderer/panels/home-panel/HomeSearch.tsx` | Search bar + merged result list |
+| `src/renderer/panels/home-panel/RepoAboutCard.tsx` | Selected-repo About card (slides over) |
+| `src/renderer/panels/home-panel/sub-views/FollowersFollowingSubView.tsx` | Followers / following list |
 | `src/renderer/panels/home-panel/index.ts` | Barrel export |
-| `src/renderer/panels/home-panel/sub-views/SubViewHeader.tsx` | Shared back-header for sub-views |
-| `src/renderer/panels/home-panel/sub-views/HomeProjectsSubView.tsx` | Projects sub-view |
-| `src/renderer/panels/home-panel/sub-views/HomeStarredSubView.tsx` | Starred sub-view |
-
-| `src/renderer/panels/home-panel/sub-views/HomeRecentSubView.tsx` | Recently visited sub-view |
-
-### Modified files
-
-| File | Change |
-| --- | --- |
-| `src/shared/types/userPreferences.types.ts` | Added `'home-panel'` to `InteractiveShellNavigationView` |
-| `src/renderer/principal-window/components/PrincipalPortal/PrincipalPortal.tsx` | Added `'home-panel'` to `WorkspaceView`, `WORKSPACE_VIEWS`, routing guard |
-| `src/renderer/workspace-shell/WorkspaceShell.tsx` | Added `'home-panel'` to `WorkspaceView`; import + render `HomeLeftPanel`; label mapping |
-| `src/renderer/principal-window/components/IntegratedShell/NavigationSidebar.tsx` | Added `Home` icon import + nav item |
-| `src/renderer/principal-window/components/IntegratedShell/IntegratedShell.tsx` | Added `'home-panel'` to `VIEW_OPTIONS`, collapsed-state defaults, both reset handlers |

@@ -1,13 +1,12 @@
 /**
  * HomeLeftPanel
  *
- * The Home surface's left panel — a SlidePane carousel that mirrors the web
- * app's home left panel. The default "home" view shows a UserAboutCard
- * (GitHub profile) and HomeNavCards. Clicking a card slides to that sub-view;
- * a back button slides back to the overview.
- *
- * Nav order: Your Projects → Other Clones → Starred → (Principal) Recent.
- * "Cloned only" is a switch inside Your Projects, not its own card.
+ * The Home surface's left panel — a SlidePane carousel. The default "home" view
+ * shows a UserAboutCard (GitHub profile), the In Progress bar, a search bar, and
+ * the list of in-progress repositories (uncommitted changes / unpushed commits),
+ * grouped by owner with `OrgSectionHeaderCard` and rendered with the
+ * Projects-surface rows (`OrgRepoItemCard`). Followers / Following slide in from
+ * the profile card.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -27,18 +26,20 @@ import {
 } from '../../events/repositorySelected';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuthState } from '../../hooks/useAuthState';
-import { useHomePanelPreferences } from '../../hooks/useHomePanelPreferences';
 import { useWorkspaceTabs } from '../../principal-window/PortalTabsContext';
+import { OrgRepoItemCard } from '../cards/OrgRepoItemCard';
+import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
+import { emitTerminalOpen } from '../../events/portalIntents';
+import { shellQuote } from '../../utils/shellQuote';
 import { UserAboutCard, type UserAboutInfo } from './UserAboutCard';
 import { RepoAboutCard } from './RepoAboutCard';
 import { InProgressBar } from './InProgressBar';
-import { useInProgressCount } from './useInProgressCount';
-import { HomeSearchBar, HomeSearchResults } from './HomeSearch';
-import { HomeNavCards, type HomeNavKey, type HomeNavCardCounts } from './HomeNavCards';
-import { HomeClonedSubView } from './sub-views/HomeClonedSubView';
-import { HomeProjectsSubView, type ProjectSection } from './sub-views/HomeProjectsSubView';
-import { HomeStarredSubView } from './sub-views/HomeStarredSubView';
-import { HomeRecentSubView } from './sub-views/HomeRecentSubView';
+import { useInProgressRepos, type InProgressRepo } from './useInProgressRepos';
+import {
+  HomeSearchBar,
+  HomeSearchResults,
+  type ProjectSection,
+} from './HomeSearch';
 import { FollowersFollowingSubView } from './sub-views/FollowersFollowingSubView';
 
 // ---------------------------------------------------------------------------
@@ -47,15 +48,13 @@ import { FollowersFollowingSubView } from './sub-views/FollowersFollowingSubView
 // animated carousel navigation between the overview and destination views.
 // ---------------------------------------------------------------------------
 
-export type HomeView = 'home' | HomeNavKey;
+export type HomeView = 'home' | 'followers' | 'following';
 
-// 'home' is leftmost; opening a card slides in from the right, back slides left.
+// 'home' is leftmost; followers/following slide in from the right, back left.
 const HOME_SLIDE_ORDER: readonly HomeView[] = [
   'home',
-  'projects',
-  'other-clones',
-  'starred',
-  'recent',
+  'followers',
+  'following',
 ];
 const homeSlideDirection = makeSlideDirection(HOME_SLIDE_ORDER as readonly string[]);
 
@@ -94,19 +93,33 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   repositories,
   events,
 }) => {
-  // Principal app OAuth — gates recent and re-runs profile load.
+  // Principal app OAuth — re-runs the profile load on sign-in.
   const { user: authUser, isAuthenticated: isPrincipalSignedIn } = useAuthState();
-  const homePanelPrefs = useHomePanelPreferences();
   const { theme } = useTheme();
   const [view, setView] = useState<HomeView>('home');
   const [selectedRepo, setSelectedRepo] = useState<RepositorySelectedPayload | null>(null);
   const [repoCardExiting, setRepoCardExiting] = useState(false);
   const { openUserProfile, openInProgress, tabs } = useWorkspaceTabs();
 
-  // Count of repos with uncommitted changes, shown in the In Progress bar.
-  const inProgressCount = useInProgressCount(repositories);
+  // Repos with uncommitted changes / unpushed commits — the in-progress list.
+  const inProgressRepos = useInProgressRepos(repositories);
   // Hide the bar's Open button when the In Progress tab is already open.
   const inProgressOpen = tabs.some((t) => t.id === 'in-progress-activity');
+
+  // Group the in-progress repos by owner, the way the Projects surface does:
+  // the owner is carried by the section header, the row shows only the repo.
+  // The signed-in login's group sorts first, "Untracked" last.
+  const [collapsedOwners, setCollapsedOwners] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const toggleOwner = useCallback((owner: string) => {
+    setCollapsedOwners((prev) => {
+      const next = new Set(prev);
+      if (next.has(owner)) next.delete(owner);
+      else next.add(owner);
+      return next;
+    });
+  }, []);
 
   // Search across projects / clones / starred. The nav cards hide while a
   // query is active.
@@ -159,22 +172,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     };
   }, []);
 
-  // When the user signs out while on a Principal-only sub-view, drop back home.
-  // Also drop back when the feature flag is off (shouldn't be reachable, but
-  // defensive). Clear selected repo card.
-  useEffect(() => {
-    if (!isPrincipalSignedIn && view === 'recent') {
-      setView('home');
-      setSelectedRepo(null);
-      setRepoCardExiting(false);
-    }
-    if (view === 'recent' && !homePanelPrefs.recentlyVisited) {
-      setView('home');
-      setSelectedRepo(null);
-      setRepoCardExiting(false);
-    }
-  }, [isPrincipalSignedIn, view, homePanelPrefs.recentlyVisited]);
-
   // Keep selectedRepo.localClones in sync when the registry changes (e.g. after
   // a clone is deleted via the RepoAboutCard delete button). Without this the
   // card holds a stale snapshot and the deleted clone keeps showing.
@@ -220,14 +217,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const [aboutUser, setAboutUser] = useState<UserAboutInfo | null>(null);
   const [userLoading, setUserLoading] = useState(true);
 
-  // Projects data + owners the current user is considered to "own"
-  // (personal login + orgs). Used to split Other Clones from Your Projects.
+  // GitHub repos (user + orgs) searched by HomeSearchResults.
   const [projectSections, setProjectSections] = useState<ProjectSection[] | null>(null);
-  const [ownedOwners, setOwnedOwners] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
-
-  const [counts, setCounts] = useState<HomeNavCardCounts>({});
 
   // Followers / following state for sub-view
   const [followersList, setFollowersList] = useState<GitHubUser[]>([]);
@@ -316,7 +307,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 
   useEffect(() => {
     if (!githubLogin) {
-      setOwnedOwners(new Set());
       setProjectSections(null);
       return;
     }
@@ -330,12 +320,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         ]);
 
         if (cancelled) return;
-
-        const owners = new Set<string>([githubLogin.toLowerCase()]);
-        for (const org of orgs) {
-          if (org.login) owners.add(org.login.toLowerCase());
-        }
-        setOwnedOwners(owners);
 
         // Group by owner
         const grouped = new Map<string, GitHubRepository[]>();
@@ -407,11 +391,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         }
 
         setProjectSections(sections);
-        setCounts((prev) => ({ ...prev, projects: userRepos.length }));
       } catch {
         if (!cancelled) {
           setProjectSections([]);
-          setOwnedOwners(new Set([githubLogin.toLowerCase()]));
         }
       }
     };
@@ -419,51 +401,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     void fetchRepos();
     return () => { cancelled = true; };
   }, [githubLogin]);
-
-  // Local clones keyed for "Cloned only" in Your Projects.
-  // Uses PURL as the canonical identifier so matching is case-insensitive
-  // and robust to owner/name casing differences between the registry and
-  // the GitHub API.
-  const clonedPurls = useMemo(() => {
-    const set = new Set<string>();
-    for (const entry of repositories) {
-      const purl =
-        entry.purl ??
-        entry.github?.purl;
-      if (purl) {
-        set.add(purl);
-      } else if (entry.github?.owner && entry.github?.name) {
-        set.add(githubIdToPurl(`${entry.github.owner}/${entry.github.name}`));
-      }
-    }
-    return set;
-  }, [repositories]);
-
-  // Other Clones: local checkouts whose GitHub owner is not the user / their orgs.
-  // Untracked (no github owner) always land here.
-  const otherClones = useMemo(() => {
-    return repositories.filter((entry) => {
-      const owner = entry.github?.owner?.toLowerCase();
-      if (!owner) return true;
-      // No known identity yet → treat everything with an owner as "other"
-      // only if we have zero owned owners (still loading / signed out of gh).
-      // Once ownedOwners is populated, filter properly.
-      if (ownedOwners.size === 0) {
-        // If we have a githubLogin we haven't finished loading orgs for,
-        // still exclude the personal login as "yours".
-        if (githubLogin && owner === githubLogin.toLowerCase()) return false;
-        return true;
-      }
-      return !ownedOwners.has(owner);
-    });
-  }, [repositories, ownedOwners, githubLogin]);
-
-  useEffect(() => {
-    setCounts((prev) => ({
-      ...prev,
-      'other-clones': otherClones.length || null,
-    }));
-  }, [otherClones.length]);
 
   const go = useCallback((next: HomeView) => {
     setView(next);
@@ -527,6 +464,53 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     },
     [events, repositories],
   );
+
+  // Open the repo profile tab for an in-progress row (mirrors InProgressRepoCard;
+  // the Projects rows open the profile rather than the guide).
+  const openInProgressRepo = useCallback(
+    (entry: AlexandriaEntry) => {
+      events.emit({
+        type: 'repository:selected',
+        source: 'home-panel',
+        timestamp: Date.now(),
+        payload: payloadFromLocalEntry(entry),
+      });
+    },
+    [events],
+  );
+
+  // Hover action on an in-progress row: open a terminal tab at the clone's path.
+  const openTerminalForEntry = useCallback(
+    (entry: AlexandriaEntry, label: string) => {
+      if (!entry.path) return;
+      emitTerminalOpen(events, 'home-panel', {
+        directory: String(entry.path),
+        label,
+      });
+    },
+    [events],
+  );
+
+  // In-progress repos grouped by owner for the section-header list.
+  const inProgressGroups = useMemo(() => {
+    const groups = new Map<string, InProgressRepo[]>();
+    for (const repo of inProgressRepos) {
+      const owner = repo.entry.github?.owner ?? 'Untracked';
+      const bucket = groups.get(owner);
+      if (bucket) bucket.push(repo);
+      else groups.set(owner, [repo]);
+    }
+    const login = githubLogin?.toLowerCase() ?? null;
+    return [...groups.entries()].sort(([a], [b]) => {
+      if (a === 'Untracked' || b === 'Untracked') {
+        return a === b ? 0 : a === 'Untracked' ? 1 : -1;
+      }
+      const aYou = login !== null && a.toLowerCase() === login;
+      const bYou = login !== null && b.toLowerCase() === login;
+      if (aYou !== bYou) return aYou ? -1 : 1;
+      return a.localeCompare(b, undefined, { sensitivity: 'base' });
+    });
+  }, [inProgressRepos, githubLogin]);
 
   return (
     <div
@@ -608,7 +592,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               {/* Full-width status row under the card: opens the singleton
                   `in-progress-activity` workspace tab; shows the count. */}
               <InProgressBar
-                count={inProgressCount}
+                count={inProgressRepos.length}
                 onOpen={openInProgress}
                 isOpen={inProgressOpen}
               />
@@ -627,44 +611,72 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                   onSelectRepo={emitRepoSelected}
                   onSelectEntry={emitLocalEntrySelected}
                 />
+              ) : inProgressGroups.length > 0 ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '4px 4px',
+                  }}
+                >
+                  {inProgressGroups.map(([owner, repos]) => {
+                    const isUntracked = owner === 'Untracked';
+                    const isCollapsed = collapsedOwners.has(owner);
+                    const isYou =
+                      !isUntracked &&
+                      githubLogin !== null &&
+                      owner.toLowerCase() === githubLogin.toLowerCase();
+                    return (
+                      <div key={owner} style={{ marginBottom: 8 }}>
+                        <OrgSectionHeaderCard
+                          header={{
+                            orgName: owner,
+                            badge: isYou ? 'you' : undefined,
+                            repoCount: repos.length,
+                            isUntracked,
+                          }}
+                          isCollapsed={isCollapsed}
+                          onToggle={() => toggleOwner(owner)}
+                        />
+                        {!isCollapsed &&
+                          repos.map(({ entry, status }) => {
+                            const name = entry.github?.name ?? entry.name;
+                            const path = entry.path ? String(entry.path) : '';
+                            return (
+                              <OrgRepoItemCard
+                                key={String(status.repoPath)}
+                                repo={{ name }}
+                                isCloned
+                                isDirty={status.isDirty}
+                                sync={{ ahead: status.ahead, behind: status.behind }}
+                                dragText={path ? shellQuote(path) : undefined}
+                                onClick={() => openInProgressRepo(entry)}
+                                onOpenTerminal={
+                                  path
+                                    ? () => openTerminalForEntry(entry, name)
+                                    : undefined
+                                }
+                              />
+                            );
+                          })}
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
-                <HomeNavCards
-                  counts={counts}
-                  activeView={null}
-                  isPrincipalSignedIn={isPrincipalSignedIn}
-                  showRecentlyVisited={homePanelPrefs.recentlyVisited}
-                  onOpenView={(key) => go(key)}
-                />
+                <div
+                  style={{
+                    padding: '24px 16px',
+                    color: theme.colors.textMuted,
+                    fontSize: theme.fontSizes[1],
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Nothing in progress — every tracked repository has a clean
+                  working tree.
+                </div>
               )}
             </div>
-          ) : view === 'projects' ? (
-            <HomeProjectsSubView
-              key="projects"
-              sections={projectSections}
-              clonedPurls={clonedPurls}
-              onBack={() => go('home')}
-              onSelectRepo={(repo) => emitRepoSelected(repo)}
-            />
-          ) : view === 'other-clones' ? (
-            <HomeClonedSubView
-              key="other-clones"
-              repositories={otherClones}
-              label="Other Clones"
-              emptyMessage="No other clones yet. Local checkouts that aren't yours will show up here."
-              onBack={() => go('home')}
-              onSelectEntry={emitLocalEntrySelected}
-            />
-          ) : view === 'starred' ? (
-            <HomeStarredSubView
-              key="starred"
-              onBack={() => go('home')}
-              onSelectRepo={(repo) => emitRepoSelected(repo)}
-            />
-          ) : view === 'recent' && isPrincipalSignedIn && homePanelPrefs.recentlyVisited ? (
-            <HomeRecentSubView
-              key="recent"
-              onBack={() => go('home')}
-            />
           ) : view === 'followers' ? (
             <FollowersFollowingSubView
               key="followers"

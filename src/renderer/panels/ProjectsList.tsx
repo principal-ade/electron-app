@@ -2,20 +2,22 @@
  * ProjectsList ("My Projects")
  *
  * A single, unified list of every project the user can reach: their local
- * clones plus every repository across their GitHub account and organizations.
- * Instead of separate views, the list is narrowed with single-select filter
- * chips (All / Cloned / In Progress). Within each org, cloned (on-disk)
- * projects sort first; the rest sort alphabetically by name, except under the
- * In Progress filter, where they order by most recent activity (the work
- * you're actively in). Orgs with more than 10 repos start collapsed.
+ * clones, every repository across their GitHub account and organizations, and
+ * the repositories they've starred. Single-select filter chips narrow it:
+ *   - Owned   — repos from the user's GitHub account/orgs (not local clones)
+ *   - Cloned  — local clones only
+ *   - Starred — repos the user has starred (may be third-party)
+ * Within each org, cloned (on-disk) projects sort first; the rest sort
+ * alphabetically by name. Orgs with more than 10 repos start collapsed.
  * Used in the Projects surface left panel.
  */
 
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Eraser, FolderGit2, FolderSearch, Loader2, Lock, Search, Terminal } from 'lucide-react';
+import { Eraser, FolderGit2, FolderSearch, Loader2, Lock, RefreshCw, Search, Terminal } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { payloadFromGithub, payloadFromLocalEntry } from '../events/repositorySelected';
 import { emitTerminalOpen } from '../events/portalIntents';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
@@ -43,7 +45,7 @@ export interface ProjectsListProps {
 }
 
 /** Single-select filter applied to the unified list. */
-type ProjectFilter = 'all' | 'cloned' | 'in-progress';
+type ProjectFilter = 'owned' | 'cloned' | 'starred';
 
 /** A merged project: a GitHub repo, a local clone, or both. */
 interface UnifiedProject {
@@ -53,6 +55,15 @@ interface UnifiedProject {
   description?: string | null;
   isCloned: boolean;
   isDirty: boolean;
+  /** Whether the user has starred this repo on GitHub. */
+  isStarred: boolean;
+  /**
+   * Whether this repo lives under the user's GitHub account or one of their
+   * orgs. Local clones of third-party repos, starred-only repos, and untracked
+   * clones are `false`, so the Owned filter excludes them (they still show
+   * under Cloned / Starred).
+   */
+  isOwned: boolean;
   /** Repository visibility: `true` private, `false` public, `undefined` unknown. */
   isPrivate?: boolean;
   /** The local registry entry, when cloned. Representative for single-clone actions. */
@@ -113,8 +124,8 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     md: theme.space?.[3] || 16,
   };
 
-  // Filter + search state
-  const [filter, setFilter] = useState<ProjectFilter>('all');
+  // Filter + search state. Default to Owned — the user's own/org repos + clones.
+  const [filter, setFilter] = useState<ProjectFilter>('owned');
   const [searchQuery, setSearchQuery] = useState('');
   // When on, the list is narrowed to private repos only; otherwise all repos
   // (public, private, and unknown-visibility) are shown.
@@ -146,9 +157,11 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   // GitHub projects across the user's account + all their orgs
   const {
     repos: githubRepos,
+    starredRepos,
     currentUser,
     userOrgs,
     loading: githubLoading,
+    refresh: refreshGithubProjects,
   } = useGithubProjects();
 
   // Fetch git status for all repositories with local paths
@@ -339,14 +352,39 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     }
   }, []);
 
-  // Merge GitHub repos and local clones into one project model keyed by owner/name.
+  // Lowercased `owner/name` keys of the user's starred repos, for marking
+  // owned/cloned projects that are also starred.
+  const starredKeys = useMemo(
+    () =>
+      new Set(
+        starredRepos.map(
+          (r) => `${r.owner.login.toLowerCase()}/${r.name.toLowerCase()}`
+        )
+      ),
+    [starredRepos]
+  );
+
+  // Merge GitHub repos (owned + starred) and local clones into one project model
+  // keyed by owner/name.
   const projects = useMemo<UnifiedProject[]>(() => {
     const map = new Map<string, UnifiedProject>();
 
-    // 1) GitHub repos — start as not-cloned; local entries upgrade them below.
-    for (const repo of githubRepos) {
+    // 1) GitHub repos — owned/affiliation first, then starred (which may add
+    //    third-party repos or mark an already-present one as starred). Start as
+    //    not-cloned; local entries upgrade them below.
+    const addGithubRepo = (
+      repo: GitHubRepository,
+      isStarred: boolean,
+      isOwned: boolean
+    ) => {
       const owner = repo.owner.login;
       const key = `${owner.toLowerCase()}/${repo.name.toLowerCase()}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.isStarred = existing.isStarred || isStarred;
+        existing.isOwned = existing.isOwned || isOwned;
+        return;
+      }
       map.set(key, {
         key,
         owner,
@@ -354,12 +392,17 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         description: repo.description,
         isCloned: false,
         isDirty: false,
+        isStarred,
+        isOwned,
         isPrivate: repo.private,
         lastActivity: toMs(repo.pushed_at || repo.updated_at),
         cloneUrl: repo.clone_url || repo.html_url,
         clones: [],
       });
-    }
+    };
+
+    for (const repo of githubRepos) addGithubRepo(repo, false, true);
+    for (const repo of starredRepos) addGithubRepo(repo, true, false);
 
     // 2) Local registry entries — every entry is a clone on disk.
     for (const entry of repositories) {
@@ -381,6 +424,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         existing.entry = entry;
         existing.clones.push(entry);
         existing.isDirty = gitStatus?.isDirty ?? false;
+        existing.isStarred = existing.isStarred || starredKeys.has(key);
         existing.description = existing.description ?? entry.github?.description;
         existing.isPrivate = existing.isPrivate ?? toIsPrivate(entry.github?.isPublic);
         existing.lastActivity = Math.max(existing.lastActivity, localActivity);
@@ -393,6 +437,8 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           description: entry.github?.description,
           isCloned: true,
           isDirty: gitStatus?.isDirty ?? false,
+          isStarred: starredKeys.has(key),
+          isOwned: false,
           isPrivate: toIsPrivate(entry.github?.isPublic),
           entry,
           clones: [entry],
@@ -404,15 +450,17 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     }
 
     return Array.from(map.values());
-  }, [githubRepos, repositories, gitStatusMap, baseDefaultDirectory]);
+  }, [githubRepos, starredRepos, repositories, gitStatusMap, baseDefaultDirectory, starredKeys]);
 
   // Apply filter + search, then group by org and order the groups.
   const { groups, sortedOrgNames } = useMemo(() => {
     let filtered = projects;
-    if (filter === 'cloned') {
+    if (filter === 'owned') {
+      filtered = filtered.filter(p => p.isOwned);
+    } else if (filter === 'cloned') {
       filtered = filtered.filter(p => p.isCloned);
-    } else if (filter === 'in-progress') {
-      filtered = filtered.filter(p => p.isCloned && p.isDirty);
+    } else if (filter === 'starred') {
+      filtered = filtered.filter(p => p.isStarred);
     }
 
     if (privateOnly) {
@@ -436,18 +484,12 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       grouped.set(p.owner, arr);
     }
 
-    // Sort within each org group. The In Progress filter shows the work the
-    // user is actively in, so order it by most recent activity; every other
-    // filter sorts alphabetically by name for a stable, predictable list.
-    const sortByRecent = filter === 'in-progress';
+    // Sort within each org group: cloned (on-disk) projects first, then
+    // alphabetically by name for a stable, predictable list.
     for (const [owner, arr] of grouped.entries()) {
       arr.sort((a, b) => {
-        // Cloned (on-disk) projects sort first within each org; the rest keep
-        // the usual order (recency under In Progress, otherwise alphabetical).
         if (a.isCloned !== b.isCloned) return a.isCloned ? -1 : 1;
-        return sortByRecent
-          ? b.lastActivity - a.lastActivity
-          : a.name.localeCompare(b.name);
+        return a.name.localeCompare(b.name);
       });
       grouped.set(owner, arr);
     }
@@ -509,6 +551,19 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
 
   const isInitialLoading = githubLoading && projects.length === 0;
 
+  // Filter-aware empty message so a filtered-to-nothing list (e.g. the Starred
+  // view with nothing starred) doesn't read as "you have no projects".
+  const emptyMessage =
+    projects.length === 0
+      ? 'No projects'
+      : searchQuery.trim()
+        ? 'No projects match this search.'
+        : filter === 'starred'
+          ? 'No starred projects yet.'
+          : filter === 'cloned'
+            ? 'No cloned projects yet.'
+            : 'No owned projects yet.';
+
   return (
     <div
       style={{
@@ -520,13 +575,55 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         overflow: 'hidden',
       }}
     >
+      {/* Header: title + refresh */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing.sm,
+          padding: spacing.sm,
+          flexShrink: 0,
+        }}
+      >
+        <FolderGit2 size={16} color={theme.colors.text} style={{ marginLeft: 4 }} />
+        <span
+          style={{
+            flex: 1,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            fontWeight: 600,
+            color: theme.colors.text,
+          }}
+        >
+          Projects
+        </span>
+        <button
+          type="button"
+          onClick={() => void refreshGithubProjects()}
+          title="Refresh"
+          aria-label="Refresh projects"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: spacing.xs,
+            background: 'transparent',
+            border: 'none',
+            color: theme.colors.textSecondary,
+            cursor: 'pointer',
+          }}
+        >
+          <RefreshCw size={14} />
+        </button>
+      </div>
+
       {/* Filter chips */}
       <div style={{ padding: spacing.sm, flexShrink: 0 }}>
         <SegmentedControl
           options={[
-            { value: 'all', label: 'All' },
+            { value: 'owned', label: 'Owned' },
             { value: 'cloned', label: 'Cloned' },
-            { value: 'in-progress', label: 'In Progress' },
+            { value: 'starred', label: 'Starred' },
           ]}
           value={filter}
           onChange={(value) => setFilter(value as ProjectFilter)}
@@ -718,7 +815,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             }}
           >
             <FolderGit2 size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
-            <span>No projects</span>
+            <span>{emptyMessage}</span>
           </div>
         ) : (
           sortedOrgNames.map((orgName) => {

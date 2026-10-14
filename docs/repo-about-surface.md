@@ -8,17 +8,19 @@
 
 ## What it is
 
-The Home left panel (`HomeLeftPanel`) has two layers in its default `"home"`
-view:
+The Home left panel (`HomeLeftPanel`) has a default `"home"` view with:
 
 1. **`UserAboutCard`** — the signed-in user's GitHub profile (avatar, login,
    bio, stats). Always visible at the top.
-2. **`HomeNavCards`** — clickable nav cards (Projects, Other Clones, Starred,
-   Recent).
+2. **`InProgressBar`** — "N in progress" with an **Open** button (the In
+   Progress tab).
+3. **`HomeSearchBar`** — searches projects, local clones, and starred repos.
+4. **In-progress repo rows** — repos with uncommitted changes or unpushed
+   commits (shown when the search is empty).
 
-When the user selects a repo from any sub-view, the `RepoAboutCard` slides in
-from the right over the sub-view (which stays mounted with `pointerEvents:
-none`). The card dismisses with a matching slide-out animation.
+When the user selects a repo — an in-progress row or a search result — the
+`RepoAboutCard` slides in from the right over the view (which stays mounted with
+`pointerEvents: none`). The card dismisses with a matching slide-out animation.
 
 ## Card content
 

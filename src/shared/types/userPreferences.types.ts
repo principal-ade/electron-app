@@ -144,11 +144,6 @@ export interface UserPreferences {
   showSearchButton?: boolean; // Show/hide the search button in side nav (default: false)
   showConnectionsButton?: boolean; // Show/hide the connections button in side nav (default: false)
   showProcessesButton?: boolean; // Show/hide the processes button in side nav (default: false)
-  /**
-   * Show/hide the legacy Projects side-nav button (the pre-Home-panel surface).
-   * Default false — Home panel owns project browsing now.
-   */
-  showProjectsButton?: boolean;
   showOnboardingButton?: boolean; // Show/hide the onboarding/tutorials button in side nav (default: false)
   showExtensionsButton?: boolean; // Show/hide the extensions button in settings (default: false)
   onboardingCompleted?: boolean; // Whether the onboarding wizard has been completed (default: false)
@@ -294,13 +289,6 @@ export interface UserPreferences {
     snoozedRepos: Record<string, number>;
     /** ISO date string of when badge was last shown (for 1-per-day limit) */
     lastBadgeShownDate?: string;
-  };
-
-  // Home panel feature flags — when false (default) the corresponding
-  // recently-visited surfaces are hidden throughout the app.
-  homePanel?: {
-    /** Show the Recently Visited nav card, sub-view, and inbox tab. */
-    recentlyVisited?: boolean;
   };
 
   // TODO: Add these fields that are currently using direct storage.get/set calls:

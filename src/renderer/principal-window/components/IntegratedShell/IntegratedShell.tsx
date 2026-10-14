@@ -208,17 +208,12 @@ export const IntegratedShell: React.FC = () => {
           // Migrate removed views to a supported workspace surface.
           // 'feed' is the former id for the Projects view, renamed 2026-06-17.
           const legacyViews = ['local-projects', 'remote-projects', 'starred-projects', 'network', 'feed'];
-          let view =
+          const view =
             savedView === 'inbox'
               ? 'topics'
               : legacyViews.includes(savedView)
                 ? 'projects'
                 : savedView;
-          // Legacy Projects side-nav is hidden by default (showProjectsButton).
-          // If the saved surface is projects but the button is off, land on Home.
-          if (view === 'projects' && !(prefs.showProjectsButton ?? false)) {
-            view = 'home-panel';
-          }
           setActiveView(view as NavigationView);
         }
 

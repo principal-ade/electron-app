@@ -5,6 +5,11 @@ import type { GitHubRepository } from '../../shared/main-process-api-interfaces/
 export interface UseGithubProjectsResult {
   /** Deduped repositories the user can see across their account + all orgs */
   repos: GitHubRepository[];
+  /**
+   * Repositories the user has starred. May include repos outside their account
+   * and orgs (third-party repos), so callers merge these separately.
+   */
+  starredRepos: GitHubRepository[];
   /** Current user's GitHub login, when authenticated */
   currentUser: string | null;
   /** Logins of the orgs the user belongs to */
@@ -16,11 +21,13 @@ export interface UseGithubProjectsResult {
 
 /**
  * Fetches every GitHub repository the signed-in user can reach: their own
- * repos plus the repos of all organizations they belong to. Results are
- * deduped by `full_name`. Fails silently (empty list) when unauthenticated.
+ * repos plus the repos of all organizations they belong to, plus their starred
+ * repos. Results are deduped by `full_name`. Fails silently (empty list) when
+ * unauthenticated.
  */
 export function useGithubProjects(): UseGithubProjectsResult {
   const [repos, setRepos] = useState<GitHubRepository[]>([]);
+  const [starredRepos, setStarredRepos] = useState<GitHubRepository[]>([]);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [userOrgs, setUserOrgs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +38,7 @@ export function useGithubProjects(): UseGithubProjectsResult {
     setError(null);
 
     try {
-      const [user, orgs, userRepos, ownedRepos] = await Promise.all([
+      const [user, orgs, userRepos, ownedRepos, starred] = await Promise.all([
         GithubService.getCurrentUser(),
         GithubService.getUserOrganizations(),
         GithubService.getUserRepositories({ perPage: 100, sort: 'updated', direction: 'desc' }),
@@ -45,10 +52,15 @@ export function useGithubProjects(): UseGithubProjectsResult {
           sort: 'updated',
           direction: 'desc',
         }),
+        // Starred repos can be third-party; a failure here shouldn't sink the rest.
+        GithubService.getUserStarredRepositories({ perPage: 100 }).catch(
+          () => [] as GitHubRepository[]
+        ),
       ]);
 
       setCurrentUser(user?.login ?? null);
       setUserOrgs(orgs.map((org) => org.login));
+      setStarredRepos(starred);
 
       // Fetch repos for every org in parallel; a failing org shouldn't sink the rest.
       const orgRepoLists = await Promise.all(
@@ -82,6 +94,7 @@ export function useGithubProjects(): UseGithubProjectsResult {
       setRepos([]);
       setCurrentUser(null);
       setUserOrgs([]);
+      setStarredRepos([]);
     } finally {
       setLoading(false);
     }
@@ -91,5 +104,5 @@ export function useGithubProjects(): UseGithubProjectsResult {
     fetchData();
   }, [fetchData]);
 
-  return { repos, currentUser, userOrgs, loading, error, refresh: fetchData };
+  return { repos, starredRepos, currentUser, userOrgs, loading, error, refresh: fetchData };
 }
