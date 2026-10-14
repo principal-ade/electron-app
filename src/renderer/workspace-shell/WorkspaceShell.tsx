@@ -48,6 +48,7 @@ import {
   useTerminalProvider,
   useTerminalActivity,
 } from '../contexts/TerminalContext';
+import { usePanelProgramStatus } from '../contexts/terminalProgramStatus';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { useTerminalImplementation } from '../hooks/useTerminalImplementation';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
@@ -297,6 +298,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     }
     return states;
   }, [terminalActivities]);
+
+  // OSC 7501 program-reported status, reduced to one record per session.
+  const programStatus = usePanelProgramStatus();
 
   const terminalPanelContext = useMemo(
     () => ({
@@ -785,6 +789,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               renderer={terminalImplementation}
               getRepoInfo={getRepoInfo}
               workingStates={workingStates}
+              programStatus={programStatus}
               initialTabs={tabs}
               onTabsChange={setTabs}
               activeTabId={activeTabId}
@@ -832,6 +837,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       terminalDirectory,
       getRepoInfo,
       workingStates,
+      programStatus,
       tabs,
       activeTabId,
       setTabs,

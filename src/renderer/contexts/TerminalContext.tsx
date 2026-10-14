@@ -45,8 +45,10 @@ function uint8ToBase64(bytes: Uint8Array): string {
 import {
   terminalClient,
   onActivitySync,
+  onProgramStatus,
   type TerminalActivityState,
   type UpdateActivityInput,
+  type ProgramStatusRecord,
 } from '../tipc/terminalClient';
 
 /**
@@ -58,6 +60,11 @@ export interface TerminalContextValue {
   repositoryPath: string;
   /** Terminal activity states from all windows (broadcast from main process) */
   terminalActivities: TerminalActivityState[];
+  /**
+   * OSC 7501 program-status records per sessionId (broadcast from main).
+   * Live-only; a session's array is the full current set of records.
+   */
+  programStatus: Record<string, ProgramStatusRecord[]>;
 }
 
 /**
@@ -108,6 +115,11 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
 
   // Track terminal activity states (broadcast from main process across all windows)
   const [terminalActivities, setTerminalActivities] = useState<TerminalActivityState[]>([]);
+
+  // Track OSC 7501 program-status records per session (broadcast from main)
+  const [programStatus, setProgramStatus] = useState<
+    Record<string, ProgramStatusRecord[]>
+  >({});
 
   // Track terminal session subscriptions for cleanup
   const terminalSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
@@ -200,7 +212,16 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     };
   }, []);
 
-  // Fetch terminal sessions on mount
+  // Listen for OSC 7501 program-status broadcasts from the main process
+  useEffect(() => {
+    const unsubscribe = onProgramStatus(({ sessionId, records }) => {
+      setProgramStatus((prev) => ({ ...prev, [sessionId]: records ?? [] }));
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
   useEffect(() => {
     const loadTerminalSessions = async () => {
       try {
@@ -560,8 +581,9 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       terminalContext,
       repositoryPath,
       terminalActivities,
+      programStatus,
     }),
-    [terminalSessions, terminalContext, repositoryPath, terminalActivities],
+    [terminalSessions, terminalContext, repositoryPath, terminalActivities, programStatus],
   );
 
   // Provider value
@@ -619,6 +641,17 @@ export const useTerminalActivity = (): {
     activities: context.terminalActivities,
     actions: activityActions,
   };
+};
+
+/**
+ * Hook to access OSC 7501 program-status records per sessionId.
+ */
+export const useTerminalProgramStatus = (): Record<
+  string,
+  ProgramStatusRecord[]
+> => {
+  const { context } = useTerminalProvider();
+  return context.programStatus;
 };
 
 // Re-export types for convenience

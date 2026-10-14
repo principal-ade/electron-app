@@ -25,6 +25,7 @@ import type {
   GetTerminalBufferInput,
   GetTerminalBufferResult,
 } from '../../shared/tipc/terminalRouterTypes';
+import type { ProgramStatusRecord } from '../../shared/terminal/programStatus';
 
 // Extend Window interface for TypeScript
 declare global {
@@ -264,6 +265,30 @@ export const onActivitySync = (
 };
 
 /**
+ * Subscribe to Program Status Protocol (OSC 7501) broadcasts.
+ * Fired when a terminal's program-reported records change (working/blocked/
+ * done/error), including when they are dropped on process exit / new prompt.
+ */
+export const onProgramStatus = (
+  callback: (data: {
+    sessionId: string;
+    records: ProgramStatusRecord[];
+  }) => void,
+): (() => void) => {
+  return window.electron.ipcRenderer.on(
+    'terminal:program-status',
+    (...args: unknown[]) => {
+      // Preload strips the IPC event, so the first arg is the payload.
+      const payload = args[0] as {
+        sessionId: string;
+        records: ProgramStatusRecord[];
+      };
+      callback(payload);
+    },
+  );
+};
+
+/**
  * Subscribe to terminal sessions changed broadcasts.
  * This is called when terminal sessions are created or destroyed.
  */
@@ -281,4 +306,4 @@ export const onSessionsChanged = (
 };
 
 // Re-export types for convenience
-export type { UpdateActivityInput, TerminalActivityState, TerminalSessionInfo, DaemonStatusResponse, DaemonControlResult };
+export type { UpdateActivityInput, TerminalActivityState, TerminalSessionInfo, DaemonStatusResponse, DaemonControlResult, ProgramStatusRecord };

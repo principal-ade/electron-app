@@ -26,6 +26,7 @@ export enum TerminalAPIEvents {
   PORT_READY = 'terminal:portReady', // MessagePort ready for direct streaming
   REQUEST_DATA_PORT = 'terminal:requestDataPort', // Request a MessagePort for terminal data
   SESSIONS_RESTORED = 'terminal:sessionsRestored', // Sessions restored from daemon after app restart
+  PROGRAM_STATUS = 'terminal:program-status', // OSC 7501 program-status records changed
 }
 
 export interface TerminalInfo {

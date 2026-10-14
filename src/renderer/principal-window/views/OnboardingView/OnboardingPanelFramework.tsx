@@ -22,6 +22,7 @@ import {
   useTerminalProvider,
   useTerminalActivity,
 } from '../../../contexts/TerminalContext';
+import { usePanelProgramStatus } from '../../../contexts/terminalProgramStatus';
 import {
   TabbedTerminalPanel,
   type TerminalTab,
@@ -137,6 +138,9 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
     }
     return states;
   }, [terminalActivities]);
+
+  // OSC 7501 program-reported status, reduced to one record per session.
+  const programStatus = usePanelProgramStatus();
 
   // Terminal context for the panel
   const terminalPanelContext = useMemo(
@@ -357,6 +361,7 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
             directory={terminalDirectory}
             renderer={terminalImplementation}
             workingStates={workingStates}
+            programStatus={programStatus}
             initialTabs={tabs}
             onTabsChange={handleTabsChange}
             renderTabContent={renderTabContent}

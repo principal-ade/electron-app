@@ -32,7 +32,15 @@ import type {
   DaemonSessionsMessage,
   GetScrollbackMessage,
   ScrollbackResponseMessage,
+  ProgramStatusMessage,
 } from './types';
+
+import {
+  OscScanner,
+  ProgramStatusRegistry,
+  PROGRAM_STATUS_FEATURE_DETECTION_REPLY,
+  parseProgramStatusPayload,
+} from '../shared/terminal/programStatus';
 
 // Feature flag for daemon mode (disabled by default due to production issues)
 const USE_DAEMON_MODE = process.env.USE_PTY_DAEMON === 'true';
@@ -161,6 +169,8 @@ interface TerminalSession {
   lastActivity: number;
   scrollback: string[]; // Stores PTY output for replay on reconnection (legacy mode)
   scrollbackBytes: number; // Tracked byte size of scrollback for cap enforcement
+  programStatus: ProgramStatusRegistry; // OSC 7501 records for this terminal
+  programStatusScanner: OscScanner; // Chunk-safe OSC 7501 extractor
 }
 
 // State
@@ -238,6 +248,65 @@ function sendToRenderer(sessionId: string, data: string): void {
 }
 
 // =============================================================================
+// Program Status (OSC 7501)
+// =============================================================================
+
+function emitProgramStatus(sessionId: string): void {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+
+  const message: ProgramStatusMessage = {
+    type: 'PROGRAM_STATUS',
+    id: `program-status-${sessionId}`,
+    timestamp: Date.now(),
+    sessionId,
+    records: session.programStatus.list(),
+  };
+  sendToMain(message);
+}
+
+function replyToProgramStatusQuery(sessionId: string): void {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+
+  if (USE_DAEMON_MODE && daemonBridge?.connected) {
+    daemonBridge.send({
+      type: 'write',
+      id: sessionId,
+      data: PROGRAM_STATUS_FEATURE_DETECTION_REPLY,
+    });
+  } else if (session.pty) {
+    session.pty.write(PROGRAM_STATUS_FEATURE_DETECTION_REPLY);
+  }
+}
+
+/**
+ * Scan PTY output for OSC 7501 reports (and OSC 133 `A` prompts). Does NOT
+ * strip anything from the stream — renderers ignore unknown OSC.
+ */
+function handleProgramStatusOutput(sessionId: string, data: string): void {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+
+  let changed = false;
+  for (const seq of session.programStatusScanner.push(data)) {
+    if (seq.code === '7501') {
+      const parsed = parseProgramStatusPayload(seq.payload);
+      if (parsed === 'query') {
+        replyToProgramStatusQuery(sessionId);
+      } else if (parsed !== null) {
+        if (session.programStatus.applyReport(parsed)) changed = true;
+      }
+    } else if (seq.code === '133' && seq.payload.startsWith('A')) {
+      // New shell prompt: working/blocked records are dropped.
+      if (session.programStatus.dropTransient()) changed = true;
+    }
+  }
+
+  if (changed) emitProgramStatus(sessionId);
+}
+
+// =============================================================================
 // Daemon Connection (Daemon Mode Only)
 // =============================================================================
 
@@ -262,6 +331,7 @@ async function connectToDaemon(_socketPath: string): Promise<void> {
     if (session) {
       session.lastActivity = Date.now();
     }
+    handleProgramStatusOutput(sessionId, data);
     sendToRenderer(sessionId, data);
   });
 
@@ -274,6 +344,10 @@ async function connectToDaemon(_socketPath: string): Promise<void> {
   });
 
   daemonBridge.on('exit', (sessionId: string, exitCode: number, _signal?: string) => {
+    const session = sessions.get(sessionId);
+    if (session && session.programStatus.dropTransient()) {
+      emitProgramStatus(sessionId);
+    }
     const exitMsg: SessionExitMessage = {
       type: 'SESSION_EXIT',
       id: `session-exit-${sessionId}`,
@@ -349,6 +423,8 @@ async function connectToDaemon(_socketPath: string): Promise<void> {
           lastActivity: new Date(info.lastActivity).getTime(),
           scrollback: [], // Not used in daemon mode (daemon handles scrollback)
           scrollbackBytes: 0,
+          programStatus: new ProgramStatusRegistry(),
+          programStatusScanner: new OscScanner(),
         };
         sessions.set(info.id, session);
         sessionPorts.set(info.id, new Map());
@@ -434,6 +510,8 @@ function createSessionLegacy(
       lastActivity: now,
       scrollback: [], // Initialize scrollback buffer
       scrollbackBytes: 0,
+      programStatus: new ProgramStatusRegistry(),
+      programStatusScanner: new OscScanner(),
     };
 
     sessions.set(sessionId, session);
@@ -458,10 +536,16 @@ function createSessionLegacy(
         if (dropped) session.scrollbackBytes -= dropped.length;
       }
 
+      // Parse OSC 7501 reports (does not modify the stream).
+      handleProgramStatusOutput(sessionId, data);
+
       sendToRenderer(sessionId, data);
     });
 
     ptyProcess.onExit((exitInfo: { exitCode: number }) => {
+      // Process exit drops working/blocked records (done/error survive).
+      if (session.programStatus.dropTransient()) emitProgramStatus(sessionId);
+
       const exitMsg: SessionExitMessage = {
         type: 'SESSION_EXIT',
         id: `session-exit-${sessionId}`,
@@ -539,6 +623,8 @@ async function createSessionDaemon(
       lastActivity: now,
       scrollback: [], // Not used in daemon mode (daemon handles scrollback)
       scrollbackBytes: 0,
+      programStatus: new ProgramStatusRegistry(),
+      programStatusScanner: new OscScanner(),
     };
     sessions.set(sessionId, session);
     sessionPorts.set(sessionId, new Map());

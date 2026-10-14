@@ -72,6 +72,7 @@ import type {
   DaemonSessionInfo,
   GetScrollbackMessage,
 } from '../../terminal-worker/types';
+import type { ProgramStatusRecord } from '../../shared/terminal/programStatus';
 
 /**
  * Minimal interface for WebSocket bridge to avoid circular dependency
@@ -91,6 +92,9 @@ export class TerminalSessionManager {
 
   // Activity tracking - which terminals have agents actively working
   private activityStore: Map<string, TerminalActivityState> = new Map();
+
+  // Program Status Protocol (OSC 7501) records per session (live-only)
+  private programStatusStore: Map<string, ProgramStatusRecord[]> = new Map();
 
   // WebSocket bridge for remote terminal access (optional)
   private wsBridge: TerminalWebSocketBridge | null = null;
@@ -377,6 +381,22 @@ export class TerminalSessionManager {
           clearTimeout(pending.timeout);
           this.pendingScrollbackRequests.delete(requestId);
           pending.resolve(buffer);
+        }
+        break;
+      }
+
+      case 'PROGRAM_STATUS': {
+        this.programStatusStore.set(msg.sessionId, msg.records);
+        // Broadcast to every window (mirrors terminal:activity-sync /
+        // terminal:sessions-changed) rather than only registered windows.
+        const payload = {
+          sessionId: msg.sessionId,
+          records: msg.records,
+        };
+        for (const win of BrowserWindow.getAllWindows()) {
+          if (!win.isDestroyed()) {
+            win.webContents.send(TerminalAPIEvents.PROGRAM_STATUS, payload);
+          }
         }
         break;
       }
@@ -837,6 +857,9 @@ export class TerminalSessionManager {
     // Clean up activity tracking (prevents ghost entries)
     this.activityStore.delete(sessionId);
 
+    // Clean up program status (live-only; never persisted)
+    this.programStatusStore.delete(sessionId);
+
     for (const [repo, sid] of Array.from(this.sessionsByRepo.entries())) {
       if (sid === sessionId) {
         this.sessionsByRepo.delete(repo);
@@ -1068,6 +1091,20 @@ export class TerminalSessionManager {
    */
   getActivityStoreSize(): number {
     return this.activityStore.size;
+  }
+
+  /**
+   * Get the current OSC 7501 program-status records for a session.
+   */
+  getProgramStatus(sessionId: string): ProgramStatusRecord[] {
+    return this.programStatusStore.get(sessionId) ?? [];
+  }
+
+  /**
+   * Get all program-status records, keyed by sessionId.
+   */
+  getAllProgramStatus(): Record<string, ProgramStatusRecord[]> {
+    return Object.fromEntries(this.programStatusStore);
   }
 
   // =============================================================================

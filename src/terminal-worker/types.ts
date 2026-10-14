@@ -2,6 +2,10 @@
  * Message types for terminal worker <-> main process communication
  */
 
+import type { ProgramStatusRecord } from '../shared/terminal/programStatus';
+
+export type { ProgramStatusRecord };
+
 // =============================================================================
 // Base Message Types
 // =============================================================================
@@ -156,6 +160,17 @@ export interface ScrollbackResponseMessage extends BaseMessage {
 }
 
 /**
+ * Program Status Protocol (OSC 7501) records for a session. Sent whenever a
+ * program reports a new state, on process exit, or on a new shell prompt.
+ * `records` is the full current set (live-only; never persisted).
+ */
+export interface ProgramStatusMessage extends BaseMessage {
+  type: 'PROGRAM_STATUS';
+  sessionId: string;
+  records: ProgramStatusRecord[];
+}
+
+/**
  * Session info from daemon (matches protocol.ts SessionInfo)
  */
 export interface DaemonSessionInfo {
@@ -177,7 +192,8 @@ export type WorkerToMainMessage =
   | DaemonConnectedMessage
   | DaemonDisconnectedMessage
   | DaemonSessionsMessage
-  | ScrollbackResponseMessage;
+  | ScrollbackResponseMessage
+  | ProgramStatusMessage;
 
 // =============================================================================
 // Port Messages (sent via MessagePort between worker and renderer)

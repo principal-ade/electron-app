@@ -46,6 +46,7 @@ import {
   useTerminalProvider,
   useTerminalActivity,
 } from '../contexts/TerminalContext';
+import { usePanelProgramStatus } from '../contexts/terminalProgramStatus';
 import {
   AgentHighlightProvider,
   useAgentHighlightProvider,
@@ -813,6 +814,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     }
     return states;
   }, [terminalActivities]);
+
+  // Reduce each session's OSC 7501 record set to the single record the tab bar
+  // should surface (most attention-worthy wins; root record breaks ties).
+  const programStatus = usePanelProgramStatus();
 
   // Open links clicked in the terminal in the default browser
   useTerminalLinkHandler(events);
@@ -2850,6 +2855,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               onActiveTabChange={setActiveTabId}
               requestCloseTabId={requestCloseTabId}
               workingStates={workingStates}
+              programStatus={programStatus}
               showAllTerminals={showAllTerminals}
               onShowAllTerminalsChange={setShowAllTerminals}
               bottomBarContent={bottomBarContent}
