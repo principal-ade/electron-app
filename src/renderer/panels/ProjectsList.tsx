@@ -10,6 +10,10 @@
  * Within each org, cloned (on-disk) projects sort first; the rest sort
  * alphabetically by name. Orgs with more than 10 repos start collapsed.
  * Used in the Projects surface left panel.
+ *
+ * When there's no GitHub session — the user isn't signed in (app OAuth or the
+ * `gh` CLI) — only local clones are reachable, so Owned/Starred would always be
+ * empty. The filter switch is hidden and the list is pinned to Cloned.
  */
 
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
@@ -452,14 +456,22 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     return Array.from(map.values());
   }, [githubRepos, starredRepos, repositories, gitStatusMap, baseDefaultDirectory, starredKeys]);
 
+  // Owned/Starred only have content when a GitHub session (app OAuth or the
+  // `gh` CLI) can list the user's repos. Signed out — or when the GitHub fetch
+  // resolves with no session — the panel is local clones only, so the filter
+  // switch is dead weight: hide it and pin the list to Cloned.
+  const showFilter =
+    !!currentUser || githubRepos.length > 0 || starredRepos.length > 0;
+  const effectiveFilter: ProjectFilter = showFilter ? filter : 'cloned';
+
   // Apply filter + search, then group by org and order the groups.
   const { groups, sortedOrgNames } = useMemo(() => {
     let filtered = projects;
-    if (filter === 'owned') {
+    if (effectiveFilter === 'owned') {
       filtered = filtered.filter(p => p.isOwned);
-    } else if (filter === 'cloned') {
+    } else if (effectiveFilter === 'cloned') {
       filtered = filtered.filter(p => p.isCloned);
-    } else if (filter === 'starred') {
+    } else if (effectiveFilter === 'starred') {
       filtered = filtered.filter(p => p.isStarred);
     }
 
@@ -510,7 +522,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       groups: grouped,
       sortedOrgNames: [...userOwn, ...memberOrgs, ...otherOrgs, ...untracked],
     };
-  }, [projects, filter, privateOnly, searchQuery, currentUser, userOrgs]);
+  }, [projects, effectiveFilter, privateOnly, searchQuery, currentUser, userOrgs]);
 
   const hasClonedProjects = useMemo(
     () => repositories.some(r => r.path),
@@ -558,9 +570,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       ? 'No projects'
       : searchQuery.trim()
         ? 'No projects match this search.'
-        : filter === 'starred'
+        : effectiveFilter === 'starred'
           ? 'No starred projects yet.'
-          : filter === 'cloned'
+          : effectiveFilter === 'cloned'
             ? 'No cloned projects yet.'
             : 'No owned projects yet.';
 
@@ -617,20 +629,22 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         </button>
       </div>
 
-      {/* Filter chips */}
-      <div style={{ padding: spacing.sm, flexShrink: 0 }}>
-        <SegmentedControl
-          options={[
-            { value: 'owned', label: 'Owned' },
-            { value: 'cloned', label: 'Cloned' },
-            { value: 'starred', label: 'Starred' },
-          ]}
-          value={filter}
-          onChange={(value) => setFilter(value as ProjectFilter)}
-          theme={theme}
-          variant="pill-flat"
-        />
-      </div>
+      {/* Filter chips — hidden without a GitHub session (clones-only list). */}
+      {showFilter && (
+        <div style={{ padding: spacing.sm, flexShrink: 0 }}>
+          <SegmentedControl
+            options={[
+              { value: 'owned', label: 'Owned' },
+              { value: 'cloned', label: 'Cloned' },
+              { value: 'starred', label: 'Starred' },
+            ]}
+            value={filter}
+            onChange={(value) => setFilter(value as ProjectFilter)}
+            theme={theme}
+            variant="pill-flat"
+          />
+        </div>
+      )}
 
       {/* Search + sort + clear-all */}
       <div
