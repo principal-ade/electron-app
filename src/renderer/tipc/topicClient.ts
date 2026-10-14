@@ -13,6 +13,7 @@ import type {
   CreateTopicInput,
   DeleteTopicInput,
   GetTopicInput,
+  GetTopicsInput,
   LinkSessionInput,
   LinkSessionResult,
   Topic,
@@ -26,7 +27,7 @@ import {
 } from '../../shared/main-process-api-interfaces/TopicAPI';
 
 export interface TopicClient {
-  getTopics: () => Promise<Topic[]>;
+  getTopics: (input?: GetTopicsInput) => Promise<Topic[]>;
   getTopic: (input: GetTopicInput) => Promise<Topic | null>;
   createTopic: (input: CreateTopicInput) => Promise<Topic>;
   updateTopic: (input: UpdateTopicInputArgs) => Promise<Topic>;
@@ -70,7 +71,7 @@ export interface TopicClient {
 }
 
 interface TipcTopicClient {
-  topic_getTopics: () => Promise<Topic[]>;
+  topic_getTopics: (input: GetTopicsInput) => Promise<Topic[]>;
   topic_getTopic: (input: GetTopicInput) => Promise<Topic | null>;
   topic_createTopic: (input: CreateTopicInput) => Promise<Topic>;
   topic_updateTopic: (input: UpdateTopicInputArgs) => Promise<Topic>;
@@ -99,7 +100,7 @@ function getTipcClient(): TipcTopicClient {
 }
 
 export const topicClient: TopicClient = {
-  getTopics: () => getTipcClient().topic_getTopics(),
+  getTopics: (input = {}) => getTipcClient().topic_getTopics(input),
   getTopic: (input) => getTipcClient().topic_getTopic(input),
   createTopic: (input) => getTipcClient().topic_createTopic(input),
   updateTopic: (input) => getTipcClient().topic_updateTopic(input),

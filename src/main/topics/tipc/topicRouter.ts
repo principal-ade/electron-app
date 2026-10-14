@@ -16,6 +16,7 @@ import type {
   AttachImageAssetInput,
   DeleteTopicInput,
   GetTopicInput,
+  GetTopicsInput,
   LinkSessionInput,
   UpdateTopicInputArgs,
 } from '../../../shared/tipc/topicRouterTypes';
@@ -43,9 +44,11 @@ export const topicRouter = {
   // Queries
   // ===========================================================================
 
-  topic_getTopics: t.procedure.action(async () => {
-    return registryService.getTopics();
-  }),
+  topic_getTopics: t.procedure
+    .input<GetTopicsInput>()
+    .action(async ({ input }) => {
+      return registryService.getTopics(input?.refresh === true);
+    }),
 
   topic_getTopic: t.procedure
     .input<GetTopicInput>()

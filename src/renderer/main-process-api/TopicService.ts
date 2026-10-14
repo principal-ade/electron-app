@@ -15,6 +15,7 @@ import type {
   TopicChangeEvent,
   UpdateTopicInput,
 } from '../../shared/main-process-api-interfaces/TopicAPI';
+import type { GetTopicsInput } from '../../shared/tipc/topicRouterTypes';
 import { topicClient } from '../tipc/topicClient';
 
 export class TopicService {
@@ -28,8 +29,13 @@ export class TopicService {
     return window.mainProcess.topics.onTopicChange(callback);
   }
 
-  static async getTopics(): Promise<Topic[]> {
-    return topicClient.getTopics();
+  /**
+   * List every topic. Pass `{ refresh: true }` on an explicit user refresh to
+   * rescan the topics directory and rebuild the on-disk manifest first, so
+   * topic files added or removed outside the app are reflected.
+   */
+  static async getTopics(options?: GetTopicsInput): Promise<Topic[]> {
+    return topicClient.getTopics(options);
   }
 
   static async getTopic(id: string): Promise<Topic | null> {

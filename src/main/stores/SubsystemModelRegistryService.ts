@@ -62,7 +62,6 @@ function isTrail(value: unknown): value is SubsystemTrail {
         typeof step.to === 'string' &&
         typeof step.mechanism === 'string' &&
         typeof step.file === 'string' &&
-        typeof step.line === 'number' &&
         typeof step.purl === 'string' &&
         typeof step.symbol === 'string',
     )

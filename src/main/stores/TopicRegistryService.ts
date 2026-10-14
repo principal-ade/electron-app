@@ -55,8 +55,13 @@ export class TopicRegistryService {
 
   // ===== Topic CRUD =====
 
-  async getTopics(): Promise<Topic[]> {
-    return this.topicStore.getTopics();
+  /**
+   * List every topic. Pass `refresh` to rescan the topics directory and rebuild
+   * the private manifest first, instead of trusting the cached `_index.json`
+   * (see `TopicStore.getTopics`).
+   */
+  async getTopics(refresh = false): Promise<Topic[]> {
+    return this.topicStore.getTopics({ refresh });
   }
 
   async getTopic(id: string): Promise<Topic | null> {

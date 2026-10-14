@@ -7,7 +7,12 @@ import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 export interface UseTopicLibraryResult {
   topics: Topic[];
   loading: boolean;
-  refresh: () => Promise<void>;
+  /**
+   * Re-list topics. Pass `{ refresh: true }` on an explicit user refresh to
+   * rebuild the on-disk manifest first, so externally added/removed topic files
+   * are reflected (see `TopicStore.getTopics`).
+   */
+  refresh: (options?: { refresh?: boolean }) => Promise<void>;
   /**
    * True when the topic's `repos` include the current window's repository PURL —
    * a direct membership check against the topic's declared repositories.
@@ -35,23 +40,26 @@ export function useTopicLibrary(
   const [loading, setLoading] = useState(true);
   const seqRef = useRef(0);
 
-  const refresh = useCallback(async () => {
-    const seq = ++seqRef.current;
-    setLoading(true);
-    try {
-      const [nextTopics, repoEntry] = await Promise.all([
-        TopicService.getTopics(),
-        repositoryPath
-          ? AlexandriaService.getRepositoryByPath(repositoryPath)
-          : Promise.resolve(null),
-      ]);
-      if (seq !== seqRef.current) return;
-      setTopics(nextTopics);
-      setRepoPurl(repoEntry ? repoPurlFromEntry(repoEntry) : null);
-    } finally {
-      if (seq === seqRef.current) setLoading(false);
-    }
-  }, [repositoryPath]);
+  const refresh = useCallback(
+    async (options?: { refresh?: boolean }) => {
+      const seq = ++seqRef.current;
+      setLoading(true);
+      try {
+        const [nextTopics, repoEntry] = await Promise.all([
+          TopicService.getTopics(options),
+          repositoryPath
+            ? AlexandriaService.getRepositoryByPath(repositoryPath)
+            : Promise.resolve(null),
+        ]);
+        if (seq !== seqRef.current) return;
+        setTopics(nextTopics);
+        setRepoPurl(repoEntry ? repoPurlFromEntry(repoEntry) : null);
+      } finally {
+        if (seq === seqRef.current) setLoading(false);
+      }
+    },
+    [repositoryPath],
+  );
 
   useEffect(() => {
     void refresh();

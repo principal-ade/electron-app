@@ -185,8 +185,8 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => void library.refresh()}
-            title="Refresh"
+            onClick={() => void library.refresh({ refresh: true })}
+            title="Refresh — rescan topic files"
             aria-label="Refresh"
             disabled={library.loading}
             style={{

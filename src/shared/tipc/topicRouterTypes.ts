@@ -35,6 +35,16 @@ export interface GetTopicInput {
   id: string;
 }
 
+export interface GetTopicsInput {
+  /**
+   * Rebuild the private `_index.json` manifest by rescanning the topics
+   * directory before reading, instead of trusting the cached manifest. Set on
+   * an explicit user refresh so topic files added or removed outside the store
+   * are reflected.
+   */
+  refresh?: boolean;
+}
+
 export interface UpdateTopicInputArgs {
   id: string;
   updates: UpdateTopicInput;
@@ -97,7 +107,7 @@ export type TopicRouterType = Record<
   topic_getTopics: {
     action: (args: {
       context: ActionContext;
-      input?: void;
+      input: GetTopicsInput;
     }) => Promise<Topic[]>;
   };
   topic_getTopic: {
