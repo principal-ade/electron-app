@@ -29,6 +29,63 @@ const mainPackageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'packa
 const releaseAppPackageJsonPath = path.join(projectRoot, 'release/app/package.json');
 const releaseAppPackageJson = JSON.parse(fs.readFileSync(releaseAppPackageJsonPath, 'utf8'));
 
+// ---------------------------------------------------------------------------
+// Publish pre-flight: auto-bump the version if the release tag already exists
+// ---------------------------------------------------------------------------
+// Publishing over an existing tag would fail (or silently mix artifacts), so
+// when --publish is requested we check GitHub and bump the patch version until
+// we land on a free one. This keeps the git tag, package.json and release/app
+// in sync without a manual version edit.
+const shouldPublish = process.argv.includes('--publish');
+const publishRepo = 'principal-ade/electron-app';
+const publishToken = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+
+const releaseExists = (version) => {
+  try {
+    const checkCmd = `curl -s -H "Authorization: token ${publishToken}" https://api.github.com/repos/${publishRepo}/releases/tags/v${version}`;
+    const releaseCheck = execSync(checkCmd, { encoding: 'utf8' });
+    return Boolean(releaseCheck && JSON.parse(releaseCheck).id);
+  } catch (e) {
+    // Probe failure (network, rate limit, ...) shouldn't block the build.
+    return false;
+  }
+};
+
+const bumpPatchVersion = () => {
+  const match = /^(\d+)\.(\d+)\.(\d+)(.*)$/.exec(mainPackageJson.version);
+  if (!match) {
+    throw new Error(`Cannot auto-bump non-semver version "${mainPackageJson.version}"`);
+  }
+  const nextVersion = `${match[1]}.${match[2]}.${Number(match[3]) + 1}`;
+  console.log(`⬆️  Bumping version: ${mainPackageJson.version} → ${nextVersion}`);
+  mainPackageJson.version = nextVersion;
+  fs.writeFileSync(
+    path.join(projectRoot, 'package.json'),
+    JSON.stringify(mainPackageJson, null, 2) + '\n'
+  );
+};
+
+if (shouldPublish) {
+  if (!publishToken) {
+    console.error('❌ No GitHub token found. Please set GH_TOKEN or GITHUB_TOKEN environment variable.');
+    console.log('   You can set it in your .env file or export it manually:');
+    console.log('   export GH_TOKEN=your_github_token_here');
+    process.exit(1);
+  }
+
+  let attempts = 0;
+  while (releaseExists(mainPackageJson.version)) {
+    console.warn(`⚠️  Release v${mainPackageJson.version} already exists on GitHub — bumping automatically.`);
+    bumpPatchVersion();
+    attempts += 1;
+    if (attempts >= 100) {
+      console.error('❌ Could not find a free version after 100 bumps. Aborting.');
+      process.exit(1);
+    }
+  }
+  console.log(`🔍 Publishing as v${mainPackageJson.version}`);
+}
+
 if (mainPackageJson.version !== releaseAppPackageJson.version) {
   console.log(`📦 Syncing version: ${releaseAppPackageJson.version} → ${mainPackageJson.version}`);
   releaseAppPackageJson.version = mainPackageJson.version;
@@ -125,42 +182,6 @@ try {
 
   // Step 5: Package with electron-builder
   console.log('📦 Packaging application...');
-  // Check if --publish flag was passed
-  const shouldPublish = process.argv.includes('--publish');
-
-  if (shouldPublish) {
-    // Pre-publish check: verify GitHub release doesn't already exist
-    const version = mainPackageJson.version;
-    console.log(`🔍 Checking if version ${version} can be published...`);
-
-    if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
-      console.error('❌ No GitHub token found. Please set GH_TOKEN or GITHUB_TOKEN environment variable.');
-      console.log('   You can set it in your .env file or export it manually:');
-      console.log('   export GH_TOKEN=your_github_token_here');
-      process.exit(1);
-    }
-
-    const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
-    try {
-      // Check if release already exists
-      const checkCmd = `curl -s -H "Authorization: token ${token}" https://api.github.com/repos/principal-ade/electron-app/releases/tags/v${version}`;
-      const releaseCheck = execSync(checkCmd, { encoding: 'utf8' });
-
-      if (releaseCheck && JSON.parse(releaseCheck).id) {
-        console.warn(`⚠️  Release v${version} already exists on GitHub.`);
-        console.log('   Options:');
-        console.log('   1. Delete the existing release on GitHub');
-        console.log('   2. Bump the version in package.json');
-        console.log('   3. Run without --publish flag to build without publishing');
-        process.exit(1);
-      }
-    } catch (e) {
-      // 404 error is expected and means we can publish
-      if (!e.stdout || !e.stdout.includes('Not Found')) {
-        console.log('✓ Version can be published');
-      }
-    }
-  }
 
   // Always build without publishing first (we'll publish after fixing DMGs)
   execSync(`npx electron-builder build --publish never`, {
@@ -185,7 +206,7 @@ try {
     const buildDir = path.join(projectRoot, 'release', 'build');
 
     // Create GitHub release on electron-app repo
-    const repo = 'principal-ade/electron-app';
+    const repo = publishRepo;
     try {
       execSync(`gh release create v${version} --repo ${repo} --title "v${version}" --generate-notes`, {
         cwd: projectRoot,
