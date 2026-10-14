@@ -121,14 +121,6 @@ export interface GetRepositoryCollaboratorsResponse {
   forbidden: boolean;
 }
 
-export interface GetUserFollowersInput {
-  username?: string;
-}
-
-export interface GetUserFollowingInput {
-  username?: string;
-}
-
 export interface FollowUserInput {
   username: string;
 }
@@ -290,18 +282,6 @@ export type GithubRouterType = Record<
       context: ActionContext;
       input: GetUserStarredForUserInput;
     }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubRepository[]>;
-  };
-  getUserFollowers: {
-    action: (args: {
-      context: ActionContext;
-      input: GetUserFollowersInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubUser[]>;
-  };
-  getUserFollowing: {
-    action: (args: {
-      context: ActionContext;
-      input: GetUserFollowingInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubUser[]>;
   };
   isFollowingUser: {
     action: (args: {

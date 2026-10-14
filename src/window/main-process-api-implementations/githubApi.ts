@@ -142,14 +142,6 @@ export const githubAPI: GitHubAPI = {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_USER_SSH_KEYS);
   },
 
-  getUserFollowers: async (username) => {
-    return ipcRenderer.invoke(GitHubAPIEvent.GET_USER_FOLLOWERS, username);
-  },
-
-  getUserFollowing: async (username) => {
-    return ipcRenderer.invoke(GitHubAPIEvent.GET_USER_FOLLOWING, username);
-  },
-
   getOrgMembers: async (org) => {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_ORG_MEMBERS, org);
   },

@@ -25,11 +25,36 @@ import {
 // import { registerWindowHandlers } from './services/ipc/window/windowHandlers'; // Replaced by modernWindowHandlers
 import { initializeServices, shutdownServices } from './initialization';
 import { verifyRequiredAssets } from './util';
+import {
+  ensureProcessPath,
+  resetToPackagedBasePath,
+} from './utils/processPath';
 // Defer SecureTokenIPC initialization to avoid early keychain access
 
 if (!app.isPackaged) {
   app.setName('Principal AI Dev');
 }
+
+// Dev/testing aid: `npm run dev` sets NODE_ENV_PACKAGED_SIMULATION. When that
+// (or SIMULATE_PACKAGED_PATH=true) is set, start from the same minimal PATH a
+// Finder-launched packaged app inherits — then augment it below — so dev and
+// packaged resolve PATH identically and prod-only PATH bugs surface in dev.
+if (
+  !app.isPackaged &&
+  (process.env.NODE_ENV_PACKAGED_SIMULATION === 'true' ||
+    process.env.SIMULATE_PACKAGED_PATH === 'true')
+) {
+  resetToPackagedBasePath();
+  console.log(`[Main] Simulating packaged PATH base: ${process.env.PATH}`);
+}
+
+// GUI apps launched from Finder/Dock inherit launchd's minimal PATH, which
+// omits Homebrew and per-user bins. Augment it once so shell-outs to tools
+// like `gh`/`git` behave the same as in `npm run dev`.
+ensureProcessPath();
+console.log(
+  `[Main] PATH resolved (${process.env.PATH?.split(path.delimiter).length ?? 0} entries)`,
+);
 
 // Configure electron-log to use app-specific directory
 log.transports.file.resolvePathFn = () => {

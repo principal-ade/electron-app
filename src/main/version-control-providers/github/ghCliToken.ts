@@ -11,6 +11,7 @@
  * token and will NOT accept a gh CLI token — those callers must not use this.
  */
 import { electronCLI } from '../../electron-cli-bridge';
+import { getProcessPath } from '../../utils/processPath';
 
 let warnedUnavailable = false;
 
@@ -22,7 +23,7 @@ export async function getGhCliToken(): Promise<string | null> {
       cwd: process.cwd(),
       env: {
         ...process.env,
-        PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
+        PATH: getProcessPath(),
       },
     });
 

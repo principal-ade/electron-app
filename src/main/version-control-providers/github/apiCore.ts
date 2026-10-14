@@ -13,6 +13,7 @@ import { electronCLI } from '../../electron-cli-bridge';
 import { authService } from '../../services/AuthService';
 import { getGhCliToken } from './ghCliToken';
 import { UnifiedSecureStorage } from '../../services/UnifiedSecureStorage';
+import { getProcessPath } from '../../utils/processPath';
 import type {
   GitHubAPIRequestBody,
   GitHubAPIResponseData,
@@ -184,7 +185,7 @@ export class GitHubAPICore {
         cwd: options.cwd || process.cwd(),
         env: {
           ...process.env,
-          PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
+          PATH: getProcessPath(),
         },
       });
 

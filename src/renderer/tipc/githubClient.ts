@@ -21,8 +21,6 @@ import type {
   GetOrgMembersInput,
   GetRepositoryCollaboratorsInput,
   GetRepositoryCollaboratorsResponse,
-  GetUserFollowersInput,
-  GetUserFollowingInput,
   FollowUserInput,
   UnfollowUserInput,
   IsFollowingUserInput,
@@ -90,8 +88,6 @@ export interface GithubClient {
   getUserStarredRepositoriesForUser: (
     input: GetUserStarredForUserInput,
   ) => Promise<GitHubRepository[]>;
-  getUserFollowers: (input: GetUserFollowersInput) => Promise<GitHubUser[]>;
-  getUserFollowing: (input: GetUserFollowingInput) => Promise<GitHubUser[]>;
   isFollowingUser: (input: IsFollowingUserInput) => Promise<boolean>;
   followUser: (input: FollowUserInput) => Promise<void>;
   unfollowUser: (input: UnfollowUserInput) => Promise<void>;
@@ -183,8 +179,6 @@ export type {
   GetUserOrgsForUserInput,
   GetUserStarredForUserInput,
   GetOrgMembersInput,
-  GetUserFollowersInput,
-  GetUserFollowingInput,
   FollowUserInput,
   UnfollowUserInput,
   IsFollowingUserInput,

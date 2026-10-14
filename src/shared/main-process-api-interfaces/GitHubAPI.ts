@@ -21,8 +21,6 @@ export enum GitHubAPIEvent {
   GET_CURRENT_USER = 'github:get-current-user',
   GET_TOKEN_INFO = 'github:get-token-info',
   GET_USER_SSH_KEYS = 'github:get-user-ssh-keys',
-  GET_USER_FOLLOWERS = 'github:get-user-followers',
-  GET_USER_FOLLOWING = 'github:get-user-following',
   GET_ORG_MEMBERS = 'github:get-org-members',
   GET_USER = 'github:get-user',
   GET_USER_ORGANIZATIONS_FOR_USER = 'github:get-user-organizations-for-user',
@@ -488,8 +486,6 @@ export interface GitHubAPI {
   getCurrentUser: () => Promise<GitHubUser | null>;
   getTokenInfo: () => Promise<TokenInfo | null>;
   getUserSSHKeys: () => Promise<SSHKeysResponse>;
-  getUserFollowers: (username?: string) => Promise<GitHubUser[]>;
-  getUserFollowing: (username?: string) => Promise<GitHubUser[]>;
   getOrgMembers: (org: string) => Promise<GitHubOrgMember[]>;
   /** Get a specific user's profile */
   getUser: (username: string) => Promise<GitHubUser | null>;

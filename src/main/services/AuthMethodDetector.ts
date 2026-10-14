@@ -10,8 +10,16 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import AuthStateManager from './AuthStateManager';
+import { getProcessPath } from '../utils/processPath';
 
 const execAsync = promisify(exec);
+
+// Raw `exec` inherits process.env.PATH, which is minimal for a GUI-launched
+// app. Resolve the augmented PATH at call time (not import time) so a dev-mode
+// PATH simulation applied at startup is respected.
+function execPathEnv(): { env: NodeJS.ProcessEnv } {
+  return { env: { ...process.env, PATH: getProcessPath() } };
+}
 
 export type AuthMethod = 'oauth' | 'cli' | 'git' | 'none';
 
@@ -126,11 +134,14 @@ export class AuthMethodDetector {
   private async checkGhCliAuth(): Promise<AuthMethodStatus['cli']> {
     try {
       // Check if gh is installed
-      await execAsync('which gh');
+      await execAsync('which gh', execPathEnv());
 
       // Check auth status
       try {
-        const { stdout } = await execAsync('gh auth status 2>&1');
+        const { stdout } = await execAsync(
+          'gh auth status 2>&1',
+          execPathEnv(),
+        );
         const isAuthenticated = stdout.includes('Logged in to github.com');
 
         // Try to extract username
@@ -167,11 +178,14 @@ export class AuthMethodDetector {
   private async checkGitAuth(): Promise<AuthMethodStatus['git']> {
     try {
       // Check if git is installed
-      await execAsync('which git');
+      await execAsync('which git', execPathEnv());
 
       // Check for credential helper
       try {
-        const { stdout } = await execAsync('git config --global credential.helper');
+        const { stdout } = await execAsync(
+          'git config --global credential.helper',
+          execPathEnv(),
+        );
         const helper = stdout.trim();
 
         return {

@@ -68,6 +68,7 @@ import {
 import { TopicsLeftPanel } from '../panels/TopicsLeftPanel';
 import { ProjectsLeftPanel } from '../panels/ProjectsLeftPanel';
 import { HomeLeftPanel } from '../panels/home-panel';
+import { useUserAboutInfo } from '../panels/home-panel/useUserAboutInfo';
 import { LocalTopicTabContent } from '../topics-view/LocalTopicTabContent';
 import {
   renderProjectsTabContent,
@@ -199,6 +200,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const getRepoInfo = useTerminalRepoInfo();
 
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(collapsed.left);
+  // Home profile, resolved here (the shell stays mounted while the left panel
+  // is swapped) so re-entering the Home panel shows the last profile instead of
+  // remounting and flashing the skeleton.
+  const { user: aboutUser, loading: userLoading } = useUserAboutInfo();
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
     string | null
   >(null);
@@ -710,22 +715,22 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         id: 'workspace-list',
         label:
           isRepositoryPanelActive && selectedRepository
-            ? selectedRepository.github?.name ??
+            ? (selectedRepository.github?.name ??
               selectedRepository.localEntry?.github?.name ??
-              'Repository'
+              'Repository')
             : activeView === 'home-panel'
-            ? 'Home'
-            : activeView === 'projects'
-              ? 'Activity'
-              : activeView === 'drawings'
+              ? 'Home'
+              : activeView === 'projects'
+                ? 'Activity'
+                : activeView === 'drawings'
                   ? 'Drawings'
                   : activeView === 'skills'
-                ? 'Skills'
-                : activeView === 'subsystem-models'
-                  ? 'Subsystem Models'
-                  : activeView === 'processes'
-                    ? 'Processes'
-                    : 'Topics',
+                    ? 'Skills'
+                    : activeView === 'subsystem-models'
+                      ? 'Subsystem Models'
+                      : activeView === 'processes'
+                        ? 'Processes'
+                        : 'Topics',
         content:
           isRepositoryPanelActive && selectedRepository ? (
             <RepoAboutCard
@@ -735,12 +740,14 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               baseDefaultDirectory={baseDefaultDirectory}
             />
           ) : activeView === 'home-panel' ? (
-            <HomeLeftPanel repositories={repositories} events={events} />
-          ) : activeView === 'projects' ? (
-            <ProjectsLeftPanel
+            <HomeLeftPanel
               repositories={repositories}
               events={events}
+              aboutUser={aboutUser}
+              userLoading={userLoading}
             />
+          ) : activeView === 'projects' ? (
+            <ProjectsLeftPanel repositories={repositories} events={events} />
           ) : activeView === 'drawings' ? (
             <DrawingsLeftPanel events={events} />
           ) : activeView === 'skills' ? (
@@ -817,6 +824,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       portalEvents,
       events,
       repositories,
+      aboutUser,
+      userLoading,
       terminalPanelContext,
       terminalActions,
       terminalCtx.terminalContext,

@@ -180,16 +180,6 @@ export class GithubService {
     }
   }
 
-  static async getUserFollowers(username?: string): Promise<GitHubUser[]> {
-    const result = await window.mainProcess.github.getUserFollowers(username);
-    return result || [];
-  }
-
-  static async getUserFollowing(username?: string): Promise<GitHubUser[]> {
-    const result = await window.mainProcess.github.getUserFollowing(username);
-    return result || [];
-  }
-
   static async isFollowingUser(username: string): Promise<boolean> {
     return githubClient.isFollowingUser({ username });
   }

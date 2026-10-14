@@ -8,6 +8,7 @@ import type { IncomingMessage } from 'http';
 import { electronCLI } from '../electron-cli-bridge';
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 import { authService } from '../services/AuthService';
+import { getProcessPath } from '../utils/processPath';
 import {
   GitHubAPIEvent,
   // DELETED: ConfigFetchRequest, ConfigFetchResponse, GitHubConfigRequest - unused after handler removal
@@ -1194,7 +1195,7 @@ export class GitHubAdapter {
         env: {
           ...process.env,
           // Ensure PATH is properly set for git and gh commands
-          PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
+          PATH: getProcessPath(),
         },
       });
 
@@ -1901,58 +1902,6 @@ export class GitHubAdapter {
     }
 
     return { collaborators: [], forbidden: false };
-  }
-
-  /**
-   * Get followers for a user (defaults to authenticated user)
-   */
-  async getUserFollowers(username?: string): Promise<GitHubUser[]> {
-    const endpoint = username
-      ? `/users/${username}/followers`
-      : '/user/followers';
-    const apiResult = await this.makeGitHubAPICall(endpoint);
-
-    if (apiResult.success && apiResult.data) {
-      return apiResult.data as GitHubUser[];
-    }
-
-    // Fallback to CLI
-    try {
-      const result = await this.executeCommand(['gh', 'api', endpoint]);
-      if (result.success && result.stdout) {
-        return JSON.parse(result.stdout) as GitHubUser[];
-      }
-    } catch (error) {
-      console.error('[GitHub] Error getting followers:', error);
-    }
-
-    return [];
-  }
-
-  /**
-   * Get users that a user is following (defaults to authenticated user)
-   */
-  async getUserFollowing(username?: string): Promise<GitHubUser[]> {
-    const endpoint = username
-      ? `/users/${username}/following`
-      : '/user/following';
-    const apiResult = await this.makeGitHubAPICall(endpoint);
-
-    if (apiResult.success && apiResult.data) {
-      return apiResult.data as GitHubUser[];
-    }
-
-    // Fallback to CLI
-    try {
-      const result = await this.executeCommand(['gh', 'api', endpoint]);
-      if (result.success && result.stdout) {
-        return JSON.parse(result.stdout) as GitHubUser[];
-      }
-    } catch (error) {
-      console.error('[GitHub] Error getting following:', error);
-    }
-
-    return [];
   }
 
   async isFollowingUser(username: string): Promise<boolean> {
@@ -3555,24 +3504,6 @@ export function registerGitHubIpcHandlers(
       return [];
     }
     return adapter.getUserSSHKeys();
-  });
-
-  ipcMain.handle(GitHubAPIEvent.GET_USER_FOLLOWERS, async (event, username) => {
-    const adapter = getAdapterFromSender(event.sender);
-    if (!adapter) {
-      console.error('[GitHub] No adapter found for GET_USER_FOLLOWERS');
-      return [];
-    }
-    return adapter.getUserFollowers(username);
-  });
-
-  ipcMain.handle(GitHubAPIEvent.GET_USER_FOLLOWING, async (event, username) => {
-    const adapter = getAdapterFromSender(event.sender);
-    if (!adapter) {
-      console.error('[GitHub] No adapter found for GET_USER_FOLLOWING');
-      return [];
-    }
-    return adapter.getUserFollowing(username);
   });
 
   ipcMain.handle(GitHubAPIEvent.GET_ORG_MEMBERS, async (event, org) => {

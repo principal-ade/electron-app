@@ -20,8 +20,6 @@ import type {
   GetUserStarredForUserInput,
   GetOrgMembersInput,
   GetRepositoryCollaboratorsInput,
-  GetUserFollowersInput,
-  GetUserFollowingInput,
   FollowUserInput,
   UnfollowUserInput,
   IsFollowingUserInput,
@@ -134,18 +132,6 @@ export const githubRouter = {
         input.username,
         input.options,
       );
-    }),
-
-  getUserFollowers: t.procedure
-    .input<GetUserFollowersInput>()
-    .action(async ({ input }) => {
-      return githubAdapter.getUserFollowers(input.username);
-    }),
-
-  getUserFollowing: t.procedure
-    .input<GetUserFollowingInput>()
-    .action(async ({ input }) => {
-      return githubAdapter.getUserFollowing(input.username);
     }),
 
   isFollowingUser: t.procedure

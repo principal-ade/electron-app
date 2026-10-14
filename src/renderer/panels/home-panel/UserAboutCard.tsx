@@ -9,40 +9,12 @@
 
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import {
-  Building2,
-  Github,
-  Mail,
-  MapPin,
-  Users,
-} from 'lucide-react';
-import { useDelayedLoading } from '../../hooks/useDelayedLoading';
-
-export type UserAboutSource = 'github' | 'git';
-
-export interface UserAboutInfo {
-  /** github = remote profile; git = global git config identity */
-  source?: UserAboutSource;
-  login: string;
-  name?: string | null;
-  email?: string | null;
-  avatar_url?: string;
-  html_url?: string;
-  bio?: string | null;
-  company?: string | null;
-  location?: string | null;
-  followers?: number | null;
-  following?: number | null;
-  public_repos?: number | null;
-  created_at?: string | null;
-}
+import { Github, Mail } from 'lucide-react';
+import type { UserAboutInfo } from './useUserAboutInfo';
 
 export interface UserAboutCardProps {
   info: UserAboutInfo | null;
   loading?: boolean;
-  onOpenFollowers?: () => void;
-  onOpenFollowing?: () => void;
-  isPrincipalSignedIn?: boolean;
 }
 
 function Avatar({
@@ -92,26 +64,36 @@ function Avatar({
   );
 }
 
+/**
+ * Height (border-box) shared by the loading skeleton and the rendered profile
+ * card so the Home panel doesn't jump when the profile loads. Sized to the
+ * compact GitHub card — a single identity row — since the company/location and
+ * followers rows were removed.
+ */
+const CARD_MIN_HEIGHT = 84;
+
 const cardShell = (background: string): React.CSSProperties => ({
   padding: '20px 20px 16px',
   display: 'flex',
   flexDirection: 'column',
   gap: 12,
+  minHeight: CARD_MIN_HEIGHT,
   background,
 });
 
 export const UserAboutCard: React.FC<UserAboutCardProps> = ({
   info,
   loading = false,
-  onOpenFollowers,
-  onOpenFollowing,
-  isPrincipalSignedIn = false,
 }) => {
   const { theme } = useTheme();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const showLoading = useDelayedLoading(loading);
 
-  if (!info) return showLoading ? <UserAboutCardSkeleton /> : null;
+  // Show the skeleton immediately while loading (no debounce) so the card never
+  // renders a blank frame first. Once loading finishes with no profile at all,
+  // fall back to the empty state.
+  if (!info) {
+    return loading ? <UserAboutCardSkeleton /> : <UserAboutCardEmpty />;
+  }
 
   const source = info.source ?? 'github';
   const isGit = source === 'git';
@@ -134,7 +116,14 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
     const displayName = info.name || info.email || 'Git';
     return (
       <div style={cardShell(theme.colors.backgroundSecondary)}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            minWidth: 0,
+          }}
+        >
           <div style={{ flexShrink: 0 }}>
             <Avatar displayName={displayName} />
           </div>
@@ -219,7 +208,9 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
   return (
     <div style={cardShell(theme.colors.backgroundSecondary)}>
       {/* Identity: avatar + name + @login + source badge */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}
+      >
         <a
           href={profileUrl}
           target="_blank"
@@ -301,122 +292,6 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
           <Github size={20} />
         </button>
       </div>
-
-      {/* Company / location */}
-      {(info.company || info.location) && (
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            columnGap: 16,
-            rowGap: 4,
-            color: theme.colors.textMuted,
-            fontSize: theme.fontSizes[1],
-          }}
-        >
-          {info.company && (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                minWidth: 0,
-              }}
-            >
-              <Building2 size={14} style={{ flexShrink: 0 }} />
-              <span
-                style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {info.company}
-              </span>
-            </span>
-          )}
-          {info.location && (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                minWidth: 0,
-              }}
-            >
-              <MapPin size={14} style={{ flexShrink: 0 }} />
-              <span
-                style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {info.location}
-              </span>
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Followers / following */}
-      {isPrincipalSignedIn ? (
-        (info.followers != null || info.following != null) && (
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              color: theme.colors.textMuted,
-              fontSize: theme.fontSizes[1],
-            }}
-          >
-            <Users size={14} style={{ flexShrink: 0 }} />
-            <span>
-              {info.followers != null && onOpenFollowers && (
-                <button
-                  type="button"
-                  onClick={onOpenFollowers}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    font: 'inherit',
-                    color: 'inherit',
-                  }}
-                >
-                  <span style={{ color: theme.colors.text, fontWeight: 600 }}>
-                    {info.followers.toLocaleString()}
-                  </span>{' '}
-                  followers
-                </button>
-              )}
-              {info.followers != null && info.following != null && ' · '}
-              {info.following != null && onOpenFollowing && (
-                <button
-                  type="button"
-                  onClick={onOpenFollowing}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    font: 'inherit',
-                    color: 'inherit',
-                  }}
-                >
-                  <span style={{ color: theme.colors.text, fontWeight: 600 }}>
-                    {info.following.toLocaleString()}
-                  </span>{' '}
-                  following
-                </button>
-              )}
-            </span>
-          </div>
-        )
-      ) : null}
 
       {showAuthModal && (
         <div
@@ -504,7 +379,11 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
 
 function UserAboutCardSkeleton() {
   const { theme } = useTheme();
-  const bar = (w: string | number, h: number, radius = 4): React.CSSProperties => ({
+  const bar = (
+    w: string | number,
+    h: number,
+    radius = 4,
+  ): React.CSSProperties => ({
     width: w,
     height: h,
     borderRadius: radius,
@@ -519,6 +398,7 @@ function UserAboutCardSkeleton() {
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
+        minHeight: CARD_MIN_HEIGHT,
         background: theme.colors.backgroundSecondary,
       }}
       aria-busy="true"
@@ -538,16 +418,72 @@ function UserAboutCardSkeleton() {
           <div style={bar(90, 12)} />
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={bar(96, 12)} />
-        <div style={bar(64, 12)} />
-      </div>
       <style>{`
         @keyframes homeCardPulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.4; }
         }
       `}</style>
+    </div>
+  );
+}
+
+/**
+ * Shown once loading finishes with neither a GitHub profile nor a local git
+ * identity (both `git config --global user.name` and `user.email` unset).
+ */
+function UserAboutCardEmpty() {
+  const { theme } = useTheme();
+
+  return (
+    <div style={cardShell(theme.colors.backgroundSecondary)}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}
+      >
+        <div
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            color: theme.colors.textMuted,
+            backgroundColor: theme.colors.background,
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <Github size={22} />
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div
+            style={{
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[4],
+              fontWeight: 700,
+              color: theme.colors.primary,
+              lineHeight: 1.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Not signed in
+          </div>
+          <div
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Sign in with the GitHub CLI
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
