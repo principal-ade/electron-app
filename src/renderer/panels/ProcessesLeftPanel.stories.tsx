@@ -21,12 +21,32 @@ import {
 const minutesAgo = (n: number) => Date.now() - n * 60_000;
 const hoursAgo = (n: number) => Date.now() - n * 3_600_000;
 
+/** Tiny self-contained SVG avatar (data URI) so fixtures render offline. */
+const avatar = (fill: string, letter: string): string =>
+  `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" rx="16" fill="${fill}"/><text x="16" y="22" font-family="sans-serif" font-size="16" fill="#ffffff" text-anchor="middle">${letter}</text></svg>`,
+  )}`;
+
+// Resolved repos — when a fixture carries one, the row shows the avatar + repo
+// name instead of the cwd path.
+const REPO_ELECTRON_APP = {
+  name: 'electron-app',
+  owner: 'principal-ade',
+  avatarUrl: avatar('#6c5ce7', 'P'),
+};
+const REPO_API = {
+  name: 'api',
+  owner: 'principal-ade',
+  avatarUrl: avatar('#e17055', 'P'),
+};
+
 const entry = (
   over: Partial<ProcessEntry> & Pick<ProcessEntry, 'id' | 'label' | 'command'>,
 ): ProcessEntry => ({
   cwd: '~/Developer/desktop-app/electron-app',
   kind: 'dev-server',
   status: 'running',
+  origin: 'managed',
   startedAt: minutesAgo(12),
   runCount: 1,
   ...over,
@@ -38,6 +58,7 @@ const processFixtures: ProcessEntry[] = [
     label: 'electron-app dev',
     command: 'npm run start:dev',
     cwd: '~/Developer/desktop-app/electron-app',
+    repo: REPO_ELECTRON_APP,
     kind: 'dev-server',
     status: 'running',
     pid: 48210,
@@ -51,6 +72,7 @@ const processFixtures: ProcessEntry[] = [
     label: 'Storybook',
     command: 'npm run storybook',
     cwd: '~/Developer/desktop-app/electron-app',
+    repo: REPO_ELECTRON_APP,
     kind: 'dev-server',
     status: 'running',
     pid: 48333,
@@ -83,6 +105,7 @@ const processFixtures: ProcessEntry[] = [
     id: 'p-prev-dev',
     label: 'electron-app dev',
     command: 'npm run start:dev',
+    repo: REPO_ELECTRON_APP,
     kind: 'dev-server',
     status: 'stopped',
     port: 3000,
@@ -108,6 +131,7 @@ const processFixtures: ProcessEntry[] = [
     id: 'p-docker',
     label: 'docker compose up',
     command: 'docker compose up api db',
+    repo: REPO_API,
     kind: 'task',
     status: 'failed',
     startedAt: hoursAgo(30),

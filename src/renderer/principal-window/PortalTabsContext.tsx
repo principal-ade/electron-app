@@ -35,6 +35,7 @@ import type {
   DrawingTab,
   SkillTab,
   SubsystemModelTab,
+  LocalhostBrowserTab,
 } from '../events/portalTabs';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
 
@@ -62,7 +63,9 @@ export type WorkspaceTab =
   | DrawingTab
   // Skills
   | SkillTab
-  | SubsystemModelTab;
+  | SubsystemModelTab
+  // Processes
+  | LocalhostBrowserTab;
 
 // ----------------------------------------------------------------------------
 // Slice shapes
@@ -117,6 +120,8 @@ export interface WorkspaceTabsContextValue {
   openSkill: (label: string) => void;
   /** Open or focus a subsystem model tab. */
   openSubsystemModel: (modelId: string, title: string) => void;
+  /** Open (or focus) an embedded localhost browser tab for a dev-server port. */
+  openLocalhostBrowser: (port: number, path?: string, label?: string) => void;
 }
 
 /** Back-compat shape for `useProjectsTabs` (titlebar + IntegratedShell). */
@@ -481,6 +486,26 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [openTab],
   );
 
+  // Embedded localhost browser — one tab per port, deduped by the port.
+  const openLocalhostBrowser = useCallback(
+    (port: number, path?: string, label?: string) => {
+      const id = `localhost-browser-${port}`;
+      openTab(
+        id,
+        () =>
+          ({
+            id,
+            label: label || `localhost:${port}`,
+            contentType: 'localhost-browser',
+            closable: true,
+            port,
+            path,
+          }) as LocalhostBrowserTab,
+      );
+    },
+    [openTab],
+  );
+
   return useMemo<WorkspaceTabsContextValue>(
     () => ({
       tabs,
@@ -500,6 +525,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openDrawing,
       openSkill,
       openSubsystemModel,
+      openLocalhostBrowser,
     }),
     [
       tabs,
@@ -517,6 +543,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openDrawing,
       openSkill,
       openSubsystemModel,
+      openLocalhostBrowser,
     ],
   );
 }

@@ -18,6 +18,8 @@ import { registerRepoRoutes } from '../repos/repoRoutes';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { registerDependencyRoutes } from '../dependency-graph/dependencyRoutes';
 import { DependencyGraphService } from '../dependency-graph/DependencyGraphService';
+import { registerProcessRoutes } from '../processes/processRoutes';
+import { getProcessRegistry } from '../processes/ProcessRegistry';
 
 // Tracer for Principal MCP Bridge instrumentation
 const tracer = getTracer('principal-ade-main');
@@ -162,6 +164,59 @@ export class PrincipalMCPBridge extends EventEmitter {
                 },
                 response:
                   '{ success, scope:"direct-dependents", target:{ repoPath, repoName?, purls[] }, impacted:[{ purl, repoPath, name, dependsOn[] }], unanalyzedCount }',
+              },
+            ],
+          },
+          {
+            name: 'processes',
+            description:
+              'Start, stop, restart, and remove long-lived managed processes (dev servers, watchers, tasks). The app owns the process; closing its panel does not kill it. Agent-started commands are constrained: cwd must be inside a registered repository, and the command binary must be on the agent allowlist.',
+            routes: [
+              {
+                method: 'GET',
+                path: '/api/processes',
+                summary: 'List managed + detected processes.',
+                response: '{ success, processes: ProcessEntry[] }',
+              },
+              {
+                method: 'POST',
+                path: '/api/processes',
+                summary:
+                  'Start a managed process. cwd must be inside a registered repo; command must be allowlisted.',
+                body: {
+                  command: 'string (required) — binary, e.g. "npm"',
+                  args: 'string[] (optional) — e.g. ["run", "dev"]',
+                  cwd: 'string (required) — absolute path inside a registered repo',
+                  env: 'Record<string,string> (optional)',
+                  label: 'string (optional)',
+                  kind: '"dev-server" | "watcher" | "task" | "agent" | "script" (optional)',
+                },
+                response:
+                  '201 { success, process } | 400 { success:false, error }',
+              },
+              {
+                method: 'GET',
+                path: '/api/processes/:id/logs',
+                summary: 'Captured stdout/stderr for a process (diagnostics).',
+                response: '{ success, id, logs } | 404 { success:false, error }',
+              },
+              {
+                method: 'POST',
+                path: '/api/processes/:id/stop',
+                summary: 'Stop (kill) a running process. Escalates SIGTERM → SIGKILL.',
+                response: '{ success } | 404 { success:false, error }',
+              },
+              {
+                method: 'POST',
+                path: '/api/processes/:id/restart',
+                summary: "Restart a process by re-running its original command.",
+                response: '{ success, process } | 404 { success:false, error }',
+              },
+              {
+                method: 'DELETE',
+                path: '/api/processes/:id',
+                summary: 'Remove an entry from the list (only when not running).',
+                response: '{ success } | 404 { success:false, error }',
               },
             ],
           },
@@ -1126,6 +1181,11 @@ export class PrincipalMCPBridge extends EventEmitter {
     // DEPENDENCY GRAPH (BLAST RADIUS) ROUTES
     // ============================================
     registerDependencyRoutes(this.app, DependencyGraphService.getInstance());
+
+    // ============================================
+    // PROCESS REGISTRY ROUTES
+    // ============================================
+    registerProcessRoutes(this.app, getProcessRegistry());
   }
 
   public async start(): Promise<number> {

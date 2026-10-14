@@ -76,6 +76,8 @@ import {
   registerLocalhostDetectionHandlers,
   cleanupLocalhostWatchers,
 } from './services/ipc/localhost/localhostDetectionHandlers';
+import { registerProcessHandlers } from './processes/processHandlers';
+import { registerProcessQuitHandler } from './processes/processLifecycle';
 import { registerGitHubArtifactHandlers } from './services/ipc/githubArtifactHandlers';
 import { ElectronClipboardAdapter } from './system/clipboardHandler';
 import { registerSkillLockHandlers } from './skills/skillLockHandlers';
@@ -293,6 +295,8 @@ const registerAllIpcHandlers = async () => {
   registerSystemHandlers();
   registerFeedbackHandlers();
   registerLocalhostDetectionHandlers();
+  registerProcessHandlers();
+  registerProcessQuitHandler();
   registerGitHubArtifactHandlers();
 };
 

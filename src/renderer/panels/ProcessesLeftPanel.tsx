@@ -24,7 +24,6 @@ import {
   ChevronDown,
   Check,
   ListFilter,
-  Plus,
   Play,
   Square,
   RotateCw,
@@ -41,58 +40,25 @@ import {
 } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
+import type {
+  ProcessEntry,
+  ProcessStatus,
+} from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 
 // ---------------------------------------------------------------------------
 // Entry model
 //
-// The whole point of this panel is to pin down the shape. `id` is a stable,
-// durable, main-process-generated identifier (NOT the OS pid). `pid` is
-// diagnostic only, may be absent (daemon/worker modes), and changes on restart.
+// The canonical shape lives in the shared process-registry API so main and
+// renderer agree. `id` is a stable, durable, main-process-generated identifier
+// (NOT the OS pid); `pid` is diagnostic only and changes across restarts.
 // ---------------------------------------------------------------------------
 
-export type ProcessStatus =
-  | 'starting'
-  | 'running'
-  | 'restarting'
-  | 'stopping'
-  | 'stopped'
-  | 'failed';
-
-/** Coarse classification of what kind of process this is. */
-export type ProcessKind = 'dev-server' | 'watcher' | 'task' | 'agent' | 'script';
-
-export interface ProcessEntry {
-  /** Stable, durable id minted by the main-process registry. Never the pid. */
-  id: string;
-  /** Human-readable label shown as the row title. */
-  label: string;
-  /** Full command line as run (for the row subtitle + copy). */
-  command: string;
-  /** Working directory the process was launched in. */
-  cwd: string;
-  kind: ProcessKind;
-  status: ProcessStatus;
-  /** OS pid — diagnostic only; may be undefined and changes across restarts. */
-  pid?: number;
-  /** Active port, when the process exposes one (dev servers). */
-  port?: number;
-  /** What opened this process (topic id, agent session, manual run). */
-  source?: string;
-  /** When the current run started. */
-  startedAt: number;
-  /** When the (most recent) run ended, if it has. */
-  endedAt?: number;
-  /** Exit code of the last finished run. */
-  exitCode?: number;
-  /** Last error captured, for failed/stopped processes. */
-  lastError?: string;
-  /** How many times this command has been launched (history signal). */
-  runCount?: number;
-  /** Whether a tab is currently open for this process. */
-  hasOpenTab?: boolean;
-  /** Whether this process was launched from the command history. */
-  fromHistory?: boolean;
-}
+export type {
+  ProcessEntry,
+  ProcessKind,
+  ProcessRepo,
+  ProcessStatus,
+} from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 
 // ---------------------------------------------------------------------------
 // Intents — the contract a host implements. Clicking a row never opens a tab
@@ -200,19 +166,6 @@ function timeAgo(ts: number): string {
   const months = Math.floor(days / 30);
   if (months < 12) return `${months}mo ago`;
   return `${Math.floor(months / 12)}y ago`;
-}
-
-/** Elapsed run duration for a still-running process (or the last run's span). */
-function formatRunDuration(entry: ProcessEntry): string | null {
-  if (entry.startedAt == null) return null;
-  const end = entry.endedAt ?? Date.now();
-  const seconds = Math.max(0, Math.floor((end - entry.startedAt) / 1000));
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const rem = minutes % 60;
-  return `${hours}h ${rem}m`;
 }
 
 // ---------------------------------------------------------------------------
@@ -352,12 +305,92 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
     </span>
   );
 
+  // Location line: a resolved git repo (owner avatar + name) when we could map
+  // the cwd to one, otherwise the raw directory path.
+  const renderLocation = (entry: ProcessEntry) => {
+    if (entry.repo) {
+      const { name, owner, avatarUrl } = entry.repo;
+      const fullName = owner ? `${owner}/${name}` : name;
+      return (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            minWidth: 0,
+            maxWidth: 180,
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+          }}
+          title={entry.cwd ? `${fullName} — ${entry.cwd}` : fullName}
+        >
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={owner ?? name}
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: '50%',
+                flexShrink: 0,
+                display: 'block',
+                objectFit: 'cover',
+              }}
+            />
+          ) : (
+            <span
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: '50%',
+                flexShrink: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: theme.colors.backgroundSecondary,
+              }}
+            >
+              <Folder size={9} />
+            </span>
+          )}
+          <span
+            style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {name}
+          </span>
+        </span>
+      );
+    }
+
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          minWidth: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          maxWidth: 180,
+        }}
+        title={entry.cwd}
+      >
+        <Folder size={11} />
+        {entry.cwd}
+      </span>
+    );
+  };
+
   const renderRow = (entry: ProcessEntry) => {
     const meta = statusMeta(entry.status, theme);
     const hovered = hoveredId === entry.id;
     const active = activeEntryId === entry.id;
     const isActive = ACTIVE_STATUSES.includes(entry.status);
-    const duration = formatRunDuration(entry);
 
     const action = (name: ProcessIntentName) => (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -438,7 +471,7 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
         />
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Title line: label + open-tab indicator */}
+          {/* Title line: label + port + open-tab indicator */}
           <div
             style={{
               display: 'flex',
@@ -453,6 +486,7 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
                 fontSize: theme.fontSizes[2],
                 fontWeight: active ? 700 : 500,
                 color: theme.colors.text,
+                minWidth: 0,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -460,6 +494,10 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
             >
               {entry.label}
             </span>
+            {entry.port != null &&
+              renderBadge(`:${entry.port}`, theme.colors.primary, {
+                mono: true,
+              })}
             {entry.hasOpenTab && (
               <span
                 title="A tab is open for this process"
@@ -475,23 +513,9 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
             )}
           </div>
 
-          {/* Command line */}
-          <div
-            title={entry.command}
-            style={{
-              fontFamily: theme.fonts.monospace,
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textMuted,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              marginBottom: 4,
-            }}
-          >
-            {entry.command}
-          </div>
-
-          {/* Meta line: status + kind + port + pid + cwd + time */}
+          {/* Meta line: repo/cwd + status + last-ran time (history only).
+              The command, pid, and kind are intentionally not shown by default
+              (kept on the model for a future reveal / diagnostics). */}
           <div
             style={{
               display: 'flex',
@@ -503,43 +527,9 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
               color: theme.colors.textTertiary,
             }}
           >
+            {renderLocation(entry)}
             {entry.status !== 'running' &&
               renderBadge(meta.label, meta.color)}
-            {renderBadge(entry.kind, theme.colors.textSecondary)}
-            {entry.port != null &&
-              renderBadge(`:${entry.port}`, theme.colors.primary, {
-                mono: true,
-              })}
-            {entry.pid != null &&
-              renderBadge(`pid ${entry.pid}`, theme.colors.textTertiary)}
-            {isActive && duration && (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                <Activity size={11} />
-                {duration}
-              </span>
-            )}
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                minWidth: 0,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                maxWidth: 180,
-              }}
-              title={entry.cwd}
-            >
-              <Folder size={11} />
-              {entry.cwd}
-            </span>
             {entry.runCount != null && entry.runCount > 1 && (
               <span title={`Ran ${entry.runCount} times`}>
                 ×{entry.runCount}
@@ -729,30 +719,6 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
             style={{ animation: 'spin 1s linear infinite' }}
           />
         )}
-        <button
-          onClick={() =>
-            events.emit({
-              type: PROCESS_INTENTS.run,
-              source: 'processes-left-panel',
-              timestamp: Date.now(),
-              payload: {},
-            })
-          }
-          title="Run a command"
-          aria-label="Run a command"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: spacing.xs,
-            background: 'transparent',
-            border: 'none',
-            color: theme.colors.textSecondary,
-            cursor: 'pointer',
-          }}
-        >
-          <Plus size={14} />
-        </button>
         <button
           onClick={() =>
             events.emit({

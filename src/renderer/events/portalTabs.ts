@@ -182,6 +182,19 @@ export interface SubsystemModelTab extends BaseTab {
   modelId: string;
 }
 
+/**
+ * Localhost browser tab — an embedded `<webview>` (via
+ * `@industry-theme/localhost-panels`) pointed at a local dev server. Opened from
+ * the Processes panel for an entry that reports a port.
+ */
+export interface LocalhostBrowserTab extends BaseTab {
+  contentType: 'localhost-browser';
+  /** Port the embedded browser loads (`http://localhost:<port>`). */
+  port: number;
+  /** Optional path appended to the URL (defaults to `/`). */
+  path?: string;
+}
+
 /** Union of all tab types the Projects surface renders. */
 export type FeedTab =
   | TerminalTab
@@ -195,4 +208,5 @@ export type FeedTab =
   | FileCityGuideTab
   | MarkdownDocTab
   | SourceFileTab
-  | MediaTab;
+  | MediaTab
+  | LocalhostBrowserTab;

@@ -29,6 +29,7 @@ export type WorkspaceView =
   | 'topics'
   | 'drawings'
   | 'skills'
+  | 'processes'
   | 'subsystem-models';
 
 export const WORKSPACE_VIEWS: WorkspaceView[] = [
@@ -37,6 +38,7 @@ export const WORKSPACE_VIEWS: WorkspaceView[] = [
   'topics',
   'drawings',
   'skills',
+  'processes',
   'subsystem-models',
 ];
 
@@ -74,6 +76,7 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
         workspaceView === 'topics' ||
         workspaceView === 'drawings' ||
         workspaceView === 'skills' ||
+        workspaceView === 'processes' ||
         workspaceView === 'subsystem-models') && (
         <WorkspaceShell
           activeView={workspaceView}

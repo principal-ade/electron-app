@@ -213,12 +213,11 @@ console.log(example);
       // future service-backed stories from throwing on invoke/undefined.
       processes: {
         list: () => Promise.resolve([]),
-        run: () => Promise.resolve({ id: 'mock-process' }),
-        restart: () => Promise.resolve({ success: true }),
+        start: () => Promise.resolve({ success: true }),
         stop: () => Promise.resolve({ success: true }),
-        kill: () => Promise.resolve({ success: true }),
+        restart: () => Promise.resolve({ success: true }),
         remove: () => Promise.resolve({ success: true }),
-        onProcessChange: () => () => {},
+        onChanged: () => () => {},
       },
       // WindowService.openDevWorkspace — no-op in storybook.
       window: {

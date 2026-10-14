@@ -7,7 +7,6 @@ import { Settings, type SettingsCategory } from '../../views/Settings';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
 import { OnboardingView } from '../../views/OnboardingView';
-import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { HomeView } from '../../views/HomeView';
 import {
@@ -884,7 +883,6 @@ export const IntegratedShell: React.FC = () => {
                       <Settings initialCategory={settingsCategory} />
                     )}
                     {overlayView === 'auth' && <AuthView />}
-                    {overlayView === 'processes' && <LocalhostProcessesView />}
                     {overlayView === 'connections' && <ConnectionsView />}
                   </motion.div>
                 </motion.div>

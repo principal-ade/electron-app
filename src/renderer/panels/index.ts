@@ -5,14 +5,6 @@
  * These follow the same structure as external panel packages.
  */
 
-// Localhost Processes Panel
-export {
-  panels as localhostProcessesPanels,
-  localhostProcessesPanelDefinition,
-  LocalhostProcessesPanel,
-  type RunningServer,
-} from './localhost-processes';
-
 // Terminal Sessions Panel
 export {
   panels as terminalSessionsPanels,

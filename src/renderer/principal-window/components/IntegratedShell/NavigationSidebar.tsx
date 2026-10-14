@@ -17,6 +17,7 @@ import { ShellService } from '../../../main-process-api/ShellService';
 import { GithubService } from '../../../main-process-api/GithubService';
 import type { NavigationView } from './IntegratedShell';
 import { useEffect, useState } from 'react';
+import { useProcessRegistry } from '../../../hooks/useProcessRegistry';
 
 const DiscordIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -99,6 +100,9 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   onSelectRepository,
 }) => {
   const { theme, mode } = useTheme();
+  // Managed + detected processes — drives the conditional nav item.
+  const { entries: processes } = useProcessRegistry();
+  const hasProcesses = processes.length > 0;
   const [hoveredNavItemId, setHoveredNavItemId] =
     useState<NavigationView | 'repository' | null>(null);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
@@ -204,8 +208,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           },
         ]
       : []),
-    // Only include processes button if user has enabled it in preferences
-    ...(showProcessesButton
+    // Processes: shown when enabled in preferences, or whenever processes run.
+    ...(showProcessesButton || hasProcesses
       ? [
           {
             id: 'processes' as NavigationView,

@@ -31,7 +31,7 @@ import React, {
   useEffect,
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Network, PenTool, ToolCase } from 'lucide-react';
+import { Globe, Network, PenTool, ToolCase } from 'lucide-react';
 import { TopicsIcon } from '../components/TopicsIcon';
 import {
   ConfigurablePanelLayout,
@@ -82,8 +82,15 @@ import { SkillsSurfaceProvider } from '../skills-view/SkillsSurfaceContext';
 import { SkillsLeftPanel } from '../skills-view/SkillsLeftPanel';
 import { SkillDetailTabContent } from '../skills-view/SkillDetailTabContent';
 import { SubsystemModelsLeftPanel } from '../subsystem-models/SubsystemModelsLeftPanel';
+import { ProcessesView } from '../principal-window/views/ProcessesView';
 import { SubsystemModelTabContent } from '../subsystem-models/SubsystemModelTabContent';
-import type { FeedTab, DrawingTab, SubsystemModelTab } from '../events/portalTabs';
+import { LocalhostBrowserTabContent } from '../principal-window/views/ProcessesView/LocalhostBrowserTabContent';
+import type {
+  FeedTab,
+  DrawingTab,
+  SubsystemModelTab,
+  LocalhostBrowserTab,
+} from '../events/portalTabs';
 import {
   useWorkspaceTabs,
   type WorkspaceTab,
@@ -103,6 +110,7 @@ export type WorkspaceView =
   | 'topics'
   | 'drawings'
   | 'skills'
+  | 'processes'
   | 'subsystem-models';
 
 /** Centered landing hint shown by the `topics-home` tab. */
@@ -327,6 +335,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         return <ToolCase size={14} />;
       case 'subsystem-model':
         return <Network size={14} />;
+      case 'localhost-browser':
+        return <Globe size={14} />;
       default:
         return null;
     }
@@ -392,6 +402,16 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             <SubsystemModelTabContent
               key={modelTab.id}
               modelId={modelTab.modelId}
+            />
+          );
+        }
+        case 'localhost-browser': {
+          const browserTab = tab as LocalhostBrowserTab;
+          return (
+            <LocalhostBrowserTabContent
+              key={browserTab.id}
+              port={browserTab.port}
+              path={browserTab.path}
             />
           );
         }
@@ -703,7 +723,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
                 ? 'Skills'
                 : activeView === 'subsystem-models'
                   ? 'Subsystem Models'
-                  : 'Topics',
+                  : activeView === 'processes'
+                    ? 'Processes'
+                    : 'Topics',
         content:
           isRepositoryPanelActive && selectedRepository ? (
             <RepoAboutCard
@@ -728,6 +750,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               events={portalEvents}
               activeTabId={activeTabId}
             />
+          ) : activeView === 'processes' ? (
+            <ProcessesView />
           ) : (
             <TopicsLeftPanel events={portalEvents} />
           ),
