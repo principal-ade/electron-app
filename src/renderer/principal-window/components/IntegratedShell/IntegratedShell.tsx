@@ -55,6 +55,17 @@ const VIEW_OPTIONS = [
   'subsystem-models',
 ];
 
+// Cmd+Shift+<letter> jumps straight to a sidebar view. Keys are matched on
+// `code` (layout-independent) and mirror the sidebar's item order/mnemonics.
+const SIDEBAR_VIEW_SHORTCUTS: Record<string, NavigationView> = {
+  KeyH: 'home-panel', // Home
+  KeyP: 'projects', // Projects
+  KeyM: 'subsystem-models', // Models
+  KeyT: 'topics', // Topics
+  KeyD: 'drawings', // Drawings
+  KeyG: 'processes', // Processes (Globe icon)
+};
+
 // Quick commands for the command palette autocomplete
 const QUICK_COMMANDS: QuickCommand[] = [
   {
@@ -675,6 +686,24 @@ export const IntegratedShell: React.FC = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [lastWorkspaceView, handleViewChange]);
 
+  // Cmd+Shift+<letter>: jump straight to a sidebar view
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (
+        !((e.metaKey || e.ctrlKey) && e.shiftKey) ||
+        e.altKey
+      ) {
+        return;
+      }
+      const view = SIDEBAR_VIEW_SHORTCUTS[e.code];
+      if (!view) return;
+      e.preventDefault();
+      handleViewChange(view);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleViewChange]);
+
   // Escape: dismiss a standalone overlay (always back to workspace)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -686,10 +715,10 @@ export const IntegratedShell: React.FC = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [lastWorkspaceView, handleViewChange]);
 
-  // Agent Command Palette - Cmd+Shift+P to open
+  // Agent Command Palette - Cmd+Shift+K to open
   const agentPalette = useAgentCommandPalette({
     events,
-    keyboard: { key: 'p', metaKey: true, shiftKey: true, altKey: false },
+    keyboard: { key: 'k', metaKey: true, shiftKey: true, altKey: false },
     config: {
       placeholder: 'Type / for commands or describe what you want',
       autoCloseDelay: 1500,
@@ -887,7 +916,7 @@ export const IntegratedShell: React.FC = () => {
         </div>
       </div>
 
-      {/* Agent Command Palette - Cmd+Shift+P to open */}
+      {/* Agent Command Palette - Cmd+Shift+K to open */}
       <AgentCommandPalette
         palette={agentPalette}
         config={{
