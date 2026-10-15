@@ -3,8 +3,8 @@
 import { useCallback, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Code2, Loader2, CheckCircle, AlertTriangle, AlertOctagon, Activity, Zap } from 'lucide-react';
-import type { GitHubCodeSearchResponse } from '@repo-explorer/types/api';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import type { GitHubCodeSearchResponse } from '../types/api';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 type SeverityLevel = 'safe' | 'low' | 'moderate' | 'high' | 'critical';
 

@@ -1,4 +1,3 @@
-import path from 'path';
 import type { StorybookConfig } from '@storybook/react-webpack5';
 import type { Configuration as WebpackConfiguration } from 'webpack';
 import type { Configuration as WebpackDevServerConfiguration } from 'webpack-dev-server';
@@ -43,14 +42,6 @@ const config: StorybookConfig = {
       electron: false,
       fs: false,
       path: false,
-    };
-
-    // The ported web-ade owner/repo page (src/renderer/repo-explorer) uses a
-    // namespaced alias instead of web-ade's `@/*` so it resolves without
-    // colliding with the app's own module graph.
-    config.resolve.alias = {
-      ...(config.resolve.alias as Record<string, string> | undefined),
-      '@repo-explorer': path.resolve(__dirname, '../src/renderer/repo-explorer'),
     };
 
     // Storybook's default CSS rule stops at css-loader, so it never runs

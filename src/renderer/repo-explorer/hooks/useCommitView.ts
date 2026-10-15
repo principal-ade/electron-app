@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CommitView } from '@industry-theme/file-city-panel';
-import type { GitHubCommitDetailResponse } from '@repo-explorer/types/api';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import type { GitHubCommitDetailResponse } from '../types/api';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 interface Result {
   commit: CommitView | null;

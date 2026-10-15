@@ -1,8 +1,8 @@
 'use client';
 
-import Link from '@repo-explorer/shims/next-link';
-import dynamic from '@repo-explorer/shims/next-dynamic';
-import { useRouter } from '@repo-explorer/shims/next-navigation';
+import Link from '../../../shims/next-link';
+import dynamic from '../../../shims/next-dynamic';
+import { useRouter } from '../../../shims/next-navigation';
 import {
   Fragment,
   useCallback,
@@ -70,21 +70,21 @@ import {
 import { addRecentRepository } from '@industry-theme/github-panels';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
-import type { TourAudioStatus, TourListItem } from '@repo-explorer/lib/tours/types';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
-import { useAuth } from '@repo-explorer/contexts/AuthContext';
-import type { VibeCodingData } from '@repo-explorer/components/VibeCodingButton';
-import VibeCodingPane from '@repo-explorer/components/VibeCodingPane';
-import { readRecentRepos } from '@repo-explorer/lib/recentRepos';
-import { BookmarksDrawer } from '@repo-explorer/components/bookmarks/BookmarksDrawer';
-import type { BookmarkRepo } from '@repo-explorer/components/bookmarks/types';
-import { BlockDropLoadingScreen } from '@repo-explorer/components/trail/BlockDropLoadingScreen';
-import { InlineTrailLoader } from '@repo-explorer/components/trail/InlineTrailLoader';
-import { ConfirmDialog } from '@repo-explorer/components/ConfirmDialog';
-import { SlidePane } from '@repo-explorer/components/rail/SlidePane';
-import { RailPaneHeader } from '@repo-explorer/components/rail/RailPaneHeader';
-import { ActivityHeatmap } from '@repo-explorer/components/ActivityHeatmap';
-import type { UserActivityResponse } from '@repo-explorer/app/api/github/user/[username]/activity/route';
+import type { TourAudioStatus, TourListItem } from '../../../lib/tours/types';
+import { repoExplorerService } from '../../../data/repoExplorerService';
+import { useAuth } from '../../../contexts/AuthContext';
+import type { VibeCodingData } from '../../../components/VibeCodingButton';
+import VibeCodingPane from '../../../components/VibeCodingPane';
+import { readRecentRepos } from '../../../lib/recentRepos';
+import { BookmarksDrawer } from '../../../components/bookmarks/BookmarksDrawer';
+import type { BookmarkRepo } from '../../../components/bookmarks/types';
+import { BlockDropLoadingScreen } from '../../../components/trail/BlockDropLoadingScreen';
+import { InlineTrailLoader } from '../../../components/trail/InlineTrailLoader';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { SlidePane } from '../../../components/rail/SlidePane';
+import { RailPaneHeader } from '../../../components/rail/RailPaneHeader';
+import { ActivityHeatmap } from '../../../components/ActivityHeatmap';
+import type { UserActivityResponse } from '../../api/github/user/[username]/activity/route';
 import { FileSourcePanel } from './FileSourcePanel';
 import { RepoActivityPane } from './RepoActivityPane';
 import { RepoIssuesPane } from './RepoIssuesPane';
@@ -99,19 +99,19 @@ import {
   mergeContributors,
   type ContributionStats,
   type EmailIdentity,
-} from '@repo-explorer/lib/repo-analysis/contributionLayers';
-import { useCommitsChangedFiles } from '@repo-explorer/hooks/useCommitsChangedFiles';
-import { usePullRequestFiles } from '@repo-explorer/hooks/usePullRequestFiles';
-import { useCommitView } from '@repo-explorer/hooks/useCommitView';
-import { useIssueView } from '@repo-explorer/hooks/useIssueView';
-import { usePullRequestView } from '@repo-explorer/hooks/usePullRequestView';
-import { useReadme } from '@repo-explorer/hooks/useReadme';
-import { useWeekCommits } from '@repo-explorer/hooks/useWeekCommits';
+} from '../../../lib/repo-analysis/contributionLayers';
+import { useCommitsChangedFiles } from '../../../hooks/useCommitsChangedFiles';
+import { usePullRequestFiles } from '../../../hooks/usePullRequestFiles';
+import { useCommitView } from '../../../hooks/useCommitView';
+import { useIssueView } from '../../../hooks/useIssueView';
+import { usePullRequestView } from '../../../hooks/usePullRequestView';
+import { useReadme } from '../../../hooks/useReadme';
+import { useWeekCommits } from '../../../hooks/useWeekCommits';
 import {
   buildAggregateChurnLayers,
   buildCommitFilesLayer,
   type ChangedFile,
-} from '@repo-explorer/lib/activity/commitLayers';
+} from '../../../lib/activity/commitLayers';
 
 /**
  * Live state of a tour's audio-generation run, keyed by tour id. Present only

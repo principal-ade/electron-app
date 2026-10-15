@@ -10,9 +10,9 @@ import {
   fmString,
 } from '@principal-ade/markdown-utils';
 import { X } from 'lucide-react';
-import { DocumentPreview } from '@repo-explorer/components/document/DocumentPreview';
+import { DocumentPreview } from '../../../components/document/DocumentPreview';
 import { MarkdownFrontmatterHeader } from './MarkdownFrontmatterHeader';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import { repoExplorerService } from '../../../data/repoExplorerService';
 
 // Markdown files render through themed-markdown (mirroring the electron-app's
 // MarkdownPanel) instead of the raw Monaco source view.

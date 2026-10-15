@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReadmeView } from '@industry-theme/file-city-panel';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 interface Result {
   readme: ReadmeView | null;

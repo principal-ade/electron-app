@@ -13,7 +13,7 @@
 import { useState } from 'react';
 import { Bot } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { AgentViewModal } from '@repo-explorer/components/AgentViewModal';
+import { AgentViewModal } from './AgentViewModal';
 
 interface AgentViewButtonProps {
   /** Canonical page path to preview, e.g. `/owner/repo`, `/trail/{id}`. */

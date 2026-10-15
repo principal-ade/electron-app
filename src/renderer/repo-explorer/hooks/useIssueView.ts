@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { IssueView } from '@industry-theme/file-city-panel';
 import { issueViewFromGitHubIssue } from '@industry-theme/file-city-panel/github';
 import type { components } from '@octokit/openapi-types';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 type GitHubIssue = components['schemas']['issue'];
 

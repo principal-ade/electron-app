@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ChangedFile } from '@repo-explorer/lib/activity/commitLayers';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import type { ChangedFile } from '../lib/activity/commitLayers';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 /**
  * Batch-fetches the changed-file lists for a set of PR numbers (from the

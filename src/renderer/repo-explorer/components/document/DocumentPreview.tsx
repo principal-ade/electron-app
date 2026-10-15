@@ -62,7 +62,7 @@ export function DocumentPreview({
         if (cancelled) return;
 
         if (resolvedKind === "pptx") {
-          const { init } = await import("@repo-explorer/shims/unsupported-docx");
+          const { init } = await import("../../shims/unsupported-docx");
           const previewer = init(container, {
             width: container.clientWidth || 960,
             height: Math.round((container.clientWidth || 960) * 0.5625),
@@ -70,12 +70,12 @@ export function DocumentPreview({
           });
           await previewer.preview(buffer);
         } else if (renderer === "mammoth") {
-          const mammoth = await import("@repo-explorer/shims/unsupported-docx");
+          const mammoth = await import("../../shims/unsupported-docx");
           const { value } = await mammoth.convertToHtml({ arrayBuffer: buffer });
           if (cancelled) return;
           container.innerHTML = value;
         } else {
-          const { renderAsync } = await import("@repo-explorer/shims/unsupported-docx");
+          const { renderAsync } = await import("../../shims/unsupported-docx");
           await renderAsync(buffer, container, undefined, {
             className: "docx",
             inWrapper: true,

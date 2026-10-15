@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { components } from '@octokit/openapi-types';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 type GitHubPullRequestSimple = components['schemas']['pull-request-simple'];
 export type PrStateFilter = 'open' | 'closed' | 'all';

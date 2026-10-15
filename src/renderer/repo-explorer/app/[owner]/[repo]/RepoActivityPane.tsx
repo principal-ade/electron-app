@@ -26,10 +26,10 @@ import {
   ChevronRight,
   FileDiff,
 } from 'lucide-react';
-import type { GitHubCommit } from '@repo-explorer/types/api';
-import type { ChangedFile } from '@repo-explorer/lib/activity/commitLayers';
-import { useRepoCommits } from '@repo-explorer/hooks/useRepoCommits';
-import { InlineTrailLoader } from '@repo-explorer/components/trail/InlineTrailLoader';
+import type { GitHubCommit } from '../../../types/api';
+import type { ChangedFile } from '../../../lib/activity/commitLayers';
+import { useRepoCommits } from '../../../hooks/useRepoCommits';
+import { InlineTrailLoader } from '../../../components/trail/InlineTrailLoader';
 
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();

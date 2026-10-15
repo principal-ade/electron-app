@@ -123,7 +123,6 @@ const configuration: webpack.Configuration = {
     extensions: ['.js', '.jsx', '.json', '.ts', '.tsx'],
     modules: [webpackPaths.srcPath, 'node_modules'],
     alias: {
-      '@repo-explorer': path.resolve(webpackPaths.srcRendererPath, 'repo-explorer'),
       react: path.resolve(webpackPaths.rootPath, 'node_modules/react'),
       'react/jsx-runtime': path.resolve(webpackPaths.rootPath, 'node_modules/react/jsx-runtime'),
       'react/jsx-dev-runtime': path.resolve(webpackPaths.rootPath, 'node_modules/react/jsx-dev-runtime'),

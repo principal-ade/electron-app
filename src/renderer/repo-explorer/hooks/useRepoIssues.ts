@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { components } from '@octokit/openapi-types';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 type GitHubIssue = components['schemas']['issue'];
 export type IssueStateFilter = 'open' | 'closed' | 'all';

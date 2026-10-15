@@ -35,7 +35,6 @@ the place to swap in the real desktop implementation later.
 
 | Seam | File(s) | Why |
 | --- | --- | --- |
-| Module alias | `@repo-explorer/*` → this folder | web-ade used `@/*`; a namespaced alias avoids colliding with the app's graph. Configured in `.storybook/main.ts` and `tsconfig.base.json`. |
 | `next/link` | `shims/next-link.tsx` | No Next router; degrades to `<a>`. |
 | `next/navigation` | `shims/next-navigation.ts` | `useRouter`/`usePathname` no-ops. |
 | `next/dynamic` | `shims/next-dynamic.tsx` | Everything is client-side; wraps loaders in `React.lazy`. |

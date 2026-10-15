@@ -5,7 +5,7 @@ import {
   pullRequestFilesFromGitHub,
 } from '@industry-theme/file-city-panel/github';
 import type { components } from '@octokit/openapi-types';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 type GitHubPullRequest = components['schemas']['pull-request'];
 type GitHubDiffEntry = components['schemas']['diff-entry'];

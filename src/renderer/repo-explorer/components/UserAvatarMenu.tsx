@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { useAuth } from '@repo-explorer/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { LogOut, Home, Calendar, User } from 'lucide-react';
-import Link from '@repo-explorer/shims/next-link';
-import { usePathname } from '@repo-explorer/shims/next-navigation';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import Link from '../shims/next-link';
+import { usePathname } from '../shims/next-navigation';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 interface UserOrganization {
   id: number;

@@ -71,6 +71,13 @@ const findImports = () => {
       .replace(/\/\*[\s\S]*?\*\//g, '')   // Remove block comments
       .replace(/\s+/g, ' ');               // Normalize whitespace
 
+    // Type-only imports/exports (`import type ... from '...'`, `export type ... from '...'`)
+    // are erased at compile time and never create a runtime dependency, so strip them
+    // before scanning (e.g. `@octokit/openapi-types`, which is a transitive type-only dep).
+    const valueContent = normalizedContent
+      .replace(/import\s+type\s[^;]*?from\s*['"][^'"]+['"]/g, '')
+      .replace(/export\s+type\s[^;]*?from\s*['"][^'"]+['"]/g, '');
+
     // Multiple regex patterns to catch different import styles
     const patterns = [
       // From clause patterns (handles multi-line imports better)
@@ -86,7 +93,7 @@ const findImports = () => {
     // First process normalized content for from clauses
     for (const pattern of patterns) {
       let match;
-      const searchContent = pattern === patterns[0] ? normalizedContent : content;
+      const searchContent = pattern === patterns[0] ? valueContent : content;
       while ((match = pattern.exec(searchContent)) !== null) {
         const importPath = match[1];
 

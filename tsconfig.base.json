@@ -12,9 +12,6 @@
     "noEmit": false,
     "skipLibCheck": true,
     "baseUrl": ".",
-    "isolatedModules": true,
-    "paths": {
-      "@repo-explorer/*": ["src/renderer/repo-explorer/*"]
-    }
+    "isolatedModules": true
   }
 }

@@ -6,8 +6,8 @@ import type {
   WeekStartsOn,
 } from '@industry-theme/file-city-panel';
 import type { FileTree } from '@principal-ai/repository-abstraction';
-import type { GitHubCommit, GitHubCommitDetailResponse } from '@repo-explorer/types/api';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import type { GitHubCommit, GitHubCommitDetailResponse } from '../types/api';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 const WEEK_STARTS_ON: WeekStartsOn = 1; // Monday
 /** Cap detail fetches so a hyperactive repo can't fire hundreds of calls. */

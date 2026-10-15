@@ -16,10 +16,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Bot, Check, Copy, X } from 'lucide-react';
-import { InlineTrailLoader } from '@repo-explorer/components/trail/InlineTrailLoader';
+import { InlineTrailLoader } from './trail/InlineTrailLoader';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 const COPY_FEEDBACK_MS = 1500;
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Layers, Globe, Lock, Plus, Check, Loader2, X, FolderPlus } from 'lucide-react';
 import type { BookmarkRepo } from './types';
-import type { Collection } from '@repo-explorer/lib/starred-collections/types';
+import type { Collection } from '../../lib/starred-collections/types';
 
 interface CollectionsBookmarkPanelProps {
   currentRepo: BookmarkRepo;

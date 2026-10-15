@@ -8,10 +8,7 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "./dist/renderer",
-    "skipLibCheck": true,
-    "paths": {
-      "@repo-explorer/*": ["src/renderer/repo-explorer/*"]
-    }
+    "skipLibCheck": true
   },
   "include": [
     "src/renderer/**/*",

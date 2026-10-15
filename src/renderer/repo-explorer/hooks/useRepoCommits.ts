@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { GitHubCommit } from '@repo-explorer/types/api';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import type { GitHubCommit } from '../types/api';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 /**
  * Paginated fetcher for a repo's default-branch commit history.

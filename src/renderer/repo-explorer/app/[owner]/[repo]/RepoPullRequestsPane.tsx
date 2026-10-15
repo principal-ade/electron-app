@@ -22,8 +22,8 @@ import type { components } from '@octokit/openapi-types';
 import {
   useRepoPullRequests,
   type PrStateFilter,
-} from '@repo-explorer/hooks/useRepoPullRequests';
-import { InlineTrailLoader } from '@repo-explorer/components/trail/InlineTrailLoader';
+} from '../../../hooks/useRepoPullRequests';
+import { InlineTrailLoader } from '../../../components/trail/InlineTrailLoader';
 
 type GitHubPullRequestSimple = components['schemas']['pull-request-simple'];
 

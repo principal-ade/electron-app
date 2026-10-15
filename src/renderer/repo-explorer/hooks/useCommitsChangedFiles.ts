@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import type { GitHubCommitDetailResponse } from '@repo-explorer/types/api';
-import type { ChangedFile } from '@repo-explorer/lib/activity/commitLayers';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+import type { GitHubCommitDetailResponse } from '../types/api';
+import type { ChangedFile } from '../lib/activity/commitLayers';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 /**
  * Batch-fetches the changed-file lists for a set of commit SHAs (from the

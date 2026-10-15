@@ -24,14 +24,14 @@ import {
 } from 'react';
 import type { HighlightLayer } from '@industry-theme/file-city-panel';
 // Type-only: erased at build, so the AWS SDK in s3-cache never enters this bundle.
-import type { RepoAnalysisErrorRecord } from '@repo-explorer/lib/repo-analysis/s3-cache';
+import type { RepoAnalysisErrorRecord } from '../../../lib/repo-analysis/s3-cache';
 // Type-only: erased at build, so the Redis client in identity-cache never enters
 // this bundle.
-import type { IdentityByEmail } from '@repo-explorer/lib/repo-analysis/identity-cache';
+import type { IdentityByEmail } from '../../../lib/repo-analysis/identity-cache';
 import {
   buildMergedContributionLayers,
   type ContributionAnalysis,
-} from '@repo-explorer/lib/repo-analysis/contributionLayers';
+} from '../../../lib/repo-analysis/contributionLayers';
 
 /**
  * Master switch for the repo-analysis feature (line counts + contributor

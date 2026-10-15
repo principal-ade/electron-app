@@ -14,8 +14,8 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { CircleDot, CheckCircle2, ChevronLeft, MessageSquare } from 'lucide-react';
 import type { components } from '@octokit/openapi-types';
-import { useRepoIssues, type IssueStateFilter } from '@repo-explorer/hooks/useRepoIssues';
-import { InlineTrailLoader } from '@repo-explorer/components/trail/InlineTrailLoader';
+import { useRepoIssues, type IssueStateFilter } from '../../../hooks/useRepoIssues';
+import { InlineTrailLoader } from '../../../components/trail/InlineTrailLoader';
 
 type GitHubIssue = components['schemas']['issue'];
 

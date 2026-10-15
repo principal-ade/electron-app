@@ -1,16 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from '@repo-explorer/shims/next-navigation';
+import { useRouter } from '../shims/next-navigation';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Github, Star, ChevronRight } from 'lucide-react';
-import { InlineTrailLoader } from '@repo-explorer/components/trail/InlineTrailLoader';
+import { InlineTrailLoader } from './trail/InlineTrailLoader';
 import {
   parseGithubRepoPath,
   readRecentRepos,
   type HeaderRepoSearchItem,
-} from '@repo-explorer/lib/recentRepos';
-import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
+} from '../lib/recentRepos';
+import { repoExplorerService } from '../data/repoExplorerService';
 
 // ---------------------------------------------------------------------------
 // RepoSearchBar — the header "open a repo" control, shared by the owner/repo

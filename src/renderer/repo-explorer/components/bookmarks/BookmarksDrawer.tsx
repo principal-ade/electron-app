@@ -5,7 +5,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import type { BookmarkRepo } from './types';
 import { BookmarksPanel } from './BookmarksPanel';
 
-import { useAuth } from '@repo-explorer/contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { CollectionsBookmarkPanel } from './CollectionsBookmarkPanel';
 
 interface BookmarksDrawerProps {
