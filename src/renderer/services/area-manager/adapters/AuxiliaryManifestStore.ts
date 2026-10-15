@@ -9,7 +9,7 @@
  * boundary rule applied to scope-manager.
  */
 
-import { isAuxiliaryManifest } from '@principal-ai/principal-view-core';
+import { isAuxiliaryManifest } from '../../principal-views/localTypes';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { AreaStore } from '../AreaStore';
 import type { AuxiliaryManifest } from '../types';

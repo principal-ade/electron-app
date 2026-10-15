@@ -254,36 +254,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [resetKey, setResetKey] = useState(0);
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
   const [_packages, _setPackages] = useState<PackageLayer[]>([]);
-  const [availableServiceNames, setAvailableServiceNames] = useState<string[]>(
-    [],
-  );
-  const [serviceTraceCounts, setServiceTraceCounts] = useState<
-    Map<string, number>
-  >(new Map());
-  const [lastActiveService, setLastActiveService] = useState<string | null>(
-    null,
-  );
   const [isSyncingWorkspace, setIsSyncingWorkspace] = useState(false);
   const [devWorkspaceConfig, setDevWorkspaceConfig] =
     useState<DevWorkspaceConfig>(DEFAULT_DEV_WORKSPACE_CONFIG);
-
-  // Callback when scope names are discovered from library.yaml by RepositoryPanelContext
-  const handleScopeNamesDiscovered = useCallback((scopeNames: string[]) => {
-    console.info(
-      '[DevWorkspaceApp] 📝 Scope names discovered from LocalRegistry:',
-      scopeNames,
-    );
-    setAvailableServiceNames(scopeNames);
-  }, []);
-
-  // Callback when service trace counts change
-  const handleServiceTraceCountsChange = useCallback(
-    (counts: Map<string, number>, lastActive: string | null) => {
-      setServiceTraceCounts(counts);
-      setLastActiveService(lastActive);
-    },
-    [],
-  );
 
   // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(
@@ -1094,9 +1067,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onLayoutChange={(newLayout) => setLayout(newLayout)}
         repositoryPath={repositoryPath}
         onOpenInFinder={repositoryPath ? handleOpenInFinder : undefined}
-        availableServiceNames={availableServiceNames}
-        serviceTraceCounts={serviceTraceCounts}
-        lastActiveService={lastActiveService}
         sidebarsHidden={sidebarsHidden}
         onSidebarsHiddenChange={handleSidebarsHiddenChange}
         onSyncWorkspace={handleSyncWorkspace}
@@ -1121,8 +1091,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onPanelControlReady={handlePanelControlReady}
           events={events}
           onLeftCollapseComplete={handleLeftCollapseComplete}
-          onScopeNamesDiscovered={handleScopeNamesDiscovered}
-          onServiceTraceCountsChange={handleServiceTraceCountsChange}
           onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
           onOpenGitHubActions={
             githubInfo && hasGitHubFolder ? handleOpenGitHubActions : undefined

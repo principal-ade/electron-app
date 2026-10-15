@@ -13,7 +13,7 @@ import {
   type ExtendedCanvas,
   type ExtendedCanvasNode,
   type OtelScopeNode,
-} from '@principal-ai/principal-view-core';
+} from '../principal-views/localTypes';
 import type {
   EventRecord,
   NamespaceRecord,

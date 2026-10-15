@@ -58,7 +58,6 @@ import type { ProcessRegistryAPI } from './ProcessRegistryAPI';
 import type { GitHubArtifactAPI } from './GitHubArtifactAPI';
 import type { RecentReposAPI } from './RecentReposAPI';
 import type { SkillLockAPI } from './SkillLockAPI';
-import type { OtelCollectorAPI } from './OtelCollectorAPI';
 import type { CLIBridgeAPI } from './CLIBridgeAPI';
 import type { ExtensionAPI } from './ExtensionAPI';
 import type { FileCityImageAPI } from './FileCityImageAPI';
@@ -111,7 +110,6 @@ export interface MainProcessAPI {
   github: GitHubAPI;
   store: StoreAPI;
   repositoryMonitoring: ExtendedRepositoryMonitoringAPI;
-  otelCollector: OtelCollectorAPI;
   cliBridge: CLIBridgeAPI;
   secrets: SecretsAPI;
   links: LinksAPI;

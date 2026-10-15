@@ -21,18 +21,13 @@ import {
   MainToServerMessage,
   WindowBroadcastMessage,
   isWindowBroadcastMessage,
-  isGetTracesRequestMessage,
-  isGetRegistrationsRequestMessage,
   isLinkSessionToTopicMessage,
   isBindAgentSessionMessage,
-  GetTracesRequestMessage,
-  GetRegistrationsRequestMessage,
   LinkSessionToTopicMessage,
   BindAgentSessionMessage,
 } from '../../event-processing-server/types';
 import { getSessionManagerInstance } from '../terminal/sessionManagerSingleton';
 import { broadcastTerminalSessionsChanged } from '../terminal/tipc/terminalRouter';
-import { OtelCollectorService } from '../services/OtelCollectorService';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
 import { AgentSessionSDKAPIEvents } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
 import {
@@ -405,10 +400,6 @@ export class EventServerManager extends EventEmitter {
 
       if (isWindowBroadcastMessage(msg)) {
         this.handleWindowBroadcast(msg);
-      } else if (isGetTracesRequestMessage(msg)) {
-        this.handleGetTracesRequest(msg);
-      } else if (isGetRegistrationsRequestMessage(msg)) {
-        this.handleGetRegistrationsRequest(msg);
       } else if (isLinkSessionToTopicMessage(msg)) {
         this.handleLinkSessionToTopic(msg);
       } else if (isBindAgentSessionMessage(msg)) {
@@ -502,102 +493,6 @@ export class EventServerManager extends EventEmitter {
     } catch (error) {
       span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) });
       this.log('error', `Window broadcast failed: ${error}`);
-    } finally {
-      span.end();
-    }
-  }
-
-  /**
-   * Handle GET_TRACES_REQUEST from the utility process
-   */
-  private handleGetTracesRequest(msg: GetTracesRequestMessage): void {
-    const tracer = getTracer('principal-ade-main');
-    const span = tracer.startSpan('otel.traces.http_request');
-
-    try {
-      const service = OtelCollectorService.getInstance();
-      const allTraces = service.getTraces(msg.limit);
-
-      let traces = allTraces;
-
-      // If specific traceId requested, filter
-      if (msg.traceId) {
-        traces = allTraces.filter((t) => t.traceId === msg.traceId);
-      }
-
-      span.addEvent('otel.traces.fetched', {
-        'traces.count': traces.length,
-        'traces.limit': msg.limit || 50,
-        'trace.id_filter': msg.traceId || '',
-      });
-
-      span.setStatus({ code: SpanStatusCode.OK });
-
-      this.sendToWorker({
-        type: 'GET_TRACES_RESPONSE',
-        id: msg.id,
-        timestamp: Date.now(),
-        success: true,
-        traces,
-      });
-    } catch (error) {
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: error instanceof Error ? error.message : String(error),
-      });
-
-      this.sendToWorker({
-        type: 'GET_TRACES_RESPONSE',
-        id: msg.id,
-        timestamp: Date.now(),
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      span.end();
-    }
-  }
-
-  /**
-   * Handle GET_REGISTRATIONS_REQUEST from the utility process
-   */
-  private handleGetRegistrationsRequest(msg: GetRegistrationsRequestMessage): void {
-    const tracer = getTracer('principal-ade-main');
-    const span = tracer.startSpan('otel.registrations.http_request');
-
-    try {
-      const service = OtelCollectorService.getInstance();
-      const registrations = service.getRegistrations();
-      const services = service.getRegisteredServices();
-
-      span.addEvent('otel.registrations.fetched', {
-        'registrations.count': registrations.length,
-        'services.count': services.length,
-      });
-
-      span.setStatus({ code: SpanStatusCode.OK });
-
-      this.sendToWorker({
-        type: 'GET_REGISTRATIONS_RESPONSE',
-        id: msg.id,
-        timestamp: Date.now(),
-        success: true,
-        registrations,
-        services,
-      });
-    } catch (error) {
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: error instanceof Error ? error.message : String(error),
-      });
-
-      this.sendToWorker({
-        type: 'GET_REGISTRATIONS_RESPONSE',
-        id: msg.id,
-        timestamp: Date.now(),
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
     } finally {
       span.end();
     }

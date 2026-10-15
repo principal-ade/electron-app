@@ -34,7 +34,6 @@ import { authenticationAPI } from './main-process-api-implementations/authentica
 import { agentSessionSDKApi } from './main-process-api-implementations/agentSessionSDKApi';
 import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
 import { localhostDetectionAPI } from './main-process-api-implementations/localhostDetectionApi';
-import { otelCollectorApi } from './main-process-api-implementations/otelCollectorApi';
 import { gitAPI } from './main-process-api-implementations/gitApi';
 import { fileCityImageAPI } from './main-process-api-implementations/fileCityImageApi';
 import { documentNotesAPI } from './main-process-api-implementations/documentNotesApi';
@@ -64,7 +63,6 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   agentSessionSDK: agentSessionSDKApi,
   githubArtifact: githubArtifactAPI,
   localhostDetection: localhostDetectionAPI,
-  otelCollector: otelCollectorApi,
   git: gitAPI,
   fileCityImage: fileCityImageAPI,
   documentNotes: documentNotesAPI,

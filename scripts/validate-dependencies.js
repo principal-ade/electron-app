@@ -137,7 +137,7 @@ const mainProcessPackages = new Set([
   '@principal-ai/alexandria-collections', '@principal-ai/alexandria-core-library',
   '@principal-ai/codebase-composition', '@principal-ai/control-tower-core',
   '@principal-ai/file-city-builder', '@principal-ai/file-city-server',
-  '@principal-ai/markdown-search', '@principal-ai/otel-collector-server',
+  '@principal-ai/markdown-search',
   '@principal-ai/repository-abstraction', '@principal-ai/repository-monitoring-server',
   '@usebruno/lang', '@usebruno/requests',
   'chokidar', 'express', 'jsonwebtoken', 'jszip', 'node-fetch', 'simple-git', 'ts-json-schema-generator',

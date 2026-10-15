@@ -36,12 +36,10 @@
     "icons:build:windows": "npm run icons:generate",
     "icons:build:linux": "npm run icons:generate",
     "validate:deps": "node scripts/validate-dependencies.js",
-    "download:otel": "node scripts/download-otel-binaries.js",
-    "download:binaries": "npm run download:otel",
-    "build": "npm run validate:deps && node .erb/scripts/copy-native-deps.js && npm run download:binaries && npm run icons:build && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
-    "build:mac": "npm run validate:deps && node .erb/scripts/copy-native-deps.js && npm run download:binaries && npm run icons:build:mac && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
-    "build:windows": "npm run validate:deps && npm run download:binaries && npm run icons:build:windows && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
-    "build:linux": "npm run validate:deps && npm run download:binaries && npm run icons:build:linux && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build": "npm run validate:deps && node .erb/scripts/copy-native-deps.js && npm run icons:build && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build:mac": "npm run validate:deps && node .erb/scripts/copy-native-deps.js && npm run icons:build:mac && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build:windows": "npm run validate:deps && npm run icons:build:windows && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build:linux": "npm run validate:deps && npm run icons:build:linux && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
     "build:dll": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings --max-old-space-size=8192\" webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.windows.ts",
     "build:main": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.prod.ts && npm run build:pty-daemon",
     "build:pty-daemon": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.pty-daemon.ts",
@@ -219,8 +217,6 @@
     "@principal-ai/file-city-server": "^0.3.9",
     "@principal-ai/logo-component": "^0.1.23",
     "@principal-ai/markdown-search": "^2.0.7",
-    "@principal-ai/otel-collector-server": "^0.3.15",
-    "@principal-ai/principal-view-core": "^0.28.9",
     "@principal-ai/repository-abstraction": "^0.5.7",
     "@principal-ai/repository-monitoring": "^0.1.12",
     "@principal-ai/repository-monitoring-server": "^2.2.18",
@@ -456,15 +452,6 @@
         ".*\\.svg$",
         ".*\\.ico$",
         ".*\\.icns$"
-      ],
-      "extraResources": [
-        {
-          "from": "resources/bin",
-          "to": "bin",
-          "filter": [
-            "*darwin*"
-          ]
-        }
       ]
     },
     "beforePack": ".erb/scripts/before-pack.js",
@@ -489,16 +476,7 @@
       "target": [
         "nsis"
       ],
-      "legalTrademarks": "Copyright © 2025 Principal ADE",
-      "extraResources": [
-        {
-          "from": "resources/bin",
-          "to": "bin",
-          "filter": [
-            "*windows*"
-          ]
-        }
-      ]
+      "legalTrademarks": "Copyright © 2025 Principal ADE"
     },
     "nsis": {
       "oneClick": false,
@@ -509,16 +487,7 @@
       "target": [
         "AppImage"
       ],
-      "category": "Development",
-      "extraResources": [
-        {
-          "from": "resources/bin",
-          "to": "bin",
-          "filter": [
-            "*linux*"
-          ]
-        }
-      ]
+      "category": "Development"
     },
     "extraResources": [
       "./assets/**"

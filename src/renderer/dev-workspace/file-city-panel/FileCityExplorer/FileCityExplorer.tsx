@@ -17,7 +17,7 @@ import {
   type ElevatedScopePanel,
   type HighlightLayer,
 } from '@principal-ai/file-city-react';
-import type { ProjectArea } from '@principal-ai/principal-view-core';
+import type { ProjectArea } from '../../../services/principal-views/localTypes';
 
 import { useScopeManagerOptional } from '../../scope-manager-provider';
 import { useAreaManagerOptional } from '../../area-manager-provider';

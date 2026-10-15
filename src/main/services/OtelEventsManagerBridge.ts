@@ -2,18 +2,13 @@
  * OtelEventsManagerBridge - Bridge for communicating with otel-events-manager
  *
  * Handles:
- * - Forwarding traces for persistence
  * - Syncing workspace/FileTree data for trace matching
  */
 
 import { app } from 'electron';
-import type { OTLPTraceRequest } from '@principal-ai/otel-collector-server';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
-
-// Type alias for clarity
-type OTLPTraceData = OTLPTraceRequest;
 
 // Configuration
 const DEFAULT_EVENTS_MANAGER_URL = 'http://localhost:4321';
@@ -22,7 +17,6 @@ const WORKSPACE_SYNC_DEBOUNCE = 500; // 500ms debounce for workspace updates
 
 // API Endpoints
 const ENDPOINTS = {
-  TRACES: '/v1/traces',
   REGISTRY_SYNC: '/api/registry/sync',
   HEALTH: '/health',
 } as const;
@@ -46,7 +40,6 @@ export interface BridgeStatus {
   lastHealthCheck: number | null;
   lastSuccessfulSync: number | null;
   syncedWorkspaces: string[];
-  traceForwardCount: number;
 }
 
 interface RegistrySyncRequest {
@@ -72,7 +65,6 @@ export class OtelEventsManagerBridge {
   private lastSuccessfulSync: number | null = null;
   private healthCheckTimer: ReturnType<typeof setInterval> | null = null;
   private syncedWorkspaces: Set<string> = new Set();
-  private traceForwardCount: number = 0;
 
   // Debounce timers for workspace sync
   private workspaceSyncTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
@@ -132,42 +124,6 @@ export class OtelEventsManagerBridge {
       this.connected = false;
       this.lastHealthCheck = Date.now();
       return false;
-    }
-  }
-
-  /**
-   * Forward trace data to otel-events-manager for persistence
-   * Fire-and-forget - does not block trace processing
-   */
-  async forwardTrace(traceData: OTLPTraceData): Promise<void> {
-    if (!this.enabled) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`${this.baseUrl}${ENDPOINTS.TRACES}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(traceData),
-      });
-
-      if (response.ok) {
-        this.traceForwardCount++;
-        this.connected = true;
-      } else {
-        console.warn(`[OtelEventsManagerBridge] Failed to forward trace: ${response.status}`);
-      }
-    } catch (err) {
-      // Silently fail - events manager might not be running
-      // Only log in development for debugging
-      if (!app.isPackaged) {
-        console.debug(
-          '[OtelEventsManagerBridge] Events manager not available:',
-          err instanceof Error ? err.message : String(err),
-        );
-      }
     }
   }
 
@@ -363,7 +319,6 @@ export class OtelEventsManagerBridge {
       lastHealthCheck: this.lastHealthCheck,
       lastSuccessfulSync: this.lastSuccessfulSync,
       syncedWorkspaces: Array.from(this.syncedWorkspaces),
-      traceForwardCount: this.traceForwardCount,
     };
   }
 

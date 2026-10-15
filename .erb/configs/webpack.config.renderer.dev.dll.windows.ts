@@ -21,9 +21,8 @@ const configuration: webpack.Configuration = {
 
   target: 'web',
 
-  // Bundle everything except otel-collector-server (which uses Node.js modules)
+  // Exclude TypeScript type-definition packages from the DLL bundle
   externals: [
-    '@principal-ai/otel-collector-server',
     /^@types\/.*$/,  // Exclude all @types packages (TypeScript type definitions)
   ],
 
@@ -142,7 +141,6 @@ const configuration: webpack.Configuration = {
           '@principal-ai/control-tower-core', // WebSocket/collaboration library - Node.js only, uses node:module
           '@principal-ai/repository-monitoring', // Node.js only watcher library
           '@principal-ai/repository-monitoring-server', // Main process only - contains pre-bundled worker
-          '@principal-ai/otel-collector-server', // OTEL collector - Main process only, uses http/net modules
           'simple-git', // Git operations library - Node.js only, uses child_process
           'electron-debug',
           'electron-devtools-installer',
@@ -165,7 +163,6 @@ const configuration: webpack.Configuration = {
           'keytar', // Native Node.js module for credential storage
           'jsonwebtoken', // Uses Node.js crypto module
           '@usebruno/requests', // Bruno HTTP client - uses Node.js tls/net/http2 modules
-          '@principal-ai/principal-view-core', // Uses /browser subpath exports, has Node.js code in main export
           '@industry-theme/repository-composition-panels', // Imports @principal-ai/principal-view-core which has Node.js dependencies
           'mermaid' // Complex ESM package with dynamic imports - exclude from DLL, will be bundled in main renderer
         ];

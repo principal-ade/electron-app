@@ -12,7 +12,6 @@ import {
   GitBranch,
   Eye,
   EyeOff,
-  Radio,
   Terminal,
   Loader2,
   Server,
@@ -25,11 +24,9 @@ import {
   XCircle,
 } from 'lucide-react';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
-import { OtelCollectorService } from '../../../main-process-api/OtelCollectorService';
 import { CLIBridgeService, type CLIBridgeStatus, type CLIBridgeTestResult } from '../../../main-process-api/CLIBridgeService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
-import { TraceViewer } from './TraceViewer';
 import {
   terminalClient,
   onActivitySync,
@@ -44,7 +41,6 @@ import type {
   LifecycleEvent,
   LifecyclePhase,
 } from '@principal-ai/repository-monitoring-server';
-import type { OtelCollectorStatus } from '../../../main-process-api/OtelCollectorService';
 import {
   RepositoryMonitoringDiagnostics,
   phaseLabel,
@@ -88,10 +84,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [packageData, setPackageData] = useState<
     Map<string, { packages: number; monorepo: boolean; loading: boolean }>
   >(new Map());
-  const [otelStatus, setOtelStatus] = useState<OtelCollectorStatus | null>(null);
-  const [otelLoading, setOtelLoading] = useState(true);
-  const [isSendingTestTrace, setIsSendingTestTrace] = useState(false);
-  const [activeTab, setActiveTab] = useState<'repository' | 'otel' | 'terminals' | 'clibridge'>('repository');
+  const [activeTab, setActiveTab] = useState<'repository' | 'terminals' | 'clibridge'>('repository');
   // CLI Bridge state
   const [cliBridgeStatus, setCliBridgeStatus] = useState<CLIBridgeStatus | null>(null);
   const [cliBridgeLoading, setCliBridgeLoading] = useState(true);
@@ -270,38 +263,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
     const id = setInterval(() => setNowTick(Date.now()), 1000);
     return () => clearInterval(id);
   }, [activeTab]);
-
-  // Poll OTEL Collector status
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-
-    const fetchOtelStatus = async () => {
-      try {
-        const status = await OtelCollectorService.getStatus();
-        setOtelStatus(status);
-        setOtelLoading(false);
-      } catch (error) {
-        console.error('Failed to fetch OTEL collector status:', error);
-        setOtelStatus({
-          isRunning: false,
-          stats: null,
-        });
-        setOtelLoading(false);
-      }
-    };
-
-    // Initial fetch
-    fetchOtelStatus();
-
-    // Poll every 2 seconds
-    interval = setInterval(fetchOtelStatus, 2000);
-
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, []);
 
   // Poll CLI Bridge status when clibridge tab is active
   useEffect(() => {
@@ -664,39 +625,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
     }
   };
 
-  const handleToggleOtelCollector = async () => {
-    try {
-      if (otelStatus?.isRunning) {
-        await OtelCollectorService.stop();
-      } else {
-        await OtelCollectorService.start();
-      }
-      // Refresh status
-      setTimeout(async () => {
-        const status = await OtelCollectorService.getStatus();
-        setOtelStatus(status);
-      }, 1000);
-    } catch (error) {
-      console.error('Failed to toggle OTEL collector:', error);
-    }
-  };
-
-  const handleSendTestTrace = async () => {
-    setIsSendingTestTrace(true);
-    try {
-      const result = await OtelCollectorService.sendTestTrace('http://localhost:3000');
-      if (result.success) {
-        console.info('Test trace sent successfully');
-      } else {
-        console.error('Failed to send test trace:', result.error);
-      }
-    } catch (error) {
-      console.error('Failed to send test trace:', error);
-    } finally {
-      setIsSendingTestTrace(false);
-    }
-  };
-
   if (loading) {
     return (
       <div
@@ -830,27 +758,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 Repository Monitoring
               </button>
               <button
-                onClick={() => setActiveTab('otel')}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  borderRadius: '6px',
-                  border: `1px solid ${activeTab === 'otel' ? theme.colors.primary : theme.colors.border}`,
-                  backgroundColor: activeTab === 'otel' ? `${theme.colors.primary}15` : 'transparent',
-                  color: activeTab === 'otel' ? theme.colors.primary : theme.colors.text,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontFamily: theme.fonts.body,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <Radio size={14} />
-                OTEL Collector
-              </button>
-              <button
                 onClick={() => setActiveTab('terminals')}
                 style={{
                   padding: '8px 16px',
@@ -926,7 +833,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               gap: '12px',
             }}
           >
-            {activeTab === 'repository' ? (
+            {activeTab === 'repository' && (
               <>
                 {/* Repository Monitoring Status (phase-aware). */}
                 {(() => {
@@ -1002,65 +909,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                     transition: 'all 0.2s ease',
                   }}
                   title={isRunning ? 'Stop monitoring' : 'Start monitoring'}
-                >
-                  <Power size={20} />
-                </button>
-              </>
-            ) : (
-              <>
-                {/* OTEL Collector Status */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: otelStatus?.isRunning
-                      ? `${theme.colors.success}15`
-                      : `${theme.colors.textSecondary}15`,
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    color: otelStatus?.isRunning
-                      ? theme.colors.success
-                      : theme.colors.textSecondary,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: otelStatus?.isRunning
-                        ? theme.colors.success
-                        : theme.colors.textSecondary,
-                      animation: otelStatus?.isRunning ? 'pulse 2s infinite' : 'none',
-                    }}
-                  />
-                  {otelLoading ? 'Loading...' : otelStatus?.isRunning ? 'Running' : 'Stopped'}
-                </div>
-
-                {/* OTEL Power button */}
-                <button
-                  onClick={handleToggleOtelCollector}
-                  disabled={otelLoading}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    border: `1px solid ${otelStatus?.isRunning ? theme.colors.error : theme.colors.success}`,
-                    backgroundColor: otelStatus?.isRunning
-                      ? `${theme.colors.error}10`
-                      : `${theme.colors.success}10`,
-                    color: otelStatus?.isRunning ? theme.colors.error : theme.colors.success,
-                    cursor: otelLoading ? 'not-allowed' : 'pointer',
-                    opacity: otelLoading ? 0.5 : 1,
-                    transition: 'all 0.2s ease',
-                  }}
-                  title={otelStatus?.isRunning ? 'Stop OTEL Collector' : 'Start OTEL Collector'}
                 >
                   <Power size={20} />
                 </button>
@@ -1266,147 +1114,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
 
         <RepositoryMonitoringDiagnostics diagnostics={diagnostics} nowTick={nowTick} />
           </>
-        )}
-
-        {/* OTEL Collector Content */}
-        {activeTab === 'otel' && (
-        <section style={{ marginBottom: '32px' }}>
-          <div
-            style={{
-              backgroundColor: theme.colors.backgroundSecondary,
-              borderRadius: '12px',
-              padding: '20px',
-              border: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            {/* Stats Grid */}
-            {otelStatus?.isRunning && otelStatus.stats && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  gap: '16px',
-                  marginBottom: '16px',
-                  padding: '16px',
-                  backgroundColor: theme.colors.background,
-                  borderRadius: '8px',
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '4px',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Traces Received
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '20px',
-                      fontWeight: 700,
-                      fontFamily: theme.fonts.monospace,
-                    }}
-                  >
-                    {otelStatus.stats.tracesReceived}
-                  </div>
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '4px',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Active Windows
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '20px',
-                      fontWeight: 700,
-                      fontFamily: theme.fonts.monospace,
-                    }}
-                  >
-                    {otelStatus.stats.activeRegistrations}
-                  </div>
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '4px',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Uptime
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '20px',
-                      fontWeight: 700,
-                      fontFamily: theme.fonts.monospace,
-                    }}
-                  >
-                    {Math.floor((otelStatus.stats.uptime || 0) / 1000)}s
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Test Trace Button */}
-            {otelStatus?.isRunning && (
-              <button
-                onClick={handleSendTestTrace}
-                disabled={isSendingTestTrace}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '6px',
-                  border: `1px solid ${theme.colors.primary}`,
-                  backgroundColor: `${theme.colors.primary}15`,
-                  color: theme.colors.primary,
-                  cursor: isSendingTestTrace ? 'not-allowed' : 'pointer',
-                  opacity: isSendingTestTrace ? 0.5 : 1,
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {isSendingTestTrace ? 'Sending...' : 'Send Test Trace'}
-              </button>
-            )}
-
-            {/* Endpoints Info */}
-            {otelStatus?.isRunning && otelStatus.stats && (
-              <div
-                style={{
-                  marginTop: '16px',
-                  padding: '12px',
-                  backgroundColor: theme.colors.background,
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.fonts.monospace,
-                }}
-              >
-                <div>OTLP: http://localhost:{otelStatus.stats.otlpPort}</div>
-                <div style={{ marginTop: '4px' }}>Wrapper: http://localhost:{otelStatus.stats.wrapperPort}</div>
-              </div>
-            )}
-          </div>
-
-          {/* Trace Viewer */}
-          {otelStatus?.isRunning && (
-            <div style={{ marginTop: '24px' }}>
-              <TraceViewer autoRefresh={true} refreshInterval={2000} />
-            </div>
-          )}
-        </section>
         )}
 
         {/* Terminal Sessions Content */}

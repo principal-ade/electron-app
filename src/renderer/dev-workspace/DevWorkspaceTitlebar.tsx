@@ -145,10 +145,6 @@ export interface DevWorkspaceTitlebarProps {
   repositoryPath?: string;
   // Open in Finder
   onOpenInFinder?: () => void;
-  // Service names and trace counts
-  availableServiceNames?: string[];
-  serviceTraceCounts?: Map<string, number>;
-  lastActiveService?: string | null;
   // Sidebar visibility toggle
   sidebarsHidden?: boolean;
   onSidebarsHiddenChange?: (hidden: boolean) => void;
@@ -179,9 +175,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   onLayoutChange,
   repositoryPath,
   onOpenInFinder,
-  availableServiceNames,
-  serviceTraceCounts,
-  lastActiveService,
   sidebarsHidden,
   onSidebarsHiddenChange,
   onSyncWorkspace,
@@ -191,7 +184,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   storybook,
 }) => {
   const { theme } = useTheme();
-  const [servicesExpanded, setServicesExpanded] = useState(false);
   const [configModalOpen, setConfigModalOpen] = useState(false);
 
   // Open Notes panel (creates .principal/notes.md if missing)
@@ -349,133 +341,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                   <Building2 size={14} />
                   <span>3D City</span>
                 </button>
-              )}
-
-              {/* Service Trace Counts Display */}
-              {config.titlebar.traces && availableServiceNames && availableServiceNames.length > 0 && (
-                <div
-                  style={{
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                >
-                  <button
-                    onClick={() => setServicesExpanded(!servicesExpanded)}
-                    style={{
-                      // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                      WebkitAppRegion: 'no-drag',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '6px 12px',
-                      background: theme.colors.backgroundTertiary,
-                      borderRadius: '6px',
-                      border: `1px solid ${theme.colors.border}`,
-                      cursor: 'pointer',
-                      fontSize: `${theme.fontSizes[1]}px`,
-                      fontWeight: theme.fontWeights.medium,
-                      fontFamily: theme.fonts.body,
-                      color: theme.colors.textSecondary,
-                    }}
-                    title={servicesExpanded ? 'Click to collapse' : 'Click to expand all services'}
-                  >
-                    <span style={{ color: theme.colors.textTertiary }}>Traces:</span>
-                    {lastActiveService ? (
-                      <>
-                        <span style={{ color: theme.colors.success }}>{lastActiveService}</span>
-                        <span
-                          style={{
-                            background: theme.colors.success,
-                            color: '#fff',
-                            padding: '0 5px',
-                            borderRadius: '8px',
-                            fontSize: '10px',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {serviceTraceCounts?.get(lastActiveService) || 0}
-                        </span>
-                      </>
-                    ) : availableServiceNames.length === 1 ? (
-                      <span style={{ color: theme.colors.textSecondary }}>{availableServiceNames[0]}</span>
-                    ) : availableServiceNames.length > 1 ? (
-                      <span style={{ color: theme.colors.textSecondary }}>
-                        {availableServiceNames.length} services registered
-                      </span>
-                    ) : (
-                      <span style={{ color: theme.colors.textTertiary }}>no services</span>
-                    )}
-                    {availableServiceNames.length > 1 && (
-                      <span style={{ color: theme.colors.textTertiary, marginLeft: '2px' }}>
-                        {servicesExpanded ? '▲' : '▼'}
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Expanded dropdown */}
-                  {servicesExpanded && availableServiceNames.length > 1 && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        marginTop: '4px',
-                        background: theme.colors.backgroundSecondary,
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: '6px',
-                        padding: '4px',
-                        zIndex: 1000,
-                        minWidth: '200px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      }}
-                    >
-                      {availableServiceNames.map((serviceName) => {
-                        const count = serviceTraceCounts?.get(serviceName) || 0;
-                        const isActive = serviceName === lastActiveService;
-                        return (
-                          <div
-                            key={serviceName}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '6px 8px',
-                              borderRadius: '4px',
-                              background: isActive ? theme.colors.success + '15' : 'transparent',
-                            }}
-                          >
-                            <span
-                              style={{
-                                color: count > 0 ? theme.colors.text : theme.colors.textTertiary,
-                                fontSize: `${theme.fontSizes[1]}px`,
-                                fontWeight: theme.fontWeights.medium,
-                                fontFamily: theme.fonts.body,
-                              }}
-                            >
-                              {serviceName}
-                              {isActive && (
-                                <span style={{ color: theme.colors.success, marginLeft: '4px' }}>●</span>
-                              )}
-                            </span>
-                            <span
-                              style={{
-                                background: count > 0 ? theme.colors.success : theme.colors.backgroundTertiary,
-                                color: count > 0 ? '#fff' : theme.colors.textTertiary,
-                                padding: '2px 8px',
-                                borderRadius: '8px',
-                                fontSize: `${theme.fontSizes[0]}px`,
-                                fontWeight: 600,
-                              }}
-                            >
-                              {count}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
               )}
 
               {/* Workspace Sync Button */}

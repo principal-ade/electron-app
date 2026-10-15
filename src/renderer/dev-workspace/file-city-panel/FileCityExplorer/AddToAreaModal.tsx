@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import type { ProjectArea } from '@principal-ai/principal-view-core';
+import type { ProjectArea } from '../../../services/principal-views/localTypes';
 import { AREA_PANEL_COLOR } from './layers';
 import { makeSectionLabelStyle } from './styles';
 

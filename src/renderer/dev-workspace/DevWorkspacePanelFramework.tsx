@@ -316,13 +316,6 @@ export interface DevWorkspacePanelFrameworkProps {
   events: PanelEventEmitter;
   /** Trace source service name for OTEL routing */
   traceSourceServiceName?: string;
-  /** Callback when scope names are discovered from library.yaml */
-  onScopeNamesDiscovered?: (scopeNames: string[]) => void;
-  /** Callback when service trace counts change */
-  onServiceTraceCountsChange?: (
-    counts: Map<string, number>,
-    lastActiveService: string | null,
-  ) => void;
   /** Callback when left panel collapse animation completes */
   onLeftCollapseComplete?: () => void;
   /** Callback when left panel expand animation completes */
@@ -4009,8 +4002,6 @@ export const DevWorkspacePanelFramework: React.FC<
   onPanelControlReady,
   events,
   traceSourceServiceName: _traceSourceServiceName,
-  onScopeNamesDiscovered,
-  onServiceTraceCountsChange,
   onLeftCollapseComplete,
   onLeftExpandComplete,
   onOpenInWebADE,
@@ -4049,8 +4040,6 @@ export const DevWorkspacePanelFramework: React.FC<
       repository={repositoryMetadata}
       events={events}
       openTabs={tabsForProvider}
-      onScopeNamesDiscovered={onScopeNamesDiscovered}
-      onServiceTraceCountsChange={onServiceTraceCountsChange}
     >
       <TerminalProvider
         repositoryPath={repositoryPath}

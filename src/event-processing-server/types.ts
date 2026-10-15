@@ -127,16 +127,6 @@ export interface BindAgentSessionMessage extends BaseServerMessage {
   source: 'startup' | 'resume' | 'clear';
 }
 
-export interface GetTracesRequestMessage extends BaseServerMessage {
-  type: 'GET_TRACES_REQUEST';
-  limit?: number;
-  traceId?: string; // If provided, get specific trace
-}
-
-export interface GetRegistrationsRequestMessage extends BaseServerMessage {
-  type: 'GET_REGISTRATIONS_REQUEST';
-}
-
 export type ServerToMainMessage =
   | ReadyMessage
   | ProcessedEventMessage
@@ -145,8 +135,6 @@ export type ServerToMainMessage =
   | ProcessingCompleteMessage
   | ServerStatsMessage
   | ServerErrorMessage
-  | GetTracesRequestMessage
-  | GetRegistrationsRequestMessage
   | LinkSessionToTopicMessage
   | BindAgentSessionMessage;
 
@@ -178,27 +166,6 @@ export interface GetStatsMessage extends BaseClientMessage {
   type: 'GET_STATS';
 }
 
-export interface GetTracesResponseMessage extends BaseClientMessage {
-  type: 'GET_TRACES_RESPONSE';
-  success: boolean;
-  traces?: Array<{ traceId: string; data: unknown }>;
-  error?: string;
-}
-
-export interface PortRegistration {
-  windowId: string;
-  serviceName: string;
-  registeredAt: number;
-}
-
-export interface GetRegistrationsResponseMessage extends BaseClientMessage {
-  type: 'GET_REGISTRATIONS_RESPONSE';
-  success: boolean;
-  registrations?: PortRegistration[];
-  services?: string[];
-  error?: string;
-}
-
 /**
  * Message to register a MessagePort for a specific repository
  * The port is transferred separately via postMessage transfer list
@@ -225,9 +192,7 @@ export type MainToServerMessage =
   | PingMessage
   | GetStatsMessage
   | RegisterPortMessage
-  | UnregisterPortMessage
-  | GetTracesResponseMessage
-  | GetRegistrationsResponseMessage;
+  | UnregisterPortMessage;
 
 /**
  * Helper functions
@@ -320,30 +285,6 @@ export function isUnregisterPortMessage(
   msg: MainToServerMessage,
 ): msg is UnregisterPortMessage {
   return msg.type === 'UNREGISTER_PORT';
-}
-
-export function isGetTracesRequestMessage(
-  msg: ServerToMainMessage,
-): msg is GetTracesRequestMessage {
-  return msg.type === 'GET_TRACES_REQUEST';
-}
-
-export function isGetTracesResponseMessage(
-  msg: MainToServerMessage,
-): msg is GetTracesResponseMessage {
-  return msg.type === 'GET_TRACES_RESPONSE';
-}
-
-export function isGetRegistrationsRequestMessage(
-  msg: ServerToMainMessage,
-): msg is GetRegistrationsRequestMessage {
-  return msg.type === 'GET_REGISTRATIONS_REQUEST';
-}
-
-export function isGetRegistrationsResponseMessage(
-  msg: MainToServerMessage,
-): msg is GetRegistrationsResponseMessage {
-  return msg.type === 'GET_REGISTRATIONS_RESPONSE';
 }
 
 export function isLinkSessionToTopicMessage(

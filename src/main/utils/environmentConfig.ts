@@ -59,23 +59,6 @@ export class EnvironmentConfig {
     return path.join(RESOURCES_PATH, ...paths);
   }
 
-  /**
-   * Get bundled binary path that works in both environments
-   * In packaged app: resources/bin/
-   * In dev: resources/bin/ (if downloaded)
-   */
-  static getBundledBinaryPath(...paths: string[]): string {
-    if (!app) {
-      throw new Error(
-        'EnvironmentConfig.getBundledBinaryPath() cannot be used in worker context',
-      );
-    }
-    const RESOURCES_PATH = app.isPackaged
-      ? path.join(process.resourcesPath, 'bin')
-      : path.join(__dirname, '../../resources/bin');
-    return path.join(RESOURCES_PATH, ...paths);
-  }
-
   static getHomeDir(): string {
     return os.homedir();
   }

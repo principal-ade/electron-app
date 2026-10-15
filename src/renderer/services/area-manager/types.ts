@@ -12,7 +12,7 @@
 import type {
   AuxiliaryManifest,
   ProjectArea,
-} from '@principal-ai/principal-view-core';
+} from '../principal-views/localTypes';
 
 export type { AuxiliaryManifest, ProjectArea };
 

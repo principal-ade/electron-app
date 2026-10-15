@@ -31,7 +31,6 @@ import { systemAPI } from './main-process-api-implementations/systemApi';
 import { userPreferencesAPI } from './main-process-api-implementations/userPreferencesApi';
 import { windowManagerAPI } from './main-process-api-implementations/windowManagerApi';
 import { repositoryMonitoringAPI } from './main-process-api-implementations/repositoryMonitoringApi';
-import { otelCollectorApi } from './main-process-api-implementations/otelCollectorApi';
 import { cliBridgeApi } from './main-process-api-implementations/cliBridgeApi';
 import { secretsAPI } from './main-process-api-implementations/secretsApi';
 import { linksAPI } from './main-process-api-implementations/linksApi';
@@ -110,7 +109,6 @@ const mainProcessExposure: MainProcessAPI = {
   fileSystem: fileSystemAPI,
   store: storeAPI,
   repositoryMonitoring: repositoryMonitoringAPI,
-  otelCollector: otelCollectorApi,
   cliBridge: cliBridgeApi,
   secrets: secretsAPI,
   links: linksAPI,

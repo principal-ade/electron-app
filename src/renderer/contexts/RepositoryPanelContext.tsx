@@ -41,10 +41,6 @@ import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
-import type { RegisteredTrace, VersionSnapshot, OtelExportTraceServiceRequest } from '@principal-ai/principal-view-core';
-import { LocalRegistry, TraceOrchestrator } from '@principal-ai/principal-view-core';
-import { OtelCollectorService } from '../main-process-api/OtelCollectorService';
-import { RendererFileSystemAdapter } from '../utils/RendererFileSystemAdapter';
 import type {
   AlexandriaRepositoriesSlice,
   WorkspaceSlice,
@@ -60,95 +56,6 @@ import { BrunoService } from '../main-process-api/BrunoService';
 // Color mode for file city visualization - imported from registry
 // The registry's ColorMode type includes all built-in and lens-based modes
 type FileCityColorMode = ColorMode;
-
-/**
- * Split an OTLP batch by traceId into separate requests.
- * This is needed because the collector may batch multiple traces together,
- * but processTrace() expects one trace per request.
- */
-function splitOtlpByTraceId(
-  otlpData: OtelExportTraceServiceRequest
-): OtelExportTraceServiceRequest[] {
-  // First, collect all unique traceIds
-  const traceIds = new Set<string>();
-  for (const resourceSpan of otlpData.resourceSpans || []) {
-    for (const scopeSpan of resourceSpan.scopeSpans || []) {
-      for (const span of scopeSpan.spans || []) {
-        traceIds.add((span as { traceId: string }).traceId);
-      }
-    }
-  }
-
-  // If only one traceId, return original data unchanged to avoid restructuring issues
-  if (traceIds.size <= 1) {
-    return [otlpData];
-  }
-
-  // Multiple traces - need to split
-  const traceMap = new Map<
-    string,
-    {
-      resourceSpans: Array<{
-        resource: unknown;
-        scopeSpans: Array<{
-          scope: unknown;
-          spans: unknown[];
-        }>;
-      }>;
-    }
-  >();
-
-  // Group spans by traceId, consolidating into single resourceSpan/scopeSpan per trace
-  for (const resourceSpan of otlpData.resourceSpans || []) {
-    for (const scopeSpan of resourceSpan.scopeSpans || []) {
-      for (const span of scopeSpan.spans || []) {
-        const traceId = (span as { traceId: string }).traceId;
-
-        let traceData = traceMap.get(traceId);
-        if (!traceData) {
-          // Create a single resourceSpan with single scopeSpan for this trace
-          traceData = {
-            resourceSpans: [{
-              resource: resourceSpan.resource,
-              scopeSpans: [{
-                scope: scopeSpan.scope,
-                spans: [],
-              }],
-            }],
-          };
-          traceMap.set(traceId, traceData);
-        }
-
-        // Add span to the first (and only) scopeSpan
-        traceData.resourceSpans[0].scopeSpans[0].spans.push(span);
-      }
-    }
-  }
-
-  // Convert map to array of OtelExportTraceServiceRequest
-  return Array.from(traceMap.values()) as OtelExportTraceServiceRequest[];
-}
-
-/**
- * Extract service.name from OTLP trace data
- */
-function extractServiceName(otlpData: OtelExportTraceServiceRequest): string | null {
-  try {
-    const resourceSpan = otlpData.resourceSpans?.[0];
-    if (!resourceSpan?.resource?.attributes) return null;
-
-    const attributes = resourceSpan.resource.attributes as Array<{ key: string; value: { stringValue?: string } }>;
-    const serviceAttr = attributes.find((attr) => attr.key === 'service.name');
-    return serviceAttr?.value?.stringValue || null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Stored trace with service name for accurate counting
- */
-type StoredTrace = RegisteredTrace & { serviceName: string | null };
 
 // File city color modes slice data
 interface FileCityColorModesSliceData {
@@ -175,9 +82,6 @@ export interface RepositoryPanelActions extends PanelActions {
   openLocalRepository?: (entry: AlexandriaEntry) => Promise<void>;
   // Active file management for markdown panel
   setActiveFile?: (filePath: string | null) => Promise<void>;
-  // Telemetry management
-  clearTelemetry?: () => Promise<void>;
-  removeTrace?: (traceId: string) => void;
   // Scenario visibility (for TraceListPanel)
   updateScenarioFilterDefault?: (
     workflowPath: string,
@@ -217,12 +121,10 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   localhostServers: DataSlice<RunningServer[]>;
   globalSkills: DataSlice<{ skills: GlobalSkill[] } | null>;
-  telemetry: DataSlice<RegisteredTrace[]>;
   // Panel-specific slices (from ExtendedPanelContextValue)
   terminal: DataSlice<TerminalSessionInfo[]>;
   feedProject: DataSlice<FeedProjectSliceData>;
   githubIssues: DataSlice<GitHubIssuesSliceData>;
-  schematics: DataSlice<VersionSnapshot[]>;
   activityHeatmap: DataSlice<ActivityHeatmapSliceData | null>;
   lineCounts: DataSlice<LineCountsSliceData | null>;
 }
@@ -247,15 +149,11 @@ interface RepositoryPanelProviderProps {
   traceSourceServiceName?: string;
   /** Open tabs from DevWorkspace - used by panels to check selection state */
   openTabs?: unknown[];
-  /** Callback when scope names are discovered from library.yaml */
-  onScopeNamesDiscovered?: (scopeNames: string[]) => void;
-  /** Callback when service trace counts change */
-  onServiceTraceCountsChange?: (counts: Map<string, number>, lastActiveService: string | null) => void;
 }
 
 export const RepositoryPanelProvider: React.FC<
   RepositoryPanelProviderProps
-> = ({ children, repositoryPath, repository, events, openTabs = [], onScopeNamesDiscovered, onServiceTraceCountsChange }) => {
+> = ({ children, repositoryPath, repository, events, openTabs = [] }) => {
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
@@ -349,131 +247,9 @@ export const RepositoryPanelProvider: React.FC<
   const [globalSkillsData, setGlobalSkillsData] = useState<GlobalSkill[]>([]);
   const [globalSkillsLoading, setGlobalSkillsLoading] = useState(false);
 
-  // Track telemetry traces for trace viewer (with serviceName for accurate counting)
-  const [telemetryTraces, setTelemetryTraces] = useState<StoredTrace[]>([]);
-  const [telemetryLoading, setTelemetryLoading] = useState(false);
-
-  // Discovered service/scope names from library.yaml (for trace port registration)
-  const [discoveredScopeNames, setDiscoveredScopeNames] = useState<string[]>([]);
-
-  // Track most recent active service
-  const [lastActiveService, setLastActiveService] = useState<string | null>(null);
-
-  // Derive service trace counts from actual stored traces
-  const serviceTraceCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const trace of telemetryTraces) {
-      if (trace.serviceName) {
-        counts.set(trace.serviceName, (counts.get(trace.serviceName) || 0) + 1);
-      }
-    }
-    return counts;
-  }, [telemetryTraces]);
-
-  // Notify parent when service trace counts change
-  useEffect(() => {
-    if (onServiceTraceCountsChange && serviceTraceCounts.size > 0) {
-      onServiceTraceCountsChange(serviceTraceCounts, lastActiveService);
-    }
-  }, [serviceTraceCounts, lastActiveService, onServiceTraceCountsChange]);
-
-  // Track schematics (version snapshots from LocalRegistry)
-  const [schematicsData, setSchematicsData] = useState<VersionSnapshot[]>([]);
-  const [schematicsLoading, setSchematicsLoading] = useState(false);
-
-  // Track previous FileTree to detect .principal-views changes
-  const prevFileTreeRef = useRef<FileTree | null>(null);
-
   // Ref for repositoryPath so fileReader always has current value
   const repositoryPathRef = useRef<string | null>(repositoryPath);
   repositoryPathRef.current = repositoryPath;
-
-  // FileSystemAdapter for LocalRegistry (needed for LibraryDiscovery)
-  const fsAdapter = useMemo(() => new RendererFileSystemAdapter(), []);
-
-  // LocalRegistry and TraceOrchestrator for processing OTLP traces
-  const localRegistry = useMemo(() => {
-    // FileReader function - reads file content via FileSystemService
-    // FileTree paths are relative, so we prepend repositoryPath to make them absolute
-    const fileReader = async (relativePath: string): Promise<string> => {
-      const basePath = repositoryPathRef.current;
-      if (!basePath) {
-        throw new Error(`Cannot read file: no repository path set`);
-      }
-      // Construct absolute path from relative FileTree path
-      const absolutePath = relativePath.startsWith('/')
-        ? relativePath
-        : `${basePath}/${relativePath}`;
-      const result = await FileSystemService.readFile(absolutePath);
-      if (!result || !result.content) {
-        throw new Error(`Failed to read file: ${absolutePath}`);
-      }
-      return result.content;
-    };
-
-    // Pass FileSystemAdapter to enable auto-discovery of scope names from library.yaml
-    return new LocalRegistry(fileReader, fsAdapter);
-  }, [fsAdapter]);
-
-  const traceOrchestrator = useMemo(() => {
-    return new TraceOrchestrator({
-      registry: localRegistry,
-      enableValidation: true,
-    });
-  }, [localRegistry]);
-
-  /**
-   * Check if .principal-views files have changed between FileTree updates
-   *
-   * TODO: Support monorepo packages - currently only checks root .principal-views/
-   * In the future, should check all packages:
-   *   - packages/foo/.principal-views/
-   *   - packages/bar/.principal-views/
-   *   - etc.
-   */
-  const hasPrincipalViewsChanges = useCallback((newFileTree: FileTree): boolean => {
-    if (!prevFileTreeRef.current) return true; // First load
-
-    // Filter files in root .principal-views directory only
-    const oldPVFiles = prevFileTreeRef.current.allFiles
-      .filter(f => f.relativePath.startsWith('.principal-views/'));
-    const newPVFiles = newFileTree.allFiles
-      .filter(f => f.relativePath.startsWith('.principal-views/'));
-
-    // Different number of files?
-    if (oldPVFiles.length !== newPVFiles.length) {
-      console.info('[RepositoryPanelContext] .principal-views file count changed:', {
-        old: oldPVFiles.length,
-        new: newPVFiles.length,
-      });
-      return true;
-    }
-
-    // Compare file paths and lastModified timestamps
-    const oldMap = new Map(oldPVFiles.map(f => [f.relativePath, f.lastModified.getTime()]));
-    for (const newFile of newPVFiles) {
-      const oldTime = oldMap.get(newFile.relativePath);
-      if (!oldTime) {
-        console.info('[RepositoryPanelContext] .principal-views file added:', newFile.relativePath);
-        return true;
-      }
-      if (oldTime !== newFile.lastModified.getTime()) {
-        console.info('[RepositoryPanelContext] .principal-views file modified:', newFile.relativePath);
-        return true;
-      }
-    }
-
-    // Check for removed files
-    const newPaths = new Set(newPVFiles.map(f => f.relativePath));
-    for (const oldFile of oldPVFiles) {
-      if (!newPaths.has(oldFile.relativePath)) {
-        console.info('[RepositoryPanelContext] .principal-views file removed:', oldFile.relativePath);
-        return true;
-      }
-    }
-
-    return false; // No changes in .principal-views
-  }, []);
 
   // Helper to extract owner/repo from git remote URL
   const parseGitHubRemote = (
@@ -957,67 +733,6 @@ export const RepositoryPanelProvider: React.FC<
     // Default to file types
     return 'fileTypes';
   }, [fileCityColorMode, stableGitStatusData]);
-
-  // Register workspace with LocalRegistry and handle .principal-views changes
-  useEffect(() => {
-    if (!repositoryPath || !stableFileTreeData) return;
-
-    let mounted = true;
-
-    const registerWorkspace = async () => {
-      try {
-        setSchematicsLoading(true);
-
-        // Register workspace with LocalRegistry - auto-discovers scope names from library.yaml
-        const scopeNames = await localRegistry.registerWorkspace(stableFileTreeData);
-
-        if (!mounted) return;
-
-        console.info('[RepositoryPanelContext] Registered workspace with LocalRegistry:', {
-          scopeNames,
-          fileTreeSha: stableFileTreeData.sha,
-        });
-
-        // Store discovered scope names for port registration
-        setDiscoveredScopeNames(scopeNames);
-
-        // Notify parent of discovered scope names (for display, etc.)
-        if (onScopeNamesDiscovered) {
-          onScopeNamesDiscovered(scopeNames);
-        }
-
-        // Check if .principal-views files changed and invalidate cache for all scope names
-        if (hasPrincipalViewsChanges(stableFileTreeData)) {
-          console.info('[RepositoryPanelContext] .principal-views changed, invalidating registry cache');
-          for (const scopeName of scopeNames) {
-            localRegistry.invalidateCache(scopeName);
-          }
-        }
-
-        // Fetch all schematics (version snapshots) for registered scopes
-        const snapshots = await localRegistry.getAllSnapshotsForRegisteredScopes();
-        if (mounted) {
-          console.info('[RepositoryPanelContext] Fetched schematics:', snapshots.length, 'snapshots');
-          setSchematicsData(snapshots);
-        }
-
-        // Update ref for next comparison
-        prevFileTreeRef.current = stableFileTreeData;
-      } catch (error) {
-        console.error('[RepositoryPanelContext] Failed to register workspace:', error);
-      } finally {
-        if (mounted) {
-          setSchematicsLoading(false);
-        }
-      }
-    };
-
-    registerWorkspace();
-
-    return () => {
-      mounted = false;
-    };
-  }, [repositoryPath, stableFileTreeData, localRegistry, hasPrincipalViewsChanges, onScopeNamesDiscovered]);
 
   // Listen for workspace file change events and trigger refresh
   // This ensures file tree updates when files are added/removed
@@ -1533,153 +1248,6 @@ export const RepositoryPanelProvider: React.FC<
     };
   }, []);
 
-  // Register MessagePort for OTEL traces from all discovered services
-  useEffect(() => {
-    let unsubscribe: (() => void) | null = null;
-    let windowId: string | null = null;
-
-    const registerTelemetryPort = async () => {
-      try {
-        // Wait for scope names to be discovered from library.yaml
-        if (discoveredScopeNames.length === 0) {
-          console.info('[RepositoryPanelProvider] No scope names discovered yet, waiting...');
-          return;
-        }
-
-        windowId = `dev-workspace-${Date.now()}`;
-
-        console.info('[RepositoryPanelProvider] 🔌 Registering telemetry port for all services');
-        console.info('[RepositoryPanelProvider] Discovered scope names:', discoveredScopeNames);
-        console.info('[RepositoryPanelProvider] Window ID:', windowId);
-
-        // Subscribe to OTEL messages for all services (port is handled in preload)
-        unsubscribe = window.mainProcess.otelCollector.onOtelMessageForServices(
-          windowId,
-          async (data: unknown) => {
-            try {
-              const message = data as { type?: string; windowId?: string; serviceIdentifier?: string; timestamp?: number; payload?: unknown };
-
-              // Check if this is a connection confirmation heartbeat from the server
-              if (message?.type === 'CONNECTION_CONFIRMED') {
-                console.info('[RepositoryPanelProvider] 🎉 Server connection confirmed!', {
-                  windowId: message.windowId,
-                  serviceIdentifier: message.serviceIdentifier,
-                  timestamp: message.timestamp ? new Date(message.timestamp).toISOString() : undefined,
-                });
-                return;
-              }
-
-              // Check if this is a raw OTLP trace from the server (forwarding mode)
-              if (message?.type === 'RAW_OTLP_TRACE') {
-                // Extract the raw OTLP data from the message
-                const otlpData = message.payload as OtelExportTraceServiceRequest | undefined;
-
-                if (!otlpData) {
-                  console.warn('[RepositoryPanelProvider] Invalid RAW_OTLP_TRACE payload:', message);
-                  return;
-                }
-
-                // Split OTLP batch by traceId - collector may batch multiple traces together
-                const splitTraces = splitOtlpByTraceId(otlpData);
-
-                // Process each trace separately
-                for (const singleTraceOtlp of splitTraces) {
-                  try {
-                    const registeredTrace = await traceOrchestrator.processTrace(singleTraceOtlp);
-
-                    // Extract service name for counting
-                    const serviceName = extractServiceName(singleTraceOtlp);
-                    if (serviceName) {
-                      setLastActiveService(serviceName);
-                    }
-
-                    // Store trace with serviceName for accurate count derivation
-                    const storedTrace: StoredTrace = { ...registeredTrace, serviceName };
-
-                    setTelemetryTraces((prev) => {
-                      // Check for duplicates
-                      const existingIds = new Set(prev.map((t) => t.traceId));
-                      if (existingIds.has(storedTrace.traceId)) {
-                        console.info('[RepositoryPanelProvider] Skipping duplicate trace:', storedTrace.traceId);
-                        return prev;
-                      }
-
-                      // Keep only last 1000 traces
-                      const combined = [...prev, storedTrace];
-                      return combined.slice(-1000);
-                    });
-                  } catch (error) {
-                    console.error('[TraceProcessing] ❌ Failed to process trace:', error);
-                  }
-                }
-
-                return;
-              }
-
-              // Unknown message type
-              console.warn('[RepositoryPanelProvider] Received unknown message type:', message?.type || message);
-            } catch (error) {
-              console.error(
-                '[RepositoryPanelProvider] Error processing telemetry message:',
-                error
-              );
-            }
-          }
-        );
-
-        // Trigger IPC registration for all discovered services (port will arrive in preload)
-        const response = await OtelCollectorService.registerPortForServices(windowId, discoveredScopeNames);
-
-        if (!response.success) {
-          console.error('[RepositoryPanelProvider] Failed to register telemetry port:', response.error);
-          return;
-        }
-
-        console.info('[RepositoryPanelProvider] ✅ Telemetry port registration initiated');
-        console.info('[RepositoryPanelProvider] Window ID:', windowId);
-        console.info('[RepositoryPanelProvider] Services:', discoveredScopeNames);
-
-        // Send ready ping to server after a short delay to ensure subscription is set up
-        // Note: Using first scope name for the ping since the port is shared
-        setTimeout(() => {
-          if (!windowId || discoveredScopeNames.length === 0) return;
-          console.info('[RepositoryPanelProvider] 📤 Sending RENDERER_READY ping to server');
-          const sent = window.mainProcess.otelCollector.sendOtelMessage(windowId, discoveredScopeNames[0], {
-            type: 'RENDERER_READY',
-            windowId,
-            serviceIdentifiers: discoveredScopeNames,
-            timestamp: Date.now(),
-          });
-          if (!sent) {
-            console.warn('[RepositoryPanelProvider] Failed to send RENDERER_READY - port not ready yet');
-          }
-        }, 100);
-      } catch (error) {
-        console.error(
-          '[RepositoryPanelProvider] Failed to register telemetry port:',
-          error
-        );
-      }
-    };
-
-    registerTelemetryPort();
-
-    // Cleanup on unmount or when discoveredScopeNames changes
-    return () => {
-      // Unsubscribe from messages
-      if (unsubscribe) {
-        unsubscribe();
-      }
-
-      // Unregister from main process - unregister window cleans up all services
-      if (windowId) {
-        OtelCollectorService.unregisterWindow(windowId).catch((err) => {
-          console.warn('[RepositoryPanelProvider] Error unregistering window:', err);
-        });
-      }
-    };
-  }, [discoveredScopeNames, traceOrchestrator]);
-
   // Create actions object
   // Note: Terminal actions have been moved to TerminalContext
   const actions: RepositoryPanelActions = useMemo(
@@ -2007,16 +1575,6 @@ export const RepositoryPanelProvider: React.FC<
         } finally {
           setActiveFileLoading(false);
         }
-      },
-
-      clearTelemetry: async () => {
-        console.info('[RepositoryPanelProvider] Clearing telemetry traces');
-        setTelemetryTraces([]);
-      },
-
-      removeTrace: (traceId: string) => {
-        console.info('[RepositoryPanelProvider] Removing trace:', traceId);
-        setTelemetryTraces((prev) => prev.filter((t) => t.traceId !== traceId));
       },
 
       updateScenarioFilterDefault: async (
@@ -2832,39 +2390,6 @@ export const RepositoryPanelProvider: React.FC<
     [globalSkillsData, globalSkillsLoading],
   );
 
-  // Explicit DataSlice: telemetry
-  const telemetrySlice = useMemo<DataSlice<RegisteredTrace[]>>(
-    () => ({
-      scope: 'workspace' as const,
-      name: 'telemetry',
-      data: telemetryTraces,
-      loading: telemetryLoading,
-      error: null,
-      refresh: async () => {
-        // For now, telemetry refresh is a no-op
-        // Real implementation will fetch from telemetry service
-        setTelemetryLoading(false);
-      },
-    }),
-    [telemetryTraces, telemetryLoading],
-  );
-
-  // Explicit DataSlice: serviceTraceCounts (derived from telemetryTraces)
-  const serviceTraceCountsSlice = useMemo<DataSlice<Map<string, number>>>(
-    () => ({
-      scope: 'workspace' as const,
-      name: 'serviceTraceCounts',
-      data: serviceTraceCounts,
-      loading: false,
-      error: null,
-      refresh: async () => {
-        // Clear counts by clearing traces
-        setTelemetryTraces([]);
-      },
-    }),
-    [serviceTraceCounts],
-  );
-
   // Panel-specific slices (from ExtendedPanelContextValue)
   // Terminal slice - provides terminal sessions data
   const terminalSlice = useMemo<DataSlice<TerminalSessionInfo[]>>(
@@ -2947,36 +2472,6 @@ export const RepositoryPanelProvider: React.FC<
       refresh: async () => {},
     }),
     [],
-  );
-
-  // Schematics slice (version snapshots from LocalRegistry)
-  const schematicsSlice = useMemo<DataSlice<VersionSnapshot[]>>(
-    () => ({
-      scope: 'repository' as const,
-      name: 'schematics',
-      data: schematicsData,
-      loading: schematicsLoading,
-      error: null,
-      refresh: async () => {
-        if (!stableFileTreeData) return;
-
-        setSchematicsLoading(true);
-        try {
-          // Invalidate cache and refetch
-          const scopeNames = localRegistry.getRegisteredWorkspaces().map(w => w.scopeName);
-          for (const scopeName of scopeNames) {
-            localRegistry.invalidateCache(scopeName);
-          }
-          const snapshots = await localRegistry.getAllSnapshotsForRegisteredScopes();
-          setSchematicsData(snapshots);
-        } catch (error) {
-          console.error('[RepositoryPanelContext] Failed to refresh schematics:', error);
-        } finally {
-          setSchematicsLoading(false);
-        }
-      },
-    }),
-    [schematicsData, schematicsLoading, stableFileTreeData, localRegistry],
   );
 
   // Activity heatmap slice (for CodeCityPanel)
@@ -3113,13 +2608,10 @@ export const RepositoryPanelProvider: React.FC<
       fileCityColorModes: fileCityColorModesSlice,
       localhostServers: localhostServersSlice,
       globalSkills: globalSkillsSlice,
-      telemetry: telemetrySlice,
-      serviceTraceCounts: serviceTraceCountsSlice,
       // Panel-specific slices (from ExtendedPanelContextValue)
       terminal: terminalSlice,
       feedProject: feedProjectSlice,
       githubIssues: githubIssuesSlice,
-      schematics: schematicsSlice,
       activityHeatmap: activityHeatmapSlice,
       lineCounts: lineCountsSlice,
     }),
@@ -3148,12 +2640,9 @@ export const RepositoryPanelProvider: React.FC<
       fileCityColorModesSlice,
       localhostServersSlice,
       globalSkillsSlice,
-      telemetrySlice,
-      serviceTraceCountsSlice,
       terminalSlice,
       feedProjectSlice,
       githubIssuesSlice,
-      schematicsSlice,
       activityHeatmapSlice,
       lineCountsSlice,
     ],
