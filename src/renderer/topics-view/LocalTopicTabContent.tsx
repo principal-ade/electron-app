@@ -23,7 +23,9 @@ export const LocalTopicTabContent: React.FC<{
   topicId: string;
   title?: string;
   events: PanelEventEmitter;
-}> = ({ topicId, title, events }) => {
+  /** Open a repo declared by the topic (a pick from the Projects rail). */
+  onOpenProject?: (purl: string) => void;
+}> = ({ topicId, title, events, onOpenProject }) => {
   const { theme } = useTheme();
 
   // Table-of-contents drawer: the body reports whether the description has
@@ -174,7 +176,7 @@ export const LocalTopicTabContent: React.FC<{
           />
         </div>
 
-        <TopicProjectsRail topicId={topicId} />
+        <TopicProjectsRail topicId={topicId} onOpenProject={onOpenProject} />
       </div>
     </div>
   );

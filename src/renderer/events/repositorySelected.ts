@@ -1,6 +1,7 @@
 import {
   createPurl,
   extractPurlFromRemoteUrl,
+  parsePurl,
 } from '@principal-ai/alexandria-core-library';
 import type {
   AlexandriaEntry,
@@ -133,3 +134,22 @@ export function payloadFromGithub(
   };
 }
 
+/**
+ * Minimal payload for a repository known only by its canonical purl — e.g. a
+ * topic's declared `repos`, where no GitHub identity or clone is at hand.
+ *
+ * Local clone details are deliberately left out: `RepositoryProfileTabContent`
+ * re-resolves every clone by purl against the live registry. For a GitHub purl
+ * the GitHub identity is seeded, so `openProjectInfo` routes a remote-only repo
+ * to the explorer — matching what a pick from the Projects surface does. Callers
+ * that have the local entries should prefer `payloadFromLocalEntry` so a cloned
+ * repo lands on its profile instead.
+ */
+export function payloadFromPurl(purl: Purl): RepositorySelectedPayload {
+  const parsed = parsePurl(purl);
+  const github =
+    parsed?.type === 'github' && parsed.namespace
+      ? buildGithubMetadata({ owner: parsed.namespace, name: parsed.name })
+      : undefined;
+  return { purl, github };
+}

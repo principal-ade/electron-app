@@ -58,8 +58,13 @@ import { useTerminalRepoInfo } from '../hooks/useTerminalRepoInfo';
 import { SendTabButton } from '../move-tab/SendTabButton';
 import { useTabReceiver } from '../move-tab/useTabReceiver';
 import { RepoAboutCard } from '../panels/home-panel/RepoAboutCard';
-import { payloadFromLocalEntry } from '../events/repositorySelected';
+import {
+  payloadFromLocalEntry,
+  payloadFromPurl,
+} from '../events/repositorySelected';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
+import { findEntriesByPurl } from '../utils/alexandriaIdentity';
+import type { Purl } from '@principal-ai/alexandria-core-library';
 import { useOpenRepositoryWindows } from '../hooks/useOpenRepositoryWindows';
 import {
   TabbedTerminalPanel,
@@ -362,6 +367,24 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     });
   }, []);
 
+  // Open a repo from a topic tab's Projects rail. Mirrors a pick from the
+  // Projects surface: a purl that matches a local clone opens that repo's
+  // profile (with every clone aggregated); a remote-only GitHub purl opens the
+  // explorer. Emitted on the shell's local bus, which the Projects open-intent
+  // forwarder lifts to the portal where `PortalIntentBridge` materializes the
+  // tab.
+  const handleOpenTopicProject = useCallback((purl: string) => {
+    const matches = findEntriesByPurl(repositoriesRef.current, purl as Purl);
+    eventsRef.current.emit({
+      type: PORTAL_INTENTS.repositorySelected,
+      source: 'topic-projects-rail',
+      timestamp: Date.now(),
+      payload: matches[0]
+        ? payloadFromLocalEntry(matches[0], matches)
+        : payloadFromPurl(purl as Purl),
+    });
+  }, []);
+
   const renderTabContent = useCallback(
     (tab: WorkspaceTab, _isActive: boolean) => {
       // Projects renders its own tabs + the shared document tabs (one source of
@@ -389,6 +412,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               topicId={topicTab.topicId}
               title={topicTab.title}
               events={eventsRef.current}
+              onOpenProject={handleOpenTopicProject}
             />
           );
         }
@@ -430,7 +454,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           return null;
       }
     },
-    [handleOpenRepository],
+    [handleOpenRepository, handleOpenTopicProject],
   );
 
   // Open links clicked in the terminal in the default browser.
