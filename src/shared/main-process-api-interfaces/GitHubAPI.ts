@@ -3,6 +3,10 @@ export enum GitHubAPIEvent {
   GET_ISSUES = 'github:get-issues',
   CREATE_ISSUE = 'github:create-issue',
   GET_PULL_REQUESTS = 'github:get-pull-requests',
+  GET_ISSUE = 'github:get-issue',
+  GET_PULL_REQUEST = 'github:get-pull-request',
+  GET_PULL_REQUEST_FILES = 'github:get-pull-request-files',
+  GET_COMMIT = 'github:get-commit',
   GET_REPOSITORY_COMMITS = 'github:get-repository-commits',
   GET_REPOSITORY_CONTRIBUTORS = 'github:get-repository-contributors',
   //GET_THREAD = 'github:get-thread',
@@ -384,7 +388,12 @@ export interface GitHubAPI {
     repo?: string;
     isGitHub: boolean;
   } | null>;
-  getIssues: (owner: string, repo: string) => Promise<GitHubIssue[]>;
+  getIssues: (
+    owner: string,
+    repo: string,
+    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+  ) => Promise<unknown[]>;
+  getIssue: (owner: string, repo: string, number: number) => Promise<unknown | null>;
   createIssue: (
     owner: string,
     repo: string,
@@ -393,7 +402,11 @@ export interface GitHubAPI {
   getPullRequests: (
     owner: string,
     repo: string,
-  ) => Promise<GitHubPullRequest[]>;
+    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+  ) => Promise<unknown[]>;
+  getPullRequest: (owner: string, repo: string, number: number) => Promise<unknown | null>;
+  getPullRequestFiles: (owner: string, repo: string, number: number) => Promise<unknown[]>;
+  getCommit: (owner: string, repo: string, sha: string) => Promise<unknown | null>;
   getRepositoryCommits: (
     owner: string,
     repo: string,

@@ -3,9 +3,10 @@
  *
  * This renders `RepoExplorerPage` (copied from web-ade's
  * `src/app/[owner]/[repo]/`) inside the desktop app's Storybook. Data comes from
- * `storybook/mockFetch.ts` (route handlers) and the `lib/trpc/client.ts` stub
- * (tRPC) so the full UI can be reviewed without an Electron main process or a
- * Next server — the baseline for the desktop port.
+ * a fixture `repoExplorerService` implementation
+ * (`storybook/mockRepoExplorerService.ts`) installed via
+ * `setRepoExplorerServiceImpl`, so the full UI can be reviewed without an
+ * Electron main process.
  *
  * Next-only seams are shimmed under `shims/` (next/link, next/navigation,
  * next/dynamic).
@@ -16,7 +17,8 @@ import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import { RepoExplorerPage } from './app/[owner]/[repo]/RepoExplorerPage';
 import { AuthProvider } from './contexts/AuthContext';
-import { installRepoExplorerFetchMock } from './storybook/mockFetch';
+import { setRepoExplorerServiceImpl } from './data/repoExplorerService';
+import { mockRepoExplorerService } from './storybook/mockRepoExplorerService';
 
 // The ported page is laid out with Tailwind utility classes. Storybook doesn't
 // load the app's stylesheet by default, so pull it in here (plus the markdown
@@ -27,9 +29,9 @@ import './styles.css';
 import 'themed-markdown/dist/index.css';
 import 'highlight.js/styles/atom-one-dark.css';
 
-// Install once at module load — the page and its hooks fire their fetches on
-// mount, so the mock must be in place before the first render.
-installRepoExplorerFetchMock();
+// Install once at module load — the page and its hooks fire their data calls on
+// mount, so the fixture service must be in place before the first render.
+setRepoExplorerServiceImpl(mockRepoExplorerService);
 
 const meta: Meta<typeof RepoExplorerPage> = {
   title: 'Repo Explorer/OwnerRepoPage',

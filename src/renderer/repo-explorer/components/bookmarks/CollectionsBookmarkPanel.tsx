@@ -35,12 +35,8 @@ export function CollectionsBookmarkPanel({
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/starred-collections');
-      if (!res.ok) {
-        throw new Error('Failed to fetch collections');
-      }
-      const data = await res.json();
-      setCollections(data.collections || []);
+      // TODO: starred-collections is hosted-only; no native source yet.
+      setCollections([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load collections');
     } finally {
@@ -62,30 +58,8 @@ export function CollectionsBookmarkPanel({
     setTogglingIds((prev) => ({ ...prev, [collection.id]: true }));
 
     try {
-      if (isSaved) {
-        // DELETE
-        const res = await fetch(
-          `/api/starred-collections/${collection.id}/repos/${currentRepo.owner.login}/${currentRepo.name}`,
-          { method: 'DELETE' }
-        );
-        if (!res.ok) {
-          throw new Error('Failed to remove repository');
-        }
-      } else {
-        // POST
-        const res = await fetch(`/api/starred-collections/${collection.id}/repos`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            owner: currentRepo.owner.login,
-            repo: currentRepo.name,
-          }),
-        });
-        if (!res.ok) {
-          throw new Error('Failed to add repository');
-        }
-      }
-      // Re-fetch to get updated collections state
+      // TODO: starred-collections is hosted-only; no native source yet.
+      void isSaved;
       await fetchCollections();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Operation failed');
@@ -104,32 +78,8 @@ export function CollectionsBookmarkPanel({
     try {
       setCreateLoading(true);
       setCreateError(null);
-      const res = await fetch('/api/starred-collections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newCollectionName.trim(),
-          description: newCollectionDesc.trim() || undefined,
-          visibility: newCollectionVis,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to create collection');
-      }
-
-      const newCol = await res.json();
-      
-      // Auto-add current repo to the newly created collection
-      await fetch(`/api/starred-collections/${newCol.id}/repos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          owner: currentRepo.owner.login,
-          repo: currentRepo.name,
-        }),
-      });
+      // TODO: starred-collections is hosted-only; no native source yet.
+      throw new Error('Collections are not available yet.');
 
       setNewCollectionName('');
       setNewCollectionDesc('');

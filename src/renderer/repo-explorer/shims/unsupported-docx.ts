@@ -5,18 +5,22 @@
  * import from breaking the bundle. Only reached when a DOCX/PPTX is opened.
  */
 
-const unavailable = (): never => {
+const unavailable = (..._args: unknown[]): never => {
   throw new Error(
     'Document rendering (docx/pptx) is not available in this environment yet.',
   );
 };
 
-export const init = unavailable;
+export const init = (
+  ..._args: unknown[]
+): { preview: (data: ArrayBuffer) => Promise<void> } => unavailable();
 
-export async function convertToHtml(): Promise<{ value: string }> {
-  unavailable();
+export async function convertToHtml(
+  ..._args: unknown[]
+): Promise<{ value: string }> {
+  return unavailable();
 }
 
-export async function renderAsync(): Promise<void> {
-  unavailable();
+export async function renderAsync(..._args: unknown[]): Promise<void> {
+  return unavailable();
 }

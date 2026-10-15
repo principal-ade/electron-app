@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { IssueView } from '@industry-theme/file-city-panel';
 import { issueViewFromGitHubIssue } from '@industry-theme/file-city-panel/github';
 import type { components } from '@octokit/openapi-types';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 type GitHubIssue = components['schemas']['issue'];
 
@@ -46,15 +47,16 @@ export function useIssueView(
 
     (async () => {
       try {
-        const res = await fetch(
-          `/api/github/repo/${owner}/${repo}/issues/${number}`,
-        );
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Failed to load issue (${res.status})`);
-        }
-        const data: GitHubIssue = await res.json();
+        const data = (await repoExplorerService.getIssue(
+          owner,
+          repo,
+          number,
+        )) as GitHubIssue | null;
         if (id !== reqId.current) return; // superseded
+        if (!data) {
+          setState({ issue: null, loading: false, error: null });
+          return;
+        }
 
         setState({
           issue: issueViewFromGitHubIssue(data),

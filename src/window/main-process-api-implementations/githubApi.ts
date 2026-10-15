@@ -57,12 +57,46 @@ export const githubAPI: GitHubAPI = {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_TREE, owner, repo, ref);
   },
 
-  getIssues: async (owner: string, repo: string) => {
-    return ipcRenderer.invoke(GitHubAPIEvent.GET_ISSUES, owner, repo);
+  getIssues: async (
+    owner: string,
+    repo: string,
+    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+  ) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_ISSUES, owner, repo, options);
   },
 
-  getPullRequests: async (owner: string, repo: string) => {
-    return ipcRenderer.invoke(GitHubAPIEvent.GET_PULL_REQUESTS, owner, repo);
+  getIssue: async (owner: string, repo: string, number: number) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_ISSUE, owner, repo, number);
+  },
+
+  getPullRequests: async (
+    owner: string,
+    repo: string,
+    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+  ) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_PULL_REQUESTS,
+      owner,
+      repo,
+      options,
+    );
+  },
+
+  getPullRequest: async (owner: string, repo: string, number: number) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_PULL_REQUEST, owner, repo, number);
+  },
+
+  getPullRequestFiles: async (owner: string, repo: string, number: number) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_PULL_REQUEST_FILES,
+      owner,
+      repo,
+      number,
+    );
+  },
+
+  getCommit: async (owner: string, repo: string, sha: string) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_COMMIT, owner, repo, sha);
   },
 
   getRepositoryCommits: async (

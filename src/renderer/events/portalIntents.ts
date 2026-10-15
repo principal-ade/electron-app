@@ -24,6 +24,8 @@ export const PORTAL_INTENTS = {
   docOpen: 'doc:open',
   /** Open a repository profile tab. */
   repositorySelected: 'repository:selected',
+  /** Open the ported owner/repo explorer tab (separate from the profile). */
+  repositoryExplorerOpen: 'repository:explorer-open',
   /** Open a File City guide tab (the guide host, separate from the profile). */
   repositoryGuideOpen: 'repository:guide-open',
   /** Open a File City guide tab with README active (or toggle it off). */
@@ -32,8 +34,6 @@ export const PORTAL_INTENTS = {
   repositoryGuideOpenWeek: 'repository:guide-open-week',
   /** Open a user/org profile tab (collapses the legacy `user:profile-selected`). */
   ownerSelected: 'owner:selected',
-  /** Open a repository commit-activity tab. */
-  repositoryActivityRequested: 'repository:activity-requested',
   /** Open a terminal tab rooted at a local directory. */
   terminalOpen: 'terminal:open',
   /** Open a local subsystem model in a workspace tab. */
@@ -129,12 +129,6 @@ export interface OwnerSelectedPayload {
   kind: 'user' | 'org';
   /** Email hint carried by the legacy `user:profile-selected` path. */
   email?: string;
-}
-
-/** Payload for {@link PORTAL_INTENTS.repositoryActivityRequested}. */
-export interface RepositoryActivityRequestedPayload {
-  owner: string;
-  repo: string;
 }
 
 /** Payload for {@link PORTAL_INTENTS.terminalOpen}. */
@@ -248,10 +242,10 @@ export function installProjectsOpenForwarder(
   // Pass-through opens (payload unchanged).
   const unsubs = [
     forward(PORTAL_INTENTS.repositorySelected),
+    forward(PORTAL_INTENTS.repositoryExplorerOpen),
     forward(PORTAL_INTENTS.repositoryGuideOpen),
     forward(PORTAL_INTENTS.repositoryGuideOpenReadme),
     forward(PORTAL_INTENTS.repositoryGuideOpenWeek),
-    forward(PORTAL_INTENTS.repositoryActivityRequested),
   ];
 
   // owner:selected — normalize `{ owner, isOrg }` → `{ owner, kind }`.

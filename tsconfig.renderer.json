@@ -8,7 +8,10 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "./dist/renderer",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@repo-explorer/*": ["src/renderer/repo-explorer/*"]
+    }
   },
   "include": [
     "src/renderer/**/*",
@@ -29,7 +32,6 @@
     "release/build",
     "release/app/dist",
     ".erb/dll",
-    "src/renderer/unused/**/*",
-    "src/renderer/repo-explorer/**/*"
+    "src/renderer/unused/**/*"
   ]
 }

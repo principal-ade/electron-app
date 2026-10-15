@@ -232,9 +232,11 @@ function lineCountsSlice(
 interface RepoExplorerPageProps {
   owner: string;
   repo: string;
+  /** Optional actions rendered in the header's right cluster (host-provided). */
+  headerActions?: React.ReactNode;
 }
 
-export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
+export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPageProps) {
   const { theme } = useTheme();
 
   const { user } = useAuth();
@@ -1143,7 +1145,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   if (!dataReady) {
     return (
       <>
-        <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
           <FileCity3D
             cityData={WARMING_CITY_DATA}
             width="100%"
@@ -1151,7 +1153,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             showControls={false}
           />
         </div>
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50 }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 50 }}>
           <BlockDropLoadingScreen message={`Loading ${repo}`} />
         </div>
       </>
@@ -1165,13 +1167,14 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   return (
     <RepoAnalysisProvider owner={owner} repo={repo}>
     <div
-      className="w-screen flex flex-col overflow-hidden"
-      style={{ background: theme.colors.background, height: '100vh' }}
+      className="w-full flex flex-col overflow-hidden"
+      style={{ background: theme.colors.background, height: '100%' }}
     >
       <Header
         rootRef={headerRef}
         owner={owner}
         repo={repo}
+        headerActions={headerActions}
         selectedTour={selectedTour}
         tourProgress={
           selectedTour ? tourGenProgress.get(selectedTour.tour.id) : undefined
@@ -1480,7 +1483,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
         FileCity3D's cold start (blank canvas until cameraReady) happens out
         of sight instead of as a visible second load. */}
     {showLoadingOverlay && (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 50 }}>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 50 }}>
         <BlockDropLoadingScreen message={`Loading ${repo}`} />
       </div>
     )}
@@ -1504,6 +1507,8 @@ const Header: React.FC<{
   /** Toggle the bookmarks passport side panel. */
   onToggleBookmarks: () => void;
   bookmarksOpen: boolean;
+  /** Host-provided actions rendered in the header's right cluster. */
+  headerActions?: React.ReactNode;
   /** Extend the breadcrumb to "owner / repo" — set while a nav-card view (not
    *  the overview) is open, so the header names the repo you've drilled into. */
   repoActive: boolean;
@@ -1526,6 +1531,7 @@ const Header: React.FC<{
   onGenerateTourAudio,
   onToggleBookmarks,
   bookmarksOpen,
+  headerActions,
   repoActive,
   onShowOverview,
   singleTour,
@@ -1728,6 +1734,7 @@ const Header: React.FC<{
           />
         )}
 
+        {headerActions}
       </div>
 
     </header>

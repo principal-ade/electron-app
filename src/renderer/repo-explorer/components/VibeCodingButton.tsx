@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, forwardRef, useImperativeHandle } from '
 import { useTheme } from '@principal-ade/industry-theme';
 import { Code2, Loader2, CheckCircle, AlertTriangle, AlertOctagon, Activity, Zap } from 'lucide-react';
 import type { GitHubCodeSearchResponse } from '@repo-explorer/types/api';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 type SeverityLevel = 'safe' | 'low' | 'moderate' | 'high' | 'critical';
 
@@ -188,14 +189,13 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
     }
 
     try {
-      const res = await fetch(
-        `/api/github/code-search?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&q=${encodeURIComponent('isRecord,is_record,is_empty')}`
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(err.error || `GitHub API error (${res.status})`);
-      }
-      const data: GitHubCodeSearchResponse = await res.json();
+      // TODO: code-search IPC not implemented yet.
+      const data: GitHubCodeSearchResponse = {
+        total_files: 0,
+        total_occurrences: 0,
+        items: [],
+        terms: [],
+      } as unknown as GitHubCodeSearchResponse;
 
       if (scanTimerRef.current) {
         pendingResultsRef.current = data;

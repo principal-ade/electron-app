@@ -7,6 +7,7 @@ import type {
 } from '@industry-theme/file-city-panel';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { GitHubCommit, GitHubCommitDetailResponse } from '@repo-explorer/types/api';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 const WEEK_STARTS_ON: WeekStartsOn = 1; // Monday
 /** Cap detail fetches so a hyperactive repo can't fire hundreds of calls. */
@@ -49,11 +50,12 @@ async function fetchCommitDetail(
   sha: string,
 ): Promise<CommitView | null> {
   try {
-    const res = await fetch(
-      `/api/github/repo/${owner}/${repo}/commits/${sha}`,
-    );
-    if (!res.ok) return null;
-    const detail: GitHubCommitDetailResponse = await res.json();
+    const detail = (await repoExplorerService.getCommitDetail(
+      owner,
+      repo,
+      sha,
+    )) as GitHubCommitDetailResponse | null;
+    if (!detail) return null;
     const files: CommitFileChange[] = (detail.files ?? []).map((f) => ({
       path: f.filename,
       status: f.status,
@@ -178,19 +180,11 @@ export function useWeekCommits(
         while (listed.length < MAX_COMMITS) {
           const remaining = MAX_COMMITS - listed.length;
           const perPage = Math.min(100, remaining);
-          const res = await fetch(
-            `/api/github/repo/${owner}/${repo}/commits?per_page=${perPage}&page=${page}` +
-              `&since=${encodeURIComponent(rangeStartIso)}` +
-              `&until=${encodeURIComponent(asOfIso)}`,
-          );
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            throw new Error(
-              data.error || `Failed to load week commits (${res.status})`,
-            );
-          }
-          const data = await res.json();
-          const batch: GitHubCommit[] = data.commits || [];
+          const data = await repoExplorerService.getCommits(owner, repo, {
+            perPage,
+            page,
+          });
+          const batch: GitHubCommit[] = (data.commits as GitHubCommit[]) || [];
           if (batch.length === 0) break;
           listed.push(...batch);
           if (batch.length < perPage) break;

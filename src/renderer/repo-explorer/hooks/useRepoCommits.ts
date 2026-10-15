@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GitHubCommit } from '@repo-explorer/types/api';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 /**
  * Paginated fetcher for a repo's default-branch commit history.
@@ -34,16 +35,11 @@ export function useRepoCommits(
       setError(null);
 
       try {
-        const res = await fetch(
-          `/api/github/repo/${owner}/${repo}/commits?per_page=${perPage}&page=${page}`,
-          { signal: controller.signal },
-        );
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Failed to load commits (${res.status})`);
-        }
-        const data = await res.json();
-        const next: GitHubCommit[] = data.commits || [];
+        const data = await repoExplorerService.getCommits(owner, repo, {
+          perPage,
+          page,
+        });
+        const next: GitHubCommit[] = (data.commits as GitHubCommit[]) || [];
         pageRef.current = page;
         setHasMore(next.length === perPage);
         setCommits((prev) => (append ? [...prev, ...next] : next));

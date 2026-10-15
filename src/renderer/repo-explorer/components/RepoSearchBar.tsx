@@ -10,6 +10,7 @@ import {
   readRecentRepos,
   type HeaderRepoSearchItem,
 } from '@repo-explorer/lib/recentRepos';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 // ---------------------------------------------------------------------------
 // RepoSearchBar — the header "open a repo" control, shared by the owner/repo
@@ -132,15 +133,10 @@ export function RepoSearchBar({
     const ctrl = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(
-          `/api/github/search?q=${encodeURIComponent(q)}&per_page=8`,
-          { signal: ctrl.signal },
-        );
-        if (!res.ok) throw new Error('search failed');
-        const data = await res.json();
+        const data = await repoExplorerService.searchRepos(q, { perPage: 8 });
         setOpenRepoResults(
-          Array.isArray(data.items)
-            ? (data.items as HeaderRepoSearchItem[]).slice(0, 8)
+          Array.isArray(data.repos)
+            ? ((data.repos as unknown) as HeaderRepoSearchItem[]).slice(0, 8)
             : [],
         );
       } catch {

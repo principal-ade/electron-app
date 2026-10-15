@@ -6,6 +6,7 @@ import { useAuth } from '@repo-explorer/contexts/AuthContext';
 import { LogOut, Home, Calendar, User } from 'lucide-react';
 import Link from '@repo-explorer/shims/next-link';
 import { usePathname } from '@repo-explorer/shims/next-navigation';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 interface UserOrganization {
   id: number;
@@ -45,11 +46,8 @@ export function UserAvatarMenu({ hideLoginButton = false }: { hideLoginButton?: 
     const fetchOrganizations = async () => {
       setOrgsLoading(true);
       try {
-        const response = await fetch('/api/github/user/orgs');
-        if (response.ok) {
-          const data = await response.json();
-          setOrganizations(data.organizations || []);
-        }
+        const data = await repoExplorerService.getUserOrganizations();
+        setOrganizations((data as any[]) || []);
       } catch (error) {
         console.error('Failed to fetch organizations:', error);
       } finally {

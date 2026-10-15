@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReadmeView } from '@industry-theme/file-city-panel';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 interface Result {
   readme: ReadmeView | null;
@@ -13,26 +14,13 @@ async function fetchReadmeContent(
   path: string,
   sha?: string | null,
 ): Promise<string> {
-  const res = await fetch(
-    `/api/github/repo/${owner}/${repo}?action=file&path=${encodeURIComponent(
-      path,
-    )}${sha ? `&ref=${encodeURIComponent(sha)}` : ''}`,
+  const data = await repoExplorerService.readFile(
+    owner,
+    repo,
+    path,
+    sha ?? undefined,
   );
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Failed to load file (${res.status})`);
-  }
-  const data = await res.json();
-  if (data.content && data.encoding === 'base64') {
-    const binary = atob(String(data.content).replace(/\n/g, ''));
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return new TextDecoder('utf-8').decode(bytes);
-  }
-  if (typeof data.content === 'string') return data.content;
-  return '';
+  return data.content;
 }
 
 function isMarkdown(path: string): boolean {

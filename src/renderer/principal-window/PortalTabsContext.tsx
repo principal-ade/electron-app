@@ -23,9 +23,9 @@ import type {
   CommitReviewTab,
   InProgressActivityTab,
   ProjectInfoTab,
+  RepoExplorerTab,
   UserProfileTab,
   OrgProfileTab,
-  RepoActivityTab,
   FileCityGuideTab,
   MarkdownDocTab,
   SourceFileTab,
@@ -55,9 +55,9 @@ export type WorkspaceTab =
   | ActivityFeedTab
   | InProgressActivityTab
   | ProjectInfoTab
+  | RepoExplorerTab
   | UserProfileTab
   | OrgProfileTab
-  | RepoActivityTab
   | FileCityGuideTab
   // Drawings
   | DrawingTab
@@ -89,12 +89,12 @@ export interface WorkspaceTabsContextValue {
   // Projects
   /** Open a `project-info-<purl>` tab idempotently and focus it. */
   openProjectInfo: (payload: RepositorySelectedPayload) => void;
+  /** Open a `repo-explorer-<purl>` tab idempotently and focus it. */
+  openRepoExplorer: (payload: RepositorySelectedPayload) => void;
   /** Open a `user-profile-<username>` tab idempotently and focus it. */
   openUserProfile: (username: string, email?: string) => void;
   /** Open an `org-profile-<orgName>` tab idempotently and focus it. */
   openOrgProfile: (orgName: string) => void;
-  /** Open a `repo-activity-<owner>/<repo>` tab idempotently and focus it. */
-  openRepoActivity: (owner: string, repo: string) => void;
   /**
    * Open a `file-city-guide-<purl>` tab idempotently and focus it.
    * Optional `options` update guide modes (readme / week); turning one on
@@ -245,9 +245,43 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [openTab],
   );
 
-  const openProjectInfo = useCallback(
+  const openRepoExplorer = useCallback(
     (payload: RepositorySelectedPayload) => {
       const { purl, github, localEntry } = payload;
+      openTab(
+        `repo-explorer-${purl}`,
+        () =>
+          ({
+            id: `repo-explorer-${purl}`,
+            label: github ? `${github.owner}/${github.name}` : String(purl),
+            contentType: 'repo-explorer',
+            closable: true,
+            purl,
+            github,
+            localEntry,
+          }) as RepoExplorerTab,
+      );
+    },
+    [openTab],
+  );
+
+  /**
+   * Open a repository. The default surface depends on clone state:
+   *   - remote-only (no local clone, has a GitHub identity) → the explorer
+   *   - cloned locally, or local-only (no GitHub identity) → the profile panel
+   * The profile panel's value is local-clone management, which doesn't apply to
+   * a remote-only repo; the explorer can't render without an owner/repo.
+   */
+  const openProjectInfo = useCallback(
+    (payload: RepositorySelectedPayload) => {
+      const { purl, github, localEntry, localClones } = payload;
+      const isLocal =
+        Boolean(localEntry?.path) || (localClones?.length ?? 0) > 0;
+      const hasGithub = Boolean(github?.owner && github?.name);
+      if (!isLocal && hasGithub) {
+        openRepoExplorer(payload);
+        return;
+      }
       openTab(
         `project-info-${purl}`,
         () =>
@@ -262,7 +296,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
           }) as ProjectInfoTab,
       );
     },
-    [openTab],
+    [openTab, openRepoExplorer],
   );
 
   const openUserProfile = useCallback(
@@ -295,24 +329,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
             closable: true,
             orgName,
           }) as OrgProfileTab,
-      );
-    },
-    [openTab],
-  );
-
-  const openRepoActivity = useCallback(
-    (owner: string, repo: string) => {
-      openTab(
-        `repo-activity-${owner}/${repo}`,
-        () =>
-          ({
-            id: `repo-activity-${owner}/${repo}`,
-            label: `${owner}/${repo}`,
-            contentType: 'repo-activity',
-            closable: true,
-            owner,
-            repo,
-          }) as RepoActivityTab,
       );
     },
     [openTab],
@@ -517,9 +533,9 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openSourceFile,
       openMedia,
       openProjectInfo,
+      openRepoExplorer,
       openUserProfile,
       openOrgProfile,
-      openRepoActivity,
       openFileCityGuide,
       openInProgress,
       openDrawing,
@@ -535,9 +551,9 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openSourceFile,
       openMedia,
       openProjectInfo,
+      openRepoExplorer,
       openUserProfile,
       openOrgProfile,
-      openRepoActivity,
       openFileCityGuide,
       openInProgress,
       openDrawing,

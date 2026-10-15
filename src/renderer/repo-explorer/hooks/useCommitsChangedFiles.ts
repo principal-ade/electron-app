@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GitHubCommitDetailResponse } from '@repo-explorer/types/api';
 import type { ChangedFile } from '@repo-explorer/lib/activity/commitLayers';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 /**
  * Batch-fetches the changed-file lists for a set of commit SHAs (from the
@@ -59,11 +60,12 @@ export function useCommitsChangedFiles(
       await Promise.all(
         toFetch.map(async (sha) => {
           try {
-            const res = await fetch(
-              `/api/github/repo/${owner}/${repo}/commits/${sha}`,
-            );
-            if (!res.ok) return;
-            const data: GitHubCommitDetailResponse = await res.json();
+            const data = (await repoExplorerService.getCommitDetail(
+              owner,
+              repo,
+              sha,
+            )) as GitHubCommitDetailResponse | null;
+            if (!data) return;
             const files: ChangedFile[] = (data.files ?? []).map((f) => ({
               filename: f.filename,
               status: f.status,

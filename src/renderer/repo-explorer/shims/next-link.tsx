@@ -2,11 +2,14 @@
  * Storybook/desktop shim for `next/link`.
  *
  * The ported page comes from web-ade (Next.js App Router). In the desktop app
- * there is no Next router, so links degrade to plain anchors. Navigation
- * intents will be wired through the workspace tab system later.
+ * there is no Next router: clicks are routed through the navigation seam
+ * (`shims/navigation`) so the host can turn them into workspace intents.
+ * Unhandled hrefs (e.g. external `target="_blank"` links) fall back to a plain
+ * anchor — which Electron's window-open handler sends to the system browser.
  */
 
 import React from 'react';
+import { navigate } from './navigation';
 
 type Href = string | { pathname?: string; query?: Record<string, unknown> };
 
@@ -27,7 +30,17 @@ function hrefToString(href: Href): string {
 }
 
 const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link(
-  { href, children, prefetch, replace, scroll, passHref, legacyBehavior, ...rest },
+  {
+    href,
+    children,
+    onClick,
+    prefetch,
+    replace,
+    scroll,
+    passHref,
+    legacyBehavior,
+    ...rest
+  },
   ref,
 ) {
   // Strip Next-only props so they don't reach the DOM.
@@ -36,8 +49,23 @@ const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link(
   void scroll;
   void passHref;
   void legacyBehavior;
+
+  const hrefStr = hrefToString(href);
+
   return (
-    <a ref={ref} href={hrefToString(href)} {...rest}>
+    <a
+      ref={ref}
+      href={hrefStr}
+      onClick={(e) => {
+        onClick?.(e);
+        if (e.defaultPrevented) return;
+        if (navigate(hrefStr)) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      {...rest}
+    >
       {children}
     </a>
   );

@@ -44,6 +44,13 @@ import {
  */
 export const REPO_ANALYSIS_ENABLED = false;
 
+/** TODO: repo analysis has no native source yet (was a hosted VM). */
+async function unsupportedAnalysisFetch(
+  ..._args: unknown[]
+): Promise<Response> {
+  throw new Error('Repo analysis has no native source yet.');
+}
+
 /** What the slim repo-analysis GET returns (the fields we use). Heavy maps
  *  (byEmail, personOwnership, lineCounts, totalLines, shortlog contributors)
  *  are omitted; ownership and the full contributor list are paged separately. */
@@ -199,7 +206,7 @@ export function RepoAnalysisProvider({
           lastError?: RepoAnalysisMeta['lastError'];
         };
         try {
-          const res = await fetch(`/api/repo-analysis/${owner}/${repo}`);
+          const res = await unsupportedAnalysisFetch(`/api/repo-analysis/${owner}/${repo}`);
           if (!res.ok) continue; // transient (e.g. a momentary 5xx) — keep polling
           data = await res.json();
         } catch {
@@ -251,7 +258,7 @@ export function RepoAnalysisProvider({
     setState({ kind: 'running' });
 
     try {
-      const res = await fetch(`/api/repo-analysis/${owner}/${repo}`, {
+      const res = await unsupportedAnalysisFetch(`/api/repo-analysis/${owner}/${repo}`, {
         method: 'POST',
       });
       const text = await res.text();
@@ -296,7 +303,7 @@ export function RepoAnalysisProvider({
 
     (async () => {
       try {
-        const res = await fetch(`/api/repo-analysis/${owner}/${repo}`);
+        const res = await unsupportedAnalysisFetch(`/api/repo-analysis/${owner}/${repo}`);
         if (cancelled) return;
         const data = await res.json();
         if (cancelled || !res.ok) return;
@@ -364,7 +371,7 @@ export function RepoAnalysisProvider({
       const limit = 50;
       while (!cancelled) {
         try {
-          const res = await fetch(
+          const res = await unsupportedAnalysisFetch(
             `/api/repo-analysis/${owner}/${repo}/ownership?cursor=${cursor}&limit=${limit}`,
           );
           if (!res.ok) break;
@@ -406,7 +413,7 @@ export function RepoAnalysisProvider({
       const limit = 500;
       while (!cancelled) {
         try {
-          const res = await fetch(
+          const res = await unsupportedAnalysisFetch(
             `/api/repo-analysis/${owner}/${repo}/contributors?cursor=${cursor}&limit=${limit}`,
           );
           if (!res.ok) break;

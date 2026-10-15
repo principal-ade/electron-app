@@ -5,6 +5,7 @@ import {
   pullRequestFilesFromGitHub,
 } from '@industry-theme/file-city-panel/github';
 import type { components } from '@octokit/openapi-types';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 type GitHubPullRequest = components['schemas']['pull-request'];
 type GitHubDiffEntry = components['schemas']['diff-entry'];
@@ -56,32 +57,17 @@ export function usePullRequestView(
 
     (async () => {
       try {
-        const base = `/api/github/repo/${owner}/${repo}/pull-requests/${number}`;
-        // Fetch the PR (required) and its changed files (best-effort) together.
-        const [prRes, filesRes] = await Promise.all([
-          fetch(base),
-          fetch(`${base}/files`).catch(() => null),
-        ]);
-        if (!prRes.ok) {
-          const data = await prRes.json().catch(() => ({}));
-          throw new Error(
-            data.error || `Failed to load pull request (${prRes.status})`,
-          );
-        }
-        const prData: GitHubPullRequest = await prRes.json();
+        const prData = (await repoExplorerService.getPullRequest(
+          owner,
+          repo,
+          number,
+        )) as GitHubPullRequest | null;
         if (id !== reqId.current) return; // superseded
-
-        const view = pullRequestViewFromGitHubPullRequest(prData);
-
-        if (filesRes && filesRes.ok) {
-          const filesData = await filesRes.json().catch(() => null);
-          const files: GitHubDiffEntry[] | undefined = filesData?.files;
-          if (id !== reqId.current) return;
-          if (Array.isArray(files) && files.length > 0) {
-            view.files = pullRequestFilesFromGitHub(files);
-          }
+        if (!prData) {
+          setState({ pullRequest: null, loading: false, error: null });
+          return;
         }
-
+        const view = pullRequestViewFromGitHubPullRequest(prData);
         setState({ pullRequest: view, loading: false, error: null });
       } catch (err) {
         if (id !== reqId.current) return;

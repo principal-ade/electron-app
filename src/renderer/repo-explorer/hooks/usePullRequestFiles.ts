@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangedFile } from '@repo-explorer/lib/activity/commitLayers';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 /**
  * Batch-fetches the changed-file lists for a set of PR numbers (from the
@@ -53,20 +54,23 @@ export function usePullRequestFiles(
       await Promise.all(
         toFetch.map(async (prNumber) => {
           try {
-            const res = await fetch(
-              `/api/github/repo/${owner}/${repo}/pull-requests/${prNumber}/files`,
-            );
-            if (!res.ok) return;
-            const data = await res.json();
-            const files: ChangedFile[] = (data.files ?? []).map(
-              (f: { filename: string; status: string; additions?: number; deletions?: number }) => ({
-                filename: f.filename,
-                status: f.status,
-                additions: f.additions ?? 0,
-                deletions: f.deletions ?? 0,
-              }),
-            );
-            cacheRef.current.set(prNumber, files);
+            const files = (await repoExplorerService.getPullRequestFiles(
+              owner,
+              repo,
+              prNumber,
+            )) as Array<{
+              filename: string;
+              status: string;
+              additions?: number;
+              deletions?: number;
+            }>;
+            const changed: ChangedFile[] = (files ?? []).map((f) => ({
+              filename: f.filename,
+              status: f.status as ChangedFile['status'],
+              additions: f.additions ?? 0,
+              deletions: f.deletions ?? 0,
+            }));
+            cacheRef.current.set(prNumber, changed);
           } catch {
             // Ignore individual failures — the heatmap is best-effort.
           }

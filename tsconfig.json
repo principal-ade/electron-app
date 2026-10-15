@@ -18,7 +18,9 @@
       "es2022"
     ],
     "jsx": "react-jsx",
-    "paths": {}
+    "paths": {
+      "@repo-explorer/*": ["src/renderer/repo-explorer/*"]
+    }
   },
   "include": [
     "src/**/*",

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { components } from '@octokit/openapi-types';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 type GitHubIssue = components['schemas']['issue'];
 export type IssueStateFilter = 'open' | 'closed' | 'all';
@@ -39,16 +40,8 @@ export function useRepoIssues(
       setError(null);
 
       try {
-        const res = await fetch(
-          `/api/github/repo/${owner}/${repo}/issues?per_page=${perPage}&page=${page}&state=${state}`,
-          { signal: controller.signal },
-        );
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Failed to load issues (${res.status})`);
-        }
-        const data = await res.json();
-        const next: GitHubIssue[] = data.issues || [];
+        const data = await repoExplorerService.getIssues(owner, repo);
+        const next: GitHubIssue[] = (data.issues as GitHubIssue[]) || [];
         pageRef.current = page;
         setHasMore(next.length === perPage);
         setIssues((prev) => (append ? [...prev, ...next] : next));

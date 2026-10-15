@@ -9,8 +9,10 @@
  *
  * Response shapes mirror what the ported components expect, so their code stays
  * close to the original. Endpoints without a native source yet are stubbed
- * (empty) and marked TODO — see the plan for issues / pull requests / packages /
- * commit detail / tours.
+ * (empty) and marked TODO.
+ *
+ * The implementation is swappable (`setRepoExplorerServiceImpl`) so Storybook —
+ * which has no Electron main process — can render against fixtures.
  */
 
 import { GithubService } from '../../main-process-api/GithubService';
@@ -30,6 +32,8 @@ export interface RepoExplorerContributor {
   login: string;
   avatar_url: string;
   contributions: number;
+  id?: number;
+  html_url?: string;
 }
 
 export interface RepoExplorerContributors {
@@ -50,6 +54,72 @@ export interface CommitAuthorIdentity {
   name?: string;
 }
 
+export interface RepoExplorerServiceImpl {
+  getRepoInfo(owner: string, repo: string): Promise<any>;
+  getContributors(
+    owner: string,
+    repo: string,
+  ): Promise<RepoExplorerContributors>;
+  getPackages(owner: string, repo: string): Promise<any>;
+  getTree(owner: string, repo: string, ref?: string): Promise<RepoExplorerTree>;
+  readFile(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+  ): Promise<RepoExplorerFileContent>;
+  getCommits(
+    owner: string,
+    repo: string,
+    opts?: { perPage?: number; page?: number },
+  ): Promise<{ commits: unknown[] }>;
+  getCommitDetail(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<unknown | null>;
+  getChangedFiles(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<Map<string, { status: string; additions: number; deletions: number }>>;
+  getCommitAuthorsByEmail(
+    owner: string,
+    repo: string,
+    emails: string[],
+  ): Promise<Record<string, CommitAuthorIdentity | null>>;
+  isStarred(owner: string, repo: string): Promise<boolean>;
+  star(owner: string, repo: string): Promise<void>;
+  unstar(owner: string, repo: string): Promise<void>;
+  searchRepos(query: string, opts?: { perPage?: number }): Promise<any>;
+  getUserOrganizations(): Promise<any>;
+  getUserProfile(login: string): Promise<unknown | null>;
+  getIssues(owner: string, repo: string): Promise<{ issues: unknown[] }>;
+  getIssue(owner: string, repo: string, n: number): Promise<unknown | null>;
+  getPullRequests(
+    owner: string,
+    repo: string,
+  ): Promise<{ pullRequests: unknown[] }>;
+  getPullRequest(
+    owner: string,
+    repo: string,
+    n: number,
+  ): Promise<unknown | null>;
+  getPullRequestFiles(
+    owner: string,
+    repo: string,
+    n: number,
+  ): Promise<unknown[]>;
+  getTours(owner: string, repo: string): Promise<{ tours: unknown[] }>;
+  beginTourGeneration(): Promise<never>;
+  generateTourStep(): Promise<void>;
+  finishTourGeneration(): Promise<any>;
+  batchGenerate(): Promise<{
+    steps: Array<{ stepId: string; status: string; audioUrl: string }>;
+  }>;
+  getUserActivity(login: string): Promise<unknown | null>;
+}
+
 function decodeFileContent(data: {
   content?: string;
   encoding?: string;
@@ -68,17 +138,13 @@ function decodeFileContent(data: {
   return typeof data.content === 'string' ? data.content : '';
 }
 
-export const repoExplorerService = {
-  /** Repository metadata (stars, license, language, topics, dates, fork-of). */
-  async getRepoInfo(owner: string, repo: string) {
+/** Default (desktop) implementation — backed by the app's GitHub IPC. */
+const ipcImpl: RepoExplorerServiceImpl = {
+  async getRepoInfo(owner, repo) {
     return GithubService.getRepository(owner, repo);
   },
 
-  /** Contributor list (login, avatar, commit count). */
-  async getContributors(
-    owner: string,
-    repo: string,
-  ): Promise<RepoExplorerContributors> {
+  async getContributors(owner, repo) {
     const list = await GithubService.getRepositoryContributors(owner, repo);
     return {
       contributors: list.map((c) => ({
@@ -90,20 +156,16 @@ export const repoExplorerService = {
     };
   },
 
-  /**
-   * Detected packages (Structure view / Architecture graph).
-   * TODO: local repos → `RepositoryMonitoringService.getPackages(path)`; remote
-   * repos → walk the tree + read manifests. Stubbed empty for now.
-   */
-  async getPackages(_owner: string, _repo: string) {
+  // TODO: local repos → RepositoryMonitoringService.getPackages(path); remote
+  // repos → walk the tree + read manifests.
+  async getPackages(_owner, _repo) {
     return {
       packages: [] as unknown[],
       summary: { packageCount: 0, totalPackages: 0, packageManagers: [] },
     };
   },
 
-  /** Default-branch (or `ref`) file tree for the city. */
-  async getTree(owner: string, repo: string, ref = 'HEAD'): Promise<RepoExplorerTree> {
+  async getTree(owner, repo, ref = 'HEAD') {
     const res = await GithubService.getTree(owner, repo, ref);
     const data = res?.data;
     return {
@@ -116,54 +178,33 @@ export const repoExplorerService = {
     };
   },
 
-  /** Read a single file's text at HEAD (or `ref`). */
-  async readFile(
-    owner: string,
-    repo: string,
-    path: string,
-    ref?: string,
-  ): Promise<RepoExplorerFileContent> {
+  async readFile(owner, repo, path, ref) {
     const res = await GithubService.getFileContent(owner, repo, path, ref);
+    // The main-process handler returns the raw file text (a string). Be
+    // defensive about a `{ content, encoding }` shape too (some paths/tests).
+    if (typeof res === 'string') return { content: res };
     return {
       content: decodeFileContent(res),
       encoding: (res as { encoding?: string } | null)?.encoding,
     };
   },
 
-  /** Default-branch commit history, newest first. */
-  async getCommits(
-    owner: string,
-    repo: string,
-    opts?: { perPage?: number; page?: number },
-  ) {
+  async getCommits(owner, repo, opts) {
     const commits = await GithubService.getRepositoryCommits(owner, repo, opts);
     return { commits };
   },
 
-  /**
-   * Commit detail (message, author, parents, stats, changed files).
-   * TODO: no native IPC for commit-by-sha yet — returns null so the commit view
-   * stays idle. Add a `getCommit` IPC handler to fill this in.
-   */
-  async getCommitDetail(
-    _owner: string,
-    _repo: string,
-    _sha: string,
-  ): Promise<unknown | null> {
-    return null;
+  async getCommitDetail(owner, repo, sha) {
+    return GithubService.getCommit(owner, repo, sha);
   },
 
-  /** Changed files for a commit (sha → status/additions/deletions). */
-  async getChangedFiles(owner: string, repo: string, sha: string) {
-    return GithubService.getChangedFilesForCommit(owner, repo, sha);
+  async getChangedFiles(owner, repo, sha) {
+    return GithubService.getChangedFilesForCommit(owner, repo, sha) as Promise<
+      Map<string, { status: string; additions: number; deletions: number }>
+    >;
   },
 
-  /** Overlay GitHub identity onto blame emails (contributor avatars). */
-  async getCommitAuthorsByEmail(
-    owner: string,
-    repo: string,
-    emails: string[],
-  ): Promise<Record<string, CommitAuthorIdentity | null>> {
+  async getCommitAuthorsByEmail(owner, repo, emails) {
     const map = await GithubService.resolveAuthorProfiles(owner, repo, emails);
     const out: Record<string, CommitAuthorIdentity | null> = {};
     for (const [email, profile] of map.entries()) {
@@ -177,83 +218,72 @@ export const repoExplorerService = {
     return out;
   },
 
-  async isStarred(owner: string, repo: string): Promise<boolean> {
-    return GithubService.isRepositoryStarred(owner, repo);
+  isStarred: (owner, repo) => GithubService.isRepositoryStarred(owner, repo),
+  star: (owner, repo) => GithubService.starRepository(owner, repo),
+  unstar: (owner, repo) => GithubService.unstarRepository(owner, repo),
+  searchRepos: (query, opts) => GithubService.searchRepos(query, opts),
+  getUserOrganizations: () => GithubService.getUserOrganizations(),
+  getUserProfile: (login) => GithubService.getUser(login),
+
+  // ---- not yet native — stubbed so the ported components render empty ----
+  async getIssues(owner, repo) {
+    const issues = await GithubService.getIssues(owner, repo, {
+      state: 'open',
+      perPage: 30,
+      page: 1,
+    });
+    return { issues };
   },
-
-  async star(owner: string, repo: string): Promise<void> {
-    return GithubService.starRepository(owner, repo);
+  async getIssue(owner, repo, number) {
+    return GithubService.getIssue(owner, repo, number);
   },
-
-  async unstar(owner: string, repo: string): Promise<void> {
-    return GithubService.unstarRepository(owner, repo);
+  async getPullRequests(owner, repo) {
+    const pullRequests = await GithubService.getPullRequests(owner, repo, {
+      state: 'open',
+      perPage: 30,
+      page: 1,
+    });
+    return { pullRequests };
   },
-
-  async searchRepos(query: string, opts?: { perPage?: number }) {
-    return GithubService.searchRepos(query, opts);
+  async getPullRequest(owner, repo, number) {
+    return GithubService.getPullRequest(owner, repo, number);
   },
-
-  async getUserOrganizations() {
-    return GithubService.getUserOrganizations();
+  async getPullRequestFiles(owner, repo, number) {
+    return GithubService.getPullRequestFiles(owner, repo, number);
   },
-
-  async getUserProfile(login: string) {
-    return GithubService.getUser(login);
-  },
-
-  // ---------------------------------------------------------------------------
-  // Not yet native — stubbed so the ported components render empty.
-  // ---------------------------------------------------------------------------
-
-  /** TODO: GitHub issues IPC. */
-  async getIssues(_owner: string, _repo: string) {
-    return { issues: [] as unknown[] };
-  },
-
-  /** TODO: GitHub issues IPC (single). */
-  async getIssue(_owner: string, _repo: string, _n: number): Promise<unknown | null> {
-    return null;
-  },
-
-  /** TODO: GitHub pull-requests IPC. */
-  async getPullRequests(_owner: string, _repo: string) {
-    return { pullRequests: [] as unknown[] };
-  },
-
-  /** TODO: GitHub pull-requests IPC (single + files). */
-  async getPullRequest(
-    _owner: string,
-    _repo: string,
-    _n: number,
-  ): Promise<unknown | null> {
-    return null;
-  },
-
-  /** TODO: tours store (`*.tour.json`). */
-  async getTours(_owner: string, _repo: string) {
+  async getTours(_owner, _repo) {
     return { tours: [] as unknown[] };
   },
-
-  /**
-   * TODO: tour audio generation (TTS) was hosted-only. No native source yet —
-   * `beginTourGeneration` throws so the UI surfaces the error state rather than
-   * silently doing nothing.
-   */
   async beginTourGeneration(): Promise<never> {
     throw new Error('Tour audio generation is not available yet.');
   },
-  async generateTourStep(): Promise<void> {},
-  async finishTourGeneration(): Promise<unknown> {
+  async generateTourStep() {},
+  async finishTourGeneration() {
     return null;
   },
-  async batchGenerate(): Promise<{
-    steps: Array<{ stepId: string; status: string; audioUrl: string }>;
-  }> {
+  async batchGenerate() {
     return { steps: [] };
   },
-
-  /** TODO: per-user activity (contributor profile heatmap). */
-  async getUserActivity(_login: string): Promise<unknown | null> {
+  async getUserActivity(_login) {
     return null;
   },
 };
+
+let impl: RepoExplorerServiceImpl = ipcImpl;
+
+/** Swap the implementation (Storybook / tests). */
+export function setRepoExplorerServiceImpl(next: RepoExplorerServiceImpl): void {
+  impl = next;
+}
+
+/**
+ * Public API. Delegates to the current impl so the impl can be swapped without
+ * re-importing call sites.
+ */
+export const repoExplorerService: RepoExplorerServiceImpl = new Proxy(
+  {} as RepoExplorerServiceImpl,
+  {
+    get: (_target, prop: string) =>
+      (impl as unknown as Record<string, unknown>)[prop],
+  },
+);

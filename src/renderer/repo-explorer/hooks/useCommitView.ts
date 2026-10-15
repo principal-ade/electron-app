@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CommitView } from '@industry-theme/file-city-panel';
 import type { GitHubCommitDetailResponse } from '@repo-explorer/types/api';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 interface Result {
   commit: CommitView | null;
@@ -44,15 +45,16 @@ export function useCommitView(
 
     (async () => {
       try {
-        const res = await fetch(
-          `/api/github/repo/${owner}/${repo}/commits/${sha}`,
-        );
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Failed to load commit (${res.status})`);
-        }
-        const detail: GitHubCommitDetailResponse = await res.json();
+        const detail = (await repoExplorerService.getCommitDetail(
+          owner,
+          repo,
+          sha,
+        )) as GitHubCommitDetailResponse | null;
         if (id !== reqId.current) return; // superseded
+        if (!detail) {
+          setState({ commit: null, loading: false, error: null });
+          return;
+        }
 
         const files = detail.files ?? [];
         const commit: CommitView = {

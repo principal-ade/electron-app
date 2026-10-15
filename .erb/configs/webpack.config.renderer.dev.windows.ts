@@ -384,6 +384,7 @@ const configuration: webpack.Configuration = {
       '.mjs': ['.mjs', '.mts'],
     },
     alias: {
+      '@repo-explorer': path.resolve(webpackPaths.srcRendererPath, 'repo-explorer'),
       'module$': path.resolve(
         webpackPaths.srcRendererPath,
         'utils/nodeModuleShim.ts',

@@ -13,7 +13,6 @@ import {
   FolderGit2,
   User,
   Building2,
-  Radio,
   Wrench,
   FileText,
   Compass,
@@ -43,9 +42,9 @@ import type {
   MediaTab,
   CommitReviewTab,
   ProjectInfoTab,
+  RepoExplorerTab,
   UserProfileTab,
   OrgProfileTab,
-  RepoActivityTab,
   FileCityGuideTab,
   FeedTab,
 } from '../events/portalTabs';
@@ -91,13 +90,12 @@ import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
-import { CommitActivityPanel } from '../panels/CommitActivityPanel';
 import { commitActivityPanelActions } from '../panels/commitActivityPanelActions';
 import { InProgressActivityPanel } from '../panels/InProgressActivityPanel';
 import { inProgressActivityPanelActions } from '../panels/inProgressActivityPanelActions';
 import { MarkdownDocTabContent } from './MarkdownDocTabContent';
 import { SourceFileTabContent } from '../panels/SourceFileTabContent';
-import { MediaTabContent } from '../panels/MediaTabContent';
+import { MediaTabContent } from '../panels/MediaTabContent';import { RepoExplorerTabContent } from '../repo-explorer/RepoExplorerTabContent';
 
 // `localClones` isn't on the formal AlexandriaEntry type — some entries
 // carry it as a renderer-side extension. Falls back to a single-clone array
@@ -1542,8 +1540,6 @@ export function renderProjectsTabIcon(tab: FeedTab): React.ReactNode {
       return <User size={14} />;
     case 'org-profile':
       return <Building2 size={14} />;
-    case 'repo-activity':
-      return <Radio size={14} />;
     case 'file-city-guide':
       return <Compass size={14} />;
     case 'markdown-doc':
@@ -1607,6 +1603,17 @@ export function renderProjectsTabContent(
         />
       );
     }
+    case 'repo-explorer': {
+      const explorerTab = tab as RepoExplorerTab;
+      return (
+        <RepoExplorerTabContent
+          key={explorerTab.id}
+          purl={explorerTab.purl}
+          github={explorerTab.github}
+          localEntry={explorerTab.localEntry}
+        />
+      );
+    }
     case 'file-city-guide': {
       const guideTab = tab as FileCityGuideTab;
       return (
@@ -1642,17 +1649,6 @@ export function renderProjectsTabContent(
           orgName={orgTab.orgName}
           events={events}
           repositories={repositories}
-        />
-      );
-    }
-    case 'repo-activity': {
-      const repoTab = tab as RepoActivityTab;
-      return (
-        <CommitActivityPanel
-          key={repoTab.id}
-          source={{ kind: 'repo', owner: repoTab.owner, repo: repoTab.repo }}
-          events={events}
-          actions={commitActivityPanelActions}
         />
       );
     }

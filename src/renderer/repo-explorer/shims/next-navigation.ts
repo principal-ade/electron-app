@@ -5,6 +5,8 @@
  * app. Real navigation will route through the workspace tab intents later.
  */
 
+import { navigate } from './navigation';
+
 export interface AppRouterInstance {
   push: (...args: unknown[]) => void;
   replace: (...args: unknown[]) => void;
@@ -16,11 +18,13 @@ export interface AppRouterInstance {
 
 export function useRouter(): AppRouterInstance {
   return {
-    push: (...args: unknown[]) => {
-      console.info('[repo-explorer shim] router.push', args);
+    push: (href: unknown) => {
+      if (typeof href === 'string' && navigate(href)) return;
+      console.info('[repo-explorer shim] router.push', href);
     },
-    replace: (...args: unknown[]) => {
-      console.info('[repo-explorer shim] router.replace', args);
+    replace: (href: unknown) => {
+      if (typeof href === 'string' && navigate(href)) return;
+      console.info('[repo-explorer shim] router.replace', href);
     },
     back: () => {},
     forward: () => {},

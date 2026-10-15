@@ -278,6 +278,7 @@ const configuration: webpack.Configuration = {
       '.mjs': ['.mjs', '.mts'],
     },
     alias: {
+      '@repo-explorer': path.resolve(webpackPaths.srcRendererPath, 'repo-explorer'),
       react: path.resolve(webpackPaths.rootPath, 'node_modules/react'),
       'react-dom': path.resolve(webpackPaths.rootPath, 'node_modules/react-dom'),
       'react/jsx-runtime': path.resolve(

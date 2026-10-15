@@ -26,7 +26,6 @@ import {
   type TopicOpenPayload,
   type RepositorySelectedPayload,
   type OwnerSelectedPayload,
-  type RepositoryActivityRequestedPayload,
   type RepositoryGuideOpenReadmePayload,
   type RepositoryGuideOpenWeekPayload,
   type SubsystemModelOpenPayload,
@@ -52,6 +51,12 @@ export const PortalIntentBridge: React.FC = () => {
       payload: RepositorySelectedPayload;
     }) => {
       ws.openProjectInfo(event.payload);
+    };
+
+    const handleRepositoryExplorerOpen = (event: {
+      payload: RepositorySelectedPayload;
+    }) => {
+      ws.openRepoExplorer(event.payload);
     };
 
     const handleRepositoryGuideOpen = (event: {
@@ -86,23 +91,20 @@ export const PortalIntentBridge: React.FC = () => {
       }
     };
 
-    const handleRepoActivity = (event: {
-      payload: RepositoryActivityRequestedPayload;
-    }) => {
-      ws.openRepoActivity(event.payload.owner, event.payload.repo);
-    };
-
     events.on(PORTAL_INTENTS.topicOpen, handleTopicOpen);
     events.on(
       PORTAL_INTENTS.subsystemModelOpen,
       handleSubsystemModelOpen,
     );
     events.on(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
+    events.on(
+      PORTAL_INTENTS.repositoryExplorerOpen,
+      handleRepositoryExplorerOpen,
+    );
     events.on(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
     events.on(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);
     events.on(PORTAL_INTENTS.repositoryGuideOpenWeek, handleRepositoryGuideOpenWeek);
     events.on(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
-    events.on(PORTAL_INTENTS.repositoryActivityRequested, handleRepoActivity);
     return () => {
       events.off(PORTAL_INTENTS.topicOpen, handleTopicOpen);
       events.off(
@@ -110,14 +112,14 @@ export const PortalIntentBridge: React.FC = () => {
         handleSubsystemModelOpen,
       );
       events.off(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
+      events.off(
+        PORTAL_INTENTS.repositoryExplorerOpen,
+        handleRepositoryExplorerOpen,
+      );
       events.off(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
       events.off(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);
       events.off(PORTAL_INTENTS.repositoryGuideOpenWeek, handleRepositoryGuideOpenWeek);
       events.off(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
-      events.off(
-        PORTAL_INTENTS.repositoryActivityRequested,
-        handleRepoActivity,
-      );
     };
   }, [events, ws]);
 

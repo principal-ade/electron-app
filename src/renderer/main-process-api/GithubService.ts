@@ -180,6 +180,74 @@ export class GithubService {
     }
   }
 
+  /**
+   * List a repo's issues (pull requests filtered out).
+   */
+  static async getIssues(
+    owner: string,
+    repo: string,
+    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+  ): Promise<unknown[]> {
+    const result = await window.mainProcess.github.getIssues(owner, repo, options);
+    return result || [];
+  }
+
+  static async getIssue(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<unknown | null> {
+    return window.mainProcess.github.getIssue(owner, repo, number);
+  }
+
+  /**
+   * List a repo's pull requests.
+   */
+  static async getPullRequests(
+    owner: string,
+    repo: string,
+    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+  ): Promise<unknown[]> {
+    const result = await window.mainProcess.github.getPullRequests(
+      owner,
+      repo,
+      options,
+    );
+    return result || [];
+  }
+
+  static async getPullRequest(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<unknown | null> {
+    return window.mainProcess.github.getPullRequest(owner, repo, number);
+  }
+
+  static async getPullRequestFiles(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<unknown[]> {
+    const result = await window.mainProcess.github.getPullRequestFiles(
+      owner,
+      repo,
+      number,
+    );
+    return result || [];
+  }
+
+  /**
+   * Fetch a single commit (message, author, stats, changed files).
+   */
+  static async getCommit(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<unknown | null> {
+    return window.mainProcess.github.getCommit(owner, repo, sha);
+  }
+
   static async isFollowingUser(username: string): Promise<boolean> {
     return githubClient.isFollowingUser({ username });
   }

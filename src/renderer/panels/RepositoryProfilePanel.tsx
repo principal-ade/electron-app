@@ -28,7 +28,6 @@ import {
   Pause,
   Eye,
   EyeClosed,
-  Star,
   Check,
   Copy,
   Loader2,
@@ -448,7 +447,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     totalLinesGlobal: number;
   } | null>(null);
   const [ownershipVersion, setOwnershipVersion] = useState(0);
-  const [ownershipLoading, setOwnershipLoading] = useState(false);
+  const [_ownershipLoading, setOwnershipLoading] = useState(false);
   const [hoveredAuthorEmail, setHoveredAuthorEmail] = useState<string | null>(null);
 
   // Deterministic per-author color: hash email to a hue in HSL space.
@@ -497,10 +496,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const CONTRIBUTORS_COLUMN_MIN_WIDTH = 900;
   const containerRef = useRef<HTMLDivElement>(null);
   const [panelWidth, setPanelWidth] = useState<number>(0);
-
-  // Star state
-  const [isStarred, setIsStarred] = useState(false);
-  const [isStarLoading, setIsStarLoading] = useState(false);
 
   // Suffix layers visibility toggle
   const [showSuffixLayers, setShowSuffixLayers] = useState(true);
@@ -767,39 +762,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
     console.info('[RepositoryProfilePanel] Total highlight layers:', layers.length);
   }, [gitStatusMap, isPlaying, repositoryData?.localClones, theme.colors, cityData, showSuffixLayers, hoveredAuthorEmail, ownershipVersion]);
-
-  // Load star status when repository changes
-  useEffect(() => {
-    if (!repositoryData?.github || !actions.isRepositoryStarred) {
-      setIsStarred(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadStarStatus = async () => {
-      try {
-        if (!actions.isRepositoryStarred || !repositoryData.github) {
-          return;
-        }
-        const starred = await actions.isRepositoryStarred(
-          repositoryData.github.owner,
-          repositoryData.github.name
-        );
-        if (!cancelled) {
-          setIsStarred(starred);
-        }
-      } catch (err) {
-        console.error('Failed to load star status:', err);
-      }
-    };
-
-    loadStarStatus();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [repositoryData, actions]);
 
   // Check if the current user has already forked this repo
   useEffect(() => {
@@ -1369,63 +1331,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return () => { cancelled = true; };
   }, [repositoryData?.localClones?.[0]?.path]);
 
-  // Handle contributors stat click — data is already fetched by the effect
-  const handleContributorsClick = () => {
-    if (!repositoryData?.localClones?.[0]?.path && !repositoryData?.github) return;
-    setShowContributors((prev) => !prev);
-  };
-
-  // Handle star/unstar repository
-  const handleToggleStar = async () => {
-    if (!repositoryData?.github) return;
-
-    if (!actions.starRepository || !actions.unstarRepository) {
-      console.warn('Star actions not available');
-      return;
-    }
-
-    setIsStarLoading(true);
-    try {
-      if (isStarred) {
-        await actions.unstarRepository(
-          repositoryData.github.owner,
-          repositoryData.github.name
-        );
-        setIsStarred(false);
-        events.emit({
-          type: 'star:repo-toggled',
-          source: 'repository-profile-panel',
-          timestamp: Date.now(),
-          payload: {
-            owner: repositoryData.github.owner,
-            repo: repositoryData.github.name,
-            starred: false,
-          },
-        });
-      } else {
-        await actions.starRepository(
-          repositoryData.github.owner,
-          repositoryData.github.name
-        );
-        setIsStarred(true);
-        events.emit({
-          type: 'star:repo-toggled',
-          source: 'repository-profile-panel',
-          timestamp: Date.now(),
-          payload: {
-            owner: repositoryData.github.owner,
-            repo: repositoryData.github.name,
-            starred: true,
-          },
-        });
-      }
-    } catch (err) {
-      console.error('Failed to toggle star:', err);
-    } finally {
-      setIsStarLoading(false);
-    }
-  };
-
   // Empty state - no repository selected
   if (!repositoryData) {
     return (
@@ -1603,37 +1508,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           {/* Stats - aligned with bottom of avatar */}
           <div style={{ flex: 1, paddingBottom: spacing.xs, display: 'flex', alignItems: 'flex-end' }}>
             <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap', flexShrink: 0 }}>
-              <div
-                style={{ textAlign: 'center', cursor: 'pointer', transition: 'opacity 0.2s ease' }}
-                onClick={handleContributorsClick}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.7';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-                title="Click to view contributors"
-              >
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '24px',
-                }}>
-                  {formatNumber(repositoryData.contributors)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  devs
-                </div>
-              </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{
                   fontSize: theme.fontSizes[3],
@@ -1676,39 +1550,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   old
                 </div>
               </div>
-
-              {/* Star Button */}
-              {repositoryData.github && (
-                <div
-                  style={{
-                    textAlign: 'center',
-                    cursor: isStarLoading ? 'not-allowed' : 'pointer',
-                    opacity: isStarLoading ? 0.6 : 1,
-                    transition: 'opacity 0.2s ease',
-                    minWidth: '65px',
-                  }}
-                  onClick={isStarLoading ? undefined : handleToggleStar}
-                >
-                  <div style={{
-                    fontSize: theme.fontSizes[3],
-                    fontWeight: theme.fontWeights?.semibold ?? 600,
-                    fontFamily: theme.fonts?.body,
-                    color: isStarred ? '#f5b731' : theme.colors.text,
-                    display: 'flex',
-                    justifyContent: 'center',
-                  }}>
-                    <Star size={24} fill={isStarred ? '#f5b731' : 'none'} />
-                  </div>
-                  <div style={{
-                    fontSize: theme.fontSizes[0],
-                    fontFamily: theme.fonts?.body,
-                    color: theme.colors.textSecondary,
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {isStarred ? 'starred' : 'star'}
-                  </div>
-                </div>
-              )}
 
             </div>
 
@@ -1789,32 +1630,39 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             {repositoryData.github && (() => {
               const github = repositoryData.github;
               return (
-              <button
-                onClick={() => events.emit({
-                  type: 'repository:activity-requested',
-                  source: 'repo-profile-panel',
-                  timestamp: Date.now(),
-                  payload: { owner: github.owner, repo: github.name },
-                })}
-                style={{
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.primary,
-                  border: `1px solid ${theme.colors.primary}`,
-                  borderRadius: 4,
-                  padding: '2px 8px',
-                  backgroundColor: 'transparent',
-                  cursor: 'pointer',
-                  lineHeight: 1.5,
-                }}
-              >
-                <LucideIcons.Radio size={11} />
-                Activity
-              </button>
+                <button
+                  onClick={() =>
+                    events.emit({
+                      type: 'repository:explorer-open',
+                      source: 'repo-profile-panel',
+                      timestamp: Date.now(),
+                      payload: payloadFromGithub({
+                        owner: github.owner,
+                        name: github.name,
+                        defaultBranch: github.defaultBranch,
+                      }),
+                    })
+                  }
+                  title="Open the explorer view"
+                  style={{
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.primary,
+                    border: `1px solid ${theme.colors.primary}`,
+                    borderRadius: 4,
+                    padding: '2px 8px',
+                    backgroundColor: 'transparent',
+                    cursor: 'pointer',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <LucideIcons.Compass size={11} />
+                  Explorer
+                </button>
               );
             })()}
           </div>
@@ -2474,131 +2322,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         )}
         </div>
 
-        {/* Right column - Top contributors (wide view only) */}
-        {!isNarrow && contributors.length > 0 && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: 60, minWidth: 0 }}>
-            <div style={{
-              fontSize: theme.fontSizes[0],
-              fontFamily: theme.fonts?.body,
-              color: theme.colors.textSecondary,
-              marginBottom: spacing.xs,
-            }}>
-              Top contributors
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm }}>
-              {contributors.slice(0, 6).map((contributor) => {
-                const email = resolveContributorEmail(contributor);
-                const isHovered = !!email && hoveredAuthorEmail?.toLowerCase() === email.toLowerCase();
-                const authorColor = email ? colorForAuthor(email) : null;
-                const cardBorder = isHovered && authorColor
-                  ? `1px solid ${authorColor}`
-                  : `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`;
-                const owned = email ? ownershipMapRef.current?.byEmail.get(email.toLowerCase()) : undefined;
-                const totalLinesGlobal = ownershipMapRef.current?.totalLinesGlobal ?? 0;
-                let linesOwned = 0;
-                if (owned) for (const v of owned.values()) linesOwned += v;
-                const pct = (owned && totalLinesGlobal > 0)
-                  ? (linesOwned / totalLinesGlobal) * 100
-                  : null;
-                return (
-                <div
-                  key={contributor.name}
-                  onClick={() => events.emit({
-                    type: 'user:profile-selected',
-                    source: 'repository-profile-panel',
-                    timestamp: Date.now(),
-                    payload: { username: contributor.name },
-                  })}
-                  onMouseEnter={() => {
-                    console.info('[RepositoryProfilePanel] top-card hover', { name: contributor.name, resolvedEmail: email, nameMapSize: nameToEmail.size });
-                    if (email) setHoveredAuthorEmail(email);
-                  }}
-                  onMouseLeave={() => { setHoveredAuthorEmail(prev => (email && prev?.toLowerCase() === email.toLowerCase() ? null : prev)); }}
-                  style={{
-                    width: 'calc(50% - 4px)',
-                    minWidth: 120,
-                    padding: `${spacing.xs}px ${spacing.sm}px`,
-                    borderRadius: 6,
-                    border: cardBorder,
-                    backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: spacing.sm,
-                    boxSizing: 'border-box',
-                    cursor: 'pointer',
-                    transition: 'border-color 0.15s ease',
-                  }}
-                >
-                  {contributor.avatarUrl ? (
-                    <img
-                      src={contributor.avatarUrl}
-                      alt={contributor.name}
-                      style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }}
-                    />
-                  ) : (
-                    <div style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.primary + '30',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: theme.fontSizes[0],
-                      fontFamily: theme.fonts?.body,
-                      color: theme.colors.primary,
-                      flexShrink: 0,
-                    }}>
-                      {contributor.name.slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{
-                      fontSize: theme.fontSizes[1],
-                      fontWeight: theme.fontWeights?.semibold ?? 600,
-                      fontFamily: theme.fonts?.body,
-                      color: theme.colors.primary,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {contributor.name}
-                    </div>
-                    <div style={{
-                      fontSize: theme.fontSizes[0],
-                      fontFamily: theme.fonts?.body,
-                      color: theme.colors.textSecondary,
-                    }}>
-                      {formatNumber(contributor.commits)} commit{contributor.commits !== 1 ? 's' : ''}
-                    </div>
-                    {isHovered && pct !== null && (
-                      <div style={{
-                        fontSize: theme.fontSizes[0],
-                        fontFamily: theme.fonts?.body,
-                        color: authorColor ?? theme.colors.textSecondary,
-                        fontWeight: theme.fontWeights?.medium ?? 500,
-                        marginTop: 2,
-                      }}>
-                        {formatNumber(linesOwned)} lines · {pct.toFixed(pct < 1 ? 2 : pct < 10 ? 1 : 0)}% of repo
-                      </div>
-                    )}
-                    {isHovered && pct === null && ownershipLoading && (
-                      <div style={{
-                        fontSize: theme.fontSizes[0],
-                        fontFamily: theme.fonts?.body,
-                        color: theme.colors.textSecondary,
-                        marginTop: 2,
-                      }}>
-                        Computing ownership…
-                      </div>
-                    )}
-                  </div>
-                </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
         </div>
       </div>
 

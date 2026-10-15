@@ -106,6 +106,19 @@ export interface ProjectInfoTab extends BaseTab {
   localEntry?: AlexandriaEntry;
 }
 
+/**
+ * Repo Explorer tab — the ported web-ade owner/repo page (a File City explorer
+ * with contributors / issues / PRs / structure). Coexists with
+ * {@link ProjectInfoTab} (the legacy `RepositoryProfilePanel`) and is opened
+ * from a button in that panel. Carries the purl + optional GitHub/local identity.
+ */
+export interface RepoExplorerTab extends BaseTab {
+  contentType: 'repo-explorer';
+  purl: Purl;
+  github?: GithubRepository;
+  localEntry?: AlexandriaEntry;
+}
+
 /** User profile tab — user activity and profile information. */
 export interface UserProfileTab extends BaseTab {
   contentType: 'user-profile';
@@ -117,13 +130,6 @@ export interface UserProfileTab extends BaseTab {
 export interface OrgProfileTab extends BaseTab {
   contentType: 'org-profile';
   orgName: string;
-}
-
-/** Repo activity tab — a repository's commit activity. */
-export interface RepoActivityTab extends BaseTab {
-  contentType: 'repo-activity';
-  owner: string;
-  repo: string;
 }
 
 /**
@@ -202,9 +208,9 @@ export type FeedTab =
   | ActivityFeedTab
   | InProgressActivityTab
   | ProjectInfoTab
+  | RepoExplorerTab
   | UserProfileTab
   | OrgProfileTab
-  | RepoActivityTab
   | FileCityGuideTab
   | MarkdownDocTab
   | SourceFileTab

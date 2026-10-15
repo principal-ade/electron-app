@@ -12,6 +12,7 @@ import {
 import { X } from 'lucide-react';
 import { DocumentPreview } from '@repo-explorer/components/document/DocumentPreview';
 import { MarkdownFrontmatterHeader } from './MarkdownFrontmatterHeader';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 // Markdown files render through themed-markdown (mirroring the electron-app's
 // MarkdownPanel) instead of the raw Monaco source view.
@@ -48,24 +49,8 @@ async function fetchFileContent(
   gitRef?: string,
 ): Promise<string> {
   const clean = normalizeRepoPath(path, owner, repo);
-  const response = await fetch(
-    `/api/github/repo/${owner}/${repo}?action=file&path=${encodeURIComponent(clean)}${
-      gitRef ? `&ref=${encodeURIComponent(gitRef)}` : ''
-    }`,
-  );
-  if (!response.ok) {
-    throw new Error(`Failed to read file: ${response.statusText}`);
-  }
-  const data = await response.json();
-  if (data.content && data.encoding === 'base64') {
-    const binaryString = atob(String(data.content).replace(/\n/g, ''));
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return new TextDecoder('utf-8').decode(bytes);
-  }
-  return typeof data.content === 'string' ? data.content : '';
+  const data = await repoExplorerService.readFile(owner, repo, clean, gitRef);
+  return data.content;
 }
 
 // Drawer sizing. Default is comfortably wide for code/markdown; the user can
@@ -138,12 +123,8 @@ export const FileSourcePanel: React.FC<{
   // Binary documents bypass the text read + Monaco entirely and stream their
   // raw bytes straight into DocumentPreview.
   const docKind = shownPath ? inferDocKind(shownPath) : null;
-  const docSrc =
-    shownPath && docKind
-      ? `/api/github/repo/${owner}/${repo}?action=raw&path=${encodeURIComponent(
-          normalizeRepoPath(shownPath, owner, repo),
-        )}${gitRef ? `&ref=${encodeURIComponent(gitRef)}` : ''}`
-      : null;
+  // TODO: binary document previews have no native source yet.
+  const docSrc: string | null = null;
 
   useEffect(() => {
     if (!shownPath || inferDocKind(shownPath)) return;
@@ -249,7 +230,7 @@ export const FileSourcePanel: React.FC<{
     <div
       aria-hidden={!open}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         zIndex: 40,
         display: 'flex',
         flexDirection: 'column',
@@ -266,7 +247,7 @@ export const FileSourcePanel: React.FC<{
               // it slides up via translateY and stays centered via translateX.
               left: '50%',
               bottom: 0,
-              height: `calc(100vh - ${topOffset}px - 48px)`,
+              height: `calc(100% - ${topOffset}px - 48px)`,
               width: `min(${width}px, 95vw)`,
               borderTop: `1px solid ${theme.colors.border}`,
               borderLeft: `1px solid ${theme.colors.border}`,
@@ -318,7 +299,7 @@ export const FileSourcePanel: React.FC<{
       />
       {dragging && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 50, cursor: 'ew-resize' }}
+          style={{ position: 'absolute', inset: 0, zIndex: 50, cursor: 'ew-resize' }}
         />
       )}
       {/* Header — file identity + close. */}

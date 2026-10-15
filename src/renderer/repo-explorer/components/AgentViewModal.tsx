@@ -19,6 +19,7 @@ import { Bot, Check, Copy, X } from 'lucide-react';
 import { InlineTrailLoader } from '@repo-explorer/components/trail/InlineTrailLoader';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 const COPY_FEEDBACK_MS = 1500;
 
@@ -41,10 +42,9 @@ interface AgentViewModalProps {
  * (private trail → 403, missing topic → 404) carry CLI-aware bodies an agent
  * would also see, so we surface them verbatim rather than throwing.
  */
-async function fetchAgentView(path: string, accept: string): Promise<string> {
-  const res = await fetch(path, { headers: { accept } });
-  const text = await res.text();
-  return text || `Request failed (${res.status})`;
+async function fetchAgentView(_path: string, _accept: string): Promise<string> {
+  // TODO: agent view is served by the (removed) hosted app. No native source.
+  return 'Agent view is not available yet.';
 }
 
 export function AgentViewModal({ path, onClose }: AgentViewModalProps) {

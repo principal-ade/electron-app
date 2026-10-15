@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { components } from '@octokit/openapi-types';
+import { repoExplorerService } from '@repo-explorer/data/repoExplorerService';
 
 type GitHubPullRequestSimple = components['schemas']['pull-request-simple'];
 export type PrStateFilter = 'open' | 'closed' | 'all';
@@ -41,18 +42,9 @@ export function useRepoPullRequests(
       setError(null);
 
       try {
-        const res = await fetch(
-          `/api/github/repo/${owner}/${repo}/pull-requests?per_page=${perPage}&page=${page}&state=${state}`,
-          { signal: controller.signal },
-        );
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(
-            data.error || `Failed to load pull requests (${res.status})`,
-          );
-        }
-        const data = await res.json();
-        const next: GitHubPullRequestSimple[] = data.pullRequests || [];
+        const data = await repoExplorerService.getPullRequests(owner, repo);
+        const next: GitHubPullRequestSimple[] =
+          (data.pullRequests as GitHubPullRequestSimple[]) || [];
         pageRef.current = page;
         setHasMore(next.length === perPage);
         setPullRequests((prev) => (append ? [...prev, ...next] : next));

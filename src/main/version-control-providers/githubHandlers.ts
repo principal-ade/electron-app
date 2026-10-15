@@ -1815,6 +1815,85 @@ export class GitHubAdapter {
     return [];
   }
 
+  /** List repository issues (pull requests filtered out). */
+  async getIssues(
+    owner: string,
+    repo: string,
+    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+  ): Promise<unknown[]> {
+    const state = options?.state || 'open';
+    const perPage = options?.perPage || 30;
+    const page = options?.page || 1;
+    const endpoint = `/repos/${owner}/${repo}/issues?state=${state}&per_page=${perPage}&page=${page}&sort=updated&direction=desc`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    if (apiResult.success && Array.isArray(apiResult.data)) {
+      return (apiResult.data as Array<{ pull_request?: unknown }>).filter(
+        (issue) => !issue.pull_request,
+      );
+    }
+    return [];
+  }
+
+  /** Fetch a single issue. */
+  async getIssue(owner: string, repo: string, number: number): Promise<unknown | null> {
+    const endpoint = `/repos/${owner}/${repo}/issues/${number}`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    return apiResult.success && apiResult.data ? apiResult.data : null;
+  }
+
+  /** List repository pull requests. */
+  async getPullRequests(
+    owner: string,
+    repo: string,
+    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+  ): Promise<unknown[]> {
+    const state = options?.state || 'open';
+    const perPage = options?.perPage || 30;
+    const page = options?.page || 1;
+    const endpoint = `/repos/${owner}/${repo}/pulls?state=${state}&per_page=${perPage}&page=${page}&sort=updated&direction=desc`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    if (apiResult.success && Array.isArray(apiResult.data)) {
+      return apiResult.data as unknown[];
+    }
+    return [];
+  }
+
+  /** Fetch a single pull request. */
+  async getPullRequest(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<unknown | null> {
+    const endpoint = `/repos/${owner}/${repo}/pulls/${number}`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    return apiResult.success && apiResult.data ? apiResult.data : null;
+  }
+
+  /** List a pull request's changed files. */
+  async getPullRequestFiles(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<unknown[]> {
+    const endpoint = `/repos/${owner}/${repo}/pulls/${number}/files`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    if (apiResult.success && Array.isArray(apiResult.data)) {
+      return apiResult.data as unknown[];
+    }
+    return [];
+  }
+
+  /** Fetch a single commit (message, author, stats, changed files). */
+  async getCommit(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<unknown | null> {
+    const endpoint = `/repos/${owner}/${repo}/commits/${sha}`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    return apiResult.success && apiResult.data ? apiResult.data : null;
+  }
+
   /**
    * Get repository contributors
    * Returns a list of contributors with their commit counts
@@ -3415,6 +3494,88 @@ export function registerGitHubIpcHandlers(
         return [];
       }
       return adapter.getRepositoryCommits(owner, repo, options);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_ISSUES,
+    async (
+      event,
+      owner: string,
+      repo: string,
+      options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+    ) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_ISSUES');
+        return [];
+      }
+      return adapter.getIssues(owner, repo, options);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_ISSUE,
+    async (event, owner: string, repo: string, number: number) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_ISSUE');
+        return null;
+      }
+      return adapter.getIssue(owner, repo, number);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_PULL_REQUESTS,
+    async (
+      event,
+      owner: string,
+      repo: string,
+      options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+    ) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_PULL_REQUESTS');
+        return [];
+      }
+      return adapter.getPullRequests(owner, repo, options);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_PULL_REQUEST,
+    async (event, owner: string, repo: string, number: number) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_PULL_REQUEST');
+        return null;
+      }
+      return adapter.getPullRequest(owner, repo, number);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_PULL_REQUEST_FILES,
+    async (event, owner: string, repo: string, number: number) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_PULL_REQUEST_FILES');
+        return [];
+      }
+      return adapter.getPullRequestFiles(owner, repo, number);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_COMMIT,
+    async (event, owner: string, repo: string, sha: string) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_COMMIT');
+        return null;
+      }
+      return adapter.getCommit(owner, repo, sha);
     },
   );
 
