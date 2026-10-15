@@ -4,8 +4,8 @@ import { TypedMultiStoreWrapper } from '../storage-providers/typed-multistore-wr
 import { StaticNamespaces } from '../storage-providers/types';
 import { ipcMain, BrowserWindow } from 'electron';
 import { trace } from '@opentelemetry/api';
-
-const USER_PREFERENCES_KEY = 'preferences';
+import { applyTelemetryPreference } from '../telemetry/settings-cache';
+import { USER_PREFERENCES_KEY } from '../../shared/types/userPreferences.types';
 
 export class UserPreferencesHandler {
   private static instance: UserPreferencesHandler | null = null;
@@ -70,6 +70,11 @@ export class UserPreferencesHandler {
       updated,
       StaticNamespaces.USER_PREFERENCES,
     );
+
+    // Keep the resolved telemetry settings in step *before* notifying windows:
+    // the renderer re-reads them synchronously when it handles the broadcast, so
+    // the cache has to be current by then.
+    applyTelemetryPreference(updated.telemetry);
 
     // Notify all renderer windows that preferences changed
     if (notifyRenderers) {

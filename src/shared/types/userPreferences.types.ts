@@ -65,6 +65,8 @@ export interface RepositoryUIState {
   lastAccessed?: number;
 }
 
+export const USER_PREFERENCES_KEY = 'preferences';
+
 export interface UserPreferences {
   // AI/LLM settings
   ollamaModel?: string; // Selected Ollama model for summarizing agent work
@@ -138,6 +140,21 @@ export interface UserPreferences {
 
   // Presence preferences
   presenceAutoConnect?: boolean; // Automatically connect to presence server on startup (default: false)
+
+  /**
+   * OpenTelemetry trace export.
+   *
+   * Both fields are intentionally optional with no stored default: when unset,
+   * resolution falls through to `OTEL_EXPORTER_OTLP_ENDPOINT` and then to
+   * `http://localhost:4318`. Once a user picks a value here, it wins over the
+   * environment (`src/telemetry/config.ts` owns the precedence).
+   */
+  telemetry?: {
+    /** Export traces at all. Unset = enabled unless DISABLE_TELEMETRY=true. */
+    enabled?: boolean;
+    /** Base OTLP/HTTP endpoint; `/v1/traces` is appended. Blank = the default. */
+    endpoint?: string;
+  };
 
   // Titlebar button visibility
   titlebarButtons?: {

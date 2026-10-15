@@ -4,7 +4,11 @@ This document describes the OpenTelemetry (OTEL) integration in Principal ADE fo
 
 ## Overview
 
-Principal ADE sends trace data to a local OpenTelemetry collector at `http://localhost:4318`. Both the main process (Node.js) and renderer processes (browser) are instrumented and can export traces.
+Principal ADE sends trace data to an OTLP/HTTP collector. Both the main process (Node.js) and
+renderer processes (browser) are instrumented, and the event-processing utility process and the
+terminal (PTY) daemon export their own traces. The endpoint is configurable — see
+[Configuration](#configuration); the default is `http://localhost:4318`, which is where a local Maple
+listens.
 
 ## Architecture
 
@@ -41,10 +45,15 @@ Principal ADE sends trace data to a local OpenTelemetry collector at `http://loc
 ```
 src/
 ├── telemetry/
-│   └── config.ts                 # Shared configuration
+│   └── config.ts                 # Shared configuration + endpoint/enabled resolution
 ├── main/
-│   └── telemetry/
-│       └── index.ts              # Main process telemetry
+│   ├── telemetry/
+│   │   ├── index.ts              # Main process telemetry
+│   │   └── settings-cache.ts     # Resolves the saved preference for every consumer
+├── event-processing-server/
+│   └── telemetry.ts              # Utility process telemetry
+├── pty-daemon/
+│   └── telemetry.ts              # Terminal daemon telemetry
 └── renderer/
     └── telemetry/
         └── index.ts              # Renderer process telemetry
@@ -52,44 +61,37 @@ src/
 
 ## Configuration
 
-Configuration is defined in `src/telemetry/config.ts`:
+The endpoint and the on/off switch resolve in one place
+(`src/telemetry/config.ts`), highest priority first:
 
-```typescript
-export const defaultTelemetryConfig = {
-  enabled: true,
-  collectorEndpoint: 'http://localhost:4318',
-  serviceName: 'principal-ade',
-  mainProcess: {
-    enabled: true,
-    instrumentations: {
-      http: true,
-      express: true,
-      fs: false,  // Disabled - too noisy
-    },
-  },
-  renderer: {
-    enabled: true,
-    instrumentations: {
-      fetch: true,
-      xhr: true,
-      documentLoad: true,
-      userInteraction: true,
-    },
-  },
-};
+1. the saved preference (Settings → Telemetry)
+2. an environment variable: `OTEL_EXPORTER_OTLP_ENDPOINT`
+3. the built-in default: `http://localhost:4318`
+
+The endpoint is a **base** URL — `/v1/traces` is appended. The deprecated
+port-only knobs `OTEL_OTLP_PORT` / `OTEL_WRAPPER_PORT` are still read as a
+fallback below `OTEL_EXPORTER_OTLP_ENDPOINT`.
+
+The main process resolves this once and hands it to the other processes: the renderer reads it
+over the synchronous `get-otel-endpoint` IPC, and the utility process and PTY daemon receive it in
+their spawn environment. A change made in Settings therefore applies to the main process and to
+every open renderer window immediately; the two child processes pick it up the next time they
+start, because they read their environment once.
+
+```bash
+# Point the whole app at a collector on a non-default port
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 npm run dev
 ```
 
 ### Disabling Telemetry
+
+**Via Settings:** Settings → Telemetry → "Export traces to an OTLP collector".
 
 **Via environment variable:**
 ```bash
 DISABLE_TELEMETRY=true npm run dev
 ```
-
-**Via localStorage (renderer only):**
-```javascript
-localStorage.setItem('telemetry-enabled', 'false');
-```
+An explicit choice saved in Settings takes precedence over `DISABLE_TELEMETRY`.
 
 ## Resource Attributes
 
@@ -261,7 +263,11 @@ The integration uses lightweight, browser-compatible packages:
 
 ## Testing Telemetry
 
-1. Start your local OTEL collector on port 4318
+1. Start a local OTLP collector on port 4318. With Maple:
+   ```bash
+   brew install Makisuo/tap/maple
+   maple start --offline          # OTLP on :4318, dashboard from the bundled UI
+   ```
 2. Run the app: `npm run dev`
 3. Check console for initialization logs:
    ```
@@ -269,7 +275,14 @@ The integration uses lightweight, browser-compatible packages:
    [Telemetry] Sending traces to: http://localhost:4318/v1/traces
    ```
 4. Perform actions in the app
-5. View traces in your collector's UI
+5. Read the traces back: `maple traces --since 5m`, or open the dashboard
+
+**Start the collector before the app.** Main, the utility process and the PTY daemon each probe the
+endpoint once while initializing, and leave telemetry off for that process if nothing answers.
+Toggling export off and on in Settings re-runs that probe for the main process and renderer windows.
+
+Spans are batched (5s flush, 50 spans), so give it a few seconds before concluding nothing arrived.
+Maple's service map needs its first hourly rollup, which runs 60s after `maple start`.
 
 ## Troubleshooting
 

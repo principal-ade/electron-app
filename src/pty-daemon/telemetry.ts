@@ -14,6 +14,7 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { trace, Tracer, SpanStatusCode, Span, context, Context } from '@opentelemetry/api';
+import { resolveTelemetrySettings } from '../telemetry/config';
 
 class DaemonTelemetryProvider {
   private provider: BasicTracerProvider | null = null;
@@ -32,11 +33,15 @@ class DaemonTelemetryProvider {
       return;
     }
 
-    // Use port 14318 for dev, 4318 for production
-    const isDev = process.env.NODE_ENV !== 'production';
-    const defaultPort = isDev ? '14318' : '4318';
-    const otlpPort = parseInt(process.env.OTEL_OTLP_PORT || defaultPort, 10);
-    const endpoint = `http://localhost:${otlpPort}`;
+    // The main process owns the preference and passes the resolved answer down
+    // on spawn; process.env here carries PRINCIPAL_TELEMETRY_*.
+    const settings = resolveTelemetrySettings({ env: process.env });
+    if (!settings.enabled) {
+      console.info('[DaemonTelemetry] Telemetry disabled via settings');
+      return;
+    }
+
+    const endpoint = settings.endpoint;
 
     // Check if collector is available
     const collectorAvailable = await this.checkCollectorHealth(endpoint);

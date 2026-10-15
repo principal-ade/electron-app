@@ -4,6 +4,12 @@
  * Initializes OpenTelemetry SDK for the Electron renderer process with:
  * - Trace exporting to OTLP HTTP endpoint
  * - Auto-instrumentation for browser (fetch, XHR, document load, user interaction)
+ *
+ * The endpoint and the on/off switch are resolved once, in the main process
+ * (saved preference > `OTEL_EXPORTER_OTLP_ENDPOINT` > default), and read over
+ * the synchronous `get-otel-endpoint` IPC. A change made in Settings arrives via
+ * `UserPreferencesService` and re-initialises this provider in place, so no
+ * window reload is needed.
  */
 
 import { WebTracerProvider } from '@opentelemetry/sdk-trace-web';
@@ -21,36 +27,90 @@ import {
   ATTR_SERVICE_VERSION,
 } from '@opentelemetry/semantic-conventions';
 import { trace, type Tracer } from '@opentelemetry/api';
-import { defaultTelemetryConfig } from '../../telemetry/config';
+import {
+  defaultTelemetryConfig,
+  RESOLVED_ENABLED_ENV,
+  RESOLVED_ENDPOINT_ENV,
+  resolveTelemetrySettings,
+  type TelemetrySettings,
+} from '../../telemetry/config';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
 // Extend Window interface for app version
 declare global {
   interface Window {
     appVersion?: string;
+    /** Snapshot of the OTLP base endpoint main resolved, exposed by preload. */
+    otelCollectorEndpoint?: string;
+    /** Snapshot ("true"/"false") of whether main resolved telemetry as on. */
+    telemetryExportEnabled?: string;
+    /** Re-read the live resolved settings from main. Exposed by preload. */
+    getTelemetrySettings?: () => {
+      endpoint: string;
+      enabled: boolean;
+    };
   }
+}
+
+/**
+ * What main resolved, in the shape the shared resolver expects. Main applies the
+ * same precedence (preference > env > default), so the renderer does not
+ * re-apply the preference itself — doing so would let a stale saved value beat a
+ * live change.
+ */
+function rendererTelemetryEnv(): Record<string, string | undefined> {
+  let endpoint = window.otelCollectorEndpoint;
+  let enabled = window.telemetryExportEnabled;
+
+  try {
+    // Prefer a fresh read: the preload snapshot is taken once, when the window
+    // is created, and would otherwise pin the endpoint for the window's life.
+    const fresh = window.getTelemetrySettings?.();
+    if (fresh) {
+      endpoint = fresh.endpoint;
+      enabled = String(fresh.enabled);
+    }
+  } catch (error) {
+    console.warn(
+      '[Telemetry] Could not read resolved telemetry settings, using the preload snapshot:',
+      error,
+    );
+  }
+
+  return {
+    [RESOLVED_ENDPOINT_ENV]: endpoint,
+    [RESOLVED_ENABLED_ENV]: enabled,
+  };
 }
 
 class WebTelemetryProvider {
   private provider: WebTracerProvider | null = null;
   private isInitialized = false;
+  private unregisterInstrumentations: (() => void) | null = null;
+  private windowType: string | null = null;
+  private settings: TelemetrySettings | null = null;
 
   /**
    * Initialize OpenTelemetry SDK for the renderer process
    */
   initialize(windowType: string): void {
+    this.windowType = windowType;
+
     if (this.isInitialized) {
       console.info('[Telemetry] Renderer telemetry already initialized');
       return;
     }
 
-    // Check if telemetry is disabled via localStorage or environment
-    if (!this.isTelemetryEnabled()) {
-      console.info('[Telemetry] Renderer telemetry disabled');
+    const settings = resolveTelemetrySettings({ env: rendererTelemetryEnv() });
+    this.settings = settings;
+
+    if (!settings.enabled) {
+      console.info('[Telemetry] Renderer telemetry disabled via settings');
       return;
     }
 
     const config = defaultTelemetryConfig;
-    const endpoint = config.collectorEndpoint;
+    const endpoint = settings.endpoint;
 
     try {
       console.info(`[Telemetry] Initializing renderer telemetry for ${windowType}...`);
@@ -146,7 +206,10 @@ class WebTelemetryProvider {
         );
       }
 
-      registerInstrumentations({
+      // Keep the cleanup function: re-initialising after a settings change has to
+      // unregister first, or each browser global is patched again and every span
+      // is reported once per change.
+      this.unregisterInstrumentations = registerInstrumentations({
         instrumentations,
         tracerProvider: this.provider,
       });
@@ -164,10 +227,49 @@ class WebTelemetryProvider {
   }
 
   /**
+   * Re-read the resolved settings and restart the provider if they changed.
+   * Triggered by a preference update, in this window or another one.
+   */
+  applySettingsChange(): void {
+    const next = resolveTelemetrySettings({ env: rendererTelemetryEnv() });
+
+    if (
+      this.settings &&
+      this.settings.enabled === next.enabled &&
+      this.settings.endpoint === next.endpoint
+    ) {
+      return;
+    }
+
+    void this.reinitialize(next);
+  }
+
+  private async reinitialize(next: TelemetrySettings): Promise<void> {
+    await this.shutdown();
+
+    if (!next.enabled || !this.windowType) {
+      return;
+    }
+
+    console.info('[Telemetry] Renderer telemetry settings changed, re-initializing');
+    this.initialize(this.windowType);
+  }
+
+  /**
    * Shutdown telemetry and flush pending spans
    */
   async shutdown(): Promise<void> {
+    if (this.unregisterInstrumentations) {
+      try {
+        this.unregisterInstrumentations();
+      } catch (error) {
+        console.error('[Telemetry] Error unregistering instrumentations:', error);
+      }
+      this.unregisterInstrumentations = null;
+    }
+
     if (!this.provider) {
+      this.isInitialized = false;
       return;
     }
 
@@ -180,23 +282,6 @@ class WebTelemetryProvider {
     } catch (error) {
       console.error('[Telemetry] Error during renderer shutdown:', error);
     }
-  }
-
-  /**
-   * Check if telemetry is enabled
-   */
-  private isTelemetryEnabled(): boolean {
-    // Check localStorage for user preference
-    try {
-      const stored = localStorage.getItem('telemetry-enabled');
-      if (stored === 'false') {
-        return false;
-      }
-    } catch {
-      // localStorage not available
-    }
-
-    return defaultTelemetryConfig.renderer.enabled;
   }
 
   /**
@@ -232,12 +317,24 @@ class WebTelemetryProvider {
 // Singleton instance
 const webTelemetry = new WebTelemetryProvider();
 
+// One subscription per renderer bundle, however many windows share it.
+let subscribedToPreferences = false;
+
 /**
  * Initialize telemetry for a renderer window
  * Call this at the top of each renderer entry point before React renders
  */
 export function initializeTelemetry(windowType: string): void {
   webTelemetry.initialize(windowType);
+
+  if (subscribedToPreferences) {
+    return;
+  }
+
+  subscribedToPreferences = true;
+  UserPreferencesService.onPreferencesUpdated(() => {
+    webTelemetry.applySettingsChange();
+  });
 }
 
 /**

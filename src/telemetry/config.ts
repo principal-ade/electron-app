@@ -1,24 +1,59 @@
 /**
- * Shared OpenTelemetry Configuration
+ * Shared OpenTelemetry configuration.
  *
- * Configuration types and defaults for both main and renderer process telemetry.
+ * Endpoint and on/off resolution, highest priority first:
+ *
+ *   1. the saved `telemetry` user preference (Settings → Telemetry)
+ *   2. an environment variable (the dev escape hatch)
+ *   3. the built-in default (`http://localhost:4318`, Maple local's port)
+ *
+ * The main process resolves this once and hands the result to every other
+ * process, so there is exactly one source of truth: the renderer reads it off
+ * `window` (see the `get-otel-endpoint` sync IPC), and the utility process and
+ * PTY daemon receive it in their spawn environment.
+ *
+ * The endpoint is a BASE url. Callers append `/v1/traces` themselves; a pasted
+ * full trace url is tolerated and stripped back to its base.
  */
 
+/** Maple local (and the OTLP/HTTP convention in general) listens here. */
+export const DEFAULT_OTLP_ENDPOINT = 'http://localhost:4318';
+
+/** Standard OTLP base endpoint env var, for pointing a checkout at any collector. */
+export const OTLP_ENDPOINT_ENV = 'OTEL_EXPORTER_OTLP_ENDPOINT';
+
+/** Set by the main process on a child process' env to carry the resolved value. */
+export const RESOLVED_ENDPOINT_ENV = 'PRINCIPAL_TELEMETRY_ENDPOINT';
+export const RESOLVED_ENABLED_ENV = 'PRINCIPAL_TELEMETRY_ENABLED';
+
 /**
- * Extended window interface for renderer process
+ * Port-only knobs this replaced. Still read as a fallback so an existing dev
+ * shell (`OTEL_OTLP_PORT=4318 npm run dev`) keeps working; prefer
+ * `OTEL_EXPORTER_OTLP_ENDPOINT`.
  */
-interface WindowWithOtel {
-  otelCollectorEndpoint?: string;
+export const LEGACY_OTLP_PORT_ENV = 'OTEL_OTLP_PORT';
+export const LEGACY_WRAPPER_PORT_ENV = 'OTEL_WRAPPER_PORT';
+
+/** The persisted slice of user preferences that drives telemetry. */
+export interface TelemetryPreference {
+  /** Export traces at all. Unset falls through to the environment. */
+  enabled?: boolean;
+  /** Base OTLP/HTTP endpoint. Unset or blank falls through to the default. */
+  endpoint?: string;
 }
 
-/**
- * Declare window as potentially available in global scope
- */
-declare const window: WindowWithOtel | undefined;
-
-export interface TelemetryConfig {
+/** The resolved answer every process runs on. */
+export interface TelemetrySettings {
   enabled: boolean;
-  collectorEndpoint: string;
+  endpoint: string;
+}
+
+/** Renderer-only localStorage key that predates the preference. */
+export const LEGACY_RENDERER_ENABLED_KEY = 'telemetry-enabled';
+
+/** Instrumentation toggles. Orthogonal to where (and whether) spans are exported. */
+export interface TelemetryConfig {
+  /** Default `service.name` for telemetry exported by the main process. */
   serviceName: string;
   mainProcess: {
     enabled: boolean;
@@ -39,41 +74,74 @@ export interface TelemetryConfig {
   };
 }
 
+/** Normalise a user-supplied endpoint to a bare origin+path, or undefined. */
+export function normalizeOtlpEndpoint(
+  raw: string | undefined,
+): string | undefined {
+  const value = raw?.trim();
+  if (!value) {
+    return undefined;
+  }
+
+  // Accept `localhost:4318` as well as a full url.
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(value)
+    ? value
+    : `http://${value}`;
+
+  return withScheme.replace(/\/+$/, '').replace(/\/v1\/traces$/, '');
+}
+
+/** `http://localhost:<port>` from a legacy port-only env var, or undefined. */
+function legacyEndpointFromPort(
+  env: Record<string, string | undefined>,
+): string | undefined {
+  const port = (
+    env[LEGACY_OTLP_PORT_ENV] ??
+    env[LEGACY_WRAPPER_PORT_ENV] ??
+    ''
+  ).trim();
+
+  return /^\d+$/.test(port) ? `http://localhost:${port}` : undefined;
+}
+
 /**
- * Get the OTLP endpoint based on environment
- * Sends directly to wrapper port: dev uses 14319, production uses 4319
+ * Collapse the preference, the environment and the defaults into the settings a
+ * process should run on. Callers pass whichever inputs they own: the main
+ * process passes the saved preference plus its own env, a child process passes
+ * only its env (the preference arrives as `RESOLVED_*` / `RESOLVED_ENDPOINT_ENV`).
  */
-function getCollectorEndpoint(): string {
-  // In renderer process, use the endpoint exposed by preload script
-  if (typeof window !== 'undefined' && window?.otelCollectorEndpoint) {
-    return window.otelCollectorEndpoint;
+export function resolveTelemetrySettings(
+  input: {
+    preference?: TelemetryPreference | undefined;
+    env?: Record<string, string | undefined> | undefined;
+  } = {},
+): TelemetrySettings {
+  const env = input.env ?? {};
+  const preference = input.preference ?? {};
+
+  const endpoint =
+    normalizeOtlpEndpoint(preference.endpoint) ??
+    normalizeOtlpEndpoint(env[RESOLVED_ENDPOINT_ENV]) ??
+    normalizeOtlpEndpoint(env[OTLP_ENDPOINT_ENV]) ??
+    legacyEndpointFromPort(env) ??
+    DEFAULT_OTLP_ENDPOINT;
+
+  let enabled: boolean;
+  if (preference.enabled !== undefined) {
+    // An explicit choice in Settings beats the environment.
+    enabled = preference.enabled;
+  } else if (env[RESOLVED_ENABLED_ENV] !== undefined) {
+    enabled = env[RESOLVED_ENABLED_ENV] !== 'false';
+  } else if (env.DISABLE_TELEMETRY === 'true') {
+    enabled = false;
+  } else {
+    enabled = true;
   }
 
-  // In main process, check for environment variable override
-  if (typeof process !== 'undefined' && process.env?.OTEL_OTLP_PORT) {
-    return `http://localhost:${process.env.OTEL_OTLP_PORT}`;
-  }
-
-  // In main process, auto-detect dev vs production
-  // Send directly to wrapper port (bypasses Go collector)
-  if (typeof process !== 'undefined' && process.type === 'browser') {
-    try {
-      const { app } = require('electron');
-      const isDev = !app.isPackaged;
-      return `http://localhost:${isDev ? '14319' : '4319'}`;
-    } catch {
-      // Fallback if electron not available
-      return 'http://localhost:4319';
-    }
-  }
-
-  // Final fallback
-  return 'http://localhost:4319';
+  return { enabled, endpoint };
 }
 
 export const defaultTelemetryConfig: TelemetryConfig = {
-  enabled: true,
-  collectorEndpoint: getCollectorEndpoint(),
   serviceName: 'principal-ade-main',
   mainProcess: {
     enabled: true,
@@ -93,11 +161,3 @@ export const defaultTelemetryConfig: TelemetryConfig = {
     },
   },
 };
-
-// Environment variable override
-export function isTelemetryEnabled(): boolean {
-  if (typeof process !== 'undefined' && process.env?.DISABLE_TELEMETRY === 'true') {
-    return false;
-  }
-  return defaultTelemetryConfig.enabled;
-}

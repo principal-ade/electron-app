@@ -4,6 +4,10 @@
  * Lightweight telemetry setup for the Electron main process.
  * Provides trace exporting to OTLP HTTP endpoint.
  * Manual instrumentation - call tracer.startSpan() where needed.
+ *
+ * Endpoint and on/off come from the resolved telemetry settings
+ * (`./settings-cache`), so a change made in Settings takes effect without an
+ * app restart.
  */
 
 import { BasicTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
@@ -12,28 +16,41 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { trace } from '@opentelemetry/api';
 import { app } from 'electron';
-import { defaultTelemetryConfig, isTelemetryEnabled } from '../../telemetry/config';
+import { defaultTelemetryConfig } from '../../telemetry/config';
+import {
+  getTelemetrySettings,
+  subscribeTelemetrySettings,
+} from './settings-cache';
 
 class NodeTelemetryProvider {
   private provider: BasicTracerProvider | null = null;
   private isInitialized = false;
+  private unsubscribeSettings: (() => void) | null = null;
 
   /**
    * Initialize OpenTelemetry for the main process
    */
   async initialize(): Promise<void> {
+    // Re-initialising is cheap and idempotent, so track setting changes for the
+    // lifetime of the process rather than wiring a one-shot listener.
+    if (!this.unsubscribeSettings) {
+      this.unsubscribeSettings = subscribeTelemetrySettings(() => {
+        void this.reinitialize();
+      });
+    }
+
     if (this.isInitialized) {
       console.log('[Telemetry] Main process telemetry already initialized');
       return;
     }
 
-    if (!isTelemetryEnabled()) {
-      console.log('[Telemetry] Main process telemetry disabled via config');
+    const settings = getTelemetrySettings();
+    if (!settings.enabled) {
+      console.log('[Telemetry] Main process telemetry disabled via settings');
       return;
     }
 
-    const config = defaultTelemetryConfig;
-    const endpoint = config.collectorEndpoint;
+    const endpoint = settings.endpoint;
 
     // Check if collector is available
     const collectorAvailable = await this.checkCollectorHealth(endpoint);
@@ -46,7 +63,7 @@ class NodeTelemetryProvider {
       console.log('[Telemetry] Initializing main process telemetry...');
 
       const resource = resourceFromAttributes({
-        [ATTR_SERVICE_NAME]: config.serviceName,
+        [ATTR_SERVICE_NAME]: defaultTelemetryConfig.serviceName,
         [ATTR_SERVICE_VERSION]: app.getVersion(),
         'process.type': 'main',
         'electron.packaged': String(app.isPackaged),
@@ -81,10 +98,23 @@ class NodeTelemetryProvider {
   }
 
   /**
+   * Apply a settings change: flush and drop the current provider, then build a
+   * new one if telemetry is still (or now) enabled.
+   */
+  private async reinitialize(): Promise<void> {
+    await this.shutdown();
+
+    if (getTelemetrySettings().enabled) {
+      await this.initialize();
+    }
+  }
+
+  /**
    * Shutdown and flush pending spans
    */
   async shutdown(): Promise<void> {
     if (!this.provider) {
+      this.isInitialized = false;
       return;
     }
 

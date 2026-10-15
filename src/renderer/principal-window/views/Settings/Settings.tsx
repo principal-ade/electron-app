@@ -8,12 +8,14 @@ import {
   Puzzle,
   Sparkles,
   Shield,
+  Activity,
 } from 'lucide-react';
 import { GeneralSettings } from './components/GeneralSettings';
 import { AIAssistantsSettings } from './components/AIAssistantsSettings';
 import { UpdatesSettings } from './components/UpdatesSettings';
 import { GeminiSettings } from './components/GeminiSettings';
 import { SecuritySettings } from './components/SecuritySettings';
+import { TelemetrySettings } from './components/TelemetrySettings';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
@@ -26,6 +28,7 @@ export type SettingsCategory =
   | 'security'
   | 'ai-assistants'
   | 'gemini'
+  | 'telemetry'
   | 'updates';
 
 export interface SettingsProps {
@@ -332,6 +335,46 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
               )}
             </button>
 
+            <button
+              onClick={() => setActiveCategory('telemetry')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor:
+                  activeCategory === 'telemetry'
+                    ? theme.colors.primary + '20'
+                    : 'transparent',
+                color:
+                  activeCategory === 'telemetry'
+                    ? theme.colors.primary
+                    : theme.colors.text,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontSize: '14px',
+                fontWeight: activeCategory === 'telemetry' ? 600 : 500,
+                textAlign: 'left',
+                width: '100%',
+              }}
+              onMouseEnter={(e) => {
+                if (activeCategory !== 'telemetry') {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeCategory !== 'telemetry') {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <Activity size={18} />
+              Telemetry
+            </button>
+
             {showExtensionsButton && (
               <>
                 {/* Divider */}
@@ -402,6 +445,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
             <GeminiSettings />
           )}
           {activeCategory === 'updates' && <UpdatesSettings />}
+          {activeCategory === 'telemetry' && <TelemetrySettings />}
         </div>
       </div>
     </div>

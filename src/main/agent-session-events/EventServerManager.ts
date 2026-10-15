@@ -29,6 +29,7 @@ import {
 import { getSessionManagerInstance } from '../terminal/sessionManagerSingleton';
 import { broadcastTerminalSessionsChanged } from '../terminal/tipc/terminalRouter';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
+import { childTelemetryEnv } from '../telemetry/settings-cache';
 import { AgentSessionSDKAPIEvents } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
 import {
   TopicAPIEvent,
@@ -318,6 +319,9 @@ export class EventServerManager extends EventEmitter {
       env: {
         ...process.env,
         NODE_ENV: process.env.NODE_ENV || 'development',
+        // Telemetry endpoint + on/off as resolved by the main process (the
+        // utility process cannot read the preference store itself).
+        ...childTelemetryEnv(),
       },
     });
 

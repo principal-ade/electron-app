@@ -9,6 +9,7 @@ import * as path from 'path';
 import * as net from 'net';
 import { spawn } from 'child_process';
 import { app } from 'electron';
+import { childTelemetryEnv } from '../telemetry/settings-cache';
 import {
   SOCKET_PATH,
   PID_FILE,
@@ -158,6 +159,9 @@ export async function spawnDaemon(): Promise<void> {
     NODE_ENV: nodeEnv,
     // CRITICAL: Tell Electron to run as Node.js, not as the full Electron app
     ELECTRON_RUN_AS_NODE: '1',
+    // Telemetry endpoint + on/off as resolved by the main process (the daemon
+    // cannot read the preference store itself). Read once, at spawn.
+    ...childTelemetryEnv(),
   };
 
   // In packaged app, add NODE_PATH so daemon can find unpacked native modules

@@ -117,15 +117,28 @@ try {
   console.error('[Preload-DevWorkspace] ❌ Failed to expose appName:', error);
 }
 
-// Expose OTEL collector endpoint for telemetry
+// Expose OTEL settings for telemetry: the resolved endpoint, whether export is
+// on, and a live reader for both. Main re-resolves when Settings changes it.
 try {
-  const otelEndpoint = ipcRenderer.sendSync('get-otel-endpoint');
-  contextBridge.exposeInMainWorld('otelCollectorEndpoint', otelEndpoint);
-  console.info('[Preload-DevWorkspace] ✅ OTEL Endpoint exposed:', otelEndpoint);
+  const readTelemetrySettings = (): { endpoint: string; enabled: boolean } =>
+    ipcRenderer.sendSync('get-otel-endpoint');
+  const telemetrySettings = readTelemetrySettings();
+
+  contextBridge.exposeInMainWorld(
+    'otelCollectorEndpoint',
+    telemetrySettings.endpoint,
+  );
+  contextBridge.exposeInMainWorld(
+    'telemetryExportEnabled',
+    String(telemetrySettings.enabled),
+  );
+  contextBridge.exposeInMainWorld('getTelemetrySettings', readTelemetrySettings);
+  console.info('[Preload-DevWorkspace] ✅ OTEL settings exposed:', telemetrySettings);
 } catch (error) {
-  console.error('[Preload-DevWorkspace] ❌ Failed to expose OTEL endpoint:', error);
-  // Fallback to dev wrapper port
-  contextBridge.exposeInMainWorld('otelCollectorEndpoint', 'http://localhost:14319');
+  console.error('[Preload-DevWorkspace] ❌ Failed to expose OTEL settings:', error);
+  // Fail closed: without the resolved settings, don't export to a guessed port.
+  contextBridge.exposeInMainWorld('otelCollectorEndpoint', 'http://localhost:4318');
+  contextBridge.exposeInMainWorld('telemetryExportEnabled', 'false');
 }
 
 // ============================================

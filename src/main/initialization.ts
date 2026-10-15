@@ -2,7 +2,10 @@ import { app, ipcMain } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { registerIpcMain } from '@egoist/tipc/main';
-import { initializeStorage } from './stores/initialization';
+import {
+  getTypedStorageManagerInstance,
+  initializeStorage,
+} from './stores/initialization';
 import { terminalRouter } from './terminal/tipc';
 import { initializeTerminalSettings } from './terminal/sessionManagerSingleton';
 import { githubRouter } from './github/tipc';
@@ -55,6 +58,10 @@ import { registerCLIBridgeHandlers } from './services/ipc/cliBridgeHandlers';
 import { JWTService } from './services/JWTService';
 import { registerGitHubIpcHandlers } from './version-control-providers/githubHandlers';
 import { UserPreferencesHandler } from './stores/userPreferencesHandler';
+import {
+  getTelemetrySettings,
+  refreshTelemetrySettingsFromStore,
+} from './telemetry/settings-cache';
 import { AppVersionManagerAPIEvent } from '../window/main-process-api-implementations/appVersionManagerApi';
 import { registerDockerHandlers } from './services/ipc/docker/dockerHandlers';
 import { registerOptimizedDockerHandlers } from './services/ipc/docker/optimizedDockerHandlers';
@@ -115,17 +122,18 @@ const setupAppVersionHandler = () => {
 };
 
 // Setup OTEL endpoint handler
-// Send directly to wrapper port (bypasses Go collector)
+// The endpoint and the on/off switch are resolved once by the main process
+// (saved preference > env > default) and handed to the renderer synchronously:
+// the preload script runs before any renderer code and cannot await the store.
 const setupOtelEndpointHandler = () => {
-  const getOtelEndpoint = () => {
-    const isDev = !app.isPackaged;
-    const wrapperPort = parseInt(process.env.OTEL_WRAPPER_PORT || (isDev ? '14319' : '4319'), 10);
-    return `http://localhost:${wrapperPort}`;
+  const getOtelSettings = () => {
+    const settings = getTelemetrySettings();
+    return { endpoint: settings.endpoint, enabled: settings.enabled };
   };
 
   // Sync handler for sendSync() (used by preload for telemetry)
   ipcMain.on('get-otel-endpoint', (event) => {
-    event.returnValue = getOtelEndpoint();
+    event.returnValue = getOtelSettings();
   });
 };
 
@@ -332,6 +340,13 @@ export const initializeServices = async () => {
 
   // Initialize storage before setting up bridges
   await initializeStorage();
+
+  // Resolve the saved telemetry preference before anything consumes it: the
+  // preload scripts read it synchronously, and the child processes below inherit
+  // it in their spawn environment.
+  await refreshTelemetrySettingsFromStore(
+    await getTypedStorageManagerInstance(),
+  );
 
   // Setup HTTP bridges after storage is ready
   await setupHttpBridges();
