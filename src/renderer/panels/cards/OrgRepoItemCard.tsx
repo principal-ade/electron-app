@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ArrowDown, ArrowUp, Circle, Cloud, Download, Eraser, FolderGit2, FolderTree, Lock, Terminal } from 'lucide-react';
+import { ArrowDown, ArrowUp, Eye, Circle, Cloud, Download, Eraser, FolderGit2, FolderTree, Lock, Terminal } from 'lucide-react';
 
 export interface OrgRepoItemCardData {
   name: string;
@@ -44,6 +44,13 @@ export interface OrgRepoItemCardProps {
    * greater than zero. Omitted (or both zero) → no indicator.
    */
   sync?: { ahead?: number; behind?: number };
+  /**
+   * Whether the repository monitoring worker is watching this clone. A watched
+   * repo has live git status (push/dirty updates arrive as events); an unwatched
+   * one is only queried on demand, so its `sync` counts can be stale. When true,
+   * a small "live" glyph renders next to the name.
+   */
+  watching?: boolean;
 }
 
 export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
@@ -59,6 +66,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   onRelocate,
   dragText,
   sync,
+  watching = false,
 }) => {
   const { theme } = useTheme();
   const spacing = { xs: 4, sm: 8, md: 16 };
@@ -354,6 +362,21 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
               {behind}
             </span>
           )}
+        </span>
+      )}
+
+      {/* Live-watch indicator — the right-most element in the row. A watched
+          clone's git status updates on push/dirty changes instead of only when
+          something re-queries it. Pulses while watching (see .animate-watchPulse
+          in index.css). */}
+      {watching && (
+        <span
+          className="animate-watchPulse"
+          title="Watching — live git status (push and dirty changes update automatically)"
+          aria-label="Watching for live changes"
+          style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}
+        >
+          <Eye size={13} color={theme.colors.primary} />
         </span>
       )}
     </div>

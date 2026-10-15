@@ -193,3 +193,28 @@ body > :not(#root) * {
     box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
   }
 }
+
+/* Live-watch indicator: a watched repository's git status arrives as events, so
+   the indicator breathes continuously to read as "live". Colour/opacity only —
+   no scale, so the row's layout and text metrics never move. A gentler,
+   event-driven variant (pulse only when ahead/behind actually change,
+   throttled) is tracked as a follow-up topic. */
+@keyframes watchPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-watchPulse {
+  animation: watchPulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-watchPulse {
+    animation: none;
+  }
+}

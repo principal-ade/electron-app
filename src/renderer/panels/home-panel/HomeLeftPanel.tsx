@@ -39,6 +39,7 @@ import { type UserAboutInfo } from './useUserAboutInfo';
 import { RepoAboutCard } from './RepoAboutCard';
 import { InProgressBar } from './InProgressBar';
 import { useInProgressRepos, type InProgressRepo } from './useInProgressRepos';
+import { useWatchedRepos } from './useWatchedRepos';
 import {
   HomeSearchBar,
   HomeSearchResults,
@@ -77,6 +78,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 
   // Repos with uncommitted changes / unpushed commits — the in-progress list.
   const inProgressRepos = useInProgressRepos(repositories);
+  // Repos the monitoring worker is watching — these have live git status;
+  // unwatched repos are query-only and can show a stale sync count.
+  const watchedPaths = useWatchedRepos();
   // Hide the bar's Open button when the In Progress tab is already open.
   const inProgressOpen = tabs.some((t) => t.id === 'in-progress-activity');
 
@@ -504,7 +508,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               onSelectRepo={emitRepoSelected}
               onSelectEntry={emitLocalEntrySelected}
             />
-          ) : inProgressGroups.length > 0 ? (
+          ) : (
             <div
               style={{
                 display: 'flex',
@@ -512,64 +516,68 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 padding: '4px 4px',
               }}
             >
-              {inProgressGroups.map(([owner, repos]) => {
-                const isUntracked = owner === 'Untracked';
-                const isCollapsed = collapsedOwners.has(owner);
-                const isYou =
-                  !isUntracked &&
-                  githubLogin !== null &&
-                  owner.toLowerCase() === githubLogin.toLowerCase();
-                return (
-                  <div key={owner} style={{ marginBottom: 8 }}>
-                    <OrgSectionHeaderCard
-                      header={{
-                        orgName: owner,
-                        badge: isYou ? 'you' : undefined,
-                        repoCount: repos.length,
-                        isUntracked,
-                      }}
-                      isCollapsed={isCollapsed}
-                      onToggle={() => toggleOwner(owner)}
-                    />
-                    {!isCollapsed &&
-                      repos.map(({ entry, status }) => {
-                        const name = entry.github?.name ?? entry.name;
-                        const path = entry.path ? String(entry.path) : '';
-                        return (
-                          <OrgRepoItemCard
-                            key={String(status.repoPath)}
-                            repo={{ name }}
-                            isCloned
-                            isDirty={status.isDirty}
-                            sync={{
-                              ahead: status.ahead,
-                              behind: status.behind,
-                            }}
-                            dragText={path ? shellQuote(path) : undefined}
-                            onClick={() => openInProgressRepo(entry)}
-                            onOpenTerminal={
-                              path
-                                ? () => openTerminalForEntry(entry, name)
-                                : undefined
-                            }
-                          />
-                        );
-                      })}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div
-              style={{
-                padding: '24px 16px',
-                color: theme.colors.textMuted,
-                fontSize: theme.fontSizes[1],
-                lineHeight: 1.5,
-              }}
-            >
-              Nothing in progress — every tracked repository has a clean working
-              tree.
+              {inProgressGroups.length > 0 &&
+                inProgressGroups.map(([owner, repos]) => {
+                  const isUntracked = owner === 'Untracked';
+                  const isCollapsed = collapsedOwners.has(owner);
+                  const isYou =
+                    !isUntracked &&
+                    githubLogin !== null &&
+                    owner.toLowerCase() === githubLogin.toLowerCase();
+                  return (
+                    <div key={owner} style={{ marginBottom: 8 }}>
+                      <OrgSectionHeaderCard
+                        header={{
+                          orgName: owner,
+                          badge: isYou ? 'you' : undefined,
+                          repoCount: repos.length,
+                          isUntracked,
+                        }}
+                        isCollapsed={isCollapsed}
+                        onToggle={() => toggleOwner(owner)}
+                      />
+                      {!isCollapsed &&
+                        repos.map(({ entry, status }) => {
+                          const name = entry.github?.name ?? entry.name;
+                          const path = entry.path ? String(entry.path) : '';
+                          return (
+                            <OrgRepoItemCard
+                              key={String(status.repoPath)}
+                              repo={{ name }}
+                              isCloned
+                              isDirty={status.isDirty}
+                              watching={path ? watchedPaths.has(path) : false}
+                              sync={{
+                                ahead: status.ahead,
+                                behind: status.behind,
+                              }}
+                              dragText={path ? shellQuote(path) : undefined}
+                              onClick={() => openInProgressRepo(entry)}
+                              onOpenTerminal={
+                                path
+                                  ? () => openTerminalForEntry(entry, name)
+                                  : undefined
+                              }
+                            />
+                          );
+                        })}
+                    </div>
+                  );
+                })}
+
+              {inProgressGroups.length === 0 && (
+                <div
+                  style={{
+                    padding: '24px 16px',
+                    color: theme.colors.textMuted,
+                    fontSize: theme.fontSizes[1],
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Nothing in progress — every tracked repository has a clean
+                  working tree.
+                </div>
+              )}
             </div>
           )}
         </div>

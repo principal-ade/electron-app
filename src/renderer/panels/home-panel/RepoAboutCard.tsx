@@ -39,6 +39,7 @@ import { parsePurl } from '@principal-ai/alexandria-core-library';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { RepositorySelectedPayload } from '../../events/repositorySelected';
 import { payloadFromGithub } from '../../events/repositorySelected';
+import { useRepoWatch } from './useRepoWatch';
 import {
   emitTerminalOpen,
   emitRepositoryGuideOpenReadme,
@@ -132,6 +133,16 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   const parsed = parsePurl(repo.purl);
   const owner = gh?.owner ?? parsed?.namespace ?? 'unknown';
   const name = gh?.name ?? parsed?.name ?? 'unknown';
+
+  // Opening this profile is the signal that the repo is being worked on, so the
+  // profile holds a monitoring watch for the local clone (reference-counted).
+  // That's what makes its git status live — e.g. a push clearing "ahead".
+  const watchedRepoPath =
+    repo.localEntry?.path != null
+      ? String(repo.localEntry.path)
+      : (repo.localClones?.[0]?.path ?? null);
+  useRepoWatch(watchedRepoPath);
+
 
   // Guide mode — owned here (not HomeLeftPanel). Single 3-way switch:
   // city | readme | week. Tab remains durable source of truth via intents.

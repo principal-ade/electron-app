@@ -113,8 +113,6 @@ export interface UserPreferences {
   // Repository management
   /** Base default directory - the top-level directory for all Principal work (cloning, workspaces, discovery) */
   baseDefaultDirectory?: string;
-  /** Enable git watching for all repositories on startup (default: false) */
-  enableGitWatchingOnStartup?: boolean;
   /**
    * Filesystem watcher implementation used by the repository monitoring
    * worker. 'parcel' (default) uses native fsevents via @parcel/watcher;

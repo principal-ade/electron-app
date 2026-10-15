@@ -219,7 +219,7 @@
     "@principal-ai/markdown-search": "^2.0.7",
     "@principal-ai/repository-abstraction": "^0.5.7",
     "@principal-ai/repository-monitoring": "^0.1.12",
-    "@principal-ai/repository-monitoring-server": "^2.2.18",
+    "@principal-ai/repository-monitoring-server": "^2.2.21",
     "@principal-ai/subsystems-core": "^0.49.1",
     "@principal-ai/subsystems-react": "^0.53.6",
     "@radix-ui/react-tabs": "^1.1.13",

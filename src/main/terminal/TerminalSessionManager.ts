@@ -19,6 +19,7 @@ import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/Term
 import { ensureDaemonRunning } from './daemonSpawner';
 import { SOCKET_PATH } from '../../shared/pty-daemon/constants';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
+import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 import { getTracer } from '../telemetry';
 
 // Tracer for terminal telemetry (main process scope)
@@ -472,6 +473,8 @@ export class TerminalSessionManager {
           this.getRepoIdFromPath(repoPath).then((repoId) => {
             session.repoId = repoId;
           });
+          // A restored terminal is still an open terminal — hold its watch too.
+          this.acquireTerminalWatch(info.id, repoPath);
         }
       });
 
@@ -808,6 +811,15 @@ export class TerminalSessionManager {
     this.sessions.set(sessionId, session);
     this.sessionPorts.set(sessionId, new Map());
 
+    // Opening a terminal in a repo is a strong signal the user is working
+    // there, so hold a monitoring watch for it: the repo then has live git
+    // status (a push clears "ahead" instead of waiting out the cache TTL) and
+    // shows up in the Home panel's "Watching" section. Released in
+    // cleanupSession.
+    if (repoPath) {
+      this.acquireTerminalWatch(sessionId, repoPath);
+    }
+
     // Create promise for session creation result
     const resultPromise = new Promise<string>((resolve, reject) => {
       this.pendingSessionCallbacks.set(sessionId, { resolve, reject });
@@ -850,6 +862,12 @@ export class TerminalSessionManager {
   }
 
   cleanupSession(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    // Drop the watch this terminal held (paired with acquireTerminalWatch).
+    if (session?.repoPath) {
+      this.releaseTerminalWatch(sessionId, session.repoPath);
+    }
+
     this.closeAllPortsForSession(sessionId);
     ownershipManager.removeSession(sessionId);
     this.sessions.delete(sessionId);
@@ -1317,6 +1335,39 @@ export class TerminalSessionManager {
   /**
    * Find the git root directory from a given path
    */
+  /**
+   * Watch reference id held by a terminal session. Prefixed so it can never
+   * collide with another consumer's reference (e.g. the renderer's
+   * `repo-profile:` ids).
+   */
+  private terminalWatchReferenceId(sessionId: string): string {
+    return `terminal:${sessionId}`;
+  }
+
+  /** Hold a monitoring watch for a terminal's repo. Best-effort. */
+  private acquireTerminalWatch(sessionId: string, repoPath: string): void {
+    void getRepositoryMonitoringManager()
+      .acquireWatch(repoPath, this.terminalWatchReferenceId(sessionId))
+      .catch((error: unknown) => {
+        console.warn(
+          `[TerminalSessionManager] Failed to acquire monitoring watch for ${repoPath}:`,
+          error,
+        );
+      });
+  }
+
+  /** Release the watch a terminal held. Best-effort. */
+  private releaseTerminalWatch(sessionId: string, repoPath: string): void {
+    void getRepositoryMonitoringManager()
+      .releaseWatch(repoPath, this.terminalWatchReferenceId(sessionId))
+      .catch((error: unknown) => {
+        console.warn(
+          `[TerminalSessionManager] Failed to release monitoring watch for ${repoPath}:`,
+          error,
+        );
+      });
+  }
+
   private async findGitRoot(directory: string): Promise<string | undefined> {
     try {
       const fs = require('fs');
