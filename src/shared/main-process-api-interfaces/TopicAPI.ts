@@ -9,6 +9,7 @@ import type {
   DraftTopic as Topic,
   TopicAsset,
   TopicStatus,
+  TopicSubsystemModelRef,
 } from '@principal-ai/subsystems-core/node';
 
 export enum TopicEventType {
@@ -68,6 +69,11 @@ export interface CreateTopicInput {
    * `pkg:github/owner/repo`). Declared by the topic itself.
    */
   repos?: string[];
+  /**
+   * Subsystem models this topic concerns, as local store refs. Optional; a
+   * topic with no association omits it entirely.
+   */
+  subsystemModels?: TopicSubsystemModelRef[];
 }
 
 /** Input to {@link TopicAPI.updateTopic} — partial patch. */
@@ -87,6 +93,12 @@ export interface UpdateTopicInput {
    * here; a caller may also set it directly.
    */
   repos?: string[];
+  /**
+   * Replace the topic's subsystem-model associations. Whole-array replace (like
+   * {@link repos}); pass `[]` to clear. A topic is local-only, so the refs are
+   * local store ids and never travel on publish.
+   */
+  subsystemModels?: TopicSubsystemModelRef[];
 }
 
 export interface TopicAPI {

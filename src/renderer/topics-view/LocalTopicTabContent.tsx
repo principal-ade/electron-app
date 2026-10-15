@@ -17,6 +17,7 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from './topic-description/TopicDescriptionBody';
 import { TopicStatusHeaderButton } from './topic-description/TopicStatusHeaderButton';
 import { TopicProjectsRail } from './topic-description/TopicProjectsRail';
+import { TopicSubsystemModelsRail } from './topic-description/TopicSubsystemModelsRail';
 import { TopicService } from '../main-process-api/TopicService';
 
 export const LocalTopicTabContent: React.FC<{
@@ -58,8 +59,6 @@ export const LocalTopicTabContent: React.FC<{
     },
     [],
   );
-
-
 
   return (
     <div
@@ -176,7 +175,20 @@ export const LocalTopicTabContent: React.FC<{
           />
         </div>
 
-        <TopicProjectsRail topicId={topicId} onOpenProject={onOpenProject} />
+        {/* Right column: subsystem models the topic concerns, then its repos.
+            Scrolls as one so both sections stay reachable on short windows. */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            flexShrink: 0,
+            minHeight: 0,
+            overflowY: 'auto',
+          }}
+        >
+          <TopicSubsystemModelsRail topicId={topicId} />
+          <TopicProjectsRail topicId={topicId} onOpenProject={onOpenProject} />
+        </div>
       </div>
     </div>
   );

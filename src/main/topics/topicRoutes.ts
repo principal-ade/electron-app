@@ -10,7 +10,10 @@
 
 import type { Application, Request, Response } from 'express';
 import { upsertSection } from '@principal-ade/markdown-utils';
-import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
+import type {
+  DraftTopic as Topic,
+  TopicSubsystemModelRef,
+} from '@principal-ai/subsystems-core/node';
 import type { TopicRegistryService } from '../stores/TopicRegistryService';
 import { validateTopicLinks } from './validateTopicLinks';
 import { TopicAPIEvent } from '../../shared/main-process-api-interfaces/TopicAPI';
@@ -34,6 +37,37 @@ function descriptionPreview(description?: string): string {
  */
 function collectTopicRepoPurls(topic: Topic): string[] {
   return (topic.repos ?? []).filter((purl) => typeof purl === 'string' && purl);
+}
+
+/**
+ * Validate an incoming `subsystemModels` value into canonical refs. Returns
+ * `null` on any malformed entry so the caller can 400 rather than persist junk.
+ * Each ref needs a non-empty `modelId`; `trailIds`, when present, must be an
+ * array of strings.
+ */
+function parseSubsystemModelRefs(
+  value: unknown,
+): TopicSubsystemModelRef[] | null {
+  if (!Array.isArray(value)) return null;
+  const refs: TopicSubsystemModelRef[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') return null;
+    const raw = entry as Record<string, unknown>;
+    const modelId = typeof raw.modelId === 'string' ? raw.modelId.trim() : '';
+    if (modelId.length === 0) return null;
+    let trailIds: string[] | undefined;
+    if (raw.trailIds !== undefined) {
+      if (
+        !Array.isArray(raw.trailIds) ||
+        !raw.trailIds.every((t) => typeof t === 'string')
+      ) {
+        return null;
+      }
+      trailIds = raw.trailIds as string[];
+    }
+    refs.push({ modelId, ...(trailIds !== undefined ? { trailIds } : {}) });
+  }
+  return refs;
 }
 
 export function registerTopicRoutes(
@@ -81,11 +115,27 @@ export function registerTopicRoutes(
       }
       repos = body.repos as string[];
     }
+    // Subsystem models this topic concerns, as local store refs. Validated the
+    // same way as an in-app edit; malformed input is rejected rather than stored.
+    let subsystemModels: TopicSubsystemModelRef[] | undefined;
+    if (body && body.subsystemModels !== undefined) {
+      const parsed = parseSubsystemModelRefs(body.subsystemModels);
+      if (!parsed) {
+        res.status(400).json({
+          success: false,
+          error:
+            'subsystemModels must be an array of { modelId: string, trailIds?: string[] }',
+        });
+        return;
+      }
+      subsystemModels = parsed;
+    }
     try {
       const topic = await registry.createTopic({
         title,
         ...(description !== undefined ? { description } : {}),
         ...(repos !== undefined ? { repos } : {}),
+        ...(subsystemModels !== undefined ? { subsystemModels } : {}),
       });
       broadcastTopicEvent(TopicAPIEvent.TOPIC_ADDED, topic);
       res.status(201).json({ success: true, topic });
@@ -336,6 +386,106 @@ export function registerTopicRoutes(
         res
           .status(500)
           .json({ success: false, error: 'failed to validate topic links' });
+      }
+    },
+  );
+
+  // Associate a subsystem model with this topic (agent analogue of the in-app
+  // model picker). Upsert by `modelId`: an existing ref is replaced in place so
+  // a caller can set or clear `trailIds`; a new one is appended. `trailIds`
+  // narrows the association to specific runtime flows within the model. The
+  // association is local-only (it never travels on publish).
+  app.post(
+    '/api/topics/:id/subsystem-models',
+    async (req: Request, res: Response) => {
+      const id = String(req.params.id);
+      if (!id) {
+        res.status(400).json({ success: false, error: 'topic id is required' });
+        return;
+      }
+      const body =
+        req.body && typeof req.body === 'object'
+          ? (req.body as Record<string, unknown>)
+          : null;
+      const modelId =
+        body && typeof body.modelId === 'string' ? body.modelId.trim() : '';
+      if (modelId.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'modelId (non-empty string) is required',
+        });
+        return;
+      }
+      let trailIds: string[] | undefined;
+      if (body && body.trailIds !== undefined) {
+        if (
+          !Array.isArray(body.trailIds) ||
+          !body.trailIds.every((t) => typeof t === 'string')
+        ) {
+          res.status(400).json({
+            success: false,
+            error: 'trailIds must be an array of strings',
+          });
+          return;
+        }
+        trailIds = body.trailIds as string[];
+      }
+      try {
+        const existing = await registry.getTopic(id);
+        if (!existing) {
+          res.status(404).json({ success: false, error: 'unknown topic id' });
+          return;
+        }
+        const current = existing.subsystemModels ?? [];
+        const ref: TopicSubsystemModelRef = {
+          modelId,
+          ...(trailIds !== undefined ? { trailIds } : {}),
+        };
+        const next = current.some((r) => r.modelId === modelId)
+          ? current.map((r) => (r.modelId === modelId ? ref : r))
+          : [...current, ref];
+        const topic = await registry.updateTopic(id, { subsystemModels: next });
+        broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
+        res.json({ success: true, topic });
+      } catch (err) {
+        console.error('[topicRoutes] link subsystem model failed', err);
+        res
+          .status(500)
+          .json({ success: false, error: 'failed to link subsystem model' });
+      }
+    },
+  );
+
+  // Remove a subsystem-model association from a topic. Idempotent: removing an
+  // id that isn't linked leaves the topic unchanged and still returns 200.
+  app.delete(
+    '/api/topics/:id/subsystem-models/:modelId',
+    async (req: Request, res: Response) => {
+      const id = String(req.params.id);
+      const modelId = String(req.params.modelId);
+      if (!id || !modelId) {
+        res.status(400).json({
+          success: false,
+          error: 'topic id and modelId are required',
+        });
+        return;
+      }
+      try {
+        const existing = await registry.getTopic(id);
+        if (!existing) {
+          res.status(404).json({ success: false, error: 'unknown topic id' });
+          return;
+        }
+        const current = existing.subsystemModels ?? [];
+        const next = current.filter((r) => r.modelId !== modelId);
+        const topic = await registry.updateTopic(id, { subsystemModels: next });
+        broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
+        res.json({ success: true, topic });
+      } catch (err) {
+        console.error('[topicRoutes] unlink subsystem model failed', err);
+        res
+          .status(500)
+          .json({ success: false, error: 'failed to unlink subsystem model' });
       }
     },
   );

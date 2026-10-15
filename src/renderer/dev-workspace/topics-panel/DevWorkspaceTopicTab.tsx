@@ -5,6 +5,7 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from '../../topics-view/topic-description/TopicDescriptionBody';
 import { TopicStatusHeaderButton } from '../../topics-view/topic-description/TopicStatusHeaderButton';
 import { TopicProjectsRail } from '../../topics-view/topic-description/TopicProjectsRail';
+import { TopicSubsystemModelsRail } from '../../topics-view/topic-description/TopicSubsystemModelsRail';
 import { TopicService } from '../../main-process-api/TopicService';
 
 export interface DevWorkspaceTopicTabProps {
@@ -177,7 +178,18 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
           />
         </div>
 
-        <TopicProjectsRail topicId={topicId} width={260} />
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            flexShrink: 0,
+            minHeight: 0,
+            overflowY: 'auto',
+          }}
+        >
+          <TopicSubsystemModelsRail topicId={topicId} width={260} />
+          <TopicProjectsRail topicId={topicId} width={260} />
+        </div>
       </div>
     </div>
   );
