@@ -32,6 +32,10 @@ export default [{
 
     // Unused code
     'src/renderer/unused/**',
+
+    // WIP port from web-ade Next.js app (uses @repo-explorer/* aliases,
+    // Next.js ESLint rules, and has known type/lint issues)
+    'src/renderer/repo-explorer/**',
   ],
 }, {
   files: [

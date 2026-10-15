@@ -455,30 +455,8 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-// Allow self-signed certificates for Control Tower server in development
-app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
-  console.log('[Main] Certificate error event fired:', {
-    url,
-    error,
-    hostname: new URL(url).hostname,
-  });
-
-  const hostname = new URL(url).hostname;
-
-  // Allow certificates for production Control Tower server
-  if (
-    hostname.includes('amazonlightsail.com') ||
-    hostname.includes('repository-traffic-controller') ||
-    (process.env.NODE_ENV === 'development' && hostname === 'localhost')
-  ) {
-    console.log(`[Main] ✅ Bypassing certificate error for ${hostname}`);
-    event.preventDefault();
-    callback(true); // Trust the certificate
-  } else {
-    console.log(`[Main] ❌ Not bypassing certificate error for ${hostname}`);
-    callback(false); // Use default verification
-  }
-});
+// Certificate error handler removed along with the traffic controller
+// (presence/collaboration WebSocket service).
 
 // Handle deep links on macOS (open-url event)
 // This must be set up before app is ready
@@ -587,9 +565,6 @@ app
     console.log('[Main] Initializing auth services...');
     const AuthStateManager = require('./services/AuthStateManager').default;
     const { authService } = require('./services/AuthService');
-    const { gitSyncIPC } = require('./services/GitSyncIPC');
-    const { presenceIPC } = require('./services/PresenceIPC');
-    const { orbitIPC } = require('./services/OrbitIPC');
     const { fastForwardIPC } = require('./services/FastForwardIPC');
 
     // Force initialization
@@ -597,9 +572,6 @@ app
     console.log('[Main] Auth services initialized:', {
       authService: !!authService,
       authStateManager: !!authStateManager,
-      gitSyncIPC: !!gitSyncIPC,
-      presenceIPC: !!presenceIPC,
-      orbitIPC: !!orbitIPC,
       fastForwardIPC: !!fastForwardIPC,
     });
 

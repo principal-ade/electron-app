@@ -5,8 +5,6 @@ import { gitClientFactory } from '../utils/gitClientFactory';
 import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
-import { UnifiedSecureStorage, TOKEN_KEYS } from '../services/UnifiedSecureStorage';
-import { requireHostedFeature } from '../services/FeatureAvailabilityService';
 
 export interface GitCommitHistoryEntry {
   hash: string;
@@ -701,54 +699,6 @@ export class GitRepositoryService {
   }
 
   /**
-   * Push line counts to the web-ade cache API
-   * Fire and forget - does not block on the response
-   */
-  private async pushLineCountsToWebCache(
-    owner: string,
-    repo: string,
-    lineCounts: Record<string, number>
-  ): Promise<void> {
-    await requireHostedFeature('repositoryInsightsAndCollections');
-    const fileCount = Object.keys(lineCounts).length;
-    if (fileCount === 0) return;
-
-    // Get GitHub token from storage for authentication
-    const storage = UnifiedSecureStorage.getInstance();
-    const tokenData = await storage.getTokenWithMetadata(TOKEN_KEYS.GITHUB_TOKEN);
-    const githubToken = tokenData?.token;
-
-    if (!githubToken) {
-      console.warn('[GitRepositoryService] No GitHub token available, skipping line counts push');
-      return;
-    }
-
-    const url = `https://app.principal-ade.com/api/line-counts/${owner}/${repo}`;
-
-    fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${githubToken}`,
-      },
-      body: JSON.stringify({
-        lineCounts,
-        fileCount,
-      }),
-    })
-      .then((response) => {
-        if (response.ok) {
-          console.log(`[GitRepositoryService] Pushed line counts to web cache for ${owner}/${repo}`);
-        } else {
-          console.warn(`[GitRepositoryService] Failed to push line counts: ${response.status}`);
-        }
-      })
-      .catch((err) => {
-        console.warn('[GitRepositoryService] Failed to push line counts to web cache:', err);
-      });
-  }
-
-  /**
    * Count lines in all tracked files in a repository
    * Returns a map of file paths (with repo prefix) to line counts
    */
@@ -824,16 +774,6 @@ export class GitRepositoryService {
         'duration_ms': duration,
       });
       span.setStatus({ code: SpanStatusCode.OK });
-
-      // Push line counts to web-ade cache (fire and forget)
-      // Use cached repository info to get owner/repo
-      const repoInfo = await this.getRepositoryInfo(repoPath);
-      const originRemote = repoInfo?.remotes?.find(r => r.name === 'origin');
-      if (originRemote?.owner && originRemote?.repo) {
-        this.pushLineCountsToWebCache(originRemote.owner, originRemote.repo, lineCounts).catch(err => {
-          console.warn('[GitRepositoryService] Failed to push line counts:', err);
-        });
-      }
 
       return lineCounts;
     } catch (error) {

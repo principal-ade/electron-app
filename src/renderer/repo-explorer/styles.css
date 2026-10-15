@@ -1,0 +1,23 @@
+/**
+ * Safe-area / base styles for the ported owner/repo page.
+ *
+ * Mirrors web-ade's `src/app/globals.css` for the one custom property the ported
+ * page consumes: `--safe-top`. The page's header and overlays use
+ * `calc(var(--safe-top) + …)` / `var(--safe-top)`; if the variable is undefined
+ * the whole `calc()` is invalid and the padding collapses to 0 (which is what
+ * happened in Storybook before this file existed).
+ *
+ * In a normal browser window / desktop webview the browser chrome owns the
+ * notch, so the inset is 0. Only an installed (standalone) / fullscreen context
+ * reports a real inset.
+ */
+
+:root {
+  --safe-top: 0px;
+}
+
+@media (display-mode: standalone) {
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+  }
+}

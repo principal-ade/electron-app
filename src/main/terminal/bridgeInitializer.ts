@@ -9,7 +9,6 @@ import { getSessionManagerInstance } from './sessionManagerSingleton';
 import { ownershipManager } from './TerminalOwnershipManager';
 import { TerminalWebSocketBridge } from './TerminalWebSocketBridge';
 import { ipcMain } from 'electron';
-import { getRemoteTerminalWindow } from '../window/RemoteTerminalWindow';
 
 let bridgeInstance: TerminalWebSocketBridge | null = null;
 
@@ -31,13 +30,7 @@ export async function initializeTerminalBridge(): Promise<void> {
   // Set bridge on session manager
   sessionManager.setWebSocketBridge(bridgeInstance);
 
-  // Register IPC handler to open remote terminal viewer window
-  ipcMain.handle('terminal:openRemoteViewer', async () => {
-    console.log('[BridgeInitializer] Opening remote terminal viewer window');
-    const window = getRemoteTerminalWindow();
-    window.create();
-    return { success: true };
-  });
+  // Remote terminal viewer removed with presence/collaboration service.
 
   // Register IPC handler for one-time bridge connection setup
   // After this initial setup, all communication happens via WebSocket

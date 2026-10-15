@@ -1,11 +1,10 @@
 /**
- * Web-ADE TIPC Router Types
+ * Shared types for Web-ADE data shapes.
  *
- * Shared TypeScript types for web-ade TIPC router communication.
- * These types are used by both the main process router and renderer client.
+ * The hosted Web-ADE API (app.principal-ade.com) has been removed. These types
+ * remain as data-shape definitions used by panel interfaces. Panel actions that
+ * previously called the hosted API now return empty/null stubs.
  */
-
-import type { ActionContext } from '@egoist/tipc/main';
 
 // =============================================================================
 // Input Types
@@ -50,83 +49,69 @@ export interface CommitActivityCard {
   commits: CommitInfo[];
   commitCount: number;
   latestCommitAt: string;
+  // Optional aggregated metadata added by the feed pipeline
+  totalCommits?: number;
+  languages?: string[];
+  insertions?: number;
+  deletions?: number;
 }
 
 export interface TreeEntry {
   path: string;
-  mode: string;
-  type: 'blob' | 'tree' | 'commit';
-  sha: string;
+  type: 'blob' | 'tree';
   size?: number;
-  url?: string;
+  sha?: string;
 }
 
 export interface GetTreeResponse {
   sha: string;
-  url: string;
   tree: TreeEntry[];
-  truncated: boolean;
+  truncated?: boolean;
 }
 
 export interface DailyContribution {
-  date: string; // YYYY-MM-DD
+  date: string;
   count: number;
+  level: 0 | 1 | 2 | 3 | 4;
 }
 
 export interface RepoContributionsResponse {
   contributions: DailyContribution[];
-  timeRange: {
-    start: string;
-    end: string;
-  };
   totalCommits: number;
-  pagesFetched: number;
-  contributorsUsed: number;
 }
 
-// =============================================================================
-// User Activity Types (Commit-focused)
-// =============================================================================
-
 export interface RecentCommitActivity {
-  id: string;
-  timestamp: string;
-  repository: string;
-  repositoryUrl?: string;
-  ownerType?: 'User' | 'Organization';
-  isPrivate?: boolean;
-  commitCount: number;
-  additions?: number;
-  deletions?: number;
+  sha: string;
+  message: string;
+  repo: string;
+  committedAt: string;
+  url: string;
 }
 
 export interface ContributedRepository {
-  nameWithOwner: string;
-  owner: string;
   name: string;
+  owner: string;
   url: string;
-  commitCount: number;
-  lastContributedAt: string;
-  isPrivate: boolean;
-  ownerType: 'User' | 'Organization';
+  description?: string;
+  stars?: number;
+  lastCommitAt?: string;
 }
 
 export interface UserActivityResponse {
   user: {
     login: string;
-    name: string | null;
-    avatarUrl: string;
-    followersCount: number;
+    avatarUrl?: string;
+    url?: string;
   };
-  recentCommits: RecentCommitActivity[]; // Last 24 hours of commits
-  contributions: DailyContribution[]; // For heatmap (365 days)
-  contributedRepos: ContributedRepository[]; // Repos contributed to (past ~5 months)
+  recentCommits: RecentCommitActivity[];
+  contributions: DailyContribution[];
+  contributedRepositories?: ContributedRepository[];
 }
 
 export interface GetUserActivityInput {
   username: string;
-  contributionDays?: number; // Days of contribution heatmap data (default: 365)
-  activityDays?: number; // Days of recent commit activity (default: 1)
+  contributionDays?: number;
+  activityDays?: number;
 }
 
 export interface GetPinnedRepositoriesInput {
@@ -135,11 +120,7 @@ export interface GetPinnedRepositoriesInput {
 
 export interface ExplainCommitData {
   sha: string;
-  message: string;
-  author: string;
-  additions?: number;
-  deletions?: number;
-  filesChanged?: number;
+  explanation: string;
 }
 
 export interface ExplainCommitsInput {
@@ -150,6 +131,7 @@ export interface ExplainCommitsInput {
 
 export interface ExplainCommitsResponse {
   text: string;
+  commits?: ExplainCommitData[];
 }
 
 export type WorkingChangeStatus =
@@ -157,79 +139,24 @@ export type WorkingChangeStatus =
   | 'modified'
   | 'deleted'
   | 'renamed'
+  | 'copied'
   | 'untracked';
 
 export interface WorkingChangeData {
   path: string;
+  oldPath?: string;
   status: WorkingChangeStatus;
-  additions?: number;
-  deletions?: number;
-  staged: boolean;
+  insertions: number;
+  deletions: number;
+  explicación?: string;
 }
 
 export interface ExplainWorkingChangesInput {
-  changes: WorkingChangeData[];
+  repoPath: string;
   audienceLevel: 'maintainer' | 'non-technical';
-  repoName: string;
-  branch?: string;
 }
 
 export interface ExplainWorkingChangesResponse {
   text: string;
+  changes?: WorkingChangeData[];
 }
-
-// =============================================================================
-// Router Type Definition
-// =============================================================================
-
-/**
- * Web-ADE router type definition for TIPC.
- * Defines the methods available via IPC and their input/output types.
- * Compatible with TIPC RouterType.
- */
-export type WebAdeRouterType = Record<
-  string,
-  {
-    action: (args: {
-      context: ActionContext;
-      input: unknown;
-    }) => Promise<unknown>;
-  }
-> & {
-  getGithubTree: {
-    action: (args: {
-      context: ActionContext;
-      input: GetTreeInput;
-    }) => Promise<GetTreeResponse>;
-  };
-  getRepoContributions: {
-    action: (args: {
-      context: ActionContext;
-      input: GetRepoContributionsInput;
-    }) => Promise<RepoContributionsResponse>;
-  };
-  getUserActivity: {
-    action: (args: {
-      context: ActionContext;
-      input: GetUserActivityInput;
-    }) => Promise<UserActivityResponse>;
-  };
-  getPinnedRepositories: {
-    action: (args: {
-      context: ActionContext;
-      input: GetPinnedRepositoriesInput;
-    }) => Promise<string[]>;
-  };
-  explainCommits: {
-    action: (args: {
-      context: ActionContext;
-      input: ExplainCommitsInput;
-    }) => Promise<ExplainCommitsResponse>;
-  };
-  explainWorkingChanges: {
-    action: (args: {
-      context: ActionContext;
-      input: ExplainWorkingChangesInput;
-    }) => Promise<ExplainWorkingChangesResponse>;
-  };
-};

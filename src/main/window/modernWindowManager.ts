@@ -20,8 +20,6 @@ import { ElectronWindowManagerAdapter } from './windowManagerHandlers';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 import MenuBuilder from '../menu';
 import { getAppVersionManagerInstance } from '../app-version';
-import { gitSyncWebSocketManager } from '../services/GitSyncWebSocketManager';
-import { orbitWebSocketManager } from '../services/OrbitWebSocketManager';
 import { splashScreen } from './splashScreen';
 
 // Import shared types and data structures
@@ -197,25 +195,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         }
       }
 
-      // Clean up git-sync connections for this window
-      try {
-        gitSyncWebSocketManager.disconnectForWindow(this.window.id);
-      } catch (error) {
-        console.error(
-          `[ModernWindow] Error disconnecting git-sync connections:`,
-          error,
-        );
-      }
-
-      // Clean up orbit P2P connections for this window
-      try {
-        orbitWebSocketManager.disconnectForWindow(this.window.id);
-      } catch (error) {
-        console.error(
-          `[ModernWindow] Error disconnecting orbit connections:`,
-          error,
-        );
-      }
+      // Presence/collaboration WebSocket cleanup removed with those services.
 
       applicationWindows.delete(this.window.id);
 
@@ -228,19 +208,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
 
       // Broadcast repository window change if this was a repository window
       if (wasRepositoryWindow) {
-        // Track repository closed in presence system
-        import('../services/PresenceWindowBridge')
-          .then((module) => {
-            module.presenceWindowBridge.trackRepositoryClosed(
-              String(this.window.id),
-            );
-          })
-          .catch((error) => {
-            console.error(
-              '[ModernWindow] Error tracking presence closure:',
-              error,
-            );
-          });
+        // Presence window bridge removed with collaboration service.
 
         // Import and call broadcast function from modernWindowHandlers
         import('./modernWindowHandlers')

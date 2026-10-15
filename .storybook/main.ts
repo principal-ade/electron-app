@@ -1,3 +1,4 @@
+import path from 'path';
 import type { StorybookConfig } from '@storybook/react-webpack5';
 import type { Configuration as WebpackConfiguration } from 'webpack';
 import type { Configuration as WebpackDevServerConfiguration } from 'webpack-dev-server';
@@ -43,6 +44,39 @@ const config: StorybookConfig = {
       fs: false,
       path: false,
     };
+
+    // The ported web-ade owner/repo page (src/renderer/repo-explorer) uses a
+    // namespaced alias instead of web-ade's `@/*` so it resolves without
+    // colliding with the app's own module graph.
+    config.resolve.alias = {
+      ...(config.resolve.alias as Record<string, string> | undefined),
+      '@repo-explorer': path.resolve(__dirname, '../src/renderer/repo-explorer'),
+    };
+
+    // Storybook's default CSS rule stops at css-loader, so it never runs
+    // PostCSS. The ported page (and the app) rely on Tailwind v4's
+    // `@import 'tailwindcss'`, which only compiles through postcss-loader.
+    // Swap the default `.css` rule's loaders for a PostCSS-enabled chain.
+    const rules = (config.module?.rules ?? []) as Array<Record<string, unknown>>;
+    for (const rule of rules) {
+      if (
+        rule &&
+        typeof rule === 'object' &&
+        rule.test instanceof RegExp &&
+        rule.test.source === '\\.css$' &&
+        Array.isArray(rule.use)
+      ) {
+        rule.use = [
+          require.resolve('style-loader'),
+          {
+            loader: require.resolve('css-loader'),
+            options: { importLoaders: 1 },
+          },
+          require.resolve('postcss-loader'),
+        ];
+      }
+    }
+
     return config;
   },
 };

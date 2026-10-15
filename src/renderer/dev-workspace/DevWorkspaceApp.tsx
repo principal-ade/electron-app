@@ -41,7 +41,6 @@ import { UserPreferencesService } from '../main-process-api/UserPreferencesServi
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
-import { APP_BRANDING } from '../../shared/config/appBranding';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { useStorybookManager } from '../hooks/useStorybookManager';
@@ -873,24 +872,11 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     return parseGitHubUrl(repository.remoteUrl);
   }, [repository.remoteUrl]);
 
-  // Open in Web-ADE handler - only available for GitHub repos
+  // Open in Web-ADE handler — removed with hosted Web-ADE service.
+  // Kept as a no-op stub to avoid breaking the titlebar button wiring.
   const handleOpenInWebADE = useCallback(async () => {
-    if (!githubInfo) return;
-
-    // Get the base URL based on environment
-    const isDev = process.env.NODE_ENV === 'development';
-    const baseUrl = isDev
-      ? APP_BRANDING.WEB_ADE_URL.DEVELOPMENT
-      : APP_BRANDING.WEB_ADE_URL.PRODUCTION;
-
-    const webAdeUrl = `${baseUrl}/${githubInfo.owner}/${githubInfo.repo}`;
-
-    try {
-      await window.mainProcess.shell.openExternal(webAdeUrl);
-    } catch (error) {
-      console.error('[DevWorkspaceApp] Failed to open Web-ADE:', error);
-    }
-  }, [githubInfo]);
+    console.info('[DevWorkspaceApp] Web-ADE hosted service has been removed');
+  }, []);
 
   // Open GitHub Actions page - only available for GitHub repos with .github folder
   const handleOpenGitHubActions = useCallback(async () => {

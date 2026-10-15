@@ -16,11 +16,9 @@ import {
   type FileWatcherImpl,
 } from '@principal-ai/repository-monitoring-server';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
-import type { SharedGitStatus } from '@principal-ai/control-tower-core';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 import { applicationWindows, PrimaryWindowType } from '../window/types';
 import { otelEventsManagerBridge } from '../services/OtelEventsManagerBridge';
-import { gitSyncWebSocketManager } from '../services/GitSyncWebSocketManager';
 
 // Type alias for git state event payload (structure defined in repository-monitoring-server)
 type GitStateEventPayload = { event: { type: string }; [key: string]: unknown };
@@ -38,128 +36,15 @@ const MonitoringInternalEvent = {
 // Create singleton manager instance
 let repositoryMonitoringManager: RepositoryMonitoringManager | null = null;
 
-// Debounce map for git status presence updates
-const gitStatusPresenceDebounceMap = new Map<string, NodeJS.Timeout>();
-const GIT_STATUS_PRESENCE_DEBOUNCE_MS = 1000; // 1 second debounce
-
-/**
- * Convert GitStatusWithFiles to SharedGitStatus for presence sharing
- */
-function convertToSharedGitStatus(status: GitStatusWithFiles): SharedGitStatus {
-  return {
-    branch: status.branch,
-    isDirty: status.isDirty,
-    hasStaged: status.hasStaged,
-    hasUntracked: status.hasUntracked,
-    ahead: status.ahead,
-    behind: status.behind,
-    modifiedFiles: status.modifiedFiles,
-    stagedFiles: status.stagedFiles,
-    untrackedFiles: status.untrackedFiles,
-    deletedFiles: status.deletedFiles,
-    lastChangedAt: status.lastChangedAt,
-  };
-}
-
-/**
- * Parse owner/repo from a git remote URL
- * Based on GitRemoteService.checkAuthMethods logic
- */
-function parseOwnerRepoFromUrl(url: string): { owner: string; repo: string } | null {
-  // Try SSH format (git@service:owner/repo.git)
-  let match = /git@[^:]+:([^/]+)\/(.+?)(?:\.git)?$/.exec(url);
-  if (match) {
-    return { owner: match[1], repo: match[2] };
-  }
-
-  // Try HTTPS format (https://service/owner/repo.git)
-  match = /https?:\/\/[^/]+\/([^/]+)\/([^/.]+)(?:\.git)?/.exec(url);
-  if (match) {
-    return { owner: match[1], repo: match[2] };
-  }
-
-  return null;
-}
-
-/**
- * Parse GitHub owner/repo from a local repository path.
- * Attempts to extract from git remote URL or path structure.
- */
-async function parseOwnerRepoFromPath(
-  repoPath: string,
-  manager: RepositoryMonitoringManager,
-): Promise<{ owner: string; repo: string } | null> {
-  try {
-    const remoteInfo = await manager.getGitRemoteInfo(repoPath);
-    if (remoteInfo?.remoteUrl) {
-      return parseOwnerRepoFromUrl(remoteInfo.remoteUrl);
-    }
-  } catch (error) {
-    console.debug(
-      '[RepositoryMonitoring] Failed to get remote info for presence update:',
-      error,
-    );
-  }
-  return null;
-}
-
 /**
  * Send git status update to presence system (debounced)
+ * Presence/collaboration WebSocket service has been removed; this is a no-op.
  */
 function sendGitStatusToPresence(
-  status: GitStatusWithFiles,
-  manager: RepositoryMonitoringManager,
+  _status: GitStatusWithFiles,
+  _manager: RepositoryMonitoringManager,
 ): void {
-  const repoPath = status.repoPath;
-
-  // Clear existing debounce timer
-  const existingTimer = gitStatusPresenceDebounceMap.get(repoPath);
-  if (existingTimer) {
-    clearTimeout(existingTimer);
-  }
-
-  // Set new debounced timer
-  const timer = setTimeout(async () => {
-    gitStatusPresenceDebounceMap.delete(repoPath);
-
-    const ownerRepo = await parseOwnerRepoFromPath(repoPath, manager);
-    if (!ownerRepo) {
-      console.debug(
-        '[RepositoryMonitoring] Cannot send git status to presence - no owner/repo for:',
-        repoPath,
-      );
-      return;
-    }
-
-    const sharedStatus = convertToSharedGitStatus(status);
-    console.log(`[RepositoryMonitoring] Sending git status to presence for ${ownerRepo.owner}/${ownerRepo.repo}:`, {
-      isDirty: sharedStatus.isDirty,
-      branch: sharedStatus.branch,
-      modifiedFiles: sharedStatus.modifiedFiles?.length || 0,
-      stagedFiles: sharedStatus.stagedFiles?.length || 0,
-      sharedStatus,
-    });
-
-    const result = await gitSyncWebSocketManager.reportRepositoryStatusUpdate(
-      ownerRepo.owner,
-      ownerRepo.repo,
-      sharedStatus,
-    );
-
-    if (result.success) {
-      console.log(
-        `[RepositoryMonitoring] Successfully sent git status to presence for ${ownerRepo.owner}/${ownerRepo.repo}`,
-        result,
-      );
-    } else {
-      console.error(
-        `[RepositoryMonitoring] Failed to send git status to presence for ${ownerRepo.owner}/${ownerRepo.repo}`,
-        result,
-      );
-    }
-  }, GIT_STATUS_PRESENCE_DEBOUNCE_MS);
-
-  gitStatusPresenceDebounceMap.set(repoPath, timer);
+  // Presence/collaboration service removed — no-op.
 }
 
 /**
@@ -933,114 +818,15 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
   startReposHeartbeat(manager);
 }
 
-// Repos heartbeat interval (30 seconds)
-const REPOS_HEARTBEAT_INTERVAL_MS = 30000;
+// Repos heartbeat removed with presence/collaboration service.
 let reposHeartbeatTimer: NodeJS.Timeout | null = null;
 
 /**
- * Get all repository paths that have open windows
- */
-function getOpenRepositoryPaths(): Set<string> {
-  const repoPaths = new Set<string>();
-
-  for (const appWindow of applicationWindows.values()) {
-    if (appWindow.window.isDestroyed()) {
-      continue;
-    }
-
-    const metadata = appWindow.metadata;
-    if (!metadata?.localPath) {
-      continue;
-    }
-
-    // Include REPOSITORY and DEV_WORKSPACE windows (they have a single repo)
-    // WORKSPACE windows contain multiple repos (handled separately via workspace API)
-    if (
-      metadata.primaryType === PrimaryWindowType.REPOSITORY ||
-      metadata.primaryType === PrimaryWindowType.DEV_WORKSPACE
-    ) {
-      repoPaths.add(metadata.localPath);
-    }
-  }
-
-  return repoPaths;
-}
-
-/**
  * Start the periodic repos heartbeat that syncs open repositories with the presence server.
- * This ensures the server has an accurate view of which repos are open on this device.
+ * Presence/collaboration WebSocket service has been removed; this is a no-op.
  */
-function startReposHeartbeat(manager: RepositoryMonitoringManager): void {
-  // Clear any existing timer
-  if (reposHeartbeatTimer) {
-    clearInterval(reposHeartbeatTimer);
-  }
-
-  // Function to gather and send heartbeat
-  const sendHeartbeat = async () => {
-    try {
-      // Get only repos that have open windows
-      const openRepoPaths = getOpenRepositoryPaths();
-
-      if (openRepoPaths.size === 0) {
-        // Send empty heartbeat to clear any stale repos on server
-        await gitSyncWebSocketManager.sendReposHeartbeat([]);
-        return;
-      }
-
-      // Gather repo entries with git status
-      const repos: import('@principal-ai/control-tower-core').RepoHeartbeatEntry[] = [];
-
-      for (const repoPath of openRepoPaths) {
-        try {
-          // Get owner/repo from remote
-          const ownerRepo = await parseOwnerRepoFromPath(repoPath, manager);
-          if (!ownerRepo) {
-            continue; // Skip repos without remote info
-          }
-
-          const repoId = `${ownerRepo.owner}/${ownerRepo.repo}`;
-
-          // Get git status
-          const gitStatus = await manager.getGitStatusWithFiles(repoPath);
-          const sharedStatus = gitStatus ? convertToSharedGitStatus(gitStatus) : undefined;
-
-          repos.push({
-            repoId,
-            branch: gitStatus?.branch || 'main',
-            gitStatus: sharedStatus,
-          });
-        } catch (error) {
-          console.debug(
-            `[RepositoryMonitoring] Failed to get info for repo ${repoPath}:`,
-            error,
-          );
-        }
-      }
-
-      if (repos.length > 0) {
-        console.log('[RepositoryMonitoring] Sending repos heartbeat:', JSON.stringify(repos, null, 2));
-        const result = await gitSyncWebSocketManager.sendReposHeartbeat(repos);
-        if (result.success) {
-          console.log(
-            `[RepositoryMonitoring] Repos heartbeat sent successfully: ${repos.length} repos`,
-            result,
-          );
-        } else {
-          console.error('[RepositoryMonitoring] Repos heartbeat failed:', result);
-        }
-      }
-    } catch (error) {
-      console.error('[RepositoryMonitoring] Failed to send repos heartbeat:', error);
-    }
-  };
-
-  // Send initial heartbeat after a short delay (allow connections to establish)
-  setTimeout(sendHeartbeat, 5000);
-
-  // Start periodic heartbeat
-  reposHeartbeatTimer = setInterval(sendHeartbeat, REPOS_HEARTBEAT_INTERVAL_MS);
-  console.log('[RepositoryMonitoring] Repos heartbeat started (30s interval)');
+function startReposHeartbeat(_manager: RepositoryMonitoringManager): void {
+  // Presence/collaboration service removed — no-op.
 }
 
 /**

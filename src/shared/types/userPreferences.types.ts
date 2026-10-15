@@ -66,16 +66,6 @@ export interface RepositoryUIState {
 }
 
 export interface UserPreferences {
-  /**
-   * Temporary availability switches for features that depend on unavailable
-   * hosted services. All default off for a new install.
-   */
-  featureAvailability?: {
-    repositoryInsightsAndCollections?: boolean;
-    presenceAndCollaboration?: boolean;
-    signIn?: boolean;
-  };
-
   // AI/LLM settings
   ollamaModel?: string; // Selected Ollama model for summarizing agent work
   ollamaModels?: string[]; // Multiple selected models for testing
@@ -306,12 +296,6 @@ export interface UserPreferences {
  */
 export const USER_PREFERENCE_DEFAULTS: {
   presenceAutoConnect: boolean;
-  featureAvailability: Required<NonNullable<UserPreferences['featureAvailability']>>;
 } = {
   presenceAutoConnect: false,
-  featureAvailability: {
-    repositoryInsightsAndCollections: false,
-    presenceAndCollaboration: false,
-    signIn: false,
-  },
 };

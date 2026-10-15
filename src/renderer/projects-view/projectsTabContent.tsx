@@ -87,8 +87,6 @@ import {
 import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
 import { GithubService } from '../main-process-api/GithubService';
 import { GitService } from '../main-process-api/GitService';
-import { WebAdeService } from '../main-process-api/WebAdeService';
-import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
 import { WindowService } from '../main-process-api/WindowService';
@@ -257,25 +255,10 @@ const RepositoryProfileTabContent: React.FC<{
             totalCommits += count;
           });
         } else if (gh?.owner && gh?.name) {
-          try {
-            const contributions = await WebAdeService.getRepoContributions(
-              gh.owner,
-              gh.name,
-            );
-            contributions.contributions.forEach((day) => {
-              activityData.set(day.date, day.count);
-            });
-            totalCommits = contributions.totalCommits;
-            console.info(
-              '[RepositoryProfileTab] Fetched remote contributions:',
-              contributions,
-            );
-          } catch (err) {
-            console.warn(
-              '[RepositoryProfileTab] Failed to fetch remote contributions:',
-              err,
-            );
-          }
+          // Web-ADE hosted API removed; remote contributions unavailable.
+          console.info(
+            '[RepositoryProfileTab] Remote contributions unavailable (Web-ADE API removed)',
+          );
         }
 
         let ownerType: 'User' | 'Organization' | undefined = undefined;
@@ -1333,26 +1316,9 @@ const UserProfileTabContent: React.FC<{
         };
       },
 
-      getUserActivity: async (username: string) => {
-        try {
-          const preferences = await UserPreferencesService.getPreferences();
-          if (
-            !preferences.featureAvailability
-              ?.repositoryInsightsAndCollections
-          ) {
-            return { recentCommits: [], contributions: [], contributedRepos: [] };
-          }
-
-          const activity = await WebAdeService.getUserActivity(username);
-          return {
-            recentCommits: activity.recentCommits,
-            contributions: activity.contributions,
-            contributedRepos: activity.contributedRepos,
-          };
-        } catch (err) {
-          console.error('Failed to fetch user activity:', err);
-          return { recentCommits: [], contributions: [], contributedRepos: [] };
-        }
+      getUserActivity: async (_username: string) => {
+        // Web-ADE hosted API removed; user activity unavailable.
+        return { recentCommits: [], contributions: [], contributedRepos: [] };
       },
 
       getUserRepositories: async (username: string) => {
@@ -1391,26 +1357,9 @@ const UserProfileTabContent: React.FC<{
         }
       },
 
-      getRepositoryFileTree: async (owner: string, repoName: string) => {
-        try {
-          const treeResponse = await WebAdeService.getGithubTree(
-            owner,
-            repoName,
-            'HEAD',
-          );
-          const files = treeResponse.tree
-            .filter((entry) => entry.type === 'blob')
-            .map((entry) => entry.path);
-
-          const builder = new PathsFileTreeBuilder();
-          return builder.build({ files, rootPath: repoName });
-        } catch (err) {
-          console.error(
-            `Failed to fetch file tree for ${owner}/${repoName}:`,
-            err,
-          );
-          return null;
-        }
+      getRepositoryFileTree: async (_owner: string, _repoName: string) => {
+        // Web-ADE hosted API removed; remote file tree unavailable.
+        return null;
       },
 
       isFollowingUser: async (username: string) => {
@@ -1429,8 +1378,9 @@ const UserProfileTabContent: React.FC<{
         return GithubService.getUserOrganizationsForUser(username);
       },
 
-      getPinnedRepositories: async (username: string) => {
-        return WebAdeService.getPinnedRepositories(username);
+      getPinnedRepositories: async (_username: string) => {
+        // Web-ADE hosted API removed; pinned repositories unavailable.
+        return [];
       },
 
       openFile: async () => {},
@@ -1548,34 +1498,18 @@ const OrgProfileTabContent: React.FC<{
         }
       },
 
-      getRepositoryFileTree: async (owner: string, repoName: string) => {
-        try {
-          const treeResponse = await WebAdeService.getGithubTree(
-            owner,
-            repoName,
-            'HEAD',
-          );
-          const files = treeResponse.tree
-            .filter((entry) => entry.type === 'blob')
-            .map((entry) => entry.path);
-
-          const builder = new PathsFileTreeBuilder();
-          return builder.build({ files, rootPath: repoName });
-        } catch (err) {
-          console.error(
-            `Failed to fetch file tree for ${owner}/${repoName}:`,
-            err,
-          );
-          return null;
-        }
+      getRepositoryFileTree: async (_owner: string, _repoName: string) => {
+        // Web-ADE hosted API removed; remote file tree unavailable.
+        return null;
       },
 
       getOrgMembers: async (orgName: string) => {
         return GithubService.getOrgMembers(orgName);
       },
 
-      getPinnedRepositories: async (username: string) => {
-        return WebAdeService.getPinnedRepositories(username);
+      getPinnedRepositories: async (_username: string) => {
+        // Web-ADE hosted API removed; pinned repositories unavailable.
+        return [];
       },
 
       openFile: async () => {},

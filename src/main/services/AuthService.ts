@@ -1,44 +1,25 @@
 /**
- * AuthService - Handles OAuth authentication for the Electron app
+ * AuthService - GitHub authentication via gh CLI and local token storage
  *
- * Credentials are stored via UnifiedSecureStorage as plaintext JSON with
- * owner-only permissions (0o600), similar to OpenCode's auth.json. Does not
- * use macOS Keychain / Electron safeStorage. Communicates with the
- * code-city-landing OAuth server for GitHub authentication via WorkOS.
+ * The hosted OAuth server (auth.principal-ade.com / WorkOS) has been removed.
+ * Authentication now works via:
+ * 1. gh CLI token (`gh auth token`) — primary source
+ * 2. Locally stored GitHub tokens in UnifiedSecureStorage — fallback
+ *
+ * Users authenticate by running `gh auth login` in their terminal.
  */
 
-import { ipcMain, shell } from 'electron';
+import { ipcMain } from 'electron';
 import Store from 'electron-store';
-import {
-  OAuthServerClient,
-  InvalidWorkosTokenError,
-} from './OAuthServerClient';
-import { deviceIdService } from './DeviceIdService';
 import AuthStateManager from './AuthStateManager';
 import {
   UnifiedSecureStorage,
   TOKEN_KEYS,
-  KeychainTimeoutError,
-  KeychainPermissionError,
-  KeychainNotAvailableError,
 } from './UnifiedSecureStorage';
 import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 import { GitCredentialHelper } from './GitCredentialHelper';
-import { APP_BRANDING } from '../../shared/config/appBranding';
+import { getGhCliToken } from '../version-control-providers/github/ghCliToken';
 import type { AuthUser } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
-
-// Declare global type for browser open function override
-declare global {
-  var open: ((url: string) => Promise<void>) | undefined;
-}
-
-interface GitHubUser {
-  login: string;
-  email: string;
-  name?: string;
-  id: number;
-  avatar_url?: string;
-}
 
 interface AuthResult {
   success: boolean;
@@ -57,13 +38,6 @@ interface AuthResult {
 export class AuthService {
   private store: Store;
   private storage: UnifiedSecureStorage;
-  private isAuthenticating = false;
-  private currentAuthController: AbortController | null = null;
-  // Single-flighted WorkOS refresh. WorkOS rotates refresh tokens, so two
-  // concurrent refreshes would each spend the same token — the loser 401s with
-  // invalid_grant and would wipe a session the winner just renewed. Concurrent
-  // getStoredAuth callers share this one promise instead.
-  private refreshInFlight: Promise<AuthResult> | null = null;
 
   constructor() {
     // Use electron-store for non-secret auth prefs (not tokens)
@@ -75,58 +49,22 @@ export class AuthService {
     this.storage = UnifiedSecureStorage.getInstance();
 
     this.setupHandlers();
-    console.log('[AuthService] Initialized with UnifiedSecureStorage (plaintext)');
+    console.log('[AuthService] Initialized (gh CLI + local token storage)');
   }
 
   private setupHandlers() {
-    // Check handler - reads stored credentials (plaintext file)
+    // Check handler - reads stored credentials or gh CLI token
     ipcMain.handle(AuthEvent.CHECK, async () => {
       try {
-        console.log('\n========================================');
-        console.log('[AuthService] CHECK HANDLER INVOKED');
-
-        console.log(
-          '[AuthService] Checking storage for stored credentials...',
-        );
-        console.log('========================================\n');
-
         const result = await this.getStoredAuth();
-
-        console.log('[AuthService] getStoredAuth returned:', {
-          success: result.success,
-          hasToken: !!result.token,
-          hasUser: !!result.user,
-          error: result.error,
-        });
-
         if (result.success && result.token && result.user) {
-          console.log(
-            '[AuthService] SUCCESS: Found stored credentials for:',
-            result.user?.login,
-          );
-          // Update AuthStateManager when credentials are successfully retrieved
           AuthStateManager.getInstance().setAuthenticated(
             result.user,
             result.token,
           );
-        } else {
-          console.log('[AuthService] FAILURE: No stored credentials found');
-          // Only clear auth if we're currently authenticated but have no stored credentials
-          // This prevents clearing auth due to transient storage access issues
-          const currentState = AuthStateManager.getInstance().getFullState();
-          if (!currentState.isAuthenticated) {
-            console.log('[AuthService] Already unauthenticated, not clearing');
-          } else {
-            console.log(
-              '[AuthService] WARNING: Currently authenticated but no stored credentials found',
-            );
-            // Don't clear - this might be a transient storage issue
-          }
         }
-
         return result;
       } catch (error) {
-        console.error('[AuthService] CHECK ERROR:', error);
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
         return { success: false, authenticated: false, error: errorMessage };
@@ -152,875 +90,175 @@ export class AuthService {
       }
     });
 
-    // Login handler - implements OAuth flow
-    ipcMain.handle(AuthEvent.LOGIN, async (event, options = {}) => {
-      console.log('[AuthService] Login requested with options:', options);
-
-      if (this.isAuthenticating && !options.forceNew) {
-        console.log('[AuthService] Authentication already in progress');
-        return { success: false, error: 'Authentication already in progress' };
-      }
-
-      if (options.forceNew && this.currentAuthController) {
-        console.log(
-          '[AuthService] Force new auth - canceling existing authentication',
-        );
-        this.cancelAuthentication();
-        // Add a small delay to ensure cleanup
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-
-      // Check if already authenticated
-      if (!options.forceNew) {
-        const existingAuth = await this.getStoredAuth();
-        if (existingAuth.success) {
-          console.log(
-            '[AuthService] Already authenticated as:',
-            existingAuth.user?.login,
-          );
-          return existingAuth;
-        }
-      }
-
-      this.isAuthenticating = true;
-      this.currentAuthController = new AbortController();
-
-      try {
-        // Use the OAuth client from dev-collab-cli
-        const authClient = new OAuthServerClient({
-          serverUrl:
-            process.env.AUTH_SERVER_URL ||
-            APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
-          forceReauth: options.forceNew || false,
-        });
-
-        // Get device ID for device-specific session tracking
-        const deviceId = await deviceIdService.getDeviceId();
-
-        // Override the open function to use Electron's shell
-        const originalOpen = global.open;
-        global.open = (url: string) => shell.openExternal(url);
-
-        try {
-          console.log('[AuthService] Starting OAuth flow...');
-          const result = await authClient.authenticate(deviceId);
-
-          // For initial authentication, token and user should always be present
-          if (!result.token) {
-            throw new Error('Authentication failed: no token received');
-          }
-          if (!result.user) {
-            throw new Error('Authentication failed: no user data received');
-          }
-
-          // Fetch GitHub user profile to get canonical user data
-          let enrichedUser: AuthUser = result.user;
-          try {
-            console.log('[AuthService] Fetching GitHub user profile...');
-            const response = await fetch('https://api.github.com/user', {
-              headers: {
-                Authorization: `Bearer ${result.token}`,
-                Accept: 'application/vnd.github.v3+json',
-              },
-            });
-
-            if (response.ok) {
-              const githubUser = (await response.json()) as GitHubUser;
-              // Use GitHub API as source of truth for all user data
-              enrichedUser = {
-                login: githubUser.login, // GitHub's canonical username
-                email: githubUser.email || result.user?.email || '',
-                name: githubUser.name || result.user?.name,
-                id: githubUser.id,
-                avatarUrl: githubUser.avatar_url,
-              };
-              console.log(
-                '[AuthService] GitHub user profile fetched successfully:',
-                enrichedUser.login,
-              );
-            } else {
-              console.error(
-                '[AuthService] ❌ FAILED to fetch GitHub profile - HTTP',
-                response.status,
-              );
-              console.error(
-                '[AuthService] User will be authenticated WITHOUT avatar URL!',
-              );
-              console.error(
-                '[AuthService] OAuth server user data does not include avatarUrl',
-              );
-            }
-          } catch (avatarError) {
-            console.error(
-              '[AuthService] ❌ EXCEPTION fetching GitHub profile:',
-              avatarError,
-            );
-            console.error(
-              '[AuthService] User will be authenticated WITHOUT avatar URL!',
-            );
-            console.error(
-              '[AuthService] OAuth server user data does not include avatarUrl',
-            );
-          }
-
-          // Store the credentials securely with refresh token and expiry
-          await this.storeAuth(
-            result.token,
-            enrichedUser,
-            result.workosToken,
-            result.refreshToken,
-            result.expiresAt,
-          );
-
-          console.log(
-            '[AuthService] Authentication successful for:',
-            enrichedUser.login,
-          );
-
-          // Update AuthStateManager
-          AuthStateManager.getInstance().setAuthenticated(
-            enrichedUser,
-            result.token,
-          );
-
-          // Configure git credentials for HTTPS cloning
-          try {
-            await GitCredentialHelper.configureGitCredentials(result.token);
-            console.log(
-              '[AuthService] Git credentials configured for HTTPS cloning',
-            );
-          } catch (gitConfigError) {
-            // Don't fail login if git config fails - user can still use the app
-            console.error(
-              '[AuthService] Failed to configure git credentials:',
-              gitConfigError,
-            );
-            console.warn(
-              '[AuthService] HTTPS cloning may not work, but login successful',
-            );
-          }
-
-          return {
-            success: true,
-            authenticated: true,
-            token: result.token,
-            user: enrichedUser,
-          };
-        } finally {
-          // Restore original open function
-          global.open = originalOpen;
-        }
-      } catch (error: unknown) {
-        if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
-          console.log('[AuthService] Authentication was canceled');
-          return { success: false, error: 'Authentication canceled' };
-        }
-        console.error('[AuthService] Authentication error:', error);
-
-        // Provide more user-friendly error messages
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        if (errorMessage.includes('timeout')) {
-          return { success: false, error: 'Authentication timed out. Please try again.' };
-        } else if (errorMessage.includes('network')) {
-          return { success: false, error: 'Network error. Please check your connection.' };
-        }
-
-        return { success: false, error: errorMessage };
-      } finally {
-        this.isAuthenticating = false;
-        this.currentAuthController = null;
-      }
+    // Login handler - OAuth server removed, instruct user to use gh CLI
+    ipcMain.handle(AuthEvent.LOGIN, async () => {
+      return {
+        success: false,
+        error:
+          'In-app OAuth login has been removed. Please run `gh auth login` in your terminal to authenticate with GitHub.',
+      };
     });
 
     // Logout handler
     ipcMain.handle(AuthEvent.LOGOUT, async () => {
       try {
-        console.log('[AuthService] Logout requested');
         await this.clearStoredAuth();
-
-        // Clear AuthStateManager
-        console.log('[AuthService] Clearing auth state manager...');
         AuthStateManager.getInstance().clearAuthentication();
-        console.log('[AuthService] ✓ Auth state cleared');
-
-        // Clear git credentials
-        try {
-          console.log('[AuthService] Clearing git credentials...');
-          await GitCredentialHelper.clearGitCredentials();
-          console.log('[AuthService] ✓ Git credentials cleared');
-        } catch (gitClearError) {
-          // Don't fail logout if git credential clearing fails
-          console.error(
-            '[AuthService] ✗ Failed to clear git credentials:',
-            gitClearError,
-          );
-        }
-
-        console.log('[AuthService] ✓ Logout completed successfully');
         return { success: true };
-      } catch (error: unknown) {
-        console.error('[AuthService] ✗ Logout failed:', error);
-
-        // Provide user-friendly error messages based on error type
-        let errorMessage: string;
-        let userGuidance: string | undefined;
-
-        if (error instanceof KeychainTimeoutError) {
-          errorMessage = 'Keychain access timed out while logging out.';
-          userGuidance = 'Please ensure your system keychain is unlocked and try again. If the problem persists, try restarting your computer.';
-        } else if (error instanceof KeychainPermissionError) {
-          errorMessage = 'Permission denied to access keychain.';
-          userGuidance = 'Please grant keychain access in System Preferences → Security & Privacy, then try logging out again.';
-        } else if (error instanceof KeychainNotAvailableError) {
-          errorMessage = 'Keychain is not available.';
-          userGuidance = 'Please ensure your system keychain is unlocked and accessible, then try again.';
-        } else if (error instanceof Error) {
-          errorMessage = error.message;
-          // Check if verification failed (tokens still exist)
-          if (errorMessage.includes('still exists after deletion')) {
-            userGuidance = 'Unable to verify token deletion. You may need to restart the application. If the problem persists, please contact support.';
-          }
-        } else {
-          errorMessage = 'Unknown error occurred during logout';
-        }
-
-        return {
-          success: false,
-          error: errorMessage,
-          guidance: userGuidance,
-        };
-      }
-    });
-
-    // Get token metadata handler
-    ipcMain.handle(AuthEvent.GET_TOKEN_METADATA, async () => {
-      try {
-        return await this.getTokenMetadata();
-      } catch (error: unknown) {
-        console.error('[AuthService] Get token metadata error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return {
-          hasToken: false,
-          hasRefreshToken: false,
-          error: errorMessage,
-        };
-      }
-    });
-
-    // Test refresh token handler
-    ipcMain.handle(AuthEvent.TEST_REFRESH_TOKEN, async () => {
-      try {
-        return await this.testRefreshToken();
       } catch (error) {
-        console.error('[AuthService] Test refresh token error:', error);
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     });
 
-    // Check keychain status handler
-    ipcMain.handle(AuthEvent.CHECK_KEYCHAIN_STATUS, async () => {
-      try {
-        return await this.storage.checkKeychainStatus();
-      } catch (error) {
-        console.error('[AuthService] Check keychain status error:', error);
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
-        return {
-          available: false,
-          initialized: false,
-          error: errorMessage,
-          errorType: 'unknown',
-        };
-      }
+    // Token metadata handler
+    ipcMain.handle(AuthEvent.GET_TOKEN_METADATA, async () => {
+      return await this.getTokenMetadata();
     });
 
-    // Test keychain access handler
+    // Test refresh token - no longer applicable
+    ipcMain.handle(AuthEvent.TEST_REFRESH_TOKEN, async () => {
+      return {
+        success: false,
+        error: 'Token refresh is no longer supported. Use `gh auth login` to re-authenticate.',
+      };
+    });
+
+    // Keychain/secure storage status handlers
+    ipcMain.handle(AuthEvent.CHECK_KEYCHAIN_STATUS, async () => {
+      return { available: true, error: null };
+    });
+
     ipcMain.handle(AuthEvent.TEST_KEYCHAIN_ACCESS, async () => {
-      try {
-        return await this.storage.testKeychainAccess();
-      } catch (error) {
-        console.error('[AuthService] Test keychain access error:', error);
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
-        return {
-          success: false,
-          error: errorMessage,
-          errorType: 'unknown',
-        };
-      }
+      return { success: true };
     });
 
     // Validate GitHub token handler
     ipcMain.handle(AuthEvent.VALIDATE_GITHUB_TOKEN, async () => {
-      try {
-        return await this.validateGitHubToken();
-      } catch (error) {
-        console.error('[AuthService] Validate GitHub token error:', error);
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
-        return {
-          valid: false,
-          tokenPresent: false,
-          error: errorMessage,
-        };
-      }
+      return await this.validateGitHubToken();
     });
-
-  }
-
-  private cancelAuthentication(): void {
-    if (this.currentAuthController) {
-      this.currentAuthController.abort();
-      this.currentAuthController = null;
-      this.isAuthenticating = false;
-    }
-  }
-
-  private async getStoredAuth(): Promise<AuthResult> {
-    try {
-      // Get GitHub token (primary token for API calls)
-      const githubTokenData = await this.storage.getTokenWithMetadata(
-        TOKEN_KEYS.GITHUB_TOKEN,
-      );
-
-      if (!githubTokenData) {
-        console.log('[AuthService] No stored credentials found');
-        return { success: false, authenticated: false };
-      }
-
-      const { token: githubToken, metadata: githubMetadata } = githubTokenData;
-      const user = githubMetadata?.user as AuthResult['user'] | undefined;
-
-      if (!user) {
-        console.log('[AuthService] No user data found in token metadata');
-        return { success: false, authenticated: false };
-      }
-
-      // Get WorkOS token (for session management)
-      const workosTokenData = await this.storage.getTokenWithMetadata(
-        TOKEN_KEYS.WORKOS_TOKEN,
-      );
-
-      // Get refresh token and expiry info
-      // First try from WorkOS token metadata, fallback to GitHub token metadata (backward compatibility)
-      let refreshToken = (workosTokenData?.metadata?.refreshToken ||
-        githubMetadata?.refreshToken) as string | undefined;
-      let expiresAt = (workosTokenData?.metadata?.expiresAt ||
-        githubMetadata?.expiresAt) as number | undefined;
-
-      // Check if WorkOS token is expired or about to expire (within 5 minutes)
-      const now = Date.now();
-      const fiveMinutes = 5 * 60 * 1000;
-      const isExpired = expiresAt && expiresAt <= now;
-      const isExpiringSoon = expiresAt && expiresAt <= now + fiveMinutes;
-
-      // The WorkOS session is the source of truth for being signed in. A valid
-      // session has an expiry comfortably in the future; without one, the
-      // long-lived GitHub token must NOT keep us authenticated on its own.
-      // Refresh the session when we can, otherwise sign out — the GitHub token
-      // is recoverable from a future WorkOS sign-in via token/current.
-      const hasValidWorkosSession = !!expiresAt && expiresAt > now + fiveMinutes;
-
-      if (!hasValidWorkosSession) {
-        if (!refreshToken) {
-          console.log(
-            '[AuthService] No valid WorkOS session and no refresh token — signing out',
-          );
-          await this.clearStoredAuth();
-          AuthStateManager.getInstance().clearAuthentication();
-          return {
-            success: false,
-            authenticated: false,
-            error: 'WorkOS session is no longer valid. Please log in again.',
-          };
-        }
-
-        // Single-flight: concurrent callers share one refresh instead of each
-        // spending the rotating refresh token (see refreshSession).
-        return this.refreshSession(refreshToken, user, githubToken, {
-          expiresAt,
-          isExpired,
-          isExpiringSoon,
-        });
-      }
-
-      // Sync token from server to get the latest (handles login from other
-      // surfaces). token/current requires a verified WorkOS access token, so
-      // this only runs when we hold a current WorkOS session token to present.
-      let currentGithubToken = githubToken;
-      const workosAccessToken = workosTokenData?.token;
-      if (user.id && workosAccessToken) {
-        try {
-          const authClient = new OAuthServerClient({
-            serverUrl:
-              process.env.AUTH_SERVER_URL ||
-              APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
-          });
-
-          // Get device ID for device-specific session tracking
-          const deviceId = await deviceIdService.getDeviceId();
-
-          const serverToken = await authClient.fetchCurrentToken(
-            workosAccessToken,
-            user.id,
-            deviceId,
-          );
-
-          if (serverToken && serverToken.githubToken !== githubToken) {
-            console.log(
-              '[AuthService] Server has a newer token, updating local storage',
-            );
-            currentGithubToken = serverToken.githubToken;
-
-            // Update the stored GitHub token
-            await this.storage.setToken(
-              TOKEN_KEYS.GITHUB_TOKEN,
-              currentGithubToken,
-              {
-                user,
-              },
-            );
-          }
-        } catch (syncError) {
-          // The server rejected our WorkOS access token even though its stored
-          // expiry hasn't elapsed (clock skew, out-of-band rotation, or the
-          // server's token lifetime being shorter than the expires_in we cached).
-          // Re-presenting it would loop forever ("WorkOS token verification
-          // failed" flood), so treat the session as stale and refresh — same
-          // recovery as the expired branch above. Without a refresh token there
-          // is nothing to recover with, so sign out.
-          if (syncError instanceof InvalidWorkosTokenError) {
-            if (!refreshToken) {
-              console.log(
-                '[AuthService] WorkOS token rejected and no refresh token — signing out',
-              );
-              await this.clearStoredAuth();
-              AuthStateManager.getInstance().clearAuthentication();
-              return {
-                success: false,
-                authenticated: false,
-                error: 'WorkOS session is no longer valid. Please log in again.',
-              };
-            }
-            console.log(
-              '[AuthService] WorkOS token rejected by server — refreshing session',
-            );
-            return this.refreshSession(refreshToken, user, githubToken, {
-              expiresAt,
-              isExpired,
-              isExpiringSoon,
-            });
-          }
-
-          // Non-fatal: if sync fails for any other reason, continue with local token
-          console.log(
-            '[AuthService] Token sync failed, using local token:',
-            syncError,
-          );
-        }
-      }
-
-      // If avatar URL is missing or user data seems incorrect, fetch from GitHub
-      let enrichedUser = user;
-      const needsGitHubFetch = !user.avatarUrl || user.login.includes('.');
-
-      if (needsGitHubFetch) {
-        try {
-          console.log('[AuthService] Fetching canonical GitHub user data...');
-          const response = await fetch('https://api.github.com/user', {
-            headers: {
-              Authorization: `Bearer ${currentGithubToken}`,
-              Accept: 'application/vnd.github.v3+json',
-            },
-          });
-
-          if (response.ok) {
-            const githubUser = (await response.json()) as GitHubUser;
-            // Use GitHub API as source of truth for all user data
-            enrichedUser = {
-              login: githubUser.login, // GitHub's canonical username
-              email: githubUser.email || user.email,
-              name: githubUser.name || user.name,
-              id: githubUser.id,
-              avatarUrl: githubUser.avatar_url,
-            };
-            console.log(
-              '[AuthService] GitHub user data fetched and cached successfully:',
-              enrichedUser.login,
-            );
-
-            // Update stored user data with canonical GitHub data
-            await this.storage.setToken(
-              TOKEN_KEYS.GITHUB_TOKEN,
-              currentGithubToken,
-              {
-                user: enrichedUser,
-              },
-            );
-          } else {
-            console.error(
-              '[AuthService] ❌ FAILED to fetch GitHub profile during auth check - HTTP',
-              response.status,
-            );
-            console.error('[AuthService] User may not have avatar URL!');
-          }
-        } catch (avatarError) {
-          console.error(
-            '[AuthService] ❌ EXCEPTION fetching GitHub profile during auth check:',
-            avatarError,
-          );
-          console.error('[AuthService] User may not have avatar URL!');
-        }
-      }
-
-      return {
-        success: true,
-        authenticated: true,
-        token: currentGithubToken, // ✅ Always return GitHub token for API calls (synced from server if newer)
-        user: enrichedUser,
-      };
-    } catch (error) {
-      console.error('[AuthService] Failed to get stored auth:', error);
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      return {
-        success: false,
-        authenticated: false,
-        error: errorMessage,
-      };
-    }
   }
 
   /**
-   * Refresh the WorkOS session, single-flighted. Concurrent getStoredAuth
-   * callers share one in-flight refresh so the rotating refresh token is spent
-   * exactly once — otherwise the losing call 401s with invalid_grant and wipes
-   * a session the winner just renewed (the "logged out often" symptom).
+   * Get auth from gh CLI token or local storage.
+   * Primary: gh CLI (`gh auth token`)
+   * Fallback: locally stored GitHub token
    */
-  private async refreshSession(
-    refreshToken: string,
-    user: NonNullable<AuthResult['user']>,
-    githubToken: string,
-    diag: { expiresAt?: number; isExpired?: unknown; isExpiringSoon?: unknown },
-  ): Promise<AuthResult> {
-    if (!this.refreshInFlight) {
-      this.refreshInFlight = this.performRefresh(
-        refreshToken,
-        user,
-        githubToken,
-        diag,
-      ).finally(() => {
-        this.refreshInFlight = null;
-      });
+  private async getStoredAuth(): Promise<AuthResult> {
+    // Try gh CLI token first
+    const ghToken = await getGhCliToken();
+    if (ghToken) {
+      // Fetch user info from GitHub API
+      try {
+        const response = await fetch('https://api.github.com/user', {
+          headers: {
+            Authorization: `Bearer ${ghToken}`,
+            Accept: 'application/vnd.github.v3+json',
+          },
+        });
+        if (response.ok) {
+          const githubUser = (await response.json()) as {
+            login: string;
+            email?: string;
+            name?: string;
+            id: number;
+            avatar_url?: string;
+          };
+          return {
+            success: true,
+            authenticated: true,
+            token: ghToken,
+            user: {
+              login: githubUser.login,
+              email: githubUser.email || '',
+              name: githubUser.name,
+              id: githubUser.id,
+              avatarUrl: githubUser.avatar_url,
+            },
+          };
+        }
+      } catch (error) {
+        console.warn('[AuthService] Failed to fetch GitHub user from gh CLI token:', error);
+      }
+      // Token exists but couldn't fetch user — still return token
+      return {
+        success: true,
+        authenticated: true,
+        token: ghToken,
+      };
     }
-    return this.refreshInFlight;
-  }
 
-  private async performRefresh(
-    refreshToken: string,
-    user: NonNullable<AuthResult['user']>,
-    githubToken: string,
-    diag: { expiresAt?: number; isExpired?: unknown; isExpiringSoon?: unknown },
-  ): Promise<AuthResult> {
-    console.log(
-      '[AuthService] WorkOS token expired or expiring soon, refreshing...',
-      {
-        expiresAt: diag.expiresAt
-          ? new Date(diag.expiresAt).toISOString()
-          : 'unknown',
-        isExpired: diag.isExpired,
-        isExpiringSoon: diag.isExpiringSoon,
-      },
+    // Fall back to locally stored token
+    const tokenData = await this.storage.getTokenWithMetadata(
+      TOKEN_KEYS.GITHUB_TOKEN,
     );
-
-    try {
-      // Attempt to refresh the token
-      const authClient = new OAuthServerClient({
-        serverUrl:
-          process.env.AUTH_SERVER_URL ||
-          APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
-      });
-
-      // Get device ID for device-specific session tracking
-      const deviceId = await deviceIdService.getDeviceId();
-
-      const refreshedAuth = await authClient.refreshAccessToken(
-        refreshToken,
-        deviceId,
-        user.id,
-      );
-
-      // ✅ CRITICAL: Only update WorkOS token, preserve GitHub token
-      console.log('[AuthService] Token refresh response received:', {
-        receivedNewGithubToken: !!refreshedAuth.token,
-        githubTokenPrefix: refreshedAuth.token?.substring(0, 4),
-        willPreserveExisting:
-          !refreshedAuth.token || !refreshedAuth.token.startsWith('gh'),
-      });
-
-      // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
-      // refreshedAuth.token may be null/undefined if server doesn't return a new GitHub token
-      const newGithubToken =
-        refreshedAuth.token && refreshedAuth.token.startsWith('gh')
-          ? refreshedAuth.token
-          : githubToken;
-
-      console.log('[AuthService] Using GitHub token:', {
-        tokenPrefix: newGithubToken?.substring(0, 4),
-        isNewToken: newGithubToken === refreshedAuth.token,
-        isPreservedToken: newGithubToken === githubToken,
-      });
-
-      // Use stored user data - refresh endpoint only returns WorkOS tokens
-      // The electron app already has the user data from initial login
-      await this.storeAuth(
-        newGithubToken,
-        user,
-        refreshedAuth.workosToken,
-        refreshedAuth.refreshToken,
-        refreshedAuth.expiresAt,
-      );
-
-      // Update AuthStateManager with GitHub token (not WorkOS token!)
-      AuthStateManager.getInstance().setAuthenticated(user, newGithubToken);
-
-      console.log(
-        '[AuthService] Token refreshed successfully, GitHub token preserved',
-      );
-
-      return {
-        success: true,
-        authenticated: true,
-        token: newGithubToken, // ✅ Return GitHub token for API calls
-        user: user,
-      };
-    } catch (refreshError: unknown) {
-      const errorMessage =
-        refreshError instanceof Error ? refreshError.message : 'Unknown error';
-
-      // Only a definitive invalid_grant means the refresh token is truly dead
-      // (revoked, or already consumed and no longer accepted) — sign out. Every
-      // other failure is transient: a network blip, a 5xx, or a 403
-      // token_mismatch from a refresh-token rotation race. Wiping credentials on
-      // those would log the user out on every hiccup, so keep the existing
-      // session and let the next call retry. This preserves the intent of the
-      // "require a valid WorkOS session" change (a session that is genuinely
-      // gone still signs out) without thrashing on transient errors.
-      const isInvalidGrant = /invalid_grant/i.test(errorMessage);
-
-      if (isInvalidGrant) {
-        console.error(
-          '[AuthService] Refresh token rejected (invalid_grant) — signing out:',
-          errorMessage,
-        );
-        await this.clearStoredAuth();
-        AuthStateManager.getInstance().clearAuthentication();
-        return {
-          success: false,
-          authenticated: false,
-          error: 'Token expired and refresh failed. Please log in again.',
-        };
-      }
-
-      console.warn(
-        '[AuthService] Token refresh failed transiently, keeping current session:',
-        errorMessage,
-      );
-      return {
-        success: true,
-        authenticated: true,
-        token: githubToken, // keep the user on the existing token; retry next call
-        user,
-      };
+    if (!tokenData?.token) {
+      return { success: false, authenticated: false };
     }
-  }
 
-  private async storeAuth(
-    githubToken: string,
-    user: NonNullable<AuthResult['user']>,
-    workosToken?: string,
-    refreshToken?: string,
-    expiresAt?: number,
-  ): Promise<void> {
-    try {
-      console.log('[AuthService] Storing credentials for:', user.login, {
-        hasWorkosToken: !!workosToken,
-        hasRefreshToken: !!refreshToken,
-        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
-      });
+    const metadata = tokenData.metadata as {
+      user?: AuthUser;
+      expiresAt?: number;
+    } | undefined;
 
-      // Store GitHub token (never expires) with user metadata
-      await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, githubToken, {
-        user,
-      });
-
-      console.log('[AuthService] GitHub token stored successfully');
-
-      // Store WorkOS token with refresh info (expires after 1 hour)
-      if (workosToken) {
-        await this.storage.setToken(TOKEN_KEYS.WORKOS_TOKEN, workosToken, {
-          refreshToken,
-          expiresAt,
-        });
-        console.log('[AuthService] WorkOS token stored successfully');
-      } else if (refreshToken || expiresAt) {
-        // If we don't have a separate WorkOS token but have refresh info,
-        // store it with the GitHub token for backward compatibility
-        await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, githubToken, {
-          user,
-          refreshToken,
-          expiresAt,
-        });
-        console.log('[AuthService] Single token stored with refresh info');
-      }
-
-      console.log('[AuthService] Credentials stored successfully');
-    } catch (error) {
-      console.error('[AuthService] Failed to store credentials:', error);
-
-      // Provide user-friendly error messages for keychain issues
-      if (error instanceof KeychainTimeoutError) {
-        throw new Error(
-          'Keychain access timed out. Please unlock your system keychain and try again.',
-        );
-      } else if (error instanceof KeychainPermissionError) {
-        throw new Error(
-          'Keychain access was denied. Please grant permission in System Preferences → Security & Privacy and try again.',
-        );
-      } else if (error instanceof KeychainNotAvailableError) {
-        throw new Error(
-          'Keychain is not available. Please ensure your system keychain is unlocked and try again.',
-        );
-      }
-
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Failed to save credentials: ${errorMessage}`);
-    }
+    return {
+      success: true,
+      authenticated: true,
+      token: tokenData.token,
+      user: metadata?.user
+        ? {
+            login: metadata.user.login,
+            email: metadata.user.email || '',
+            name: metadata.user.name,
+            id: metadata.user.id,
+            avatarUrl: metadata.user.avatarUrl,
+          }
+        : undefined,
+    };
   }
 
   private async clearStoredAuth(): Promise<void> {
-    const errors: string[] = [];
-
-    // Track which tokens existed before deletion attempt
-    const tokensToDelete = [
-      { key: TOKEN_KEYS.GITHUB_TOKEN, name: 'GitHub token' },
-      { key: TOKEN_KEYS.WORKOS_TOKEN, name: 'WorkOS token' },
-    ];
-
-    console.log('[AuthService] Starting token deletion...');
-
-    // Delete each token and track results
-    for (const { key, name } of tokensToDelete) {
-      try {
-        console.log(`[AuthService] Deleting ${name} (${key})...`);
-        await this.storage.deleteToken(key);
-        console.log(`[AuthService] ✓ Successfully deleted ${name}`);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`[AuthService] ✗ Failed to delete ${name}:`, errorMessage);
-
-        // Only add to errors if it's an actual failure (not "token doesn't exist")
-        // Keychain errors are real failures that should be reported
-        if (error instanceof KeychainTimeoutError ||
-            error instanceof KeychainPermissionError ||
-            error instanceof KeychainNotAvailableError) {
-          errors.push(`${name}: ${errorMessage}`);
-        }
-      }
+    try {
+      await this.storage.deleteToken(TOKEN_KEYS.GITHUB_TOKEN);
+      const workosKey = 'workos_access_token';
+      await this.storage.deleteToken(workosKey);
+    } catch (error) {
+      console.error('[AuthService] Error clearing stored auth:', error);
     }
-
-    // Verify tokens are actually gone
-    console.log('[AuthService] Verifying token deletion...');
-    const verificationErrors: string[] = [];
-
-    for (const { key, name } of tokensToDelete) {
-      try {
-        const stillExists = await this.storage.getToken(key);
-        if (stillExists) {
-          const message = `${name} still exists after deletion attempt`;
-          console.error(`[AuthService] ✗ Verification failed: ${message}`);
-          verificationErrors.push(message);
-        } else {
-          console.log(`[AuthService] ✓ Verified ${name} is deleted`);
-        }
-      } catch (_error) {
-        // If we can't read the token, assume it's deleted (or keychain is inaccessible)
-        console.log(`[AuthService] ✓ Cannot read ${name} (likely deleted)`);
-      }
-    }
-
-    // If there were any deletion or verification errors, throw
-    const allErrors = [...errors, ...verificationErrors];
-    if (allErrors.length > 0) {
-      const errorMessage = `Failed to clear credentials: ${allErrors.join('; ')}`;
-      console.error(`[AuthService] ${errorMessage}`);
-      throw new Error(errorMessage);
-    }
-
-    console.log('[AuthService] ✓ All credentials cleared and verified');
   }
 
-  /**
-   * Initialize auth state on startup
-   * Loads stored credentials to populate AuthStateManager (no keychain access)
-   */
   async initializeAuthState(): Promise<void> {
     try {
-      console.log('[AuthService] Initializing auth state on startup...');
-
       const storedAuth = await this.getStoredAuth();
-
       if (storedAuth.success && storedAuth.token && storedAuth.user) {
-        console.log(
-          '[AuthService] Found and loaded stored credentials for:',
-          storedAuth.user.login,
-        );
-        // Update AuthStateManager with stored credentials
         AuthStateManager.getInstance().setAuthenticated(
           storedAuth.user,
           storedAuth.token,
         );
-      } else {
-        console.log('[AuthService] No existing authentication found');
-        // Ensure AuthStateManager is in unauthenticated state
-        AuthStateManager.getInstance().clearAuthentication();
+        console.log('[AuthService] Auth state initialized for:', storedAuth.user.login);
       }
     } catch (error) {
-      console.error('[AuthService] Error initializing auth state:', error);
-      // On error, ensure we're in unauthenticated state
-      AuthStateManager.getInstance().clearAuthentication();
+      console.error('[AuthService] Failed to initialize auth state:', error);
     }
   }
 
   /**
-   * Check if stored auth exists
-   */
-  private async hasStoredAuth(): Promise<boolean> {
-    try {
-      const token = await this.storage.getToken(TOKEN_KEYS.GITHUB_TOKEN);
-      return token !== null;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Get a valid GitHub token with automatic refresh if expired/expiring
-   * This is the centralized method that all GitHub API calls should use
-   * @returns Valid token or null if not authenticated
+   * Get a valid GitHub token.
+   * Primary: gh CLI token
+   * Fallback: locally stored token
    */
   async getValidToken(): Promise<string | null> {
     try {
-      const auth = await this.getStoredAuth();
-
-      if (auth.success && auth.token) {
-        return auth.token;
+      // Try gh CLI first
+      const ghToken = await getGhCliToken();
+      if (ghToken) {
+        return ghToken;
       }
 
-      return null;
+      // Fall back to stored token
+      const tokenData = await this.storage.getToken(TOKEN_KEYS.GITHUB_TOKEN);
+      return tokenData || null;
     } catch (error) {
       console.error('[AuthService] Error getting valid token:', error);
       return null;
@@ -1039,11 +277,9 @@ export class AuthService {
   } | null> {
     try {
       const auth = await this.getStoredAuth();
-
       if (auth.success && auth.user) {
         return auth.user;
       }
-
       return null;
     } catch (error) {
       console.error('[AuthService] Error getting current user:', error);
@@ -1052,7 +288,7 @@ export class AuthService {
   }
 
   /**
-   * Get token metadata including expiry and refresh token info
+   * Get token metadata including expiry info
    */
   async getTokenMetadata(): Promise<{
     hasToken: boolean;
@@ -1065,6 +301,16 @@ export class AuthService {
     user?: AuthUser;
   }> {
     try {
+      // Check gh CLI token first
+      const ghToken = await getGhCliToken();
+      if (ghToken) {
+        return {
+          hasToken: true,
+          hasRefreshToken: false,
+          user: undefined,
+        };
+      }
+
       const tokenData = await this.storage.getTokenWithMetadata(
         TOKEN_KEYS.GITHUB_TOKEN,
       );
@@ -1121,113 +367,17 @@ export class AuthService {
     }
   }
 
-  /**
-   * Test the refresh token mechanism by forcing a token refresh
-   */
   async testRefreshToken(): Promise<{
     success: boolean;
     error?: string;
     newExpiresAt?: number;
   }> {
-    try {
-      console.log('[AuthService] Testing refresh token mechanism...');
-
-      const tokenData = await this.storage.getTokenWithMetadata(
-        TOKEN_KEYS.GITHUB_TOKEN,
-      );
-
-      if (!tokenData) {
-        return {
-          success: false,
-          error: 'No token found to refresh',
-        };
-      }
-
-      const { metadata } = tokenData;
-      const refreshToken = metadata?.refreshToken as string | undefined;
-
-      if (!refreshToken) {
-        return {
-          success: false,
-          error: 'No refresh token available',
-        };
-      }
-
-      // Attempt to refresh the token
-      const authClient = new OAuthServerClient({
-        serverUrl:
-          process.env.AUTH_SERVER_URL ||
-          APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
-      });
-
-      const refreshedAuth = await authClient.refreshAccessToken(refreshToken);
-
-      // Get the existing GitHub token and user data to preserve
-      const githubTokenData = await this.storage.getTokenWithMetadata(
-        TOKEN_KEYS.GITHUB_TOKEN,
-      );
-      const existingGithubToken = githubTokenData?.token;
-      const existingUser = githubTokenData?.metadata?.user as
-        | AuthResult['user']
-        | undefined;
-
-      // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
-      const newGithubToken =
-        refreshedAuth.token && refreshedAuth.token.startsWith('gho_')
-          ? refreshedAuth.token
-          : existingGithubToken || refreshedAuth.token;
-
-      // Ensure we have a token to store
-      if (!newGithubToken) {
-        throw new Error(
-          'Token refresh failed: no GitHub token available after refresh',
-        );
-      }
-
-      // Ensure we have user data
-      if (!existingUser) {
-        throw new Error('Token refresh failed: no user data available');
-      }
-
-      // Store the new tokens with existing user data
-      // Refresh endpoint only returns WorkOS tokens, user data is preserved locally
-      await this.storeAuth(
-        newGithubToken,
-        existingUser,
-        refreshedAuth.workosToken,
-        refreshedAuth.refreshToken,
-        refreshedAuth.expiresAt,
-      );
-
-      // Update AuthStateManager with GitHub token
-      AuthStateManager.getInstance().setAuthenticated(
-        existingUser,
-        newGithubToken,
-      );
-
-      console.log('[AuthService] Token refresh test successful:', {
-        newExpiresAt: refreshedAuth.expiresAt
-          ? new Date(refreshedAuth.expiresAt).toISOString()
-          : 'unknown',
-      });
-
-      return {
-        success: true,
-        newExpiresAt: refreshedAuth.expiresAt,
-      };
-    } catch (error: unknown) {
-      console.error('[AuthService] Token refresh test failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      return {
-        success: false,
-        error: errorMessage || 'Token refresh failed',
-      };
-    }
+    return {
+      success: false,
+      error: 'Token refresh is no longer supported. Use `gh auth login` to re-authenticate.',
+    };
   }
 
-  /**
-   * Validate the GitHub token by making a test API call
-   */
   async validateGitHubToken(): Promise<{
     valid: boolean;
     tokenPresent: boolean;
@@ -1236,30 +386,16 @@ export class AuthService {
     statusCode?: number;
   }> {
     try {
-      console.log('[AuthService] Validating GitHub token...');
-
-      const githubTokenData = await this.storage.getTokenWithMetadata(
-        TOKEN_KEYS.GITHUB_TOKEN,
-      );
-
-      if (!githubTokenData || !githubTokenData.token) {
-        console.log('[AuthService] No GitHub token found in storage');
+      const token = await this.getValidToken();
+      if (!token) {
         return {
           valid: false,
           tokenPresent: false,
-          error: 'No GitHub token found',
+          error: 'No GitHub token found. Run `gh auth login` to authenticate.',
         };
       }
 
-      const token = githubTokenData.token;
       const tokenPrefix = token.substring(0, 4);
-
-      console.log('[AuthService] GitHub token found:', {
-        length: token.length,
-        prefix: tokenPrefix,
-        hasGho: token.startsWith('gho_'),
-        hasGhp: token.startsWith('ghp_'),
-      });
 
       // Validate token by making a test API call to GitHub
       const response = await fetch('https://api.github.com/user', {
@@ -1269,11 +405,6 @@ export class AuthService {
         },
       });
 
-      console.log('[AuthService] GitHub API validation response:', {
-        status: response.status,
-        ok: response.ok,
-      });
-
       if (response.ok) {
         return {
           valid: true,
@@ -1281,12 +412,6 @@ export class AuthService {
           tokenPrefix,
         };
       } else {
-        const errorText = await response.text().catch(() => 'Unknown error');
-        console.error('[AuthService] GitHub token validation failed:', {
-          status: response.status,
-          error: errorText,
-        });
-
         return {
           valid: false,
           tokenPresent: true,
@@ -1296,13 +421,37 @@ export class AuthService {
         };
       }
     } catch (error: unknown) {
-      console.error('[AuthService] GitHub token validation error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         valid: false,
         tokenPresent: true,
         error: errorMessage || 'Failed to validate token',
       };
+    }
+  }
+
+  /**
+   * Store a GitHub token and user info locally.
+   * Used when a token is manually provided (e.g., pasted by the user).
+   */
+  async storeManualAuth(
+    token: string,
+    user: {
+      login: string;
+      email: string;
+      name?: string;
+      id?: number;
+      avatarUrl?: string;
+    },
+  ): Promise<void> {
+    await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, token, {
+      user: user as AuthUser,
+    });
+    AuthStateManager.getInstance().setAuthenticated(user, token);
+    try {
+      await GitCredentialHelper.configureGitCredentials(token);
+    } catch (error) {
+      console.error('[AuthService] Failed to configure git credentials:', error);
     }
   }
 }
