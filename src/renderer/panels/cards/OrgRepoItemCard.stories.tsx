@@ -101,6 +101,7 @@ export const WithSync: Story = {
           isCloned
           isDirty
           sync={{ ahead: 3 }}
+          onPushAhead={() => console.info('push ahead')}
           onClick={() => console.info('clicked')}
           onOpenTerminal={() => console.info('terminal')}
         />
@@ -116,6 +117,13 @@ export const WithSync: Story = {
           isCloned
           isDirty
           sync={{ ahead: 2, behind: 5 }}
+          onClick={() => console.info('clicked')}
+          onOpenTerminal={() => console.info('terminal')}
+        />
+        <OrgRepoItemCard
+          repo={createMockRepo({ name: 'synced-repo' })}
+          isCloned
+          sync={{ ahead: 0, behind: 0 }}
           onClick={() => console.info('clicked')}
           onOpenTerminal={() => console.info('terminal')}
         />

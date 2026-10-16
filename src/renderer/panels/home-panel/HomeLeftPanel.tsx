@@ -14,6 +14,8 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import { githubIdToPurl } from '@principal-ai/alexandria-core-library';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
+import { GitService } from '../../main-process-api/GitService';
+import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import {
   extractLocalClones,
   payloadFromGithub,
@@ -38,6 +40,7 @@ import { getHomeRepositories, type HomeRepository } from './homeRepositories';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
 import { useWatchedRepos } from './useWatchedRepos';
 import { HomeSearchBar, HomeSearchResults } from './HomeSearch';
+import { PushToRemoteModal } from '../components/PushToRemoteModal';
 
 // ---------------------------------------------------------------------------
 // HomeLeftPanel — the home left rail, the user-based sibling of the
@@ -69,9 +72,18 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const [selectedRepo, setSelectedRepo] =
     useState<RepositorySelectedPayload | null>(null);
   const [repoCardExiting, setRepoCardExiting] = useState(false);
+  // The repo whose ahead indicator was clicked — opens the push-to-remote modal.
+  const [pushTarget, setPushTarget] = useState<{
+    path: string;
+    name: string;
+    ahead: number;
+    branch?: string;
+  } | null>(null);
 
   // Repos with uncommitted changes / unpushed commits — the in-progress list.
-  const inProgressRepos = useInProgressRepos(repositories);
+  // `statusRefreshKey` forces a re-query after a push clears an ahead count.
+  const [statusRefreshKey, setStatusRefreshKey] = useState(0);
+  const inProgressRepos = useInProgressRepos(repositories, statusRefreshKey);
   const homeRepos = useMemo(
     () => getHomeRepositories(repositories, inProgressRepos, tabs),
     [repositories, inProgressRepos, tabs],
@@ -259,6 +271,30 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     [events],
   );
 
+  // Push the clicked repo's local commits to its upstream (creating the
+  // upstream if the branch has none yet). Shared by the push modal.
+  const pushToRemote = useCallback(
+    async (
+      path: string,
+    ): Promise<{ success: boolean; message: string }> => {
+      const safety = await GitService.isPushSafe(path);
+      return GitService.push(
+        path,
+        safety.needsUpstream ? { setUpstream: true } : undefined,
+      );
+    },
+    [],
+  );
+
+  // After a successful push: re-query every status (an unwatched repo's cached
+  // ahead count would otherwise stay stale) and ask the monitor to re-check.
+  const handlePushed = useCallback((path: string) => {
+    setStatusRefreshKey((k) => k + 1);
+    RepositoryMonitoringService.refreshRepository(path).catch((err) => {
+      console.warn('[HomeLeftPanel] Failed to refresh after push:', err);
+    });
+  }, []);
+
   // Hover action on an in-progress row: open a terminal tab at the clone's path.
   const openTerminalForEntry = useCallback(
     (entry: AlexandriaEntry, label: string) => {
@@ -421,6 +457,17 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                                 ahead: status?.ahead,
                                 behind: status?.behind,
                               }}
+                              onPushAhead={
+                                path && (status?.ahead ?? 0) > 0
+                                  ? () =>
+                                      setPushTarget({
+                                        path,
+                                        name,
+                                        ahead: status?.ahead ?? 0,
+                                        branch: status?.branch,
+                                      })
+                                  : undefined
+                              }
                               dragText={path ? shellQuote(path) : undefined}
                               onClick={() => openInProgressRepo(payload)}
                               onOpenTerminal={
@@ -452,6 +499,22 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
           )}
         </div>
       </div>
+
+      <PushToRemoteModal
+        isOpen={pushTarget !== null}
+        onClose={() => setPushTarget(null)}
+        repoName={pushTarget?.name ?? ''}
+        aheadCount={pushTarget?.ahead ?? 0}
+        branch={pushTarget?.branch}
+        onPush={() =>
+          pushTarget
+            ? pushToRemote(pushTarget.path)
+            : Promise.resolve({ success: false, message: 'No repository.' })
+        }
+        onPushed={() => {
+          if (pushTarget) handlePushed(pushTarget.path);
+        }}
+      />
     </div>
   );
 };

@@ -41,9 +41,16 @@ export interface OrgRepoItemCardProps {
   /**
    * Sync state vs the upstream remote. When provided, a right-aligned indicator
    * renders showing the commit counts for whichever of `ahead` / `behind` is
-   * greater than zero. Omitted (or both zero) → no indicator.
+   * greater than zero. When both are zero the repo icon turns green to signal
+   * it's synced with remote. Omitted → no sync treatment at all.
    */
   sync?: { ahead?: number; behind?: number };
+  /**
+   * Click handler for the ahead indicator. When provided (and there are commits
+   * ahead), the ArrowUp + count renders as a button that opens a push-to-remote
+   * flow. Omit to render it as static text.
+   */
+  onPushAhead?: () => void;
   /**
    * Whether the repository monitoring worker is watching this clone. A watched
    * repo has live git status (push/dirty updates arrive as events); an unwatched
@@ -66,6 +73,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   onRelocate,
   dragText,
   sync,
+  onPushAhead,
   watching = false,
 }) => {
   const { theme } = useTheme();
@@ -76,6 +84,10 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   const ahead = sync?.ahead ?? 0;
   const behind = sync?.behind ?? 0;
   const showSync = ahead > 0 || behind > 0;
+  // Synced with remote: the sync prop is present and nothing is ahead/behind.
+  // Tints the repo icon green as an at-a-glance "up to date" signal (only the
+  // Home rows pass `sync`, so the Projects list is unaffected).
+  const synced = sync !== undefined && ahead === 0 && behind === 0;
 
   return (
     <div
@@ -112,7 +124,10 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
       {/* On-disk clones get the repo icon; not-yet-cloned repos get a cloud. */}
       <div style={{ position: 'relative', flexShrink: 0, display: 'inline-flex' }}>
         {isCloned ? (
-          <FolderGit2 size={15} color={theme.colors.text} />
+          <FolderGit2
+            size={15}
+            color={synced ? theme.colors.success : theme.colors.text}
+          />
         ) : (
           <Cloud size={15} color={theme.colors.textSecondary} />
         )}
@@ -336,7 +351,6 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
         >
           {ahead > 0 && (
             <span
-              title={`${ahead} commit${ahead === 1 ? '' : 's'} ahead of remote`}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -344,8 +358,49 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
                 color: theme.colors.info,
               }}
             >
-              <ArrowUp size={12} />
-              {ahead}
+              {onPushAhead ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPushAhead();
+                  }}
+                  title={`${ahead} commit${ahead === 1 ? '' : 's'} ahead of remote — push to remote`}
+                  aria-label={`Push ${ahead} commit${ahead === 1 ? '' : 's'} to remote`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    color: theme.colors.info,
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    font: 'inherit',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.textDecoration = 'underline';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.textDecoration = 'none';
+                  }}
+                >
+                  <ArrowUp size={12} />
+                  {ahead}
+                </button>
+              ) : (
+                <span
+                  title={`${ahead} commit${ahead === 1 ? '' : 's'} ahead of remote`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 2,
+                  }}
+                >
+                  <ArrowUp size={12} />
+                  {ahead}
+                </span>
+              )}
             </span>
           )}
           {behind > 0 && (

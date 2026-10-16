@@ -31,6 +31,11 @@ function displayName(repo: InProgressRepo): string {
 
 export function useInProgressRepos(
   repositories: AlexandriaEntry[],
+  /**
+   * Bump to force a re-query of every repo's status (e.g. right after a push,
+   * when an unwatched repo's cached ahead/behind count would otherwise be stale).
+   */
+  refreshKey = 0,
 ): InProgressRepo[] {
   const paths = useMemo(
     () => repositories.filter((r) => r.path).map((r) => String(r.path)),
@@ -78,7 +83,7 @@ export function useInProgressRepos(
     return () => {
       cancelled = true;
     };
-  }, [paths]);
+  }, [paths, refreshKey]);
 
   // Live updates for repos in our set.
   useEffect(() => {
