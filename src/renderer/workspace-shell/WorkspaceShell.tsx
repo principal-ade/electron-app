@@ -52,6 +52,7 @@ import { usePanelProgramStatus } from '../contexts/terminalProgramStatus';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { useTerminalImplementation } from '../hooks/useTerminalImplementation';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { RepoFileSearchPalette } from './RepoFileSearchPalette';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { useTerminalRepoInfo } from '../hooks/useTerminalRepoInfo';
 import { SendTabButton } from '../move-tab/SendTabButton';
@@ -486,6 +487,15 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     null,
   );
 
+  // Cmd+Shift+F file search: the git repo the active terminal sits in, resolved
+  // lazily when the chord fires (see the keydown effect below).
+  const [fileSearchRepo, setFileSearchRepo] = useState<{
+    path: string;
+    label: string;
+  } | null>(null);
+  // Transient feedback when the chord fires but there is no repo to search.
+  const [fileSearchNotice, setFileSearchNotice] = useState<string | null>(null);
+
   // Cross-window tab receiver.
   const { incomingTab, clearIncomingTab } = useTabReceiver();
   const repoWindows = useOpenRepositoryWindows();
@@ -648,6 +658,50 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     return () => window.removeEventListener('keydown', handler, true);
   }, [openProjectTabForActiveTerminal]);
 
+  // Cmd+Shift+F (Ctrl+Shift+F off macOS): open a file-search popup scoped to the
+  // registered repository the active terminal is sitting in. Resolution goes
+  // through the Alexandria registry (the same nearest-ancestor lookup Cmd+Shift+O
+  // uses) — the file-tree infrastructure only serves registered repos, so an
+  // unregistered directory shows a brief notice instead of opening the popup.
+  // Capture phase + stopPropagation so the terminal never sees the chord; a no-op
+  // when the active tab isn't a terminal.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (
+        !((e.metaKey || e.ctrlKey) && e.shiftKey) ||
+        e.altKey ||
+        e.code !== 'KeyF'
+      ) {
+        return;
+      }
+      const directory = activeTabDirectory;
+      if (!directory) return; // no active terminal → don't consume the chord
+      if (fileSearchRepo) return; // already open → let the palette own the keys
+      e.preventDefault();
+      e.stopPropagation();
+      const entry = findEntryForDirectory(directory);
+      const repoPath = entry?.path ? String(entry.path) : undefined;
+      if (!entry || !repoPath) {
+        setFileSearchNotice('Not a registered repository');
+        return;
+      }
+      const label =
+        entry.github?.owner && entry.github?.name
+          ? `${entry.github.owner}/${entry.github.name}`
+          : entry.name || repoPath.split('/').filter(Boolean).pop() || repoPath;
+      setFileSearchRepo({ path: repoPath, label });
+    };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, [activeTabDirectory, findEntryForDirectory, fileSearchRepo]);
+
+  // Auto-dismiss the transient file-search notice.
+  useEffect(() => {
+    if (!fileSearchNotice) return;
+    const timer = setTimeout(() => setFileSearchNotice(null), 2500);
+    return () => clearTimeout(timer);
+  }, [fileSearchNotice]);
+
   // bottom-bar content for cross-window tab transfer (principal → dev-workspace).
   const bottomBarContent = useMemo(() => {
     const hasRepo = activeTabDirectory
@@ -739,6 +793,27 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     });
   }, [openMarkdownDoc]);
 
+  // Route an absolute file path to the right viewer tab by extension — markdown
+  // docs and media get their dedicated tabs, everything else the source viewer.
+  // Shared by the `file:opened` bus handler below and the Cmd+Shift+F palette.
+  const openFileByPath = useCallback(
+    (filePath: string, repositoryPath?: string) => {
+      const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
+      const isMedia =
+        /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(
+          filePath,
+        );
+      if (isMarkdown) {
+        openMarkdownDoc(filePath, repositoryPath);
+      } else if (isMedia) {
+        openMedia(filePath);
+      } else {
+        openSourceFile(filePath);
+      }
+    },
+    [openMarkdownDoc, openMedia, openSourceFile],
+  );
+
   // Bridge in-document doc links. The shared markdown link handler
   // (`useMarkdownLinkHandler`, used by topic descriptions and other markdown
   // surfaces here) resolves a click — including purl links — to a file and
@@ -752,24 +827,13 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       if (event.source === 'tab') return; // ignore tab re-emits
       const filePath = event.payload?.filePath;
       if (!filePath) return;
-      const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
-      const isMedia =
-        /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(
-          filePath,
-        );
-      if (isMarkdown) {
-        openMarkdownDoc(filePath, event.payload?.repositoryPath);
-      } else if (isMedia) {
-        openMedia(filePath);
-      } else {
-        openSourceFile(filePath);
-      }
+      openFileByPath(filePath, event.payload?.repositoryPath);
     };
     events.on('file:opened', handleFileOpened);
     return () => {
       events.off('file:opened', handleFileOpened);
     };
-  }, [events, openMarkdownDoc, openSourceFile, openMedia]);
+  }, [events, openFileByPath]);
 
   const handlePanelResize = useCallback(
     (sizes: { left: number; middle: number; right: number }) => {
@@ -954,6 +1018,40 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           />
           {/* Projects repository delete modal — always mounted with the shell. */}
           {deleteModal}
+          {/* Cmd+Shift+F file search, scoped to the active terminal's repo. */}
+          {fileSearchRepo && (
+            <RepoFileSearchPalette
+              repoPath={fileSearchRepo.path}
+              repoLabel={fileSearchRepo.label}
+              onClose={() => setFileSearchRepo(null)}
+              onSelectFile={(absolutePath) => {
+                openFileByPath(absolutePath, fileSearchRepo.path);
+                setFileSearchRepo(null);
+              }}
+            />
+          )}
+          {fileSearchNotice && (
+            <div
+              style={{
+                position: 'fixed',
+                bottom: 24,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 10000,
+                padding: '8px 16px',
+                borderRadius: 6,
+                background: theme.colors.backgroundSecondary,
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.textSecondary,
+                fontSize: theme.fontSizes[2],
+                fontFamily: theme.fonts.body,
+                boxShadow: '0 6px 24px rgba(0, 0, 0, 0.4)',
+                pointerEvents: 'none',
+              }}
+            >
+              {fileSearchNotice}
+            </div>
+          )}
         </div>
       </SkillsSurfaceProvider>
     </SkillBrowserPanelProvider>
