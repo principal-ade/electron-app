@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { GitService } from '../../main-process-api/GitService';
 import { GithubService } from '../../main-process-api/GithubService';
+import { useAuthUser } from '../../providers/AuthProvider';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
@@ -99,6 +100,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
   initialFork = false,
 }) => {
   const { theme } = useTheme();
+  const { profile } = useAuthUser();
 
   // Resolved workspace (from prop or loaded from service)
   const [resolvedWorkspace, setResolvedWorkspace] = useState<Workspace | null>(workspaceProp ?? null);
@@ -192,7 +194,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
     try {
       // Get current user and repo info in parallel
       const [user, repo] = await Promise.all([
-        GithubService.getCurrentUser(),
+        Promise.resolve(profile),
         GithubService.getRepository(parsedUrl.owner, parsedUrl.repo),
       ]);
 
@@ -210,7 +212,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
     } finally {
       setIsCheckingPermissions(false);
     }
-  }, [parsedUrl]);
+  }, [parsedUrl, profile]);
 
   // Auto-check permissions when URL is parsed (with debounce)
   useEffect(() => {

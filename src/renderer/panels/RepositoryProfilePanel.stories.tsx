@@ -13,6 +13,7 @@ import type {
   RepositoryProfilePanelActions,
   RepositoryProfilePanelContext,
 } from './RepositoryProfilePanel';
+import { AuthProvider } from '../providers/AuthProvider';
 
 // Mock event emitter for stories
 type EventHandler = (event: PanelEvent<unknown>) => void;
@@ -301,11 +302,13 @@ const meta: Meta<typeof RepositoryProfilePanel> = {
   tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div style={{ width: '100vw', height: '100vh', boxSizing: 'border-box' }}>
-        <div style={{ width: '100%', height: '100%' }}>
-          <Story />
+      <AuthProvider>
+        <div style={{ width: '100vw', height: '100vh', boxSizing: 'border-box' }}>
+          <div style={{ width: '100%', height: '100%' }}>
+            <Story />
+          </div>
         </div>
-      </div>
+      </AuthProvider>
     ),
   ],
 };

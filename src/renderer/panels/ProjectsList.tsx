@@ -3,17 +3,19 @@
  *
  * A single, unified list of every project the user can reach: their local
  * clones, every repository across their GitHub account and organizations, and
- * the repositories they've starred. Single-select filter chips narrow it:
+ * the repositories they've starred. Single-select filter chips narrow it
+ * (Cloned · Owned · Starred, Cloned first):
+ *   - Cloned  — local clones only (the default)
  *   - Owned   — repos from the user's GitHub account/orgs (not local clones)
- *   - Cloned  — local clones only
  *   - Starred — repos the user has starred (may be third-party)
  * Within each org, cloned (on-disk) projects sort first; the rest sort
  * alphabetically by name. Orgs with more than 10 repos start collapsed.
  * Used in the Projects surface left panel.
  *
- * When there's no GitHub session — the user isn't signed in (app OAuth or the
- * `gh` CLI) — only local clones are reachable, so Owned/Starred would always be
- * empty. The filter switch is hidden and the list is pinned to Cloned.
+ * The selected filter is owned by the shell (see {@link ProjectsListProps}), so
+ * switching side panels keeps it. When there's no GitHub session only local
+ * clones are reachable, so the switch is hidden and the list is pinned to
+ * Cloned.
  */
 
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
@@ -33,6 +35,7 @@ import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { useGithubProjects } from '../hooks/useGithubProjects';
+import { useAuthUser } from '../providers/AuthProvider';
 import { OrgSectionHeaderCard } from './cards/OrgSectionHeaderCard';
 import { OrgRepoItemCard } from './cards/OrgRepoItemCard';
 import { shellQuote } from '../utils/shellQuote';
@@ -41,15 +44,21 @@ import { getOffConventionTarget } from '../../shared/utils/clonePath';
 import { CloneFromGitHubModal } from './components/CloneFromGitHubModal';
 import { CreateRepositoryInWorkspaceModal } from './components/CreateRepositoryInWorkspaceModal';
 
+/** Single-select filter applied to the unified list. */
+export type ProjectFilter = 'owned' | 'cloned' | 'starred';
+
 export interface ProjectsListProps {
   /** Locally registered repositories (clones on disk) */
   repositories?: AlexandriaEntry[];
   /** Event emitter for panel communication */
   events: PanelEventEmitter;
+  /**
+   * Selected filter. Owned by the shell (not local state) so it survives the
+   * left panel remounting when the user switches between side panels.
+   */
+  filter: ProjectFilter;
+  onFilterChange: (filter: ProjectFilter) => void;
 }
-
-/** Single-select filter applied to the unified list. */
-type ProjectFilter = 'owned' | 'cloned' | 'starred';
 
 /** A merged project: a GitHub repo, a local clone, or both. */
 interface UnifiedProject {
@@ -119,8 +128,13 @@ const projectDragText = (project: UnifiedProject): string | undefined => {
 export const ProjectsList: React.FC<ProjectsListProps> = ({
   repositories = [],
   events,
+  filter,
+  onFilterChange,
 }) => {
   const { theme } = useTheme();
+  // Auth state is available on first paint (shared provider); the filter switch
+  // is gated on it rather than on the GitHub fetch result.
+  const { isAuthenticated } = useAuthUser();
 
   const spacing = {
     xs: theme.space?.[1] || 4,
@@ -128,8 +142,8 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     md: theme.space?.[3] || 16,
   };
 
-  // Filter + search state. Default to Owned — the user's own/org repos + clones.
-  const [filter, setFilter] = useState<ProjectFilter>('owned');
+  // Search state. The filter itself is owned by the shell (see props) so it
+  // survives switching side panels; Cloned is the default there.
   const [searchQuery, setSearchQuery] = useState('');
   // When on, the list is narrowed to private repos only; otherwise all repos
   // (public, private, and unknown-visibility) are shown.
@@ -456,12 +470,11 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     return Array.from(map.values());
   }, [githubRepos, starredRepos, repositories, gitStatusMap, baseDefaultDirectory, starredKeys]);
 
-  // Owned/Starred only have content when a GitHub session (app OAuth or the
-  // `gh` CLI) can list the user's repos. Signed out — or when the GitHub fetch
-  // resolves with no session — the panel is local clones only, so the filter
-  // switch is dead weight: hide it and pin the list to Cloned.
-  const showFilter =
-    !!currentUser || githubRepos.length > 0 || starredRepos.length > 0;
+  // Owned/Starred only have content when there's a GitHub session (the `gh`
+  // CLI). Gate on auth state directly — known on first paint — rather than on
+  // the fetch result, so the switch doesn't pop in only after the network
+  // resolves (and the list doesn't flip Cloned → Owned underneath the user).
+  const showFilter = isAuthenticated;
   const effectiveFilter: ProjectFilter = showFilter ? filter : 'cloned';
 
   // Apply filter + search, then group by org and order the groups.
@@ -637,12 +650,12 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         <div style={{ padding: spacing.sm, flexShrink: 0 }}>
           <SegmentedControl
             options={[
-              { value: 'owned', label: 'Owned' },
               { value: 'cloned', label: 'Cloned' },
+              { value: 'owned', label: 'Owned' },
               { value: 'starred', label: 'Starred' },
             ]}
             value={filter}
-            onChange={(value) => setFilter(value as ProjectFilter)}
+            onChange={(value) => onFilterChange(value as ProjectFilter)}
             theme={theme}
             variant="pill-flat"
           />

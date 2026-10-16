@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Shield } from 'lucide-react';
-import { useAuthState } from '../../../hooks/useAuthState';
+import { useAuthUser } from '../../../providers/AuthProvider';
 import { AuthDetails } from './components/AuthDetails';
 import './AuthView.css';
 
@@ -9,7 +9,7 @@ export const AuthView: React.FC = () => {
   const { theme } = useTheme();
   // Read-only: this surface reports the GitHub session the app discovered
   // (gh CLI / stored token). There is no in-app login/logout to drive.
-  const { isAuthenticated, user } = useAuthState();
+  const { isAuthenticated, user } = useAuthUser();
 
   const backgroundColor = theme.colors.background;
 

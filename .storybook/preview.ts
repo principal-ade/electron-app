@@ -235,6 +235,26 @@ console.log(example);
           return () => {};
         },
       },
+      // Auth state read by the shared AuthProvider. Storybook is treated as
+      // signed out; stories that need a specific identity can still mock the
+      // GithubService calls they care about.
+      authentication: {
+        getAuthState: () =>
+          Promise.resolve({
+            isAuthenticated: false,
+            user: null,
+            lastChecked: Date.now(),
+          }),
+        onAuthStateChanged: () => () => {},
+        isAuthenticated: () => Promise.resolve(false),
+        check: () => Promise.resolve({ success: false }),
+        getStatus: () => Promise.resolve({ authenticated: false }),
+        getGitHubAuth: () => Promise.resolve({ authenticated: false }),
+        getTokenMetadata: () =>
+          Promise.resolve({ hasToken: false, hasRefreshToken: false }),
+        validateGitHubToken: () =>
+          Promise.resolve({ valid: false, tokenPresent: false }),
+      },
     } as any;
   }
 }

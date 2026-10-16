@@ -8,7 +8,7 @@
  */
 
 import React, { createContext, useContext, useMemo } from 'react';
-import { useAuthState } from '../../hooks/useAuthState';
+import { useAuthUser } from '../../providers/AuthProvider';
 
 export interface User {
   login: string;
@@ -33,27 +33,29 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const auth = useAuthState();
+  // Consume the app-wide AuthProvider rather than opening a second auth
+  // subscription; repo-explorer only needs the identity shape.
+  const { isAuthenticated, isLoading, user: authUser, profile } = useAuthUser();
 
   const value = useMemo<AuthContextType>(() => {
-    const user: User | null = auth.user
+    const user: User | null = authUser
       ? {
-          login: auth.user.login,
-          email: auth.user.email ?? '',
-          name: auth.user.name ?? auth.user.login,
-          id: auth.user.id ?? 0,
-          avatar_url: auth.user.avatarUrl,
+          login: authUser.login,
+          email: profile?.email ?? authUser.email ?? '',
+          name: profile?.name ?? authUser.name ?? authUser.login,
+          id: profile?.id ?? authUser.id ?? 0,
+          avatar_url: profile?.avatar_url ?? authUser.avatarUrl,
         }
       : null;
 
     return {
       user,
-      isAuthenticated: auth.isAuthenticated,
-      isLoading: auth.isLoading,
+      isAuthenticated,
+      isLoading,
       fetchUser: async () => {},
       refreshTokens: async () => true,
     };
-  }, [auth]);
+  }, [authUser, profile, isAuthenticated, isLoading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

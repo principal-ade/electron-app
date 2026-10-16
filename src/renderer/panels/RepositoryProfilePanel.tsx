@@ -48,6 +48,7 @@ import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-ser
 import * as LucideIcons from 'lucide-react';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
+import { useAuthUser } from '../providers/AuthProvider';
 import { ShellService } from '../main-process-api/ShellService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import {
@@ -394,6 +395,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   events,
 }) => {
   const { theme } = useTheme();
+  const { user } = useAuthUser();
 
   const spacing = useMemo(
     () => ({
@@ -756,29 +758,31 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // Check if the current user has already forked this repo
   useEffect(() => {
-    if (!repositoryData?.github) {
+    const github = repositoryData?.github;
+    if (!github) {
       setIsForked(false);
+      return;
+    }
+
+    const login = user?.login;
+    if (!login) {
+      setIsForked(false);
+      setForkedRepoOwner(null);
       return;
     }
 
     let cancelled = false;
 
-    const checkForkStatus = async () => {
+    (async () => {
       try {
-        const user = await GithubService.getCurrentUser();
-        if (!user || cancelled) return;
-
-        const github = repositoryData.github;
-        if (!github) return;
-
-        const userRepo = await GithubService.getRepository(user.login, github.name);
+        const userRepo = await GithubService.getRepository(login, github.name);
         const isFork =
           !!userRepo &&
           userRepo.fork === true &&
           userRepo.parent?.full_name === `${github.owner}/${github.name}`;
         if (!cancelled) {
           setIsForked(isFork);
-          setForkedRepoOwner(isFork ? user.login : null);
+          setForkedRepoOwner(isFork ? login : null);
         }
       } catch {
         if (!cancelled) {
@@ -786,11 +790,10 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           setForkedRepoOwner(null);
         }
       }
-    };
+    })();
 
-    checkForkStatus();
     return () => { cancelled = true; };
-  }, [repositoryData]);
+  }, [repositoryData, user?.login]);
 
   // Fetch file trees when repository changes
   useEffect(() => {

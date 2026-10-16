@@ -14,6 +14,7 @@ import {
   HardDrive,
 } from 'lucide-react';
 import { GithubService } from '../../main-process-api/GithubService';
+import { useAuthUser } from '../../providers/AuthProvider';
 import { GitService } from '../../main-process-api/GitService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
@@ -60,6 +61,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
   CreateRepositoryInWorkspaceModalProps
 > = ({ isOpen, onClose, workspace, workspaces = [], baseDefaultDirectory = null, useOwnerSubdir = false, presetOwner, presetOwnerIsUser = false, onCreated }) => {
   const { theme } = useTheme();
+  const { profile } = useAuthUser();
 
   // In owner-subdir mode the destination is fixed to the base dir, so we
   // jump straight to org selection (or surface an error if no base dir is
@@ -169,15 +171,17 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
     }
   }, [isOpen, initialStep, initialDestination, initialOrg, initialIsUser]);
 
+  // The modal's "personal account" entry is the signed-in user, sourced from
+  // the shared AuthProvider (no per-open getCurrentUser round-trip).
+  useEffect(() => {
+    setCurrentUser(profile);
+  }, [profile]);
+
   const loadOrganizations = async () => {
     setIsLoadingOrgs(true);
     setOrgsError(null);
     try {
-      const [user, orgs] = await Promise.all([
-        GithubService.getCurrentUser(),
-        GithubService.getUserOrganizations(),
-      ]);
-      setCurrentUser(user);
+      const orgs = await GithubService.getUserOrganizations();
       setOrganizations(orgs);
     } catch (err) {
       console.error('Failed to load organizations:', err);

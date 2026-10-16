@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { X } from 'lucide-react';
 import { useSkillsSync } from '../../../hooks/useSkillsSync';
-import { useAuthState } from '../../../hooks/useAuthState';
+import { useAuthUser } from '../../../providers/AuthProvider';
 import { GithubService } from '../../../main-process-api/GithubService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { PresetDirectory } from '../../../../shared/main-process-api-interfaces/FileSystemAPI';
@@ -32,7 +32,7 @@ type OnboardingStep = 'welcome' | 'existing-skills' | 'configure' | 'migrating' 
 export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onComplete, onCancel }) => {
   const { theme } = useTheme();
   const { getAllLocalSkills, initializeRepo, migrateSkills, isLoading, error } = useSkillsSync();
-  const { isAuthenticated, user } = useAuthState();
+  const { isAuthenticated, user } = useAuthUser();
 
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const [repoUrl, setRepoUrl] = useState('');

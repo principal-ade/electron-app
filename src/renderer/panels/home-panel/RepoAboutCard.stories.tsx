@@ -9,6 +9,7 @@ import { RepoAboutCard } from './RepoAboutCard';
 import type { RepositorySelectedPayload } from '../../events/repositorySelected';
 import { payloadFromGithub } from '../../events/repositorySelected';
 import { GitService } from '../../main-process-api/GitService';
+import { AuthProvider } from '../../providers/AuthProvider';
 
 // Mock getBranchStatus to return realistic data for storybook paths
 GitService.getBranchStatus = async (_directory: string) => {
@@ -102,6 +103,13 @@ const meta: Meta<typeof RepoAboutCard> = {
     },
   },
   tags: ['autodocs'],
+  decorators: [
+    (Story) => (
+      <AuthProvider>
+        <Story />
+      </AuthProvider>
+    ),
+  ],
 };
 
 export default meta;

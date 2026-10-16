@@ -17,6 +17,7 @@ import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import { RepoExplorerPage } from './app/[owner]/[repo]/RepoExplorerPage';
 import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider as SharedAuthProvider } from '../providers/AuthProvider';
 import { setRepoExplorerServiceImpl } from './data/repoExplorerService';
 import { mockRepoExplorerService } from './storybook/mockRepoExplorerService';
 
@@ -49,11 +50,15 @@ const meta: Meta<typeof RepoExplorerPage> = {
   decorators: [
     (Story) => (
       <ThemeProvider>
-        <AuthProvider>
-          <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-            <Story />
-          </div>
-        </AuthProvider>
+        <SharedAuthProvider>
+          <AuthProvider>
+            <div
+              style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}
+            >
+              <Story />
+            </div>
+          </AuthProvider>
+        </SharedAuthProvider>
       </ThemeProvider>
     ),
   ],

@@ -15,18 +15,23 @@
 import React from 'react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { ProjectsList } from './ProjectsList';
+import { ProjectsList, type ProjectFilter } from './ProjectsList';
 
 export interface ProjectsLeftPanelProps {
   /** List of locally registered repositories. */
   repositories: AlexandriaEntry[];
   /** Event bus for panel communication. */
   events: PanelEventEmitter;
+  /** Selected filter — owned by the shell so it survives side-panel switches. */
+  filter: ProjectFilter;
+  onFilterChange: (filter: ProjectFilter) => void;
 }
 
 export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
   repositories,
   events,
+  filter,
+  onFilterChange,
 }) => {
   return (
     <div
@@ -38,7 +43,12 @@ export const ProjectsLeftPanel: React.FC<ProjectsLeftPanelProps> = ({
         flexDirection: 'column',
       }}
     >
-      <ProjectsList repositories={repositories} events={events} />
+      <ProjectsList
+        repositories={repositories}
+        events={events}
+        filter={filter}
+        onFilterChange={onFilterChange}
+      />
     </div>
   );
 };

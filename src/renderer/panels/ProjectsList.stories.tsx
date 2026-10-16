@@ -5,9 +5,10 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
-import { ProjectsList } from './ProjectsList';
+import { ProjectsList, type ProjectFilter } from './ProjectsList';
 import { GithubService } from '../main-process-api/GithubService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { AuthProvider } from '../providers/AuthProvider';
 
 // ---------- mock plumbing ----------
 //
@@ -111,6 +112,34 @@ const asOrg = (login: string) => ({
   }
 ).onGitStatusChanged = () => () => {};
 
+// Auth: the shared AuthProvider reads `window.mainProcess.authentication` (the
+// global Storybook mock is signed out). Point it at the per-story currentUser so
+// the panel renders signed in — that's what gates the filter switch and drives
+// useGithubProjects' fan-out (whose GithubService calls are mocked above).
+if (typeof window !== 'undefined') {
+  const mainProcess = ((window as unknown as { mainProcess?: unknown }).mainProcess ??
+    {}) as Record<string, unknown>;
+  (window as unknown as { mainProcess: unknown }).mainProcess = mainProcess;
+  mainProcess.authentication = {
+    ...(mainProcess.authentication as Record<string, unknown> | undefined),
+    getAuthState: async () =>
+      activeMocks.currentUser
+        ? {
+            isAuthenticated: true,
+            user: {
+              login: activeMocks.currentUser,
+              email: `${activeMocks.currentUser}@example.com`,
+              name: activeMocks.currentUser,
+              id: 1,
+              avatarUrl: `https://github.com/${activeMocks.currentUser}.png`,
+            },
+            lastChecked: Date.now(),
+          }
+        : { isAuthenticated: false, user: null, lastChecked: Date.now() },
+    onAuthStateChanged: () => () => {},
+  };
+}
+
 // Panel event emitter — ProjectsList only ever calls events.emit(); log it so
 // clicking a project is observable in the Actions/console.
 const events = {
@@ -118,6 +147,24 @@ const events = {
   on: () => () => {},
   off: () => {},
 } as unknown as PanelEventEmitter;
+
+/**
+ * ProjectsList now takes its filter from the shell (so it survives side-panel
+ * switches). Hold it here so the Storybook switch stays interactive.
+ */
+const ProjectsListStory: React.FC<{ repositories?: AlexandriaEntry[] }> = ({
+  repositories,
+}) => {
+  const [filter, setFilter] = React.useState<ProjectFilter>('cloned');
+  return (
+    <ProjectsList
+      repositories={repositories}
+      events={events}
+      filter={filter}
+      onFilterChange={setFilter}
+    />
+  );
+};
 
 // ---------- fixtures ----------
 
@@ -241,9 +288,11 @@ const meta: Meta<typeof ProjectsList> = {
   decorators: [
     (Story) => (
       <ThemeProvider theme={slateNeonTheme}>
-        <div style={{ width: '100vw', height: '100vh' }}>
-          <Story />
-        </div>
+        <AuthProvider>
+          <div style={{ width: '100vw', height: '100vh' }}>
+            <Story />
+          </div>
+        </AuthProvider>
       </ThemeProvider>
     ),
   ],
@@ -269,7 +318,7 @@ export const Default: Story = {
       starredRepos: starredFixtures,
       dirtyPaths: new Set(['/Users/dev/code/web-ade']),
     });
-    return <ProjectsList commits={[]} repositories={localFixtures} events={events} />;
+    return <ProjectsListStory repositories={localFixtures} />;
   },
 };
 
@@ -280,7 +329,7 @@ export const Default: Story = {
 export const Empty: Story = {
   render: () => {
     withMocks({ githubRepos: 'reject' });
-    return <ProjectsList commits={[]} repositories={[]} events={events} />;
+    return <ProjectsListStory repositories={[]} />;
   },
 };
 
@@ -294,7 +343,7 @@ export const LocalOnly: Story = {
       githubRepos: 'reject',
       dirtyPaths: new Set(['/Users/dev/code/web-ade']),
     });
-    return <ProjectsList commits={[]} repositories={localFixtures} events={events} />;
+    return <ProjectsListStory repositories={localFixtures} />;
   },
 };
 
@@ -305,6 +354,6 @@ export const LocalOnly: Story = {
 export const Loading: Story = {
   render: () => {
     withMocks({ githubRepos: 'pending' });
-    return <ProjectsList commits={[]} repositories={[]} events={events} />;
+    return <ProjectsListStory repositories={[]} />;
   },
 };

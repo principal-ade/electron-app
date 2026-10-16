@@ -23,7 +23,8 @@ import type {
   AlexandriaEntry,
 } from '@principal-ai/alexandria-core-library/types';
 import { InProgressActivityPanel } from '../../../panels/InProgressActivityPanel';
-import { inProgressActivityPanelActions } from '../../../panels/inProgressActivityPanelActions';
+import { createInProgressActivityPanelActions } from '../../../panels/inProgressActivityPanelActions';
+import { useAuthUser } from '../../../providers/AuthProvider';
 import { PORTAL_INTENTS } from '../../../events/portalIntents';
 import { usePortalEvents } from '../../PortalEventContext';
 import { getPrincipalBridgeUrl } from '../../../../shared/config/appBranding';
@@ -173,6 +174,17 @@ function matchInstalledFromLock(lockFile: SkillLockFile | null): Set<string> {
 export function HomeView({ onDismissOverlay }: HomeViewProps) {
   const { theme } = useTheme();
   const { events: portalEvents } = usePortalEvents();
+  const { user } = useAuthUser();
+
+  // In-progress cards attribute unpushed commits to the viewer; feed the shared
+  // identity in rather than letting the action module refetch the current user.
+  const inProgressActions = useMemo(
+    () =>
+      createInProgressActivityPanelActions(
+        user ? { login: user.login, avatarUrl: user.avatarUrl ?? '' } : null,
+      ),
+    [user],
+  );
 
   const [gitUserName, setGitUserName] = useState<string | null>(null);
   const [gitConfigOpen, setGitConfigOpen] = useState(false);
@@ -1063,7 +1075,7 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
               <InProgressActivityPanel
                 repositories={repositories}
                 events={portalEvents}
-                actions={inProgressActivityPanelActions}
+                actions={inProgressActions}
               />
             </div>
           </div>

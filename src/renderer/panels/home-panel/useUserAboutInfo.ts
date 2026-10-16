@@ -12,9 +12,8 @@
  */
 
 import { useEffect, useState } from 'react';
-import { GithubService } from '../../main-process-api/GithubService';
 import { GitService } from '../../main-process-api/GitService';
-import { useAuthState } from '../../hooks/useAuthState';
+import { useAuthUser } from '../../providers/AuthProvider';
 
 export type UserAboutSource = 'github' | 'git';
 
@@ -67,34 +66,39 @@ async function loadGitIdentity(): Promise<UserAboutInfo | null> {
 }
 
 export function useUserAboutInfo(): UserAboutInfoResult {
-  const { user: authUser } = useAuthState();
+  const { profile, isAuthenticated, isLoading: authLoading } = useAuthUser();
   const [user, setUser] = useState<UserAboutInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Re-runs on sign-in / sign-out. Kept above the Home panel (see file header)
-  // so a remount doesn't reset it back to a loading state.
+  // The GitHub profile comes from the shared AuthProvider (fetched once per
+  // session); we only fall back to the local git identity when signed out.
+  // Kept above the Home panel (see file header) so a remount doesn't reset it
+  // back to a loading state.
   useEffect(() => {
+    // Wait for the shared auth/profile resolution so we don't briefly flash the
+    // local git identity before the GitHub profile arrives.
+    if (authLoading) return;
+    if (isAuthenticated && !profile) return;
+
     let cancelled = false;
 
     (async () => {
       try {
-        const u = await GithubService.getCurrentUser();
-        if (cancelled) return;
-        const next: UserAboutInfo | null = u
+        const next: UserAboutInfo | null = profile
           ? {
               source: 'github',
-              login: u.login,
-              name: u.name,
-              email: u.email,
-              avatar_url: u.avatar_url,
-              html_url: `https://github.com/${u.login}`,
-              bio: u.bio,
-              company: u.company,
-              location: u.location,
-              followers: u.followers,
-              following: u.following,
-              public_repos: u.public_repos,
-              created_at: u.created_at,
+              login: profile.login,
+              name: profile.name,
+              email: profile.email,
+              avatar_url: profile.avatar_url,
+              html_url: `https://github.com/${profile.login}`,
+              bio: profile.bio,
+              company: profile.company,
+              location: profile.location,
+              followers: profile.followers,
+              following: profile.following,
+              public_repos: profile.public_repos,
+              created_at: profile.created_at,
             }
           : await loadGitIdentity();
         if (cancelled) return;
@@ -110,7 +114,7 @@ export function useUserAboutInfo(): UserAboutInfoResult {
     return () => {
       cancelled = true;
     };
-  }, [authUser?.login]);
+  }, [profile, isAuthenticated, authLoading]);
 
   return { user, loading };
 }

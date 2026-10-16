@@ -49,6 +49,7 @@ import {
   type RepositoryGuideOpenWeekPayload,
 } from '../../events/portalIntents';
 import { GithubService } from '../../main-process-api/GithubService';
+import { useAuthUser } from '../../providers/AuthProvider';
 import { GitService, type GitBranchStatus } from '../../main-process-api/GitService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WindowService } from '../../main-process-api/WindowService';
@@ -129,6 +130,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   baseDefaultDirectory,
 }) => {
   const { theme } = useTheme();
+  const { user } = useAuthUser();
   const gh = repo.github;
   const parsed = parsePurl(repo.purl);
   const owner = gh?.owner ?? parsed?.namespace ?? 'unknown';
@@ -372,27 +374,26 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   // Check if the current user has already forked this repo
   useEffect(() => {
     if (!gh) { setIsForked(false); return; }
+    const login = user?.login;
+    if (!login) { setIsForked(false); setForkedRepoOwner(null); return; }
     let cancelled = false;
-    const checkForkStatus = async () => {
+    (async () => {
       try {
-        const user = await GithubService.getCurrentUser();
-        if (!user || cancelled) return;
-        const userRepo = await GithubService.getRepository(user.login, name);
+        const userRepo = await GithubService.getRepository(login, name);
         const forked =
           !!userRepo &&
           userRepo.fork === true &&
           userRepo.parent?.full_name === `${owner}/${name}`;
         if (!cancelled) {
           setIsForked(forked);
-          setForkedRepoOwner(forked ? user.login : null);
+          setForkedRepoOwner(forked ? login : null);
         }
       } catch {
         if (!cancelled) { setIsForked(false); setForkedRepoOwner(null); }
       }
-    };
-    checkForkStatus();
+    })();
     return () => { cancelled = true; };
-  }, [owner, name, gh]);
+  }, [owner, name, gh, user?.login]);
 
   const description = gh?.description;
   const stars = gh?.stars ?? 0;

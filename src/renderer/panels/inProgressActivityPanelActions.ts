@@ -73,18 +73,10 @@ function avatarForLogin(login: string): string {
   return `https://github.com/${login}.png?size=64`;
 }
 
-let currentUserCache: { login: string; avatarUrl: string } | null | undefined;
-
-/** The signed-in user's GitHub profile (login + avatar), cached for the session. */
-async function getCurrentUserProfile(): Promise<{ login: string; avatarUrl: string } | null> {
-  if (currentUserCache !== undefined) return currentUserCache;
-  try {
-    const u = await GithubService.getCurrentUser();
-    currentUserCache = u?.avatar_url ? { login: u.login, avatarUrl: u.avatar_url } : null;
-  } catch {
-    currentUserCache = null;
-  }
-  return currentUserCache;
+/** The signed-in viewer's identity, supplied by the shared AuthProvider. */
+export interface InProgressViewerIdentity {
+  login: string;
+  avatarUrl: string;
 }
 
 async function gitStdout(repoPath: string, args: string[]): Promise<string> {
@@ -101,10 +93,12 @@ async function gitStdout(repoPath: string, args: string[]): Promise<string> {
  * match the commit email against the local git identity and use the signed-in
  * user's avatar; otherwise fall back to a GitHub noreply login, then initials.
  */
-async function getAheadCommits(repoPath: string): Promise<InProgressAheadCommit[]> {
-  const [commits, me, myEmail] = await Promise.all([
+async function getAheadCommits(
+  repoPath: string,
+  me: InProgressViewerIdentity | null,
+): Promise<InProgressAheadCommit[]> {
+  const [commits, myEmail] = await Promise.all([
     GitService.getAheadCommits(repoPath),
-    getCurrentUserProfile(),
     gitStdout(repoPath, ['config', 'user.email']),
   ]);
   const myEmailLower = myEmail.toLowerCase();
@@ -204,10 +198,19 @@ async function pushBranch(repoPath: string): Promise<InProgressPushResult> {
   return result;
 }
 
-export const inProgressActivityPanelActions: InProgressRepoCardActions = {
-  getFileTreeForLocalRepo: (repoPath) => RepositoryMonitoringService.getFileTree(repoPath),
-  getWorkingChanges,
-  getAheadCommits,
-  getBehindCommits,
-  pushBranch,
-};
+/**
+ * Build the InProgress action set for a given viewer. The viewer identity comes
+ * from the shared AuthProvider, so this module no longer calls
+ * `GithubService.getCurrentUser()` itself.
+ */
+export function createInProgressActivityPanelActions(
+  currentUser: InProgressViewerIdentity | null,
+): InProgressRepoCardActions {
+  return {
+    getFileTreeForLocalRepo: (repoPath) => RepositoryMonitoringService.getFileTree(repoPath),
+    getWorkingChanges,
+    getAheadCommits: (repoPath) => getAheadCommits(repoPath, currentUser),
+    getBehindCommits,
+    pushBranch,
+  };
+}

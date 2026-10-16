@@ -8,6 +8,7 @@ import { PortalTabsProvider } from './PortalTabsContext';
 import { PortalIntentBridge } from './components/PortalIntentBridge';
 import { IntegratedShell } from './components/IntegratedShell/IntegratedShell';
 import { KeychainConsentModal } from '../components/KeychainConsentModal';
+import { AuthProvider } from '../providers/AuthProvider';
 import {
   useKeychainConsent,
   KeychainConsentProvider,
@@ -40,16 +41,18 @@ export const PrincipalApp: React.FC = () => {
       <GlobalFeedbackProvider>
         <KeychainConsentWrapper>
           <MemoryRouter>
-            <PrincipalEventProvider>
-              <PortalEventProvider>
-                <PortalTabsProvider>
-                  {/* Always-mounted listener on the portal bus, so the titlebar
-                      can open content into a view that isn't mounted yet. */}
-                  <PortalIntentBridge />
-                  <IntegratedShell />
-                </PortalTabsProvider>
-              </PortalEventProvider>
-            </PrincipalEventProvider>
+            <AuthProvider>
+              <PrincipalEventProvider>
+                <PortalEventProvider>
+                  <PortalTabsProvider>
+                    {/* Always-mounted listener on the portal bus, so the titlebar
+                        can open content into a view that isn't mounted yet. */}
+                    <PortalIntentBridge />
+                    <IntegratedShell />
+                  </PortalTabsProvider>
+                </PortalEventProvider>
+              </PrincipalEventProvider>
+            </AuthProvider>
           </MemoryRouter>
         </KeychainConsentWrapper>
       </GlobalFeedbackProvider>

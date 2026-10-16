@@ -28,7 +28,7 @@ import {
   type RepositorySelectedPayload,
 } from '../../events/repositorySelected';
 import { useTheme } from '@principal-ade/industry-theme';
-import { useAuthState } from '../../hooks/useAuthState';
+import { useAuthUser } from '../../providers/AuthProvider';
 import { OrgRepoItemCard } from '../cards/OrgRepoItemCard';
 import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
 import { emitTerminalOpen } from '../../events/portalIntents';
@@ -71,7 +71,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   userLoading,
 }) => {
   // Principal app OAuth — re-runs the profile load on sign-in.
-  const { user: authUser } = useAuthState();
+  const { user: authUser } = useAuthUser();
   const { theme } = useTheme();
   const [selectedRepo, setSelectedRepo] =
     useState<RepositorySelectedPayload | null>(null);

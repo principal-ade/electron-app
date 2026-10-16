@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GithubService } from '../main-process-api/GithubService';
+import { useAuthUser } from '../providers/AuthProvider';
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export interface UseGithubProjectsResult {
@@ -26,20 +27,32 @@ export interface UseGithubProjectsResult {
  * unauthenticated.
  */
 export function useGithubProjects(): UseGithubProjectsResult {
+  const { isAuthenticated, user } = useAuthUser();
+  const userLogin = user?.login ?? null;
   const [repos, setRepos] = useState<GitHubRepository[]>([]);
   const [starredRepos, setStarredRepos] = useState<GitHubRepository[]>([]);
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [userOrgs, setUserOrgs] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(isAuthenticated);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    // Signed out → only local clones are reachable and every GitHub call would
+    // just fail. Skip the fan-out and report the empty state immediately so the
+    // Projects panel never waits on the network to learn there's no session.
+    if (!isAuthenticated || !userLogin) {
+      setRepos([]);
+      setStarredRepos([]);
+      setUserOrgs([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const [user, orgs, userRepos, ownedRepos, starred] = await Promise.all([
-        GithubService.getCurrentUser(),
+      const [orgs, userRepos, ownedRepos, starred] = await Promise.all([
         GithubService.getUserOrganizations(),
         GithubService.getUserRepositories({ perPage: 100, sort: 'updated', direction: 'desc' }),
         // The broad affiliation list above is capped at 100 and sorted by
@@ -58,7 +71,6 @@ export function useGithubProjects(): UseGithubProjectsResult {
         ),
       ]);
 
-      setCurrentUser(user?.login ?? null);
       setUserOrgs(orgs.map((org) => org.login));
       setStarredRepos(starred);
 
@@ -92,17 +104,26 @@ export function useGithubProjects(): UseGithubProjectsResult {
       console.error('[useGithubProjects] Failed to fetch GitHub projects:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch projects');
       setRepos([]);
-      setCurrentUser(null);
       setUserOrgs([]);
       setStarredRepos([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated, userLogin]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  return { repos, starredRepos, currentUser, userOrgs, loading, error, refresh: fetchData };
+  return {
+    repos,
+    starredRepos,
+    // Derived from auth state (available immediately) rather than set after the
+    // fetch, so callers can gate UI on the session without waiting on network.
+    currentUser: userLogin,
+    userOrgs,
+    loading,
+    error,
+    refresh: fetchData,
+  };
 }

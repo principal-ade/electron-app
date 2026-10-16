@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import { X, Loader2, AlertCircle, Check, GitFork } from 'lucide-react';
 import { GithubService } from '../../main-process-api/GithubService';
+import { useAuthUser } from '../../providers/AuthProvider';
 import { GitService } from '../../main-process-api/GitService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
@@ -31,6 +32,7 @@ type ProgressStep = 'forking' | 'cloning' | 'registering' | 'adding';
 
 export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner, repoName, registerRepository }) => {
   const { theme } = useTheme();
+  const { profile } = useAuthUser();
 
   const [step, setStep] = useState<Step>('select');
   const [progressStep, setProgressStep] = useState<ProgressStep>('forking');
@@ -58,7 +60,7 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
     setIsLoading(true);
     const repoUrl = `https://github.com/${repoOwner}/${repoName}.git`;
     Promise.all([
-      GithubService.getCurrentUser(),
+      Promise.resolve(profile),
       GithubService.getUserOrganizations(),
       UserPreferencesService.getPreferences(),
       GitService.checkAuthMethods(repoUrl),
@@ -79,7 +81,7 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
         setError('Failed to load account information.');
       })
       .finally(() => setIsLoading(false));
-  }, [isOpen]);
+  }, [isOpen, profile]);
 
   const targetLogin = forkTarget === 'personal' ? (currentUser?.login ?? '') : forkTarget;
   const clonePath = baseDir && targetLogin ? joinClonePath(baseDir, targetLogin, repoName) : null;

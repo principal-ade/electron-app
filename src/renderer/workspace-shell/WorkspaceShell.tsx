@@ -73,6 +73,7 @@ import {
 } from '@industry-theme/xterm-terminal-panel';
 import { TopicsLeftPanel } from '../panels/TopicsLeftPanel';
 import { ProjectsLeftPanel } from '../panels/ProjectsLeftPanel';
+import type { ProjectFilter } from '../panels/ProjectsList';
 import { HomeLeftPanel } from '../panels/home-panel';
 import { useUserAboutInfo } from '../panels/home-panel/useUserAboutInfo';
 import { LocalTopicTabContent } from '../topics-view/LocalTopicTabContent';
@@ -206,6 +207,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const getRepoInfo = useTerminalRepoInfo();
 
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(collapsed.left);
+  // Projects filter lives here (the shell stays mounted while the left panel is
+  // swapped) so switching side panels doesn't reset it. Cloned is the default.
+  const [projectFilter, setProjectFilter] = useState<ProjectFilter>('cloned');
   // Home profile, resolved here (the shell stays mounted while the left panel
   // is swapped) so re-entering the Home panel shows the last profile instead of
   // remounting and flashing the skeleton.
@@ -886,7 +890,12 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               userLoading={userLoading}
             />
           ) : activeView === 'projects' ? (
-            <ProjectsLeftPanel repositories={repositories} events={events} />
+            <ProjectsLeftPanel
+              repositories={repositories}
+              events={events}
+              filter={projectFilter}
+              onFilterChange={setProjectFilter}
+            />
           ) : activeView === 'drawings' ? (
             <DrawingsLeftPanel events={events} />
           ) : activeView === 'skills' ? (
@@ -986,6 +995,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       baseDefaultDirectory,
       terminalImplementation,
       theme,
+      projectFilter,
     ],
   );
 

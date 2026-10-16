@@ -82,6 +82,7 @@ import {
 } from '../panels/OrgProfilePanel';
 import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
 import { GithubService } from '../main-process-api/GithubService';
+import { useAuthUser } from '../providers/AuthProvider';
 import { GitService } from '../main-process-api/GitService';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
@@ -1240,21 +1241,8 @@ const UserProfileTabContent: React.FC<{
   events: PanelEventEmitter;
   repositories: AlexandriaEntry[];
 }> = ({ username, email, events, repositories }) => {
-  const [authenticatedUser, setAuthenticatedUser] = React.useState<
-    string | undefined
-  >();
-
-  React.useEffect(() => {
-    let cancelled = false;
-    GithubService.getCurrentUser()
-      .then((u) => {
-        if (!cancelled && u?.login) setAuthenticatedUser(u.login);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { user } = useAuthUser();
+  const authenticatedUser = user?.login;
 
   // Memoize context to prevent unnecessary re-renders
   const userContext: UserProfilePanelContext = React.useMemo(
