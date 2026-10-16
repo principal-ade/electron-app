@@ -8,18 +8,11 @@
  * (`OrgRepoItemCard`).
  */
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { githubIdToPurl } from '@principal-ai/alexandria-core-library';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
-import { GithubService } from '../../main-process-api/GithubService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import {
   extractLocalClones,
@@ -33,6 +26,10 @@ import { OrgRepoItemCard } from '../cards/OrgRepoItemCard';
 import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
 import { emitTerminalOpen } from '../../events/portalIntents';
 import { shellQuote } from '../../utils/shellQuote';
+import {
+  useGithubProjectSections,
+  useGithubStarred,
+} from '../../hooks/useGithubGraph';
 import { UserAboutCard } from './UserAboutCard';
 import { type UserAboutInfo } from './useUserAboutInfo';
 import { RepoAboutCard } from './RepoAboutCard';
@@ -40,11 +37,7 @@ import { useInProgressRepos } from './useInProgressRepos';
 import { getHomeRepositories, type HomeRepository } from './homeRepositories';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
 import { useWatchedRepos } from './useWatchedRepos';
-import {
-  HomeSearchBar,
-  HomeSearchResults,
-  type ProjectSection,
-} from './HomeSearch';
+import { HomeSearchBar, HomeSearchResults } from './HomeSearch';
 
 // ---------------------------------------------------------------------------
 // HomeLeftPanel — the home left rail, the user-based sibling of the
@@ -107,19 +100,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const searchActive = searchQuery.trim().length > 0;
 
-  // Starred repos are fetched lazily the first time the user searches.
-  const [starredRepos, setStarredRepos] = useState<GitHubRepository[] | null>(
-    null,
-  );
-  const starredRequestedRef = useRef(false);
-  const ensureStarred = useCallback(() => {
-    if (starredRequestedRef.current) return;
-    starredRequestedRef.current = true;
-    GithubService.getUserStarredRepositories({ perPage: 100 })
-      .then((r) => setStarredRepos(r))
-      .catch(() => setStarredRepos([]));
-  }, []);
-
+  // Starred repos are loaded lazily by the shared graph store the first time the
+  // user searches (same cache the Projects list's Starred filter uses).
+  const { starredRepos, ensure: ensureStarred } = useGithubStarred();
   useEffect(() => {
     if (searchActive) ensureStarred();
   }, [searchActive, ensureStarred]);
@@ -194,121 +177,10 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     }, 320);
   }, []);
 
-  // GitHub repos (user + orgs) searched by HomeSearchResults.
-  const [projectSections, setProjectSections] = useState<
-    ProjectSection[] | null
-  >(null);
-
-  // Fetch repos for project sections + counts — only when we have a GitHub identity
-  const githubLogin =
-    aboutUser?.source === 'github'
-      ? aboutUser.login
-      : (authUser?.login ?? null);
-
-  useEffect(() => {
-    if (!githubLogin) {
-      setProjectSections(null);
-      return;
-    }
-    let cancelled = false;
-
-    const fetchRepos = async () => {
-      try {
-        const [userRepos, orgs] = await Promise.all([
-          GithubService.getUserRepositories({
-            perPage: 100,
-            sort: 'updated',
-            direction: 'desc',
-          }),
-          GithubService.getUserOrganizations().catch(() => []),
-        ]);
-
-        if (cancelled) return;
-
-        // Group by owner
-        const grouped = new Map<string, GitHubRepository[]>();
-        for (const repo of userRepos) {
-          const owner = repo.owner?.login ?? 'unknown';
-          if (!grouped.has(owner)) grouped.set(owner, []);
-          grouped.get(owner)!.push(repo);
-        }
-
-        // Fetch org repos
-        const orgReposPromises = orgs.map(async (org) => {
-          try {
-            const repos = await GithubService.getOrgRepositories(org.login, {
-              perPage: 100,
-              sort: 'updated',
-              direction: 'desc',
-            });
-            return {
-              org: org.login,
-              // Prefer GitHub profile display name over login for section headers.
-              displayName: (org.name && org.name.trim()) || org.login,
-              repos,
-              avatar_url: org.avatar_url,
-            };
-          } catch {
-            return {
-              org: org.login,
-              displayName: (org.name && org.name.trim()) || org.login,
-              repos: [] as GitHubRepository[],
-              avatar_url: org.avatar_url,
-            };
-          }
-        });
-
-        const orgResults = await Promise.all(orgReposPromises);
-        if (cancelled) return;
-
-        for (const { org, repos } of orgResults) {
-          for (const repo of repos) {
-            if (!grouped.has(org)) grouped.set(org, []);
-            // Dedupe
-            if (
-              !grouped.get(org)!.some((r) => r.full_name === repo.full_name)
-            ) {
-              grouped.get(org)!.push(repo);
-            }
-          }
-        }
-
-        // Build sections: user first, then orgs
-        const sections: ProjectSection[] = [];
-        const userReposList = grouped.get(githubLogin);
-        if (userReposList && userReposList.length > 0) {
-          sections.push({
-            key: githubLogin,
-            label: 'Your repositories',
-            repos: userReposList,
-          });
-        }
-
-        for (const { org, displayName, avatar_url } of orgResults) {
-          const orgReposList = grouped.get(org);
-          if (orgReposList && orgReposList.length > 0) {
-            sections.push({
-              key: org,
-              label: displayName,
-              avatar_url,
-              repos: orgReposList,
-            });
-          }
-        }
-
-        setProjectSections(sections);
-      } catch {
-        if (!cancelled) {
-          setProjectSections([]);
-        }
-      }
-    };
-
-    void fetchRepos();
-    return () => {
-      cancelled = true;
-    };
-  }, [githubLogin]);
+  // GitHub repo sections for the search — served from the shared graph store
+  // (the same fan-out the Projects list uses), not a second copy of it.
+  const projectSections = useGithubProjectSections();
+  const githubLogin = authUser?.login ?? null;
 
   // Build the proper repository:selected payload for a GitHub repo, matching
   // against local clones when available (so the profile panel knows the path).

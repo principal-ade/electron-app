@@ -180,6 +180,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     userOrgs,
     loading: githubLoading,
     refresh: refreshGithubProjects,
+    ensureStarred,
   } = useGithubProjects();
 
   // Fetch git status for all repositories with local paths
@@ -476,6 +477,11 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   // resolves (and the list doesn't flip Cloned → Owned underneath the user).
   const showFilter = isAuthenticated;
   const effectiveFilter: ProjectFilter = showFilter ? filter : 'cloned';
+
+  // Starred is lazy: load the page the first time the Starred filter is used.
+  useEffect(() => {
+    if (effectiveFilter === 'starred') ensureStarred();
+  }, [effectiveFilter, ensureStarred]);
 
   // Apply filter + search, then group by org and order the groups.
   const { groups, sortedOrgNames } = useMemo(() => {

@@ -83,6 +83,10 @@ import {
 import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
 import { GithubService } from '../main-process-api/GithubService';
 import { useAuthUser } from '../providers/AuthProvider';
+import {
+  getOrgReposFromCache,
+  refreshIfStale as refreshGithubProjectsIfStale,
+} from '../stores/githubProjectsStore';
 import { GitService } from '../main-process-api/GitService';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
@@ -171,6 +175,12 @@ const RepositoryProfileTabContent: React.FC<{
   }, [aggregatedClones]);
 
   const heatMapData = useCommitHeatMap(resolvedEntry?.path ?? null);
+
+  // Opening a repo profile is a good moment to revalidate the Projects list's
+  // cached GitHub projects if it has aged out.
+  React.useEffect(() => {
+    refreshGithubProjectsIfStale();
+  }, []);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -1446,9 +1456,11 @@ const OrgProfileTabContent: React.FC<{
 
       getOrgRepositories: async (orgName: string) => {
         try {
-          const repos = await GithubService.getOrgRepositories(orgName, {
-            perPage: 100,
-          });
+          // Reuse the shared graph cache when this org is in the user's graph;
+          // otherwise fetch on demand (e.g. an org you don't belong to).
+          const repos =
+            getOrgReposFromCache(orgName) ??
+            (await GithubService.getOrgRepositories(orgName, { perPage: 100 }));
 
           return repos.map((repo) => {
             const alexandriaEntry = findClonedGithubEntry(

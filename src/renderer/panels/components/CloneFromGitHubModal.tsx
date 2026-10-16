@@ -14,13 +14,13 @@ import {
 import { GitService } from '../../main-process-api/GitService';
 import { GithubService } from '../../main-process-api/GithubService';
 import { useAuthUser } from '../../providers/AuthProvider';
+import { useGithubOrganizations } from '../../hooks/useGithubGraph';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import type {
   GitHubRepositoryWithPermissions,
   GitHubUser,
-  GitHubOrganization,
 } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { joinClonePath } from '../../../shared/utils/clonePath';
 
@@ -125,9 +125,9 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
   const [currentUser, setCurrentUser] = useState<GitHubUser | null>(null);
   const [willFork, setWillFork] = useState(false);
 
-  // Fork target state (user's personal account or an organization)
-  const [organizations, setOrganizations] = useState<GitHubOrganization[]>([]);
-  const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
+  // Fork target state (user's personal account or an organization). Orgs come
+  // from the shared graph store — no per-open getUserOrganizations().
+  const { orgs: organizations, loading: isLoadingOrgs } = useGithubOrganizations();
   const [forkTarget, setForkTarget] = useState<string>('personal'); // 'personal' or org login
 
   // Progress state
@@ -225,23 +225,6 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
     return () => clearTimeout(timer);
   }, [parsedUrl, checkPermissions]);
 
-  // Load organizations when fork is selected
-  useEffect(() => {
-    if (willFork && organizations.length === 0 && !isLoadingOrgs) {
-      setIsLoadingOrgs(true);
-      GithubService.getUserOrganizations()
-        .then((orgs) => {
-          setOrganizations(orgs);
-        })
-        .catch((err) => {
-          console.error('Failed to load organizations:', err);
-        })
-        .finally(() => {
-          setIsLoadingOrgs(false);
-        });
-    }
-  }, [willFork, organizations.length, isLoadingOrgs]);
-
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
@@ -257,7 +240,6 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
       setCurrentUser(null);
       setWillFork(false);
       setForkedRepoUrl(null);
-      setOrganizations([]);
       setForkTarget('personal');
     }
   }, [isOpen, initialUrl]);

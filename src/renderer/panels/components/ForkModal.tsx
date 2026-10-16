@@ -7,7 +7,8 @@ import { useAuthUser } from '../../providers/AuthProvider';
 import { GitService } from '../../main-process-api/GitService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
-import type { GitHubUser, GitHubOrganization } from '../../../shared/main-process-api-interfaces/GitHubAPI';
+import type { GitHubUser } from '../../../shared/main-process-api-interfaces/GitHubAPI';
+import { useGithubOrganizations } from '../../hooks/useGithubGraph';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { joinClonePath } from '../../../shared/utils/clonePath';
 
@@ -38,7 +39,8 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
   const [progressStep, setProgressStep] = useState<ProgressStep>('forking');
 
   const [currentUser, setCurrentUser] = useState<GitHubUser | null>(null);
-  const [organizations, setOrganizations] = useState<GitHubOrganization[]>([]);
+  // Orgs come from the shared graph store — no per-open getUserOrganizations().
+  const { orgs: organizations } = useGithubOrganizations();
   const [forkTarget, setForkTarget] = useState<string>('personal');
   const [baseDir, setBaseDir] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,13 +63,11 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
     const repoUrl = `https://github.com/${repoOwner}/${repoName}.git`;
     Promise.all([
       Promise.resolve(profile),
-      GithubService.getUserOrganizations(),
       UserPreferencesService.getPreferences(),
       GitService.checkAuthMethods(repoUrl),
     ])
-      .then(([user, orgs, prefs, methods]) => {
+      .then(([user, prefs, methods]) => {
         setCurrentUser(user);
-        setOrganizations(orgs);
         setBaseDir(prefs.baseDefaultDirectory || null);
         setAuthMethods(methods);
         if (methods.ssh.available) {

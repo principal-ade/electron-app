@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { GithubService } from '../../main-process-api/GithubService';
 import { useAuthUser } from '../../providers/AuthProvider';
+import { useGithubOrganizations } from '../../hooks/useGithubGraph';
+import { refreshIfStale as refreshGithubProjectsIfStale } from '../../stores/githubProjectsStore';
 import { GitService } from '../../main-process-api/GitService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
@@ -23,7 +25,6 @@ import type {
   CreateRepositoryInput,
   GitHubRepositoryCreated,
   GitHubLicenseTemplate,
-  GitHubOrganization,
   GitHubUser,
 } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import type { AlexandriaEntry, Workspace } from '@principal-ai/alexandria-core-library/types';
@@ -102,11 +103,9 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
   const [selectedOrg, setSelectedOrg] = useState<string | null>(initialOrg);
   const [isSelectedOrgUser, setIsSelectedOrgUser] = useState(initialIsUser);
 
-  // Organization loading state
+  // Organization list comes from the shared graph store (no per-open fetch).
   const [currentUser, setCurrentUser] = useState<GitHubUser | null>(null);
-  const [organizations, setOrganizations] = useState<GitHubOrganization[]>([]);
-  const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
-  const [orgsError, setOrgsError] = useState<string | null>(null);
+  const { orgs: organizations, loading: isLoadingOrgs } = useGithubOrganizations();
   const [hoveredOrg, setHoveredOrg] = useState<string | null>(null);
   const [hoveredDestination, setHoveredDestination] = useState<string | null>(null);
 
@@ -145,7 +144,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       setSelectedOrg(initialOrg);
       setIsSelectedOrgUser(initialIsUser);
       setClonePathOverride(null);
-      loadOrganizations();
+      refreshGithubProjectsIfStale();
       loadTemplates();
     }
   }, [isOpen, initialStep, initialDestination, initialOrg, initialIsUser]);
@@ -165,7 +164,6 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       setGitignoreTemplate('');
       setLicenseTemplate('');
       setError(null);
-      setOrgsError(null);
       setProgressStep('creating');
       setIsCreating(false);
     }
@@ -176,24 +174,6 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
   useEffect(() => {
     setCurrentUser(profile);
   }, [profile]);
-
-  const loadOrganizations = async () => {
-    setIsLoadingOrgs(true);
-    setOrgsError(null);
-    try {
-      const orgs = await GithubService.getUserOrganizations();
-      setOrganizations(orgs);
-    } catch (err) {
-      console.error('Failed to load organizations:', err);
-      setOrgsError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to load organizations. Please try again.',
-      );
-    } finally {
-      setIsLoadingOrgs(false);
-    }
-  };
 
   const loadTemplates = async () => {
     setIsLoadingTemplates(true);
@@ -732,48 +712,6 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
             >
               Loading organizations...
             </span>
-          </div>
-        ) : orgsError ? (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '200px',
-              gap: '12px',
-            }}
-          >
-            <AlertCircle
-              size={32}
-              style={{ color: theme.colors.error || '#ef4444' }}
-            />
-            <span
-              style={{
-                fontSize: `${theme.fontSizes[1]}px`,
-                fontFamily: theme.fonts.body,
-                color: theme.colors.error || '#ef4444',
-                textAlign: 'center',
-              }}
-            >
-              {orgsError}
-            </span>
-            <button
-              onClick={loadOrganizations}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: 'transparent',
-                color: theme.colors.text,
-                fontSize: `${theme.fontSizes[1]}px`,
-                fontWeight: theme.fontWeights.semibold,
-                fontFamily: theme.fonts.body,
-                cursor: 'pointer',
-              }}
-            >
-              Try again
-            </button>
           </div>
         ) : !currentUser && organizations.length === 0 ? (
           <div
