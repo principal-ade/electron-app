@@ -52,7 +52,6 @@ import { usePanelProgramStatus } from '../contexts/terminalProgramStatus';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { useTerminalImplementation } from '../hooks/useTerminalImplementation';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
-import { WindowService } from '../main-process-api/WindowService';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { useTerminalRepoInfo } from '../hooks/useTerminalRepoInfo';
 import { SendTabButton } from '../move-tab/SendTabButton';
@@ -356,17 +355,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     }
   }, []);
 
-  // Open a repository in a dev workspace (from an activity card's open action).
-  const handleOpenRepository = useCallback((entry: AlexandriaEntry) => {
-    void WindowService.openDevWorkspace({ alexandriaEntry: entry });
-    eventsRef.current.emit({
-      type: 'repository:opened',
-      source: 'workspace-shell',
-      timestamp: Date.now(),
-      payload: { repositoryId: entry.name, repository: entry },
-    });
-  }, []);
-
   // Open a repo from a topic tab's Projects rail. Mirrors a pick from the
   // Projects surface: a purl that matches a local clone opens that repo's
   // profile (with every clone aggregated); a remote-only GitHub purl opens the
@@ -392,7 +380,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       const projectsContent = renderProjectsTabContent(tab as FeedTab, {
         events: eventsRef.current,
         repositories: repositoriesRef.current,
-        onOpenRepository: handleOpenRepository,
       });
       if (projectsContent) return projectsContent;
       switch (tab.contentType) {
@@ -454,7 +441,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           return null;
       }
     },
-    [handleOpenRepository, handleOpenTopicProject],
+    [handleOpenTopicProject],
   );
 
   // Open links clicked in the terminal in the default browser.

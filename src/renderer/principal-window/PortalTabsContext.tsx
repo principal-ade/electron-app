@@ -19,9 +19,7 @@ import React, {
 } from 'react';
 import type { TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import type {
-  ActivityFeedTab,
   CommitReviewTab,
-  InProgressActivityTab,
   ProjectInfoTab,
   RepoExplorerTab,
   UserProfileTab,
@@ -52,8 +50,6 @@ export type WorkspaceTab =
   | MediaTab
   // Projects
   | CommitReviewTab
-  | ActivityFeedTab
-  | InProgressActivityTab
   | ProjectInfoTab
   | RepoExplorerTab
   | UserProfileTab
@@ -108,8 +104,6 @@ export interface WorkspaceTabsContextValue {
       weekActive?: boolean;
     },
   ) => void;
-  /** Open the singleton `in-progress-activity` tab and focus it. */
-  openInProgress: () => void;
   /** Open (or focus) a `drawing` tab, deduped by drawing id. */
   openDrawing: (payload: {
     drawingId: string;
@@ -151,20 +145,15 @@ const WorkspaceTabsContext = createContext<WorkspaceTabsContextValue | null>(
 // ----------------------------------------------------------------------------
 // Shared workspace bucket (Projects + Topics)
 // ----------------------------------------------------------------------------
-
-const WORKSPACE_INITIAL_TABS: WorkspaceTab[] = [
-  {
-    id: 'activity-feed',
-    contentType: 'activity-feed',
-    label: 'Recent Activity',
-  } as ActivityFeedTab,
-];
+//
+// The bucket starts empty: nothing is auto-opened on the workspace surface, so
+// the tab strip is blank until the user opens something (a repo profile, topic,
+// doc, terminal, …). The Sky View overlay is the landing surface; that is where
+// the "what needs attention" views live now.
 
 function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
-  const [tabs, setTabs] = useState<WorkspaceTab[]>(WORKSPACE_INITIAL_TABS);
-  const [activeTabId, setActiveTabId] = useState<string | null>(
-    'activity-feed',
-  );
+  const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
   // Idempotent open helper: focus the tab if present, else append `make()`.
   const openTab = useCallback((tabId: string, make: () => WorkspaceTab) => {
@@ -414,19 +403,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [openTab],
   );
 
-  const openInProgress = useCallback(() => {
-    openTab(
-      'in-progress-activity',
-      () =>
-        ({
-          id: 'in-progress-activity',
-          label: 'In Progress',
-          contentType: 'in-progress-activity',
-          closable: true,
-        }) as InProgressActivityTab,
-    );
-  }, [openTab]);
-
   // Deduped by the `drawingId` *field* (not the tab id) so a freshly-created
   // drawing — whose tab keeps its `new-<uuid>` tab id but whose `drawingId` is
   // rewritten to the real file id on first save — focuses instead of duplicating.
@@ -537,7 +513,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openUserProfile,
       openOrgProfile,
       openFileCityGuide,
-      openInProgress,
       openDrawing,
       openSkill,
       openSubsystemModel,
@@ -555,7 +530,6 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openUserProfile,
       openOrgProfile,
       openFileCityGuide,
-      openInProgress,
       openDrawing,
       openSkill,
       openSubsystemModel,

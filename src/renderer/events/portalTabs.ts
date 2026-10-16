@@ -88,16 +88,6 @@ export interface CommitReviewTab extends BaseTab {
   commit: ActivityCommit;
 }
 
-/** Activity feed tab — the main activity feed with repository cards. */
-export interface ActivityFeedTab extends BaseTab {
-  contentType: 'activity-feed';
-}
-
-/** In-progress tab — repositories with uncommitted working-tree changes. */
-export interface InProgressActivityTab extends BaseTab {
-  contentType: 'in-progress-activity';
-}
-
 /** Project info tab — repository details with heatmap and file city. */
 export interface ProjectInfoTab extends BaseTab {
   contentType: 'project-info';
@@ -205,8 +195,6 @@ export interface LocalhostBrowserTab extends BaseTab {
 export type FeedTab =
   | TerminalTab
   | CommitReviewTab
-  | ActivityFeedTab
-  | InProgressActivityTab
   | ProjectInfoTab
   | RepoExplorerTab
   | UserProfileTab

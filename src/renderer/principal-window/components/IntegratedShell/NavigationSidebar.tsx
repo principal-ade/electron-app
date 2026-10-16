@@ -18,6 +18,7 @@ import { GithubService } from '../../../main-process-api/GithubService';
 import type { NavigationView } from './IntegratedShell';
 import { useEffect, useState } from 'react';
 import { useProcessRegistry } from '../../../hooks/useProcessRegistry';
+import { blurAfterPointerActivation } from '../../../utils/blurAfterPointerActivation';
 
 const DiscordIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -26,7 +27,12 @@ const DiscordIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
 );
 
 interface NavigationSidebarProps {
-  activeView: NavigationView;
+  /**
+   * The workspace surface currently shown in the portal — `null` before the
+   * first one is mounted, and unchanged while a standalone overlay floats above
+   * it (the surface is still where you are).
+   */
+  activeView: NavigationView | null;
   onViewChange: (view: NavigationView) => void;
   leftPanelCollapsed: boolean;
   onToggleLeftPanel: () => void;
@@ -159,7 +165,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       : theme.colors.accent;
 
   const navItems: NavItem[] = [
-    // Titlebar "Dashboard" toggles the HomeView overlay; this is the
+    // Titlebar "Sky View" toggles the HomeView overlay; this is the
     // home-panel workspace browse surface (web-app-style left rail).
     {
       id: 'home-panel',
@@ -257,7 +263,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       <button
         key={item.id}
         className={`nav-item ${active ? 'active' : ''}`}
-        onClick={() => {
+        onClick={(event) => {
+          blurAfterPointerActivation(event);
           if (active || leftPanelCollapsed) {
             onToggleLeftPanel();
           }
@@ -357,7 +364,10 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }}
       >
         <button
-          onClick={() => ShellService.openExternal('https://discord.gg/G3qdcC2DXq')}
+          onClick={(event) => {
+            blurAfterPointerActivation(event);
+            void ShellService.openExternal('https://discord.gg/G3qdcC2DXq');
+          }}
           title="Join our Discord community"
           style={{
             width: 'calc(100% - 20px)',

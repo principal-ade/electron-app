@@ -9,11 +9,9 @@
 import React from 'react';
 import {
   GitCommit,
-  Activity,
   FolderGit2,
   User,
   Building2,
-  Wrench,
   FileText,
   Compass,
 } from 'lucide-react';
@@ -48,7 +46,6 @@ import type {
   FileCityGuideTab,
   FeedTab,
 } from '../events/portalTabs';
-import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
 import {
   RepositoryProfilePanel,
@@ -91,8 +88,6 @@ import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstract
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { commitActivityPanelActions } from '../panels/commitActivityPanelActions';
-import { InProgressActivityPanel } from '../panels/InProgressActivityPanel';
-import { inProgressActivityPanelActions } from '../panels/inProgressActivityPanelActions';
 import { MarkdownDocTabContent } from './MarkdownDocTabContent';
 import { SourceFileTabContent } from '../panels/SourceFileTabContent';
 import { MediaTabContent } from '../panels/MediaTabContent';import { RepoExplorerTabContent } from '../repo-explorer/RepoExplorerTabContent';
@@ -1530,10 +1525,6 @@ export function renderProjectsTabIcon(tab: FeedTab): React.ReactNode {
   switch (tab.contentType) {
     case 'commit-review':
       return <GitCommit size={14} />;
-    case 'activity-feed':
-      return <Activity size={14} />;
-    case 'in-progress-activity':
-      return <Wrench size={14} />;
     case 'project-info':
       return <FolderGit2 size={14} />;
     case 'user-profile':
@@ -1554,10 +1545,9 @@ export function renderProjectsTabContent(
   deps: {
     events: PanelEventEmitter;
     repositories: AlexandriaEntry[];
-    onOpenRepository?: (entry: AlexandriaEntry) => void;
   },
 ): React.ReactNode {
-  const { events, repositories, onOpenRepository } = deps;
+  const { events, repositories } = deps;
   switch (tab.contentType) {
     case 'commit-review': {
       const reviewTab = tab as CommitReviewTab;
@@ -1568,26 +1558,6 @@ export function renderProjectsTabContent(
           githubOwner={reviewTab.githubOwner}
           githubRepoName={reviewTab.githubRepoName}
           commit={reviewTab.commit}
-        />
-      );
-    }
-    case 'activity-feed': {
-      return (
-        <ActivityFeedCardPanel
-          key={`activity-feed-${repositories.length}`}
-          repositories={repositories}
-          events={events}
-          onOpenRepository={onOpenRepository}
-        />
-      );
-    }
-    case 'in-progress-activity': {
-      return (
-        <InProgressActivityPanel
-          key={`in-progress-${repositories.length}`}
-          repositories={repositories}
-          events={events}
-          actions={inProgressActivityPanelActions}
         />
       );
     }

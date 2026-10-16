@@ -194,7 +194,7 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
 
   // Owner → is-org, so the owner avatar opens the right profile. Owner feeds
   // know it from `accountType`; repo feeds need a lookup. Mirrors
-  // InProgressActivityPanel / ActivityFeedCardPanel.
+  // InProgressActivityPanel mirrors this panel's owner-type resolution.
   const [repoOwnerIsOrg, setRepoOwnerIsOrg] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {

@@ -8,8 +8,6 @@
  * refresh and delete modal stay live even while Topics is the active view.
  *
  * Responsibilities:
- * - the initial dirty-check that flips the Recent-Activity landing to In-Progress
- *   when the workspace has uncommitted work and the user hasn't navigated yet;
  * - the repository delete modal (opened by `repository-profile:delete*` events
  *   from profile tabs) — an always-mounted home, since the emitting tab can be
  *   acted on while another surface's left panel is showing;
@@ -20,19 +18,13 @@
  * on the local bus, the forwarder lifts them to the portal bus, and
  * `PortalIntentBridge` materializes them into the shared bucket.
  */
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { DeleteAlexandriaEntryModal } from '../panels/components/DeleteAlexandriaEntryModal';
 import type { RepositoryProfileData } from '../panels/RepositoryProfilePanel';
-import type { ProjectInfoTab, InProgressActivityTab } from '../events/portalTabs';
+import type { ProjectInfoTab } from '../events/portalTabs';
 import { useWorkspaceTabs } from '../principal-window/PortalTabsContext';
 import { usePortalEvents } from '../principal-window/PortalEventContext';
 import { installProjectsOpenForwarder } from '../events/portalIntents';
@@ -51,58 +43,6 @@ export function useProjectsHost({
 }): ProjectsHost {
   const { tabs, setTabs, activeTabId, setActiveTabId } = useWorkspaceTabs();
   const { events: portalEvents } = usePortalEvents();
-
-  // --- Initial dirty-check: flip Recent Activity → In Progress -------------
-  const didCheckInitialDirtyRef = useRef(false);
-  const activeTabIdRef = useRef(activeTabId);
-  useEffect(() => {
-    activeTabIdRef.current = activeTabId;
-  });
-  useEffect(() => {
-    if (didCheckInitialDirtyRef.current) return;
-    if (repositories.length === 0) return;
-    didCheckInitialDirtyRef.current = true;
-
-    let cancelled = false;
-    (async () => {
-      const paths = repositories.filter((r) => r.path).map((r) => String(r.path));
-      for (const path of paths) {
-        const status =
-          await RepositoryMonitoringService.getGitStatusWithFiles(path);
-        if (cancelled) return;
-        if (status && (status.isDirty || status.ahead > 0)) {
-          // Only flip while the user is still on the untouched landing tab.
-          if (activeTabIdRef.current !== 'activity-feed') return;
-          setTabs((prev) => {
-            const onLanding = prev.some((t) => t.id === 'activity-feed');
-            const alreadyInProgress = prev.some(
-              (t) => t.id === 'in-progress-activity',
-            );
-            if (!onLanding || alreadyInProgress) return prev;
-            return prev.map((t) =>
-              t.id === 'activity-feed'
-                ? ({
-                    id: 'in-progress-activity',
-                    contentType: 'in-progress-activity',
-                    label: 'In Progress',
-                  } as InProgressActivityTab)
-                : t,
-            );
-          });
-          setActiveTabId((curr) =>
-            curr === 'activity-feed' ? 'in-progress-activity' : curr,
-          );
-          return;
-        }
-      }
-    })().catch((err) => {
-      console.warn('[useProjectsHost] initial dirty-check failed:', err);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [repositories, setTabs, setActiveTabId]);
 
   // --- Profile-link window.open side-effects -------------------------------
   useEffect(() => {
@@ -237,9 +177,12 @@ export function useProjectsHost({
             ),
           );
         } else if (openTab && !entryToDelete.github) {
-          setTabs((prevTabs) => prevTabs.filter((tab) => tab.id !== openTab.id));
+          const remaining = tabs.filter((tab) => tab.id !== openTab.id);
+          setTabs(remaining);
           if (activeTabId === openTab.id) {
-            setActiveTabId('activity-feed');
+            // Focus whatever is left; with the landing tab gone an empty bucket
+            // means no active tab, which shows the workspace's empty state.
+            setActiveTabId(remaining[remaining.length - 1]?.id ?? null);
           }
         }
 

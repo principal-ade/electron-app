@@ -38,6 +38,25 @@ import './IntegratedShell.css';
 
 export type NavigationView = InteractiveShellNavigationView;
 
+/**
+ * Standalone views that float *above* the portal rather than living in it:
+ * everything that isn't a portal-hosted workspace surface.
+ */
+export type OverlayView = Exclude<NavigationView, WorkspaceView>;
+
+/** Runtime list behind {@link OverlayView} (used to validate stored ids). */
+const OVERLAY_VIEWS: OverlayView[] = [
+  'home',
+  'onboarding',
+  'settings',
+  'monitoring',
+  'auth',
+  'connections',
+];
+
+const isOverlayView = (view: string): view is OverlayView =>
+  (OVERLAY_VIEWS as string[]).includes(view);
+
 // Available views for switch command
 const VIEW_OPTIONS = [
   'home',
@@ -57,7 +76,7 @@ const VIEW_OPTIONS = [
 
 // Cmd+Shift+<letter> jumps straight to a sidebar view. Keys are matched on
 // `code` (layout-independent) and mirror the sidebar's item order/mnemonics.
-const SIDEBAR_VIEW_SHORTCUTS: Record<string, NavigationView> = {
+const SIDEBAR_VIEW_SHORTCUTS: Record<string, WorkspaceView> = {
   KeyH: 'home-panel', // Home
   KeyP: 'projects', // Projects
   KeyM: 'subsystem-models', // Models
@@ -129,19 +148,22 @@ const getViewDefaults = (
 };
 
 export const IntegratedShell: React.FC = () => {
-  const [activeView, setActiveView] = useState<NavigationView>('home');
   const [selectedRepository, setSelectedRepository] =
     useState<RepositorySelectedPayload | null>(null);
+  // Two orthogonal axes, instead of one view enum standing in for both:
+  //
+  //   surface — the workspace surface hosted by the portal. `null` until the
+  //             user first shows one, so a cold start doesn't eagerly mount a
+  //             workspace (and its terminals).
+  //   overlay — a standalone view floating above the portal. `null` = none.
+  //
+  // Keeping them separate is what lets an action taken *inside* an overlay
+  // (e.g. opening a repo profile from Sky View) dismiss the overlay without
+  // also choosing a surface — no left-panel swap, no collapse-state change.
+  const [surface, setSurface] = useState<WorkspaceView | null>(null);
+  const [overlay, setOverlay] = useState<OverlayView | null>('home');
   const [isRepositoryPanelActive, setIsRepositoryPanelActive] =
     useState(false);
-  // The workspace surface (projects/topics) shown in the
-  // persistent PrincipalPortal beneath any standalone overlay. Stays `null`
-  // until the user first visits a workspace view, so a cold start that lands
-  // on Home doesn't eagerly mount a workspace (and its terminals). Once set it
-  // stays mounted under overlays, so returning from Home/Settings/etc. is a
-  // pure visibility flip with no tab/terminal/scroll state to reconstruct.
-  const [lastWorkspaceView, setLastWorkspaceView] =
-    useState<WorkspaceView | null>(null);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | undefined>(undefined);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
@@ -150,38 +172,32 @@ export const IntegratedShell: React.FC = () => {
   const { events: portalEvents } = usePortalEvents();
   const { openTopic: openTopicInTopicsView } = useTopicsTabs();
 
-  // Live mirror of activeView so the SHOW_IN_PRINCIPAL listener — which
-  // subscribes once on mount — can read the view the user is currently on
-  // without re-subscribing (and risking a missed fire) on every switch.
-  const activeViewRef = useRef(activeView);
-  activeViewRef.current = activeView;
-
-  // Mirror of lastWorkspaceView so the open-terminal-tab IPC handler can tell
-  // whether the portal (and WorkspaceShell terminal host) is already mounted.
-  const lastWorkspaceViewRef = useRef(lastWorkspaceView);
-  lastWorkspaceViewRef.current = lastWorkspaceView;
+  // Live mirrors for the listeners that subscribe once on mount: they need to
+  // read which surface / overlay is up without re-subscribing (and risking a
+  // missed fire) on every switch.
+  const surfaceRef = useRef(surface);
+  surfaceRef.current = surface;
+  const overlayRef = useRef(overlay);
+  overlayRef.current = overlay;
 
   // Queued when Quick Open asks for a terminal tab before the portal has ever
-  // mounted; flushed once lastWorkspaceView is set and WorkspaceShell is up.
+  // mounted; flushed once a surface is set and WorkspaceShell is up.
   const pendingTerminalOpenRef = useRef<TerminalOpenPayload | null>(null);
 
   const prevOverlayRef = useRef<string | null>(null);
 
-  // Remember the most recent workspace surface so the portal keeps showing it
-  // beneath standalone overlays. Standalone views (home, settings, …) leave
-  // this untouched — that's what makes them feel like overlays you pop back
-  // out of rather than full navigations.
+  const isFirstOverlay = prevOverlayRef.current === null && overlay !== null;
   useEffect(() => {
-    if (isWorkspaceView(activeView)) {
-      setLastWorkspaceView(activeView);
-    }
-  }, [activeView]);
+    prevOverlayRef.current = overlay;
+  }, [overlay]);
 
-  const overlayView = isWorkspaceView(activeView) ? null : activeView;
-  const isFirstOverlay = prevOverlayRef.current === null && overlayView !== null;
+  // Leaving Settings drops its category, so reopening it starts at the top
+  // instead of resuming whatever sub-page was last shown.
   useEffect(() => {
-    prevOverlayRef.current = overlayView;
-  }, [overlayView]);
+    if (overlay !== 'settings') {
+      setSettingsCategory(undefined);
+    }
+  }, [overlay]);
 
   // Store collapsed states per view to avoid animation glitches when switching
   const [viewCollapsedStates, setViewCollapsedStates] = useState<
@@ -199,13 +215,11 @@ export const IntegratedShell: React.FC = () => {
     skills: { left: false, right: false },
   });
 
-  // The titlebar left-panel toggle controls the visible workspace's panel,
-  // including while a standalone overlay is displayed above that workspace.
-  const sidebarView = isWorkspaceView(activeView)
-    ? activeView
-    : (lastWorkspaceView ?? activeView);
+  // The titlebar left-panel toggle controls the visible surface's panel, which
+  // is the one showing whether or not an overlay is floating above it.
+  const sidebarView = surface ?? 'home-panel';
   const sidebarCollapsed = viewCollapsedStates[sidebarView]?.left ?? false;
-  const rightSidebarCollapsed = viewCollapsedStates[activeView]?.right ?? false;
+  const rightSidebarCollapsed = viewCollapsedStates[sidebarView]?.right ?? false;
 
   // Load saved navigation view and panel states on mount
   useEffect(() => {
@@ -225,7 +239,15 @@ export const IntegratedShell: React.FC = () => {
               : legacyViews.includes(savedView)
                 ? 'projects'
                 : savedView;
-          setActiveView(view as NavigationView);
+          // Split the single stored value back onto the two axes: a workspace id
+          // restores the surface, an overlay id restores the overlay (with no
+          // surface — the portal mounts the first time one is shown).
+          if (isWorkspaceView(view)) {
+            setSurface(view);
+            setOverlay(null);
+          } else if (isOverlayView(view)) {
+            setOverlay(view);
+          }
         }
 
         // Load collapsed states for all views
@@ -268,14 +290,15 @@ export const IntegratedShell: React.FC = () => {
   // Topic activate from the bridge: topicRoutes' POST /api/topics/:id/activate
   // targeted this (focused) window. Topics share the one workspace tab bucket
   // (useTopicsTabs → useWorkspaceTabs), so the tab opens regardless of which
-  // surface is active — no need to force the Topics view and yank the user off
-  // whatever workspace surface they were on. Only switch when they're on a
-  // standalone overlay (home/settings/…), where the workspace portal is hidden
-  // and the freshly-opened tab would otherwise be invisible.
+  // surface is active — no need to force the Topics surface and yank the user
+  // off whatever they were on. Only dismiss an overlay, where the portal is
+  // hidden and the freshly-opened tab would otherwise be invisible.
   useEffect(() => {
     const unsubscribe = topicClient.onTopicActivate(({ topicId, title }) => {
-      if (!isWorkspaceView(activeViewRef.current)) {
-        setActiveView('topics');
+      setOverlay(null);
+      // Nothing has ever been mounted, so give the tab somewhere to land.
+      if (!surfaceRef.current) {
+        setSurface('topics');
       }
       openTopicInTopicsView(topicId, title);
     });
@@ -286,7 +309,7 @@ export const IntegratedShell: React.FC = () => {
   useEffect(() => {
     const unsubscribe = WindowService.onNavigateToUpdates(() => {
       setSettingsCategory('updates');
-      setActiveView('settings');
+      setOverlay('settings');
     });
 
     return () => {
@@ -302,13 +325,15 @@ export const IntegratedShell: React.FC = () => {
     const unsubscribe = WindowService.onOpenTerminalTab((payload) => {
       if (!payload?.directory) return;
 
-      // Leave overlays (home/settings/…) so the portal is visible; if the
-      // portal has never mounted, landing on projects also sets lastWorkspaceView.
-      if (!isWorkspaceView(activeViewRef.current)) {
-        setActiveView('projects');
+      // Take any overlay down so the portal is visible; if the portal has never
+      // mounted, showing Projects gives the terminal host somewhere to mount.
+      setOverlay(null);
+      const portalMounted = surfaceRef.current !== null;
+      if (!portalMounted) {
+        setSurface('projects');
       }
 
-      if (!lastWorkspaceViewRef.current) {
+      if (!portalMounted) {
         // WorkspaceShell isn't mounted yet — queue and flush after it mounts.
         pendingTerminalOpenRef.current = {
           directory: payload.directory,
@@ -327,20 +352,20 @@ export const IntegratedShell: React.FC = () => {
 
   // Flush a terminal-open that arrived before the portal first mounted.
   useEffect(() => {
-    if (!lastWorkspaceView) return;
+    if (!surface) return;
     const pending = pendingTerminalOpenRef.current;
     if (!pending) return;
 
-    // WorkspaceShell mounts in the same commit as lastWorkspaceView; its
-    // terminal:open listener registers in a useEffect that runs after paint.
-    // Defer one macrotask so the emit is not lost.
+    // WorkspaceShell mounts in the same commit as `surface`; its terminal:open
+    // listener registers in a useEffect that runs after paint. Defer one
+    // macrotask so the emit is not lost.
     const timer = setTimeout(() => {
       if (pendingTerminalOpenRef.current !== pending) return;
       pendingTerminalOpenRef.current = null;
       emitTerminalOpen(portalEvents, 'quick-open', pending);
     }, 0);
     return () => clearTimeout(timer);
-  }, [lastWorkspaceView, portalEvents]);
+  }, [surface, portalEvents]);
 
   // Auto-connect to presence on startup if enabled
   useEffect(() => {
@@ -396,25 +421,12 @@ export const IntegratedShell: React.FC = () => {
     }
   }, [preferencesLoaded]);
 
-  // Save navigation view when it changes
-  const handleViewChange = useCallback(async (view: NavigationView) => {
-    setActiveView(view);
-    setIsRepositoryPanelActive(false);
-
-    // Clear settings category when navigating away from settings
-    if (view !== 'settings') {
-      setSettingsCategory(undefined);
-    }
-
-    // Sidebar Home always lands on the about/overview surface of the home
-    // panel — including when Home is already active but a sub-view (Your
-    // Projects, Other Clones, …) is showing.
-    if (view === 'home-panel') {
-      window.dispatchEvent(new CustomEvent('home-panel:show-overview'));
-    }
-
-    // Only save preference after initial load to avoid race conditions
-    if (preferencesLoaded) {
+  // The stored preference stays a single field — whatever the user last saw.
+  // The overlay wins when one is up (that is what's on screen); otherwise the
+  // surface. Written on both axes so a restart resumes the same place.
+  const persistActiveView = useCallback(
+    async (view: NavigationView) => {
+      if (!preferencesLoaded) return;
       try {
         await UserPreferencesService.updatePreferences({
           interactiveShell: {
@@ -424,8 +436,78 @@ export const IntegratedShell: React.FC = () => {
       } catch (error) {
         console.error('Failed to save navigation preference:', error);
       }
+    },
+    [preferencesLoaded],
+  );
+
+  // Show a workspace surface. This is *navigation*: any overlay comes down and
+  // the repository-panel selection resets, because the user deliberately left.
+  const selectSurface = useCallback(
+    (view: WorkspaceView) => {
+      setSurface(view);
+      setOverlay(null);
+      setIsRepositoryPanelActive(false);
+
+      // Sidebar Home always lands on the about/overview surface of the home
+      // panel — including when Home is already active but a sub-view (Your
+      // Projects, Other Clones, …) is showing.
+      if (view === 'home-panel') {
+        window.dispatchEvent(new CustomEvent('home-panel:show-overview'));
+      }
+
+      void persistActiveView(view);
+    },
+    [persistActiveView],
+  );
+
+  // Raise a standalone overlay. The surface underneath is untouched — no panel
+  // swap, no collapse-state change, no tab state to reconstruct.
+  const openOverlay = useCallback(
+    (view: OverlayView) => {
+      setOverlay(view);
+      void persistActiveView(view);
+    },
+    [persistActiveView],
+  );
+
+  // Take the overlay down and reveal whatever was underneath it. Not
+  // navigation: nothing about the surface changes, so an action inside an
+  // overlay can dismiss it without moving the user anywhere. The one exception
+  // is a cold start, where no surface has ever been mounted — then there is
+  // nothing underneath to reveal, so mount the app's home surface.
+  const dismissOverlay = useCallback(() => {
+    setOverlay(null);
+    if (surfaceRef.current) {
+      void persistActiveView(surfaceRef.current);
+    } else {
+      setSurface('home-panel');
+      void persistActiveView('home-panel');
     }
-  }, [preferencesLoaded]);
+  }, [persistActiveView]);
+
+  const toggleOverlay = useCallback(
+    (view: OverlayView) => {
+      if (overlayRef.current === view) {
+        dismissOverlay();
+      } else {
+        openOverlay(view);
+      }
+    },
+    [dismissOverlay, openOverlay],
+  );
+
+  // Route a view id to the right axis — the sidebar, the command palette and
+  // the panel-event handlers all speak one flat namespace.
+  const requestView = useCallback(
+    (view: NavigationView) => {
+      if (isWorkspaceView(view)) {
+        selectSurface(view);
+      } else {
+        openOverlay(view);
+      }
+    },
+    [openOverlay, selectSurface],
+  );
 
   const handleOpenRepository = useCallback(
     (repository: RepositorySelectedPayload) => {
@@ -437,33 +519,30 @@ export const IntegratedShell: React.FC = () => {
 
   const handleSelectRepository = useCallback(() => {
     if (!selectedRepository) return;
-    if (!isWorkspaceView(activeView) && lastWorkspaceView) {
-      void handleViewChange(lastWorkspaceView);
+    // The repository panel lives on the surface, so an overlay has to come down
+    // for it to be visible. No surface change: the panel is wherever you are.
+    if (overlayRef.current) {
+      setOverlay(null);
     }
     setIsRepositoryPanelActive(true);
-  }, [selectedRepository, activeView, lastWorkspaceView, handleViewChange]);
+  }, [selectedRepository]);
 
   const handleCloseRepository = useCallback(() => {
     setSelectedRepository(null);
     setIsRepositoryPanelActive(false);
   }, []);
 
-  // Toggle the Dashboard overlay from the titlebar: open Dashboard if we're not already
-  // on it, otherwise drop back to the last workspace surface (or Projects on a
-  // cold start that never opened one).
+  // Toggle the Sky View overlay from the titlebar.
   const handleToggleHome = useCallback(() => {
-    handleViewChange(
-      activeView === 'home' ? (lastWorkspaceView ?? 'home-panel') : 'home'
-    );
-  }, [activeView, lastWorkspaceView, handleViewChange]);
+    toggleOverlay('home');
+  }, [toggleOverlay]);
 
-  const handleOpenDashboardTopic = useCallback(
-    (topicId: string, title: string) => {
-      handleViewChange('topics');
-      openTopicInTopicsView(topicId, title);
-    },
-    [handleViewChange, openTopicInTopicsView],
-  );
+  // A card click in the Sky View overlay opens a repo/owner profile tab on the
+  // portal bus (PortalIntentBridge materializes it). Dropping the overlay is all
+  // it takes to reveal that tab — the surface underneath never moved.
+  const handleDismissOverlay = useCallback(() => {
+    dismissOverlay();
+  }, [dismissOverlay]);
 
   // Save collapsed states when they change
   const handleToggleSidebar = useCallback(async () => {
@@ -504,28 +583,27 @@ export const IntegratedShell: React.FC = () => {
 
   const handlePortalCollapsedChange = useCallback(
     (left: boolean) => {
-      if (!lastWorkspaceView) return;
+      if (!surface) return;
       setViewCollapsedStates((prev) => {
-        const previousState =
-          prev[lastWorkspaceView] ?? getViewDefaults(lastWorkspaceView);
+        const previousState = prev[surface] ?? getViewDefaults(surface);
         return {
           ...prev,
-          [lastWorkspaceView]: { ...previousState, left },
+          [surface]: { ...previousState, left },
         };
       });
     },
-    [lastWorkspaceView],
+    [surface],
   );
 
   const handleToggleRightSidebar = useCallback(async () => {
     const newCollapsed = !rightSidebarCollapsed;
 
-    // Update state for current view
+    // Update state for the visible surface
     setViewCollapsedStates((prev) => {
-      const previousState = prev[activeView] ?? getViewDefaults(activeView);
+      const previousState = prev[sidebarView] ?? getViewDefaults(sidebarView);
       return {
         ...prev,
-        [activeView]: {
+        [sidebarView]: {
           ...previousState,
           right: newCollapsed,
         },
@@ -534,7 +612,7 @@ export const IntegratedShell: React.FC = () => {
 
     if (preferencesLoaded) {
       try {
-        const viewKey = getViewKey(activeView);
+        const viewKey = getViewKey(sidebarView);
         if (viewKey) {
           // AuthView only supports two-panel layout (no right panel)
           // Only save left collapse state for authView
@@ -543,8 +621,8 @@ export const IntegratedShell: React.FC = () => {
               [viewKey]: {
                 collapsed: {
                   left:
-                    viewCollapsedStates[activeView]?.left ??
-                    getViewDefaults(activeView).left,
+                    viewCollapsedStates[sidebarView]?.left ??
+                    getViewDefaults(sidebarView).left,
                 },
               },
             },
@@ -554,7 +632,12 @@ export const IntegratedShell: React.FC = () => {
         console.error('Failed to save right sidebar collapsed state:', error);
       }
     }
-  }, [rightSidebarCollapsed, activeView, preferencesLoaded, viewCollapsedStates]);
+  }, [
+    rightSidebarCollapsed,
+    sidebarView,
+    preferencesLoaded,
+    viewCollapsedStates,
+  ]);
 
   // Handle quick commands from Agent Command Palette
   const handleQuickCommand = useCallback(
@@ -590,12 +673,12 @@ export const IntegratedShell: React.FC = () => {
         case 'switch': {
           const viewName = (args.args as string[])?.[0] as NavigationView;
           if (viewName) {
-            handleViewChange(viewName);
+            requestView(viewName);
           }
           return { success: true };
         }
         case 'reset':
-          setActiveView('home');
+          setOverlay('home');
           setViewCollapsedStates({
             projects: { left: false, right: false },
             'home-panel': { left: false, right: false },
@@ -612,7 +695,7 @@ export const IntegratedShell: React.FC = () => {
           return { error: `Unknown command: ${name}` };
       }
     },
-    [handleToggleSidebar, handleToggleRightSidebar, handleViewChange],
+    [handleToggleSidebar, handleToggleRightSidebar, requestView],
   );
 
   // Event listeners for panel events from Agent Command Palette
@@ -650,11 +733,11 @@ export const IntegratedShell: React.FC = () => {
       events.on('panel:switch', (event) => {
         const payload = event.payload as { view?: string };
         if (payload.view) {
-          handleViewChange(payload.view as NavigationView);
+          requestView(payload.view as NavigationView);
         }
       }),
       events.on('panel:reset-layout', () => {
-        setActiveView('home');
+        setOverlay('home');
         setViewCollapsedStates({
           projects: { left: false, right: false },
           'home-panel': { left: false, right: false },
@@ -672,21 +755,23 @@ export const IntegratedShell: React.FC = () => {
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events, handleToggleSidebar, handleToggleRightSidebar, handleViewChange]);
+  }, [events, handleToggleSidebar, handleToggleRightSidebar, requestView]);
 
-  // Cmd+': toggle dashboard overlay
+  // Cmd+': toggle the Sky View overlay
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.code === 'Quote') {
         e.preventDefault();
-        handleViewChange(activeViewRef.current === 'home' ? (lastWorkspaceView ?? 'home-panel') : 'home');
+        toggleOverlay('home');
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [lastWorkspaceView, handleViewChange]);
+  }, [toggleOverlay]);
 
-  // Cmd+Shift+<letter>: jump straight to a sidebar view
+  // Cmd+Shift+<letter>: jump straight to a sidebar view — except
+  // Cmd+Shift+S, which toggles Sky View (the overlay has no sidebar item, so it
+  // takes the mnemonic here; KeyS is otherwise unused).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (
@@ -695,25 +780,30 @@ export const IntegratedShell: React.FC = () => {
       ) {
         return;
       }
+      if (e.code === 'KeyS') {
+        e.preventDefault();
+        toggleOverlay('home');
+        return;
+      }
       const view = SIDEBAR_VIEW_SHORTCUTS[e.code];
       if (!view) return;
       e.preventDefault();
-      handleViewChange(view);
+      selectSurface(view);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleViewChange]);
+  }, [selectSurface, toggleOverlay]);
 
-  // Escape: dismiss a standalone overlay (always back to workspace)
+  // Escape: dismiss a standalone overlay, revealing whatever is beneath it
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isWorkspaceView(activeViewRef.current)) {
-        handleViewChange(lastWorkspaceView ?? 'home-panel');
+      if (e.key === 'Escape' && overlayRef.current) {
+        dismissOverlay();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [lastWorkspaceView, handleViewChange]);
+  }, [dismissOverlay]);
 
   // Agent Command Palette - Cmd+Shift+K to open
   const agentPalette = useAgentCommandPalette({
@@ -749,8 +839,8 @@ export const IntegratedShell: React.FC = () => {
       }}
     >
       <NavigationSidebar
-        activeView={activeView}
-        onViewChange={handleViewChange}
+        activeView={surface}
+        onViewChange={requestView}
         leftPanelCollapsed={sidebarCollapsed}
         onToggleLeftPanel={() => {
           void handleToggleSidebar();
@@ -779,7 +869,7 @@ export const IntegratedShell: React.FC = () => {
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={handleToggleSidebar}
           onToggleHome={handleToggleHome}
-          isHomeActive={activeView === 'home'}
+          isHomeActive={overlay === 'home'}
           showRightSidebarControl={false}
           rightSidebarCollapsed={rightSidebarCollapsed}
           onToggleRightSidebar={handleToggleRightSidebar}
@@ -825,19 +915,17 @@ export const IntegratedShell: React.FC = () => {
             }}
           >
             {/*
-              Persistent base layer. The active workspace surface stays mounted
-              beneath standalone overlays, so switching to Home/Settings/etc.
-              and back is a pure visibility flip — no tab/terminal/scroll state
-              to reconstruct. (Workspace surfaces still swap among themselves
-              via activeView for now; the single-tab-host merge is a later
-              slice.) Null until the user first opens a workspace view, so a
-              cold start on Home doesn't eagerly boot a workspace.
+              Persistent base layer: the workspace surface. It stays mounted
+              while an overlay is up, so dismissing one is a pure visibility
+              flip — no tab/terminal/scroll state to reconstruct. Null until the
+              user first shows a surface, so a cold start on Sky View doesn't
+              eagerly boot a workspace.
             */}
-            {lastWorkspaceView && (
+            {surface && (
               <PrincipalPortal
-                workspaceView={lastWorkspaceView}
+                workspaceView={surface}
                 leftSidebarCollapsed={
-                  viewCollapsedStates[lastWorkspaceView]?.left ?? false
+                  viewCollapsedStates[surface]?.left ?? false
                 }
                 onLeftSidebarCollapsedChange={handlePortalCollapsedChange}
                 selectedRepository={selectedRepository}
@@ -860,9 +948,9 @@ export const IntegratedShell: React.FC = () => {
               overlays like Home → Settings).
             */}
             <AnimatePresence>
-              {overlayView && (
+              {overlay && (
                 <motion.div
-                  key={overlayView}
+                  key={overlay}
                   className="portal-overlay-scrim"
                   initial={isFirstOverlay ? { opacity: 0 } : false}
                   animate={{ opacity: 1 }}
@@ -892,22 +980,22 @@ export const IntegratedShell: React.FC = () => {
                       boxShadow: '0 12px 48px rgba(0, 0, 0, 0.45)',
                     }}
                   >
-                    {overlayView === 'home' && (
-                      <HomeView onOpenTopic={handleOpenDashboardTopic} />
+                    {overlay === 'home' && (
+                      <HomeView onDismissOverlay={handleDismissOverlay} />
                     )}
-                    {overlayView === 'onboarding' && (
+                    {overlay === 'onboarding' && (
                       <OnboardingView
-                        onComplete={() => handleViewChange('home-panel')}
+                        onComplete={() => selectSurface('home-panel')}
                       />
                     )}
-                    {overlayView === 'monitoring' && (
+                    {overlay === 'monitoring' && (
                       <SystemMonitor sidebarCollapsed={sidebarCollapsed} />
                     )}
-                    {overlayView === 'settings' && (
+                    {overlay === 'settings' && (
                       <Settings initialCategory={settingsCategory} />
                     )}
-                    {overlayView === 'auth' && <AuthView />}
-                    {overlayView === 'connections' && <ConnectionsView />}
+                    {overlay === 'auth' && <AuthView />}
+                    {overlay === 'connections' && <ConnectionsView />}
                   </motion.div>
                 </motion.div>
               )}
@@ -934,7 +1022,7 @@ export const IntegratedShell: React.FC = () => {
           <OnboardingWizard
             onComplete={async () => {
               setShowOnboardingWizard(false);
-              handleViewChange('home-panel');
+              selectSurface('home-panel');
               try {
                 await UserPreferencesService.updatePreferences({
                   onboardingCompleted: true

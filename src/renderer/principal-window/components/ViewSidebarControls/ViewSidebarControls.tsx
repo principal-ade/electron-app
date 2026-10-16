@@ -6,6 +6,7 @@ import {
   PanelRightClose,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { blurAfterPointerActivation } from '../../../utils/blurAfterPointerActivation';
 
 interface ViewSidebarControlsProps {
   isCollapsed: boolean;
@@ -45,7 +46,10 @@ export const ViewSidebarControls: React.FC<ViewSidebarControlsProps> = ({
 
   return (
     <button
-      onClick={onToggle}
+      onClick={(event) => {
+        blurAfterPointerActivation(event);
+        onToggle();
+      }}
       title={getTitle()}
       style={{
         WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],

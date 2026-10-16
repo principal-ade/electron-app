@@ -16,35 +16,27 @@ import { GitService } from '../../../main-process-api/GitService';
 import { GithubService } from '../../../main-process-api/GithubService';
 import { SkillLockService } from '../../../main-process-api/SkillLockService';
 import { ShellService } from '../../../main-process-api/ShellService';
-import { TopicService } from '../../../main-process-api/TopicService';
-import { WindowService } from '../../../main-process-api/WindowService';
-import { useOpenRepositoryWindows } from '../../../hooks/useOpenRepositoryWindows';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
-import { NewTopicModal } from '../../../components/NewTopicModal';
-import { DeleteTopicConfirmDialog } from '../../../components/DeleteTopicConfirmDialog';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import type { SkillLockFile } from '../../../../shared/main-process-api-interfaces/SkillLockAPI';
 import type {
   AlexandriaEntry,
 } from '@principal-ai/alexandria-core-library/types';
-import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
-import {
-  TopicsDashboard,
-  type TopicsDashboardTopicEntry,
-} from './TopicsDashboard';
-import { OpenProjectCard, type OpenProjectEntry } from './OpenProjectCard';
+import { InProgressActivityPanel } from '../../../panels/InProgressActivityPanel';
+import { inProgressActivityPanelActions } from '../../../panels/inProgressActivityPanelActions';
+import { PORTAL_INTENTS } from '../../../events/portalIntents';
+import { usePortalEvents } from '../../PortalEventContext';
 import { getPrincipalBridgeUrl } from '../../../../shared/config/appBranding';
 
 interface HomeViewProps {
-  onOpenTopic: (topicId: string, title: string) => void;
+  /**
+   * Dismiss the overlay this view lives in. The card grid opens repo/owner
+   * profile tabs, which render in the portal *behind* the overlay, so the
+   * overlay has to come down for the user to see what opened. Dismissing is not
+   * navigation — the surface underneath, and its left panel, are untouched.
+   */
+  onDismissOverlay?: () => void;
 }
-
-const repoPathLabel = (repositoryPath: string | undefined): string => {
-  if (!repositoryPath) return 'No repo';
-  const trimmed = repositoryPath.replace(/[\\/]+$/, '');
-  const idx = trimmed.search(/[\\/](?!.*[\\/])/);
-  return idx >= 0 ? trimmed.slice(idx + 1) : trimmed;
-};
 
 const SKILL_REPO_OWNER = 'principal-ai';
 const SKILL_REPO_NAME = 'skills';
@@ -178,8 +170,9 @@ function matchInstalledFromLock(lockFile: SkillLockFile | null): Set<string> {
   );
 }
 
-export function HomeView({ onOpenTopic }: HomeViewProps) {
+export function HomeView({ onDismissOverlay }: HomeViewProps) {
   const { theme } = useTheme();
+  const { events: portalEvents } = usePortalEvents();
 
   const [gitUserName, setGitUserName] = useState<string | null>(null);
   const [gitConfigOpen, setGitConfigOpen] = useState(false);
@@ -227,65 +220,24 @@ export function HomeView({ onOpenTopic }: HomeViewProps) {
   const [skillUpdates, setSkillUpdates] = useState<Set<string>>(new Set());
   const [updatingSkills, setUpdatingSkills] = useState<Set<string>>(new Set());
 
-  // Dashboard data sources.
+  // Repositories tracked by Alexandria — the In Progress grid's data source.
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
-  // Topic modal state.
-  const [isNewTopicOpen, setIsNewTopicOpen] = useState(false);
 
-  // Home-view keyboard shortcut: Cmd/Ctrl+T → open the create topic modal.
+  // The card grid emits `repository:selected` / `owner:selected`; PortalIntentBridge
+  // turns those into tabs in the portal behind this overlay. Dropping the
+  // overlay on the same click is what makes the opened tab visible.
   useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return;
-      if (e.key.toLowerCase() === 't') {
-        e.preventDefault();
-        setIsNewTopicOpen(true);
-      }
+    const leave = () => onDismissOverlay?.();
+    const offRepository = portalEvents.on(
+      PORTAL_INTENTS.repositorySelected,
+      leave,
+    );
+    const offOwner = portalEvents.on(PORTAL_INTENTS.ownerSelected, leave);
+    return () => {
+      offRepository();
+      offOwner();
     };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
-  const [pendingDeleteTopic, setPendingDeleteTopic] =
-    useState<TopicsDashboardTopicEntry | null>(null);
-  const [deletingTopic, setDeletingTopic] = useState(false);
-
-  // Projects that currently have a window open. Mapped from the live
-  // repository-window list to repo identity + label/owner for the cards.
-  const openRepoWindows = useOpenRepositoryWindows();
-  const openProjects = useMemo<OpenProjectEntry[]>(() => {
-    const seen = new Set<string>();
-    const out: OpenProjectEntry[] = [];
-    for (const win of openRepoWindows) {
-      const path = win.localPath;
-      if (!path || seen.has(path)) continue;
-      seen.add(path);
-      const repo = repositories.find((r) => r.path === path);
-      out.push({
-        key: path,
-        label: repo?.github?.name ?? repo?.name ?? repoPathLabel(path),
-        ownerLogin: repo?.github?.owner,
-      });
-    }
-    return out;
-  }, [openRepoWindows, repositories]);
-
-  // Open the dev workspace for a project path, registering it first if it isn't
-  // a known Alexandria repo. Shared by the open-projects cards; opening an
-  // already-open workspace focuses the existing window.
-  const openProject = useCallback(async (path: string) => {
-    try {
-      const existing = await AlexandriaService.getRepositoryByPath(path);
-      const alexandriaEntry =
-        existing ?? (await AlexandriaService.registerRepository(path));
-      await WindowService.openDevWorkspace({ alexandriaEntry });
-    } catch (err) {
-      console.error(
-        '[HomeView] Failed to open dev workspace for project:',
-        path,
-        err,
-      );
-    }
-  }, []);
+  }, [portalEvents, onDismissOverlay]);
 
   useEffect(() => {
     let cancelled = false;
@@ -302,51 +254,6 @@ export function HomeView({ onOpenTopic }: HomeViewProps) {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    TopicService.getTopics()
-      .then((list) => {
-        if (!cancelled) setTopics(list);
-      })
-      .catch((err) => {
-        console.error('[HomeView] Failed to load topics:', err);
-      });
-
-    const unsubscribe = TopicService.onTopicChange((event) => {
-      if (event.type === 'added' && event.topic) {
-        const topic = event.topic;
-        setTopics((prev) =>
-          prev.some((t) => t.id === topic.id) ? prev : [...prev, topic],
-        );
-      } else if (event.type === 'updated' && event.topic) {
-        const topic = event.topic;
-        setTopics((prev) => prev.map((t) => (t.id === topic.id ? topic : t)));
-      } else if (event.type === 'removed' && event.id) {
-        const id = event.id;
-        setTopics((prev) => prev.filter((t) => t.id !== id));
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
-
-  const dashboardTopicEntries = useMemo<TopicsDashboardTopicEntry[]>(() => {
-    const sorted = [...topics].sort((a, b) =>
-      b.updatedAt.localeCompare(a.updatedAt),
-    );
-    return sorted.map((t) => {
-      return {
-        key: t.id,
-        title: t.title,
-        updatedAt: t.updatedAt,
-        status: t.status,
-      };
-    });
-  }, [topics]);
-
   const installedSkillDetails = useMemo(
     () => ALL_SKILL_DETAILS.filter((s) => installedSkillNames.has(s.name)),
     [installedSkillNames],
@@ -358,9 +265,9 @@ export function HomeView({ onOpenTopic }: HomeViewProps) {
       OPTIONAL_SKILL_DETAILS.filter((s) => !installedSkillNames.has(s.name)),
     [installedSkillNames],
   );
-  const showTopicSkillSetup =
-    topicSkillsInstalled === false && !topicSkillSetupSkipped;
-  const showDashboard = topicSkillsInstalled === true || topicSkillSetupSkipped;
+  // First-run moment: the greeting + skill install. It no longer gates the
+  // dashboard — In Progress shows underneath it either way.
+  const firstRun = topicSkillsInstalled === false && !topicSkillSetupSkipped;
 
   useEffect(() => {
     let cancelled = false;
@@ -887,13 +794,13 @@ export function HomeView({ onOpenTopic }: HomeViewProps) {
           overflowY: 'auto',
         }}
       >
-        {showTopicSkillSetup && (
+        {firstRun && (
           <div style={{ flex: '0 0 auto', marginTop: '9vh' }}>
             {welcomeHeader}
           </div>
         )}
 
-        {showTopicSkillSetup && (
+        {firstRun && (
           <div
             style={{
               flex: '0 0 auto',
@@ -1102,114 +1009,71 @@ export function HomeView({ onOpenTopic }: HomeViewProps) {
           </div>
         )}
 
-        {showDashboard && (
-          <div
-            style={{
-              display: 'grid',
-              // Symmetric 3 columns: an empty left spacer the same width as the
-              // rail, the topics in the middle, and the rail on the right — so
-              // the topics column is centered on the page. The center track uses
-              // minmax(0, 1fr) so it can shrink and scroll its list internally.
-              gridTemplateColumns: '300px minmax(0, 1fr) 300px',
-              columnGap: 32,
-              width: '100%',
-              marginTop: 24,
-              alignItems: 'stretch',
-              flex: '1 1 auto',
-              minHeight: 0,
-            }}
-          >
-            {/* Left rail: installed skills. Falls back to an empty spacer so
-                the topics column stays centered when there are no skills. */}
-            {installedSkillDetails.length > 0 ? (
-              <aside
-                style={{
-                  // Width comes from the grid's 300px left track.
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 28,
-                  // Align the rail's first heading with the dashboard's
-                  // section heading (its section has a 40px top padding).
-                  paddingTop: 40,
-                  // Scroll the rail's own overflow rather than the page.
-                  minHeight: 0,
-                  overflowY: 'auto',
-                }}
-              >
-                {installedSkillsBlock(true)}
-              </aside>
-            ) : (
-              <div aria-hidden />
-            )}
-
-            {/* Center column: the prioritized topics dashboard (or the prompt
-                ideas for a brand-new user with nothing to land on yet). */}
-            <div
+        {/* Sky View: the installed-skills rail beside the in-progress grid.
+            Two tracks — a fixed rail plus the grid — so cards keep a readable
+            width instead of stretching the full overlay. */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '300px minmax(0, 1fr)',
+            columnGap: 32,
+            width: '100%',
+            marginTop: firstRun ? 40 : 0,
+            alignItems: 'stretch',
+            flex: '1 1 auto',
+            minHeight: 320,
+          }}
+        >
+          {/* Left rail: installed skills. Falls back to an empty spacer so the
+              In Progress grid keeps its column width. */}
+          {installedSkillDetails.length > 0 ? (
+            <aside
               style={{
-                minWidth: 0,
-                minHeight: 0,
+                // Width comes from the grid's 300px track.
                 display: 'flex',
                 flexDirection: 'column',
+                gap: 28,
+                // Align the rail's first heading with the In Progress heading.
+                paddingTop: 40,
+                // Scroll the rail's own overflow rather than the page.
+                minHeight: 0,
+                overflowY: 'auto',
               }}
             >
-              <TopicsDashboard
-                topicEntries={dashboardTopicEntries}
-                onSelectTopic={(entry) => onOpenTopic(entry.key, entry.title)}
-                onCreateTopic={() => setIsNewTopicOpen(true)}
-                onDeleteTopic={(entry) => setPendingDeleteTopic(entry)}
+              {installedSkillsBlock(true)}
+            </aside>
+          ) : (
+            <div aria-hidden />
+          )}
+
+          {/* Center column: repositories with uncommitted or unpushed work. */}
+          <div
+            style={{
+              minWidth: 0,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+              // Matches the rail's heading offset so the two align.
+              paddingTop: 40,
+            }}
+          >
+            <div style={railHeadingStyle}>In Progress</div>
+            <div style={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
+              <InProgressActivityPanel
+                repositories={repositories}
+                events={portalEvents}
+                actions={inProgressActivityPanelActions}
               />
             </div>
-
-            {/* Right rail: open projects. Rendered only when there's
-                something to put in it. */}
-            {openProjects.length > 0 && (
-              <aside
-                style={{
-                  // Width comes from the grid's 300px right track.
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 28,
-                  // Align the rail's first heading with the dashboard's
-                  // section heading (its section has a 40px top padding).
-                  paddingTop: 40,
-                  // Scroll the rail's own overflow rather than the page.
-                  minHeight: 0,
-                  overflowY: 'auto',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 10,
-                  }}
-                >
-                  <div style={railHeadingStyle}>Open Projects</div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 10,
-                    }}
-                  >
-                    {openProjects.map((p) => (
-                      <OpenProjectCard
-                        key={p.key}
-                        entry={p}
-                        theme={theme}
-                        onClick={() => void openProject(p.key)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </aside>
-            )}
           </div>
-        )}
+        </div>
 
-        {/* Pre-install welcome state keeps the skills as a centered bottom
-            footer; once installed they move into the right rail above. */}
-        {showTopicSkillSetup && installedSkillsBlock(false)}
+        {/* First-run keeps the skills as a centered bottom footer; once any are
+            installed they move into the left rail above. */}
+        {firstRun &&
+          installedSkillDetails.length === 0 &&
+          installedSkillsBlock(false)}
       </div>
 
       <GitGlobalConfigModal
@@ -1219,37 +1083,6 @@ export function HomeView({ onOpenTopic }: HomeViewProps) {
           void loadGitUserName();
         }}
       />
-
-      <NewTopicModal
-        isOpen={isNewTopicOpen}
-        onClose={() => setIsNewTopicOpen(false)}
-      />
-
-      {pendingDeleteTopic && (
-        <DeleteTopicConfirmDialog
-          topicTitle={pendingDeleteTopic.title}
-          busy={deletingTopic}
-          onCancel={() => {
-            if (deletingTopic) return;
-            setPendingDeleteTopic(null);
-          }}
-          onConfirm={() => {
-            const target = pendingDeleteTopic;
-            if (!target) return;
-            setDeletingTopic(true);
-            void (async () => {
-              try {
-                await TopicService.deleteTopic(target.key);
-              } catch (err) {
-                console.error('[HomeView] Failed to delete topic:', err);
-              } finally {
-                setDeletingTopic(false);
-                setPendingDeleteTopic(null);
-              }
-            })();
-          }}
-        />
-      )}
     </div>
   );
 }

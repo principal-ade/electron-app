@@ -6,12 +6,13 @@ import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
 import {
-  LayoutDashboard,
+  Radar,
   FilePlus2,
 } from 'lucide-react';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 import { CreateRepositoryInWorkspaceModal } from '../../../panels/components/CreateRepositoryInWorkspaceModal';
 import { StudioHeaderButton } from '../../../components/Titlebar/StudioHeaderButton';
+import { blurAfterPointerActivation } from '../../../utils/blurAfterPointerActivation';
 
 declare global {
   interface Window {
@@ -34,9 +35,9 @@ interface IntegratedTitlebarProps {
   onToggleRightSidebar?: () => void;
   showRightSidebarControl?: boolean;
   hideSearch?: boolean;
-  /** Toggle the Dashboard overlay (`home` view) on/off. */
+  /** Toggle the Sky View overlay (`home` view) on/off. */
   onToggleHome?: () => void;
-  /** Whether the Dashboard overlay is currently showing (drives the toggled state). */
+  /** Whether the Sky View overlay is currently showing (drives the toggled state). */
   isHomeActive?: boolean;
 }
 
@@ -135,8 +136,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         />
       )}
 
-      {/* Dashboard toggle — left side, clear of the macOS traffic lights. Opens
-          the Dashboard overlay (`home` view), or drops back to the last
+      {/* Sky View toggle — left side, clear of the macOS traffic lights. Opens
+          the Sky View overlay (`home` view), or drops back to the last
           workspace surface when it's already showing. Sidebar "Home" is the
           separate home-panel browse surface. */}
       {onToggleHome && (
@@ -149,8 +150,15 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           }}
         >
           <button
-            onClick={onToggleHome}
-            title={isHomeActive ? 'Close Dashboard' : 'Dashboard'}
+            onClick={(event) => {
+              blurAfterPointerActivation(event);
+              onToggleHome();
+            }}
+            title={
+              isHomeActive
+                ? 'Close Sky View (Cmd/Ctrl+Shift+S)'
+                : 'Sky View (Cmd/Ctrl+Shift+S)'
+            }
             aria-pressed={isHomeActive}
             style={{
               display: 'flex',
@@ -186,8 +194,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
               }
             }}
           >
-            <LayoutDashboard size={16} />
-            <span>Dashboard</span>
+            <Radar size={16} />
+            <span>Sky View</span>
           </button>
         </div>
       )}

@@ -75,7 +75,7 @@ export function useDrawingsHost({ events }: { events: PanelEventEmitter }): void
         setTabs((prev) => prev.filter((t) => t.id !== openTab.id));
         if (activeTabIdRef.current === openTab.id) {
           const remaining = tabsRef.current.filter((t) => t.id !== openTab.id);
-          setActiveTabId(remaining[remaining.length - 1]?.id ?? 'activity-feed');
+          setActiveTabId(remaining[remaining.length - 1]?.id ?? null);
         }
       }
       events.emit<DrawingDeletedPayload>({

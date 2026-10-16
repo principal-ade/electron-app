@@ -29,7 +29,6 @@ import {
 } from '../../events/repositorySelected';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuthState } from '../../hooks/useAuthState';
-import { useWorkspaceTabs } from '../../principal-window/PortalTabsContext';
 import { OrgRepoItemCard } from '../cards/OrgRepoItemCard';
 import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
 import { emitTerminalOpen } from '../../events/portalIntents';
@@ -37,7 +36,6 @@ import { shellQuote } from '../../utils/shellQuote';
 import { UserAboutCard } from './UserAboutCard';
 import { type UserAboutInfo } from './useUserAboutInfo';
 import { RepoAboutCard } from './RepoAboutCard';
-import { InProgressBar } from './InProgressBar';
 import { useInProgressRepos, type InProgressRepo } from './useInProgressRepos';
 import { useWatchedRepos } from './useWatchedRepos';
 import {
@@ -74,15 +72,12 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const [selectedRepo, setSelectedRepo] =
     useState<RepositorySelectedPayload | null>(null);
   const [repoCardExiting, setRepoCardExiting] = useState(false);
-  const { openInProgress, tabs } = useWorkspaceTabs();
 
   // Repos with uncommitted changes / unpushed commits — the in-progress list.
   const inProgressRepos = useInProgressRepos(repositories);
   // Repos the monitoring worker is watching — these have live git status;
   // unwatched repos are query-only and can show a stale sync count.
   const watchedPaths = useWatchedRepos();
-  // Hide the bar's Open button when the In Progress tab is already open.
-  const inProgressOpen = tabs.some((t) => t.id === 'in-progress-activity');
 
   // Group the in-progress repos by owner, the way the Projects surface does:
   // the owner is carried by the section header, the row shows only the repo.
@@ -486,14 +481,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
           }}
         >
           <UserAboutCard info={aboutUser} loading={userLoading} />
-          {/* Full-width status row under the card: opens the singleton
-              `in-progress-activity` workspace tab; shows the count. */}
-          <InProgressBar
-            count={inProgressRepos.length}
-            onOpen={openInProgress}
-            isOpen={inProgressOpen}
-          />
-          {/* Search bar — first thing under the In Progress line. */}
+          {/* Search bar — first thing under the about card. */}
           <HomeSearchBar
             query={searchQuery}
             onQueryChange={setSearchQuery}
