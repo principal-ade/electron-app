@@ -106,6 +106,8 @@ export interface InProgressRepoCardActions {
 interface InProgressRepoCardProps {
   summary: InProgressSummary;
   onDismiss?: (repoPath: string) => void;
+  /** Called after a successful push so the host can refresh the repo's status. */
+  onPushed?: (repoPath: string) => void;
   dimmed?: boolean;
   events?: PanelEventEmitter;
   entry?: AlexandriaEntry;
@@ -147,12 +149,16 @@ function CardActionButton({
   variant = 'secondary',
   tall = false,
   active = false,
+  disabled = false,
+  title,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   variant?: 'primary' | 'secondary';
   tall?: boolean;
   active?: boolean;
+  disabled?: boolean;
+  title?: string;
 }) {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
@@ -161,6 +167,8 @@ function CardActionButton({
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
+      title={title}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -187,8 +195,8 @@ function CardActionButton({
         fontSize: theme.fontSizes[0],
         fontWeight: 600,
         lineHeight: 1.2,
-        cursor: 'pointer',
-        opacity: primary && hovered ? 0.9 : 1,
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.6 : primary && hovered ? 0.9 : 1,
       }}
     >
       {children}
@@ -199,6 +207,7 @@ function CardActionButton({
 export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
   summary,
   onDismiss,
+  onPushed,
   dimmed = false,
   events,
   entry,
@@ -214,6 +223,9 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [collapseHeight, setCollapseHeight] = useState<number | null>(null);
   const [nameHovered, setNameHovered] = useState(false);
+  // Push-to-remote affordance (shown when there are unpushed commits).
+  const [pushing, setPushing] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
   // The repo name opens the repo profile tab when we have an entry + event bus.
   const nameClickable = Boolean(entry && events);
 
@@ -399,6 +411,7 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
   useEffect(() => {
     setCollapsing(false);
     setCollapseHeight(null);
+    setPushError(null);
   }, [summary.repoPath]);
 
   const handleCollapseEnd = useCallback(
@@ -550,6 +563,25 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
       });
     }
   }, [summary.githubOwner, summary.isOwnerOrg, events]);
+
+  const handlePush = useCallback(async () => {
+    if (pushing) return;
+    setPushing(true);
+    setPushError(null);
+    try {
+      const result = await actions.pushBranch(summary.repoPath);
+      if (result.success) {
+        onPushed?.(summary.repoPath);
+      } else {
+        setPushError(result.message || 'Push failed');
+      }
+    } catch (err) {
+      console.warn(`[InProgressRepoCard] Failed to push ${summary.repoName}:`, err);
+      setPushError(err instanceof Error ? err.message : 'Push failed');
+    } finally {
+      setPushing(false);
+    }
+  }, [actions, pushing, summary.repoName, summary.repoPath, onPushed]);
 
   const totalLines = totals.additions + totals.deletions;
   const budget = diffBarWidthPct(totalLines);
@@ -781,6 +813,18 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
             </div>
           </div>
 
+          {aheadCount > 0 && (
+            <CardActionButton
+              tall
+              variant="primary"
+              disabled={pushing}
+              title={pushError ?? `Push ${aheadCount} commit${aheadCount !== 1 ? 's' : ''} to remote`}
+              onClick={handlePush}
+            >
+              {pushing ? 'Pushing…' : 'Push'}
+            </CardActionButton>
+          )}
+
           <CardActionButton
             tall
             active={overlay === 'changes'}
@@ -791,6 +835,22 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
             Changes
           </CardActionButton>
         </div>
+
+        {pushError && (
+          <div
+            title={pushError}
+            style={{
+              marginTop: spacing.xs,
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.error,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {pushError}
+          </div>
+        )}
 
         {(totals.additions > 0 || totals.deletions > 0) && (
           <div

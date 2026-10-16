@@ -199,6 +199,21 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
     });
   }, []);
 
+  // A successful push clears the ahead count immediately (optimistic) and asks
+  // the monitor to re-check so the map/branch state stays in sync.
+  const handlePushed = useCallback((repoPath: string) => {
+    setStatusMap((prev) => {
+      const current = prev.get(repoPath);
+      if (!current || current.ahead === 0) return prev;
+      const next = new Map(prev);
+      next.set(repoPath, { ...current, ahead: 0 });
+      return next;
+    });
+    RepositoryMonitoringService.refreshRepository(repoPath).catch((err) => {
+      console.warn('[InProgressActivityPanel] Failed to refresh after push:', err);
+    });
+  }, []);
+
   return (
     <div
       style={{
@@ -244,6 +259,7 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
                 key={summary.repoPath}
                 summary={summary}
                 onDismiss={handleDismiss}
+                onPushed={handlePushed}
                 events={events}
                 entry={entry}
                 actions={actions}
