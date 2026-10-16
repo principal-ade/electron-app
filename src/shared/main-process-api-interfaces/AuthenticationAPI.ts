@@ -58,28 +58,16 @@ export interface TokenMetadata {
 }
 
 export interface AuthenticationAPI {
-  // OAuth operations
-  login(options?: { forceNew?: boolean }): Promise<AuthResult>;
-  logout(): Promise<{ success: boolean; error?: string; guidance?: string }>;
+  // Session operations (read-only — auth comes from the gh CLI session)
   check(): Promise<AuthResult>;
   getStatus(): Promise<AuthStatus>;
 
   // Token management
-  saveGitHubAuth(
-    token: string,
-    user: AuthUser,
-  ): Promise<{ success: boolean; error?: string }>;
   getGitHubAuth(): Promise<TokenWithMetadata>;
-  clearGitHubAuth(): Promise<{ success: boolean; error?: string }>;
   isAuthenticated(): Promise<boolean>;
 
-  // Token metadata and refresh testing
+  // Token metadata and validation
   getTokenMetadata(): Promise<TokenMetadata>;
-  testRefreshToken(): Promise<{
-    success: boolean;
-    error?: string;
-    newExpiresAt?: number;
-  }>;
   validateGitHubToken(): Promise<{
     valid: boolean;
     tokenPresent: boolean;

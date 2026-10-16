@@ -7,15 +7,12 @@
  */
 
 export enum AuthEvent {
-  // OAuth authentication events
-  LOGIN = 'cli-auth:login',
-  LOGOUT = 'cli-auth:logout',
+  // Session check events (auth is read from the gh CLI session)
   CHECK = 'cli-auth:check',
   STATUS = 'cli-auth:status',
 
-  // Token metadata and refresh operations
+  // Token metadata and validation operations
   GET_TOKEN_METADATA = 'cli-auth:get-token-metadata',
-  TEST_REFRESH_TOKEN = 'cli-auth:test-refresh-token',
   VALIDATE_GITHUB_TOKEN = 'cli-auth:validate-github-token',
 
   // Keychain permission and status events

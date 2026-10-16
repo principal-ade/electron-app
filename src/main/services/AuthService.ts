@@ -12,10 +12,7 @@
 import { ipcMain } from 'electron';
 import Store from 'electron-store';
 import AuthStateManager from './AuthStateManager';
-import {
-  UnifiedSecureStorage,
-  TOKEN_KEYS,
-} from './UnifiedSecureStorage';
+import { UnifiedSecureStorage, TOKEN_KEYS } from './UnifiedSecureStorage';
 import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 import { GitCredentialHelper } from './GitCredentialHelper';
 import { getGhCliToken } from '../version-control-providers/github/ghCliToken';
@@ -90,39 +87,9 @@ export class AuthService {
       }
     });
 
-    // Login handler - OAuth server removed, instruct user to use gh CLI
-    ipcMain.handle(AuthEvent.LOGIN, async () => {
-      return {
-        success: false,
-        error:
-          'In-app OAuth login has been removed. Please run `gh auth login` in your terminal to authenticate with GitHub.',
-      };
-    });
-
-    // Logout handler
-    ipcMain.handle(AuthEvent.LOGOUT, async () => {
-      try {
-        await this.clearStoredAuth();
-        AuthStateManager.getInstance().clearAuthentication();
-        return { success: true };
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
-        return { success: false, error: errorMessage };
-      }
-    });
-
     // Token metadata handler
     ipcMain.handle(AuthEvent.GET_TOKEN_METADATA, async () => {
       return await this.getTokenMetadata();
-    });
-
-    // Test refresh token - no longer applicable
-    ipcMain.handle(AuthEvent.TEST_REFRESH_TOKEN, async () => {
-      return {
-        success: false,
-        error: 'Token refresh is no longer supported. Use `gh auth login` to re-authenticate.',
-      };
     });
 
     // Keychain/secure storage status handlers
@@ -179,7 +146,10 @@ export class AuthService {
           };
         }
       } catch (error) {
-        console.warn('[AuthService] Failed to fetch GitHub user from gh CLI token:', error);
+        console.warn(
+          '[AuthService] Failed to fetch GitHub user from gh CLI token:',
+          error,
+        );
       }
       // Token exists but couldn't fetch user — still return token
       return {
@@ -197,10 +167,12 @@ export class AuthService {
       return { success: false, authenticated: false };
     }
 
-    const metadata = tokenData.metadata as {
-      user?: AuthUser;
-      expiresAt?: number;
-    } | undefined;
+    const metadata = tokenData.metadata as
+      | {
+          user?: AuthUser;
+          expiresAt?: number;
+        }
+      | undefined;
 
     return {
       success: true,
@@ -218,16 +190,6 @@ export class AuthService {
     };
   }
 
-  private async clearStoredAuth(): Promise<void> {
-    try {
-      await this.storage.deleteToken(TOKEN_KEYS.GITHUB_TOKEN);
-      const workosKey = 'workos_access_token';
-      await this.storage.deleteToken(workosKey);
-    } catch (error) {
-      console.error('[AuthService] Error clearing stored auth:', error);
-    }
-  }
-
   async initializeAuthState(): Promise<void> {
     try {
       const storedAuth = await this.getStoredAuth();
@@ -236,7 +198,10 @@ export class AuthService {
           storedAuth.user,
           storedAuth.token,
         );
-        console.log('[AuthService] Auth state initialized for:', storedAuth.user.login);
+        console.log(
+          '[AuthService] Auth state initialized for:',
+          storedAuth.user.login,
+        );
       }
     } catch (error) {
       console.error('[AuthService] Failed to initialize auth state:', error);
@@ -367,17 +332,6 @@ export class AuthService {
     }
   }
 
-  async testRefreshToken(): Promise<{
-    success: boolean;
-    error?: string;
-    newExpiresAt?: number;
-  }> {
-    return {
-      success: false,
-      error: 'Token refresh is no longer supported. Use `gh auth login` to re-authenticate.',
-    };
-  }
-
   async validateGitHubToken(): Promise<{
     valid: boolean;
     tokenPresent: boolean;
@@ -421,7 +375,8 @@ export class AuthService {
         };
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       return {
         valid: false,
         tokenPresent: true,
@@ -451,7 +406,10 @@ export class AuthService {
     try {
       await GitCredentialHelper.configureGitCredentials(token);
     } catch (error) {
-      console.error('[AuthService] Failed to configure git credentials:', error);
+      console.error(
+        '[AuthService] Failed to configure git credentials:',
+        error,
+      );
     }
   }
 }

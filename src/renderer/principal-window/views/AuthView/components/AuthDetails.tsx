@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
-  LogIn,
-  LogOut,
   Loader2,
   Shield,
   CheckCircle,
@@ -11,10 +9,8 @@ import {
   Key,
   Building,
   RefreshCw,
-  ExternalLink,
   Users,
 } from 'lucide-react';
-import { gitSyncConnectionManager } from '../../../../services/git-sync/GitSyncConnectionManager';
 import { GithubService } from '../../../../main-process-api/GithubService';
 import { SSHSetupService } from '../../../../main-process-api/SSHSetupService';
 import { AuthenticationService } from '../../../../main-process-api/AuthenticationService';
@@ -84,7 +80,6 @@ export const SCOPE_DESCRIPTIONS: Record<string, string> = {
   'read:discussion': 'Read discussions',
   'write:discussion': 'Write discussions',
 };
-import { ShellService } from '../../../../main-process-api/ShellService';
 
 interface GitHubUser {
   login: string;
@@ -96,21 +91,11 @@ interface GitHubUser {
 interface AuthDetailsProps {
   isAuthenticated: boolean;
   user: GitHubUser | null;
-  login: (forceRetry?: boolean) => Promise<void>;
-  logout: () => Promise<void>;
-  isLoggingIn: boolean;
-  loginError: string | null;
-  clearLoginError: () => void;
 }
 
 export const AuthDetails: React.FC<AuthDetailsProps> = ({
   isAuthenticated,
   user: authUser,
-  login,
-  logout,
-  isLoggingIn,
-  loginError,
-  clearLoginError,
 }) => {
   const { theme } = useTheme();
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
@@ -126,13 +111,10 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     success: boolean;
     message: string;
   } | null>(null);
-  const [tokenMetadata, setTokenMetadata] = useState<TokenMetadata | null>(null);
+  const [tokenMetadata, setTokenMetadata] = useState<TokenMetadata | null>(
+    null,
+  );
   const [loadingTokenMetadata, setLoadingTokenMetadata] = useState(false);
-  const [testingRefresh, setTestingRefresh] = useState(false);
-  const [refreshResult, setRefreshResult] = useState<{
-    success: boolean;
-    message: string;
-  } | null>(null);
   const [githubTokenValidation, setGithubTokenValidation] = useState<{
     valid: boolean;
     tokenPresent: boolean;
@@ -263,37 +245,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
 
   const formatScope = (scope: string): string => {
     return SCOPE_DESCRIPTIONS[scope] || scope.replace(/[_:]/g, ' ');
-  };
-
-  const handleTestRefresh = async () => {
-    setTestingRefresh(true);
-    setRefreshResult(null);
-    try {
-      const result = await AuthenticationService.testRefreshToken();
-      if (result.success) {
-        setRefreshResult({
-          success: true,
-          message: `Token refreshed successfully! New expiry: ${result.newExpiresAt ? new Date(result.newExpiresAt).toLocaleString() : 'Unknown'}`,
-        });
-        // Refresh metadata to show updated info
-        await fetchTokenMetadata();
-      } else {
-        setRefreshResult({
-          success: false,
-          message: result.error || 'Failed to refresh token',
-        });
-      }
-    } catch (error) {
-      console.error('[AuthDetails] Refresh test failed:', error);
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to test refresh';
-      setRefreshResult({
-        success: false,
-        message: errorMessage,
-      });
-    } finally {
-      setTestingRefresh(false);
-    }
   };
 
   const handleTestSSHConnection = async () => {
@@ -505,44 +456,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                     )}
                   </div>
                 </div>
-
-                <button
-                  onClick={async () => {
-                    try {
-                      await logout();
-                      // Disconnect from presence (main process)
-                      await PresenceService.disconnectFromPresence();
-                      // Also clear any local connection state
-                      gitSyncConnectionManager.disconnectAll();
-                      console.info('Logged out successfully');
-                    } catch (error) {
-                      console.error('Logout failed:', error);
-                    }
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 20px',
-                    backgroundColor: theme.colors.error || '#ef4444',
-                    color: theme.colors.background,
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    transition: 'opacity 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.9';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <LogOut size={16} />
-                  Sign Out
-                </button>
               </div>
             ) : (
               <div>
@@ -551,119 +464,14 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                     marginBottom: '20px',
                     fontSize: '14px',
                     color: theme.colors.textSecondary,
+                    lineHeight: '1.6',
                   }}
                 >
-                  You are currently not authenticated. Sign in with your GitHub
-                  account to access repository features and synchronization.
+                  No GitHub session detected. This app reads your GitHub CLI
+                  session rather than signing you in itself — run{' '}
+                  <code>gh auth login</code> in your terminal, and this view
+                  updates automatically once the session is active.
                 </p>
-
-                {loginError &&
-                  loginError !== 'Authentication already in progress' && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px 16px',
-                        backgroundColor: theme.colors.error
-                          ? `${theme.colors.error}20`
-                          : '#ef444420',
-                        border: `1px solid ${theme.colors.error || '#ef4444'}40`,
-                        borderRadius: '8px',
-                        marginBottom: '16px',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: '13px',
-                          color: theme.colors.error || '#ef4444',
-                        }}
-                      >
-                        {loginError}
-                      </span>
-                      <button
-                        onClick={() => clearLoginError()}
-                        style={{
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          padding: '4px',
-                          color: theme.colors.error || '#ef4444',
-                          fontSize: '16px',
-                          fontWeight: 'bold',
-                          lineHeight: 1,
-                        }}
-                        title="Dismiss"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )}
-
-                <button
-                  onClick={async () => {
-                    try {
-                      const forceRetry =
-                        loginError === 'Authentication already in progress';
-                      await login(forceRetry);
-                      console.info('Login completed successfully');
-                    } catch (error: unknown) {
-                      console.error('Login error:', error);
-                    }
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 20px',
-                    backgroundColor: isLoggingIn
-                      ? theme.colors.backgroundTertiary
-                      : theme.colors.primary,
-                    color: isLoggingIn
-                      ? theme.colors.textSecondary
-                      : theme.colors.background,
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    cursor: isLoggingIn ? 'wait' : 'pointer',
-                    transition: 'all 0.2s',
-                    opacity: isLoggingIn ? 0.7 : 1,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isLoggingIn) e.currentTarget.style.opacity = '0.9';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isLoggingIn) e.currentTarget.style.opacity = '1';
-                  }}
-                  title={
-                    isLoggingIn
-                      ? 'Authenticating...'
-                      : loginError === 'Authentication already in progress'
-                        ? 'Click to retry'
-                        : 'Login with GitHub'
-                  }
-                  disabled={
-                    isLoggingIn &&
-                    loginError !== 'Authentication already in progress'
-                  }
-                >
-                  {isLoggingIn ? (
-                    <>
-                      <Loader2 size={16} className="spinning" />
-                      <span>Signing in...</span>
-                    </>
-                  ) : (
-                    <>
-                      <LogIn size={16} />
-                      <span>
-                        {loginError === 'Authentication already in progress'
-                          ? 'Retry Sign In'
-                          : 'Sign In with GitHub'}
-                      </span>
-                    </>
-                  )}
-                </button>
               </div>
             )}
           </div>
@@ -811,38 +619,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                   Token Permissions
                 </h2>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={async () => {
-                      // Open GitHub settings to manage authorized applications
-                      // (WorkOS uses this GitHub OAuth app for authentication)
-                      await ShellService.openExternal(
-                        'https://github.com/settings/connections/applications/Ov23liw7kWJ0kctIrSs3',
-                      );
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '6px 12px',
-                      backgroundColor: theme.colors.primary,
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: theme.colors.background,
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.opacity = '0.9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.opacity = '1';
-                    }}
-                    title="Manage permissions granted to this app"
-                  >
-                    <ExternalLink size={14} />
-                    Manage Permissions
-                  </button>
                   <button
                     onClick={fetchTokenInfo}
                     disabled={loadingTokenInfo}
@@ -1074,7 +850,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
             </div>
           )}
 
-          {/* Token Metadata & Refresh Testing Card */}
+          {/* Token Metadata Card */}
           {isAuthenticated && tokenMetadata && (
             <div
               style={{
@@ -1102,7 +878,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                   }}
                 >
                   <RefreshCw size={20} />
-                  Token Information & Refresh Testing
+                  Token Information
                 </h2>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
@@ -1469,154 +1245,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                       {tokenMetadata.expiresAtFormatted}
                     </div>
                   )}
-
-                  {/* Refresh Token Test */}
-                  <div
-                    style={{
-                      padding: '16px',
-                      backgroundColor: secondaryBackground,
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: '8px',
-                    }}
-                  >
-                    <h3
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        marginBottom: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                      }}
-                    >
-                      <Shield size={16} />
-                      Test Refresh Mechanism
-                    </h3>
-                    <p
-                      style={{
-                        fontSize: '13px',
-                        color: theme.colors.textSecondary,
-                        marginBottom: '12px',
-                        lineHeight: '1.5',
-                      }}
-                    >
-                      {tokenMetadata.hasRefreshToken
-                        ? 'Test the automatic token refresh mechanism by forcing a token refresh. This will request a new access token from the server using your refresh token.'
-                        : 'No refresh token is available. You may need to re-authenticate to get a refresh token.'}
-                    </p>
-                    <button
-                      onClick={handleTestRefresh}
-                      disabled={
-                        testingRefresh || !tokenMetadata.hasRefreshToken
-                      }
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 16px',
-                        backgroundColor: tokenMetadata.hasRefreshToken
-                          ? theme.colors.primary
-                          : theme.colors.backgroundSecondary,
-                        border: 'none',
-                        borderRadius: '6px',
-                        color: tokenMetadata.hasRefreshToken
-                          ? theme.colors.background
-                          : theme.colors.textSecondary,
-                        fontSize: '13px',
-                        fontWeight: 500,
-                        cursor:
-                          tokenMetadata.hasRefreshToken && !testingRefresh
-                            ? 'pointer'
-                            : 'not-allowed',
-                        opacity: tokenMetadata.hasRefreshToken ? 1 : 0.5,
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (tokenMetadata.hasRefreshToken && !testingRefresh) {
-                          e.currentTarget.style.opacity = '0.9';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (tokenMetadata.hasRefreshToken) {
-                          e.currentTarget.style.opacity = '1';
-                        }
-                      }}
-                    >
-                      {testingRefresh ? (
-                        <>
-                          <Loader2 size={16} className="spinning" />
-                          Testing Refresh...
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw size={16} />
-                          Test Token Refresh
-                        </>
-                      )}
-                    </button>
-
-                    {/* Refresh Result */}
-                    {refreshResult && (
-                      <div
-                        style={{
-                          marginTop: '12px',
-                          padding: '12px',
-                          backgroundColor: theme.colors.background,
-                          border: `1px solid ${
-                            refreshResult.success
-                              ? theme.colors.success || '#10b981'
-                              : theme.colors.error || '#ef4444'
-                          }`,
-                          borderRadius: '6px',
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '8px',
-                          fontSize: '13px',
-                        }}
-                      >
-                        {refreshResult.success ? (
-                          <CheckCircle
-                            size={16}
-                            style={{
-                              color: theme.colors.success || '#10b981',
-                              flexShrink: 0,
-                              marginTop: '2px',
-                            }}
-                          />
-                        ) : (
-                          <XCircle
-                            size={16}
-                            style={{
-                              color: theme.colors.error || '#ef4444',
-                              flexShrink: 0,
-                              marginTop: '2px',
-                            }}
-                          />
-                        )}
-                        <span>{refreshResult.message}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Information Notice */}
-                  <div
-                    style={{
-                      marginTop: '16px',
-                      padding: '12px',
-                      backgroundColor: secondaryBackground,
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      color: theme.colors.textSecondary,
-                      fontStyle: 'italic',
-                      lineHeight: '1.6',
-                    }}
-                  >
-                    <strong>Note:</strong> Tokens are automatically refreshed
-                    when they expire or are about to expire (within 5 minutes).
-                    This test allows you to manually verify the refresh
-                    mechanism is working correctly.
-                  </div>
                 </>
               )}
             </div>
@@ -1914,9 +1542,8 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                                 lineHeight: '1.5',
                               }}
                             >
-                              To view and manage your SSH keys, you need to
-                              re-authenticate with additional permissions. Click
-                              "Manage Permissions" above to grant the{' '}
+                              To view your GitHub SSH keys, your GitHub CLI
+                              token needs the{' '}
                               <code
                                 style={{
                                   padding: '2px 6px',
@@ -1927,7 +1554,18 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                               >
                                 read:public_key
                               </code>{' '}
-                              scope.
+                              scope. Grant it by running{' '}
+                              <code
+                                style={{
+                                  padding: '2px 6px',
+                                  backgroundColor: theme.colors.background,
+                                  borderRadius: '4px',
+                                  fontFamily: 'monospace',
+                                }}
+                              >
+                                gh auth refresh -s read:public_key
+                              </code>{' '}
+                              in your terminal, then refresh this view.
                             </p>
                           </div>
                         </div>
@@ -2014,8 +1652,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
               )}
             </div>
           )}
-
-
 
           {/* Connected Services Card */}
           {isAuthenticated && (
@@ -2130,7 +1766,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
         onClose={() => setShowSSHSetup(false)}
         onSuccess={handleSSHSetupComplete}
       />
-
     </div>
   );
 };

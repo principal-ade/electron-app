@@ -25,8 +25,6 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  login: (redirectTo?: string) => void;
-  logout: () => Promise<void>;
   fetchUser: () => Promise<void>;
   /** Kept for API compatibility with the web-ade context. */
   refreshTokens: () => Promise<boolean>;
@@ -52,10 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isAuthenticated: auth.isAuthenticated,
       isLoading: auth.isLoading,
-      login: () => {
-        void auth.login();
-      },
-      logout: auth.logout,
       fetchUser: async () => {},
       refreshTokens: async () => true,
     };

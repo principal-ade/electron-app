@@ -4,7 +4,6 @@
  */
 
 import {
-  AuthUser,
   AuthResult,
   AuthStatus,
   AuthState,
@@ -14,20 +13,6 @@ import {
 } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 
 export class AuthenticationService {
-  /**
-   * Login via OAuth authentication
-   */
-  static async login(options?: { forceNew?: boolean }): Promise<AuthResult> {
-    return window.mainProcess.authentication.login(options);
-  }
-
-  /**
-   * Logout from authentication
-   */
-  static async logout(): Promise<{ success: boolean; error?: string; guidance?: string }> {
-    return window.mainProcess.authentication.logout();
-  }
-
   /**
    * Check authentication status
    */
@@ -43,30 +28,10 @@ export class AuthenticationService {
   }
 
   /**
-   * Save GitHub authentication token
-   */
-  static async saveGitHubAuth(
-    token: string,
-    authUser: AuthUser,
-  ): Promise<{ success: boolean; error?: string }> {
-    return window.mainProcess.authentication.saveGitHubAuth(token, authUser);
-  }
-
-  /**
    * Get GitHub authentication token
    */
   static async getGitHubAuth(): Promise<TokenWithMetadata> {
     return window.mainProcess.authentication.getGitHubAuth();
-  }
-
-  /**
-   * Clear GitHub authentication
-   */
-  static async clearGitHubAuth(): Promise<{
-    success: boolean;
-    error?: string;
-  }> {
-    return window.mainProcess.authentication.clearGitHubAuth();
   }
 
   /**
@@ -77,21 +42,10 @@ export class AuthenticationService {
   }
 
   /**
-   * Get token metadata including expiry and refresh token info
+   * Get token metadata including expiry info
    */
   static async getTokenMetadata(): Promise<TokenMetadata> {
     return window.mainProcess.authentication.getTokenMetadata();
-  }
-
-  /**
-   * Test refresh token mechanism by forcing a token refresh
-   */
-  static async testRefreshToken(): Promise<{
-    success: boolean;
-    error?: string;
-    newExpiresAt?: number;
-  }> {
-    return window.mainProcess.authentication.testRefreshToken();
   }
 
   /**

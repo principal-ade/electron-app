@@ -5,9 +5,6 @@
  * Now uses the unified AuthenticationAPI instead of direct IPC calls.
  */
 
-import type {
-  AuthUser,
-} from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 import { AuthenticationService } from '../main-process-api/AuthenticationService';
 
 // Map the legacy GitHubUser interface to AuthUser
@@ -40,36 +37,6 @@ export class SecureAuthService {
       SecureAuthService.instance = new SecureAuthService();
     }
     return SecureAuthService.instance;
-  }
-
-  /**
-   * Save authentication securely
-   */
-  async saveAuth(token: string, user: GitHubUser): Promise<boolean> {
-    try {
-      // Convert GitHubUser to AuthUser format
-      const authUser: AuthUser = {
-        login: user.githubHandle,
-        email: user.email || '',
-        name: user.metadata?.name,
-        avatarUrl: user.metadata?.avatarUrl,
-      };
-
-      const result = await AuthenticationService.saveGitHubAuth(
-        token,
-        authUser,
-      );
-
-      if (result.success) {
-        // Clear from localStorage after successful save
-        this.clearLocalStorage();
-      }
-
-      return result.success;
-    } catch (error) {
-      console.error('Failed to save auth securely:', error);
-      return false;
-    }
   }
 
   /**
@@ -106,18 +73,6 @@ export class SecureAuthService {
   }
 
   /**
-   * Clear authentication
-   */
-  async logout(): Promise<void> {
-    try {
-      await AuthenticationService.clearGitHubAuth();
-      this.clearLocalStorage();
-    } catch (error) {
-      console.error('Failed to clear auth:', error);
-    }
-  }
-
-  /**
    * Check if authenticated (quick check)
    */
   async isAuthenticated(): Promise<boolean> {
@@ -127,15 +82,6 @@ export class SecureAuthService {
       console.error('Failed to check authentication:', error);
       return false;
     }
-  }
-
-  /**
-   * Clear sensitive data from localStorage
-   */
-  private clearLocalStorage(): void {
-    localStorage.removeItem('orbit_auth');
-    localStorage.removeItem('git-sync-auth');
-    localStorage.removeItem('github_token');
   }
 }
 

@@ -1,7 +1,6 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import { UnifiedSecureStorage, TOKEN_KEYS } from './UnifiedSecureStorage';
 import { SecureTokenAPIEvent } from '../../shared/main-process-api-interfaces/SecureTokenAPI';
-import type { AuthUser } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 import { authService } from './AuthService';
 import type { TokenMetadata } from './storage-domains/TokenDomain';
 
@@ -26,25 +25,6 @@ export class SecureTokenIPC {
   }
 
   private setupHandlers(): void {
-    // Save GitHub auth token
-    ipcMain.handle(
-      SecureTokenAPIEvent.SAVE_GITHUB_AUTH,
-      async (event: IpcMainInvokeEvent, token: string, user: AuthUser) => {
-        try {
-          await this.getStorage().setToken(TOKEN_KEYS.ORBIT_AUTH, token, {
-            user,
-          });
-          return { success: true };
-        } catch (error) {
-          console.error('Failed to save GitHub auth:', error);
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          };
-        }
-      },
-    );
-
     // Get GitHub auth token
     ipcMain.handle(SecureTokenAPIEvent.GET_GITHUB_AUTH, async () => {
       try {
@@ -82,26 +62,21 @@ export class SecureTokenIPC {
       return token !== null;
     });
 
-    // Clear GitHub auth
-    ipcMain.handle(SecureTokenAPIEvent.CLEAR_GITHUB_AUTH, async () => {
-      try {
-        await this.getStorage().deleteToken(TOKEN_KEYS.ORBIT_AUTH);
-        return { success: true };
-      } catch (error) {
-        console.error('Failed to clear GitHub auth:', error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
-    });
-
     // Generic token operations
     ipcMain.handle(
       SecureTokenAPIEvent.SET,
-      async (event: IpcMainInvokeEvent, key: string, token: string, metadata?: unknown) => {
+      async (
+        event: IpcMainInvokeEvent,
+        key: string,
+        token: string,
+        metadata?: unknown,
+      ) => {
         try {
-          await this.getStorage().setToken(key, token, metadata as TokenMetadata | undefined);
+          await this.getStorage().setToken(
+            key,
+            token,
+            metadata as TokenMetadata | undefined,
+          );
           return { success: true };
         } catch (error) {
           return {
@@ -158,25 +133,6 @@ export function registerSecureTokenHandlers(): void {
     SecureTokenAPIEvent,
   } = require('../../shared/main-process-api-interfaces/SecureTokenAPI');
   const AuthStateManager = require('./AuthStateManager').default;
-
-  // Save GitHub auth token
-  ipcMain.handle(
-    SecureTokenAPIEvent.SAVE_GITHUB_AUTH,
-    async (event: IpcMainInvokeEvent, token: string, user: AuthUser) => {
-      try {
-        await getSecureTokenIPC()
-          .getStorage()
-          .setToken(TOKEN_KEYS.ORBIT_AUTH, token, { user });
-        return { success: true };
-      } catch (error) {
-        console.error('Failed to save GitHub auth:', error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
-    },
-  );
 
   // Get GitHub auth token
   ipcMain.handle(SecureTokenAPIEvent.GET_GITHUB_AUTH, async () => {
@@ -249,26 +205,19 @@ export function registerSecureTokenHandlers(): void {
     return token !== null;
   });
 
-  // Clear GitHub auth
-  ipcMain.handle(SecureTokenAPIEvent.CLEAR_GITHUB_AUTH, async () => {
-    try {
-      await getSecureTokenIPC().getStorage().deleteToken(TOKEN_KEYS.ORBIT_AUTH);
-      return { success: true };
-    } catch (error) {
-      console.error('Failed to clear GitHub auth:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  });
-
   // Generic token operations
   ipcMain.handle(
     SecureTokenAPIEvent.SET,
-    async (event: IpcMainInvokeEvent, key: string, token: string, metadata?: unknown) => {
+    async (
+      event: IpcMainInvokeEvent,
+      key: string,
+      token: string,
+      metadata?: unknown,
+    ) => {
       try {
-        await getSecureTokenIPC().getStorage().setToken(key, token, metadata as TokenMetadata | undefined);
+        await getSecureTokenIPC()
+          .getStorage()
+          .setToken(key, token, metadata as TokenMetadata | undefined);
         return { success: true };
       } catch (error) {
         return {
@@ -279,17 +228,20 @@ export function registerSecureTokenHandlers(): void {
     },
   );
 
-  ipcMain.handle(SecureTokenAPIEvent.GET, async (event: IpcMainInvokeEvent, key: string) => {
-    try {
-      const token = await getSecureTokenIPC().getStorage().getToken(key);
-      return { success: true, token };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  });
+  ipcMain.handle(
+    SecureTokenAPIEvent.GET,
+    async (event: IpcMainInvokeEvent, key: string) => {
+      try {
+        const token = await getSecureTokenIPC().getStorage().getToken(key);
+        return { success: true, token };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+  );
 
   ipcMain.handle(
     SecureTokenAPIEvent.DELETE,

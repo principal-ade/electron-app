@@ -7,15 +7,9 @@ import './AuthView.css';
 
 export const AuthView: React.FC = () => {
   const { theme } = useTheme();
-  const {
-    isAuthenticated,
-    user,
-    login,
-    logout,
-    isLoggingIn,
-    loginError,
-    clearLoginError,
-  } = useAuthState();
+  // Read-only: this surface reports the GitHub session the app discovered
+  // (gh CLI / stored token). There is no in-app login/logout to drive.
+  const { isAuthenticated, user } = useAuthState();
 
   const backgroundColor = theme.colors.background;
 
@@ -53,21 +47,13 @@ export const AuthView: React.FC = () => {
             color: theme.colors.text,
           }}
         >
-          Authentication
+          GitHub Status
         </h2>
       </div>
 
       {/* Content */}
       <div style={{ flex: 1, overflow: 'auto' }}>
-        <AuthDetails
-          isAuthenticated={isAuthenticated}
-          user={user}
-          login={login}
-          logout={logout}
-          isLoggingIn={isLoggingIn || false}
-          loginError={loginError || null}
-          clearLoginError={clearLoginError}
-        />
+        <AuthDetails isAuthenticated={isAuthenticated} user={user} />
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Home, Calendar, User } from 'lucide-react';
+import { Home, Calendar, User } from 'lucide-react';
 import Link from '../shims/next-link';
 import { usePathname } from '../shims/next-navigation';
 import { repoExplorerService } from '../data/repoExplorerService';
@@ -15,9 +15,10 @@ interface UserOrganization {
   description: string | null;
 }
 
-export function UserAvatarMenu({ hideLoginButton = false }: { hideLoginButton?: boolean } = {}) {
+export function UserAvatarMenu() {
   const { theme } = useTheme();
-  const { user, isAuthenticated, login, logout } = useAuth();
+  // Read-only auth: there is no in-app login/logout to expose here.
+  const { user, isAuthenticated } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [organizations, setOrganizations] = useState<UserOrganization[]>([]);
   const [orgsLoading, setOrgsLoading] = useState(false);
@@ -30,7 +31,10 @@ export function UserAvatarMenu({ hideLoginButton = false }: { hideLoginButton?: 
     if (!userMenuOpen) return;
 
     function handleClickOutside(event: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
         setUserMenuOpen(false);
       }
     }
@@ -58,22 +62,8 @@ export function UserAvatarMenu({ hideLoginButton = false }: { hideLoginButton?: 
     fetchOrganizations();
   }, [userMenuOpen, isAuthenticated, organizations.length]);
 
-  if (!isAuthenticated || !user) {
-    if (hideLoginButton) return null;
-    return (
-      <button
-        onClick={() => login()}
-        className="flex items-center justify-center px-3 h-8 rounded-md transition-all hover:opacity-80 text-sm font-medium"
-        style={{
-          background: theme.colors.primary,
-          color: theme.colors.textOnPrimary,
-        }}
-        title="Login"
-      >
-        Login
-      </button>
-    );
-  }
+  // No session → nothing to show (auth comes from the gh CLI session).
+  if (!isAuthenticated || !user) return null;
 
   return (
     <div className="relative" ref={userMenuRef}>
@@ -175,21 +165,6 @@ export function UserAvatarMenu({ hideLoginButton = false }: { hideLoginButton?: 
             <Calendar className="w-4 h-4" />
             Feed
           </Link>
-          <div
-            className="my-1 h-px"
-            style={{ background: theme.colors.border }}
-          />
-          <button
-            onClick={() => {
-              setUserMenuOpen(false);
-              logout();
-            }}
-            className="flex items-center gap-2 px-3 py-2 text-sm w-full transition-colors hover:opacity-80"
-            style={{ color: theme.colors.error }}
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
         </div>
       )}
     </div>

@@ -9,9 +9,7 @@ import type { AuthUser } from './AuthenticationAPI';
 
 export enum SecureTokenAPIEvent {
   // GitHub-specific operations
-  SAVE_GITHUB_AUTH = 'secure-token:save-github-auth',
   GET_GITHUB_AUTH = 'secure-token:get-github-auth',
-  CLEAR_GITHUB_AUTH = 'secure-token:clear-github-auth',
   IS_AUTHENTICATED = 'secure-token:is-authenticated',
 
   // Generic token operations

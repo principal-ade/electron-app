@@ -27,8 +27,6 @@ export interface AuthState {
 class AuthStateManager extends EventEmitter {
   private static instance: AuthStateManager;
   private state: AuthState;
-  private checkInterval: NodeJS.Timeout | null = null;
-  private readonly STATE_CHECK_INTERVAL = 60000; // Check every minute
 
   private constructor() {
     super();
@@ -200,19 +198,6 @@ class AuthStateManager extends EventEmitter {
   }
 
   /**
-   * Clear authentication state
-   */
-  clearAuthentication() {
-    console.log('[AuthStateManager] Clearing authentication state');
-
-    this.updateState({
-      isAuthenticated: false,
-      user: null,
-      token: null,
-    });
-  }
-
-  /**
    * Get the current state (without sensitive token)
    */
   getPublicState(): Omit<AuthState, 'token'> {
@@ -245,51 +230,6 @@ class AuthStateManager extends EventEmitter {
         );
       }
     });
-  }
-
-  /**
-   * Start periodic auth state checks
-   */
-  startPeriodicChecks(checkCallback: () => Promise<void>) {
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval);
-    }
-
-    // Initial check
-    checkCallback().catch((err) => {
-      console.error('[AuthStateManager] Initial auth check failed:', err);
-    });
-
-    // Set up periodic checks
-    this.checkInterval = setInterval(() => {
-      checkCallback().catch((err) => {
-        console.error('[AuthStateManager] Periodic auth check failed:', err);
-      });
-    }, this.STATE_CHECK_INTERVAL);
-
-    console.log('[AuthStateManager] Started periodic auth checks');
-  }
-
-  /**
-   * Stop periodic auth state checks
-   */
-  stopPeriodicChecks() {
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval);
-      this.checkInterval = null;
-      console.log('[AuthStateManager] Stopped periodic auth checks');
-    }
-  }
-
-  /**
-   * Check if authentication is still valid
-   */
-  isAuthenticationValid(): boolean {
-    // Check if we have auth and it was checked recently (within 5 minutes)
-    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-    return (
-      this.state.isAuthenticated && this.state.lastChecked > fiveMinutesAgo
-    );
   }
 }
 

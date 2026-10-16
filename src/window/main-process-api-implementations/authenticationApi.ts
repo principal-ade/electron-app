@@ -12,7 +12,6 @@ import type {
   AuthResult,
   AuthStatus,
   AuthState,
-  AuthUser,
   TokenResult,
   TokenWithMetadata,
   TokenMetadata,
@@ -21,17 +20,7 @@ import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 import { SecureTokenAPIEvent } from '../../shared/main-process-api-interfaces/SecureTokenAPI';
 
 export const authenticationAPI: AuthenticationAPI = {
-  // ===== OAuth Operations =====
-
-  login: async (options?: { forceNew?: boolean }): Promise<AuthResult> => {
-    // Forward to existing cli-auth:login handler
-    return ipcRenderer.invoke(AuthEvent.LOGIN, options);
-  },
-
-  logout: async (): Promise<{ success: boolean; error?: string }> => {
-    // Forward to existing cli-auth:logout handler
-    return ipcRenderer.invoke(AuthEvent.LOGOUT);
-  },
+  // ===== Session Operations =====
 
   check: async (): Promise<AuthResult> => {
     // Forward to existing cli-auth:check handler
@@ -45,26 +34,9 @@ export const authenticationAPI: AuthenticationAPI = {
 
   // ===== Token Management =====
 
-  saveGitHubAuth: async (
-    token: string,
-    user: AuthUser,
-  ): Promise<{ success: boolean; error?: string }> => {
-    // Forward to existing secure-token:save-github-auth handler
-    return ipcRenderer.invoke(
-      SecureTokenAPIEvent.SAVE_GITHUB_AUTH,
-      token,
-      user,
-    );
-  },
-
   getGitHubAuth: async (): Promise<TokenWithMetadata> => {
     // Forward to existing secure-token:get-github-auth handler
     return ipcRenderer.invoke(SecureTokenAPIEvent.GET_GITHUB_AUTH);
-  },
-
-  clearGitHubAuth: async (): Promise<{ success: boolean; error?: string }> => {
-    // Forward to existing secure-token:clear-github-auth handler
-    return ipcRenderer.invoke(SecureTokenAPIEvent.CLEAR_GITHUB_AUTH);
   },
 
   isAuthenticated: async (): Promise<boolean> => {
@@ -72,17 +44,9 @@ export const authenticationAPI: AuthenticationAPI = {
     return ipcRenderer.invoke(SecureTokenAPIEvent.IS_AUTHENTICATED);
   },
 
-  // Token metadata and refresh testing
+  // Token metadata and validation
   getTokenMetadata: async (): Promise<TokenMetadata> => {
     return ipcRenderer.invoke(AuthEvent.GET_TOKEN_METADATA);
-  },
-
-  testRefreshToken: async (): Promise<{
-    success: boolean;
-    error?: string;
-    newExpiresAt?: number;
-  }> => {
-    return ipcRenderer.invoke(AuthEvent.TEST_REFRESH_TOKEN);
   },
 
   validateGitHubToken: async (): Promise<{
