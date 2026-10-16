@@ -29,9 +29,11 @@ import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
 import { emitTerminalOpen } from '../../events/portalIntents';
 import { shellQuote } from '../../utils/shellQuote';
 import {
+  useGithubOrganizations,
   useGithubProjectSections,
   useGithubStarred,
 } from '../../hooks/useGithubGraph';
+import { resolveOwnerIdentity } from '../ownerIdentity';
 import { UserAboutCard } from './UserAboutCard';
 import { type UserAboutInfo } from './useUserAboutInfo';
 import { RepoAboutCard } from './RepoAboutCard';
@@ -67,7 +69,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   userLoading,
 }) => {
   // Principal app OAuth — re-runs the profile load on sign-in.
-  const { user: authUser } = useAuthUser();
+  const { user: authUser, profile } = useAuthUser();
   const { theme } = useTheme();
   const [selectedRepo, setSelectedRepo] =
     useState<RepositorySelectedPayload | null>(null);
@@ -193,6 +195,21 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // (the same fan-out the Projects list uses), not a second copy of it.
   const projectSections = useGithubProjectSections();
   const githubLogin = authUser?.login ?? null;
+
+  // Orgs (with display names + avatars) for the in-progress section headers.
+  const { orgs } = useGithubOrganizations();
+
+  // Owner login → display label/avatar. Grouping/ordering stay keyed on the
+  // login; only the header label changes (see {@link resolveOwnerIdentity}).
+  const ownerDirectory = useMemo(
+    () => ({
+      selfLogin: githubLogin,
+      selfName: profile?.name,
+      selfAvatarUrl: profile?.avatar_url,
+      orgs,
+    }),
+    [githubLogin, profile, orgs],
+  );
 
   // Build the proper repository:selected payload for a GitHub repo, matching
   // against local clones when available (so the profile panel knows the path).
@@ -424,16 +441,15 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 inProgressGroups.map(([owner, repos]) => {
                   const isUntracked = owner === 'Untracked';
                   const isCollapsed = collapsedOwners.has(owner);
-                  const isYou =
-                    !isUntracked &&
-                    githubLogin !== null &&
-                    owner.toLowerCase() === githubLogin.toLowerCase();
+                  const identity = resolveOwnerIdentity(owner, ownerDirectory);
                   return (
                     <div key={owner} style={{ marginBottom: 8 }}>
                       <OrgSectionHeaderCard
                         header={{
-                          orgName: owner,
-                          badge: isYou ? 'you' : undefined,
+                          orgName: identity.label,
+                          login: identity.login,
+                          avatarUrl: identity.avatarUrl,
+                          badge: identity.isSelf ? 'you' : undefined,
                           repoCount: repos.length,
                           isUntracked,
                         }}

@@ -3,7 +3,14 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { ChevronDown, ChevronRight, FolderGit2, Plus } from 'lucide-react';
 
 export interface OrgSectionHeaderCardData {
+  /** Human-facing section label: an org/user display name when known, else the login. */
   orgName: string;
+  /**
+   * Owner login. Used for the avatar fallback (`https://github.com/{login}.png`)
+   * and shown as a hover title when the label is a display name. Defaults to
+   * `orgName`.
+   */
+  login?: string;
   avatarUrl?: string;
   badge?: 'you' | 'member';
   repoCount: number;
@@ -42,9 +49,10 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
   const [addHover, setAddHover] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
 
+  const login = header.login ?? header.orgName;
   const avatarSrc =
     header.avatarUrl ??
-    (!header.isUntracked ? `https://github.com/${header.orgName}.png?size=48` : undefined);
+    (!header.isUntracked ? `https://github.com/${login}.png?size=48` : undefined);
   const Chevron = isCollapsed ? ChevronRight : ChevronDown;
   const badgeLabel = header.badge === 'you' ? 'you' : header.badge === 'member' ? 'member' : null;
 
@@ -54,6 +62,7 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
         onClick={onToggle}
         role={onToggle ? 'button' : undefined}
         aria-expanded={!isCollapsed}
+        title={login !== header.orgName ? login : undefined}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         style={{
@@ -84,7 +93,7 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
           {avatarSrc && !avatarBroken ? (
             <img
               src={avatarSrc}
-              alt={header.orgName}
+              alt={login}
               width={22}
               height={22}
               style={{ objectFit: 'cover', display: 'block' }}

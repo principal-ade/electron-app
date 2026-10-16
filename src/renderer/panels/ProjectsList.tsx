@@ -38,6 +38,7 @@ import { useGithubProjects } from '../hooks/useGithubProjects';
 import { useAuthUser } from '../providers/AuthProvider';
 import { OrgSectionHeaderCard } from './cards/OrgSectionHeaderCard';
 import { OrgRepoItemCard } from './cards/OrgRepoItemCard';
+import { resolveOwnerIdentity } from './ownerIdentity';
 import { shellQuote } from '../utils/shellQuote';
 import { RelocateToConventionModal } from './components/RelocateToConventionModal';
 import { getOffConventionTarget } from '../../shared/utils/clonePath';
@@ -134,7 +135,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   const { theme } = useTheme();
   // Auth state is available on first paint (shared provider); the filter switch
   // is gated on it rather than on the GitHub fetch result.
-  const { isAuthenticated } = useAuthUser();
+  const { isAuthenticated, profile } = useAuthUser();
 
   const spacing = {
     xs: theme.space?.[1] || 4,
@@ -178,6 +179,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     starredRepos,
     currentUser,
     userOrgs,
+    orgs,
     loading: githubLoading,
     refresh: refreshGithubProjects,
     ensureStarred,
@@ -595,6 +597,19 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             ? 'No cloned projects yet.'
             : 'No owned projects yet.';
 
+  // Owner login → display label/avatar for the section headers. Grouping,
+  // ordering, badges and the clone/create actions all stay keyed on the login;
+  // only the header label changes (see {@link resolveOwnerIdentity}).
+  const ownerDirectory = useMemo(
+    () => ({
+      selfLogin: currentUser,
+      selfName: profile?.name,
+      selfAvatarUrl: profile?.avatar_url,
+      orgs,
+    }),
+    [currentUser, profile, orgs],
+  );
+
   return (
     <div
       style={{
@@ -871,11 +886,17 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             // account or a member org, and a base clone directory is set.
             const canAdd = !!baseDefaultDirectory && (isUserOwn || isMemberOrg);
 
+            // Display label/avatar for the header; the login stays the key for
+            // ordering, badges and the add/create flows above.
+            const identity = resolveOwnerIdentity(orgName, ownerDirectory);
+
             return (
               <div key={orgName} style={{ marginBottom: spacing.md }}>
                 <OrgSectionHeaderCard
                   header={{
-                    orgName,
+                    orgName: identity.label,
+                    login: identity.login,
+                    avatarUrl: identity.avatarUrl,
                     badge,
                     repoCount: repos.length,
                     isUntracked: orgName === 'Untracked',
@@ -887,7 +908,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                       ? () => setCreateTarget({ owner: orgName, isUser: isUserOwn })
                       : undefined
                   }
-                  addLabel={`Add a repository to ${orgName}`}
+                  addLabel={`Add a repository to ${identity.label}`}
                 />
 
                 {!isCollapsed && (

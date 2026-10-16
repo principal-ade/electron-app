@@ -93,6 +93,42 @@ export const BadgeMember: Story = {
   ),
 };
 
+/** Org display name, with the login surfaced as the hover title. */
+export const OrgDisplayName: Story = {
+  render: () => (
+    <Wrapper>
+      <OrgSectionHeaderCard
+        header={createMockHeader({
+          orgName: 'Acme Corporation',
+          login: 'acme',
+          badge: 'member',
+          repoCount: 12,
+        })}
+        isCollapsed={false}
+        onToggle={() => console.info('toggle')}
+      />
+    </Wrapper>
+  ),
+};
+
+/** The signed-in user's own account: profile display name instead of the login. */
+export const SelfDisplayName: Story = {
+  render: () => (
+    <Wrapper>
+      <OrgSectionHeaderCard
+        header={createMockHeader({
+          orgName: 'Jane Doe',
+          login: 'johndoe',
+          badge: 'you',
+          repoCount: 3,
+        })}
+        isCollapsed={false}
+        onToggle={() => console.info('toggle')}
+      />
+    </Wrapper>
+  ),
+};
+
 export const SingleRepo: Story = {
   render: () => (
     <Wrapper>

@@ -1,5 +1,8 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
+import type {
+  GitHubOrganization,
+  GitHubRepository,
+} from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { useAuthUser } from '../providers/AuthProvider';
 import {
   ensureStarred,
@@ -24,6 +27,8 @@ export interface UseGithubProjectsResult {
   currentUser: string | null;
   /** Logins of the orgs the user belongs to */
   userOrgs: string[];
+  /** The user's orgs with display names + avatars (for section headers). */
+  orgs: GitHubOrganization[];
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -65,6 +70,8 @@ export function useGithubProjects(): UseGithubProjectsResult {
     // Derived from auth state — available immediately, not after the fetch.
     currentUser: login,
     userOrgs: snapshot.orgs.map((org) => org.login),
+    // Carries the display name + avatar the raw login list drops.
+    orgs: snapshot.orgs,
     loading: snapshot.loading,
     error: snapshot.error,
     refresh,
