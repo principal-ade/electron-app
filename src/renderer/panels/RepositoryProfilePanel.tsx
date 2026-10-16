@@ -23,11 +23,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Circle,
-  Github,
   Play,
   Pause,
-  Eye,
-  EyeClosed,
   Check,
   Copy,
   Loader2,
@@ -477,9 +474,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   // Feedback for copying a local clone path (keyed by the path just copied).
   const [copiedClonePath, setCopiedClonePath] = useState<string | null>(null);
 
-  // Feedback for copying the GitHub link from the repo name
-  const [copiedGithubLink, setCopiedGithubLink] = useState(false);
-
   // State for commit playback
   type PlayMode = 'today' | 'week' | 'year';
   const [isPlaying, setIsPlaying] = useState(false);
@@ -496,9 +490,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const CONTRIBUTORS_COLUMN_MIN_WIDTH = 900;
   const containerRef = useRef<HTMLDivElement>(null);
   const [panelWidth, setPanelWidth] = useState<number>(0);
-
-  // Suffix layers visibility toggle
-  const [showSuffixLayers, setShowSuffixLayers] = useState(true);
 
   // Track which button is currently bouncing (by clone path)
   const [bouncingButton, setBouncingButton] = useState<string | null>(null);
@@ -644,7 +635,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     // 1. First, add file suffix color layers (higher priority: 100+)
     // Higher priority = drawn first = appears underneath
     // These show the default colors for all files based on their extensions
-    if (showSuffixLayers && cityData?.buildings) {
+    if (cityData?.buildings) {
       const fileSuffixLayers = createFileColorHighlightLayers(cityData.buildings);
 
       // Check if there are any git changes
@@ -761,7 +752,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     setHighlightLayers(layers);
 
     console.info('[RepositoryProfilePanel] Total highlight layers:', layers.length);
-  }, [gitStatusMap, isPlaying, repositoryData?.localClones, theme.colors, cityData, showSuffixLayers, hoveredAuthorEmail, ownershipVersion]);
+  }, [gitStatusMap, isPlaying, repositoryData?.localClones, theme.colors, cityData, hoveredAuthorEmail, ownershipVersion]);
 
   // Check if the current user has already forked this repo
   useEffect(() => {
@@ -1057,15 +1048,26 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     }
   };
 
-  const handleCopyGithubLink = async () => {
-    if (!repositoryData?.htmlUrl) return;
-    try {
-      await navigator.clipboard.writeText(repositoryData.htmlUrl);
-      setCopiedGithubLink(true);
-      setTimeout(() => setCopiedGithubLink(false), 1500);
-    } catch (error) {
-      console.error('Failed to copy GitHub link:', error);
-    }
+  // Open a repo-relative file in a workspace tab. The projects window's
+  // WorkspaceShell listens for `file:opened` on this bus and routes by
+  // extension (markdown → doc tab, media → media tab, else source-file tab).
+  // File City + git-status paths are repo-relative, so prefix the clone root.
+  const openFileInTab = (path: string) => {
+    const clonePath = repositoryData?.localClones?.[0]?.path;
+    if (!clonePath) return; // remote-only repos have no local file to open
+    const filePath = path.startsWith('/') ? path : `${clonePath}/${path}`;
+    events.emit({
+      type: 'file:opened',
+      source: 'repo-profile-panel',
+      timestamp: Date.now(),
+      payload: { filePath, repositoryPath: clonePath },
+    });
+  };
+
+  // File City building click → open the file (directories are ignored).
+  const handleFileCityFileClick = (path: string, type: 'file' | 'directory') => {
+    if (type !== 'file') return;
+    openFileInTab(path);
   };
 
   // Copy a local clone's full (unshortened) path to the clipboard.
@@ -1505,89 +1507,66 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             )}
           </div>
 
-          {/* Stats - aligned with bottom of avatar */}
-          <div style={{ flex: 1, paddingBottom: spacing.xs, display: 'flex', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap', flexShrink: 0 }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '24px',
-                }}>
-                  {formatNumber(repositoryData.totalCommits)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  commits
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '24px',
-                }}>
-                  {getRepositoryAge(repositoryData.createdAt)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  old
-                </div>
-              </div>
-
+          {/* Repository name, visibility badge, explorer */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+              {repositoryData.isPrivate !== undefined && (
+                <span
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    color: repositoryData.isPrivate ? theme.colors.textSecondary : theme.colors.textMuted,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: 4,
+                    padding: '2px 8px',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {repositoryData.isPrivate ? 'Private' : 'Public'}
+                </span>
+              )}
+              {repositoryData.github && (() => {
+                const github = repositoryData.github;
+                return (
+                  <button
+                    onClick={() =>
+                      events.emit({
+                        type: 'repository:explorer-open',
+                        source: 'repo-profile-panel',
+                        timestamp: Date.now(),
+                        payload: payloadFromGithub({
+                          owner: github.owner,
+                          name: github.name,
+                          defaultBranch: github.defaultBranch,
+                        }),
+                      })
+                    }
+                    title="Open the explorer view"
+                    style={{
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.primary,
+                      border: `1px solid ${theme.colors.primary}`,
+                      borderRadius: 4,
+                      padding: '2px 8px',
+                      backgroundColor: 'transparent',
+                      cursor: 'pointer',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <LucideIcons.Compass size={11} />
+                    Explorer
+                  </button>
+                );
+              })()}
             </div>
-
-          </div>
-        </div>
-
-        {/* Repository Name and Status Badge */}
-        <div style={{ marginBottom: spacing.md }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-            {repositoryData.htmlUrl && (
-              <button
-                onClick={handleOpenInGitHub}
-                title="Open in GitHub"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: theme.colors.textSecondary,
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = theme.colors.text;
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >
-                <Github size={24} />
-              </button>
-            )}
             <h2
-              onClick={repositoryData.htmlUrl ? handleCopyGithubLink : undefined}
-              title={repositoryData.htmlUrl ? 'Click to copy GitHub link' : undefined}
+              onClick={repositoryData.htmlUrl ? handleOpenInGitHub : undefined}
+              title={repositoryData.htmlUrl ? 'Open in GitHub' : undefined}
               style={{
                 margin: 0,
                 fontSize: theme.fontSizes[4],
@@ -1599,73 +1578,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             >
               {repositoryData.name}
             </h2>
-            {copiedGithubLink && (
-              <span
-                style={{
-                  flexShrink: 0,
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.primary,
-                }}
-              >
-                Link copied
-              </span>
-            )}
-            {repositoryData.isPrivate !== undefined && (
-              <span
-                style={{
-                  flexShrink: 0,
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: repositoryData.isPrivate ? theme.colors.textSecondary : theme.colors.textMuted,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: 4,
-                  padding: '2px 8px',
-                  lineHeight: 1.5,
-                }}
-              >
-                {repositoryData.isPrivate ? 'Private' : 'Public'}
-              </span>
-            )}
-            {repositoryData.github && (() => {
-              const github = repositoryData.github;
-              return (
-                <button
-                  onClick={() =>
-                    events.emit({
-                      type: 'repository:explorer-open',
-                      source: 'repo-profile-panel',
-                      timestamp: Date.now(),
-                      payload: payloadFromGithub({
-                        owner: github.owner,
-                        name: github.name,
-                        defaultBranch: github.defaultBranch,
-                      }),
-                    })
-                  }
-                  title="Open the explorer view"
-                  style={{
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    fontSize: theme.fontSizes[0],
-                    fontFamily: theme.fonts?.body,
-                    color: theme.colors.primary,
-                    border: `1px solid ${theme.colors.primary}`,
-                    borderRadius: 4,
-                    padding: '2px 8px',
-                    backgroundColor: 'transparent',
-                    cursor: 'pointer',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  <LucideIcons.Compass size={11} />
-                  Explorer
-                </button>
-              );
-            })()}
           </div>
+        </div>
+
+        {/* Clone / GitHub actions */}
+        <div style={{ marginBottom: spacing.md }}>
           {!repositoryData.isLocal && (
             <div
               style={{
@@ -2073,11 +1990,61 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                             color: theme.colors.text,
                           }}
                         >
+                          {/* Sync status vs remote (shown regardless of local changes) */}
+                          {!branchStatus.hasUpstream ? (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                color: theme.colors.warning,
+                              }}
+                            >
+                              <AlertCircle size={12} />
+                              <span>no remote</span>
+                            </div>
+                          ) : branchStatus.ahead === 0 && branchStatus.behind === 0 ? (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                color: theme.colors.success,
+                              }}
+                            >
+                              <CheckCircle2 size={12} />
+                              <span>in sync</span>
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                color: branchStatus.ahead > 0 && branchStatus.behind > 0
+                                  ? theme.colors.error
+                                  : branchStatus.behind > 0
+                                    ? theme.colors.warning
+                                    : theme.colors.info,
+                              }}
+                            >
+                              <AlertCircle size={12} />
+                              <span>
+                                {branchStatus.ahead > 0 && branchStatus.behind === 0
+                                  ? `${branchStatus.ahead} ahead`
+                                  : branchStatus.ahead === 0 && branchStatus.behind > 0
+                                    ? `${branchStatus.behind} behind`
+                                    : `${branchStatus.ahead}↑ ${branchStatus.behind}↓`}
+                              </span>
+                            </div>
+                          )}
+
+                          <span style={{ color: theme.colors.textSecondary }}>•</span>
                           <GitBranch size={12} />
                           <span>{branchStatus.branch}</span>
 
-                          {/* Status Indicator */}
-                          {gitStatus && gitStatus.isDirty ? (
+                          {/* Local working-tree changes */}
+                          {gitStatus && gitStatus.isDirty && (
                             <>
                               <span style={{ color: theme.colors.textSecondary }}>•</span>
                               <div
@@ -2097,61 +2064,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                                                   (gitStatus.deletedFiles?.length || 0);
                                     return total === 1 ? '1 change' : `${total} changes`;
                                   })()}
-                                </span>
-                              </div>
-                            </>
-                          ) : !branchStatus.hasUpstream ? (
-                            <>
-                              <span style={{ color: theme.colors.textSecondary }}>•</span>
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  color: theme.colors.warning,
-                                }}
-                              >
-                                <AlertCircle size={12} />
-                                <span>no remote</span>
-                              </div>
-                            </>
-                          ) : branchStatus.ahead === 0 && branchStatus.behind === 0 ? (
-                            <>
-                              <span style={{ color: theme.colors.textSecondary }}>•</span>
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  color: theme.colors.success,
-                                }}
-                              >
-                                <CheckCircle2 size={12} />
-                                <span>in sync</span>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <span style={{ color: theme.colors.textSecondary }}>•</span>
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  color: branchStatus.ahead > 0 && branchStatus.behind > 0
-                                    ? theme.colors.error
-                                    : branchStatus.behind > 0
-                                      ? theme.colors.warning
-                                      : theme.colors.info,
-                                }}
-                              >
-                                <AlertCircle size={12} />
-                                <span>
-                                  {branchStatus.ahead > 0 && branchStatus.behind === 0
-                                    ? `${branchStatus.ahead} ahead`
-                                    : branchStatus.ahead === 0 && branchStatus.behind > 0
-                                      ? `${branchStatus.behind} behind`
-                                      : `${branchStatus.ahead}↑ ${branchStatus.behind}↓`}
                                 </span>
                               </div>
                             </>
@@ -2303,23 +2215,67 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             </div>
           )}
         </div>
+        </div>
 
-        {/* Description */}
-        {repositoryData.description && (
-          <p
-            style={{
-              margin: `0 0 ${spacing.md}px`,
-              fontSize: theme.fontSizes[1],
-              fontFamily: theme.fonts?.body,
-              lineHeight: theme.lineHeights?.body ?? 1.5,
-              color: theme.colors.text,
-              overflowWrap: 'break-word',
-              wordBreak: 'break-word',
-            }}
-          >
-            {repositoryData.description}
-          </p>
-        )}
+        {/* Stats - pinned to the right of the profile row */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            alignSelf: 'flex-start',
+            height: 120,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'flex-end',
+            paddingBottom: spacing.xs,
+          }}
+        >
+          <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap', flexShrink: 0 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                fontSize: theme.fontSizes[3],
+                fontWeight: theme.fontWeights?.semibold ?? 600,
+                fontFamily: theme.fonts?.body,
+                color: theme.colors.text,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '24px',
+              }}>
+                {getRepositoryAge(repositoryData.createdAt)}
+              </div>
+              <div style={{
+                fontSize: theme.fontSizes[0],
+                fontFamily: theme.fonts?.body,
+                color: theme.colors.textSecondary
+              }}>
+                old
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                fontSize: theme.fontSizes[3],
+                fontWeight: theme.fontWeights?.semibold ?? 600,
+                fontFamily: theme.fonts?.body,
+                color: theme.colors.text,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '24px',
+              }}>
+                {formatNumber(repositoryData.totalCommits)}
+              </div>
+              <div style={{
+                fontSize: theme.fontSizes[0],
+                fontFamily: theme.fonts?.body,
+                color: theme.colors.textSecondary
+              }}>
+                commits
+              </div>
+            </div>
+
+          </div>
+
         </div>
 
         </div>
@@ -2566,6 +2522,10 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
                 if (hasChanges) {
                   // Show changed files
+                  // Paths that no longer exist on disk. Git reports a staged
+                  // deletion in both `stagedFiles` and `deletedFiles`, so a
+                  // deletion can also appear under Staged — those can't open.
+                  const deletedSet = new Set(gitStatus.deletedFiles || []);
                   const sections = [
                     { title: 'Staged', files: gitStatus.stagedFiles || [], color: theme.colors.success, icon: '✓' },
                     { title: 'Modified', files: gitStatus.modifiedFiles || [], color: theme.colors.warning, icon: '●' },
@@ -2589,34 +2549,60 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                             {section.title} ({section.files.length})
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                            {section.files.map((filePath) => (
-                              <div
-                                key={filePath}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: spacing.xs,
-                                  padding: spacing.xs,
-                                  backgroundColor: theme.colors.background,
-                                  borderRadius: theme.radii?.[1] || 4,
-                                  fontSize: theme.fontSizes[0],
-                                  fontFamily: theme.fonts?.monospace,
-                                }}
-                              >
-                                <span style={{ color: section.color, flexShrink: 0, width: 16, textAlign: 'center' }}>
-                                  {section.icon}
-                                </span>
-                                <span style={{
-                                  color: theme.colors.text,
-                                  flex: 1,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }} title={filePath}>
-                                  {filePath}
-                                </span>
-                              </div>
-                            ))}
+                            {section.files.map((rawPath) => {
+                              // Porcelain renames arrive as "old -> new"; use the
+                              // new path for opening/display.
+                              const filePath = rawPath.includes(' -> ')
+                                ? (rawPath.split(' -> ').pop() ?? rawPath)
+                                : rawPath;
+                              // A deleted file no longer exists on disk. A staged
+                              // deletion also appears under Staged, so gate on the
+                              // deleted set rather than the section title.
+                              const openable = !deletedSet.has(rawPath);
+                              return (
+                                <button
+                                  key={rawPath}
+                                  type="button"
+                                  disabled={!openable}
+                                  onClick={() => openable && openFileInTab(filePath)}
+                                  title={openable ? `Open ${filePath}` : rawPath}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: spacing.xs,
+                                    padding: spacing.xs,
+                                    backgroundColor: theme.colors.background,
+                                    border: 'none',
+                                    borderRadius: theme.radii?.[1] || 4,
+                                    fontSize: theme.fontSizes[0],
+                                    fontFamily: theme.fonts?.monospace,
+                                    textAlign: 'left',
+                                    width: '100%',
+                                    cursor: openable ? 'pointer' : 'default',
+                                    transition: 'background-color 0.15s ease',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (openable) e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = theme.colors.background;
+                                  }}
+                                >
+                                  <span style={{ color: section.color, flexShrink: 0, width: 16, textAlign: 'center' }}>
+                                    {section.icon}
+                                  </span>
+                                  <span style={{
+                                    color: theme.colors.text,
+                                    flex: 1,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}>
+                                    {filePath}
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       ))}
@@ -2795,44 +2781,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             position: 'relative',
           }}
         >
-          {/* Toggle suffix layers button */}
-          {cityData && (
-            <button
-              onClick={() => setShowSuffixLayers(!showSuffixLayers)}
-              style={{
-                position: 'absolute',
-                top: spacing.sm,
-                right: spacing.sm,
-                zIndex: 10,
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-                padding: `${spacing.xs}px ${spacing.sm}px`,
-                background: theme.colors.backgroundSecondary,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: 6,
-                color: showSuffixLayers ? theme.colors.text : theme.colors.textSecondary,
-                fontSize: theme.fontSizes[0],
-                fontFamily: theme.fonts?.body,
-                fontWeight: theme.fontWeights?.medium ?? 500,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = `${theme.colors.primary}15`;
-                e.currentTarget.style.borderColor = theme.colors.primary;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = theme.colors.backgroundSecondary;
-                e.currentTarget.style.borderColor = theme.colors.border;
-              }}
-              title={showSuffixLayers ? 'Hide file type colors' : 'Show file type colors'}
-            >
-              {showSuffixLayers ? <Eye size={14} /> : <EyeClosed size={14} />}
-              <span>File Types</span>
-            </button>
-          )}
-
           {cityData ? (
             <ArchitectureMapHighlightLayers
               cityData={cityData}
@@ -2845,6 +2793,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               showDirectoryLabels={true}
               fullSize={true}
               maxCanvasSize={2048}
+              onFileClick={handleFileCityFileClick}
             />
           ) : (
             <div
