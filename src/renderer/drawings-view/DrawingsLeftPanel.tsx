@@ -195,7 +195,10 @@ export const DrawingsLeftPanel: React.FC<DrawingsLeftPanelProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: spacing.sm,
-          padding: spacing.sm,
+          height: 40,
+          boxSizing: 'border-box',
+          padding: `0 ${spacing.sm}px`,
+          borderBottom: `1px solid ${theme.colors.border}`,
           flexShrink: 0,
         }}
       >
@@ -265,7 +268,6 @@ export const DrawingsLeftPanel: React.FC<DrawingsLeftPanelProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: spacing.sm,
-          padding: `0 ${spacing.sm}px ${spacing.sm}px`,
         }}
       >
         <div
@@ -278,8 +280,8 @@ export const DrawingsLeftPanel: React.FC<DrawingsLeftPanelProps> = ({
             alignItems: 'center',
             gap: spacing.sm,
             padding: `0 ${spacing.sm}px`,
-            borderRadius: 6,
-            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 0,
+            borderBottom: `1px solid ${theme.colors.border}`,
             backgroundColor: theme.colors.backgroundSecondary,
           }}
         >

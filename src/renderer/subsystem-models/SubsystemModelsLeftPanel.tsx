@@ -199,7 +199,10 @@ export const SubsystemModelsLeftPanel: React.FC<
           display: 'flex',
           alignItems: 'center',
           gap: spacing.sm,
-          padding: spacing.sm,
+          height: 40,
+          boxSizing: 'border-box',
+          padding: `0 ${spacing.sm}px`,
+          borderBottom: `1px solid ${theme.colors.border}`,
           flexShrink: 0,
         }}
       >
@@ -245,7 +248,6 @@ export const SubsystemModelsLeftPanel: React.FC<
           display: 'flex',
           alignItems: 'center',
           gap: spacing.sm,
-          padding: `0 ${spacing.sm}px ${spacing.sm}px`,
         }}
       >
         <div
@@ -258,8 +260,8 @@ export const SubsystemModelsLeftPanel: React.FC<
             alignItems: 'center',
             gap: spacing.sm,
             padding: `0 ${spacing.sm}px`,
-            borderRadius: 6,
-            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 0,
+            borderBottom: `1px solid ${theme.colors.border}`,
             backgroundColor: theme.colors.backgroundSecondary,
           }}
         >

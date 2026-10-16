@@ -593,7 +593,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: spacing.sm,
-          padding: spacing.sm,
+          height: 40,
+          boxSizing: 'border-box',
+          padding: `0 ${spacing.sm}px`,
+          borderBottom: `1px solid ${theme.colors.border}`,
           flexShrink: 0,
         }}
       >

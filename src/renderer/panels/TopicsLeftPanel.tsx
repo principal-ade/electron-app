@@ -321,7 +321,10 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
           display: 'flex',
           alignItems: 'center',
           gap: spacing.sm,
-          padding: spacing.sm,
+          height: 40,
+          boxSizing: 'border-box',
+          padding: `0 ${spacing.sm}px`,
+          borderBottom: `1px solid ${theme.colors.border}`,
           flexShrink: 0,
         }}
       >
@@ -380,8 +383,6 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: spacing.sm,
-          padding: `0 ${spacing.sm}px ${spacing.sm}px`,
         }}
       >
         {/* Text filter */}
@@ -395,8 +396,8 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
             alignItems: 'center',
             gap: spacing.sm,
             padding: `0 ${spacing.sm}px`,
-            borderRadius: 6,
-            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 0,
+            borderBottom: `1px solid ${theme.colors.border}`,
             backgroundColor: theme.colors.backgroundSecondary,
           }}
         >
@@ -460,8 +461,8 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
               boxSizing: 'border-box',
               gap: spacing.xs,
               padding: `0 ${spacing.sm}px`,
-              borderRadius: 6,
-              border: `1px solid ${
+              borderRadius: 0,
+              borderBottom: `1px solid ${
                 statusFilter.size > 0
                   ? theme.colors.primary
                   : theme.colors.border
