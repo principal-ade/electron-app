@@ -756,6 +756,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             />
           ) : activeView === 'home-panel' ? (
             <HomeLeftPanel
+              tabs={tabs}
               repositories={repositories}
               events={events}
               aboutUser={aboutUser}

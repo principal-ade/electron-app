@@ -3,7 +3,7 @@
  *
  * The Home surface's left panel. Shows a UserAboutCard (GitHub profile), the
  * In Progress bar, a search bar, and the list of in-progress repositories
- * (uncommitted changes / unpushed commits), grouped by owner with
+ * (open tabs / uncommitted changes / unpushed commits), grouped by owner with
  * `OrgSectionHeaderCard` and rendered with the Projects-surface rows
  * (`OrgRepoItemCard`).
  */
@@ -36,7 +36,9 @@ import { shellQuote } from '../../utils/shellQuote';
 import { UserAboutCard } from './UserAboutCard';
 import { type UserAboutInfo } from './useUserAboutInfo';
 import { RepoAboutCard } from './RepoAboutCard';
-import { useInProgressRepos, type InProgressRepo } from './useInProgressRepos';
+import { useInProgressRepos } from './useInProgressRepos';
+import { getHomeRepositories, type HomeRepository } from './homeRepositories';
+import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
 import { useWatchedRepos } from './useWatchedRepos';
 import {
   HomeSearchBar,
@@ -51,6 +53,7 @@ import {
 
 export interface HomeLeftPanelProps {
   repositories: AlexandriaEntry[];
+  tabs: WorkspaceTab[];
   events: PanelEventEmitter;
   /**
    * Home profile (GitHub or git identity), owned by WorkspaceShell so it
@@ -62,6 +65,7 @@ export interface HomeLeftPanelProps {
 
 export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   repositories,
+  tabs,
   events,
   aboutUser,
   userLoading,
@@ -75,6 +79,10 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 
   // Repos with uncommitted changes / unpushed commits — the in-progress list.
   const inProgressRepos = useInProgressRepos(repositories);
+  const homeRepos = useMemo(
+    () => getHomeRepositories(repositories, inProgressRepos, tabs),
+    [repositories, inProgressRepos, tabs],
+  );
   // Repos the monitoring worker is watching — these have live git status;
   // unwatched repos are query-only and can show a stale sync count.
   const watchedPaths = useWatchedRepos();
@@ -368,12 +376,12 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // Open the repo profile tab for an in-progress row (mirrors InProgressRepoCard;
   // the Projects rows open the profile rather than the guide).
   const openInProgressRepo = useCallback(
-    (entry: AlexandriaEntry) => {
+    (payload: RepositorySelectedPayload) => {
       events.emit({
         type: 'repository:selected',
         source: 'home-panel',
         timestamp: Date.now(),
-        payload: payloadFromLocalEntry(entry),
+        payload,
       });
     },
     [events],
@@ -393,9 +401,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 
   // In-progress repos grouped by owner for the section-header list.
   const inProgressGroups = useMemo(() => {
-    const groups = new Map<string, InProgressRepo[]>();
-    for (const repo of inProgressRepos) {
-      const owner = repo.entry.github?.owner ?? 'Untracked';
+    const groups = new Map<string, HomeRepository[]>();
+    for (const repo of homeRepos) {
+      const owner = repo.payload.github?.owner ?? 'Untracked';
       const bucket = groups.get(owner);
       if (bucket) bucket.push(repo);
       else groups.set(owner, [repo]);
@@ -410,7 +418,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       if (aYou !== bYou) return aYou ? -1 : 1;
       return a.localeCompare(b, undefined, { sensitivity: 'base' });
     });
-  }, [inProgressRepos, githubLogin]);
+  }, [homeRepos, githubLogin]);
 
   return (
     <div
@@ -525,24 +533,26 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                         onToggle={() => toggleOwner(owner)}
                       />
                       {!isCollapsed &&
-                        repos.map(({ entry, status }) => {
-                          const name = entry.github?.name ?? entry.name;
-                          const path = entry.path ? String(entry.path) : '';
+                        repos.map(({ key, payload, status }) => {
+                          const entry = payload.localEntry;
+                          const name =
+                            payload.github?.name ?? entry?.name ?? payload.purl;
+                          const path = entry?.path ? String(entry.path) : '';
                           return (
                             <OrgRepoItemCard
-                              key={String(status.repoPath)}
+                              key={key}
                               repo={{ name }}
-                              isCloned
-                              isDirty={status.isDirty}
+                              isCloned={!!path}
+                              isDirty={status?.isDirty}
                               watching={path ? watchedPaths.has(path) : false}
                               sync={{
-                                ahead: status.ahead,
-                                behind: status.behind,
+                                ahead: status?.ahead,
+                                behind: status?.behind,
                               }}
                               dragText={path ? shellQuote(path) : undefined}
-                              onClick={() => openInProgressRepo(entry)}
+                              onClick={() => openInProgressRepo(payload)}
                               onOpenTerminal={
-                                path
+                                path && entry
                                   ? () => openTerminalForEntry(entry, name)
                                   : undefined
                               }
@@ -562,8 +572,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                     lineHeight: 1.5,
                   }}
                 >
-                  Nothing in progress — every tracked repository has a clean
-                  working tree.
+                  Nothing in progress — no open repository tabs, uncommitted
+                  changes, or unpushed commits.
                 </div>
               )}
             </div>
