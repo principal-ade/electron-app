@@ -16,6 +16,9 @@
  */
 
 import { GithubService } from '../../main-process-api/GithubService';
+import { AlexandriaService } from '../../main-process-api/AlexandriaService';
+import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
+import { findClonedGithubEntry } from '../../utils/alexandriaIdentity';
 
 export interface RepoExplorerTreeEntry {
   path: string;
@@ -156,9 +159,37 @@ const ipcImpl: RepoExplorerServiceImpl = {
     };
   },
 
-  // TODO: local repos → RepositoryMonitoringService.getPackages(path); remote
-  // repos → walk the tree + read manifests.
-  async getPackages(_owner, _repo) {
+  // Local (cloned) repos: resolve owner/repo to its checkout via the Alexandria
+  // registry and reuse the monitoring worker's package discovery — the same
+  // path SystemMonitor uses. That runs PackageLayerModule (+ optional quality
+  // enrichment) over the checkout and returns real PackageLayer[].
+  //
+  // Remote (un-cloned) repos still have no source here; they'd need a tree walk
+  // + manifest read (PackageLayerModule.discoverPackages with the GitHub tree).
+  async getPackages(owner, repo) {
+    try {
+      const entries = await AlexandriaService.getRepositories();
+      const entry = findClonedGithubEntry(entries, owner, repo);
+      const localPath =
+        typeof entry?.path === 'string' && entry.path.length > 0
+          ? entry.path
+          : undefined;
+
+      if (localPath) {
+        const result = await RepositoryMonitoringService.getPackages(localPath);
+        if (result) {
+          return { packages: result.packages, summary: result.summary };
+        }
+      }
+    } catch (err) {
+      console.error(
+        `[repoExplorerService] getPackages(${owner}/${repo}) local lookup failed:`,
+        err,
+      );
+    }
+
+    // TODO: remote repos → walk the tree + read manifests via
+    // PackageLayerModule.discoverPackages(fileTree, fileReader).
     return {
       packages: [] as unknown[],
       summary: { packageCount: 0, totalPackages: 0, packageManagers: [] },
