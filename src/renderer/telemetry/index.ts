@@ -128,8 +128,16 @@ class WebTelemetryProvider {
         'window.type': windowType,
       });
 
+      // The browser exporter serializes JSON, and with no `headers` it would use
+      // `navigator.sendBeacon` instead of fetch. sendBeacon sends with
+      // credentials mode `include`, so the collector has to answer
+      // `Access-Control-Allow-Credentials: true` - which OTLP/HTTP collectors
+      // generally do not (Maple's local server does not). Passing the content
+      // type we already send selects the fetch transport, which needs no
+      // credentials and is satisfied by a plain preflight.
       const exporter = new OTLPTraceExporter({
         url: `${endpoint}/v1/traces`,
+        headers: { 'Content-Type': 'application/json' },
       });
 
       // Create provider with resource and span processors
