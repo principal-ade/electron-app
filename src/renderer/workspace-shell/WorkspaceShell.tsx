@@ -555,39 +555,98 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     [repositories],
   );
 
-  const handleShowProject = useCallback(() => {
-    if (!activeTabDirectory) return;
-    const entry = findEntryForDirectory(activeTabDirectory);
-    if (!entry) return;
-    const matchingEntries = repositories.filter((e) => {
-      const ep = e.purl ?? e.github?.purl;
-      const ip = entry.purl ?? entry.github?.purl;
-      return ep && ip && ep === ip;
-    });
-    try {
-      const payload = payloadFromLocalEntry(
+  // Resolve a terminal working directory to a repository payload. Aggregates
+  // every registered entry that shares the matched repo's purl so all clones are
+  // listed (mirrors the Projects list's click-to-open payload).
+  const resolveRepoPayloadForDirectory = useCallback(
+    (directory: string): RepositorySelectedPayload | undefined => {
+      const entry = findEntryForDirectory(directory);
+      if (!entry) return undefined;
+      const matchingEntries = repositories.filter((e) => {
+        const ep = e.purl ?? e.github?.purl;
+        const ip = entry.purl ?? entry.github?.purl;
+        return ep && ip && ep === ip;
+      });
+      return payloadFromLocalEntry(
         entry,
         matchingEntries.length > 0 ? matchingEntries : undefined,
       );
-      onOpenRepository(payload);
-      // Expand the left panel if collapsed.
-      if (isLeftCollapsed) {
-        panelLayoutRef.current?.expandPanel('left');
-        setIsLeftCollapsed(false);
-        onCollapsedChange({ left: false, right: collapsed.right });
-      }
+    },
+    [findEntryForDirectory, repositories],
+  );
+
+  const handleShowProject = useCallback(() => {
+    if (!activeTabDirectory) return;
+    let payload: RepositorySelectedPayload | undefined;
+    try {
+      payload = resolveRepoPayloadForDirectory(activeTabDirectory);
     } catch (err) {
       console.error('[WorkspaceShell] Failed to build repo payload:', err);
+      return;
+    }
+    if (!payload) return;
+    onOpenRepository(payload);
+    // Expand the left panel if collapsed.
+    if (isLeftCollapsed) {
+      panelLayoutRef.current?.expandPanel('left');
+      setIsLeftCollapsed(false);
+      onCollapsedChange({ left: false, right: collapsed.right });
     }
   }, [
     activeTabDirectory,
-    findEntryForDirectory,
-    repositories,
+    resolveRepoPayloadForDirectory,
     isLeftCollapsed,
     onOpenRepository,
     onCollapsedChange,
     collapsed.right,
   ]);
+
+  // Open (or focus) the project-info tab for the clone that contains the active
+  // terminal's working directory. Emitted on the shell's local bus, which the
+  // Projects open-intent forwarder lifts to the portal where PortalIntentBridge
+  // materializes the tab — the same path as clicking the project in the
+  // Projects list, so a remote-only clone still routes to the explorer.
+  // Returns whether it actually resolved a clone (so the caller only consumes
+  // the chord when there is something to open).
+  const openProjectTabForActiveTerminal = useCallback((): boolean => {
+    if (!activeTabDirectory) return false;
+    let payload: RepositorySelectedPayload | undefined;
+    try {
+      payload = resolveRepoPayloadForDirectory(activeTabDirectory);
+    } catch (err) {
+      console.error('[WorkspaceShell] Failed to build repo payload:', err);
+      return false;
+    }
+    if (!payload) return false;
+    eventsRef.current.emit({
+      type: PORTAL_INTENTS.repositorySelected,
+      source: 'workspace-terminal-project-shortcut',
+      timestamp: Date.now(),
+      payload,
+    });
+    return true;
+  }, [activeTabDirectory, resolveRepoPayloadForDirectory]);
+
+  // Cmd+Shift+O (Ctrl+Shift+O off macOS): open the project tab for the clone
+  // the active terminal is sitting in. Capture phase + stopPropagation so the
+  // terminal never sees the chord; a no-op when the active tab isn't a terminal
+  // rooted in a registered clone.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (
+        !((e.metaKey || e.ctrlKey) && e.shiftKey) ||
+        e.altKey ||
+        e.code !== 'KeyO'
+      ) {
+        return;
+      }
+      if (!openProjectTabForActiveTerminal()) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, [openProjectTabForActiveTerminal]);
 
   // bottom-bar content for cross-window tab transfer (principal → dev-workspace).
   const bottomBarContent = useMemo(() => {
