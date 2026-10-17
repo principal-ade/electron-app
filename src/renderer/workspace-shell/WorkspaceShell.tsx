@@ -110,6 +110,7 @@ import {
   PORTAL_INTENTS,
   type TerminalOpenPayload,
 } from '../events/portalIntents';
+import { TerminalEmptyState } from './TerminalEmptyState';
 
 /** Which surface's left panel + landing the shell currently shows. */
 export type WorkspaceView =
@@ -120,6 +121,13 @@ export type WorkspaceView =
   | 'skills'
   | 'processes'
   | 'subsystem-models';
+
+/**
+ * Stable identity for the terminal panel's `renderEmptyState` — the panel
+ * memoizes on prop identity, so a fresh arrow each render would defeat it. The
+ * empty state takes no props from the shell.
+ */
+const renderTerminalEmptyState = () => <TerminalEmptyState />;
 
 /** Centered landing hint shown by the `topics-home` tab. */
 const HomePanel: React.FC<{
@@ -615,6 +623,21 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     collapsed.right,
   ]);
 
+  // Resolve the clone that contains the active terminal's working directory to
+  // a repo payload, or undefined when the terminal isn't rooted in a registered
+  // clone.
+  const resolveActiveTerminalRepoPayload = useCallback(():
+    | RepositorySelectedPayload
+    | undefined => {
+    if (!activeTabDirectory) return undefined;
+    try {
+      return resolveRepoPayloadForDirectory(activeTabDirectory);
+    } catch (err) {
+      console.error('[WorkspaceShell] Failed to build repo payload:', err);
+      return undefined;
+    }
+  }, [activeTabDirectory, resolveRepoPayloadForDirectory]);
+
   // Open (or focus) the project-info tab for the clone that contains the active
   // terminal's working directory. Emitted on the shell's local bus, which the
   // Projects open-intent forwarder lifts to the portal where PortalIntentBridge
@@ -623,14 +646,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   // Returns whether it actually resolved a clone (so the caller only consumes
   // the chord when there is something to open).
   const openProjectTabForActiveTerminal = useCallback((): boolean => {
-    if (!activeTabDirectory) return false;
-    let payload: RepositorySelectedPayload | undefined;
-    try {
-      payload = resolveRepoPayloadForDirectory(activeTabDirectory);
-    } catch (err) {
-      console.error('[WorkspaceShell] Failed to build repo payload:', err);
-      return false;
-    }
+    const payload = resolveActiveTerminalRepoPayload();
     if (!payload) return false;
     eventsRef.current.emit({
       type: PORTAL_INTENTS.repositorySelected,
@@ -639,7 +655,26 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       payload,
     });
     return true;
-  }, [activeTabDirectory, resolveRepoPayloadForDirectory]);
+  }, [resolveActiveTerminalRepoPayload]);
+
+  // Open (or focus) the owner/repo explorer for the clone that contains the
+  // active terminal's working directory. Unlike the project chord this is
+  // always the explorer, even for a locally-cloned repo whose project chord
+  // would land on the profile tab. The explorer can't render without an
+  // owner/repo, so a local-only clone (no GitHub identity) is a no-op and the
+  // terminal keeps the chord.
+  const openExplorerForActiveTerminal = useCallback((): boolean => {
+    const payload = resolveActiveTerminalRepoPayload();
+    if (!payload) return false;
+    if (!payload.github?.owner || !payload.github?.name) return false;
+    eventsRef.current.emit({
+      type: PORTAL_INTENTS.repositoryExplorerOpen,
+      source: 'workspace-terminal-explorer-shortcut',
+      timestamp: Date.now(),
+      payload,
+    });
+    return true;
+  }, [resolveActiveTerminalRepoPayload]);
 
   // Cmd+Shift+O (Ctrl+Shift+O off macOS): open the project tab for the clone
   // the active terminal is sitting in. Capture phase + stopPropagation so the
@@ -661,6 +696,27 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     window.addEventListener('keydown', handler, true);
     return () => window.removeEventListener('keydown', handler, true);
   }, [openProjectTabForActiveTerminal]);
+
+  // Cmd+Shift+E (Ctrl+Shift+E off macOS): open the owner/repo explorer for the
+  // clone the active terminal is sitting in. Same capture-phase guard as the
+  // project chord; a no-op when the active tab isn't a terminal rooted in a
+  // registered repo with a GitHub identity.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (
+        !((e.metaKey || e.ctrlKey) && e.shiftKey) ||
+        e.altKey ||
+        e.code !== 'KeyE'
+      ) {
+        return;
+      }
+      if (!openExplorerForActiveTerminal()) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, [openExplorerForActiveTerminal]);
 
   // Cmd+Shift+F (Ctrl+Shift+F off macOS): open a file-search popup scoped to the
   // registered repository the active terminal is sitting in. Resolution goes
@@ -943,6 +999,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               requestCloseTabId={requestCloseTabId}
               renderTabContent={renderTabContent}
               renderTabIcon={renderTabIcon}
+              renderEmptyState={renderTerminalEmptyState}
               bottomBarContent={bottomBarContent}
             />
           </div>
