@@ -7,12 +7,14 @@
 
 import { tipc } from '@egoist/tipc/main';
 import { BrowserWindow } from 'electron';
+import path from 'path';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { getSessionManagerInstance } from '../sessionManagerSingleton';
 import { ownershipManager } from '../TerminalOwnershipManager';
 import { isPtyAvailable } from '../utils/ptyLoader';
 import { getTracer } from '../../telemetry';
 import { getDaemonStatus, isDaemonRunning, stopDaemon, ensureDaemonRunning } from '../daemonSpawner';
+import { AlexandriaRegistryService } from '../../stores/AlexandriaRegistryService';
 
 // Tracer for terminal telemetry (main process scope)
 const tracer = getTracer('principal-ade-main');
@@ -60,6 +62,46 @@ export function broadcastTerminalSessionsChanged(): { sessionsCount: number; win
   });
 
   return { sessionsCount: sessions.length, windowsCount };
+}
+
+/**
+ * Stamp `lastOpenedAt` for the repository rooted exactly at `cwd`, so opening
+ * a terminal tab feeds the same recency ordering as opening a repo window.
+ *
+ * Only an exact repo-root match counts: a terminal opened in a subdirectory or
+ * outside any registered repository is ignored. Paths are normalised (absolute,
+ * trailing separator stripped) before the lookup.
+ *
+ * Fire-and-forget — the caller does not await it, and a failure never blocks
+ * the terminal tab.
+ */
+async function stampOpenedRepository(cwd?: string): Promise<void> {
+  if (!cwd) return;
+
+  const span = tracer.startSpan('alexandria.terminal.update_last_opened');
+
+  try {
+    const normalized = path.resolve(cwd).replace(/[/\\]+$/, '');
+    const registry = AlexandriaRegistryService.getInstance();
+    const repository = await registry.getRepositoryByPath(normalized);
+
+    if (!repository) {
+      span.setStatus({ code: SpanStatusCode.OK });
+      return;
+    }
+
+    span.setAttribute('repository_path', repository.path);
+    await registry.updateLastOpened(repository.path);
+    span.setStatus({ code: SpanStatusCode.OK });
+  } catch (error) {
+    console.warn('[Terminal] Failed to update lastOpenedAt:', error);
+    span.recordException(
+      error instanceof Error ? error : new Error(String(error)),
+    );
+    span.setStatus({ code: SpanStatusCode.ERROR });
+  } finally {
+    span.end();
+  }
 }
 
 export const terminalRouter = {
@@ -146,6 +188,11 @@ export const terminalRouter = {
         } catch (err) {
           console.warn('[Terminal] Failed to broadcast session change:', err);
         }
+
+        // Opening a terminal tab counts as opening the repo: stamp recency so
+        // it shows up first in Quick Open / local project ordering. Fire-and-
+        // forget — the tab is returned immediately.
+        void stampOpenedRepository(input.cwd);
 
         span.setStatus({ code: SpanStatusCode.OK });
         return sessionId;
