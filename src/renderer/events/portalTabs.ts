@@ -21,6 +21,7 @@ import type {
   Purl,
 } from '@principal-ai/alexandria-core-library';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
+import type { ProcessStatus } from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 
 /**
  * Markdown document tab — a doc opened in-place from the Principal MCP Bridge
@@ -189,6 +190,12 @@ export interface LocalhostBrowserTab extends BaseTab {
   port: number;
   /** Optional path appended to the URL (defaults to `/`). */
   path?: string;
+  /** Linked managed process; URL-only tabs remain keyed by origin. */
+  processId?: string;
+  processStatus?: ProcessStatus | 'removed';
+  processReady?: boolean;
+  processRunCount?: number;
+  navigationRevision?: number;
 }
 
 /** Union of all tab types the Projects surface renders. */

@@ -9,6 +9,8 @@ import {
 } from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 
 export const processRegistryAPI: ProcessRegistryAPI = {
+  logs: async (id: string): Promise<string[]> =>
+    ipcRenderer.invoke(ProcessRegistryEvents.LOGS, id),
   list: async (): Promise<ProcessEntry[]> =>
     ipcRenderer.invoke(ProcessRegistryEvents.LIST),
 

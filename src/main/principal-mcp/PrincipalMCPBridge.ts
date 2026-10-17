@@ -11,6 +11,7 @@ import { BrunoValidationService } from '../bruno/BrunoValidationService';
 import { ElectronFileAdapter, BrunoLangParserAdapter } from '../bruno/adapters';
 import { registerDocumentNotesRoutes } from '../document-notes/documentNotesRoutes';
 import { registerDocumentRoutes } from './documentRoutes';
+import { registerBrowserRoutes } from './browserRoutes';
 import { getDocumentNotesPersistence } from '../document-notes/documentNotesPersistence';
 import { registerTopicRoutes } from '../topics/topicRoutes';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
@@ -140,6 +141,25 @@ export class PrincipalMCPBridge extends EventEmitter {
                 },
                 response:
                   '{ success, windowOpened } — windowOpened is false when no focused window hosts a tabbed terminal.',
+              },
+            ],
+          },
+          {
+            name: 'browser',
+            description:
+              'Open a localhost browser tab in an already-focused Principal window. Process-linked tabs follow managed-process restarts and port changes; opening or closing a tab does not start or stop a process.',
+            routes: [
+              {
+                method: 'POST',
+                path: '/api/browser/open',
+                body: {
+                  processId: 'string — managed process id; mutually exclusive with url',
+                  path: 'string (optional) — path, query and fragment when using processId',
+                  url: 'string — http://localhost:<explicit-port>/path; mutually exclusive with processId',
+                  label: 'string (optional)',
+                },
+                response:
+                  '{ success, opened, tabId?, processId?, reason? } — opened acknowledges a committed tab, not page-load success. 400 invalid request, 403 browser-origin request, 404 unknown process, 409 process without a running port.',
               },
             ],
           },
@@ -1166,6 +1186,7 @@ export class PrincipalMCPBridge extends EventEmitter {
     // DOCUMENT (OPEN-IN-FOCUSED-WINDOW) ROUTES
     // ============================================
     registerDocumentRoutes(this.app);
+    registerBrowserRoutes(this.app, getProcessRegistry());
 
     // ============================================
     // TOPIC ROUTES

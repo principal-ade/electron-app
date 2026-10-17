@@ -106,6 +106,7 @@ export enum ProcessRegistryEvents {
   STOP = 'processes:stop',
   RESTART = 'processes:restart',
   REMOVE = 'processes:remove',
+  LOGS = 'processes:logs',
   CHANGED = 'processes:changed',
 }
 
@@ -120,6 +121,8 @@ export interface ProcessRegistryAPI {
   restart: (id: string) => Promise<ProcessStartResult>;
   /** Remove an entry from the list (only when not running). */
   remove: (id: string) => Promise<ProcessControlResult>;
+  /** Captured stdout and stderr for a managed process. */
+  logs: (id: string) => Promise<string[]>;
   /** Subscribe to registry changes; returns an unsubscribe function. */
   onChanged: (callback: (processes: ProcessEntry[]) => void) => () => void;
 }

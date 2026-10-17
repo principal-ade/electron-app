@@ -360,6 +360,8 @@ export class ProcessRegistry extends EventEmitter {
     entry.endedAt = undefined;
     entry.exitCode = undefined;
     entry.lastError = undefined;
+    // A restarted server may bind a different port. Do not reuse the old one.
+    entry.port = undefined;
     entry.fromHistory = false;
     this.emitChanged();
 

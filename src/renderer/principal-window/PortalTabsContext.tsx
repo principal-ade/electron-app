@@ -14,6 +14,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -36,6 +37,12 @@ import type {
   LocalhostBrowserTab,
 } from '../events/portalTabs';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
+import { ProcessRegistryService } from '../main-process-api/ProcessRegistryService';
+import {
+  browserTabId,
+  openOrNavigateLocalhostBrowser,
+  syncBrowserProcesses,
+} from './browserTabs';
 
 /**
  * The unified workspace tab union hosted by `WorkspaceShell` — the superset of
@@ -114,8 +121,13 @@ export interface WorkspaceTabsContextValue {
   openSkill: (label: string) => void;
   /** Open or focus a subsystem model tab. */
   openSubsystemModel: (modelId: string, title: string) => void;
-  /** Open (or focus) an embedded localhost browser tab for a dev-server port. */
-  openLocalhostBrowser: (port: number, path?: string, label?: string) => void;
+  /** Open or navigate a browser tab, keyed by managed process or localhost origin. */
+  openLocalhostBrowser: (
+    port: number,
+    path?: string,
+    label?: string,
+    processId?: string,
+  ) => string;
 }
 
 /** Back-compat shape for `useProjectsTabs` (titlebar + IntegratedShell). */
@@ -154,6 +166,37 @@ const WorkspaceTabsContext = createContext<WorkspaceTabsContextValue | null>(
 function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const linkedBrowserIds = tabs
+    .filter(
+      (tab): tab is LocalhostBrowserTab =>
+        tab.contentType === 'localhost-browser' && !!tab.processId,
+    )
+    .map((tab) => tab.processId)
+    .sort()
+    .join('\0');
+
+  useEffect(() => {
+    if (!linkedBrowserIds) return;
+    let cancelled = false;
+    let receivedUpdate = false;
+    const unsubscribe = ProcessRegistryService.onChanged((processes) => {
+      receivedUpdate = true;
+      setTabs((prev) => syncBrowserProcesses(prev, processes));
+    });
+    void ProcessRegistryService.list()
+      .then((processes) => {
+        if (!cancelled && !receivedUpdate) {
+          setTabs((prev) => syncBrowserProcesses(prev, processes));
+        }
+      })
+      .catch((error) =>
+        console.error('Failed to load linked browser processes', error),
+      );
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [linkedBrowserIds]);
 
   // Idempotent open helper: focus the tab if present, else append `make()`.
   const openTab = useCallback((tabId: string, make: () => WorkspaceTab) => {
@@ -384,20 +427,22 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       }
 
       // Open / focus without changing modes.
-      openTab(tabId, () =>
-        ({
-          id: tabId,
-          label: github
-            ? `${github.owner}/${github.name} · City`
-            : `City · ${String(purl)}`,
-          contentType: 'file-city-guide',
-          closable: true,
-          purl,
-          github,
-          localEntry,
-          readmeActive: false,
-          weekActive: false,
-        }) as FileCityGuideTab,
+      openTab(
+        tabId,
+        () =>
+          ({
+            id: tabId,
+            label: github
+              ? `${github.owner}/${github.name} · City`
+              : `City · ${String(purl)}`,
+            contentType: 'file-city-guide',
+            closable: true,
+            purl,
+            github,
+            localEntry,
+            readmeActive: false,
+            weekActive: false,
+          }) as FileCityGuideTab,
       );
     },
     [openTab],
@@ -478,24 +523,15 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [openTab],
   );
 
-  // Embedded localhost browser — one tab per port, deduped by the port.
   const openLocalhostBrowser = useCallback(
-    (port: number, path?: string, label?: string) => {
-      const id = `localhost-browser-${port}`;
-      openTab(
-        id,
-        () =>
-          ({
-            id,
-            label: label || `localhost:${port}`,
-            contentType: 'localhost-browser',
-            closable: true,
-            port,
-            path,
-          }) as LocalhostBrowserTab,
-      );
+    (port: number, path = '/', label?: string, processId?: string) => {
+      const target = { port, path, label, processId };
+      const id = browserTabId(target);
+      setTabs((prev) => openOrNavigateLocalhostBrowser(prev, target));
+      setActiveTabId(id);
+      return id;
     },
-    [openTab],
+    [],
   );
 
   return useMemo<WorkspaceTabsContextValue>(

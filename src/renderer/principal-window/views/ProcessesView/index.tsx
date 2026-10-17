@@ -4,7 +4,7 @@
  * Hosts the unified process panel. Merges managed processes (from the main
  * registry) with detected local servers, and turns the panel's intents into
  * registry / detection calls:
- * - open      → highlight (a tab view is a later increment)
+ * - open      → open a browser tab, linked for managed processes
  * - restart   → managed only
  * - stop/kill → managed: registry.stop; detected: kill by pid
  * - remove    → managed only (drop from history)
@@ -56,7 +56,12 @@ export const ProcessesView: React.FC = () => {
         setActiveEntryId(entry.id);
         // Open the dev server in an embedded browser tab when it exposes a port.
         if (entry.port != null) {
-          openLocalhostBrowser(entry.port, undefined, entry.label);
+          openLocalhostBrowser(
+            entry.port,
+            undefined,
+            entry.label,
+            entry.origin === 'managed' ? entry.id : undefined,
+          );
         }
       }),
       bus.on(PROCESS_INTENTS.restart, (event) => {

@@ -63,6 +63,7 @@ import type { ExtensionAPI } from './ExtensionAPI';
 import type { FileCityImageAPI } from './FileCityImageAPI';
 import type { DocumentNotesAPI } from './DocumentNotesAPI';
 import type { DocumentAPI } from './DocumentAPI';
+import type { BrowserAPI } from './BrowserAPI';
 import type { BrunoAPI } from './BrunoAPI';
 
 /**
@@ -140,6 +141,7 @@ export interface MainProcessAPI {
   fileCityImage: FileCityImageAPI;
   documentNotes: DocumentNotesAPI;
   document: DocumentAPI;
+  browser: BrowserAPI;
   bruno: BrunoAPI;
   processes: ProcessRegistryAPI;
   /** Only available in Remote Terminal Viewer window */

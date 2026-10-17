@@ -56,6 +56,7 @@ import { extensionAPI } from './main-process-api-implementations/extensionApi';
 import { fileCityImageAPI } from './main-process-api-implementations/fileCityImageApi';
 import { documentNotesAPI } from './main-process-api-implementations/documentNotesApi';
 import { documentAPI } from './main-process-api-implementations/documentApi';
+import { browserAPI } from './main-process-api-implementations/browserApi';
 import { brunoAPI } from './main-process-api-implementations/brunoApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
@@ -140,6 +141,7 @@ const mainProcessExposure: MainProcessAPI = {
   fileCityImage: fileCityImageAPI,
   documentNotes: documentNotesAPI,
   document: documentAPI,
+  browser: browserAPI,
   bruno: brunoAPI,
 };
 

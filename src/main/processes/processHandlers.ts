@@ -15,6 +15,9 @@ export function registerProcessHandlers(): void {
   const registry = getProcessRegistry();
 
   ipcMain.handle(ProcessRegistryEvents.LIST, async () => registry.list());
+  ipcMain.handle(ProcessRegistryEvents.LOGS, async (_event, id: string) =>
+    registry.getLogs(id),
+  );
 
   ipcMain.handle(
     ProcessRegistryEvents.START,

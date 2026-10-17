@@ -445,6 +445,11 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               key={browserTab.id}
               port={browserTab.port}
               path={browserTab.path}
+              processId={browserTab.processId}
+              processStatus={browserTab.processStatus}
+              processReady={browserTab.processReady}
+              processRunCount={browserTab.processRunCount}
+              navigationRevision={browserTab.navigationRevision}
             />
           );
         }

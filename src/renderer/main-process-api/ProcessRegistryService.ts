@@ -10,6 +10,7 @@ import type {
  * (`window.mainProcess.processes`).
  */
 export const ProcessRegistryService = {
+  logs: (id: string): Promise<string[]> => window.mainProcess.processes.logs(id),
   list: (): Promise<ProcessEntry[]> => window.mainProcess.processes.list(),
 
   start: (request: ProcessStartRequest): Promise<ProcessStartResult> =>

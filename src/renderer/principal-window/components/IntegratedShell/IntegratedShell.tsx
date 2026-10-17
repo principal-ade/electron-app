@@ -28,6 +28,7 @@ import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { usePortalEvents } from '../../PortalEventContext';
 import { useTopicsTabs } from '../../contexts/TopicsTabsContext';
 import { topicClient } from '../../../tipc/topicClient';
+import { useBridgeBrowserOpen } from '../../../hooks/useBridgeBrowserOpen';
 import type { RepositorySelectedPayload } from '../../../events/repositorySelected';
 import { OnboardingWizard } from '../../../components/OnboardingWizard/OnboardingWizard';
 import {
@@ -179,6 +180,12 @@ export const IntegratedShell: React.FC = () => {
   surfaceRef.current = surface;
   const overlayRef = useRef(overlay);
   overlayRef.current = overlay;
+
+  const revealBrowserWorkspace = useCallback(() => {
+    setOverlay(null);
+    if (!surfaceRef.current) setSurface('processes');
+  }, []);
+  useBridgeBrowserOpen(revealBrowserWorkspace);
 
   // Queued when Quick Open asks for a terminal tab before the portal has ever
   // mounted; flushed once a surface is set and WorkspaceShell is up.
