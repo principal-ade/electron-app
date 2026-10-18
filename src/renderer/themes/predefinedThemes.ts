@@ -170,7 +170,7 @@ export const predefinedThemes: Record<
 > = {
   transparent: {
     name: 'Transparent',
-    description: 'Transparent theme used during loading',
+    description: 'Transparent theme — paints no background so the window shows through',
     theme: transparentTheme,
   },
   iceTangerine: {
