@@ -214,7 +214,7 @@
     "@principal-ai/codebase-composition": "^0.2.58",
     "@principal-ai/control-tower-core": "^0.6.2",
     "@principal-ai/file-city-builder": "^0.5.5",
-    "@principal-ai/file-city-react": "^0.6.3",
+    "@principal-ai/file-city-react": "^0.6.4",
     "@principal-ai/file-city-server": "^0.3.9",
     "@principal-ai/logo-component": "^0.1.23",
     "@principal-ai/markdown-search": "^2.0.7",
