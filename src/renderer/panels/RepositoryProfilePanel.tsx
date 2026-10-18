@@ -2796,7 +2796,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
               showDirectoryLabels={true}
               fullSize={true}
               maxCanvasSize={2048}
-              onFileClick={handleFileCityFileClick}
+              onBuildingClick={(building) =>
+                handleFileCityFileClick(building.path, 'file')
+              }
             />
           ) : (
             <div

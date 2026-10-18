@@ -976,8 +976,8 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
           <ArchitectureMapHighlightLayers
             cityData={cityData}
             highlightLayers={mapHighlightLayers}
-            onHover={handleMapHover}
-            onFileClick={handleMapFileClick}
+            onHoverInfo={handleMapHover}
+            onBuildingClick={(building) => handleMapFileClick(building.path, 'file')}
             fullSize
             showFileNames={false}
             canvasBackgroundColor={theme.colors.background}
