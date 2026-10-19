@@ -18,6 +18,7 @@ export interface DevWorkspaceTopicTabProps {
   events: PanelEventEmitter;
   /** Current repo, used as a link-resolution fallback (optional). */
   repositoryPath?: string;
+  onOpenModel: (modelId: string, title: string) => void;
 }
 
 /**
@@ -34,6 +35,7 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
   isActive,
   events,
   repositoryPath,
+  onOpenModel,
 }) => {
   const { theme } = useTheme();
 
@@ -185,12 +187,20 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
             display: 'flex',
             flexDirection: 'column',
             flexShrink: 0,
+            width: '25%',
+            minWidth: 300,
+            boxSizing: 'border-box',
             minHeight: 0,
             overflowY: 'auto',
+            borderLeft: `1px solid ${theme.colors.border}`,
           }}
         >
-          <TopicSubsystemModelsRail topicId={topicId} width={260} />
-          <TopicProjectsRail topicId={topicId} width={260} />
+          <TopicProjectsRail topicId={topicId} width="100%" />
+          <TopicSubsystemModelsRail
+            topicId={topicId}
+            width="100%"
+            onOpenModel={onOpenModel}
+          />
         </div>
       </div>
     </div>

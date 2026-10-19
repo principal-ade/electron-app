@@ -27,7 +27,8 @@ export const LocalTopicTabContent: React.FC<{
   events: PanelEventEmitter;
   /** Open a repo declared by the topic (a pick from the Projects rail). */
   onOpenProject?: (purl: string) => void;
-}> = ({ topicId, title, events, onOpenProject }) => {
+  onOpenModel: (modelId: string, title: string) => void;
+}> = ({ topicId, title, events, onOpenProject, onOpenModel }) => {
   const { theme } = useTheme();
 
   // Table-of-contents drawer: the body reports whether the description has
@@ -177,19 +178,31 @@ export const LocalTopicTabContent: React.FC<{
           />
         </div>
 
-        {/* Right column: subsystem models the topic concerns, then its repos.
+        {/* Right column: the topic's repos, then the subsystem models it concerns.
             Scrolls as one so both sections stay reachable on short windows. */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             flexShrink: 0,
+            width: '25%',
+            minWidth: 300,
+            boxSizing: 'border-box',
             minHeight: 0,
             overflowY: 'auto',
+            borderLeft: `1px solid ${theme.colors.border}`,
           }}
         >
-          <TopicSubsystemModelsRail topicId={topicId} />
-          <TopicProjectsRail topicId={topicId} onOpenProject={onOpenProject} />
+          <TopicProjectsRail
+            topicId={topicId}
+            width="100%"
+            onOpenProject={onOpenProject}
+          />
+          <TopicSubsystemModelsRail
+            topicId={topicId}
+            width="100%"
+            onOpenModel={onOpenModel}
+          />
         </div>
       </div>
     </div>

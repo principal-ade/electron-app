@@ -27,6 +27,7 @@ import {
   Film,
   ExternalLink,
   AlertCircle,
+  Network,
 } from 'lucide-react';
 import { TopicsIcon } from '../components/TopicsIcon';
 import {
@@ -127,6 +128,7 @@ import { GitConfigPanel } from './git-config-panel';
 import { DocumentService } from '../services/DocumentService';
 import { TopicsPanel } from './topics-panel/TopicsPanel';
 import { DevWorkspaceTopicTab } from './topics-panel/DevWorkspaceTopicTab';
+import { SubsystemModelTabContent } from '../subsystem-models/SubsystemModelTabContent';
 import { TOPIC_EVENT, type TopicOpenEvent } from './topics-panel/topic-events';
 import { topicClient } from '../tipc/topicClient';
 import { useTopicRemoved } from '../topics-view/useTopicRemoved';
@@ -245,6 +247,11 @@ interface TopicTab extends BaseTab {
   title?: string;
 }
 
+interface SubsystemModelTab extends BaseTab {
+  contentType: 'subsystem-model';
+  modelId: string;
+}
+
 /**
  * Props for the Bruno RequestPanel including optional selected request
  */
@@ -273,7 +280,8 @@ type DevWorkspaceTab =
   | DependencyGraphTab
   | BrunoRequestTab
   | FileCity3DTab
-  | TopicTab;
+  | TopicTab
+  | SubsystemModelTab;
 
 /**
  * History item for right panel document viewing
@@ -2364,6 +2372,29 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return unsubscribe;
   }, [events, openTopicTab]);
 
+  const openSubsystemModelTab = useCallback(
+    (modelId: string, title: string) => {
+      setTabs((prevTabs) => {
+        const tabId = `subsystem-model-${modelId}`;
+        const existing = prevTabs.find((tab) => tab.id === tabId);
+        if (existing) {
+          setFocusTabId(existing.id);
+          return prevTabs;
+        }
+        const newTab: SubsystemModelTab = {
+          id: tabId,
+          label: title,
+          contentType: 'subsystem-model',
+          modelId,
+          closable: true,
+        };
+        setFocusTabId(newTab.id);
+        return [...prevTabs, newTab];
+      });
+    },
+    [],
+  );
+
   // Cross-window bridge activation (`POST /api/topics/:id/activate` →
   // `TopicAPIEvent.TOPIC_ACTIVATE`). When this dev-workspace window is the one
   // the bridge targeted (the focused window), open the topic in our own tab
@@ -2460,6 +2491,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return <Building2 size={14} />;
       case 'topic':
         return <TopicsIcon size={14} />;
+      case 'subsystem-model':
+        return <Network size={14} />;
       case 'media': {
         const mediaTab = tab as MediaTab;
         const isVideo = /\.(mp4|webm|mov|avi|mkv|ogv)$/i.test(
@@ -2795,11 +2828,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               title={topicTab.title}
               isActive={isActive}
               events={eventsRef.current}
+              onOpenModel={openSubsystemModelTab}
               repositoryPath={
                 contextRef.current?.currentScope?.repository?.path
               }
             />
           );
+        }
+
+        case 'subsystem-model': {
+          return <SubsystemModelTabContent modelId={tab.modelId} />;
         }
 
         case 'media': {
@@ -2830,6 +2868,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       MDXEditorPanelComponent,
       GitDiffPanelComponent,
       BrunoRequestPanelComponent,
+      openSubsystemModelTab,
     ],
   );
 

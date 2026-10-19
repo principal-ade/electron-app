@@ -29,7 +29,7 @@ function projectFromPurl(purl: string): ProjectEntry | null {
 export interface TopicProjectsRailProps {
   topicId: string;
   onOpenProject?: (purl: string) => void;
-  width?: number;
+  width?: React.CSSProperties['width'];
 }
 
 /** Displays the repositories declared by a topic. */
@@ -84,11 +84,11 @@ export const TopicProjectsRail: React.FC<TopicProjectsRailProps> = ({
     <aside
       style={{
         width,
+        boxSizing: 'border-box',
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        borderLeft: `1px solid ${theme.colors.border}`,
         backgroundColor: theme.colors.background,
       }}
     >
@@ -97,8 +97,7 @@ export const TopicProjectsRail: React.FC<TopicProjectsRailProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          padding: '12px 16px',
-          borderBottom: `1px solid ${theme.colors.border}`,
+          padding: '12px 8px 0',
           color: theme.colors.textSecondary,
         }}
       >
@@ -106,13 +105,13 @@ export const TopicProjectsRail: React.FC<TopicProjectsRailProps> = ({
         <span
           style={{
             fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[0],
+            fontSize: theme.fontSizes[1],
             fontWeight: 600,
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
           }}
         >
-          Projects ({projects.length})
+          Projects
         </span>
       </div>
       <div

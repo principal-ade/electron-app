@@ -424,6 +424,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               title={topicTab.title}
               events={eventsRef.current}
               onOpenProject={handleOpenTopicProject}
+              onOpenModel={openSubsystemModel}
             />
           );
         }
@@ -470,7 +471,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           return null;
       }
     },
-    [handleOpenTopicProject],
+    [handleOpenTopicProject, openSubsystemModel],
   );
 
   // Open links clicked in the terminal in the default browser.

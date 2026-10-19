@@ -663,12 +663,7 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
             Loading…
           </div>
         ) : description === null ? null : trimmed ? (
-          // Cap the prose at a comfortable reading measure, centered within its
-          // column. When the column is 800 wide (rail present) this reads as
-          // left-aligned; when the column fills the view (rail collapsed) the
-          // prose centers. Narrow columns (e.g. the Braindump slide-over) fall
-          // back to full width.
-          <div style={{ maxWidth: 800, width: '100%', margin: '0 auto' }}>
+          <div style={{ width: '100%' }}>
             <IndustryMarkdownSlide
               content={description as string}
               slideIdPrefix="topic-description"
