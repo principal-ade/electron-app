@@ -10,8 +10,15 @@ import {
   type LogTailRequest,
 } from '@principal-ai/repository-monitoring-server';
 import type { ExtendedRepositoryMonitoringAPI } from '../../shared/main-process-api-interfaces';
+import { HOME_REPOSITORY_REFRESH_INTEREST } from '../../shared/homeRepositoryRefresh';
 
 export const repositoryMonitoringAPI: ExtendedRepositoryMonitoringAPI = {
+  setHomeRefreshInterest: (interest) =>
+    ipcRenderer.invoke(HOME_REPOSITORY_REFRESH_INTEREST, interest),
+
+  refreshGitStatus: (repoPath) =>
+    ipcRenderer.invoke(RepositoryMonitoringAPIEvent.REFRESH_GIT_STATUS, repoPath),
+
   getFileTree: async (repoPath: string) => {
     return ipcRenderer.invoke(
       RepositoryMonitoringAPIEvent.GET_FILE_TREE,

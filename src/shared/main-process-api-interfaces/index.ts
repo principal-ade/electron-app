@@ -13,9 +13,14 @@ import type { GitAPI } from './GitAPI';
 import type { GitHubAPI } from './GitHubAPI';
 import type { AppVersionManagerAPI } from './AppVersionManagerAPI';
 import type { RepositoryMonitoringAPI } from '@principal-ai/repository-monitoring-server';
+import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
+import type { HomeRepositoryRefreshInterest } from '../homeRepositoryRefresh';
 
 // Extended RepositoryMonitoringAPI with app-specific methods
 export interface ExtendedRepositoryMonitoringAPI extends RepositoryMonitoringAPI {
+  setHomeRefreshInterest: (
+    interest: HomeRepositoryRefreshInterest,
+  ) => Promise<GitStatusWithFiles[]>;
   syncWorkspace: (repoPath: string) => Promise<{
     success: boolean;
     registeredScopes?: string[];

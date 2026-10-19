@@ -6,6 +6,7 @@
 
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
+import type { HomeRepositoryRefreshInterest } from '../../shared/homeRepositoryRefresh';
 import type {
   RepositoryMonitoringResult,
   MonitoringStatus,
@@ -25,6 +26,16 @@ import type {
 } from '@principal-ai/repository-monitoring-server';
 
 export class RepositoryMonitoringService {
+  static setHomeRefreshInterest(
+    interest: HomeRepositoryRefreshInterest,
+  ): Promise<GitStatusWithFiles[]> {
+    return window.mainProcess.repositoryMonitoring.setHomeRefreshInterest(interest);
+  }
+
+  static refreshGitStatus(repoPath: string): Promise<GitStatusWithFiles> {
+    return window.mainProcess.repositoryMonitoring.refreshGitStatus(repoPath);
+  }
+
   /**
    * Get FileTree for a repository
    */

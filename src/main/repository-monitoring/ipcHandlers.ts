@@ -19,6 +19,7 @@ import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 import { applicationWindows, PrimaryWindowType } from '../window/types';
 import { otelEventsManagerBridge } from '../services/OtelEventsManagerBridge';
+import { registerHomeRepositoryRefreshHandlers } from './homeRepositoryRefreshHandlers';
 
 // Type alias for git state event payload (structure defined in repository-monitoring-server)
 type GitStateEventPayload = { event: { type: string }; [key: string]: unknown };
@@ -155,6 +156,17 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
 
   const manager = getManager({ watcherImpl });
   const qualityLensService = QualityLensService.getInstance();
+
+  registerHomeRepositoryRefreshHandlers(manager, (status) => {
+    void broadcastToRelevantWindows(
+      RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED,
+      status,
+    );
+  });
+  ipcMain.handle(
+    RepositoryMonitoringAPIEvent.REFRESH_GIT_STATUS,
+    async (_event, repoPath: string) => manager.refreshGitStatus(repoPath),
+  );
 
   // Get FileTree for a repository
   ipcMain.handle(

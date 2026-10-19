@@ -22,7 +22,7 @@ import type { SkillLockFile } from '../../../../shared/main-process-api-interfac
 import type {
   AlexandriaEntry,
 } from '@principal-ai/alexandria-core-library/types';
-import { InProgressActivityPanel } from '../../../panels/InProgressActivityPanel';
+import { SkyRepositoriesPanel } from './SkyRepositoriesPanel';
 import { createInProgressActivityPanelActions } from '../../../panels/inProgressActivityPanelActions';
 import { useAuthUser } from '../../../providers/AuthProvider';
 import { PORTAL_INTENTS } from '../../../events/portalIntents';
@@ -1070,14 +1070,12 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
               paddingTop: 40,
             }}
           >
-            <div style={railHeadingStyle}>In Progress</div>
-            <div style={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
-              <InProgressActivityPanel
-                repositories={repositories}
-                events={portalEvents}
-                actions={inProgressActions}
-              />
-            </div>
+            <SkyRepositoriesPanel
+              headingStyle={railHeadingStyle}
+              repositories={repositories}
+              events={portalEvents}
+              actions={inProgressActions}
+            />
           </div>
         </div>
 
