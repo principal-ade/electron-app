@@ -41,6 +41,7 @@ import { documentAPI } from './main-process-api-implementations/documentApi';
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
 import { brunoAPI } from './main-process-api-implementations/brunoApi';
+import { browserAPI } from './main-process-api-implementations/browserApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -70,6 +71,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   skillLock: skillLockAPI,
   appVersionManager: appVersionManagerApi,
   bruno: brunoAPI,
+  browser: { openLocalhostUrl: browserAPI.openLocalhostUrl },
 };
 
 // Expose the mainProcess API
@@ -132,12 +134,24 @@ try {
     'telemetryExportEnabled',
     String(telemetrySettings.enabled),
   );
-  contextBridge.exposeInMainWorld('getTelemetrySettings', readTelemetrySettings);
-  console.info('[Preload-DevWorkspace] ✅ OTEL settings exposed:', telemetrySettings);
+  contextBridge.exposeInMainWorld(
+    'getTelemetrySettings',
+    readTelemetrySettings,
+  );
+  console.info(
+    '[Preload-DevWorkspace] ✅ OTEL settings exposed:',
+    telemetrySettings,
+  );
 } catch (error) {
-  console.error('[Preload-DevWorkspace] ❌ Failed to expose OTEL settings:', error);
+  console.error(
+    '[Preload-DevWorkspace] ❌ Failed to expose OTEL settings:',
+    error,
+  );
   // Fail closed: without the resolved settings, don't export to a guessed port.
-  contextBridge.exposeInMainWorld('otelCollectorEndpoint', 'http://localhost:4318');
+  contextBridge.exposeInMainWorld(
+    'otelCollectorEndpoint',
+    'http://localhost:4318',
+  );
   contextBridge.exposeInMainWorld('telemetryExportEnabled', 'false');
 }
 

@@ -93,6 +93,8 @@ export interface UserPreferences {
   enableVimMode?: boolean;
 
   // Terminal preferences
+  /** Open supported HTTP localhost terminal links in an app tab (default: false). */
+  openLocalhostTerminalLinksInApp?: boolean;
   /** Show the "open in repo window" / "open in main window" button in the terminal bottom bar (default: false) */
   showSendTabButton?: boolean;
   /** Default terminal for opening shells */

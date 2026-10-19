@@ -36,6 +36,7 @@ import type { DocumentAPI } from './DocumentAPI';
 import type { SkillLockAPI } from './SkillLockAPI';
 import type { AppVersionManagerAPI } from './AppVersionManagerAPI';
 import type { BrunoAPI } from './BrunoAPI';
+import type { BrowserAPI } from './BrowserAPI';
 
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
@@ -59,6 +60,7 @@ export interface DevWorkspaceMainProcessAPI {
   skillLock: SkillLockAPI;
   appVersionManager: AppVersionManagerAPI;
   bruno: BrunoAPI;
+  browser: Pick<BrowserAPI, 'openLocalhostUrl'>;
 }
 
 // Re-export the individual API types for convenience

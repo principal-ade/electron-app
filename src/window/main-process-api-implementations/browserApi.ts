@@ -6,6 +6,8 @@ import {
 } from '../../shared/main-process-api-interfaces/BrowserAPI';
 
 export const browserAPI: BrowserAPI = {
+  openLocalhostUrl: (url) =>
+    ipcRenderer.invoke(BrowserEvent.OPEN_LOCALHOST_URL, url),
   onOpenBrowser: (callback) => {
     const handler = (
       _event: Electron.IpcRendererEvent,

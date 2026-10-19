@@ -6,11 +6,20 @@ import { BrowserEvent } from '../../shared/main-process-api-interfaces/BrowserAP
 import { applicationWindows } from '../window/modernWindowManager';
 import { PrimaryWindowType } from '../window/types';
 import type { ProcessRegistry } from '../processes/ProcessRegistry';
-import { dispatchBrowserOpen, registerBrowserRoutes } from './browserRoutes';
+import {
+  dispatchBrowserOpen,
+  registerBrowserIpcHandlers,
+  registerBrowserRoutes,
+} from './browserRoutes';
 
 jest.mock('electron', () => ({
   BrowserWindow: { getFocusedWindow: jest.fn() },
-  ipcMain: { on: jest.fn(), removeListener: jest.fn() },
+  ipcMain: {
+    on: jest.fn(),
+    removeListener: jest.fn(),
+    handle: jest.fn(),
+    removeHandler: jest.fn(),
+  },
 }));
 jest.mock('../window/modernWindowManager', () => ({
   applicationWindows: new Map(),
@@ -151,4 +160,148 @@ test('reports success only after the focused MAIN host commits a tab', async () 
   expect(res.json).toHaveBeenCalledWith(
     expect.objectContaining({ opened: true, tabId: 'tab-1' }),
   );
+});
+
+function addWindow(id: number, primaryType = PrimaryWindowType.MAIN) {
+  const window = {
+    id,
+    webContents: webContents(),
+    isDestroyed: jest.fn(() => false),
+    isMinimized: jest.fn(() => false),
+    restore: jest.fn(),
+    show: jest.fn(),
+    focus: jest.fn(),
+  };
+  applicationWindows.set(id, {
+    window,
+    metadata: { primaryType },
+  } as never);
+  return window;
+}
+
+function browserIpc() {
+  const registry = { list: jest.fn(() => []) };
+  registerBrowserIpcHandlers(registry as unknown as ProcessRegistry);
+  expect(ipcMain.removeHandler).toHaveBeenCalledWith(
+    BrowserEvent.OPEN_LOCALHOST_URL,
+  );
+  return (ipcMain.handle as jest.Mock).mock.calls[0][1] as (
+    event: Electron.IpcMainInvokeEvent,
+    url: unknown,
+  ) => Promise<{ opened: boolean }>;
+}
+
+function senderEvent(contents: WebContents) {
+  return {
+    sender: contents,
+    senderFrame: contents.mainFrame,
+  } as Electron.IpcMainInvokeEvent;
+}
+
+function acknowledge(contents: WebContents) {
+  const [, envelope] = (contents.send as jest.Mock).mock.calls[0];
+  const [, listener] = (ipcMain.on as jest.Mock).mock.calls[0];
+  listener(senderEvent(contents), {
+    requestId: envelope.requestId,
+    tabId: 'localhost-browser-5173',
+  });
+}
+
+test('terminal IPC opens in its MAIN sender without requiring a focused window', async () => {
+  const host = addWindow(1);
+  const handler = browserIpc();
+  const pending = handler(
+    senderEvent(host.webContents),
+    'http://localhost:5173/docs?mode=preview#intro',
+  );
+  expect(host.webContents.send).toHaveBeenCalledWith(
+    BrowserEvent.OPEN,
+    expect.objectContaining({ port: 5173, path: '/docs?mode=preview#intro' }),
+  );
+  acknowledge(host.webContents);
+  await expect(pending).resolves.toEqual({ opened: true });
+  expect(host.focus).toHaveBeenCalled();
+  expect(BrowserWindow.getFocusedWindow).not.toHaveBeenCalled();
+});
+
+test('project-window terminal IPC forwards to and restores the MAIN window', async () => {
+  const project = addWindow(2, PrimaryWindowType.DEV_WORKSPACE);
+  const host = addWindow(1);
+  host.isMinimized.mockReturnValue(true);
+  const pending = browserIpc()(
+    senderEvent(project.webContents),
+    'http://localhost:5173/',
+  );
+  expect(project.webContents.send).not.toHaveBeenCalled();
+  acknowledge(host.webContents);
+  await expect(pending).resolves.toEqual({ opened: true });
+  expect(host.restore).toHaveBeenCalled();
+  expect(host.show).toHaveBeenCalled();
+  expect(host.focus).toHaveBeenCalled();
+  expect(project.focus).not.toHaveBeenCalled();
+});
+
+test('terminal IPC rejects unregistered senders and child frames', async () => {
+  const host = addWindow(1);
+  const handler = browserIpc();
+  await expect(
+    handler(senderEvent(webContents()), 'http://localhost:5173/'),
+  ).resolves.toEqual({ opened: false });
+  await expect(
+    handler(
+      {
+        ...senderEvent(host.webContents),
+        senderFrame: {},
+      } as Electron.IpcMainInvokeEvent,
+      'http://localhost:5173/',
+    ),
+  ).resolves.toEqual({ opened: false });
+  expect(host.webContents.send).not.toHaveBeenCalled();
+});
+
+test('terminal IPC rejects extension windows', async () => {
+  const extension = addWindow(2, PrimaryWindowType.EXTENSION);
+  const host = addWindow(1);
+  await expect(
+    browserIpc()(senderEvent(extension.webContents), 'http://localhost:5173/'),
+  ).resolves.toEqual({ opened: false });
+  expect(host.webContents.send).not.toHaveBeenCalled();
+});
+
+test.each([
+  'https://localhost:5173/',
+  'http://127.0.0.1:5173/',
+  'http://localhost.evil:5173/',
+  'http://user@localhost:5173/',
+  'http://localhost:0/',
+  'http://localhost:5173/\\evil',
+  'https://example.com/',
+  { port: 5173 },
+])('terminal IPC validates the URL again: %p', async (url) => {
+  const host = addWindow(1);
+  await expect(
+    browserIpc()(senderEvent(host.webContents), url),
+  ).resolves.toEqual({
+    opened: false,
+  });
+  expect(host.webContents.send).not.toHaveBeenCalled();
+});
+
+test('terminal IPC allows external fallback when no MAIN window exists', async () => {
+  const project = addWindow(2, PrimaryWindowType.DEV_WORKSPACE);
+  await expect(
+    browserIpc()(senderEvent(project.webContents), 'http://localhost:5173/'),
+  ).resolves.toEqual({ opened: false });
+  expect(project.webContents.send).not.toHaveBeenCalled();
+});
+
+test('terminal IPC allows external fallback when the MAIN renderer times out', async () => {
+  const host = addWindow(1);
+  const pending = browserIpc()(
+    senderEvent(host.webContents),
+    'http://localhost:5173/',
+  );
+  jest.advanceTimersByTime(3000);
+  await expect(pending).resolves.toEqual({ opened: false });
+  expect(host.focus).not.toHaveBeenCalled();
 });

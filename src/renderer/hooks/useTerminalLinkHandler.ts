@@ -4,10 +4,10 @@ import type {
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import type { TerminalLinkClickEvent } from '@industry-theme/xterm-terminal-panel';
-import { ShellService } from '../main-process-api/ShellService';
+import { useTerminalLinkRouting } from './useTerminalLinkRouting';
 
 /**
- * Opens links clicked in a terminal panel in the user's default browser.
+ * Routes terminal link clicks according to the user's localhost preference.
  *
  * The xterm panel calls `preventDefault()` on the click and emits
  * `terminal:link-click` on the panel event bus; nothing else listens, so
@@ -22,15 +22,16 @@ import { ShellService } from '../main-process-api/ShellService';
 export function useTerminalLinkHandler(
   events: PanelEventEmitter | undefined,
 ): void {
+  const openLink = useTerminalLinkRouting();
   useEffect(() => {
     if (!events) return undefined;
     const handler = (event: PanelEvent<TerminalLinkClickEvent>) => {
       const url = event.payload?.url;
-      if (url) void ShellService.openExternal(url);
+      if (url) openLink(url);
     };
     events.on('terminal:link-click', handler);
     return () => {
       events.off('terminal:link-click', handler);
     };
-  }, [events]);
+  }, [events, openLink]);
 }

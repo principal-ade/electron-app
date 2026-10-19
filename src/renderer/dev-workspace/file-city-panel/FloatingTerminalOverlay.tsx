@@ -17,7 +17,7 @@ import {
   Minimize2,
   TerminalSquare,
 } from 'lucide-react';
-import { ShellService } from '../../main-process-api/ShellService';
+import { useTerminalLinkRouting } from '../../hooks/useTerminalLinkRouting';
 
 export interface FloatingTerminalOverlayProps {
   context: TerminalPanelProps['context'];
@@ -40,7 +40,9 @@ const MIN_EXPANDED_HEIGHT = 160;
 // auto-creating a tab for our session.
 const OVERLAY_SESSION_CONTEXT = 'overlay:file-city';
 
-export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = ({
+export const FloatingTerminalOverlay: React.FC<
+  FloatingTerminalOverlayProps
+> = ({
   context,
   actions,
   backgroundColor = 'rgba(20, 20, 20, 0.55)',
@@ -56,6 +58,7 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
   const [isResizing, setIsResizing] = React.useState(false);
   const [maximized, setMaximized] = React.useState(false);
   const terminalImplementation = useTerminalImplementation();
+  const openTerminalLink = useTerminalLinkRouting();
   const containerRef = React.useRef<HTMLDivElement | null>(null);
 
   const handleResizeMouseDown = React.useCallback(
@@ -174,9 +177,7 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
           fontFamily: theme.fonts.body,
           fontSize: 12,
           userSelect: 'none',
-          borderBottom: collapsed
-            ? 'none'
-            : `1px solid ${theme.colors.border}`,
+          borderBottom: collapsed ? 'none' : `1px solid ${theme.colors.border}`,
           background: 'transparent',
         }}
       >
@@ -282,8 +283,7 @@ export const FloatingTerminalOverlay: React.FC<FloatingTerminalOverlayProps> = (
             renderer={terminalImplementation}
             transparent
             backgroundColor="rgba(0, 0, 0, 0)"
-            // No panel event bus here — open clicked links directly.
-            onLinkClick={(url) => void ShellService.openExternal(url)}
+            onLinkClick={openTerminalLink}
           />
         </div>
       )}

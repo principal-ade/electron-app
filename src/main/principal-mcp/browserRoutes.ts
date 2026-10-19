@@ -49,6 +49,56 @@ export function dispatchBrowserOpen(
   });
 }
 
+/** Renderer entry point, independent of the optional HTTP bridge. */
+export function registerBrowserIpcHandlers(registry: ProcessRegistry): void {
+  ipcMain.removeHandler(BrowserEvent.OPEN_LOCALHOST_URL);
+  ipcMain.handle(
+    BrowserEvent.OPEN_LOCALHOST_URL,
+    async (event, url: unknown) => {
+      const sender = [...applicationWindows.values()].find(
+        (entry) => entry.window.webContents === event.sender,
+      );
+      if (
+        !sender ||
+        sender.window.isDestroyed() ||
+        event.senderFrame !== event.sender.mainFrame ||
+        ![
+          PrimaryWindowType.MAIN,
+          PrimaryWindowType.DEV_WORKSPACE,
+          PrimaryWindowType.REPOSITORY,
+        ].includes(sender.metadata.primaryType)
+      ) {
+        return { opened: false };
+      }
+      try {
+        const target = resolveBrowserTarget({ url }, registry.list());
+        const host =
+          sender.metadata.primaryType === PrimaryWindowType.MAIN
+            ? sender
+            : [...applicationWindows.values()].find(
+                (entry) =>
+                  entry.metadata.primaryType === PrimaryWindowType.MAIN &&
+                  !entry.window.isDestroyed(),
+              );
+        if (!host) return { opened: false };
+        const tabId = await dispatchBrowserOpen(
+          host.window.webContents,
+          target,
+        );
+        if (!tabId) return { opened: false };
+        if (!host.window.isDestroyed()) {
+          if (host.window.isMinimized()) host.window.restore();
+          host.window.show();
+          host.window.focus();
+        }
+        return { opened: true };
+      } catch {
+        return { opened: false };
+      }
+    },
+  );
+}
+
 export function registerBrowserRoutes(
   app: Application,
   registry: ProcessRegistry,

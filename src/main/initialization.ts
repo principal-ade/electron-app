@@ -81,6 +81,8 @@ import {
   cleanupLocalhostWatchers,
 } from './services/ipc/localhost/localhostDetectionHandlers';
 import { registerProcessHandlers } from './processes/processHandlers';
+import { getProcessRegistry } from './processes/ProcessRegistry';
+import { registerBrowserIpcHandlers } from './principal-mcp/browserRoutes';
 import { registerProcessQuitHandler } from './processes/processLifecycle';
 import { registerGitHubArtifactHandlers } from './services/ipc/githubArtifactHandlers';
 import { ElectronClipboardAdapter } from './system/clipboardHandler';
@@ -277,7 +279,9 @@ const registerAllIpcHandlers = async () => {
   if (process.env.ENABLE_DOC_INDEX === 'true') {
     registerDocumentSearchHandlers();
   } else {
-    console.info('[Init] Document search handlers disabled (set ENABLE_DOC_INDEX=true to enable)');
+    console.info(
+      '[Init] Document search handlers disabled (set ENABLE_DOC_INDEX=true to enable)',
+    );
   }
 
   // LLM Models handlers have been removed
@@ -300,6 +304,7 @@ const registerAllIpcHandlers = async () => {
   registerFeedbackHandlers();
   registerLocalhostDetectionHandlers();
   registerProcessHandlers();
+  registerBrowserIpcHandlers(getProcessRegistry());
   registerProcessQuitHandler();
   registerGitHubArtifactHandlers();
 };
@@ -390,7 +395,10 @@ export const initializeServices = async () => {
       const { nodeTelemetry } = await import('./telemetry');
       await nodeTelemetry.initialize();
     } catch (error) {
-      console.error('[Main Process] Failed to initialize app telemetry:', error);
+      console.error(
+        '[Main Process] Failed to initialize app telemetry:',
+        error,
+      );
     }
   }, 2000); // Delay to ensure storage is fully initialized
 

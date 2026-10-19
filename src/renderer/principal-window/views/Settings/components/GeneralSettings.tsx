@@ -16,6 +16,8 @@ export const GeneralSettings: React.FC = () => {
   const [isDevMode, setIsDevMode] = useState(false);
   const [defaultEditor, setDefaultEditor] = useState<EditorId>('vscode');
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
+  const [openLocalhostTerminalLinksInApp, setOpenLocalhostTerminalLinksInApp] =
+    useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
   const [showCreateRepoButton, setShowCreateRepoButton] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
@@ -52,16 +54,18 @@ export const GeneralSettings: React.FC = () => {
       const editor = (prefs.defaultEditor ?? 'vscode') as EditorId;
       setDefaultEditor(editor);
       setEnableVimMode(prefs.enableVimMode ?? false);
-      setShowPullMailbox(prefs.titlebarButtons?.pullMailbox ?? false);
-      setShowCreateRepoButton(
-        prefs.titlebarButtons?.createRepository ?? false,
+      setOpenLocalhostTerminalLinksInApp(
+        prefs.openLocalhostTerminalLinksInApp === true,
       );
+      setShowPullMailbox(prefs.titlebarButtons?.pullMailbox ?? false);
+      setShowCreateRepoButton(prefs.titlebarButtons?.createRepository ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
       setShowProcessesButton(prefs.showProcessesButton ?? false);
       setShowOnboardingButton(prefs.showOnboardingButton ?? false);
       setPresenceAutoConnect(
-        prefs.presenceAutoConnect ?? USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
+        prefs.presenceAutoConnect ??
+          USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
       );
       setShowSendTabButton(prefs.showSendTabButton ?? false);
       setQuickOpenTarget(
@@ -114,7 +118,9 @@ export const GeneralSettings: React.FC = () => {
       );
       setShowClearConfirm(false);
     } catch (error) {
-      alert(`Failed to clear data: ${error instanceof Error ? error.message : String(error)}`);
+      alert(
+        `Failed to clear data: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
       setIsClearing(false);
     }
@@ -388,6 +394,43 @@ export const GeneralSettings: React.FC = () => {
             <option value="ghostty">Ghostty (default)</option>
             <option value="xterm">XTerm</option>
           </select>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginTop: '20px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              color: theme.colors.text,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={openLocalhostTerminalLinksInApp}
+              onChange={async (event) => {
+                const enabled = event.target.checked;
+                setOpenLocalhostTerminalLinksInApp(enabled);
+                await UserPreferencesService.updatePreferences({
+                  openLocalhostTerminalLinksInApp: enabled,
+                });
+              }}
+              aria-describedby="terminal-localhost-links-description"
+            />
+            Open localhost terminal links in an app tab
+          </label>
+          <p
+            id="terminal-localhost-links-description"
+            style={{
+              fontSize: '13px',
+              color: theme.colors.textSecondary,
+              margin: '8px 0 0',
+            }}
+          >
+            Opens HTTP links with an explicit localhost port in the main
+            Principal window. Other links, or links without an available app tab
+            host, open in your default browser. Applies immediately.
+          </p>
         </div>
       </div>
 
@@ -1185,9 +1228,9 @@ export const GeneralSettings: React.FC = () => {
                 }}
               >
                 Remove all registered repositories and workspaces from the
-                Alexandria registry. This is useful before uninstalling the
-                app. <strong>Local repository files will NOT be deleted</strong>
-                , only the registry data.
+                Alexandria registry. This is useful before uninstalling the app.{' '}
+                <strong>Local repository files will NOT be deleted</strong>,
+                only the registry data.
               </p>
               {!showClearConfirm ? (
                 <button
