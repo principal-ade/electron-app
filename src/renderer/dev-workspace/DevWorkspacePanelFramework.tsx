@@ -129,6 +129,7 @@ import { TopicsPanel } from './topics-panel/TopicsPanel';
 import { DevWorkspaceTopicTab } from './topics-panel/DevWorkspaceTopicTab';
 import { TOPIC_EVENT, type TopicOpenEvent } from './topics-panel/topic-events';
 import { topicClient } from '../tipc/topicClient';
+import { useTopicRemoved } from '../topics-view/useTopicRemoved';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -865,6 +866,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Tab state for TabbedTerminalPanel (skills only - terminals are managed by
   // the panel from context).
   const [tabs, setTabs] = useState<DevWorkspaceTab[]>(() => []);
+  // Keep a focus fallback without taking ownership of the panel's terminals.
+  const terminalTabsRef = useRef<DevWorkspaceTab[]>([]);
 
   // Sync tabs to parent whenever they change (for RepositoryPanelProvider)
   useEffect(() => {
@@ -947,6 +950,45 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Active tab tracking for cross-window tab transfer.
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
+  useTopicRemoved(
+    useCallback(
+      (topicId) => {
+        const isDeleted = (tab: DevWorkspaceTab) =>
+          tab.contentType === 'topic' && tab.topicId === topicId;
+        const removedIds = new Set(
+          [...tabs, ...Object.values(associatedTabData)]
+            .filter(isDeleted)
+            .map((tab) => tab.id),
+        );
+        if (removedIds.size === 0) return;
+        const remaining = tabs.filter((tab) => !isDeleted(tab));
+        const nextActiveId =
+          remaining[0]?.id ?? terminalTabsRef.current[0]?.id ?? null;
+        setTabs((prev) => prev.filter((tab) => !isDeleted(tab)));
+        setActiveTabId((current) =>
+          current && removedIds.has(current) ? nextActiveId : current,
+        );
+        setFocusTabId((current) =>
+          current && removedIds.has(current) ? null : current,
+        );
+        // A topic can also be docked alongside a terminal, outside `tabs`.
+        setAssociatedTabData((prev) =>
+          Object.fromEntries(
+            Object.entries(prev).filter(([, tab]) => !isDeleted(tab)),
+          ),
+        );
+        setAssociations((prev) =>
+          Object.fromEntries(
+            Object.entries(prev).filter(
+              ([, association]) => !removedIds.has(association.associatedTabId),
+            ),
+          ),
+        );
+      },
+      [tabs, associatedTabData],
+    ),
+  );
 
   // Tab close after cross-window transfer (sender removes the tab).
   const [requestCloseTabId, setRequestCloseTabId] = useState<string | null>(
@@ -1051,6 +1093,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Stable onTabsChange that prevents infinite loops
   const handleTabsChange = useCallback((newTabs: DevWorkspaceTab[]) => {
+    terminalTabsRef.current = newTabs.filter(
+      (tab) => tab.contentType === 'terminal',
+    );
     setTabs((prevTabs) => {
       // Only keep custom tabs from the update (filter out terminal tabs)
       // Terminal tabs are managed by TabbedTerminalPanel, we only care about custom tabs

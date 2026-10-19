@@ -7,6 +7,15 @@ import { useBridgeBrowserOpen } from '../hooks/useBridgeBrowserOpen';
 import { BrowserService } from '../services/BrowserService';
 import type { ProcessEntry } from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 import type { OpenBrowserEnvelope } from '../../shared/main-process-api-interfaces/BrowserAPI';
+import { TopicService } from '../main-process-api/TopicService';
+import {
+  TopicEventType,
+  type TopicChangeEvent,
+} from '../../shared/main-process-api-interfaces/TopicAPI';
+
+jest.mock('../main-process-api/TopicService', () => ({
+  TopicService: { onTopicChange: jest.fn() },
+}));
 
 jest.mock('../main-process-api/ProcessRegistryService', () => ({
   ProcessRegistryService: {
@@ -40,6 +49,78 @@ beforeEach(() => {
   jest.clearAllMocks();
   (ProcessRegistryService.list as jest.Mock).mockResolvedValue([server]);
   (ProcessRegistryService.onChanged as jest.Mock).mockReturnValue(jest.fn());
+  (TopicService.onTopicChange as jest.Mock).mockReturnValue(jest.fn());
+});
+
+test('topic removal closes all matching tabs and selects a remaining tab', () => {
+  let changed!: (event: TopicChangeEvent) => void;
+  const unsubscribe = jest.fn();
+  (TopicService.onTopicChange as jest.Mock).mockImplementation((callback) => {
+    changed = callback;
+    return unsubscribe;
+  });
+  const { result, unmount } = renderHook(useWorkspaceTabs, { wrapper });
+  act(() => {
+    result.current.openLocalTopic('topic-b', 'Keep');
+    result.current.openLocalTopic('topic-a', 'Delete');
+  });
+  act(() =>
+    result.current.setTabs((prev) => [
+      ...prev,
+      { ...prev[1], id: 'another-copy' },
+    ]),
+  );
+  act(() => changed({ type: TopicEventType.REMOVED, id: 'topic-a' }));
+  expect(result.current.tabs.map((tab) => tab.id)).toEqual([
+    'local-topic-topic-b',
+  ]);
+  expect(result.current.activeTabId).toBe('local-topic-topic-b');
+  unmount();
+  expect(unsubscribe).toHaveBeenCalled();
+});
+
+test('topic removal preserves unrelated active tabs and ignores other topic events', () => {
+  let changed!: (event: TopicChangeEvent) => void;
+  (TopicService.onTopicChange as jest.Mock).mockImplementation((callback) => {
+    changed = callback;
+    return jest.fn();
+  });
+  const { result } = renderHook(useWorkspaceTabs, { wrapper });
+  act(() => {
+    result.current.openLocalTopic('topic-a');
+    result.current.openLocalTopic('topic-b');
+  });
+  act(() => changed({ type: TopicEventType.UPDATED, id: 'topic-a' }));
+  expect(result.current.tabs).toHaveLength(2);
+  act(() => changed({ type: TopicEventType.REMOVED, id: 'topic-a' }));
+  expect(result.current.activeTabId).toBe('local-topic-topic-b');
+  act(() => changed({ type: TopicEventType.REMOVED, id: 'topic-b' }));
+  expect(result.current.tabs).toEqual([]);
+  expect(result.current.activeTabId).toBeNull();
+});
+
+test('a removal broadcast closes the topic in every subscribed window', () => {
+  const listeners = new Set<(event: TopicChangeEvent) => void>();
+  (TopicService.onTopicChange as jest.Mock).mockImplementation((callback) => {
+    listeners.add(callback);
+    return () => listeners.delete(callback);
+  });
+  const first = renderHook(useWorkspaceTabs, { wrapper });
+  const second = renderHook(useWorkspaceTabs, { wrapper });
+  act(() => {
+    first.result.current.openLocalTopic('topic-a');
+    second.result.current.openLocalTopic('topic-a');
+  });
+  act(() => {
+    for (const listener of listeners) {
+      listener({ type: TopicEventType.REMOVED, id: 'topic-a' });
+    }
+  });
+  expect(first.result.current.tabs).toEqual([]);
+  expect(second.result.current.tabs).toEqual([]);
+  first.unmount();
+  second.unmount();
+  expect(listeners.size).toBe(0);
 });
 
 test('linked tabs stay synchronized outside Processes view and closing never stops the process', async () => {

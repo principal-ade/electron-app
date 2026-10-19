@@ -38,6 +38,7 @@ import type {
 } from '../events/portalTabs';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
 import { ProcessRegistryService } from '../main-process-api/ProcessRegistryService';
+import { useTopicRemoved } from '../topics-view/useTopicRemoved';
 import {
   browserTabId,
   openOrNavigateLocalhostBrowser,
@@ -166,6 +167,26 @@ const WorkspaceTabsContext = createContext<WorkspaceTabsContextValue | null>(
 function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
+  useTopicRemoved(
+    useCallback(
+      (topicId) => {
+        const isDeleted = (tab: WorkspaceTab) =>
+          tab.contentType === 'local-topic' && tab.topicId === topicId;
+        const removedIds = new Set(tabs.filter(isDeleted).map((tab) => tab.id));
+        if (removedIds.size === 0) return;
+        const remaining = tabs.filter((tab) => !isDeleted(tab));
+        setTabs((prev) => prev.filter((tab) => !isDeleted(tab)));
+        setActiveTabId((current) =>
+          current && removedIds.has(current)
+            ? (remaining[0]?.id ?? null)
+            : current,
+        );
+      },
+      [tabs],
+    ),
+  );
+
   const linkedBrowserIds = tabs
     .filter(
       (tab): tab is LocalhostBrowserTab =>

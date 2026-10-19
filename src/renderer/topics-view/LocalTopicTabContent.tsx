@@ -19,6 +19,7 @@ import { TopicStatusHeaderButton } from './topic-description/TopicStatusHeaderBu
 import { TopicProjectsRail } from './topic-description/TopicProjectsRail';
 import { TopicSubsystemModelsRail } from './topic-description/TopicSubsystemModelsRail';
 import { TopicService } from '../main-process-api/TopicService';
+import { TopicDeleteHeaderButton } from './TopicDeleteHeaderButton';
 
 export const LocalTopicTabContent: React.FC<{
   topicId: string;
@@ -150,6 +151,7 @@ export const LocalTopicTabContent: React.FC<{
           </button>
         )}
         <TopicStatusHeaderButton topicId={topicId} />
+        <TopicDeleteHeaderButton topicId={topicId} title={title} />
       </div>
 
       {/* Body: topic description and its declared project list. */}

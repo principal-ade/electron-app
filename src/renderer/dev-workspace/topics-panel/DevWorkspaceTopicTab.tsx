@@ -7,6 +7,7 @@ import { TopicStatusHeaderButton } from '../../topics-view/topic-description/Top
 import { TopicProjectsRail } from '../../topics-view/topic-description/TopicProjectsRail';
 import { TopicSubsystemModelsRail } from '../../topics-view/topic-description/TopicSubsystemModelsRail';
 import { TopicService } from '../../main-process-api/TopicService';
+import { TopicDeleteHeaderButton } from '../../topics-view/TopicDeleteHeaderButton';
 
 export interface DevWorkspaceTopicTabProps {
   topicId: string;
@@ -160,6 +161,7 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
           </button>
         )}
         <TopicStatusHeaderButton topicId={topicId} />
+        <TopicDeleteHeaderButton topicId={topicId} title={title} />
       </div>
 
       {/* Body: topic description and its declared project list. */}

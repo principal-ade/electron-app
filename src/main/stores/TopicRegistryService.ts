@@ -101,7 +101,21 @@ export class TopicRegistryService {
   }
 
   async deleteTopic(id: string): Promise<boolean> {
-    return this.topicStore.deleteTopic(id);
+    const removed = await this.topicStore.deleteTopic(id);
+    const file = this.readSyncFile();
+    const links = file.sessionLinks ?? {};
+    let changed = false;
+    for (const [sessionId, topicId] of Object.entries(links)) {
+      if (topicId === id) {
+        delete links[sessionId];
+        changed = true;
+      }
+    }
+    if (changed) {
+      file.sessionLinks = links;
+      this.writeSyncFile(file);
+    }
+    return removed;
   }
 
   // ===== Agent session links =====
