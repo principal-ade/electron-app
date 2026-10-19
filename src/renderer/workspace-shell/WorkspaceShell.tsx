@@ -50,6 +50,7 @@ import {
 } from '../contexts/TerminalContext';
 import { usePanelProgramStatus } from '../contexts/terminalProgramStatus';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { ProcessRegistryService } from '../main-process-api/ProcessRegistryService';
 import { useTerminalImplementation } from '../hooks/useTerminalImplementation';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { RepoFileSearchPalette } from './RepoFileSearchPalette';
@@ -108,8 +109,11 @@ import { DocumentService } from '../services/DocumentService';
 import type { LocalTopicTab } from '../events/portalTabs';
 import {
   PORTAL_INTENTS,
+  emitTerminalOpen,
   type TerminalOpenPayload,
 } from '../events/portalIntents';
+import { DRAWING_EVENTS } from '../drawings-view/drawingsStorage';
+import type { HomeTabEntry } from '../panels/home-panel/homeTabEntries';
 import { TerminalEmptyState } from './TerminalEmptyState';
 
 /** Which surface's left panel + landing the shell currently shows. */
@@ -264,6 +268,13 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     openMarkdownDoc,
     openSourceFile,
     openMedia,
+    openLocalTopic,
+    openProjectInfo,
+    openRepoExplorer,
+    openFileCityGuide,
+    openSubsystemModel,
+    openSkill,
+    openLocalhostBrowser,
   } = useWorkspaceTabs();
   // The Topics left panel emits open intents on the portal bus
   // (PortalIntentBridge turns them into tabs).
@@ -600,6 +611,119 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       );
     },
     [findEntryForDirectory, repositories],
+  );
+
+  // Reopen a Home rail entry whose tab has been closed (a pinned entry). Each
+  // kind routes through the same opener that created it originally, so Home
+  // never needs its own tab-construction path.
+  const handleOpenHomeEntry = useCallback(
+    (entry: HomeTabEntry) => {
+      switch (entry.kind) {
+        case 'topic':
+          if (entry.topicId) openLocalTopic(entry.topicId, entry.title);
+          break;
+        case 'markdown-doc':
+          if (entry.filePath) {
+            openMarkdownDoc(entry.filePath, entry.repositoryPath);
+          }
+          break;
+        case 'source-file':
+          if (entry.filePath) openSourceFile(entry.filePath);
+          break;
+        case 'media':
+          if (entry.filePath) openMedia(entry.filePath);
+          break;
+        case 'drawing':
+          if (entry.drawingId) {
+            eventsRef.current.emit({
+              type: DRAWING_EVENTS.open,
+              source: 'home-panel',
+              timestamp: Date.now(),
+              payload: {
+                drawingId: entry.drawingId,
+                path: entry.path,
+                name: entry.name ?? entry.label,
+              },
+            });
+          }
+          break;
+        case 'subsystem-model':
+          if (entry.modelId) {
+            openSubsystemModel(entry.modelId, entry.title ?? entry.label);
+          }
+          break;
+        case 'skill':
+          openSkill(entry.label);
+          break;
+        case 'localhost-browser':
+          if (entry.port != null) {
+            // A pinned browser tab is the one "launch" entry: when its linked
+            // managed process is stopped, start it again before revealing the
+            // tab. Unlinked/detected servers just reopen the URL tab.
+            if (entry.processId) {
+              void ProcessRegistryService.list()
+                .then((processes) => {
+                  const proc = processes.find(
+                    (candidate) => candidate.id === entry.processId,
+                  );
+                  if (
+                    proc?.origin === 'managed' &&
+                    (proc.status === 'stopped' || proc.status === 'failed')
+                  ) {
+                    return ProcessRegistryService.restart(proc.id);
+                  }
+                  return undefined;
+                })
+                .catch((error) =>
+                  console.warn(
+                    '[WorkspaceShell] Failed to start pinned browser process:',
+                    error,
+                  ),
+                );
+            }
+            openLocalhostBrowser(
+              entry.port,
+              entry.path ?? '/',
+              entry.label,
+              entry.processId,
+            );
+          }
+          break;
+        case 'terminal':
+          if (entry.path) {
+            emitTerminalOpen(eventsRef.current, 'home-panel', {
+              directory: entry.path,
+              label: entry.label,
+            });
+          }
+          break;
+        case 'repo-tab': {
+          if (!entry.purl) break;
+          const purl = entry.purl as Purl;
+          const matches = findEntriesByPurl(repositoriesRef.current, purl);
+          const payload = matches[0]
+            ? payloadFromLocalEntry(matches[0], matches)
+            : payloadFromPurl(purl);
+          if (entry.variant === 'repo-explorer') openRepoExplorer(payload);
+          else if (entry.variant === 'file-city-guide')
+            openFileCityGuide(payload);
+          else openProjectInfo(payload);
+          break;
+        }
+      }
+    },
+    [
+      openLocalTopic,
+      openMarkdownDoc,
+      openSourceFile,
+      openMedia,
+      openSubsystemModel,
+      openSkill,
+      openLocalhostBrowser,
+      openRepoExplorer,
+      openFileCityGuide,
+      openProjectInfo,
+    ],
   );
 
   const handleShowProject = useCallback(() => {
@@ -949,6 +1073,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               events={events}
               aboutUser={aboutUser}
               userLoading={userLoading}
+              activeTabId={activeTabId}
+              onActivateTab={setActiveTabId}
+              onOpenEntry={handleOpenHomeEntry}
             />
           ) : activeView === 'projects' ? (
             <ProjectsLeftPanel
@@ -1051,6 +1178,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       requestFocusTabId,
       handleFocusTabHandled,
       requestCloseTabId,
+      handleOpenHomeEntry,
       renderTabContent,
       renderTabIcon,
       bottomBarContent,

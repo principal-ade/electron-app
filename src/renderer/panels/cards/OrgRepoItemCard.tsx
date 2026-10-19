@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ArrowDown, ArrowUp, Eye, Circle, Cloud, Download, Eraser, FolderGit2, FolderTree, Lock, Terminal } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Eye,
+  Circle,
+  Cloud,
+  Download,
+  Eraser,
+  FolderGit2,
+  FolderTree,
+  Lock,
+  Pin,
+  Terminal,
+} from 'lucide-react';
 
 export interface OrgRepoItemCardData {
   name: string;
@@ -58,6 +71,20 @@ export interface OrgRepoItemCardProps {
    * a small "live" glyph renders next to the name.
    */
   watching?: boolean;
+  /**
+   * Right-aligned icons for tabs pinned to this repo whose tabs are closed.
+   * Rendered between the name and the hover actions so they stay visible while
+   * the row is at rest (hover actions only appear on hover). Clicking one
+   * reopens its tab.
+   */
+  tabIcons?: React.ReactNode;
+  /** Whether this repository is pinned to Home. */
+  pinned?: boolean;
+  /**
+   * Toggle the repo's Home pin. Pinning a repo keeps its row in the rail even
+   * when it is clean and has no open tabs; terminals are pinned this way.
+   */
+  onTogglePin?: () => void;
 }
 
 export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
@@ -75,6 +102,9 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   sync,
   onPushAhead,
   watching = false,
+  tabIcons,
+  pinned = false,
+  onTogglePin,
 }) => {
   const { theme } = useTheme();
   const spacing = { xs: 4, sm: 8, md: 16 };
@@ -113,7 +143,9 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
         // "Quiet list" row: no border. A subtle background tint on hover is the
         // only chrome; hierarchy is carried by the section header above.
         padding: '6px 10px 6px 14px',
-        backgroundColor: hovered ? theme.colors.backgroundSecondary : 'transparent',
+        backgroundColor: hovered
+          ? theme.colors.backgroundSecondary
+          : 'transparent',
         borderRadius: 6,
         cursor: onClick ? 'pointer' : 'default',
         transition: 'background-color 0.15s ease',
@@ -122,7 +154,9 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
       }}
     >
       {/* On-disk clones get the repo icon; not-yet-cloned repos get a cloud. */}
-      <div style={{ position: 'relative', flexShrink: 0, display: 'inline-flex' }}>
+      <div
+        style={{ position: 'relative', flexShrink: 0, display: 'inline-flex' }}
+      >
         {isCloned ? (
           <FolderGit2
             size={15}
@@ -144,11 +178,17 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
               // not part of the icon's own linework.
               borderRadius: '50%',
               boxShadow: `0 0 0 1.5px ${
-                hovered ? theme.colors.backgroundSecondary : theme.colors.background
+                hovered
+                  ? theme.colors.backgroundSecondary
+                  : theme.colors.background
               }`,
             }}
           >
-            <Circle size={7} fill={theme.colors.warning} color={theme.colors.warning} />
+            <Circle
+              size={7}
+              fill={theme.colors.warning}
+              color={theme.colors.warning}
+            />
           </span>
         )}
       </div>
@@ -163,6 +203,8 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
         >
           <span
             style={{
+              flex: 1,
+              minWidth: 0,
               fontFamily: theme.fonts?.body,
               fontSize: theme.fontSizes[2],
               color: theme.colors.text,
@@ -178,13 +220,62 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
           {isPrivate === true && (
             <span
               title="Private repository"
-              style={{ flexShrink: 0, display: 'inline-flex', position: 'relative', top: 1 }}
+              style={{
+                flexShrink: 0,
+                display: 'inline-flex',
+                position: 'relative',
+                top: 1,
+              }}
             >
               <Lock size={11} color={theme.colors.textSecondary} />
             </span>
           )}
+          {/* Repo pin. Pinning the repo keeps its row in Home; terminals are
+              pinned this way, never individually. Revealed on hover unless
+              already pinned. */}
+          {onTogglePin && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePin();
+              }}
+              title={
+                pinned ? 'Unpin repository from Home' : 'Pin repository to Home'
+              }
+              aria-label={
+                pinned
+                  ? `Unpin ${repo.name} from Home`
+                  : `Pin ${repo.name} to Home`
+              }
+              style={{
+                flexShrink: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 20,
+                height: 20,
+                padding: 0,
+                border: 'none',
+                borderRadius: 4,
+                background: 'transparent',
+                color: pinned
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary,
+                cursor: 'pointer',
+                opacity: pinned || hovered ? 1 : 0,
+                transition: 'opacity 120ms, color 120ms',
+              }}
+            >
+              <Pin size={12} fill={pinned ? 'currentColor' : 'none'} />
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Pinned-tab icons: always visible so a closed, pinned tab stays
+          reachable without hovering the row. */}
+      {tabIcons}
 
       {/* Clone action for projects that aren't on disk yet. */}
       {!isCloned && onClone && (
@@ -325,7 +416,8 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
             transition: 'opacity 120ms, color 120ms',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = theme.colors.error ?? theme.colors.text;
+            e.currentTarget.style.color =
+              theme.colors.error ?? theme.colors.text;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.color = theme.colors.textSecondary;
@@ -429,7 +521,11 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
           className="animate-watchPulse"
           title="Watching — live git status (push and dirty changes update automatically)"
           aria-label="Watching for live changes"
-          style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}
+          style={{
+            flexShrink: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+          }}
         >
           <Eye size={13} color={theme.colors.primary} />
         </span>

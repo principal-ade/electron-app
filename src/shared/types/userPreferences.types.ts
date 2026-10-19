@@ -252,6 +252,21 @@ export interface UserPreferences {
   // Interactive shell preferences
   interactiveShell?: {
     activeNavigationView?: InteractiveShellNavigationView;
+    /**
+     * Tabs the user pinned from the Home rail. A pinned entry persists across
+     * the tab being closed so it can be reopened from Home (repo-rooted ones
+     * collapse to an icon on their repo row; standalone ones stay in the
+     * Pinned section). Stored flat so it serializes cleanly; the renderer
+     * narrows on `kind`.
+     */
+    homePinnedTabs?: HomePinnedTab[];
+    /**
+     * Repo rows the user pinned from Home, keyed by `HomeRepoRow.key` (the
+     * clone path, or a purl for a remote-only repo). A pinned repo stays in the
+     * rail even when it is clean and has no open tabs. Terminals are pinned by
+     * pinning their repo, never individually.
+     */
+    homePinnedRepos?: string[];
   };
 
   // Onboarding state and completion tracking
@@ -303,6 +318,50 @@ export interface UserPreferences {
   // - validationConfigs: src/renderer/services/validation/ConfiguredValidationService.ts:13
   // - customArchitectureLayers: src/renderer/services/storage/CustomLayersStorageService.ts:3
   // - sessionContexts: src/renderer/services/sessionContextService.ts (with pattern `sessionContexts:${directory}`)
+}
+
+/** Which workspace tab a {@link HomePinnedTab} refers to. */
+export type HomePinnedTabKind =
+  | 'topic'
+  | 'markdown-doc'
+  | 'source-file'
+  | 'media'
+  | 'drawing'
+  | 'subsystem-model'
+  | 'skill'
+  | 'localhost-browser'
+  | 'terminal'
+  | 'repo-tab';
+
+/**
+ * A Home rail tab entry the user pinned. Deliberately flat (optional per-kind
+ * fields rather than a discriminated union) so it round-trips through the
+ * preferences store without a schema version; callers narrow on `kind`. Field
+ * names mirror the tab interfaces in `events/portalTabs.ts` so an entry maps
+ * 1:1 back onto a tab.
+ */
+export interface HomePinnedTab {
+  /** Stable tab id (`<contentType>-<key>`); matches a live tab by id. */
+  id: string;
+  kind: HomePinnedTabKind;
+  /** Display label for the rail row / icon tooltip. */
+  label: string;
+  /** Owning clone path when this tab is rooted in a repository. */
+  repoPath?: string;
+  // Kind-specific payload.
+  topicId?: string;
+  title?: string;
+  filePath?: string;
+  repositoryPath?: string;
+  drawingId?: string;
+  name?: string;
+  modelId?: string;
+  /** Drawing file path, localhost URL path, or terminal directory (by kind). */
+  path?: string;
+  port?: number;
+  processId?: string;
+  purl?: string;
+  variant?: 'project-info' | 'repo-explorer' | 'file-city-guide';
 }
 
 /**

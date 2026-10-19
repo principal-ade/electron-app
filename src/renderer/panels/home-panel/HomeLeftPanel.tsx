@@ -23,6 +23,7 @@ import {
   type RepositorySelectedPayload,
 } from '../../events/repositorySelected';
 import { useTheme } from '@principal-ade/industry-theme';
+import { PanelsTopLeft } from 'lucide-react';
 import { useAuthUser } from '../../providers/AuthProvider';
 import { OrgRepoItemCard } from '../cards/OrgRepoItemCard';
 import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
@@ -38,7 +39,13 @@ import { UserAboutCard } from './UserAboutCard';
 import { type UserAboutInfo } from './useUserAboutInfo';
 import { RepoAboutCard } from './RepoAboutCard';
 import { useInProgressRepos } from './useInProgressRepos';
-import { getHomeRepositories, type HomeRepository } from './homeRepositories';
+import {
+  buildHomeTabEntries,
+  type HomeRepoRow,
+  type HomeTabEntry,
+} from './homeTabEntries';
+import { HomeTabRow, PinnedTabIcon } from './HomeTabItems';
+import { useHomePins } from './useHomePins';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
 import { useWatchedRepos } from './useWatchedRepos';
 import { HomeSearchBar, HomeSearchResults } from './HomeSearch';
@@ -59,6 +66,12 @@ export interface HomeLeftPanelProps {
    */
   aboutUser: UserAboutInfo | null;
   userLoading: boolean;
+  /** Currently-focused workspace tab, for highlighting a rail entry. */
+  activeTabId: string | null;
+  /** Focus an already-open tab (a child row / standalone open-tab row). */
+  onActivateTab: (tabId: string) => void;
+  /** Reopen a pinned tab whose tab has been closed. */
+  onOpenEntry: (entry: HomeTabEntry) => void;
 }
 
 export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
@@ -67,6 +80,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   events,
   aboutUser,
   userLoading,
+  activeTabId,
+  onActivateTab,
+  onOpenEntry,
 }) => {
   // Principal app OAuth — re-runs the profile load on sign-in.
   const { user: authUser, profile } = useAuthUser();
@@ -83,15 +99,31 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   } | null>(null);
 
   // Repos with uncommitted changes / unpushed commits — the in-progress list.
-  // `statusRefreshKey` forces a re-query after a push clears an ahead count.
-  const [statusRefreshKey, setStatusRefreshKey] = useState(0);
-  const inProgressRepos = useInProgressRepos(repositories, statusRefreshKey);
-  const homeRepos = useMemo(
-    () => getHomeRepositories(repositories, inProgressRepos, tabs),
-    [repositories, inProgressRepos, tabs],
+  const inProgressRepos = useInProgressRepos(repositories);
+  // Pinned tab entries + pinned repos (persisted in preferences) so a closed
+  // tab or a clean, tab-less repo can stay reachable from the rail.
+  const {
+    pinnedTabs: pinnedTabEntries,
+    pinnedTabIds,
+    toggleTabPin,
+    pinnedRepos,
+    pinnedRepoKeys,
+    toggleRepoPin,
+  } = useHomePins();
+  // Repo rows + their nested tab entries, plus the standalone and pinned lists.
+  const homeTabs = useMemo(
+    () =>
+      buildHomeTabEntries(
+        repositories,
+        inProgressRepos,
+        tabs,
+        pinnedTabEntries,
+        pinnedRepos,
+      ),
+    [repositories, inProgressRepos, tabs, pinnedTabEntries, pinnedRepos],
   );
   // Repos the monitoring worker is watching — these have live git status;
-  // unwatched repos are query-only and can show a stale sync count.
+  // unwatched repos receive staggered refreshes while Home is visible.
   const watchedPaths = useWatchedRepos();
 
   // Group the in-progress repos by owner, the way the Projects surface does:
@@ -291,9 +323,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // Push the clicked repo's local commits to its upstream (creating the
   // upstream if the branch has none yet). Shared by the push modal.
   const pushToRemote = useCallback(
-    async (
-      path: string,
-    ): Promise<{ success: boolean; message: string }> => {
+    async (path: string): Promise<{ success: boolean; message: string }> => {
       const safety = await GitService.isPushSafe(path);
       return GitService.push(
         path,
@@ -303,11 +333,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     [],
   );
 
-  // After a successful push: re-query every status (an unwatched repo's cached
-  // ahead count would otherwise stay stale) and ask the monitor to re-check.
+  // Refresh only the pushed repository; the worker broadcasts the fresh status.
   const handlePushed = useCallback((path: string) => {
-    setStatusRefreshKey((k) => k + 1);
-    RepositoryMonitoringService.refreshRepository(path).catch((err) => {
+    RepositoryMonitoringService.refreshGitStatus(path).catch((err) => {
       console.warn('[HomeLeftPanel] Failed to refresh after push:', err);
     });
   }, []);
@@ -324,10 +352,11 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     [events],
   );
 
-  // In-progress repos grouped by owner for the section-header list.
+  // In-progress repos grouped by owner for the section-header list. Each row
+  // already carries its open/pinned tab entries.
   const inProgressGroups = useMemo(() => {
-    const groups = new Map<string, HomeRepository[]>();
-    for (const repo of homeRepos) {
+    const groups = new Map<string, HomeRepoRow[]>();
+    for (const repo of homeTabs.repos) {
       const owner = repo.payload.github?.owner ?? 'Untracked';
       const bucket = groups.get(owner);
       if (bucket) bucket.push(repo);
@@ -343,7 +372,38 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       if (aYou !== bYou) return aYou ? -1 : 1;
       return a.localeCompare(b, undefined, { sensitivity: 'base' });
     });
-  }, [homeRepos, githubLogin]);
+  }, [homeTabs.repos, githubLogin]);
+
+  // Small uppercase heading for the standalone "Open Tabs" / "Pinned" sections.
+  const tabSectionStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 14px 4px',
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSizes[1],
+    fontWeight: theme.fontWeights.semibold,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    color: theme.colors.textSecondary,
+  };
+
+  const renderTabEntry = (entry: HomeTabEntry, open: boolean, depth = 0) => (
+    <HomeTabRow
+      key={entry.id}
+      entry={entry}
+      open={open}
+      pinned={pinnedTabIds.has(entry.id)}
+      depth={depth}
+      // Terminals are pinned by pinning their repo, never individually.
+      pinnable={entry.kind !== 'terminal'}
+      // Topic and subsystem-model titles are user-authored and often long;
+      // wrap rather than truncate them in the narrow rail.
+      wrapLabel={entry.kind === 'topic' || entry.kind === 'subsystem-model'}
+      onActivate={() => (open ? onActivateTab(entry.id) : onOpenEntry(entry))}
+      onTogglePin={() => toggleTabPin(entry)}
+    />
+  );
 
   return (
     <div
@@ -457,60 +517,111 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                         onToggle={() => toggleOwner(owner)}
                       />
                       {!isCollapsed &&
-                        repos.map(({ key, payload, status }) => {
-                          const entry = payload.localEntry;
-                          const name =
-                            payload.github?.name ?? entry?.name ?? payload.purl;
-                          const path = entry?.path ? String(entry.path) : '';
-                          return (
-                            <OrgRepoItemCard
-                              key={key}
-                              repo={{ name }}
-                              isCloned={!!path}
-                              isDirty={status?.isDirty}
-                              watching={path ? watchedPaths.has(path) : false}
-                              sync={{
-                                ahead: status?.ahead,
-                                behind: status?.behind,
-                              }}
-                              onPushAhead={
-                                path && (status?.ahead ?? 0) > 0
-                                  ? () =>
-                                      setPushTarget({
-                                        path,
-                                        name,
-                                        ahead: status?.ahead ?? 0,
-                                        branch: status?.branch,
-                                      })
-                                  : undefined
-                              }
-                              dragText={path ? shellQuote(path) : undefined}
-                              onClick={() => openInProgressRepo(payload)}
-                              onOpenTerminal={
-                                path && entry
-                                  ? () => openTerminalForEntry(entry, name)
-                                  : undefined
-                              }
-                            />
-                          );
-                        })}
+                        repos.map(
+                          ({ key, payload, status, openTabs, pinnedTabs }) => {
+                            const entry = payload.localEntry;
+                            const name =
+                              payload.github?.name ??
+                              entry?.name ??
+                              payload.purl;
+                            const path = entry?.path ? String(entry.path) : '';
+                            return (
+                              <div key={key}>
+                                <OrgRepoItemCard
+                                  repo={{ name }}
+                                  isCloned={!!path}
+                                  isDirty={status?.isDirty}
+                                  watching={
+                                    path ? watchedPaths.has(path) : false
+                                  }
+                                  sync={{
+                                    ahead: status?.ahead,
+                                    behind: status?.behind,
+                                  }}
+                                  onPushAhead={
+                                    path && (status?.ahead ?? 0) > 0
+                                      ? () =>
+                                          setPushTarget({
+                                            path,
+                                            name,
+                                            ahead: status?.ahead ?? 0,
+                                            branch: status?.branch,
+                                          })
+                                      : undefined
+                                  }
+                                  dragText={path ? shellQuote(path) : undefined}
+                                  onClick={() => openInProgressRepo(payload)}
+                                  onOpenTerminal={
+                                    path && entry
+                                      ? () => openTerminalForEntry(entry, name)
+                                      : undefined
+                                  }
+                                  pinned={pinnedRepoKeys.has(key)}
+                                  onTogglePin={() => toggleRepoPin(key)}
+                                  tabIcons={
+                                    pinnedTabs.length > 0
+                                      ? pinnedTabs.map((pin) => (
+                                          <PinnedTabIcon
+                                            key={pin.id}
+                                            entry={pin}
+                                            active={activeTabId === pin.id}
+                                            onActivate={() => onOpenEntry(pin)}
+                                            onUnpin={() => toggleTabPin(pin)}
+                                          />
+                                        ))
+                                      : undefined
+                                  }
+                                />
+                                {/* Open repo-rooted tabs, nested under the repo
+                                    row and focusing on click. */}
+                                {openTabs.map((tab) =>
+                                  renderTabEntry(tab, true, 1),
+                                )}
+                              </div>
+                            );
+                          },
+                        )}
                     </div>
                   );
                 })}
 
-              {inProgressGroups.length === 0 && (
-                <div
-                  style={{
-                    padding: '24px 16px',
-                    color: theme.colors.textMuted,
-                    fontSize: theme.fontSizes[1],
-                    lineHeight: 1.5,
-                  }}
-                >
-                  Nothing in progress — no open repository tabs, uncommitted
-                  changes, or unpushed commits.
+              {/* Open tabs that don't belong to a repository. */}
+              {homeTabs.openTabs.length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={tabSectionStyle}>
+                    <PanelsTopLeft
+                      size={16}
+                      color={theme.colors.textSecondary}
+                    />
+                    <span>Open Tabs</span>
+                  </div>
+                  {homeTabs.openTabs.map((tab) => renderTabEntry(tab, true))}
                 </div>
               )}
+
+              {/* Pinned entries whose tab is currently closed. */}
+              {homeTabs.pinnedTabs.length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={tabSectionStyle}>Pinned</div>
+                  {homeTabs.pinnedTabs.map((tab) => renderTabEntry(tab, false))}
+                </div>
+              )}
+
+              {inProgressGroups.length === 0 &&
+                homeTabs.openTabs.length === 0 &&
+                homeTabs.pinnedTabs.length === 0 && (
+                  <div
+                    style={{
+                      padding: '24px 16px',
+                      color: theme.colors.textMuted,
+                      fontSize: theme.fontSizes[1],
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Nothing in progress — no open or pinned tabs, uncommitted
+                    changes, or unpushed commits.
+                  </div>
+                )}
             </div>
           )}
         </div>
