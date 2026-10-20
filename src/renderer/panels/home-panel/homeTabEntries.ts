@@ -203,16 +203,16 @@ export function buildHomeTabEntries(
   const openIds = new Set<string>();
   const openTabs: HomeTabEntry[] = [];
 
-  // Terminal tabs are labelled `⌘ N` by the tab host (their position among
-  // terminals), not by their directory. Mirror that numbering here so the
-  // rail says "Tab 1" instead of repeating the repo name.
+  // Terminal tabs are labelled `⌘ N` by the tab host, where N is the tab's
+  // overall position in the tab bar (Cmd+1–9 switches by overall index).
+  // Mirror that numbering here so the rail says "Tab 1"/"Tab 3" instead of
+  // repeating the repo name — and stays in sync when tabs are reordered.
   const terminalNumbers = new Map<string, number>();
-  let terminalCount = 0;
-  for (const tab of tabs) {
+  tabs.forEach((tab, index) => {
     if (tab.contentType === 'terminal') {
-      terminalNumbers.set(tab.id, ++terminalCount);
+      terminalNumbers.set(tab.id, index + 1);
     }
-  }
+  });
 
   for (const tab of tabs) {
     const owner = ownerForTab(tab);

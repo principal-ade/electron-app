@@ -45,17 +45,19 @@ describe('buildHomeTabEntries', () => {
     ]);
   });
 
-  it('numbers terminal child rows by their position among terminals', () => {
+  it('numbers terminal child rows by their overall tab-bar position', () => {
     const second: WorkspaceTab = { ...terminal(), id: 'terminal-2' };
     const { repos } = buildHomeTabEntries(
       [entry],
       [],
-      [terminal(), second],
+      [terminal(), profile(), second],
       [],
     );
+    // The custom tab occupies position 2, so the second terminal is `⌘ 3`.
     expect(repos[0].openTabs.map((tab) => tab.label)).toEqual([
       'Tab 1',
-      'Tab 2',
+      'app',
+      'Tab 3',
     ]);
   });
 
