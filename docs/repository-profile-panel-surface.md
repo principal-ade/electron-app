@@ -108,6 +108,7 @@ Key fields: `name`, `fullName`, `owner`, `ownerAvatarUrl`, `ownerType`,
 | `getLineCounts(path)` | Building heights (local) |
 | `getReadmeContent?(owner, name)` | Remote README |
 | `openRepository(path, remoteUrl?)` | Open dev workspace / register |
+| `openLocalhostBrowser?(port, path?, label?, processId?)` | Open or focus the process-linked Storybook browser tab once its port is known |
 | `isRepositoryStarred` / `star` / `unstar` | GitHub star |
 | `registerRepository` | Alexandria after clone |
 | `getContributors` | GitHub contributors |
@@ -155,6 +156,9 @@ portal for opens). Design inventory:
 | Contributors | List + optional ownership hover coloring on city |
 | Star | GitHub star |
 | Playback | Commit highlight playback over city (today/week/year) |
+| Packages | Repository Info lists monitored package names, versions, and descriptions from the first local clone; names open their manifests |
+| Dirty info switch | Changed Files remains the default for dirty clones; switch to Repository Info to inspect packages and commit playback |
+| Storybook | Detected using the shared Storybook service; starts through the process registry and reuses Home process rows for status, browser, stop, restart, and pin controls |
 
 ## Explicit non-goals (this surface)
 

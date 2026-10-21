@@ -56,6 +56,7 @@ import {
   type CloneProgressState,
 } from '../components/GitCloneModal';
 import { ForkModal } from './components/ForkModal';
+import { RepositoryPackageList } from './components/RepositoryPackageList';
 
 export interface RepositoryProfileData {
   name: string;
@@ -126,6 +127,9 @@ export interface RepositoryProfilePanelActions extends PanelActions {
    * the local path to an Alexandria entry (registering it if necessary).
    */
   openRepository: (path: string, remoteUrl?: string) => Promise<void>;
+
+  /** Open a localhost browser tab linked to a managed process when available. */
+  openLocalhostBrowser?: (port: number, path?: string, label?: string, processId?: string) => void;
 
   /**
    * Check if repository is starred
@@ -410,6 +414,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // Read repository from context
   const repositoryData = context.currentScope?.repository as RepositoryProfileData | undefined;
+  const repositoryPath = repositoryData?.localClones?.[0]?.path;
+  const [showStats, setShowStats] = useState(false);
+  useEffect(() => {
+    setShowStats(false);
+  }, [repositoryPath, repositoryData?.fullName]);
 
   // State for file trees (fetched via actions)
   const [localFileTree, setLocalFileTree] = useState<FileTree | null>(null);
@@ -2286,7 +2295,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
       {/* Bottom Section - Stats and File City 3D (fills remaining height) */}
       <div style={{ flex: 1, display: 'flex', gap: spacing.md, padding: spacing.md, overflow: 'hidden' }}>
-          {/* Repository Stats - Left */}
+          {/* Repository Info - Left */}
           <section
             style={{
               flex: 1,
@@ -2318,7 +2327,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     return <Users size={16} color={theme.colors.primary} />;
                   } else if (!hasLocalClone && (readmeContent || readmeLoading)) {
                     return <FolderGit2 size={16} color={theme.colors.primary} />;
-                  } else if (!showContributors && hasChanges) {
+                  } else if (!showContributors && hasChanges && !showStats) {
                     return <Circle size={16} color={theme.colors.warning} />;
                   } else {
                     return <GitCommit size={16} color={theme.colors.primary} />;
@@ -2343,13 +2352,32 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                       return 'Contributors';
                     } else if (!hasLocalClone && (readmeContent || readmeLoading)) {
                       return 'README';
-                    } else if (!showContributors && hasChanges) {
+                    } else if (!showContributors && hasChanges && !showStats) {
                       return 'Changed Files';
                     } else {
-                      return 'Repository Stats';
+                      return 'Repository Info';
                     }
                   })()}
                 </h4>
+                {!showContributors && repositoryPath && gitStatusMap.get(repositoryPath)?.isDirty && (
+                  <button
+                    type="button"
+                    onClick={() => setShowStats(previous => !previous)}
+                    style={{
+                      marginLeft: 'auto',
+                      padding: `${spacing.xs}px ${spacing.sm}px`,
+                      background: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: 4,
+                      color: theme.colors.primary,
+                      fontSize: theme.fontSizes[1],
+                      fontFamily: theme.fonts?.body,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {showStats ? 'Changed Files' : 'Repository Info'}
+                  </button>
+                )}
                 {showContributors && (
                   <button
                     onClick={() => setShowContributors(false)}
@@ -2371,7 +2399,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                       e.currentTarget.style.color = theme.colors.textSecondary;
                     }}
                   >
-                    Back to Stats
+                    Back to Info
                   </button>
                 )}
               </div>
@@ -2523,7 +2551,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 const gitStatus = firstClone ? gitStatusMap.get(firstClone.path) : null;
                 const hasChanges = gitStatus && gitStatus.isDirty;
 
-                if (hasChanges) {
+                if (hasChanges && !showStats) {
                   // Show changed files
                   // Paths that no longer exist on disk. Git reports a staged
                   // deletion in both `stagedFiles` and `deletedFiles`, so a
@@ -2616,6 +2644,14 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 // Otherwise show normal stats
                 return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+                {repositoryPath && (
+                  <RepositoryPackageList
+                    key={repositoryPath}
+                    repositoryPath={repositoryPath}
+                    onOpenFile={openFileInTab}
+                    onOpenBrowser={actions.openLocalhostBrowser}
+                  />
+                )}
                 {/* Playback Buttons (for local repos) */}
                 {repositoryData.isLocal && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, marginTop: spacing.md }}>

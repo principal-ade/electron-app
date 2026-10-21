@@ -92,6 +92,7 @@ import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { useWorkspaceTabs } from '../principal-window/PortalTabsContext';
 import { commitActivityPanelActions } from '../panels/commitActivityPanelActions';
 import { MarkdownDocTabContent } from './MarkdownDocTabContent';
 import { SourceFileTabContent } from '../panels/SourceFileTabContent';
@@ -145,6 +146,7 @@ const RepositoryProfileTabContent: React.FC<{
   localEntry?: AlexandriaEntry;
   events: PanelEventEmitter;
 }> = ({ purl, github, localEntry, events }) => {
+  const { openLocalhostBrowser } = useWorkspaceTabs();
   const [repositoryData, setRepositoryData] = React.useState<
     RepositoryProfileData | undefined
   >(undefined);
@@ -503,6 +505,7 @@ const RepositoryProfileTabContent: React.FC<{
   const projectActions = React.useMemo(
     () => ({
       openFile: async () => {},
+      openLocalhostBrowser,
       openRepository: async (path: string, remoteUrl?: string) => {
         if (!path) return;
         const existing = await AlexandriaService.getRepositoryByPath(path);
@@ -580,7 +583,7 @@ const RepositoryProfileTabContent: React.FC<{
         return GithubService.getRepositoryContributors(owner, repo);
       },
     }),
-    [],
+    [openLocalhostBrowser],
   );
 
   return (
