@@ -1,5 +1,9 @@
 import { makeAxiosInstance } from '@usebruno/requests';
-import type { BrunoRequest, BrunoResponse, BrunoEnvironment } from '@principal-ade/bruno-panels';
+import type {
+  BrunoRequest,
+  BrunoResponse,
+  BrunoEnvironment,
+} from '@principal-ade/bruno-panels';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -11,11 +15,11 @@ function interpolate(
   value: string,
   environment: Record<string, string>,
 ): string {
-  let result = value;
-  for (const [key, val] of Object.entries(environment)) {
-    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val);
-  }
-  return result;
+  return value.replace(/\{\{([^{}]+)\}\}/g, (match, key: string) =>
+    Object.prototype.hasOwnProperty.call(environment, key)
+      ? environment[key]
+      : match,
+  );
 }
 
 /**
@@ -28,7 +32,36 @@ export async function sendBrunoRequest(
   const axiosInstance = makeAxiosInstance();
 
   // Interpolate environment variables in URL
-  let url = interpolate(request.http.url, environment);
+  const target = new URL(interpolate(request.http.url, environment));
+  if (!/^https?:$/.test(target.protocol)) {
+    throw new Error('Only HTTP and HTTPS requests can be sent.');
+  }
+  const pathParams = new Map(
+    (request.params || [])
+      .filter((param) => param.enabled && param.type === 'path')
+      .map((param) => [param.name, param.value]),
+  );
+  target.pathname = target.pathname.replace(
+    /:([a-zA-Z0-9_]+)/g,
+    (match, name: string) => {
+      const value = pathParams.get(name);
+      return value !== undefined
+        ? encodeURIComponent(interpolate(value, environment))
+        : match;
+    },
+  );
+  let url = target.toString();
+  if (request.body?.multipartForm !== undefined) {
+    throw new Error(
+      'Sending multipart requests is not supported. Choose another body format.',
+    );
+  }
+  if (
+    request.auth?.mode &&
+    !['none', 'basic', 'bearer'].includes(request.auth.mode)
+  ) {
+    throw new Error('Only basic and bearer authentication are supported.');
+  }
 
   // Build headers object
   const headers: Record<string, string> = {};
@@ -58,14 +91,14 @@ export async function sendBrunoRequest(
   let body: string | undefined;
   const contentType = headers['Content-Type'] || headers['content-type'];
 
-  if (request.body?.json) {
+  if (request.body?.json !== undefined) {
     body = interpolate(request.body.json, environment);
     if (!contentType) {
       headers['Content-Type'] = 'application/json';
     }
-  } else if (request.body?.text) {
+  } else if (request.body?.text !== undefined) {
     body = interpolate(request.body.text, environment);
-  } else if (request.body?.xml) {
+  } else if (request.body?.xml !== undefined) {
     body = interpolate(request.body.xml, environment);
     if (!contentType) {
       headers['Content-Type'] = 'application/xml';
@@ -86,15 +119,16 @@ export async function sendBrunoRequest(
   // Handle authentication
   if (request.auth?.mode === 'basic' && request.auth.basic) {
     const { username, password } = request.auth.basic;
-    const credentials = Buffer.from(`${username}:${password}`).toString(
-      'base64',
-    );
+    const credentials = Buffer.from(
+      `${interpolate(username, environment)}:${interpolate(password, environment)}`,
+    ).toString('base64');
     headers['Authorization'] = `Basic ${credentials}`;
   } else if (request.auth?.mode === 'bearer' && request.auth.bearer) {
     const token = interpolate(request.auth.bearer.token, environment);
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  const startedAt = Date.now();
   try {
     const response = await axiosInstance.request({
       method: request.http.method.toUpperCase(),
@@ -103,13 +137,14 @@ export async function sendBrunoRequest(
       data: body,
       // Don't throw on non-2xx responses - return them to the panel
       validateStatus: () => true,
+      timeout: 60_000,
     });
 
     // Calculate response size
     const responseData =
       typeof response.data === 'string'
         ? response.data
-        : JSON.stringify(response.data);
+        : (JSON.stringify(response.data) ?? '');
     const size = Buffer.byteLength(responseData, 'utf8');
 
     return {
@@ -117,14 +152,22 @@ export async function sendBrunoRequest(
       statusText: response.statusText,
       headers: response.headers as Record<string, string>,
       data: response.data,
-      responseTime: (response as { responseTime?: number }).responseTime || 0,
+      responseTime: Date.now() - startedAt,
       size,
     };
   } catch (error: unknown) {
     // Handle axios errors with more detail
     if (error && typeof error === 'object' && 'code' in error) {
-      const axiosError = error as { code?: string; message?: string; cause?: Error };
-      const message = axiosError.cause?.message || axiosError.message || axiosError.code || 'Unknown error';
+      const axiosError = error as {
+        code?: string;
+        message?: string;
+        cause?: Error;
+      };
+      const message =
+        axiosError.cause?.message ||
+        axiosError.message ||
+        axiosError.code ||
+        'Unknown error';
       throw new Error(`Request failed: ${message}`);
     }
 
@@ -138,12 +181,14 @@ export async function sendBrunoRequest(
 /**
  * Load all Bruno environments from environments/*.json files
  */
-export async function loadEnvironments(collectionPath: string): Promise<BrunoEnvironment[]> {
+export async function loadEnvironments(
+  collectionPath: string,
+): Promise<BrunoEnvironment[]> {
   const environmentsDir = path.join(collectionPath, 'environments');
 
   try {
     const files = await fs.readdir(environmentsDir);
-    const jsonFiles = files.filter(f => f.endsWith('.json'));
+    const jsonFiles = files.filter((f) => f.endsWith('.json'));
 
     const environments: BrunoEnvironment[] = [];
 

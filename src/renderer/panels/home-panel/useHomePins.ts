@@ -71,6 +71,8 @@ export function useHomePins(): HomePinsState {
   const pinnedRepoKeys = useMemo(() => new Set(pinnedRepos), [pinnedRepos]);
 
   const toggleTabPin = useCallback((entry: HomePinnedTab) => {
+    // Requests are pinned through the encrypted store, never preferences.
+    if (entry.kind === 'http-request') return;
     if (!isHomeTabPinnable(entry)) return;
     setPinnedTabs((prev) => {
       const next = prev.some((p) => p.id === entry.id)

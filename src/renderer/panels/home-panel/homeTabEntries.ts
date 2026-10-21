@@ -10,6 +10,7 @@
  *   models, localhost browsers, skills, and files outside any repo);
  * - pinned entries whose tab is currently closed, split the same way (repo
  *   rows carry them as icons; the rest land in the Pinned section).
+ * - requests in a separate target-metadata hierarchy, not their caller repo.
  *
  * The entry shape is the persisted `HomePinnedTab` descriptor, so a live entry
  * and a pinned one are the same value — the rail can pin an open tab without a
@@ -27,6 +28,11 @@ import {
 } from '../../events/repositorySelected';
 import { getHomeRepositories, type HomeRepository } from './homeRepositories';
 import type { InProgressRepo } from './useInProgressRepos';
+import type { SavedRequest } from '../../../shared/requests/preparedRequest';
+import {
+  buildRequestGroups,
+  type RequestPurlGroup,
+} from '../../requests/requestGroups';
 
 /** A tab entry as the rail renders it (identical to the persisted shape). */
 export type HomeTabEntry = HomePinnedTab;
@@ -58,6 +64,8 @@ export interface HomeRepoRow extends HomeRepository {
 }
 
 export interface HomeTabEntries {
+  /** Open requests and remembered routes, grouped only by their optional target metadata. */
+  requests: RequestPurlGroup[];
   /** Process id → its browser tab, already represented under a repository. */
   processTabs: Map<string, HomeProcessTab>;
   /** Active/pinned processes outside registered repositories. */
@@ -92,6 +100,8 @@ function ownerForTab(tab: WorkspaceTab): {
       return { path: tab.repoPath };
     case 'markdown-doc':
       return { path: tab.repositoryPath ?? tab.filePath };
+    case 'http-request':
+      return tab.repositoryPath ? { path: tab.repositoryPath } : null;
     case 'source-file':
     case 'media':
       return { path: tab.filePath };
@@ -110,6 +120,12 @@ export function entryFromTab(
 ): HomeTabEntry | null {
   const base = { id: tab.id, label: tab.label, repoPath };
   switch (tab.contentType) {
+    case 'http-request':
+      return {
+        ...base,
+        kind: 'http-request',
+        savedRequestId: tab.savedRequestId,
+      };
     case 'local-topic':
       return { ...base, kind: 'topic', topicId: tab.topicId, title: tab.title };
     case 'markdown-doc':
@@ -204,6 +220,7 @@ export function buildHomeTabEntries(
   pinned: readonly HomePinnedTab[],
   pinnedRepos: readonly string[] = [],
   processes: readonly ProcessEntry[] = [],
+  rememberedRequests: readonly SavedRequest[] = [],
 ): HomeTabEntries {
   const rows = new Map<string, HomeRepoRow>();
   const rowFor = (repo: HomeRepository): HomeRepoRow => {
@@ -219,7 +236,11 @@ export function buildHomeTabEntries(
     rows.set(repo.key, row);
     return row;
   };
-  for (const repo of getHomeRepositories(repositories, inProgress, tabs)) {
+  for (const repo of getHomeRepositories(
+    repositories,
+    inProgress,
+    tabs.filter((tab) => tab.contentType !== 'http-request'),
+  )) {
     rowFor(repo);
   }
 
@@ -285,6 +306,7 @@ export function buildHomeTabEntries(
   });
 
   for (const tab of tabs) {
+    if (tab.contentType === 'http-request') continue;
     if (representedBrowserIds.has(tab.id)) {
       // Still count it as open so its persisted tab pin isn't duplicated.
       openIds.add(tab.id);
@@ -338,6 +360,7 @@ export function buildHomeTabEntries(
   // Ignore legacy individual terminal/profile pins; the repo is their shortcut.
   const pinnedTabs: HomeTabEntry[] = [];
   for (const pin of pinned) {
+    if (pin.kind === 'http-request') continue;
     if (!isHomeTabPinnable(pin)) continue;
     if (openIds.has(pin.id)) continue;
     if (pin.repoPath) {
@@ -389,6 +412,7 @@ export function buildHomeTabEntries(
   }
 
   return {
+    requests: buildRequestGroups(tabs, rememberedRequests),
     processTabs,
     processes: standaloneProcesses,
     repos: [...rows.values()],

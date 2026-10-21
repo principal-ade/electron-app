@@ -4,6 +4,7 @@ import type { HomePinnedTab } from '../../../shared/types/userPreferences.types'
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
 import { buildHomeTabEntries, resolveRepoPath } from './homeTabEntries';
 import type { ProcessEntry } from '../../../shared/main-process-api-interfaces/ProcessRegistryAPI';
+import type { HttpRequestTab } from '../../events/portalTabs';
 
 const purl = 'pkg:github/acme/app' as Purl;
 const entry = {
@@ -11,6 +12,90 @@ const entry = {
   path: '/work/app',
   purl,
 } as AlexandriaEntry;
+
+test('requests appear only in target groups, never under the originating repo, without payloads', () => {
+  const request: HttpRequestTab = {
+    id: 'http-request-one',
+    label: 'Health',
+    contentType: 'http-request',
+    savedRequestId: 'one',
+    sessionId: 'session',
+    panelState: {
+      request: {
+        http: { method: 'GET', url: 'https://private.test?token=secret' },
+      },
+      requestId: 'one',
+      environment: { TOKEN: 'secret' },
+      environmentName: null,
+      response: null,
+      error: null,
+      isSending: false,
+    },
+  };
+  const standalone = buildHomeTabEntries([], [], [request], []);
+  expect(standalone.openTabs).toEqual([]);
+  expect(standalone.requests[0].identifiers[0].requests).toEqual([
+    {
+      id: request.id,
+      label: 'Health',
+      savedRequestId: 'one',
+      open: true,
+    },
+  ]);
+  expect(JSON.stringify(standalone)).not.toContain('secret');
+  const grouped = buildHomeTabEntries(
+    [entry],
+    [],
+    [{ ...request, repositoryPath: '/work/app' }],
+    [],
+  );
+  expect(grouped.repos).toEqual([]);
+  expect(grouped.requests).toEqual(standalone.requests);
+  const pin: HomePinnedTab = {
+    id: request.id,
+    kind: 'http-request',
+    label: 'Health',
+    savedRequestId: 'one',
+    repoPath: '/work/app',
+  };
+  const definition = request.panelState.request;
+  if (!definition) throw new Error('Missing prepared request.');
+  const saved = {
+    id: 'one',
+    title: 'Health',
+    request: definition,
+    environment: {},
+    repositoryPath: '/work/app',
+    target: {
+      purl: 'pkg:github/unregistered/target',
+      identifier: 'container:api',
+    },
+  };
+  const closed = buildHomeTabEntries([entry], [], [], [pin], [], [], [saved]);
+  expect(closed.repos).toEqual([]);
+  expect(closed.pinnedTabs).toEqual([]);
+  expect(closed.requests[0]).toMatchObject({
+    purl: saved.target.purl,
+    identifiers: [
+      {
+        identifier: saved.target.identifier,
+        requests: [expect.objectContaining({ open: false })],
+      },
+    ],
+  });
+  const open = buildHomeTabEntries(
+    [entry],
+    [],
+    [request],
+    [pin],
+    [],
+    [],
+    [saved],
+  );
+  expect(open.requests[0].purl).toBeUndefined();
+  expect(open.requests[0].identifiers[0].requests).toHaveLength(1);
+  expect(open.requests[0].identifiers[0].requests[0].open).toBe(true);
+});
 
 function terminal(directory = '/work/app'): WorkspaceTab {
   return {

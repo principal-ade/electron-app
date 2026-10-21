@@ -14,6 +14,7 @@ export type InteractiveShellNavigationView =
   | 'monitoring'
   | 'auth'
   | 'processes'
+  | 'requests'
   | 'connections'
   | 'skills'
   | 'drawings'
@@ -324,6 +325,7 @@ export interface UserPreferences {
 
 /** Which workspace tab a {@link HomePinnedTab} refers to. */
 export type HomePinnedTabKind =
+  | 'http-request'
   | 'topic'
   | 'markdown-doc'
   | 'source-file'
@@ -358,6 +360,8 @@ export interface HomePinnedTab {
   drawingId?: string;
   name?: string;
   modelId?: string;
+  /** Secure request-store id only. Never put a request payload in preferences. */
+  savedRequestId?: string;
   /** Drawing file path, localhost URL path, or terminal directory (by kind). */
   path?: string;
   port?: number;

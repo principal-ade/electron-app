@@ -9,6 +9,7 @@ import {
   PenTool,
   Home,
   Network,
+  Send,
 } from 'lucide-react';
 import { TopicsIcon } from '../../../components/TopicsIcon';
 import { GitIcon } from '../../../components/GitIcon';
@@ -16,7 +17,7 @@ import { UserPreferencesService } from '../../../main-process-api/UserPreference
 import { ShellService } from '../../../main-process-api/ShellService';
 import { GithubService } from '../../../main-process-api/GithubService';
 import type { NavigationView } from './IntegratedShell';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useProcessRegistry } from '../../../hooks/useProcessRegistry';
 import { blurAfterPointerActivation } from '../../../utils/blurAfterPointerActivation';
 
@@ -195,6 +196,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     },
     { id: 'topics', icon: <TopicsIcon />, label: 'Topics' },
     { id: 'drawings', icon: <PenTool size={20} />, label: 'Drawings' },
+    { id: 'requests', icon: <Send size={20} />, label: 'Requests' },
     ...(showOnboardingButton
       ? [
           {
@@ -355,7 +357,9 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
       }}
     >
-      <div style={{ flex: 1 }}>{topItems.map(renderNavItem)}</div>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        {topItems.map(renderNavItem)}
+      </div>
 
       <div
         style={{

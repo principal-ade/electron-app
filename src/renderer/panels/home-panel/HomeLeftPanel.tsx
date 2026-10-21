@@ -46,12 +46,18 @@ import {
 } from './homeTabEntries';
 import { HomeTabRow, PinnedTabIcon } from './HomeTabItems';
 import { useHomePins } from './useHomePins';
-import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
+import {
+  useWorkspaceTabs,
+  type WorkspaceTab,
+} from '../../principal-window/PortalTabsContext';
+import { savedDefinition } from '../../requests/requestTabs';
+import { RequestGroupList } from '../../requests/RequestGroupList';
 import { useWatchedRepos } from './useWatchedRepos';
 import { HomeSearchBar, HomeSearchResults } from './HomeSearch';
 import { PushToRemoteModal } from '../components/PushToRemoteModal';
 import { useProcessRegistry } from '../../hooks/useProcessRegistry';
 import { HomeProcessRow } from './HomeProcessRow';
+import { requestDefinition } from '../../../shared/requests/preparedRequest';
 
 // ---------------------------------------------------------------------------
 // HomeLeftPanel — the home left rail, the user-based sibling of the
@@ -110,13 +116,71 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // Pinned tab entries + pinned repos (persisted in preferences) so a closed
   // tab or a clean, tab-less repo can stay reachable from the rail.
   const {
-    pinnedTabs: pinnedTabEntries,
-    pinnedTabIds,
-    toggleTabPin,
+    pinnedTabs: preferencePins,
+    toggleTabPin: togglePreferenceTabPin,
     pinnedRepos,
     pinnedRepoKeys,
     toggleRepoPin,
   } = useHomePins();
+  const {
+    savedRequests,
+    catalogRequests,
+    saveRequest,
+    unpinRequest,
+    requestPinError,
+    refreshSavedRequests,
+  } = useWorkspaceTabs();
+  const pinnedTabEntries = useMemo(
+    () => [
+      ...preferencePins.filter((entry) => entry.kind !== 'http-request'),
+      ...savedRequests.map(
+        (request): HomeTabEntry => ({
+          id: `http-request-${request.id}`,
+          kind: 'http-request',
+          savedRequestId: request.id,
+          label: request.title,
+          repoPath: request.repositoryPath,
+        }),
+      ),
+    ],
+    [preferencePins, savedRequests],
+  );
+  const pinnedTabIds = useMemo(
+    () => new Set(pinnedTabEntries.map((entry) => entry.id)),
+    [pinnedTabEntries],
+  );
+  const toggleTabPin = useCallback(
+    (entry: HomeTabEntry) => {
+      if (entry.kind !== 'http-request') {
+        togglePreferenceTabPin(entry);
+        return;
+      }
+      if (!entry.savedRequestId) return;
+      if (
+        savedRequests.some((request) => request.id === entry.savedRequestId)
+      ) {
+        void unpinRequest(entry.savedRequestId);
+      } else {
+        const tab = tabs.find((candidate) => candidate.id === entry.id);
+        if (tab?.contentType === 'http-request')
+          void saveRequest(savedDefinition(tab));
+        else {
+          const remembered = catalogRequests.find(
+            (request) => request.id === entry.savedRequestId,
+          );
+          if (remembered) void saveRequest(requestDefinition(remembered));
+        }
+      }
+    },
+    [
+      togglePreferenceTabPin,
+      savedRequests,
+      catalogRequests,
+      tabs,
+      saveRequest,
+      unpinRequest,
+    ],
+  );
   // Repo rows + their nested tab entries, plus the standalone and pinned lists.
   const homeTabs = useMemo(
     () =>
@@ -127,6 +191,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         pinnedTabEntries,
         pinnedRepos,
         processes,
+        catalogRequests,
       ),
     [
       repositories,
@@ -135,6 +200,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       pinnedTabEntries,
       pinnedRepos,
       processes,
+      catalogRequests,
     ],
   );
   // Repos the monitoring worker is watching — these have live git status;
@@ -516,6 +582,35 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 padding: '4px 4px',
               }}
             >
+              {requestPinError && (
+                <div
+                  role="alert"
+                  style={{ padding: '8px 14px', color: theme.colors.error }}
+                >
+                  {requestPinError}
+                  <button
+                    type="button"
+                    onClick={() => void refreshSavedRequests()}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+              <RequestGroupList
+                groups={homeTabs.requests}
+                renderRequest={(request, depth) =>
+                  renderTabEntry(
+                    {
+                      id: request.id,
+                      label: request.label,
+                      kind: 'http-request',
+                      savedRequestId: request.savedRequestId,
+                    },
+                    request.open,
+                    depth,
+                  )
+                }
+              />
               {processesError && (
                 <div
                   role="alert"
@@ -667,6 +762,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               )}
 
               {inProgressGroups.length === 0 &&
+                homeTabs.requests.length === 0 &&
                 homeTabs.processes.length === 0 &&
                 homeTabs.openTabs.length === 0 &&
                 homeTabs.pinnedTabs.length === 0 && (

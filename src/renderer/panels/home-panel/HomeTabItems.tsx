@@ -24,6 +24,7 @@ import {
   Network,
   PenTool,
   Pin,
+  Send,
   Terminal,
   ToolCase,
 } from 'lucide-react';
@@ -54,6 +55,8 @@ export function homeTabIcon(
   color?: string,
 ): React.ReactNode {
   switch (entry.kind) {
+    case 'http-request':
+      return <Send size={size} color={color} />;
     case 'topic':
       return <TopicsIcon size={size} color={color} />;
     case 'markdown-doc':

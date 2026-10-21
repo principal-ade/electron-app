@@ -538,6 +538,57 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
     ],
   },
   {
+    name: 'requests',
+    description:
+      'Prepare editable HTTP request tabs for explicit user sending.',
+    routes: [
+      {
+        method: 'POST',
+        path: '/api/requests/open',
+        summary:
+          'Remember a prepared HTTP route and open it in the focused Principal MAIN window. Never sends it.',
+        body: {
+          title:
+            'string (optional): 1–200 characters; defaults to HTTP request.',
+          request:
+            'BrunoRequest (required): http: { method, url }, optional meta, headers, params, body, auth. Each header/param has name, value, enabled; params also have type query or path.',
+          environment:
+            'Record<string, string> (optional): explicit {{variable}} replacements.',
+          repositoryPath:
+            'string (optional): absolute originating repository path; distinct from the request target.',
+          target:
+            '{ purl: string, identifier: string } (optional): unverified UI grouping only. Trimmed, non-empty strings; purl at most 1000 characters, identifier at most 200. No registry lookup or C4 verification.',
+        },
+        response:
+          '{ success: true, opened, tabId?, reason?: "no-focused-request-host" | "request-host-unavailable" }',
+        errors: {
+          '400': 'Invalid, oversized, or unsupported definition.',
+          '403': 'Origin or Sec-Fetch-Site header present.',
+          '503':
+            'Encrypted route retention unavailable, corrupt storage, or catalog full.',
+        },
+        notes: [
+          'Opening and reopening never send HTTP. Only the user Send button executes a request. No scripts, tests, response capture, or auto-send flags.',
+          'Requires an already-focused Principal MAIN window. Does not create/focus windows. opened acknowledges a committed tab, not a network response; waits up to three seconds.',
+          'HTTP/HTTPS URLs, headers, query/path parameters, JSON/text/XML/urlencoded bodies, basic/bearer auth. Multipart definitions can be edited and pinned but Send rejects them. File uploads are not supported.',
+          'Valid preparations are retained in an encrypted route catalog, even without Send or a focused host. Identity: exact target pair, uppercase method, URL origin/path; literal URL templates are not resolved. Query/body/header/environment/title changes update the existing definition, not a send-history row. Literal IDs are not generalized into route patterns.',
+          'Pins are favorites, not a retention requirement. Unpinning keeps the definition. Save changes explicitly after editing any remembered request. Already-open tabs retain their current edits/responses; closed tabs reopen from the latest retained definition. Responses and execution history are never persisted.',
+          'Requests and Home group by exact target.purl then target.identifier, with missing targets under Ungrouped. Metadata never changes the URL, permissions, or execution. The catalog holds 1000 entries without silent eviction; unpin then Forget in Requests to remove a definition. No plaintext fallback.',
+        ],
+        example: {
+          title: 'Health check',
+          target: {
+            purl: 'pkg:github/acme/backend',
+            identifier: 'container:api',
+          },
+          request: {
+            http: { method: 'GET', url: 'http://localhost:3000/health' },
+          },
+        },
+      },
+    ],
+  },
+  {
     name: 'browser',
     description:
       'Open localhost preview tabs in an already-focused Principal MAIN window.',

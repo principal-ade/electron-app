@@ -31,7 +31,10 @@ import React, {
   useEffect,
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Globe, Network, PenTool, ToolCase } from 'lucide-react';
+import { Globe, Network, PenTool, ToolCase, Send } from 'lucide-react';
+import { HttpRequestTabContent } from '../requests/HttpRequestTabContent';
+import { RequestsLeftPanel } from '../requests/RequestsLeftPanel';
+import { requestDefinition } from '../../shared/requests/preparedRequest';
 import { TopicsIcon } from '../components/TopicsIcon';
 import {
   ConfigurablePanelLayout,
@@ -124,6 +127,7 @@ export type WorkspaceView =
   | 'drawings'
   | 'skills'
   | 'processes'
+  | 'requests'
   | 'subsystem-models';
 
 /**
@@ -275,6 +279,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     openSubsystemModel,
     openSkill,
     openLocalhostBrowser,
+    openHttpRequest,
+    catalogRequests,
   } = useWorkspaceTabs();
   // The Topics left panel emits open intents on the portal bus
   // (PortalIntentBridge turns them into tabs).
@@ -374,6 +380,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         return <Network size={14} />;
       case 'localhost-browser':
         return <Globe size={14} />;
+      case 'http-request':
+        return <Send size={14} />;
       default:
         return null;
     }
@@ -467,6 +475,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         }
         case 'skill':
           return <SkillDetailTabContent key={tab.id} />;
+        case 'http-request':
+          return <HttpRequestTabContent key={tab.sessionId} tab={tab} />;
         default:
           return null;
       }
@@ -620,6 +630,13 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const handleOpenHomeEntry = useCallback(
     (entry: HomeTabEntry) => {
       switch (entry.kind) {
+        case 'http-request': {
+          const saved = catalogRequests.find(
+            (request) => request.id === entry.savedRequestId,
+          );
+          if (saved) openHttpRequest(requestDefinition(saved));
+          break;
+        }
         case 'topic':
           if (entry.topicId) openLocalTopic(entry.topicId, entry.title);
           break;
@@ -715,6 +732,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     },
     [
       openLocalTopic,
+      openHttpRequest,
+      catalogRequests,
       openMarkdownDoc,
       openSourceFile,
       openMedia,
@@ -1058,7 +1077,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
                       ? 'Subsystem Models'
                       : activeView === 'processes'
                         ? 'Processes'
-                        : 'Topics',
+                        : activeView === 'requests'
+                          ? 'Requests'
+                          : 'Topics',
         content:
           isRepositoryPanelActive && selectedRepository ? (
             <RepoAboutCard
@@ -1096,6 +1117,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             />
           ) : activeView === 'processes' ? (
             <ProcessesView />
+          ) : activeView === 'requests' ? (
+            <RequestsLeftPanel />
           ) : (
             <TopicsLeftPanel events={portalEvents} />
           ),

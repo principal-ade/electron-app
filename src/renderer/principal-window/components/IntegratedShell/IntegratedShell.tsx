@@ -29,6 +29,7 @@ import { usePortalEvents } from '../../PortalEventContext';
 import { useTopicsTabs } from '../../contexts/TopicsTabsContext';
 import { topicClient } from '../../../tipc/topicClient';
 import { useBridgeBrowserOpen } from '../../../hooks/useBridgeBrowserOpen';
+import { useBridgeRequestOpen } from '../../../hooks/useBridgeRequestOpen';
 import type { RepositorySelectedPayload } from '../../../events/repositorySelected';
 import { OnboardingWizard } from '../../../components/OnboardingWizard/OnboardingWizard';
 import {
@@ -69,6 +70,7 @@ const VIEW_OPTIONS = [
   'monitoring',
   'auth',
   'processes',
+  'requests',
   'connections',
   'skills',
   'drawings',
@@ -186,6 +188,12 @@ export const IntegratedShell: React.FC = () => {
     if (!surfaceRef.current) setSurface('processes');
   }, []);
   useBridgeBrowserOpen(revealBrowserWorkspace);
+  const revealRequestWorkspace = useCallback(() => {
+    setOverlay(null);
+    setSurface('requests');
+    setIsRepositoryPanelActive(false);
+  }, []);
+  useBridgeRequestOpen(revealRequestWorkspace);
 
   // Queued when Quick Open asks for a terminal tab before the portal has ever
   // mounted; flushed once a surface is set and WorkspaceShell is up.
@@ -218,6 +226,7 @@ export const IntegratedShell: React.FC = () => {
     monitoring: { left: false, right: false },
     settings: { left: false, right: false },
     processes: { left: false, right: false },
+    requests: { left: false, right: false },
     connections: { left: false, right: false },
     skills: { left: false, right: false },
   });
@@ -694,6 +703,7 @@ export const IntegratedShell: React.FC = () => {
             monitoring: { left: false, right: false },
             settings: { left: false, right: false },
             processes: { left: false, right: false },
+            requests: { left: false, right: false },
             connections: { left: false, right: false },
             skills: { left: false, right: false },
           });
@@ -753,6 +763,7 @@ export const IntegratedShell: React.FC = () => {
           monitoring: { left: false, right: false },
           settings: { left: false, right: false },
           processes: { left: false, right: false },
+          requests: { left: false, right: false },
           connections: { left: false, right: false },
           skills: { left: false, right: false },
         });

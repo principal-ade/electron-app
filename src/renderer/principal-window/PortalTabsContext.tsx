@@ -35,10 +35,16 @@ import type {
   SkillTab,
   SubsystemModelTab,
   LocalhostBrowserTab,
+  HttpRequestTab,
 } from '../events/portalTabs';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
 import { ProcessRegistryService } from '../main-process-api/ProcessRegistryService';
 import { useTopicRemoved } from '../topics-view/useTopicRemoved';
+import type {
+  CatalogRequest,
+  SavedRequest,
+} from '../../shared/requests/preparedRequest';
+import { useRequestPins } from '../requests/useRequestPins';
 import {
   browserTabId,
   openOrNavigateLocalhostBrowser,
@@ -69,7 +75,8 @@ export type WorkspaceTab =
   | SkillTab
   | SubsystemModelTab
   // Processes
-  | LocalhostBrowserTab;
+  | LocalhostBrowserTab
+  | HttpRequestTab;
 
 // ----------------------------------------------------------------------------
 // Slice shapes
@@ -77,6 +84,18 @@ export type WorkspaceTab =
 
 /** The shared bucket, as the `WorkspaceShell` sees it. */
 export interface WorkspaceTabsContextValue {
+  openHttpRequest: (request: SavedRequest) => string;
+  /** Favorites only. Definitions live in encrypted storage, not preferences. */
+  savedRequests: SavedRequest[];
+  /** All remembered routes, including closed, unpinned definitions. */
+  catalogRequests: CatalogRequest[];
+  updateRequest: (request: SavedRequest) => Promise<void>;
+  forgetRequest: (id: string) => Promise<void>;
+  saveRequest: (request: SavedRequest) => Promise<void>;
+  unpinRequest: (id: string) => Promise<void>;
+  requestPinError: string | null;
+  requestPinBusy: boolean;
+  refreshSavedRequests: () => Promise<void>;
   tabs: WorkspaceTab[];
   setTabs: React.Dispatch<React.SetStateAction<WorkspaceTab[]>>;
   activeTabId: string | null;
@@ -167,6 +186,7 @@ const WorkspaceTabsContext = createContext<WorkspaceTabsContextValue | null>(
 function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const requestPins = useRequestPins();
 
   useTopicRemoved(
     useCallback(
@@ -555,8 +575,37 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [],
   );
 
+  const openHttpRequest = useCallback(
+    (request: SavedRequest) => {
+      const id = `http-request-${request.id}`;
+      openTab(id, () => ({
+        id,
+        label: request.title,
+        contentType: 'http-request',
+        closable: true,
+        savedRequestId: request.id,
+        sessionId: crypto.randomUUID(),
+        repositoryPath: request.repositoryPath,
+        target: request.target,
+        panelState: {
+          request: request.request,
+          requestId: request.id,
+          environment: request.environment,
+          environmentName: null,
+          response: null,
+          error: null,
+          isSending: false,
+        },
+      }));
+      return id;
+    },
+    [openTab],
+  );
+
   return useMemo<WorkspaceTabsContextValue>(
     () => ({
+      ...requestPins,
+      openHttpRequest,
       tabs,
       setTabs,
       activeTabId,
@@ -576,6 +625,8 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openLocalhostBrowser,
     }),
     [
+      requestPins,
+      openHttpRequest,
       tabs,
       activeTabId,
       openLocalTopic,

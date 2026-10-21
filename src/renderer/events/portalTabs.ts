@@ -22,6 +22,18 @@ import type {
 } from '@principal-ai/alexandria-core-library';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { ProcessStatus } from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
+import type { RequestPanelState } from '@principal-ade/bruno-panels';
+import type { RequestTarget } from '../../shared/requests/preparedRequest';
+
+export interface HttpRequestTab extends BaseTab {
+  contentType: 'http-request';
+  savedRequestId: string;
+  /** A new session prevents an old in-flight send from updating a reopened tab. */
+  sessionId: string;
+  repositoryPath?: string;
+  target?: RequestTarget;
+  panelState: RequestPanelState;
+}
 
 /**
  * Markdown document tab — a doc opened in-place from the Principal MCP Bridge
