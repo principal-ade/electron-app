@@ -19,6 +19,7 @@ import {
   FolderGit2,
   FolderSearch,
   Globe,
+  IdCard,
   Image as ImageIcon,
   Network,
   PenTool,
@@ -27,9 +28,18 @@ import {
   ToolCase,
 } from 'lucide-react';
 import { TopicsIcon } from '../../components/TopicsIcon';
-import type { HomeTabEntry } from './homeTabEntries';
+import { isHomeTabPinnable, type HomeTabEntry } from './homeTabEntries';
 
-/** Icon for a tab entry, matching the workspace tab strip's glyphs. */
+/** Label the tab's purpose in Home, where its repository is already shown. */
+function homeTabLabel(entry: HomeTabEntry): string {
+  if (entry.kind === 'repo-tab') {
+    if (entry.variant === 'project-info') return 'Clone profile';
+    if (entry.variant === 'repo-explorer') return 'Clone explorer';
+  }
+  return entry.label;
+}
+
+/** Icon for a tab entry in the Home rail. */
 export function homeTabIcon(
   entry: HomeTabEntry,
   size = 14,
@@ -55,6 +65,9 @@ export function homeTabIcon(
     case 'terminal':
       return <Terminal size={size} color={color} />;
     case 'repo-tab':
+      if (entry.variant === 'project-info') {
+        return <IdCard size={size} color={color} />;
+      }
       return entry.variant === 'repo-explorer' ? (
         <FolderSearch size={size} color={color} />
       ) : entry.variant === 'file-city-guide' ? (
@@ -71,10 +84,12 @@ export interface HomeTabRowProps {
   entry: HomeTabEntry;
   /** Whether the entry's tab is currently open (vs a pinned closed entry). */
   open: boolean;
+  /** Current 1-based tab-bar position, never persisted with a pin. */
+  tabNumber?: number;
   pinned: boolean;
   /** Extra left padding for child rows nested under a repo row. */
   depth?: number;
-  /** Whether this tab can be pinned individually (terminals cannot). */
+  /** Optionally disable pinning for otherwise pinnable tab kinds. */
   pinnable?: boolean;
   /**
    * Wrap long labels instead of truncating them. Used for kinds whose titles
@@ -93,6 +108,7 @@ export interface HomeTabRowProps {
 export const HomeTabRow: React.FC<HomeTabRowProps> = ({
   entry,
   open,
+  tabNumber,
   pinned,
   depth = 0,
   pinnable = true,
@@ -102,12 +118,13 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
 }) => {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
+  const label = homeTabLabel(entry);
 
   return (
     <div
       onClick={onActivate}
       role="button"
-      title={`Open ${entry.label}`}
+      title={`Open ${label}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -158,9 +175,24 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
               }),
         }}
       >
-        {entry.label}
+        {label}
       </span>
-      {pinnable && (
+      {open &&
+        tabNumber != null &&
+        entry.kind === 'repo-tab' &&
+        (entry.variant === 'project-info' ||
+          entry.variant === 'repo-explorer') && (
+          <span
+            style={{
+              flexShrink: 0,
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textSecondary,
+            }}
+          >
+            Tab {tabNumber}
+          </span>
+        )}
+      {pinnable && isHomeTabPinnable(entry) && (
         <button
           type="button"
           onClick={(e) => {
@@ -168,7 +200,7 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
             onTogglePin();
           }}
           title={pinned ? 'Unpin from Home' : 'Pin to Home'}
-          aria-label={pinned ? `Unpin ${entry.label}` : `Pin ${entry.label}`}
+          aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}
           style={{
             flexShrink: 0,
             display: 'inline-flex',
@@ -214,6 +246,7 @@ export const PinnedTabIcon: React.FC<PinnedTabIconProps> = ({
 }) => {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
+  const label = homeTabLabel(entry);
 
   return (
     <button
@@ -224,8 +257,8 @@ export const PinnedTabIcon: React.FC<PinnedTabIconProps> = ({
         e.stopPropagation();
         onUnpin();
       }}
-      title={`${entry.label} — click to reopen, right-click to unpin`}
-      aria-label={`Reopen pinned tab ${entry.label}`}
+      title={`${label} — click to reopen, right-click to unpin`}
+      aria-label={`Reopen pinned tab ${label}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

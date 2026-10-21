@@ -7,8 +7,8 @@
  *   rail after its tab closes. Repo-rooted tab pins collapse to an icon on the
  *   repo row; standalone ones land in the Pinned section.
  * - **Repo pins** (`interactiveShell.homePinnedRepos`) keep a repo row in the
- *   rail even when it is clean and has no open tabs. Terminals are pinned by
- *   pinning their repo — they are never pinned individually.
+ *   rail even when it is clean and has no open tabs. Terminals and clone
+ *   profiles use their repo pin, never an individual tab pin.
  *
  * Preferences updates are deep-merged in the main process, so writing one slice
  * leaves the others untouched.
@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { HomePinnedTab } from '../../../shared/types/userPreferences.types';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
+import { isHomeTabPinnable } from './homeTabEntries';
 
 export interface HomePinsState {
   /** Every pinned tab entry, whether or not its tab is open. */
@@ -70,6 +71,7 @@ export function useHomePins(): HomePinsState {
   const pinnedRepoKeys = useMemo(() => new Set(pinnedRepos), [pinnedRepos]);
 
   const toggleTabPin = useCallback((entry: HomePinnedTab) => {
+    if (!isHomeTabPinnable(entry)) return;
     setPinnedTabs((prev) => {
       const next = prev.some((p) => p.id === entry.id)
         ? prev.filter((p) => p.id !== entry.id)

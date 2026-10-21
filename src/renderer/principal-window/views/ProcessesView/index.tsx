@@ -31,12 +31,14 @@ export const ProcessesView: React.FC = () => {
   const { entries, loading, error, refresh } = useProcessRegistry();
   const bus = useMemo(() => new PanelEventBus(), []);
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const { openLocalhostBrowser } = useWorkspaceTabs();
 
   const stopEntry = useCallback(
     async (entry: ProcessEntry) => {
       if (entry.origin === 'detected') {
-        if (entry.pid != null) await LocalhostDetectionService.killServer(entry.pid);
+        if (entry.pid != null)
+          await LocalhostDetectionService.killServer(entry.pid);
       } else {
         await ProcessRegistryService.stop(entry.id);
       }
@@ -50,6 +52,22 @@ export const ProcessesView: React.FC = () => {
       (event.payload as { entry?: ProcessEntry } | undefined)?.entry;
 
     const unsubscribers = [
+      bus.on(PROCESS_INTENTS.togglePin, (event) => {
+        const entry = entryOf(event);
+        if (entry?.origin !== 'managed') return;
+        setActionError(null);
+        void ProcessRegistryService.setPinned(entry.id, !entry.pinned)
+          .then(async (result) => {
+            if (!result.success) {
+              setActionError(result.error ?? 'Could not save process pin.');
+            } else {
+              await refresh();
+            }
+          })
+          .catch(() =>
+            setActionError('Could not save process pin. Please try again.'),
+          );
+      }),
       bus.on(PROCESS_INTENTS.open, (event) => {
         const entry = entryOf(event);
         if (!entry) return;
@@ -93,7 +111,7 @@ export const ProcessesView: React.FC = () => {
       entries={entries}
       events={bus}
       loading={loading}
-      error={error}
+      error={actionError ?? error}
       activeEntryId={activeEntryId}
     />
   );

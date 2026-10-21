@@ -10,7 +10,8 @@ import type {
  * (`window.mainProcess.processes`).
  */
 export const ProcessRegistryService = {
-  logs: (id: string): Promise<string[]> => window.mainProcess.processes.logs(id),
+  logs: (id: string): Promise<string[]> =>
+    window.mainProcess.processes.logs(id),
   list: (): Promise<ProcessEntry[]> => window.mainProcess.processes.list(),
 
   start: (request: ProcessStartRequest): Promise<ProcessStartResult> =>
@@ -25,9 +26,11 @@ export const ProcessRegistryService = {
   remove: (id: string): Promise<ProcessControlResult> =>
     window.mainProcess.processes.remove(id),
 
-  onChanged: (
-    callback: (processes: ProcessEntry[]) => void,
-  ): (() => void) => window.mainProcess.processes.onChanged(callback),
+  setPinned: (id: string, pinned: boolean): Promise<ProcessControlResult> =>
+    window.mainProcess.processes.setPinned(id, pinned),
+
+  onChanged: (callback: (processes: ProcessEntry[]) => void): (() => void) =>
+    window.mainProcess.processes.onChanged(callback),
 };
 
 export type {

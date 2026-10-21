@@ -23,6 +23,10 @@ import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { terminalEnvironment } from '../terminalEnvironment';
 import { repoPurlFromEntry } from '../../shared/topics/repoPurl';
 import {
+  ProcessLaunchStore,
+  type ProcessLaunchPersistence,
+} from './ProcessLaunchStore';
+import {
   ProcessEntry,
   ProcessKind,
   ProcessRepo,
@@ -60,10 +64,15 @@ function inferKind(command: string, args: string[]): ProcessKind {
   const script = args[1] ?? '';
 
   if (bin === 'tsc' || args.includes('--watch')) return 'watcher';
-  if (scriptRunners.includes(bin) && (args[0] === 'run' || args[0] === 'start')) {
+  if (
+    scriptRunners.includes(bin) &&
+    (args[0] === 'run' || args[0] === 'start')
+  ) {
     if (/storybook|dev|serve|start|preview/i.test(script)) return 'dev-server';
   }
-  if (['vite', 'next', 'http-server', 'storybook', 'astro', 'nuxt'].includes(bin)) {
+  if (
+    ['vite', 'next', 'http-server', 'storybook', 'astro', 'nuxt'].includes(bin)
+  ) {
     return 'dev-server';
   }
   return 'script';
@@ -76,8 +85,68 @@ export class ProcessRegistry extends EventEmitter {
   private descriptors = new Map<string, ProcessStartRequest>();
   /** Captured stdout/stderr chunks per id (kept for a future logs view). */
   private logs = new Map<string, string[]>();
-  /** Resolved spawn environment per id (full user PATH), reused on restart. */
+  /** Resolved spawn environment per id (full user PATH), refreshed on restart. */
   private envs = new Map<string, NodeJS.ProcessEnv>();
+  private persistenceError: string | undefined;
+
+  constructor(private readonly launchStore?: ProcessLaunchPersistence) {
+    super();
+    try {
+      for (const { id, request } of launchStore?.load() ?? []) {
+        this.descriptors.set(id, request);
+        this.logs.set(id, []);
+        this.entries.set(id, {
+          id,
+          label: request.label?.trim() || path.basename(request.command),
+          command: [request.command, ...(request.args ?? [])].join(' '),
+          cwd: request.cwd,
+          kind: request.kind ?? inferKind(request.command, request.args ?? []),
+          origin: 'managed',
+          status: 'stopped',
+          pinned: true,
+          startedAt: 0,
+          runCount: 0,
+        });
+      }
+    } catch {
+      // Do not overwrite an unreadable vault with a partial/empty snapshot.
+      this.persistenceError =
+        'Saved process launches could not be unlocked. Restart the app after secure storage is available.';
+      console.error('[ProcessRegistry] Could not load saved process launches.');
+    }
+  }
+
+  setPinned(id: string, pinned: boolean): ProcessControlResult {
+    const entry = this.entries.get(id);
+    if (!entry || entry.origin !== 'managed' || !this.descriptors.has(id)) {
+      return { success: false, error: 'Only managed processes can be pinned.' };
+    }
+    if (this.persistenceError)
+      return { success: false, error: this.persistenceError };
+    try {
+      if (!this.launchStore)
+        throw new Error('Process launch storage is unavailable.');
+      const launches = [...this.entries.values()]
+        .filter((candidate) =>
+          candidate.id === id ? pinned : candidate.pinned,
+        )
+        .map((candidate) => {
+          const request = this.descriptors.get(candidate.id);
+          if (!request)
+            throw new Error('Missing process launch configuration.');
+          return { id: candidate.id, request };
+        });
+      this.launchStore.save(launches);
+      entry.pinned = pinned;
+      this.emitChanged();
+      return { success: true };
+    } catch {
+      return {
+        success: false,
+        error: 'Could not securely save the process pin.',
+      };
+    }
+  }
 
   /** Snapshot of all entries. */
   list(): ProcessEntry[] {
@@ -256,8 +325,12 @@ export class ProcessRegistry extends EventEmitter {
       this.children.delete(id);
     });
 
-    child.stdout?.on('data', (data: Buffer) => this.appendLog(id, data.toString()));
-    child.stderr?.on('data', (data: Buffer) => this.appendLog(id, data.toString()));
+    child.stdout?.on('data', (data: Buffer) =>
+      this.appendLog(id, data.toString()),
+    );
+    child.stderr?.on('data', (data: Buffer) =>
+      this.appendLog(id, data.toString()),
+    );
   }
 
   private appendLog(id: string, chunk: string): void {
@@ -352,6 +425,26 @@ export class ProcessRegistry extends EventEmitter {
       return { success: false, error: 'unknown process id' };
     }
 
+    if (!fs.existsSync(descriptor.cwd)) {
+      return {
+        success: false,
+        error: 'The process working directory no longer exists.',
+      };
+    }
+    // Restored pins must use the current login-shell environment, not an old
+    // GUI environment or a persisted snapshot of the user's secrets.
+    let env: NodeJS.ProcessEnv = { ...process.env, ...descriptor.env };
+    try {
+      env = {
+        ...(await terminalEnvironment.getTerminalEnvironment(descriptor.cwd)),
+        ...descriptor.env,
+      };
+    } catch {
+      /* fall back to the inherited environment */
+    }
+    this.envs.set(id, env);
+    entry.repo = await this.resolveRepo(descriptor.cwd);
+
     await this.stop(id);
 
     entry.status = 'restarting';
@@ -371,6 +464,12 @@ export class ProcessRegistry extends EventEmitter {
 
   /** Remove an entry from the list. Refuses while it's still running. */
   async remove(id: string): Promise<ProcessControlResult> {
+    if (this.entries.get(id)?.pinned) {
+      return {
+        success: false,
+        error: 'Unpin this process before removing it.',
+      };
+    }
     if (this.children.has(id)) {
       return { success: false, error: 'process is still running' };
     }
@@ -401,7 +500,7 @@ let processRegistry: ProcessRegistry | null = null;
 
 export function getProcessRegistry(): ProcessRegistry {
   if (!processRegistry) {
-    processRegistry = new ProcessRegistry();
+    processRegistry = new ProcessRegistry(new ProcessLaunchStore());
   }
   return processRegistry;
 }

@@ -3,6 +3,7 @@ import type { Purl } from '@principal-ai/alexandria-core-library';
 import type { HomePinnedTab } from '../../../shared/types/userPreferences.types';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
 import { buildHomeTabEntries, resolveRepoPath } from './homeTabEntries';
+import type { ProcessEntry } from '../../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 
 const purl = 'pkg:github/acme/app' as Purl;
 const entry = {
@@ -79,12 +80,12 @@ describe('buildHomeTabEntries', () => {
 
   it('creates a repo row for a pinned tab whose repo has no open work', () => {
     const pin: HomePinnedTab = {
-      id: 'profile',
+      id: 'explorer',
       kind: 'repo-tab',
       label: 'app',
       repoPath: '/work/app',
       purl: String(purl),
-      variant: 'project-info',
+      variant: 'repo-explorer',
     };
     const { repos, pinnedTabs, openTabs } = buildHomeTabEntries(
       [entry],
@@ -118,6 +119,59 @@ describe('buildHomeTabEntries', () => {
     expect(pinnedTabs).toEqual([]);
     expect(repos[0].openTabs.map((tab) => tab.id)).toEqual(['profile']);
     expect(repos[0].pinnedTabs).toEqual([]);
+  });
+
+  it('ignores legacy remote-only profile pins', () => {
+    const pin: HomePinnedTab = {
+      id: 'profile',
+      kind: 'repo-tab',
+      label: 'app',
+      purl: String(purl),
+      variant: 'project-info',
+    };
+    const result = buildHomeTabEntries([], [], [], [pin]);
+    expect(result.repos).toEqual([]);
+    expect(result.pinnedTabs).toEqual([]);
+  });
+
+  it('shows a profile only while open, even with a legacy profile pin', () => {
+    const pin: HomePinnedTab = {
+      id: 'profile',
+      kind: 'repo-tab',
+      label: 'app',
+      repoPath: '/work/app',
+      purl: String(purl),
+      variant: 'project-info',
+    };
+    const open = buildHomeTabEntries([entry], [], [profile()], [pin]);
+    expect(open.repos[0].openTabs.map((tab) => tab.id)).toEqual([pin.id]);
+    const closed = buildHomeTabEntries([entry], [], [], [pin]);
+    expect(closed.repos).toEqual([]);
+    const repoPinned = buildHomeTabEntries(
+      [entry],
+      [],
+      [],
+      [pin],
+      ['/work/app'],
+    );
+    expect(repoPinned.repos).toHaveLength(1);
+    expect(repoPinned.repos[0].pinned).toBe(true);
+    expect(repoPinned.repos[0].pinnedTabs).toEqual([]);
+    expect(repoPinned.repos[0].openTabs).toEqual([]);
+    expect(buildHomeTabEntries([entry], [], [], []).repos).toEqual([]);
+  });
+
+  it('preserves compact icons for other closed repo pins', () => {
+    const pin: HomePinnedTab = {
+      id: 'explorer',
+      kind: 'repo-tab',
+      label: 'app',
+      repoPath: '/work/app',
+      purl: String(purl),
+      variant: 'repo-explorer',
+    };
+    const result = buildHomeTabEntries([entry], [], [], [pin]);
+    expect(result.repos[0].pinnedTabs).toEqual([pin]);
   });
 
   it('keeps a closed standalone pin in the Pinned section', () => {
@@ -203,5 +257,232 @@ describe('resolveRepoPath', () => {
     );
     expect(resolveRepoPath('/work/app-other', [entry])).toBeUndefined();
     expect(resolveRepoPath('/work/app', [entry])).toBe('/work/app');
+  });
+});
+
+describe('Home processes', () => {
+  const process: ProcessEntry = {
+    id: 'managed-1',
+    label: 'Dev server',
+    command: 'npm run dev',
+    cwd: '/work/app/src',
+    kind: 'dev-server',
+    origin: 'managed',
+    status: 'running',
+    startedAt: 1,
+  };
+  const browser: WorkspaceTab = {
+    id: 'localhost-browser-process-managed-1',
+    label: 'Dev server',
+    contentType: 'localhost-browser',
+    processId: process.id,
+    port: 5173,
+    path: '/dashboard',
+  };
+
+  it('represents a linked browser on its repo process row instead of Open Tabs', () => {
+    const result = buildHomeTabEntries(
+      [entry],
+      [],
+      [terminal(), browser],
+      [],
+      [],
+      [process],
+    );
+    expect(result.openTabs).toEqual([]);
+    expect(result.repos[0].openTabs.map((tab) => tab.id)).toEqual([
+      'terminal-1',
+    ]);
+    expect(result.processTabs.get(process.id)).toEqual({
+      id: browser.id,
+      number: 2,
+    });
+  });
+
+  it('matches a detected repo process to its browser by port', () => {
+    const external = {
+      ...process,
+      id: 'detected:123',
+      origin: 'detected' as const,
+      port: 5173,
+    };
+    const unlinked = {
+      ...browser,
+      id: 'localhost-browser-5173',
+      processId: undefined,
+    };
+    const result = buildHomeTabEntries(
+      [entry],
+      [],
+      [unlinked],
+      [],
+      [],
+      [external],
+    );
+    expect(result.openTabs).toEqual([]);
+    expect(result.processTabs.get(external.id)).toEqual({
+      id: unlinked.id,
+      number: 1,
+    });
+  });
+
+  it('updates the process tab number when tabs are reordered or closed', () => {
+    const build = (tabs: WorkspaceTab[]) =>
+      buildHomeTabEntries([entry], [], tabs, [], [], [process]);
+    expect(
+      build([terminal(), profile(), browser]).processTabs.get(process.id)
+        ?.number,
+    ).toBe(3);
+    expect(
+      build([browser, terminal(), profile()]).processTabs.get(process.id)
+        ?.number,
+    ).toBe(1);
+    expect(build([terminal()]).processTabs.size).toBe(0);
+  });
+
+  it('does not duplicate a suppressed browser as a closed pin', () => {
+    const pin: HomePinnedTab = {
+      id: browser.id,
+      label: browser.label,
+      kind: 'localhost-browser',
+      port: 5173,
+    };
+    const result = buildHomeTabEntries(
+      [entry],
+      [],
+      [browser],
+      [pin],
+      [],
+      [process],
+    );
+    expect(result.openTabs).toEqual([]);
+    expect(result.pinnedTabs).toEqual([]);
+  });
+
+  it('keeps unrelated browsers and browsers without a repo process in Open Tabs', () => {
+    const unrelated = {
+      ...browser,
+      id: 'unrelated',
+      processId: 'other-process',
+    };
+    const result = buildHomeTabEntries(
+      [entry],
+      [],
+      [unrelated],
+      [],
+      [],
+      [{ ...process, port: 5173 }],
+    );
+    expect(result.openTabs.map((tab) => tab.id)).toEqual(['unrelated']);
+    expect(result.processTabs.size).toBe(0);
+    const standalone = buildHomeTabEntries(
+      [],
+      [],
+      [browser],
+      [],
+      [],
+      [process],
+    );
+    expect(standalone.openTabs.map((tab) => tab.id)).toEqual([browser.id]);
+  });
+
+  it('prefers a managed browser identity over an unrelated unlinked tab on the same port', () => {
+    const unlinked = {
+      ...browser,
+      id: 'localhost-browser-5173',
+      processId: undefined,
+    };
+    const result = buildHomeTabEntries(
+      [entry],
+      [],
+      [unlinked, browser],
+      [],
+      [],
+      [{ ...process, port: 5173 }],
+    );
+    expect(result.processTabs.get(process.id)).toEqual({
+      id: browser.id,
+      number: 2,
+    });
+    expect(result.openTabs.map((tab) => tab.id)).toEqual([unlinked.id]);
+  });
+
+  it('does not associate a stopped pin with an unlinked browser using its old port', () => {
+    const unlinked = {
+      ...browser,
+      id: 'localhost-browser-5173',
+      processId: undefined,
+    };
+    const stopped = {
+      ...process,
+      status: 'stopped' as const,
+      pinned: true,
+      port: 5173,
+    };
+    const result = buildHomeTabEntries(
+      [entry],
+      [],
+      [unlinked],
+      [],
+      [],
+      [stopped],
+    );
+    expect(result.processTabs.size).toBe(0);
+    expect(result.openTabs.map((tab) => tab.id)).toEqual([unlinked.id]);
+  });
+
+  it('creates a repository row for an active process without tabs or git changes', () => {
+    const result = buildHomeTabEntries([entry], [], [], [], [], [process]);
+    expect(result.repos).toHaveLength(1);
+    expect(result.repos[0].processes).toEqual([process]);
+    expect(result.processes).toEqual([]);
+  });
+
+  it('keeps stopped pins visible but hides unpinned process history', () => {
+    const pinned = { ...process, status: 'stopped' as const, pinned: true };
+    const history = { ...process, id: 'history', status: 'failed' as const };
+    const result = buildHomeTabEntries([], [], [], [], [], [pinned, history]);
+    expect(result.processes).toEqual([pinned]);
+  });
+
+  it('shows active externally detected processes with a port', () => {
+    const external = { ...process, origin: 'detected' as const, port: 5173 };
+    const result = buildHomeTabEntries([entry], [], [], [], [], [external]);
+    expect(result.repos[0].processes).toEqual([external]);
+  });
+
+  it('hides external processes without a port, inside and outside repositories', () => {
+    const external = { ...process, origin: 'detected' as const };
+    const outside = { ...external, id: 'outside', cwd: '/elsewhere' };
+    const result = buildHomeTabEntries(
+      [entry],
+      [],
+      [],
+      [],
+      [],
+      [external, outside],
+    );
+    expect(result.repos).toEqual([]);
+    expect(result.processes).toEqual([]);
+  });
+
+  it('keeps active managed processes without a port visible outside repositories', () => {
+    const result = buildHomeTabEntries([], [], [], [], [], [process]);
+    expect(result.processes).toEqual([process]);
+  });
+
+  it('uses the deepest registered clone and respects path boundaries', () => {
+    const nested = { ...entry, path: '/work/app/src' } as AlexandriaEntry;
+    const outside = { ...process, id: 'outside', cwd: '/work/app-other' };
+    const result = buildHomeTabEntries(
+      [entry, nested],
+      [],
+      [],
+      [],
+      [],
+      [process, outside],
+    );
+    expect(result.repos[0].key).toBe('/work/app/src');
+    expect(result.processes).toEqual([outside]);
   });
 });

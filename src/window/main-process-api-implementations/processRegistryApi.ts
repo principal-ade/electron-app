@@ -26,6 +26,12 @@ export const processRegistryAPI: ProcessRegistryAPI = {
   remove: async (id: string): Promise<ProcessControlResult> =>
     ipcRenderer.invoke(ProcessRegistryEvents.REMOVE, id),
 
+  setPinned: async (
+    id: string,
+    pinned: boolean,
+  ): Promise<ProcessControlResult> =>
+    ipcRenderer.invoke(ProcessRegistryEvents.SET_PINNED, id, pinned),
+
   onChanged: (callback: (processes: ProcessEntry[]) => void) => {
     const subscription = (
       _event: Electron.IpcRendererEvent,

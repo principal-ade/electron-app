@@ -56,6 +56,8 @@ export interface ProcessEntry {
   kind: ProcessKind;
   status: ProcessStatus;
   origin: ProcessOrigin;
+  /** A managed launch configuration saved for Home, independent of its PID. */
+  pinned?: boolean;
   /** OS pid — diagnostic only; may be undefined and changes across restarts. */
   pid?: number;
   /** Active port, when known (detected servers). */
@@ -106,6 +108,7 @@ export enum ProcessRegistryEvents {
   STOP = 'processes:stop',
   RESTART = 'processes:restart',
   REMOVE = 'processes:remove',
+  SET_PINNED = 'processes:set-pinned',
   LOGS = 'processes:logs',
   CHANGED = 'processes:changed',
 }
@@ -121,6 +124,8 @@ export interface ProcessRegistryAPI {
   restart: (id: string) => Promise<ProcessStartResult>;
   /** Remove an entry from the list (only when not running). */
   remove: (id: string) => Promise<ProcessControlResult>;
+  /** Save/remove a managed launch configuration. Detected processes cannot be pinned. */
+  setPinned: (id: string, pinned: boolean) => Promise<ProcessControlResult>;
   /** Captured stdout and stderr for a managed process. */
   logs: (id: string) => Promise<string[]>;
   /** Subscribe to registry changes; returns an unsubscribe function. */

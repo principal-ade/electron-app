@@ -50,6 +50,8 @@ import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
 import { useWatchedRepos } from './useWatchedRepos';
 import { HomeSearchBar, HomeSearchResults } from './HomeSearch';
 import { PushToRemoteModal } from '../components/PushToRemoteModal';
+import { useProcessRegistry } from '../../hooks/useProcessRegistry';
+import { HomeProcessRow } from './HomeProcessRow';
 
 // ---------------------------------------------------------------------------
 // HomeLeftPanel — the home left rail, the user-based sibling of the
@@ -100,6 +102,11 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 
   // Repos with uncommitted changes / unpushed commits — the in-progress list.
   const inProgressRepos = useInProgressRepos(repositories);
+  const {
+    entries: processes,
+    error: processesError,
+    refresh: refreshProcesses,
+  } = useProcessRegistry();
   // Pinned tab entries + pinned repos (persisted in preferences) so a closed
   // tab or a clean, tab-less repo can stay reachable from the rail.
   const {
@@ -119,8 +126,16 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         tabs,
         pinnedTabEntries,
         pinnedRepos,
+        processes,
       ),
-    [repositories, inProgressRepos, tabs, pinnedTabEntries, pinnedRepos],
+    [
+      repositories,
+      inProgressRepos,
+      tabs,
+      pinnedTabEntries,
+      pinnedRepos,
+      processes,
+    ],
   );
   // Repos the monitoring worker is watching — these have live git status;
   // unwatched repos receive staggered refreshes while Home is visible.
@@ -388,15 +403,19 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     color: theme.colors.textSecondary,
   };
 
+  const tabNumbers = useMemo(
+    () => new Map(tabs.map((tab, index) => [tab.id, index + 1])),
+    [tabs],
+  );
+
   const renderTabEntry = (entry: HomeTabEntry, open: boolean, depth = 0) => (
     <HomeTabRow
       key={entry.id}
       entry={entry}
       open={open}
+      tabNumber={open ? tabNumbers.get(entry.id) : undefined}
       pinned={pinnedTabIds.has(entry.id)}
       depth={depth}
-      // Terminals are pinned by pinning their repo, never individually.
-      pinnable={entry.kind !== 'terminal'}
       // Topic and subsystem-model titles are user-authored and often long;
       // wrap rather than truncate them in the narrow rail.
       wrapLabel={entry.kind === 'topic' || entry.kind === 'subsystem-model'}
@@ -497,6 +516,14 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 padding: '4px 4px',
               }}
             >
+              {processesError && (
+                <div
+                  role="alert"
+                  style={{ padding: '8px 14px', color: theme.colors.error }}
+                >
+                  Could not load processes: {processesError}
+                </div>
+              )}
               {inProgressGroups.length > 0 &&
                 inProgressGroups.map(([owner, repos]) => {
                   const isUntracked = owner === 'Untracked';
@@ -518,7 +545,14 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                       />
                       {!isCollapsed &&
                         repos.map(
-                          ({ key, payload, status, openTabs, pinnedTabs }) => {
+                          ({
+                            key,
+                            payload,
+                            status,
+                            openTabs,
+                            pinnedTabs,
+                            processes: repoProcesses,
+                          }) => {
                             const entry = payload.localEntry;
                             const name =
                               payload.github?.name ??
@@ -577,6 +611,18 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                                 {openTabs.map((tab) =>
                                   renderTabEntry(tab, true, 1),
                                 )}
+                                {repoProcesses.map((process) => (
+                                  <HomeProcessRow
+                                    key={process.id}
+                                    entry={process}
+                                    depth={1}
+                                    openTab={homeTabs.processTabs.get(
+                                      process.id,
+                                    )}
+                                    onActivateTab={onActivateTab}
+                                    onProcessKilled={refreshProcesses}
+                                  />
+                                ))}
                               </div>
                             );
                           },
@@ -584,6 +630,19 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                     </div>
                   );
                 })}
+
+              {homeTabs.processes.length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={tabSectionStyle}>Processes</div>
+                  {homeTabs.processes.map((process) => (
+                    <HomeProcessRow
+                      key={process.id}
+                      entry={process}
+                      onProcessKilled={refreshProcesses}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* Open tabs that don't belong to a repository. */}
               {homeTabs.openTabs.length > 0 && (
@@ -608,6 +667,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               )}
 
               {inProgressGroups.length === 0 &&
+                homeTabs.processes.length === 0 &&
                 homeTabs.openTabs.length === 0 &&
                 homeTabs.pinnedTabs.length === 0 && (
                   <div
@@ -619,7 +679,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                     }}
                   >
                     Nothing in progress — no open or pinned tabs, uncommitted
-                    changes, or unpushed commits.
+                    changes, unpushed commits, or active or pinned processes.
                   </div>
                 )}
             </div>

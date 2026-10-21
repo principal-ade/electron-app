@@ -2,7 +2,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   Settings,
   Activity,
-  Globe,
+  Cpu,
   Radio,
   ToolCase,
   GraduationCap,
@@ -209,7 +209,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       ? [
           {
             id: 'processes' as NavigationView,
-            icon: <Globe size={20} />,
+            icon: <Cpu size={20} />,
             label: 'Processes',
           },
         ]

@@ -21,7 +21,8 @@ export function registerProcessHandlers(): void {
 
   ipcMain.handle(
     ProcessRegistryEvents.START,
-    async (_event, request: ProcessStartRequest) => registry.start(request, 'user'),
+    async (_event, request: ProcessStartRequest) =>
+      registry.start(request, 'user'),
   );
 
   ipcMain.handle(ProcessRegistryEvents.STOP, async (_event, id: string) =>
@@ -34,6 +35,16 @@ export function registerProcessHandlers(): void {
 
   ipcMain.handle(ProcessRegistryEvents.REMOVE, async (_event, id: string) =>
     registry.remove(id),
+  );
+
+  ipcMain.handle(
+    ProcessRegistryEvents.SET_PINNED,
+    async (_event, id: string, pinned: boolean) => {
+      if (typeof id !== 'string' || typeof pinned !== 'boolean') {
+        return { success: false, error: 'Invalid process pin request.' };
+      }
+      return registry.setPinned(id, pinned);
+    },
   );
 
   console.log('[ProcessRegistry] Handlers registered');

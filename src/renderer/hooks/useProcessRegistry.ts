@@ -42,7 +42,10 @@ interface RepoLite {
 }
 
 /** Longest-prefix match of `cwd` against known repo roots. */
-function resolveRepoForCwd(cwd: string, repos: RepoLite[]): ProcessRepo | undefined {
+function resolveRepoForCwd(
+  cwd: string,
+  repos: RepoLite[],
+): ProcessRepo | undefined {
   if (!cwd) return undefined;
   let best: RepoLite | undefined;
   for (const repo of repos) {
@@ -85,7 +88,9 @@ function detectedEntries(
     })
     .map((s) => ({
       id: `detected:${s.pid ?? s.port}`,
-      label: s.label || `localhost:${s.port}`,
+      label: s.command?.trim()
+        ? `${s.command.trim()} :${s.port}`
+        : `localhost:${s.port}`,
       command: s.command || '',
       cwd: s.cwd || '',
       repo: s.cwd ? resolveRepoForCwd(s.cwd, repos) : undefined,

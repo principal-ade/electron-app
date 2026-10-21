@@ -20,6 +20,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import type { Purl } from '@principal-ai/alexandria-core-library';
 import type { HomePinnedTab } from '../../../shared/types/userPreferences.types';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
+import type { ProcessEntry } from '../../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 import {
   payloadFromLocalEntry,
   payloadFromPurl,
@@ -30,8 +31,24 @@ import type { InProgressRepo } from './useInProgressRepos';
 /** A tab entry as the rail renders it (identical to the persisted shape). */
 export type HomeTabEntry = HomePinnedTab;
 
+/** Terminals and clone profiles are kept reachable by pinning their repo. */
+export function isHomeTabPinnable(entry: HomeTabEntry): boolean {
+  return (
+    entry.kind !== 'terminal' &&
+    !(entry.kind === 'repo-tab' && entry.variant === 'project-info')
+  );
+}
+
+/** The browser represented by a repo process row, numbered in tab-bar order. */
+export interface HomeProcessTab {
+  id: string;
+  number: number;
+}
+
 /** A repo row plus the tab entries nested under it. */
 export interface HomeRepoRow extends HomeRepository {
+  /** Active processes and saved launch configurations rooted in this repo. */
+  processes: ProcessEntry[];
   /** Open repo-rooted tabs, rendered as child rows. */
   openTabs: HomeTabEntry[];
   /** Pinned repo-rooted tabs whose tab is closed, rendered as row icons. */
@@ -41,6 +58,10 @@ export interface HomeRepoRow extends HomeRepository {
 }
 
 export interface HomeTabEntries {
+  /** Process id → its browser tab, already represented under a repository. */
+  processTabs: Map<string, HomeProcessTab>;
+  /** Active/pinned processes outside registered repositories. */
+  processes: ProcessEntry[];
   /** Repos with in-progress work, an open tab, or a pinned tab. */
   repos: HomeRepoRow[];
   /** Open tabs that don't belong to any repo. */
@@ -182,6 +203,7 @@ export function buildHomeTabEntries(
   tabs: WorkspaceTab[],
   pinned: readonly HomePinnedTab[],
   pinnedRepos: readonly string[] = [],
+  processes: readonly ProcessEntry[] = [],
 ): HomeTabEntries {
   const rows = new Map<string, HomeRepoRow>();
   const rowFor = (repo: HomeRepository): HomeRepoRow => {
@@ -192,6 +214,7 @@ export function buildHomeTabEntries(
       openTabs: [],
       pinnedTabs: [],
       pinned: false,
+      processes: [],
     };
     rows.set(repo.key, row);
     return row;
@@ -200,8 +223,55 @@ export function buildHomeTabEntries(
     rowFor(repo);
   }
 
+  const standaloneProcesses: ProcessEntry[] = [];
+  for (const process of processes) {
+    // External processes have no managed output to inspect. Only surface
+    // them in Home when there is a browser endpoint to open.
+    if (process.origin === 'detected' && process.port == null) continue;
+    const active = !['stopped', 'failed'].includes(process.status);
+    if (!active && !process.pinned) continue;
+    const repoPath = resolveRepoPath(process.cwd, repositories);
+    const repoEntry = repoPath
+      ? findRepoByPath(repoPath, repositories)
+      : undefined;
+    if (repoPath && repoEntry) {
+      rowFor({
+        key: repoPath,
+        payload: payloadFromLocalEntry(repoEntry),
+      }).processes.push(process);
+    } else {
+      standaloneProcesses.push(process);
+    }
+  }
+
   const openIds = new Set<string>();
   const openTabs: HomeTabEntry[] = [];
+  const processTabs = new Map<string, HomeProcessTab>();
+  const representedBrowserIds = new Set<string>();
+  for (const row of rows.values()) {
+    for (const process of row.processes) {
+      // Managed browsers retain identity across port changes. Detected
+      // processes open unlinked browsers, so match those by their current port.
+      let index = tabs.findIndex(
+        (tab) =>
+          tab.contentType === 'localhost-browser' &&
+          tab.processId === process.id,
+      );
+      if (index < 0 && !['stopped', 'failed'].includes(process.status)) {
+        index = tabs.findIndex(
+          (tab) =>
+            tab.contentType === 'localhost-browser' &&
+            !tab.processId &&
+            process.port != null &&
+            tab.port === process.port,
+        );
+      }
+      const tab = tabs[index];
+      if (!tab || representedBrowserIds.has(tab.id)) continue;
+      processTabs.set(process.id, { id: tab.id, number: index + 1 });
+      representedBrowserIds.add(tab.id);
+    }
+  }
 
   // Terminal tabs are labelled `⌘ N` by the tab host, where N is the tab's
   // overall position in the tab bar (Cmd+1–9 switches by overall index).
@@ -215,6 +285,11 @@ export function buildHomeTabEntries(
   });
 
   for (const tab of tabs) {
+    if (representedBrowserIds.has(tab.id)) {
+      // Still count it as open so its persisted tab pin isn't duplicated.
+      openIds.add(tab.id);
+      continue;
+    }
     const owner = ownerForTab(tab);
     // Prefer the clone containing the tab's path; a repo tab with no local
     // clone still nests under a registered repo matched by purl.
@@ -256,10 +331,10 @@ export function buildHomeTabEntries(
   }
 
   // Pinned entries whose tab is closed (open ones already render as rows).
-  // Terminals are pinned by pinning their repo, never individually.
+  // Ignore legacy individual terminal/profile pins; the repo is their shortcut.
   const pinnedTabs: HomeTabEntry[] = [];
   for (const pin of pinned) {
-    if (pin.kind === 'terminal') continue;
+    if (!isHomeTabPinnable(pin)) continue;
     if (openIds.has(pin.id)) continue;
     if (pin.repoPath) {
       const repoEntry = findRepoByPath(pin.repoPath, repositories);
@@ -310,6 +385,8 @@ export function buildHomeTabEntries(
   }
 
   return {
+    processTabs,
+    processes: standaloneProcesses,
     repos: [...rows.values()],
     openTabs,
     pinnedTabs,

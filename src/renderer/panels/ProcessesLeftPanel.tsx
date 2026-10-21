@@ -3,19 +3,22 @@
  *
  * Left panel for the process/bridge surface. Lists "process entries" — commands
  * that were run as managed, long-lived processes (dev servers, watchers, tasks)
- * plus the history of commands that were opened. Clicking a row emits a
- * `process:open` intent on the panel event bus; a host turns it into a tab that
- * shows the process info (port, pid, cwd, live logs) WITHOUT killing it. Closing
- * that tab must not kill the process — only an explicit Stop/Kill does.
+ * plus detected servers and command history. Clicking a row emits a
+ * `process:open` intent; the host opens a browser when the process has a port.
+ * Only managed launch configurations can be pinned for reuse from Home.
  *
- * This is a Storybook-first prototype: it is fully prop-driven (no electron /
- * telemetry imports) so it renders in the browser and the story can drive every
- * state. The eventual production wiring reads `entries` from a main-process
- * process registry (and subscribes to registry changes); the intent emissions
- * below are the contract that host implements.
+ * Fully prop-driven so Storybook can drive every state. ProcessesView supplies
+ * registry/detection entries and handles intents without coupling this panel
+ * to Electron.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   RefreshCw,
@@ -33,10 +36,11 @@ import {
   ExternalLink,
   Folder,
   Clock,
-  Activity,
+  Cpu,
   Terminal,
   AlertCircle,
   Loader2,
+  Pin,
 } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
@@ -82,6 +86,7 @@ export const PROCESS_INTENTS = {
   copyCommand: 'process:copy-command',
   /** Reveal the raw logs (without opening the info tab). */
   revealLogs: 'process:reveal-logs',
+  togglePin: 'process:toggle-pin',
 } as const;
 
 export type ProcessIntentName =
@@ -149,7 +154,11 @@ function statusMeta(
       return { label: 'Failed', color: theme.colors.error, pulse: false };
     case 'stopped':
     default:
-      return { label: 'Stopped', color: theme.colors.textTertiary, pulse: false };
+      return {
+        label: 'Stopped',
+        color: theme.colors.textTertiary,
+        pulse: false,
+      };
   }
 }
 
@@ -231,7 +240,8 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return entries.filter((entry) => {
-      if (statusFilter.size > 0 && !statusFilter.has(entry.status)) return false;
+      if (statusFilter.size > 0 && !statusFilter.has(entry.status))
+        return false;
       if (!q) return true;
       return (
         entry.label.toLowerCase().includes(q) ||
@@ -267,7 +277,7 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
     statusFilter.size === 0
       ? 'All statuses'
       : statusFilter.size === 1
-        ? (statusMeta([...statusFilter][0], theme).label)
+        ? statusMeta([...statusFilter][0], theme).label
         : `${statusFilter.size} statuses`;
 
   const emptyState = (text: string) => (
@@ -494,6 +504,40 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
             >
               {entry.label}
             </span>
+            {entry.origin === 'managed' ? (
+              <button
+                type="button"
+                title={
+                  entry.pinned
+                    ? 'Unpin from Home'
+                    : 'Pin launch configuration to Home'
+                }
+                aria-label={`${entry.pinned ? 'Unpin' : 'Pin'} ${entry.label}`}
+                onClick={action(PROCESS_INTENTS.togglePin)}
+                style={{
+                  display: 'inline-flex',
+                  padding: 2,
+                  border: 'none',
+                  background: 'transparent',
+                  color: entry.pinned
+                    ? theme.colors.primary
+                    : theme.colors.textSecondary,
+                  cursor: 'pointer',
+                }}
+              >
+                <Pin size={12} fill={entry.pinned ? 'currentColor' : 'none'} />
+              </button>
+            ) : (
+              <span
+                title="Started outside Principal. Launch configuration unavailable."
+                style={{
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                External
+              </span>
+            )}
             {entry.port != null &&
               renderBadge(`:${entry.port}`, theme.colors.primary, {
                 mono: true,
@@ -528,8 +572,7 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
             }}
           >
             {renderLocation(entry)}
-            {entry.status !== 'running' &&
-              renderBadge(meta.label, meta.color)}
+            {entry.status !== 'running' && renderBadge(meta.label, meta.color)}
             {entry.runCount != null && entry.runCount > 1 && (
               <span title={`Ran ${entry.runCount} times`}>
                 ×{entry.runCount}
@@ -540,7 +583,9 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
               >
                 <Clock size={11} />
-                {timeAgo(entry.endedAt ?? entry.startedAt)}
+                {entry.startedAt > 0
+                  ? timeAgo(entry.endedAt ?? entry.startedAt)
+                  : 'Saved launch'}
               </span>
             )}
           </div>
@@ -586,11 +631,8 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
                   Terminal,
                   action(PROCESS_INTENTS.revealLogs),
                 )}
-                {iconBtn(
-                  'Restart',
-                  RotateCw,
-                  action(PROCESS_INTENTS.restart),
-                )}
+                {entry.origin === 'managed' &&
+                  iconBtn('Restart', RotateCw, action(PROCESS_INTENTS.restart))}
                 {iconBtn(
                   'Stop',
                   Square,
@@ -618,11 +660,12 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
                   action(PROCESS_INTENTS.restart),
                   theme.colors.success,
                 )}
-                {iconBtn(
-                  'Remove from history',
-                  Trash2,
-                  action(PROCESS_INTENTS.remove),
-                )}
+                {!entry.pinned &&
+                  iconBtn(
+                    'Remove from history',
+                    Trash2,
+                    action(PROCESS_INTENTS.remove),
+                  )}
               </>
             )}
           </div>
@@ -660,7 +703,6 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
     if (loading && entries.length === 0) {
       return showLoading ? emptyState('Loading…') : null;
     }
-    if (error) return emptyState(error);
     if (entries.length === 0) {
       return emptyState('No processes yet. Run a command to start one.');
     }
@@ -699,7 +741,7 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
           flexShrink: 0,
         }}
       >
-        <Activity
+        <Cpu
           size={16}
           color={theme.colors.text}
           style={{ marginLeft: 4 }}
@@ -952,7 +994,9 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
                       }}
                     />
                     <span style={{ flex: 1, minWidth: 0 }}>{meta.label}</span>
-                    {selected && <Check size={14} color={theme.colors.primary} />}
+                    {selected && (
+                      <Check size={14} color={theme.colors.primary} />
+                    )}
                   </button>
                 );
               })}
@@ -961,6 +1005,14 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
         </div>
       </div>
 
+      {error && (
+        <div
+          role="alert"
+          style={{ padding: spacing.sm, color: theme.colors.error }}
+        >
+          {error}
+        </div>
+      )}
       {/* List */}
       <div style={{ flex: 1, overflow: 'auto' }}>{renderList()}</div>
 
