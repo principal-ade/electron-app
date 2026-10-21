@@ -306,7 +306,11 @@ export function buildHomeTabEntries(
         : undefined;
     const entry = entryFromTab(tab, repoPath);
     if (!entry) continue;
-    if (entry.kind === 'terminal') {
+    if (entry.kind === 'terminal' && repoPath) {
+      // Repo-nested terminals already sit under a row naming their location,
+      // so the tab-bar position is the useful label there. A standalone
+      // terminal has no repo row, so keep its cwd (the only thing that tells
+      // two of them apart).
       const terminalNumber = terminalNumbers.get(tab.id);
       if (terminalNumber != null) entry.label = `Tab ${terminalNumber}`;
     }

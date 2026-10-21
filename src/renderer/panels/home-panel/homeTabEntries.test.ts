@@ -62,6 +62,25 @@ describe('buildHomeTabEntries', () => {
     ]);
   });
 
+  it('keeps a standalone terminal in Open Tabs with its cwd', () => {
+    const { repos, openTabs } = buildHomeTabEntries(
+      [],
+      [],
+      [terminal('/tmp/scratch')],
+      [],
+    );
+
+    expect(repos).toEqual([]);
+    expect(openTabs).toEqual([
+      expect.objectContaining({
+        id: 'terminal-1',
+        kind: 'terminal',
+        path: '/tmp/scratch',
+        label: 'Terminal',
+      }),
+    ]);
+  });
+
   it('puts standalone tabs in the top-level list', () => {
     const topic: WorkspaceTab = {
       id: 'local-topic-t1',

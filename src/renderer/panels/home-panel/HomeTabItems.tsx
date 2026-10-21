@@ -28,13 +28,21 @@ import {
   ToolCase,
 } from 'lucide-react';
 import { TopicsIcon } from '../../components/TopicsIcon';
+import { tildifyPath } from '../../utils/tildifyPath';
 import { isHomeTabPinnable, type HomeTabEntry } from './homeTabEntries';
 
-/** Label the tab's purpose in Home, where its repository is already shown. */
+/**
+ * Label the tab's purpose in Home, where its repository is already shown. A
+ * standalone terminal (no repo row above it) shows its cwd instead: that is
+ * what distinguishes one terminal from another.
+ */
 function homeTabLabel(entry: HomeTabEntry): string {
   if (entry.kind === 'repo-tab') {
     if (entry.variant === 'project-info') return 'Clone profile';
     if (entry.variant === 'repo-explorer') return 'Clone explorer';
+  }
+  if (entry.kind === 'terminal' && !entry.repoPath && entry.path) {
+    return tildifyPath(entry.path);
   }
   return entry.label;
 }
@@ -119,12 +127,16 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
   const label = homeTabLabel(entry);
+  const title =
+    entry.kind === 'terminal' && !entry.repoPath && entry.path
+      ? `Open terminal in ${entry.path}`
+      : `Open ${label}`;
 
   return (
     <div
       onClick={onActivate}
       role="button"
-      title={`Open ${label}`}
+      title={title}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

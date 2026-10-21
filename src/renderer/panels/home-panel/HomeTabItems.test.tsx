@@ -159,6 +159,49 @@ test('does not invent a tab number for a profile with no open tab position', () 
   expect(screen.queryByText(/^Tab /)).toBeNull();
 });
 
+test('shows a standalone terminal cwd instead of its tab number', () => {
+  render(
+    <HomeTabRow
+      entry={{
+        id: 'terminal-1',
+        kind: 'terminal',
+        label: 'Tab 2',
+        path: '/Users/pat/code/scratch',
+      }}
+      open
+      tabNumber={2}
+      pinned={false}
+      onActivate={jest.fn()}
+      onTogglePin={jest.fn()}
+    />,
+  );
+  expect(screen.getByText('~/code/scratch')).toBeTruthy();
+  expect(screen.queryByText('Tab 2')).toBeNull();
+  expect(
+    screen.getByTitle('Open terminal in /Users/pat/code/scratch'),
+  ).toBeTruthy();
+});
+
+test('keeps the tab-number label for a repo-rooted terminal', () => {
+  render(
+    <HomeTabRow
+      entry={{
+        id: 'terminal-1',
+        kind: 'terminal',
+        label: 'Tab 2',
+        path: '/work/app',
+        repoPath: '/work/app',
+      }}
+      open
+      pinned={false}
+      onActivate={jest.fn()}
+      onTogglePin={jest.fn()}
+    />,
+  );
+  expect(screen.getByText('Tab 2')).toBeTruthy();
+  expect(screen.queryByText('/work/app')).toBeNull();
+});
+
 test('does not add a tab-number badge to other repository tab kinds', () => {
   render(
     <HomeTabRow
