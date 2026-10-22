@@ -19,6 +19,7 @@ import { TopicProjectsRail } from './topic-description/TopicProjectsRail';
 import { TopicSubsystemModelsRail } from './topic-description/TopicSubsystemModelsRail';
 import { TopicService } from '../main-process-api/TopicService';
 import { TopicDeleteHeaderButton } from './TopicDeleteHeaderButton';
+import { TopicPinHeaderButton } from './TopicPinHeaderButton';
 
 export const LocalTopicTabContent: React.FC<{
   topicId: string;
@@ -150,6 +151,7 @@ export const LocalTopicTabContent: React.FC<{
             <List size={16} />
           </button>
         )}
+        <TopicPinHeaderButton topicId={topicId} title={title} />
         <TopicDeleteHeaderButton topicId={topicId} title={title} />
       </div>
 
