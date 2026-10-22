@@ -7,11 +7,6 @@ import {
   repoDisplayLabel,
   repoDisplayNameFromPurl,
 } from '../../../shared/topics/repoPurl';
-import {
-  STATES,
-  normalizeState,
-  stateColor,
-} from '../../topics-view/topic-description/topicStatusModel';
 
 /** Compact "x ago" relative time from an ISO timestamp. */
 function timeAgo(iso: string): string {
@@ -29,9 +24,6 @@ function timeAgo(iso: string): string {
   if (months < 12) return `${months}mo ago`;
   return `${Math.floor(months / 12)}y ago`;
 }
-
-const stateLabel = (state: string): string =>
-  STATES.find((s) => s.value === state)?.label ?? 'New Thought';
 
 export interface TopicRowProps {
   topic: Topic;
@@ -73,13 +65,10 @@ export const TopicRow: React.FC<TopicRowProps> = ({
 }) => {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
-  const state = normalizeState(topic.status?.state);
-  const color = stateColor(state, theme);
   const repoNames = (topic.repos ?? []).map(repoDisplayNameFromPurl);
   // Inline may collapse (`web, api, +2 more`); the tooltip always lists them all.
   const repoLabel = repoDisplayLabel(topic.repos);
   const repoTitle = repoNames.join(', ');
-  const statusName = topic.status?.label || stateLabel(state);
 
   // Drag the topic into a terminal as an agent prompt that hydrates it from the
   // local bridge so the terminal can hydrate the topic as context.
@@ -139,18 +128,6 @@ export const TopicRow: React.FC<TopicRowProps> = ({
             color: theme.colors.textMuted,
           }}
         >
-          {/* Status dot — the topic's "aliveness" axis color. */}
-          <span
-            aria-hidden
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              flexShrink: 0,
-              backgroundColor: color,
-            }}
-            title={statusName}
-          />
           {repoLabel && (
             <span
               title={repoTitle || undefined}

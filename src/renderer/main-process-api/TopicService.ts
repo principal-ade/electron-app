@@ -7,7 +7,7 @@
  */
 
 // Mirror the TopicAPI contract this service wraps: the tipc client returns the
-// desktop DraftTopic (which carries `repos`, `status`, assets), not the older
+// desktop DraftTopic (which carries `repos`, assets), not the older
 // alexandria-core Topic. Aliasing keeps every method's `Topic` in sync with it.
 import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import type {

@@ -88,7 +88,6 @@ export class TopicRegistryService {
       title: input.title,
       description: input.description,
       createdBy: input.createdBy,
-      ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.repos !== undefined ? { repos: input.repos } : {}),
       ...(input.subsystemModels !== undefined
         ? { subsystemModels: input.subsystemModels }

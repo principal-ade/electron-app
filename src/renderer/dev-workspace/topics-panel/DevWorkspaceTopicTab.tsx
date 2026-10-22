@@ -3,7 +3,6 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Check, Copy, List } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from '../../topics-view/topic-description/TopicDescriptionBody';
-import { TopicStatusHeaderButton } from '../../topics-view/topic-description/TopicStatusHeaderButton';
 import { TopicProjectsRail } from '../../topics-view/topic-description/TopicProjectsRail';
 import { TopicSubsystemModelsRail } from '../../topics-view/topic-description/TopicSubsystemModelsRail';
 import { TopicService } from '../../main-process-api/TopicService';
@@ -162,7 +161,6 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
             <List size={16} />
           </button>
         )}
-        <TopicStatusHeaderButton topicId={topicId} />
         <TopicDeleteHeaderButton topicId={topicId} title={title} />
       </div>
 

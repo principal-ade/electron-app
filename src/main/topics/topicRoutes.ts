@@ -167,7 +167,6 @@ export function registerTopicRoutes(
           href: `/api/topics/${encodeURIComponent(t.id)}`,
           title: t.title,
           descriptionPreview: descriptionPreview(t.description),
-          state: t.status?.state,
           createdAt: t.createdAt,
           updatedAt: t.updatedAt,
         }))

@@ -8,7 +8,6 @@
 import type {
   DraftTopic as Topic,
   TopicAsset,
-  TopicStatus,
   TopicSubsystemModelRef,
 } from '@principal-ai/subsystems-core/node';
 
@@ -62,8 +61,6 @@ export interface CreateTopicInput {
   createdBy?: { githubId: number; githubLogin: string };
   /** Optional explicit id; defaults to a locally generated one. */
   id?: string;
-  /** Optional initial workflow status; defaults to absent (treated as `active`). */
-  status?: TopicStatus;
   /**
    * Repositories this topic is about, as PURL strings (e.g.
    * `pkg:github/owner/repo`). Declared by the topic itself.
@@ -81,10 +78,6 @@ export interface UpdateTopicInput {
   title?: string;
   description?: string;
   createdBy?: { githubId: number; githubLogin: string };
-  /**
-   * New workflow status, persisted as part of the local topic.
-   */
-  status?: TopicStatus;
   /** Images attached to the topic (see {@link TopicAsset}). */
   assets?: TopicAsset[];
   /**

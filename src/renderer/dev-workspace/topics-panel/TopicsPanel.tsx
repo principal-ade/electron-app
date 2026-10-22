@@ -7,31 +7,15 @@ import React, {
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
-import {
-  Check,
-  ChevronDown,
-  ListFilter,
-  RefreshCw,
-  Search,
-  X,
-} from 'lucide-react';
+import { RefreshCw, Search, X } from 'lucide-react';
 import { TopicsIcon } from '../../components/TopicsIcon';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
-import {
-  STATES,
-  normalizeState,
-  stateColor,
-  type TopicStatusState,
-} from '../../topics-view/topic-description/topicStatusModel';
 import { useTopicLibrary } from './useTopicLibrary';
 import { TopicRow } from './TopicRow';
 import { TOPIC_EVENT, type TopicOpenEvent } from './topic-events';
 import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 
 type TopicView = 'thisRepo' | 'all';
-
-const stateLabel = (state: string): string =>
-  STATES.find((s) => s.value === state)?.label ?? 'New Thought';
 
 export interface TopicsPanelProps {
   repositoryPath?: string;
@@ -51,12 +35,6 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
   const library = useTopicLibrary(repositoryPath ?? null);
   const [view, setView] = useState<TopicView>('thisRepo');
   const [query, setQuery] = useState('');
-  // Status filter — empty set means "all statuses". Multi-select (OR).
-  const [statusFilter, setStatusFilter] = useState<Set<TopicStatusState>>(
-    () => new Set(),
-  );
-  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
-  const statusMenuRef = useRef<HTMLDivElement>(null);
 
   const hasRepo = Boolean(repositoryPath);
 
@@ -88,30 +66,6 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
     [events],
   );
 
-  const toggleStatus = useCallback((state: TopicStatusState) => {
-    setStatusFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(state)) next.delete(state);
-      else next.add(state);
-      return next;
-    });
-  }, []);
-
-  // Close the status menu on an outside click.
-  useEffect(() => {
-    if (!statusMenuOpen) return;
-    const onDown = (e: MouseEvent) => {
-      if (
-        statusMenuRef.current &&
-        !statusMenuRef.current.contains(e.target as Node)
-      ) {
-        setStatusMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [statusMenuOpen]);
-
   const isMultiRepo = useCallback((topic: Topic): boolean => {
     return (topic.repos?.length ?? 0) > 1;
   }, []);
@@ -124,12 +78,6 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
         : library.topics;
     return scoped
       .filter((topic) => {
-        if (
-          statusFilter.size > 0 &&
-          !statusFilter.has(normalizeState(topic.status?.state))
-        ) {
-          return false;
-        }
         if (!q) return true;
         return (
           topic.title.toLowerCase().includes(q) ||
@@ -137,14 +85,7 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
         );
       })
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }, [library, view, query, statusFilter]);
-
-  const statusTriggerLabel =
-    statusFilter.size === 0
-      ? 'All statuses'
-      : statusFilter.size === 1
-        ? stateLabel([...statusFilter][0])
-        : `${statusFilter.size} statuses`;
+  }, [library, view, query]);
 
   const ready = !library.loading || library.topics.length > 0;
 
@@ -215,7 +156,7 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
           />
         )}
 
-        {/* Filters: text search (left) + status (right) */}
+        {/* Text search */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div
             style={{
@@ -271,158 +212,6 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
               </button>
             )}
           </div>
-
-          <div
-            ref={statusMenuRef}
-            style={{ position: 'relative', flexShrink: 0 }}
-          >
-            <button
-              type="button"
-              onClick={() => setStatusMenuOpen((o) => !o)}
-              aria-haspopup="menu"
-              aria-expanded={statusMenuOpen}
-              title={
-                statusFilter.size === 0
-                  ? 'Filter by status'
-                  : `Status: ${statusTriggerLabel}`
-              }
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                height: 30,
-                boxSizing: 'border-box',
-                gap: '4px',
-                padding: '0 8px',
-                borderRadius: 6,
-                border: `1px solid ${
-                  statusFilter.size > 0
-                    ? theme.colors.primary
-                    : theme.colors.border
-                }`,
-                backgroundColor: theme.colors.backgroundSecondary,
-                color: theme.colors.text,
-                cursor: 'pointer',
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[1],
-              }}
-            >
-              <ListFilter
-                size={14}
-                color={
-                  statusFilter.size > 0
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary
-                }
-              />
-              {statusFilter.size > 0 && (
-                <>
-                  <span
-                    style={{
-                      maxWidth: 96,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {statusTriggerLabel}
-                  </span>
-                  <span
-                    role="button"
-                    aria-label="Clear status filter"
-                    title="Clear status filter"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setStatusFilter(new Set());
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      color: theme.colors.textSecondary,
-                    }}
-                  >
-                    <X size={14} />
-                  </span>
-                </>
-              )}
-              <ChevronDown
-                size={14}
-                style={{
-                  flexShrink: 0,
-                  color: theme.colors.textSecondary,
-                  transition: 'transform 200ms ease',
-                  transform: statusMenuOpen ? 'rotate(180deg)' : 'none',
-                }}
-              />
-            </button>
-
-            {statusMenuOpen && (
-              <div
-                role="menu"
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: 2,
-                  zIndex: 30,
-                  minWidth: 200,
-                  padding: 4,
-                  borderRadius: 8,
-                  border: `1px solid ${theme.colors.border}`,
-                  background: theme.colors.background,
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.24)',
-                }}
-              >
-                {STATES.map((s) => {
-                  const selected = statusFilter.has(s.value);
-                  return (
-                    <button
-                      key={s.value}
-                      type="button"
-                      role="menuitemcheckbox"
-                      aria-checked={selected}
-                      onClick={() => toggleStatus(s.value)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        width: '100%',
-                        padding: '8px 10px',
-                        borderRadius: 6,
-                        border: 'none',
-                        background: 'transparent',
-                        color: theme.colors.text,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[1],
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background =
-                          theme.colors.backgroundSecondary;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          flexShrink: 0,
-                          backgroundColor: stateColor(s.value, theme),
-                        }}
-                      />
-                      <span style={{ flex: 1, minWidth: 0 }}>{s.label}</span>
-                      {selected && (
-                        <Check size={14} color={theme.colors.primary} />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         </div>
       </header>
 
@@ -440,7 +229,7 @@ export const TopicsPanel: React.FC<TopicsPanelProps> = ({
             theme={theme}
             view={view}
             hasRepo={hasRepo}
-            filtered={query.trim().length > 0 || statusFilter.size > 0}
+            filtered={query.trim().length > 0}
             totalTopics={library.topics.length}
             onShowAll={() => setView('all')}
           />

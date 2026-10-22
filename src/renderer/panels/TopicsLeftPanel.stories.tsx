@@ -59,25 +59,22 @@ const topicFixtures: Topic[] = [
     title: 'How the reconciler schedules work',
     repos: ['pkg:github/facebook/react', 'pkg:github/reactwg/react-18'],
     updatedAt: minutesAgo(8),
-    status: { state: 'working' },
   }),
   topic({
     id: 't-2',
     title: 'App Router request lifecycle',
     repos: ['pkg:github/vercel/next.js'],
     updatedAt: hoursAgo(3),
-    status: { state: 'paused', label: 'revisit after launch' },
   }),
   topic({
     id: 't-3',
     title: 'Control-flow narrowing, end to end',
     repos: ['pkg:github/microsoft/TypeScript'],
     updatedAt: daysAgo(2),
-    status: { state: 'done-for-now' },
   }),
   topic({
     id: 't-4',
-    title: 'Untriaged idea with no status',
+    title: 'Untriaged idea',
     repos: [],
     updatedAt: daysAgo(5),
   }),
@@ -105,7 +102,7 @@ const meta: Meta<typeof TopicsLeftPanel> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A handful of topics across the status axis, most-recent first. */
+/** A handful of topics, most-recent first. */
 export const Default: Story = {
   render: () => {
     withTopics(topicFixtures);

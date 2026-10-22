@@ -15,7 +15,6 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Check, Copy, List } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from './topic-description/TopicDescriptionBody';
-import { TopicStatusHeaderButton } from './topic-description/TopicStatusHeaderButton';
 import { TopicProjectsRail } from './topic-description/TopicProjectsRail';
 import { TopicSubsystemModelsRail } from './topic-description/TopicSubsystemModelsRail';
 import { TopicService } from '../main-process-api/TopicService';
@@ -151,7 +150,6 @@ export const LocalTopicTabContent: React.FC<{
             <List size={16} />
           </button>
         )}
-        <TopicStatusHeaderButton topicId={topicId} />
         <TopicDeleteHeaderButton topicId={topicId} title={title} />
       </div>
 
