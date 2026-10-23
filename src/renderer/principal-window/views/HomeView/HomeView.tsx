@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
+  Boxes,
   Check,
   Compass,
   Download,
@@ -19,9 +20,7 @@ import { ShellService } from '../../../main-process-api/ShellService';
 import { GitGlobalConfigModal } from '../../../components/GitGlobalConfigModal';
 import { DIRECTORY_ID_TO_DESTINATION } from '../SkillBrowserView/InstallSkillToolbar';
 import type { SkillLockFile } from '../../../../shared/main-process-api-interfaces/SkillLockAPI';
-import type {
-  AlexandriaEntry,
-} from '@principal-ai/alexandria-core-library/types';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { SkyRepositoriesPanel } from './SkyRepositoriesPanel';
 import { createInProgressActivityPanelActions } from '../../../panels/inProgressActivityPanelActions';
 import { useAuthUser } from '../../../providers/AuthProvider';
@@ -39,65 +38,99 @@ interface HomeViewProps {
   onDismissOverlay?: () => void;
 }
 
-const SKILL_REPO_OWNER = 'principal-ai';
-const SKILL_REPO_NAME = 'skills';
-const SKILL_BRANCH = 'main';
-const SKILL_GITHUB_URL = `https://github.com/${SKILL_REPO_OWNER}/${SKILL_REPO_NAME}`;
+/**
+ * A public GitHub repo that hosts one or more advertised skills. Most ship from
+ * the shared principal-ai/skills repo, but a skill may live in the repo that
+ * owns it (e.g. create-subsystem-model in principal-ai/subsystem-modeling).
+ */
+interface SkillRepo {
+  owner: string;
+  name: string;
+  branch: string;
+}
+
+const SKILLS_REPO: SkillRepo = {
+  owner: 'principal-ai',
+  name: 'skills',
+  branch: 'main',
+};
+const SUBSYSTEM_MODELING_REPO: SkillRepo = {
+  owner: 'principal-ai',
+  name: 'subsystem-modeling',
+  branch: 'main',
+};
+
 const TOPIC_SKILL_SETUP_SKIPPED_KEY = 'principal.topic-skill-setup-skipped';
-// Normalized "owner/repo" source recorded in the skill lock file for skills that
-// ship from the shared principal-ai/skills repo. Used to confirm an installed
-// skill came from the expected repo, not just that *some* skill of the same name
-// is present — see matchInstalledFromLock.
-const SKILL_SOURCE = `${SKILL_REPO_OWNER}/${SKILL_REPO_NAME}`;
 
-const TOPIC_SKILL_NAMES = [
-  'create-topic',
-  'topic-context',
-] as const;
+function skillRepoUrl(repo: SkillRepo): string {
+  return `https://github.com/${repo.owner}/${repo.name}`;
+}
 
-const TOPIC_SKILL_DETAILS: ReadonlyArray<{
-  name: (typeof TOPIC_SKILL_NAMES)[number];
-  title: string;
-  description: string;
-  url: string;
-  source: string;
-  Icon: React.ComponentType<{ size?: number; color?: string }>;
-}> = [
-  {
-    name: 'create-topic',
-    title: 'Create Topic',
-    description:
-      'Create a topic — a subject brief scoped to its declared projects, with a description that doubles as the working brief for agents pointed at it.',
-    url: `${SKILL_GITHUB_URL}/tree/${SKILL_BRANCH}/create-topic`,
-    source: SKILL_SOURCE,
-    Icon: Plus,
-  },
-  {
-    name: 'topic-context',
-    title: 'Topic Context',
-    description:
-      'Read the topic an agent was briefed on and keep its description current — fetch the topic, append discovered context, or replace a status section in place.',
-    url: `${SKILL_GITHUB_URL}/tree/${SKILL_BRANCH}/topic-context`,
-    source: SKILL_SOURCE,
-    Icon: TopicsIcon,
-  },
-];
+// Normalized "owner/repo" source recorded in the skill lock file. Used to
+// confirm an installed skill came from the expected repo, not just that *some*
+// skill of the same name is present — see matchInstalledFromLock.
+function skillRepoSource(repo: SkillRepo): string {
+  return `${repo.owner}/${repo.name}`;
+}
+
+/** Subset of GitHub's tree entries the install flow needs. */
+type GitHubTreeEntry = {
+  path: string;
+  type: 'blob' | 'tree';
+  sha: string;
+};
+
+/** GitHub tree URL for the skill's folder, opened by clicking an installed badge. */
+function skillFolderUrl(skill: { repo: SkillRepo; path: string }): string {
+  return `${skillRepoUrl(skill.repo)}/tree/${skill.repo.branch}/${skill.path}`;
+}
 
 /** Display metadata shared by required and optional skill entries. */
 interface SkillDetail {
   name: string;
   title: string;
   description: string;
+  /** GitHub tree URL for the skill folder. */
   url: string;
   /**
-   * Normalized "owner/repo" the skill ships from. A lock entry only counts as
-   * *this* skill when its recorded `source` matches — the lock file keys by bare
-   * name, so a same-named skill from another repo would otherwise read as
-   * installed. See matchInstalledFromLock.
+   * Repo the skill ships from. Its "owner/repo" is the lock file `source`: a
+   * lock entry only counts as *this* skill when the recorded source matches —
+   * the lock file keys by bare name, so a same-named skill from another repo
+   * would otherwise read as installed. See matchInstalledFromLock.
    */
-  source: string;
+  repo: SkillRepo;
+  /** Path to the skill folder inside `repo` (nested for monorepo layouts). */
+  path: string;
   Icon: React.ComponentType<{ size?: number; color?: string }>;
 }
+
+/** Catalog entry input — the folder URL is derived from the repo and path. */
+function defineSkill(skill: Omit<SkillDetail, 'url'>): SkillDetail {
+  return { ...skill, url: skillFolderUrl(skill) };
+}
+
+const TOPIC_SKILL_NAMES = ['create-topic', 'topic-context'] as const;
+
+const TOPIC_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
+  defineSkill({
+    name: 'create-topic',
+    title: 'Create Topic',
+    description:
+      'Create a topic — a subject brief scoped to its declared projects, with a description that doubles as the working brief for agents pointed at it.',
+    repo: SKILLS_REPO,
+    path: 'create-topic',
+    Icon: Plus,
+  }),
+  defineSkill({
+    name: 'topic-context',
+    title: 'Topic Context',
+    description:
+      'Read the topic an agent was briefed on and keep its description current — fetch the topic, append discovered context, or replace a status section in place.',
+    repo: SKILLS_REPO,
+    path: 'topic-context',
+    Icon: TopicsIcon,
+  }),
+];
 
 // Optional skills are installed individually. They
 // surface in the footer as individually installable add-ons, and show up among
@@ -106,36 +139,46 @@ const OPTIONAL_SKILL_NAMES = [
   'excalidraw-drawings',
   'principal-ai-desktop-app-tools',
   'file-city-tours',
+  'create-subsystem-model',
 ] as const;
 
 const OPTIONAL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
-  {
+  defineSkill({
     name: 'excalidraw-drawings',
     title: 'Excalidraw Drawings',
     description:
       "Find and edit the app's Excalidraw drawings on disk — locate the .excalidraw JSON under ~/.alexandria/drawings and edit a diagram directly so an agent can collaborate on it.",
-    url: `${SKILL_GITHUB_URL}/tree/${SKILL_BRANCH}/excalidraw-drawings`,
-    source: SKILL_SOURCE,
+    repo: SKILLS_REPO,
+    path: 'excalidraw-drawings',
     Icon: PenTool,
-  },
-  {
+  }),
+  defineSkill({
     name: 'principal-ai-desktop-app-tools',
     title: 'Principal Desktop App Tools',
     description: `Canonical reference for the app's local bridge — the HTTP surface at ${getPrincipalBridgeUrl()} that agents use to create topics and leave notes on documents, plus the conventions every call shares.`,
-    url: `${SKILL_GITHUB_URL}/tree/${SKILL_BRANCH}/principal-ai-desktop-app-tools`,
-    source: SKILL_SOURCE,
+    repo: SKILLS_REPO,
+    path: 'principal-ai-desktop-app-tools',
     Icon: Plug,
-  },
-  {
+  }),
+  defineSkill({
     name: 'file-city-tours',
     title: 'File City Tours',
     description:
       "Create and validate guided introduction tours for File City visualizations — build onboarding walkthroughs that highlight a codebase's architecture with interactive highlights, actions, and color modes.",
-    // file-city-tours ships from the shared principal-ai/skills repo.
-    url: `${SKILL_GITHUB_URL}/tree/${SKILL_BRANCH}/file-city-tours`,
-    source: SKILL_SOURCE,
+    repo: SKILLS_REPO,
+    path: 'file-city-tours',
     Icon: Compass,
-  },
+  }),
+  defineSkill({
+    name: 'create-subsystem-model',
+    title: 'Subsystem Models',
+    description:
+      'Author a subsystem model — named components, package/module containment, and runtime trails for one subsystem — then create it and open it in Subsystems Studio via the Principal Studio CLI.',
+    // Ships from the subsystem-modeling repo, which owns the skill.
+    repo: SUBSYSTEM_MODELING_REPO,
+    path: 'skills/create-subsystem-model',
+    Icon: Boxes,
+  }),
 ];
 
 /** Every skill the home view knows how to display or install. */
@@ -157,7 +200,7 @@ const TRACKED_SKILL_NAMES: ReadonlyArray<string> = [
  * tell our `file-city-tours` (principal-ai/skills) apart from a same-named skill
  * installed from somewhere else (e.g. a stale principal-ai/file-city install). We
  * additionally
- * require the recorded `entry.source` to equal the catalog entry's `source`, so
+ * require the recorded `entry.source` to equal the catalog entry's source, so
  * the badge reflects *our* skill rather than any skill that happens to share the
  * name. Identity here is (name, source), even though storage still keys by name.
  */
@@ -166,7 +209,7 @@ function matchInstalledFromLock(lockFile: SkillLockFile | null): Set<string> {
   return new Set(
     ALL_SKILL_DETAILS.filter((skill) => {
       const entry = lockFile.skills[skill.name];
-      return entry != null && entry.source === skill.source;
+      return entry != null && entry.source === skillRepoSource(skill.repo);
     }).map((skill) => skill.name),
   );
 }
@@ -206,7 +249,9 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
     void loadGitUserName();
   }, [loadGitUserName]);
 
-  const [topicSkillsInstalled, setTopicSkillsInstalled] = useState<boolean | null>(null);
+  const [topicSkillsInstalled, setTopicSkillsInstalled] = useState<
+    boolean | null
+  >(null);
   const [topicSkillSetupSkipped, setTopicSkillSetupSkipped] = useState(() => {
     try {
       return (
@@ -271,7 +316,8 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
     [installedSkillNames],
   );
 
-  // Optional skills not yet installed — shown as install buttons in the footer.
+  // Optional skills not yet installed — shown as install buttons alongside the
+  // installed badges, whether or not anything is installed yet.
   const optionalSkillsToInstall = useMemo(
     () =>
       OPTIONAL_SKILL_DETAILS.filter((s) => !installedSkillNames.has(s.name)),
@@ -280,6 +326,21 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
   // First-run moment: the greeting + skill install. It no longer gates the
   // dashboard — In Progress shows underneath it either way.
   const firstRun = topicSkillsInstalled === false && !topicSkillSetupSkipped;
+
+  // Anything worth showing in the skills block — installed badges and/or the
+  // optional add-ons still on offer. Add-ons keep the block alive before any
+  // skill is installed, so a fresh user can still install one.
+  const hasSkillEntries =
+    installedSkillDetails.length > 0 || optionalSkillsToInstall.length > 0;
+  // `topicSkillsInstalled` is null until the lock file has been read, so gate
+  // the rail on it to keep the add-ons from flashing in during startup.
+  const skillsStateLoaded = topicSkillsInstalled !== null;
+  // The pre-install welcome state keeps the skills as a centered bottom footer;
+  // everywhere else they live in the left rail. Once any skill is installed the
+  // footer gives way to the rail (same as before).
+  const showSkillsFooter = firstRun && installedSkillDetails.length === 0;
+  const showSkillsRail =
+    skillsStateLoaded && hasSkillEntries && !showSkillsFooter;
 
   useEffect(() => {
     let cancelled = false;
@@ -357,23 +418,15 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
     };
   }, [refreshSkillUpdates]);
 
-  // Fetch the skills repo tree once and install each named skill into both the
-  // canonical and Claude-specific skill directories. Returns the set of skills
-  // that installed at least once, plus any per-destination failures.
+  // Fetch each source repo's tree once, then install the named skills into both
+  // the canonical and Claude-specific skill directories. Returns the set of
+  // skills that installed at least once, plus any per-destination failures.
+  // Skills are grouped by repo so a bundle from one repo (the topic skills) is
+  // still a single tree fetch, and a skill hosted elsewhere only fetches its own.
   const installSkillsByName = useCallback(
     async (
       names: ReadonlyArray<string>,
     ): Promise<{ fullyInstalled: Set<string>; failures: string[] }> => {
-      const treeResult = await GithubService.getTree(
-        SKILL_REPO_OWNER,
-        SKILL_REPO_NAME,
-        SKILL_BRANCH,
-      );
-      if (!treeResult?.success || !treeResult.data) {
-        throw new Error('Could not fetch skills repository tree.');
-      }
-
-      const tree = treeResult.data.tree;
       const destinations = [
         DIRECTORY_ID_TO_DESTINATION['claude-specific'],
         DIRECTORY_ID_TO_DESTINATION['agent-universal'],
@@ -382,41 +435,86 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
       const failures: string[] = [];
       const fullyInstalled = new Set<string>();
 
-      for (const skillName of names) {
-        const prefix = `${skillName}/`;
-        const fileList = tree
-          .filter(
-            (item) => item.type === 'blob' && item.path.startsWith(prefix),
-          )
-          .map((item) => item.path);
-        if (fileList.length === 0) {
-          failures.push(`${skillName}: not found in repo`);
+      // Resolve names against the catalog up front: install state and the
+      // GitHub source both come from the entry, never from the bare name.
+      const byRepo = new Map<
+        string,
+        { repo: SkillRepo; skills: SkillDetail[] }
+      >();
+      for (const name of names) {
+        const skill = ALL_SKILL_DETAILS.find((s) => s.name === name);
+        if (!skill) {
+          failures.push(`${name}: not in the skill catalog`);
           continue;
         }
-        const folderEntry = tree.find(
-          (item) => item.type === 'tree' && item.path === skillName,
-        );
+        const key = skillRepoSource(skill.repo);
+        const group = byRepo.get(key) ?? { repo: skill.repo, skills: [] };
+        group.skills.push(skill);
+        byRepo.set(key, group);
+      }
 
-        let skillSucceededOnce = false;
-        for (const destination of destinations) {
-          const result = await GithubService.installSkill({
-            githubUrl: SKILL_GITHUB_URL,
-            skillPath: skillName,
-            destination,
-            skillName,
-            fileList,
-            skillTreeSha: folderEntry?.sha,
-          });
-          if (result.success) {
-            skillSucceededOnce = true;
-          } else {
-            failures.push(
-              `${skillName} → ${destination}: ${result.error || 'failed'}`,
+      for (const { repo, skills } of byRepo.values()) {
+        const githubUrl = skillRepoUrl(repo);
+        let tree: GitHubTreeEntry[] = [];
+        try {
+          const treeResult = await GithubService.getTree(
+            repo.owner,
+            repo.name,
+            repo.branch,
+          );
+          if (!treeResult?.success || !treeResult.data) {
+            throw new Error(
+              `Could not fetch the ${repo.owner}/${repo.name} repository tree.`,
             );
           }
+          tree = treeResult.data.tree;
+        } catch (error) {
+          const reason =
+            error instanceof Error ? error.message : 'tree fetch failed';
+          for (const skill of skills) {
+            failures.push(`${skill.name}: ${reason}`);
+          }
+          continue;
         }
-        if (skillSucceededOnce) {
-          fullyInstalled.add(skillName);
+
+        for (const skill of skills) {
+          const prefix = `${skill.path}/`;
+          const fileList = tree
+            .filter(
+              (item) => item.type === 'blob' && item.path.startsWith(prefix),
+            )
+            .map((item) => item.path);
+          if (fileList.length === 0) {
+            failures.push(
+              `${skill.name}: not found at ${skill.path} in ${skillRepoSource(repo)}`,
+            );
+            continue;
+          }
+          const folderEntry = tree.find(
+            (item) => item.type === 'tree' && item.path === skill.path,
+          );
+
+          let skillSucceededOnce = false;
+          for (const destination of destinations) {
+            const result = await GithubService.installSkill({
+              githubUrl,
+              skillPath: skill.path,
+              destination,
+              skillName: skill.name,
+              fileList,
+              skillTreeSha: folderEntry?.sha,
+            });
+            if (result.success) {
+              skillSucceededOnce = true;
+            } else {
+              failures.push(
+                `${skill.name} → ${destination}: ${result.error || 'failed'}`,
+              );
+            }
+          }
+          if (skillSucceededOnce) {
+            fullyInstalled.add(skill.name);
+          }
         }
       }
 
@@ -470,7 +568,7 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
         throw new Error(
           failures.length > 0
             ? failures.join('; ')
-              : 'Failed to install topic skills.',
+            : 'Failed to install topic skills.',
         );
       }
       const allInstalled = TOPIC_SKILL_NAMES.every((name) =>
@@ -533,11 +631,11 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
     color: theme.colors.textSecondary,
   };
 
-  // The installed-skill + installable-add-on badges. Rendered in the right rail
+  // The installed-skill + installable-add-on badges. Rendered in the left rail
   // (the normal home state, `rail`) and as a centered bottom footer (the
-  // pre-install welcome state).
+  // pre-install welcome state). Add-ons show even before anything is installed.
   const installedSkillsBlock = (rail: boolean): React.ReactNode => {
-    if (installedSkillDetails.length === 0) return null;
+    if (!hasSkillEntries) return null;
     return (
       <div
         style={
@@ -1036,9 +1134,10 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
             minHeight: 320,
           }}
         >
-          {/* Left rail: installed skills. Falls back to an empty spacer so the
-              In Progress grid keeps its column width. */}
-          {installedSkillDetails.length > 0 ? (
+          {/* Left rail: installed skills plus the add-ons still on offer. Falls
+              back to an empty spacer so the In Progress grid keeps its column
+              width. */}
+          {showSkillsRail ? (
             <aside
               style={{
                 // Width comes from the grid's 300px track.
@@ -1079,11 +1178,10 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
           </div>
         </div>
 
-        {/* First-run keeps the skills as a centered bottom footer; once any are
-            installed they move into the left rail above. */}
-        {firstRun &&
-          installedSkillDetails.length === 0 &&
-          installedSkillsBlock(false)}
+        {/* First-run keeps the skills as a centered bottom footer — including
+            the add-ons, so nothing is hidden before a first install. Once any
+            skill is installed they move into the left rail above. */}
+        {showSkillsFooter && installedSkillsBlock(false)}
       </div>
 
       <GitGlobalConfigModal
