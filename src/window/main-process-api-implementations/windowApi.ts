@@ -11,6 +11,7 @@ import type {
   ExtensionWindowOptions,
   TabTransferData,
   OpenTerminalTabPayload,
+  OpenRepositoryExplorerPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -112,6 +113,21 @@ export const windowAPI: WindowAPI = {
     ipcRenderer.on(WindowEvent.OPEN_TERMINAL_TAB, handler);
     return () => {
       ipcRenderer.removeListener(WindowEvent.OPEN_TERMINAL_TAB, handler);
+    };
+  },
+
+  onOpenRepositoryExplorer: (
+    callback: (payload: OpenRepositoryExplorerPayload) => void,
+  ) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: OpenRepositoryExplorerPayload,
+    ) => {
+      callback(payload);
+    };
+    ipcRenderer.on(WindowEvent.OPEN_REPOSITORY_EXPLORER, handler);
+    return () => {
+      ipcRenderer.removeListener(WindowEvent.OPEN_REPOSITORY_EXPLORER, handler);
     };
   },
 

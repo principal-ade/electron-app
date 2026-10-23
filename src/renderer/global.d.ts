@@ -70,12 +70,8 @@ declare global {
       closeQuickOpen?: () => void;
       showQuickOpen?: () => void;
       copyToClipboard?: (text: string) => void;
-      // GitHub search and clone APIs
+      // GitHub search API
       searchGitHub?: (query: string) => Promise<GitHubSearchResult[]>;
-      cloneGitHubRepo?: (
-        cloneUrl: string,
-        repoName: string,
-      ) => Promise<{ success: boolean; path?: string; error?: string }>;
       isAuthenticated?: () => Promise<boolean>;
     };
     // Window init data for routing

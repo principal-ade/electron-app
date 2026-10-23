@@ -13,6 +13,7 @@ import type {
   ExtensionWindowOptions,
   TabTransferData,
   OpenTerminalTabPayload,
+  OpenRepositoryExplorerPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
@@ -91,6 +92,20 @@ export class WindowService {
     } catch (error) {
       console.error(
         '[WindowService] Failed to register open-terminal-tab listener:',
+        error,
+      );
+      return () => {};
+    }
+  }
+
+  static onOpenRepositoryExplorer(
+    callback: (payload: OpenRepositoryExplorerPayload) => void,
+  ): () => void {
+    try {
+      return window.mainProcess.window.onOpenRepositoryExplorer(callback);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to register repository explorer listener:',
         error,
       );
       return () => {};

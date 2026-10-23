@@ -58,12 +58,8 @@ interface QuickOpenWindow extends Window {
     selectQuickOpenItem: (item: QuickOpenItem) => void;
     closeQuickOpen: () => void;
     copyToClipboard: (text: string) => Promise<void>;
-    // GitHub search and clone
+    // GitHub search
     searchGitHub: (query: string) => Promise<GitHubSearchResult[]>;
-    cloneGitHubRepo: (
-      cloneUrl: string,
-      repoName: string,
-    ) => Promise<{ success: boolean; path?: string; error?: string }>;
     isAuthenticated: () => Promise<boolean>;
   };
 }
@@ -155,7 +151,6 @@ const QuickOpenApp: React.FC = () => {
   // GitHub search mode state
   const [mode, setMode] = useState<QuickOpenMode>('local');
   const [isSearching, setIsSearching] = useState(false);
-  const [isCloning, setIsCloning] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -295,47 +290,10 @@ const QuickOpenApp: React.FC = () => {
     }
   }, [selectedIndex]);
 
-  const handleSelectItem = async (item: QuickOpenItem) => {
+  const handleSelectItem = (item: QuickOpenItem) => {
     console.info('[Quick Open] Selected item:', item);
 
-    // Handle GitHub item - clone first
-    if (item.type === 'github' && item.cloneUrl) {
-      setIsCloning(true);
-      setCopiedMessage('Cloning repository...');
-
-      try {
-        const repoName = item.name.split('/')[1] || item.name;
-        const result = await quickOpenWindow.electronAPI.cloneGitHubRepo(
-          item.cloneUrl,
-          repoName,
-        );
-
-        if (result.success) {
-          setCopiedMessage('Cloned! Opening workspace...');
-          // The main process will handle opening the workspace
-          // after clone completes
-          setTimeout(() => {
-            quickOpenWindow.electronAPI.closeQuickOpen();
-          }, 500);
-        } else {
-          setCopiedMessage(result.error || 'Clone failed');
-          setIsCloning(false);
-          setTimeout(() => {
-            setCopiedMessage(null);
-          }, 3000);
-        }
-      } catch (error) {
-        console.error('[Quick Open] Clone failed:', error);
-        setCopiedMessage('Clone failed');
-        setIsCloning(false);
-        setTimeout(() => {
-          setCopiedMessage(null);
-        }, 3000);
-      }
-      return;
-    }
-
-    // Local item - pass to main process
+    // The main process opens local repositories or browses GitHub in Explorer.
     quickOpenWindow.electronAPI.selectQuickOpenItem(item);
   };
 
@@ -584,8 +542,8 @@ const QuickOpenApp: React.FC = () => {
           />
         </div>
 
-        {/* Feedback overlay (copied, cloning, etc.) */}
-        {(copiedMessage || isCloning) && (
+        {/* Clipboard feedback overlay */}
+        {copiedMessage && (
           <div
             style={{
               position: 'absolute',
@@ -615,34 +573,11 @@ const QuickOpenApp: React.FC = () => {
                 gap: '12px',
               }}
             >
-              {isCloning && !copiedMessage?.includes('failed') ? (
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: '16px',
-                    height: '16px',
-                    border: '2px solid currentColor',
-                    borderTopColor: 'transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                  }}
-                />
-              ) : (
-                '✓'
-              )}{' '}
+              {'✓ '}
               {copiedMessage}
             </div>
           </div>
         )}
-
-        {/* Add keyframe animation for spinner */}
-        <style>
-          {`
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-          `}
-        </style>
 
         <div
           style={{
@@ -923,7 +858,7 @@ const QuickOpenApp: React.FC = () => {
               color: theme.colors.textSecondary,
             }}
           >
-            {mode === 'local' ? 'Enter Open' : 'Enter Clone'}
+            {mode === 'local' ? 'Enter Open' : 'Enter Explore'}
           </span>
           {mode === 'local' && (
             <>

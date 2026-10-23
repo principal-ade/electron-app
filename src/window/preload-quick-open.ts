@@ -48,12 +48,6 @@ interface GitHubSearchResult {
   html_url: string;
 }
 
-interface CloneResult {
-  success: boolean;
-  path?: string;
-  error?: string;
-}
-
 console.info('[Preload-QuickOpen] API imports successful');
 
 // Expose minimal mainProcess API (only what Quick Open needs for theming)
@@ -95,11 +89,9 @@ try {
     copyToClipboard: (text: string) =>
       ipcRenderer.invoke(ClipboardAPIEvent.WRITE_TEXT, text),
 
-    // GitHub search and clone APIs
+    // GitHub search API
     searchGitHub: (query: string): Promise<GitHubSearchResult[]> =>
       ipcRenderer.invoke('quick-open:search-github', query),
-    cloneGitHubRepo: (cloneUrl: string, repoName: string): Promise<CloneResult> =>
-      ipcRenderer.invoke('quick-open:clone-github', cloneUrl, repoName),
     isAuthenticated: (): Promise<boolean> =>
       ipcRenderer.invoke('quick-open:is-authenticated'),
   });

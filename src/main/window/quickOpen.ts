@@ -17,9 +17,11 @@ import { openDevWorkspaceWindow } from './devWorkspaceWindowHandlers';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { gitHubAPICore } from '../version-control-providers/github/apiCore';
 import { authService } from '../services/AuthService';
-import { gitClientFactory } from '../utils/gitClientFactory';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
-import type { OpenTerminalTabPayload } from '../../shared/main-process-api-interfaces/WindowAPI';
+import type {
+  OpenTerminalTabPayload,
+  OpenRepositoryExplorerPayload,
+} from '../../shared/main-process-api-interfaces/WindowAPI';
 import { focusOrCreateMainWindow } from './modernWindowManager';
 
 interface GitHubSearchResult {
@@ -375,6 +377,34 @@ export function setupQuickOpenHandlers(): void {
     // Close the overlay immediately for instant feedback
     quickOpen.hide();
 
+    if (item.type === 'github') {
+      const [owner, name] = (item.fullName || item.name).split('/');
+      if (!owner || !name) return;
+
+      const principal = await focusOrCreateMainWindow();
+      if (!principal || principal.window.isDestroyed()) return;
+
+      const payload: OpenRepositoryExplorerPayload = {
+        owner,
+        name,
+        description: item.description,
+        stars: item.stars,
+      };
+      const send = () => {
+        if (principal.window.isDestroyed()) return;
+        principal.window.webContents.send(
+          WindowEvent.OPEN_REPOSITORY_EXPLORER,
+          payload,
+        );
+      };
+      if (principal.window.webContents.isLoading()) {
+        principal.window.webContents.once('did-finish-load', send);
+      } else {
+        send();
+      }
+      return;
+    }
+
     const openTarget = await getQuickOpenTarget();
 
     // Terminal mode opens a terminal tab in the principal window.
@@ -465,106 +495,6 @@ export function setupQuickOpenHandlers(): void {
       } catch (error) {
         log.error('[Quick Open] GitHub search error:', error);
         return [];
-      }
-    },
-  );
-
-  // Clone a GitHub repository
-  ipcMain.handle(
-    'quick-open:clone-github',
-    async (
-      _event,
-      cloneUrl: string,
-      repoName: string,
-    ): Promise<{ success: boolean; path?: string; error?: string }> => {
-      log.info(`[Quick Open] Cloning ${repoName} from ${cloneUrl}`);
-
-      try {
-        // Get user preferences for base directory
-        const {
-          UserPreferencesHandler,
-        } = require('../stores/userPreferencesHandler');
-        const prefsService = UserPreferencesHandler.getInstance();
-        const preferences = await prefsService.getUserPreferences();
-        const baseDir = preferences.baseDefaultDirectory;
-
-        if (!baseDir) {
-          return {
-            success: false,
-            error: 'No default directory set. Please set a base directory in preferences.',
-          };
-        }
-
-        const targetPath = path.join(baseDir, repoName);
-
-        // Check if directory already exists
-        const fs = require('fs').promises;
-        try {
-          await fs.access(targetPath);
-          // Directory exists - check if it's the same repo
-          log.info(`[Quick Open] Directory already exists: ${targetPath}`);
-          return {
-            success: false,
-            error: `Directory already exists: ${targetPath}`,
-          };
-        } catch {
-          // Directory doesn't exist, proceed with clone
-        }
-
-        // Clone the repository
-        const parentDir = path.dirname(targetPath);
-        const git = await gitClientFactory.getClient(parentDir);
-
-        // Set up environment for clone
-        const cloneEnv: Record<string, string> = {};
-        if (process.env.PATH) cloneEnv.PATH = process.env.PATH;
-        if (process.env.HOME) cloneEnv.HOME = process.env.HOME;
-        if (process.env.USER) cloneEnv.USER = process.env.USER;
-
-        await git.raw(['clone', cloneUrl, targetPath], {
-          env: cloneEnv,
-          timeout: 120000, // 2 minute timeout
-        });
-
-        log.info(`[Quick Open] Clone successful: ${targetPath}`);
-
-        // Register with Alexandria
-        const {
-          AlexandriaRegistryService,
-        } = require('../stores/AlexandriaRegistryService');
-        const alexandriaService = AlexandriaRegistryService.getInstance();
-        const registeredRepo = await alexandriaService.registerRepository(
-          targetPath,
-          cloneUrl,
-        );
-
-        log.info(`[Quick Open] Registered repository: ${registeredRepo.name}`);
-
-        // Open the cloned repo per the Quick Open destination preference
-        if (registeredRepo) {
-          const openTarget = await getQuickOpenTarget();
-          if (openTarget === 'terminal' && registeredRepo.path) {
-            await openTerminalTabInPrincipal(
-              String(registeredRepo.path),
-              registeredRepo.name,
-            );
-            log.info(
-              `[Quick Open] Opened terminal tab for cloned ${repoName}`,
-            );
-          } else {
-            await openDevWorkspaceWindow({
-              alexandriaEntry: registeredRepo,
-            });
-            log.info(`[Quick Open] Opened dev workspace for ${repoName}`);
-          }
-        }
-
-        return { success: true, path: targetPath };
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        log.error(`[Quick Open] Clone failed: ${errorMessage}`);
-        return { success: false, error: errorMessage };
       }
     },
   );

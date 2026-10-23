@@ -27,10 +27,14 @@ import {
 import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { usePortalEvents } from '../../PortalEventContext';
 import { useTopicsTabs } from '../../contexts/TopicsTabsContext';
+import { useWorkspaceTabs } from '../../PortalTabsContext';
 import { topicClient } from '../../../tipc/topicClient';
 import { useBridgeBrowserOpen } from '../../../hooks/useBridgeBrowserOpen';
 import { useBridgeRequestOpen } from '../../../hooks/useBridgeRequestOpen';
-import type { RepositorySelectedPayload } from '../../../events/repositorySelected';
+import {
+  payloadFromGithub,
+  type RepositorySelectedPayload,
+} from '../../../events/repositorySelected';
 import { OnboardingWizard } from '../../../components/OnboardingWizard/OnboardingWizard';
 import {
   emitTerminalOpen,
@@ -174,6 +178,7 @@ export const IntegratedShell: React.FC = () => {
   const { events } = usePrincipalEvents();
   const { events: portalEvents } = usePortalEvents();
   const { openTopic: openTopicInTopicsView } = useTopicsTabs();
+  const { openRepoExplorer } = useWorkspaceTabs();
 
   // Live mirrors for the listeners that subscribe once on mount: they need to
   // read which surface / overlay is up without re-subscribing (and risking a
@@ -332,6 +337,19 @@ export const IntegratedShell: React.FC = () => {
       unsubscribe();
     };
   }, []);
+
+  // GitHub Quick Open results always browse remotely, independent of the
+  // destination preference for local repositories.
+  useEffect(() => {
+    return WindowService.onOpenRepositoryExplorer((payload) => {
+      if (!payload?.owner || !payload.name) return;
+      setOverlay(null);
+      if (!surfaceRef.current) {
+        setSurface('projects');
+      }
+      openRepoExplorer(payloadFromGithub(payload));
+    });
+  }, [openRepoExplorer]);
 
   // Quick Open (Command+O) with quickOpenTarget === 'terminal': main sends
   // OPEN_TERMINAL_TAB after focusing the principal window. Ensure a workspace

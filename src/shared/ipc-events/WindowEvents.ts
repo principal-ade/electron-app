@@ -22,6 +22,8 @@ export enum WindowEvent {
    * Used by Quick Open when `quickOpenTarget === 'terminal'`.
    */
   OPEN_TERMINAL_TAB = 'window:open-terminal-tab',
+  // Browse a remote GitHub repository without cloning it.
+  OPEN_REPOSITORY_EXPLORER = 'window:open-repository-explorer',
 
   // Cross-window tab transfer: sender invokes with tab data + target window
   // path; main pushes a TAB_RECEIVED event to the target window's webContents.

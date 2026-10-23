@@ -28,6 +28,13 @@ export interface OpenTerminalTabPayload {
   label?: string;
 }
 
+export interface OpenRepositoryExplorerPayload {
+  owner: string;
+  name: string;
+  description?: string;
+  stars?: number;
+}
+
 export interface TabTransferData {
   tabId: string;
   sessionId?: string;
@@ -58,6 +65,9 @@ export interface WindowAPI {
   onNavigateToUpdates(callback: () => void): () => void;
   onOpenTerminalTab(
     callback: (payload: OpenTerminalTabPayload) => void,
+  ): () => void;
+  onOpenRepositoryExplorer(
+    callback: (payload: OpenRepositoryExplorerPayload) => void,
   ): () => void;
 
   sendTabToWindow(data: TabTransferData): Promise<void>;
