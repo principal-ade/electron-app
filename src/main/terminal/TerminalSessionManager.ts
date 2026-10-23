@@ -74,6 +74,7 @@ import type {
   GetScrollbackMessage,
 } from '../../terminal-worker/types';
 import type { ProgramStatusRecord } from '../../shared/terminal/programStatus';
+import { isTerminalCwd } from '../../shared/terminal/cwd';
 
 /**
  * Minimal interface for WebSocket bridge to avoid circular dependency
@@ -382,6 +383,24 @@ export class TerminalSessionManager {
           clearTimeout(pending.timeout);
           this.pendingScrollbackRequests.delete(requestId);
           pending.resolve(buffer);
+        }
+        break;
+      }
+
+      case 'CWD_CHANGED': {
+        const session = this.sessions.get(msg.sessionId);
+        if (!session || !isTerminalCwd(msg.cwd, process.platform) ||
+            session.directory === msg.cwd) break;
+
+        // Update live metadata, not session identity, ownership, or repo watches.
+        session.directory = msg.cwd;
+        for (const win of BrowserWindow.getAllWindows()) {
+          if (!win.isDestroyed()) {
+            win.webContents.send(TerminalAPIEvents.CWD_CHANGED, {
+              sessionId: msg.sessionId,
+              cwd: msg.cwd,
+            });
+          }
         }
         break;
       }

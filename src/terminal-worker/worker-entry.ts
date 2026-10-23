@@ -9,6 +9,8 @@
  * Daemon mode is disabled by default. Set USE_PTY_DAEMON=true to enable.
  */
 
+import { hostname } from 'node:os';
+
 import type {
   MainToWorkerMessage,
   WorkerToMainMessage,
@@ -41,9 +43,11 @@ import {
   PROGRAM_STATUS_FEATURE_DETECTION_REPLY,
   parseProgramStatusPayload,
 } from '../shared/terminal/programStatus';
+import { parseTerminalCwd } from '../shared/terminal/cwd';
 
 // Feature flag for daemon mode (disabled by default due to production issues)
 const USE_DAEMON_MODE = process.env.USE_PTY_DAEMON === 'true';
+const LOCAL_HOSTNAME = hostname();
 
 // Type guards inlined to avoid webpack module resolution issues
 function isMainToWorkerMessage(msg: unknown): msg is MainToWorkerMessage {
@@ -281,7 +285,7 @@ function replyToProgramStatusQuery(sessionId: string): void {
 }
 
 /**
- * Scan PTY output for OSC 7501 reports (and OSC 133 `A` prompts). Does NOT
+ * Scan PTY output for OSC 7 cwd reports, OSC 7501, and OSC 133 prompts. Does NOT
  * strip anything from the stream — renderers ignore unknown OSC.
  */
 function handleProgramStatusOutput(sessionId: string, data: string): void {
@@ -290,7 +294,19 @@ function handleProgramStatusOutput(sessionId: string, data: string): void {
 
   let changed = false;
   for (const seq of session.programStatusScanner.push(data)) {
-    if (seq.code === '7501') {
+    if (seq.code === '7') {
+      const cwd = parseTerminalCwd(seq.payload, LOCAL_HOSTNAME, process.platform);
+      if (cwd !== null && cwd !== session.directory) {
+        session.directory = cwd;
+        sendToMain({
+          type: 'CWD_CHANGED',
+          id: `cwd-changed-${sessionId}`,
+          timestamp: Date.now(),
+          sessionId,
+          cwd,
+        });
+      }
+    } else if (seq.code === '7501') {
       const parsed = parseProgramStatusPayload(seq.payload);
       if (parsed === 'query') {
         replyToProgramStatusQuery(sessionId);

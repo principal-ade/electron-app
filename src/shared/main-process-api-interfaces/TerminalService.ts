@@ -27,6 +27,7 @@ export enum TerminalAPIEvents {
   REQUEST_DATA_PORT = 'terminal:requestDataPort', // Request a MessagePort for terminal data
   SESSIONS_RESTORED = 'terminal:sessionsRestored', // Sessions restored from daemon after app restart
   PROGRAM_STATUS = 'terminal:program-status', // OSC 7501 program-status records changed
+  CWD_CHANGED = 'terminal:cwd-change',
 }
 
 export interface TerminalInfo {

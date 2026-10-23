@@ -23,6 +23,7 @@ import type {
  * Extended terminal actions with command support
  */
 interface TerminalPanelActions extends BaseTerminalPanelActions {
+  onTerminalCwdChange?: typeof onCwdChange;
   createTerminalSession: (options?: {
     cwd?: string;
     context?: string;
@@ -46,6 +47,7 @@ import {
   terminalClient,
   onActivitySync,
   onProgramStatus,
+  onCwdChange,
   type TerminalActivityState,
   type UpdateActivityInput,
   type ProgramStatusRecord,
@@ -211,6 +213,14 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => onCwdChange(({ sessionId, cwd }) => {
+    setTerminalSessions((previous) => previous.map((session) =>
+      session.id === sessionId && session.directory !== cwd
+        ? { ...session, directory: cwd }
+        : session,
+    ));
+  }), []);
 
   // Listen for OSC 7501 program-status broadcasts from the main process
   useEffect(() => {
@@ -435,6 +445,8 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       refreshTerminal: async (sessionId: string) => {
         return TerminalService.refresh(sessionId);
       },
+
+      onTerminalCwdChange: onCwdChange,
 
       listTerminalSessions: async (): Promise<TerminalSessionInfo[]> => {
         const sessions = await TerminalService.list();

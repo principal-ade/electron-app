@@ -53,9 +53,11 @@ import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
 import { minimatch } from 'minimatch';
+import { onCwdChange } from '../tipc/terminalClient';
 
 // Extend PanelActions with terminal and workspace-specific actions
 interface ExtendedPanelActions extends PanelActions {
+  onTerminalCwdChange?: typeof onCwdChange;
   // Terminal actions (all required to match TerminalPanelActions)
   createTerminalSession: (options?: {
     cwd?: string;
@@ -1369,6 +1371,8 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
           return TerminalService.onDataForSession(sessionId, callback);
         },
+
+        onTerminalCwdChange: onCwdChange,
 
         // List terminal sessions (used by TabbedTerminalPanel for restoration)
         listTerminalSessions: async () => {

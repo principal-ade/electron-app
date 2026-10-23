@@ -288,6 +288,18 @@ export const onProgramStatus = (
   );
 };
 
+/** Observe cwd metadata without acquiring terminal ownership or a data port. */
+export const onCwdChange = (
+  callback: (data: { sessionId: string; cwd: string }) => void,
+): (() => void) => {
+  return window.electron.ipcRenderer.on('terminal:cwd-change', (...args: unknown[]) => {
+    const data = args[0] as { sessionId?: unknown; cwd?: unknown } | undefined;
+    if (data && typeof data.sessionId === 'string' && typeof data.cwd === 'string') {
+      callback({ sessionId: data.sessionId, cwd: data.cwd });
+    }
+  });
+};
+
 /**
  * Subscribe to terminal sessions changed broadcasts.
  * This is called when terminal sessions are created or destroyed.

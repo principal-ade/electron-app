@@ -170,6 +170,12 @@ export interface ProgramStatusMessage extends BaseMessage {
   records: ProgramStatusRecord[];
 }
 
+export interface CwdChangedMessage extends BaseMessage {
+  type: 'CWD_CHANGED';
+  sessionId: string;
+  cwd: string;
+}
+
 /**
  * Session info from daemon (matches protocol.ts SessionInfo)
  */
@@ -193,7 +199,8 @@ export type WorkerToMainMessage =
   | DaemonDisconnectedMessage
   | DaemonSessionsMessage
   | ScrollbackResponseMessage
-  | ProgramStatusMessage;
+  | ProgramStatusMessage
+  | CwdChangedMessage;
 
 // =============================================================================
 // Port Messages (sent via MessagePort between worker and renderer)
