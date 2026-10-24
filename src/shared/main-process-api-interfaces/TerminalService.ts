@@ -37,6 +37,9 @@ export interface TerminalInfo {
   agentSessionId?: string;
   createdAt: number;
   lastActivity: number;
+  /** Last known PTY grid size — the width the buffered output was produced at. */
+  cols?: number;
+  rows?: number;
   status: 'active' | 'disconnected';
   ownedByWindowId?: number; // NEW: Which window has active ownership
   ownershipClaimedAt?: number; // NEW: When ownership was claimed
@@ -76,6 +79,12 @@ export interface PortReadyData {
 
 export interface RequestDataPortResult {
   success: boolean;
+  /**
+   * True when a fresh MessageChannel was created for this window, false when an
+   * existing one was reused. A reuse after a renderer reload means the channel
+   * was not invalidated and the caller will never receive data.
+   */
+  created?: boolean;
   reason?: string;
 }
 

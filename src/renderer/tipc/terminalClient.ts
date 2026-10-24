@@ -7,6 +7,7 @@
 
 import { createClient } from '@egoist/tipc/renderer';
 import { getTracer } from '../telemetry';
+import { traceparentFromSpan } from '../../shared/telemetry/traceparent';
 import type {
   CreateTerminalSessionInput,
   DestroyTerminalSessionInput,
@@ -130,26 +131,38 @@ function getTerminalClient(): TerminalClient {
 async function createTerminalSessionWithTelemetry(
   input: CreateTerminalSessionInput,
 ): Promise<string> {
+  // The span is passed down explicitly: TIPC has no context propagation, and
+  // this runtime has no OpenTelemetry context manager.
   const span = tracer.startSpan('terminal.session.request');
+  console.info(
+    '[TerminalTelemetry] request span',
+    span.spanContext().traceId,
+    'recording=',
+    span.isRecording(),
+  );
+  return (async () => {
+    try {
+      // Event: Renderer requested terminal session creation
+      span.addEvent('terminal.session.create_requested', {
+        cwd: input.cwd || '',
+        context: input.context || '',
+      });
 
-  try {
-    // Event: Renderer requested terminal session creation
-    span.addEvent('terminal.session.create_requested', {
-      cwd: input.cwd || '',
-      context: input.context || '',
-    });
+      const client = getTerminalClient();
+      const sessionId = await client.createTerminalSession({
+        ...input,
+        traceparent: traceparentFromSpan(span),
+      });
 
-    const client = getTerminalClient();
-    const sessionId = await client.createTerminalSession(input);
-
-    span.setAttribute('session.id', sessionId);
-    return sessionId;
-  } catch (error) {
-    span.recordException(error instanceof Error ? error : new Error(String(error)));
-    throw error;
-  } finally {
-    span.end();
-  }
+      span.setAttribute('session.id', sessionId);
+      return sessionId;
+    } catch (error) {
+      span.recordException(error instanceof Error ? error : new Error(String(error)));
+      throw error;
+    } finally {
+      span.end();
+    }
+  })();
 }
 
 /**
@@ -214,6 +227,19 @@ export const onOwnershipLost = (
   callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
 ) => {
   return window.electron.onOwnershipLost(callback);
+};
+
+/**
+ * Subscribe to a raw terminal event from main. The preload strips the IPC
+ * event, so the callback receives only the payload.
+ */
+export const onTerminalEvent = <T>(
+  channel: string,
+  callback: (payload: T) => void,
+): (() => void) => {
+  return window.electron.ipcRenderer.on(channel, (...args: unknown[]) => {
+    callback(args[0] as T);
+  });
 };
 
 /**

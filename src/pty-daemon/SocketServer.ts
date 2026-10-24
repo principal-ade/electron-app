@@ -18,6 +18,7 @@ import {
 } from '../shared/pty-daemon/protocol';
 import { DaemonSessionManager } from './DaemonSessionManager';
 import { SOCKET_PATH, DAEMON_DIR } from '../shared/pty-daemon/constants';
+import { contextFromTraceparent } from '../shared/telemetry/traceparent';
 import { Logger } from './Logger';
 import {
   addServerEvent,
@@ -269,9 +270,14 @@ export class SocketServer extends EventEmitter {
     this.logger.debug(`Received from client ${clientId}:`, msg.type);
 
     switch (msg.type) {
-      case 'create':
-        this.sessionManager.createSession(msg);
+      case 'create': {
+        // Re-attach the caller's trace context so the spawn spans land in the
+        // trace that started in the renderer, not in a fresh one. Passed
+        // explicitly: there is no context manager in this process.
+        const parent = contextFromTraceparent(msg.traceparent);
+        this.sessionManager.createSession(msg, parent ?? undefined);
         break;
+      }
 
       case 'write':
         this.sessionManager.write(msg.id, msg.data);

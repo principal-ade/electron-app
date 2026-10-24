@@ -49,6 +49,19 @@ import { parseTerminalCwd } from '../shared/terminal/cwd';
 const USE_DAEMON_MODE = process.env.USE_PTY_DAEMON === 'true';
 const LOCAL_HOSTNAME = hostname();
 
+/**
+ * How long to wait for the daemon to confirm a `create` before failing the
+ * session request. Mirrors the main process's own creation timeout.
+ */
+const DAEMON_CREATE_TIMEOUT_MS = 10_000;
+
+/**
+ * Gap between the two halves of a repaint nudge. Long enough that the child
+ * sees two distinct SIGWINCHes instead of one coalesced signal that carries the
+ * unchanged final size.
+ */
+const REPAINT_NUDGE_RESTORE_MS = 60;
+
 // Type guards inlined to avoid webpack module resolution issues
 function isMainToWorkerMessage(msg: unknown): msg is MainToWorkerMessage {
   return (
@@ -435,6 +448,7 @@ async function connectToDaemon(_socketPath: string): Promise<void> {
           id: info.id,
           pty: null,
           directory: info.cwd,
+          context: info.context,
           createdAt: new Date(info.createdAt).getTime(),
           lastActivity: new Date(info.lastActivity).getTime(),
           scrollback: [], // Not used in daemon mode (daemon handles scrollback)
@@ -477,9 +491,18 @@ async function createSession(
   env: Record<string, string>,
   context?: string,
   command?: string,
+  traceparent?: string,
 ): Promise<void> {
   if (USE_DAEMON_MODE) {
-    await createSessionDaemon(sessionId, directory, shell, env, context, command);
+    await createSessionDaemon(
+      sessionId,
+      directory,
+      shell,
+      env,
+      context,
+      command,
+      traceparent,
+    );
   } else {
     createSessionLegacy(sessionId, directory, shell, env, context, command);
   }
@@ -614,6 +637,7 @@ async function createSessionDaemon(
   env: Record<string, string>,
   context?: string,
   command?: string,
+  traceparent?: string,
 ): Promise<void> {
   if (!daemonBridge?.connected) {
     const errorMsg: SessionCreatedMessage = {
@@ -655,9 +679,34 @@ async function createSessionDaemon(
       cwd: directory,
       shell,
       env,
+      context,
+      // Forwarded unchanged: the daemon's spawn spans join the trace that
+      // started in the renderer, without the worker inventing a span of its own.
+      traceparent,
     });
 
-    await creationPromise;
+    // If the daemon accepts `create` but never answers (hung spawn, dead
+    // socket), fail the request rather than awaiting forever.
+    let createTimer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        creationPromise,
+        new Promise<never>((_resolve, reject) => {
+          createTimer = setTimeout(() => {
+            pendingCreations.delete(sessionId);
+            // The daemon may have spawned a PTY that never reported back.
+            daemonBridge?.send({ type: 'destroy', id: sessionId });
+            reject(
+              new Error(
+                `Timed out after ${DAEMON_CREATE_TIMEOUT_MS}ms waiting for the PTY daemon to create session ${sessionId}`,
+              ),
+            );
+          }, DAEMON_CREATE_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (createTimer) clearTimeout(createTimer);
+    }
 
     const successMsg: SessionCreatedMessage = {
       type: 'SESSION_CREATED',
@@ -676,15 +725,11 @@ async function createSessionDaemon(
           data: `${command}\r`,
         });
       }, 500);
-    } else {
-      setTimeout(() => {
-        daemonBridge?.send({
-          type: 'write',
-          id: sessionId,
-          data: '\r',
-        });
-      }, 200);
     }
+    // No synthetic Enter for the no-command case. Pressing Return at an empty
+    // prompt makes the shell redraw it, which is the duplicate-prompt bug the
+    // legacy path already dropped (see createSessionLegacy). zsh prints its own
+    // prompt; we do not need to nudge it.
   } catch (error) {
     sessions.delete(sessionId);
     sessionPorts.delete(sessionId);
@@ -764,16 +809,33 @@ function resizeSession(
   const session = sessions.get(sessionId);
   if (session) {
     if (USE_DAEMON_MODE && daemonBridge?.connected) {
-      daemonBridge.send({
-        type: 'resize',
-        id: sessionId,
-        cols,
-        rows,
-      });
+      if (force) {
+        // Repaint nudge: widen by one column, then restore. The two resizes
+        // MUST be spaced out — sent in the same tick the child receives a
+        // single coalesced SIGWINCH carrying the *restored* size, concludes
+        // nothing changed, and never repaints.
+        console.info(
+          `[TerminalWorker] Repaint nudge ${sessionId}: ${cols + 1}x${rows} then ${cols}x${rows}`,
+        );
+        daemonBridge.send({ type: 'resize', id: sessionId, cols: cols + 1, rows });
+        setTimeout(() => {
+          if (daemonBridge?.connected) {
+            daemonBridge.send({ type: 'resize', id: sessionId, cols, rows });
+          }
+        }, REPAINT_NUDGE_RESTORE_MS);
+      } else {
+        daemonBridge.send({ type: 'resize', id: sessionId, cols, rows });
+      }
     } else if (session.pty) {
       if (force) {
         session.pty.resize(cols + 1, rows);
-        session.pty.resize(cols, rows);
+        setTimeout(() => {
+          try {
+            session.pty?.resize(cols, rows);
+          } catch {
+            // PTY may have exited between the two halves of the nudge.
+          }
+        }, REPAINT_NUDGE_RESTORE_MS);
       } else {
         session.pty.resize(cols, rows);
       }
@@ -833,42 +895,26 @@ function registerPort(
 
   if (isOwner) {
     session.ownerWindowId = windowId;
-    console.info(`[TerminalWorker] isOwner=true, checking scrollback...`);
 
-    if (USE_DAEMON_MODE && daemonBridge?.connected) {
-      // Daemon mode: request scrollback from daemon
-      daemonBridge.send({
-        type: 'attach',
-        id: sessionId,
-      });
-
-      const scrollbackHandler = (scrollbackSessionId: string, data: string) => {
-        if (scrollbackSessionId === sessionId && data) {
-          sendToRenderer(sessionId, data);
-        }
-      };
-      daemonBridge.once('scrollback', scrollbackHandler);
-    } else if (session.scrollback && session.scrollback.length > 0) {
-      // Legacy mode: replay stored scrollback to the renderer
-      const scrollbackData = session.scrollback.join('');
-      console.info(
-        `[TerminalWorker] Replaying scrollback for session ${sessionId}: ${session.scrollback.length} chunks, ${scrollbackData.length} bytes`,
-      );
-
-      if (scrollbackData) {
-        // Small delay to ensure port is ready to receive
-        setTimeout(() => {
-          console.info(`[TerminalWorker] Sending scrollback to renderer for session ${sessionId}`);
-          sendToRenderer(sessionId, scrollbackData);
-        }, 50);
-      }
-    } else {
-      console.info(
-        `[TerminalWorker] No scrollback to replay for session ${sessionId}: scrollback=${session.scrollback?.length ?? 0} chunks`,
-      );
-    }
+    // No scrollback replay on (re)attach.
+    //
+    // Replaying a recording re-executes its side effects: the buffered bytes
+    // contain the application's device/colour queries (OSC 10/11, CSI c, kitty
+    // keyboard), and a fresh terminal *answers* them — straight into the PTY,
+    // where the app receives them as keystrokes. The visible result was a
+    // prompt full of `11;rgb:…0u62;22c` and duplicated TUI frames.
+    //
+    // The renderer adopts the PTY's grid and nags it with a forced resize, so
+    // the application repaints itself at the right size. That is the same
+    // "reanchor" behaviour a multiplexer uses when it cannot resume a byte
+    // stream: send no content, force a repaint.
+    //
+    // History on a cold start belongs to a serialized screen snapshot, not to
+    // raw bytes — a separate feature.
+    console.info(
+      `[TerminalWorker] Port registered for owner ${windowId}; not replaying scrollback (repaint via SIGWINCH)`,
+    );
   }
-
   console.info(
     `[TerminalWorker] Registered port for session ${sessionId} -> window ${windowId} (owner: ${isOwner})`,
   );
@@ -1000,6 +1046,7 @@ function handleMessage(rawMessage: unknown): void {
       message.env,
       message.context,
       message.command,
+      message.traceparent,
     );
   } else if (isDestroySessionMessage(message)) {
     destroySession(message.sessionId);

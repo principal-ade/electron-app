@@ -18,6 +18,10 @@ export async function initializeTerminalSettings(): Promise<void> {
   if (!daemonModeInitialized) {
     await initializeDaemonModeSetting();
     daemonModeInitialized = true;
+    // Spawn the backend now that the daemon flag is known: the worker's
+    // connection to the daemon is what restores surviving sessions, and a
+    // purely lazy spawn would leave them invisible until the first terminal.
+    void getSessionManagerInstance().warmUp();
   }
 }
 

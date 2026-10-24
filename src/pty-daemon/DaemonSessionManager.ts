@@ -7,6 +7,7 @@
 
 import { EventEmitter } from 'events';
 import type { IPty } from 'node-pty';
+import type { Context } from '@opentelemetry/api';
 import { ScrollbackBuffer } from './ScrollbackBuffer';
 import {
   SessionInfo,
@@ -41,6 +42,7 @@ interface PtySession {
   id: string;
   pty: IPty;
   cwd: string;
+  context?: string;
   cols: number;
   rows: number;
   createdAt: Date;
@@ -64,8 +66,8 @@ export class DaemonSessionManager extends EventEmitter {
   /**
    * Create a new PTY session.
    */
-  createSession(msg: CreateSessionMessage): void {
-    const { id, cwd, shell, env, cols = DEFAULT_COLS, rows = DEFAULT_ROWS } = msg;
+  createSession(msg: CreateSessionMessage, parentContext?: Context): void {
+    const { id, cwd, shell, env, cols = DEFAULT_COLS, rows = DEFAULT_ROWS, context } = msg;
 
     // Check if session already exists
     if (this.sessions.has(id)) {
@@ -98,6 +100,7 @@ export class DaemonSessionManager extends EventEmitter {
         cols,
         rows,
         Object.keys(ptyEnv),
+        parentContext,
       );
 
       // Spawn PTY process
@@ -110,12 +113,13 @@ export class DaemonSessionManager extends EventEmitter {
       });
 
       // Log successful spawn
-      addPtySpawnedEvent(id, ptyProcess.pid);
+      addPtySpawnedEvent(id, ptyProcess.pid, parentContext);
 
       const session: PtySession = {
         id,
         pty: ptyProcess,
         cwd,
+        context,
         cols,
         rows,
         createdAt: new Date(),
@@ -189,7 +193,7 @@ export class DaemonSessionManager extends EventEmitter {
       }
 
       // Add detailed spawn failure telemetry
-      addPtySpawnFailedEvent(id, errorMessage, shellPath, cwd);
+      addPtySpawnFailedEvent(id, errorMessage, shellPath, cwd, parentContext);
 
       // Add error telemetry event
       addErrorEvent(
@@ -280,6 +284,7 @@ export class DaemonSessionManager extends EventEmitter {
       sessions.push({
         id,
         cwd: session.cwd,
+        context: session.context,
         pid: session.pty.pid,
         createdAt: session.createdAt.toISOString(),
         lastActivity: session.lastActivity.toISOString(),

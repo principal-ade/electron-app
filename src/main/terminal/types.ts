@@ -32,6 +32,13 @@ export interface TerminalSession {
   context?: string; // 'principal' | 'dashboard' | 'agent' | etc
   createdAt: number;
   lastActivity: number;
+  /**
+   * Last known PTY grid size. Authoritative for reconnecting a renderer: the
+   * replayed scrollback was produced at exactly this width, so a terminal
+   * rebuilt at these dimensions lays history out correctly.
+   */
+  cols?: number;
+  rows?: number;
   // Repository tracking for WebSocket room organization
   repoPath?: string;
   repoId?: string; // Format: "owner/repo"

@@ -538,6 +538,52 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
     ],
   },
   {
+    name: 'terminals',
+    description:
+      'Open, list, and close real PTY terminal sessions. Uses the renderer\u2019s own session-creation path, so reuse, ownership, and telemetry match a terminal opened in the UI.',
+    routes: [
+      {
+        method: 'GET',
+        path: '/api/terminals',
+        summary: 'List live terminal sessions.',
+        response: '{ success: true, sessions: TerminalSession[] }',
+        notes: [
+          'Entries include id, cwd, context, createdAt, and lastActivity. Sessions include ones reattached from the PTY daemon after an app restart.',
+        ],
+      },
+      {
+        method: 'POST',
+        path: '/api/terminals',
+        summary:
+          'Open a terminal session at a repository, or reattach to the one this context already owns.',
+        body: {
+          cwd: 'string (required): absolute path inside a registered repository.',
+          context:
+            'string (optional): tab identity. Re-posting the same context returns the existing session with reused: true instead of spawning a second shell.',
+          command:
+            'string (optional): command to run in the new session. A command request always creates a fresh session.',
+        },
+        response:
+          '{ success: true, sessionId, reused: boolean, windowId: number }',
+        errors: {
+          '400':
+            'cwd missing, not absolute, missing on disk, outside a registered repository, or session creation failed.',
+          '409': 'No live application window to own the terminal.',
+        },
+        notes: [
+          'Served by the same code path as the renderer, so it emits terminal.session.create with session.origin = http.',
+        ],
+      },
+      {
+        method: 'DELETE',
+        path: '/api/terminals/:id',
+        summary: 'Close a terminal session and kill its PTY.',
+        response: '{ success: true, sessionId }',
+        errors: { '404': 'Unknown session id.' },
+      },
+    ],
+  },
+  {
     name: 'requests',
     description:
       'Prepare editable HTTP request tabs for explicit user sending.',

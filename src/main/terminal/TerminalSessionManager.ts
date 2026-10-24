@@ -29,6 +29,37 @@ const tracer = getTracer('principal-ade-main');
 let cachedDaemonModeEnabled: boolean | null = null;
 
 /**
+ * How long to wait for the terminal backend (utility worker, and through it the
+ * PTY daemon) to confirm a session was created before failing the request.
+ */
+const SESSION_CREATE_TIMEOUT_MS = 15_000;
+
+/**
+ * Resolved once the daemon-mode preference has been read (or the wait times
+ * out). `TerminalSessionManager` spawns its utility worker during module
+ * initialization, which can happen before the preference store is available;
+ * the worker needs the setting at spawn time, so spawning waits on this.
+ */
+let markDaemonModeSettingReady: (() => void) | null = null;
+const daemonModeSettingReady = new Promise<void>((resolve) => {
+  markDaemonModeSettingReady = resolve;
+});
+
+/** Don't block terminal startup forever if preferences never load. */
+const DAEMON_MODE_SETTING_WAIT_MS = 15_000;
+
+async function awaitDaemonModeSetting(): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  await Promise.race([
+    daemonModeSettingReady,
+    new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, DAEMON_MODE_SETTING_WAIT_MS);
+    }),
+  ]);
+  if (timer) clearTimeout(timer);
+}
+
+/**
  * Initialize daemon mode setting from user preferences.
  * Must be called during app initialization before terminals are created.
  */
@@ -36,12 +67,16 @@ export async function initializeDaemonModeSetting(): Promise<void> {
   try {
     const prefsHandler = UserPreferencesHandler.getInstance();
     const prefs = await prefsHandler.getUserPreferences();
-    // Default to false (disabled) - daemon has production issues
+    // Default to false (disabled) - daemon mode is opt-in until it has soaked.
     cachedDaemonModeEnabled = prefs.usePtyDaemon === true;
     console.log(`[Terminal] Daemon mode setting: ${cachedDaemonModeEnabled ? 'ENABLED' : 'DISABLED'}`);
   } catch (error) {
     console.warn('[Terminal] Failed to load daemon mode preference, defaulting to disabled:', error);
     cachedDaemonModeEnabled = false;
+  } finally {
+    // Release any worker spawn waiting on this setting.
+    markDaemonModeSettingReady?.();
+    markDaemonModeSettingReady = null;
   }
 }
 
@@ -83,6 +118,13 @@ import { isTerminalCwd } from '../../shared/terminal/cwd';
 interface TerminalWebSocketBridge {
   onSessionCreated(sessionId: string): Promise<void>;
   onSessionDestroyed(sessionId: string): Promise<void>;
+}
+
+export interface PortCreationResult {
+  success: boolean;
+  /** True when a fresh MessageChannel was created; false when an existing one was reused. */
+  created: boolean;
+  reason?: string;
 }
 
 export class TerminalSessionManager {
@@ -141,7 +183,23 @@ export class TerminalSessionManager {
   private daemonConnectedResolve: (() => void) | null = null;
 
   constructor() {
-    this.initializeWorker();
+    // The worker is spawned lazily on first use (see ensureWorkerReady). Doing
+    // it here would bake USE_PTY_DAEMON into the worker's environment before the
+    // preference store has been read, pinning the session to legacy mode while
+    // the manager believes daemon mode is on — every terminal then fails with
+    // "Terminal backend not available (mode: daemon)".
+  }
+
+  /**
+   * Start the terminal backend once settings are known.
+   *
+   * The worker is normally spawned lazily, but daemon-owned sessions can only
+   * be restored by connecting to the daemon — so when daemon mode is on, the
+   * connection has to happen at startup or surviving terminals never come back.
+   * Safe to call in legacy mode too: it just spawns the worker early.
+   */
+  async warmUp(): Promise<void> {
+    await this.ensureWorkerReady();
   }
 
   /**
@@ -210,6 +268,12 @@ export class TerminalSessionManager {
     if (!app.isReady()) {
       await app.whenReady();
     }
+
+    // The worker's USE_PTY_DAEMON env var is baked in at spawn, so spawning
+    // before the preference has been read would pin the worker to legacy mode
+    // for the whole session — and main would then wait forever for a daemon
+    // connection that can never arrive.
+    await awaitDaemonModeSetting();
 
     let workerPath: string;
 
@@ -448,6 +512,11 @@ export class TerminalSessionManager {
       this.sendToWorker(connectMsg);
     } catch (error) {
       console.error('[Terminal] Failed to initialize daemon connection:', error);
+      // Settle anything awaiting the connection (ensureDaemonReady) and allow a
+      // later attempt, instead of leaving every session request to time out.
+      this.daemonConnectedPromise = null;
+      this.daemonConnectedResolve?.();
+      this.daemonConnectedResolve = null;
     }
   }
 
@@ -474,9 +543,11 @@ export class TerminalSessionManager {
         id: info.id,
         pty: null as unknown as ReturnType<typeof import('node-pty').spawn>,
         directory: info.cwd,
-        context: undefined,
+        context: info.context,
         createdAt: new Date(info.createdAt).getTime(),
         lastActivity: new Date(info.lastActivity).getTime(),
+        cols: info.cols,
+        rows: info.rows,
         repoPath: undefined, // Will be detected below
         repoId: undefined,
         owner: null,
@@ -542,7 +613,8 @@ export class TerminalSessionManager {
     if (this.workerReadyPromise) {
       // Wait for worker with timeout
       const timeoutPromise = new Promise<void>((_, reject) => {
-        setTimeout(() => reject(new Error('Worker ready timeout')), 10000);
+        // Must outlast the daemon-mode setting gate inside initializeWorker.
+        setTimeout(() => reject(new Error('Worker ready timeout')), 30000);
       });
 
       try {
@@ -604,11 +676,36 @@ export class TerminalSessionManager {
 
     this.rendererWindows.add(window);
 
+    // A renderer reload tears down the preload and every MessagePort with it,
+    // but the BrowserWindow (and its id) survives — so the ports main and the
+    // worker still hold are dead. Drop them before the reloaded renderer asks
+    // for one, otherwise createPortForSession finds the stale entry, reports
+    // success without building a channel, and the terminal sits on a blinking
+    // cursor forever. In-place navigations (HMR, SPA routing) keep the same
+    // document and their ports, so they are ignored.
+    const handleMainFrameNavigation = (
+      _event: Electron.Event,
+      _url: string,
+      isInPlace: boolean,
+      isMainFrame: boolean,
+    ) => {
+      if (!isMainFrame || isInPlace) return;
+      console.log(
+        `[Terminal] Renderer navigating; dropping terminal ports for window ${window.id}`,
+      );
+      this.cleanupWindowPorts(window.id);
+    };
+    const webContents = window.webContents;
+    webContents.on('did-start-navigation', handleMainFrameNavigation);
+
     const cleanup = () => {
       this.rendererWindows.delete(window);
       this.cleanupWindowPorts(window.id);
       ownershipManager.cleanupWindow(window.id);
       window.removeListener('closed', cleanup);
+      if (!webContents.isDestroyed()) {
+        webContents.removeListener('did-start-navigation', handleMainFrameNavigation);
+      }
     };
 
     window.on('closed', cleanup);
@@ -767,6 +864,7 @@ export class TerminalSessionManager {
     context?: string,
     command?: string,
     metadata?: TerminalSessionMetadata,
+    traceparent?: string,
   ): Promise<string> {
     const isReady = await this.ensureDaemonReady();
     if (!isReady) {
@@ -855,11 +953,38 @@ export class TerminalSessionManager {
       command,
       shell,
       env,
+      traceparent,
     };
     this.sendToWorker(message);
 
-    // Wait for session creation and notify bridge
-    const createdSessionId = await resultPromise;
+    // Wait for session creation and notify bridge. Spawning is normally fast,
+    // but a wedged worker (or a daemon that accepts `create` and never answers)
+    // would otherwise leave the tab spinning forever with a session stuck in
+    // `sessions`, counting against the cap. Fail the request instead.
+    let createdSessionId: string;
+    let createTimer: NodeJS.Timeout | undefined;
+    try {
+      createdSessionId = await Promise.race([
+        resultPromise,
+        new Promise<never>((_resolve, reject) => {
+          createTimer = setTimeout(() => {
+            reject(
+              new Error(
+                `Timed out after ${SESSION_CREATE_TIMEOUT_MS}ms waiting for the terminal backend to create session ${sessionId}`,
+              ),
+            );
+          }, SESSION_CREATE_TIMEOUT_MS);
+        }),
+      ]);
+    } catch (error) {
+      // Drop the half-created session so it cannot be reused or counted, and
+      // tell the worker to tear down any PTY it managed to spawn.
+      this.pendingSessionCallbacks.delete(sessionId);
+      await this.destroySession(sessionId);
+      throw error;
+    } finally {
+      if (createTimer) clearTimeout(createTimer);
+    }
 
     // Notify WebSocket bridge of new session
     if (this.wsBridge) {
@@ -1017,6 +1142,13 @@ export class TerminalSessionManager {
     rows: number,
     force: boolean = false,
   ): void {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      // Remember the size the PTY now has. A renderer reattaching later is
+      // constructed from this so the replay matches the bytes' real width.
+      session.cols = cols;
+      session.rows = rows;
+    }
     if (this.sessions.has(sessionId)) {
       const message: ResizeSessionMessage = {
         type: 'RESIZE',
@@ -1158,25 +1290,29 @@ export class TerminalSessionManager {
     sessionId: string,
     windowId: number,
     claimOwnership: boolean = false,
-  ): boolean {
+  ): PortCreationResult {
     console.log(
       `[Terminal] createPortForSession: sessionId=${sessionId}, windowId=${windowId}, claimOwnership=${claimOwnership}`,
     );
 
     if (!this.sessions.has(sessionId)) {
       console.error(`[Terminal] Session ${sessionId} not found`);
-      return false;
+      return { success: false, created: false, reason: 'Session not found' };
     }
 
     const window = BrowserWindow.fromId(windowId);
     if (!window || window.isDestroyed()) {
       console.error(`[Terminal] Window ${windowId} not found or destroyed`);
-      return false;
+      return { success: false, created: false, reason: 'Window not found or destroyed' };
     }
 
     // Check if port already exists
     const existingPorts = this.sessionPorts.get(sessionId);
     if (existingPorts?.has(windowId)) {
+      // A live port for this window: re-subscribe without rebuilding the
+      // channel. Note that a *reload* must have already invalidated it via
+      // cleanupWindowPorts — otherwise this would hand back a channel whose
+      // renderer end is gone and the caller would wait for data forever.
       console.log(
         `[Terminal] Window ${windowId} already has a port for session ${sessionId}`,
       );
@@ -1192,7 +1328,7 @@ export class TerminalSessionManager {
         };
         this.sendToWorker(ownerMsg);
       }
-      return true;
+      return { success: true, created: false };
     }
 
     try {
@@ -1232,13 +1368,17 @@ export class TerminalSessionManager {
         `[Terminal] Created MessagePort for session ${sessionId} -> window ${windowId}`,
       );
 
-      return true;
+      return { success: true, created: true };
     } catch (error) {
       console.error(
         `[Terminal] Failed to create port for session ${sessionId}:`,
         error,
       );
-      return false;
+      return {
+        success: false,
+        created: false,
+        reason: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -1246,7 +1386,7 @@ export class TerminalSessionManager {
    * @deprecated Use createPortForSession instead
    */
   createMessageChannelForSession(sessionId: string, windowId: number): boolean {
-    return this.createPortForSession(sessionId, windowId, true);
+    return this.createPortForSession(sessionId, windowId, true).success;
   }
 
   /**

@@ -1392,6 +1392,8 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             createdAt: s.createdAt,
             lastActivity: s.lastActivity,
             context: s.context,
+            cols: s.cols,
+            rows: s.rows,
           }));
         },
 

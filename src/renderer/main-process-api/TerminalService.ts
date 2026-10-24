@@ -12,6 +12,7 @@ import {
   writeToTerminalPort,
   onPortReady,
   onSessionsChanged,
+  onTerminalEvent,
 } from '../tipc/terminalClient';
 import type {
   TerminalInfo,
@@ -32,6 +33,8 @@ export class TerminalService {
       agentSessionId: s.agentSessionId,
       createdAt: s.createdAt,
       lastActivity: s.lastActivity,
+      cols: s.cols,
+      rows: s.rows,
       status: (s.status as 'active' | 'disconnected') || 'active',
       ownedByWindowId: s.ownedByWindowId,
       metadata: s.metadata,
@@ -159,6 +162,17 @@ export class TerminalService {
   }
 
   /**
+   * Subscribe to sessions restored from the PTY daemon after an app restart.
+   * Fired once per reconnect, after the daemon reports the sessions it kept
+   * alive — later than the initial session list, so callers re-list.
+   */
+  static onSessionsRestored(
+    callback: (payload: { sessions: unknown[] }) => void,
+  ): () => void {
+    return onTerminalEvent('terminal:sessionsRestored', callback);
+  }
+
+  /**
    * Subscribe to terminal sessions changed events.
    * Called when sessions are created or destroyed in any window.
    */
@@ -174,6 +188,8 @@ export class TerminalService {
         agentSessionId: s.agentSessionId,
         createdAt: s.createdAt,
         lastActivity: s.lastActivity,
+        cols: s.cols,
+        rows: s.rows,
         status: (s.status as 'active' | 'disconnected') || 'active',
         ownedByWindowId: s.ownedByWindowId,
         metadata: s.metadata,

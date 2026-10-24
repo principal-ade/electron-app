@@ -17,6 +17,17 @@ export interface CreateSessionMessage {
   env?: Record<string, string>;
   cols?: number;
   rows?: number;
+  /**
+   * Tab identity from the renderer (`<window context>:<tab context>`). Persisted
+   * with the session so a session that outlives the app can be reattached to the
+   * tab that opened it instead of spawning a second shell.
+   */
+  context?: string;
+  /**
+   * W3C trace context of the span that asked for this session, hand-propagated
+   * so the daemon's spawn spans land in the same trace as the request.
+   */
+  traceparent?: string;
 }
 
 export interface WriteMessage {
@@ -145,6 +156,8 @@ export interface SessionInfo {
   id: string;
   cwd: string;
   pid: number;
+  /** Tab identity the session was created for, when known. */
+  context?: string;
   createdAt: string; // ISO timestamp
   lastActivity: string; // ISO timestamp
   cols: number;

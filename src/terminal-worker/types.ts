@@ -21,6 +21,8 @@ export interface BaseMessage {
 
 export interface CreateSessionMessage extends BaseMessage {
   type: 'CREATE_SESSION';
+  /** W3C trace context of the main-process span that requested the session. */
+  traceparent?: string;
   sessionId: string;
   directory: string;
   context?: string;
@@ -183,6 +185,8 @@ export interface DaemonSessionInfo {
   id: string;
   cwd: string;
   pid: number;
+  /** Tab identity the session was created for, when known. */
+  context?: string;
   createdAt: string;
   lastActivity: string;
   cols: number;

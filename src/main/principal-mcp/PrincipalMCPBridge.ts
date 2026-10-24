@@ -21,6 +21,7 @@ import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { registerDependencyRoutes } from '../dependency-graph/dependencyRoutes';
 import { DependencyGraphService } from '../dependency-graph/DependencyGraphService';
 import { registerProcessRoutes } from '../processes/processRoutes';
+import { registerTerminalRoutes } from '../terminal/terminalRoutes';
 import { getProcessRegistry } from '../processes/ProcessRegistry';
 import { registerCatalogRoutes } from './catalogRoutes';
 
@@ -1046,6 +1047,11 @@ export class PrincipalMCPBridge extends EventEmitter {
     // PROCESS REGISTRY ROUTES
     // ============================================
     registerProcessRoutes(this.app, getProcessRegistry());
+
+    // ============================================
+    // TERMINAL SESSION ROUTES
+    // ============================================
+    registerTerminalRoutes(this.app);
   }
 
   public async start(): Promise<number> {

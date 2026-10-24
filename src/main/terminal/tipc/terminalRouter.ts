@@ -7,14 +7,16 @@
 
 import { tipc } from '@egoist/tipc/main';
 import { BrowserWindow } from 'electron';
-import path from 'path';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { getSessionManagerInstance } from '../sessionManagerSingleton';
 import { ownershipManager } from '../TerminalOwnershipManager';
-import { isPtyAvailable } from '../utils/ptyLoader';
 import { getTracer } from '../../telemetry';
 import { getDaemonStatus, isDaemonRunning, stopDaemon, ensureDaemonRunning } from '../daemonSpawner';
-import { AlexandriaRegistryService } from '../../stores/AlexandriaRegistryService';
+import {
+  broadcastTerminalSessionsChanged,
+  createTerminalSession,
+} from '../terminalSessionService';
+import { contextFromTraceparent } from '../../../shared/telemetry/traceparent';
 
 // Tracer for terminal telemetry (main process scope)
 const tracer = getTracer('principal-ade-main');
@@ -24,85 +26,7 @@ const sessionManager = getSessionManagerInstance();
 
 const t = tipc.create();
 
-/**
- * Broadcast terminal sessions list to all windows.
- * Called when sessions are created or destroyed, and from the
- * agent-session-events sidecar when a Claude SessionStart binds onto a tab.
- * Returns counts for telemetry.
- */
-export function broadcastTerminalSessionsChanged(): { sessionsCount: number; windowsCount: number } {
-  const sessions = Array.from(sessionManager.getAllSessions().entries()).map(
-    ([id, session]) => {
-      const owner = ownershipManager.getOwner(id);
-      const ownerWindowId =
-        owner && owner.type === 'local' ? parseInt(owner.id, 10) : undefined;
-      return {
-        id,
-        cwd: session.directory,
-        directory: session.directory,
-        context: session.context,
-        agentSessionId: session.agentSessionId,
-        createdAt: session.createdAt,
-        lastActivity: session.lastActivity,
-        status: 'active' as const,
-        ownedByWindowId: ownerWindowId,
-        metadata: session.metadata,
-      };
-    },
-  );
-
-  const allWindows = BrowserWindow.getAllWindows();
-  let windowsCount = 0;
-
-  allWindows.forEach((win) => {
-    if (!win.isDestroyed()) {
-      win.webContents.send('terminal:sessions-changed', sessions);
-      windowsCount++;
-    }
-  });
-
-  return { sessionsCount: sessions.length, windowsCount };
-}
-
-/**
- * Stamp `lastOpenedAt` for the repository rooted exactly at `cwd`, so opening
- * a terminal tab feeds the same recency ordering as opening a repo window.
- *
- * Only an exact repo-root match counts: a terminal opened in a subdirectory or
- * outside any registered repository is ignored. Paths are normalised (absolute,
- * trailing separator stripped) before the lookup.
- *
- * Fire-and-forget — the caller does not await it, and a failure never blocks
- * the terminal tab.
- */
-async function stampOpenedRepository(cwd?: string): Promise<void> {
-  if (!cwd) return;
-
-  const span = tracer.startSpan('alexandria.terminal.update_last_opened');
-
-  try {
-    const normalized = path.resolve(cwd).replace(/[/\\]+$/, '');
-    const registry = AlexandriaRegistryService.getInstance();
-    const repository = await registry.getRepositoryByPath(normalized);
-
-    if (!repository) {
-      span.setStatus({ code: SpanStatusCode.OK });
-      return;
-    }
-
-    span.setAttribute('repository_path', repository.path);
-    await registry.updateLastOpened(repository.path);
-    span.setStatus({ code: SpanStatusCode.OK });
-  } catch (error) {
-    console.warn('[Terminal] Failed to update lastOpenedAt:', error);
-    span.recordException(
-      error instanceof Error ? error : new Error(String(error)),
-    );
-    span.setStatus({ code: SpanStatusCode.ERROR });
-  } finally {
-    span.end();
-  }
-}
+export { broadcastTerminalSessionsChanged };
 
 export const terminalRouter = {
   // ============================================
@@ -110,98 +34,24 @@ export const terminalRouter = {
   // ============================================
 
   createTerminalSession: t.procedure
-    .input<{ cwd?: string; command?: string; context?: string; metadata?: import('../../../shared/tipc/terminalRouterTypes').TerminalSessionMetadata }>()
+    .input<{ cwd?: string; command?: string; context?: string; metadata?: import('../../../shared/tipc/terminalRouterTypes').TerminalSessionMetadata; traceparent?: string }>()
     .action(async ({ input, context }) => {
-      const span = tracer.startSpan('terminal.session.create');
-
-      try {
-        if (!isPtyAvailable()) {
-          span.setStatus({ code: SpanStatusCode.ERROR, message: 'PTY not available' });
-          throw new Error(
-            'Terminal functionality is not available in this build',
-          );
-        }
-
-        const window = BrowserWindow.fromWebContents(context.sender);
-        if (!window) {
-          span.setStatus({ code: SpanStatusCode.ERROR, message: 'No window found' });
-          throw new Error('No window found for terminal session');
-        }
-
-        const canCreate = sessionManager.canCreateSession();
-
-        // Event: Router handled session creation request
-        span.addEvent('terminal.session.router_handled', {
-          'window.id': window.id,
-          can_create: canCreate,
-        });
-
-        // Check session limit
-        if (!canCreate) {
-          span.setStatus({ code: SpanStatusCode.ERROR, message: 'Session limit reached' });
-          throw new Error(
-            `Maximum number of terminal sessions (${sessionManager.getMaxSessions()}) reached`,
-          );
-        }
-
-        // Create the session
-        const sessionId = await sessionManager.createSession(
-          input.cwd || process.env.HOME || '/',
-          input.context,
-          input.command,
-          input.metadata,
-        );
-
-        span.setAttribute('session.id', sessionId);
-
-        // Event: Manager action - create
-        span.addEvent('terminal.session.manager_action', {
-          action: 'create',
-          'session.id': sessionId,
-        });
-
-        // Event: Store updated
-        span.addEvent('terminal.session.store_updated', {
-          operation: 'set',
-          'session.id': sessionId,
-          'store.size': sessionManager.getAllSessions().size,
-        });
-
-        // Create MessageChannel and send port to renderer
-        sessionManager.createMessageChannelForSession(sessionId, window.id);
-
-        // Auto-claim ownership for the creating window
-        const ownershipResult = ownershipManager.claimOwnership(sessionId, window.id);
-        console.log('[Terminal] Ownership claimed:', { sessionId, windowId: window.id, result: ownershipResult });
-
-        // Verify ownership was set
-        const verifyOwner = ownershipManager.getOwner(sessionId);
-        console.log('[Terminal] Verified owner after claim:', { sessionId, owner: verifyOwner });
-
-        // Broadcast session list change to all windows
-        try {
-          const { sessionsCount, windowsCount } = broadcastTerminalSessionsChanged();
-          span.addEvent('terminal.sessions.broadcast', {
-            'sessions.count': sessionsCount,
-            'windows.count': windowsCount,
-          });
-        } catch (err) {
-          console.warn('[Terminal] Failed to broadcast session change:', err);
-        }
-
-        // Opening a terminal tab counts as opening the repo: stamp recency so
-        // it shows up first in Quick Open / local project ordering. Fire-and-
-        // forget — the tab is returned immediately.
-        void stampOpenedRepository(input.cwd);
-
-        span.setStatus({ code: SpanStatusCode.OK });
-        return sessionId;
-      } catch (error) {
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
-        throw error;
-      } finally {
-        span.end();
+      const window = BrowserWindow.fromWebContents(context.sender);
+      if (!window) {
+        throw new Error('No window found for terminal session');
       }
+
+      // Shared with the HTTP bridge: reuse rules, ownership, telemetry. The
+      // renderer's trace context rides along in the input so this span (and
+      // everything downstream) stays in the trace the user's click started.
+      const parent = contextFromTraceparent(input.traceparent);
+      const { sessionId } = await createTerminalSession(
+        input,
+        window.id,
+        'renderer',
+        parent,
+      );
+      return sessionId;
     }),
 
   destroyTerminalSession: t.procedure
@@ -275,6 +125,8 @@ export const terminalRouter = {
             agentSessionId: session.agentSessionId,
             createdAt: session.createdAt,
             lastActivity: session.lastActivity,
+            cols: session.cols,
+            rows: session.rows,
             status: 'active' as const,
             ownedByWindowId: ownerWindowId,
             metadata: session.metadata,
@@ -302,12 +154,33 @@ export const terminalRouter = {
   resizeTerminal: t.procedure
     .input<{ sessionId: string; cols: number; rows: number; force?: boolean }>()
     .action(async ({ input }) => {
-      sessionManager.resizeSession(
-        input.sessionId,
-        input.cols,
-        input.rows,
-        input.force ?? false,
-      );
+      // Spanned so a reconnect's resize sequence (or its absence) is visible
+      // next to the PTY size the daemon reports.
+      const span = tracer.startSpan('terminal.resize', {
+        attributes: {
+          'session.id': input.sessionId,
+          'terminal.cols': input.cols,
+          'terminal.rows': input.rows,
+          'resize.force': input.force ?? false,
+        },
+      });
+      try {
+        sessionManager.resizeSession(
+          input.sessionId,
+          input.cols,
+          input.rows,
+          input.force ?? false,
+        );
+        span.setStatus({ code: SpanStatusCode.OK });
+      } catch (error) {
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        throw error;
+      } finally {
+        span.end();
+      }
     }),
 
   refreshTerminal: t.procedure
@@ -481,7 +354,7 @@ export const terminalRouter = {
 
       // Create port and pass ownership status to worker
       // Worker will replay scrollback if this window is the owner (for reconnection)
-      const success = sessionManager.createPortForSession(
+      const port = sessionManager.createPortForSession(
         input.sessionId,
         window.id,
         isOwner, // Pass actual ownership status so worker can send scrollback
@@ -489,13 +362,24 @@ export const terminalRouter = {
 
       span.addEvent('terminal.port.created', {
         'session.id': input.sessionId,
-        'success': success,
+        'success': port.success,
+        // false means an existing channel was reused. After a reload that
+        // should be impossible (the ports are dropped on navigation), so this
+        // attribute is what makes a dead reconnect visible in a trace.
+        'port.created': port.created,
+        'isOwner': isOwner,
       });
-      span.setStatus({ code: success ? SpanStatusCode.OK : SpanStatusCode.ERROR });
+      span.setStatus({ code: port.success ? SpanStatusCode.OK : SpanStatusCode.ERROR });
       span.end();
 
-      console.log(`[TIPC] requestTerminalDataPort result: success=${success}`);
-      return { success, reason: success ? undefined : 'Failed to create port' };
+      console.log(
+        `[TIPC] requestTerminalDataPort result: success=${port.success} created=${port.created}`,
+      );
+      return {
+        success: port.success,
+        created: port.created,
+        reason: port.success ? undefined : (port.reason ?? 'Failed to create port'),
+      };
     }),
 
   getTerminalBuffer: t.procedure

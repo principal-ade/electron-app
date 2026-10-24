@@ -29,6 +29,11 @@ export interface CreateTerminalSessionInput {
   command?: string;
   context?: string;
   metadata?: TerminalSessionMetadata;
+  /**
+   * W3C trace context of the span that requested this session. Carried by hand
+   * because TIPC does not propagate OpenTelemetry context across processes.
+   */
+  traceparent?: string;
 }
 
 export interface DestroyTerminalSessionInput {
@@ -74,6 +79,9 @@ export interface TerminalSessionInfo {
   agentSessionId?: string;
   createdAt: number;
   lastActivity: number;
+  /** Last known PTY grid size (what the buffered output was produced at). */
+  cols?: number;
+  rows?: number;
   status?: string;
   ownedByWindowId?: number;
   metadata?: TerminalSessionMetadata;
@@ -222,7 +230,7 @@ export type TerminalRouterType = Record<
     action: (args: {
       context: ActionContext;
       input: RequestDataPortInput;
-    }) => Promise<{ success: boolean; reason?: string }>;
+    }) => Promise<{ success: boolean; created?: boolean; reason?: string }>;
   };
   getTerminalBuffer: {
     action: (args: {

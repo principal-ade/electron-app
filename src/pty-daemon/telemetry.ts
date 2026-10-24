@@ -328,6 +328,7 @@ export function addPtySpawnAttemptEvent(
   cols: number,
   rows: number,
   envKeys: string[],
+  parentContext?: Context,
 ): void {
   // Try to find spawn-helper path for debugging
   let spawnHelperPath = 'unknown';
@@ -341,7 +342,11 @@ export function addPtySpawnAttemptEvent(
   }
 
   const tracer = getTracer();
-  const span = tracer.startSpan('terminal.pty.spawn_attempt');
+  const span = tracer.startSpan(
+    'terminal.pty.spawn_attempt',
+    undefined,
+    parentContext,
+  );
   span.addEvent('terminal.pty.spawn_attempt', {
     'session.id': sessionId,
     'shell.path': shellPath,
@@ -370,9 +375,10 @@ export function addPtySpawnAttemptEvent(
 export function addPtySpawnedEvent(
   sessionId: string,
   pid: number,
+  parentContext?: Context,
 ): void {
   const tracer = getTracer();
-  const span = tracer.startSpan('terminal.pty.spawned');
+  const span = tracer.startSpan('terminal.pty.spawned', undefined, parentContext);
   span.addEvent('terminal.pty.spawned', {
     'session.id': sessionId,
     'pid': pid,
@@ -389,9 +395,14 @@ export function addPtySpawnFailedEvent(
   errorMessage: string,
   shellPath: string,
   cwd: string,
+  parentContext?: Context,
 ): void {
   const tracer = getTracer();
-  const span = tracer.startSpan('terminal.pty.spawn_failed');
+  const span = tracer.startSpan(
+    'terminal.pty.spawn_failed',
+    undefined,
+    parentContext,
+  );
   span.addEvent('terminal.pty.spawn_failed', {
     'session.id': sessionId,
     'error.message': errorMessage,

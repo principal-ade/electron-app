@@ -126,6 +126,13 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
   // Track terminal session subscriptions for cleanup
   const terminalSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
 
+  // Last grid size each terminal reported (from the panel's fit). Used to
+  // annotate reconnects with what the renderer believes its size is, so a
+  // PTY-vs-grid mismatch is visible in the trace instead of only on screen.
+  const terminalSizeRef = useRef<Map<string, { cols: number; rows: number }>>(
+    new Map(),
+  );
+
   // Forward terminal exit events and update session list
   useEffect(() => {
     let unsubExit: (() => void) | null = null;
@@ -236,11 +243,18 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     const loadTerminalSessions = async () => {
       try {
         const sessions = await TerminalService.list();
-        console.info('[TerminalProvider] Loaded terminal sessions:', sessions.map(s => ({
-          id: s.id,
-          directory: s.directory,
-          context: s.context,
-        })));
+        // Single string on purpose: Electron's console capture turns multi-arg
+        // calls into "[object Object]".
+        console.info(
+          '[TerminalProvider] Loaded terminal sessions: ' +
+            JSON.stringify(
+              sessions.map((s) => ({
+                id: s.id,
+                context: s.context,
+                size: s.cols && s.rows ? `${s.cols}x${s.rows}` : 'NONE',
+              })),
+            ),
+        );
         console.info('[TerminalProvider] Expected terminalContext:', terminalContext);
         setTerminalSessions(sessions);
       } catch (error) {
@@ -253,6 +267,23 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
 
     loadTerminalSessions();
 
+
+    // Main broadcasts the authoritative session list whenever a session is
+    // created, destroyed, or restored from the PTY daemon. Following it keeps
+    // this window's tabs correct across windows and across app restarts —
+    // without this, a session that survived a restart (or one opened in another
+    // window) only shows up after an incidental refresh.
+    const unsubscribeSessions = TerminalService.onSessionsChanged((sessions) => {
+      setTerminalSessions(sessions);
+    });
+
+    // The daemon reports its surviving sessions once it reconnects, which can
+    // land after this effect's initial list. Re-list when that happens so
+    // restored sessions become tabs instead of staying invisible.
+    const unsubscribeRestored = TerminalService.onSessionsRestored(() => {
+      void loadTerminalSessions();
+    });
+
     // Listen for external session creation events
     const handleSessionCreated = (event: Event) => {
       const customEvent = event as CustomEvent;
@@ -264,6 +295,8 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     window.addEventListener('terminal-session-created', handleSessionCreated);
 
     return () => {
+      unsubscribeSessions();
+      unsubscribeRestored();
       window.removeEventListener('terminal-session-created', handleSessionCreated);
     };
   }, [terminalContext]);
@@ -381,6 +414,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
         rows: number,
         force?: boolean,
       ) => {
+        terminalSizeRef.current.set(sessionId, { cols, rows });
         TerminalService.resize(sessionId, cols, rows, force);
       },
 
@@ -459,6 +493,8 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
           createdAt: s.createdAt || Date.now(),
           lastActivity: s.lastActivity || Date.now(),
           context: s.context,
+          cols: s.cols,
+          rows: s.rows,
         }));
       },
 
@@ -508,8 +544,55 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
             reconnectSpan.addEvent('terminal.reconnect.port_requested', {
               'session.id': sessionId,
               'port.success': portResult.success,
+              // false = an existing channel was reused. After a page reload the
+              // ports are dropped, so this should always be true; anything else
+              // means the renderer is attached to a channel that no longer
+              // exists.
+              'port.created': portResult.created ?? false,
               'port.reason': portResult.reason ?? 'none',
             });
+
+            const grid = terminalSizeRef.current.get(sessionId);
+            reconnectSpan.setAttribute(
+              'terminal.cols',
+              grid?.cols ?? -1,
+            );
+            reconnectSpan.setAttribute(
+              'terminal.rows',
+              grid?.rows ?? -1,
+            );
+            reconnectSpan.addEvent('terminal.reconnect.grid_size', {
+              'session.id': sessionId,
+              'terminal.cols': grid?.cols ?? -1,
+              'terminal.rows': grid?.rows ?? -1,
+            });
+
+            // Nudge the PTY once the grid is known. A resize to the size the
+            // PTY already has produces no SIGWINCH, so the shell never repaints
+            // and stale wrapping survives the reconnect — which is why a manual
+            // resize appeared to "fix" it. `force` sends cols+1 then cols, which
+            // guarantees the signal without clearing scrollback (unlike Ctrl+L).
+            let nudged = false;
+            const nudge = (attempt: number) => {
+              if (nudged) return;
+              const size = terminalSizeRef.current.get(sessionId);
+              if (size) {
+                nudged = true;
+                TerminalService.resize(sessionId, size.cols, size.rows, true);
+                reconnectSpan.addEvent('terminal.reconnect.grid_nudged', {
+                  'session.id': sessionId,
+                  'terminal.cols': size.cols,
+                  'terminal.rows': size.rows,
+                  'attempt': attempt,
+                });
+                return;
+              }
+              // The panel fits shortly after mount; retry until it reports.
+              if (attempt < 5) {
+                setTimeout(() => nudge(attempt + 1), 100);
+              }
+            };
+            setTimeout(() => nudge(0), 150);
 
             // Scrollback replay is handled by the worker when port is registered
             // No need for Ctrl+L refresh - it would clear the scrollback we just received
