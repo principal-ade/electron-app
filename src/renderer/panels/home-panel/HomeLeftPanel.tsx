@@ -387,8 +387,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     [events, repositories],
   );
 
-  // Open the repo profile tab for an in-progress row (mirrors InProgressRepoCard;
-  // the Projects rows open the profile rather than the guide).
+  // Right-clicking an in-progress row opens its repo profile tab.
   const openInProgressRepo = useCallback(
     (payload: RepositorySelectedPayload) => {
       events.emit({
@@ -421,7 +420,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     });
   }, []);
 
-  // Hover action on an in-progress row: open a terminal tab at the clone's path.
+  // Clicking an in-progress row opens a terminal tab at the clone's path.
   const openTerminalForEntry = useCallback(
     (entry: AlexandriaEntry, label: string) => {
       if (!entry.path) return;
@@ -679,12 +678,21 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                                       : undefined
                                   }
                                   dragText={path ? shellQuote(path) : undefined}
-                                  onClick={() => openInProgressRepo(payload)}
-                                  onOpenTerminal={
+                                  title={
+                                    path
+                                      ? 'Click to open a terminal, right-click to open the repo profile'
+                                      : 'Open the repo profile'
+                                  }
+                                  onClick={
                                     path && entry
                                       ? () => openTerminalForEntry(entry, name)
-                                      : undefined
+                                      : () => openInProgressRepo(payload)
                                   }
+                                  onContextMenu={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    openInProgressRepo(payload);
+                                  }}
                                   pinned={pinnedRepoKeys.has(key)}
                                   onTogglePin={() => toggleRepoPin(key)}
                                   tabIcons={

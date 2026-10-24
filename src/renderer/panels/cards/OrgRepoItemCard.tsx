@@ -22,6 +22,9 @@ export interface OrgRepoItemCardData {
 export interface OrgRepoItemCardProps {
   repo: OrgRepoItemCardData;
   onClick?: () => void;
+  /** Optional alternate action for right-clicking the repository row. */
+  onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
+  title?: string;
   /** Whether this project has a local clone on disk. */
   isCloned?: boolean;
   /** Whether the local clone has uncommitted changes. */
@@ -90,6 +93,8 @@ export interface OrgRepoItemCardProps {
 export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   repo,
   onClick,
+  onContextMenu,
+  title,
   isCloned = false,
   isDirty = false,
   isPrivate,
@@ -122,6 +127,8 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   return (
     <div
       onClick={onClick}
+      onContextMenu={onContextMenu}
+      title={title}
       role={onClick ? 'button' : undefined}
       // Projects can be dragged onto a terminal: cloned ones paste their path,
       // not-yet-cloned ones paste their GitHub URL.
@@ -229,46 +236,6 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
             >
               <Lock size={11} color={theme.colors.textSecondary} />
             </span>
-          )}
-          {/* Repo pin. Pinning the repo keeps its row in Home; terminals are
-              pinned this way, never individually. Revealed on hover unless
-              already pinned. */}
-          {onTogglePin && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onTogglePin();
-              }}
-              title={
-                pinned ? 'Unpin repository from Home' : 'Pin repository to Home'
-              }
-              aria-label={
-                pinned
-                  ? `Unpin ${repo.name} from Home`
-                  : `Pin ${repo.name} to Home`
-              }
-              style={{
-                flexShrink: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 20,
-                height: 20,
-                padding: 0,
-                border: 'none',
-                borderRadius: 4,
-                background: 'transparent',
-                color: pinned
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary,
-                cursor: 'pointer',
-                opacity: pinned || hovered ? 1 : 0,
-                transition: 'opacity 120ms, color 120ms',
-              }}
-            >
-              <Pin size={12} fill={pinned ? 'currentColor' : 'none'} />
-            </button>
           )}
         </div>
       </div>
@@ -427,7 +394,26 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
         </button>
       )}
 
-      {/* Sync indicator, far right (after the row actions): ↑ahead / ↓behind
+      {/* Live-watch indicator. A watched
+          clone's git status updates on push/dirty changes instead of only when
+          something re-queries it. Pulses while watching (see .animate-watchPulse
+          in index.css). */}
+      {watching && (
+        <span
+          className="animate-watchPulse"
+          title="Watching — live git status (push and dirty changes update automatically)"
+          aria-label="Watching for live changes"
+          style={{
+            flexShrink: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+          }}
+        >
+          <Eye size={13} color={theme.colors.primary} />
+        </span>
+      )}
+
+      {/* Sync indicator, after the row actions: ↑ahead / ↓behind
           vs the upstream remote. Only renders when there's something to show. */}
       {showSync && (
         <span
@@ -512,23 +498,41 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
         </span>
       )}
 
-      {/* Live-watch indicator — the right-most element in the row. A watched
-          clone's git status updates on push/dirty changes instead of only when
-          something re-queries it. Pulses while watching (see .animate-watchPulse
-          in index.css). */}
-      {watching && (
-        <span
-          className="animate-watchPulse"
-          title="Watching — live git status (push and dirty changes update automatically)"
-          aria-label="Watching for live changes"
+      {/* Repo pin. Pinning the repo keeps its row in Home; terminals are
+          pinned this way, never individually. Revealed on hover unless
+          already pinned. */}
+      {onTogglePin && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePin();
+          }}
+          title={
+            pinned ? 'Unpin repository from Home' : 'Pin repository to Home'
+          }
+          aria-label={
+            pinned ? `Unpin ${repo.name} from Home` : `Pin ${repo.name} to Home`
+          }
           style={{
             flexShrink: 0,
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'center',
+            width: 20,
+            height: 20,
+            padding: 0,
+            border: 'none',
+            borderRadius: 4,
+            background: 'transparent',
+            color: pinned ? theme.colors.primary : theme.colors.textSecondary,
+            cursor: 'pointer',
+            opacity: pinned || hovered ? 1 : 0,
+            transition: 'opacity 120ms, color 120ms',
           }}
         >
-          <Eye size={13} color={theme.colors.primary} />
-        </span>
+          <Pin size={12} fill={pinned ? 'currentColor' : 'none'} />
+        </button>
       )}
     </div>
   );
