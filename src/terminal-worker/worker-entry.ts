@@ -308,7 +308,11 @@ function handleProgramStatusOutput(sessionId: string, data: string): void {
   let changed = false;
   for (const seq of session.programStatusScanner.push(data)) {
     if (seq.code === '7') {
-      const cwd = parseTerminalCwd(seq.payload, LOCAL_HOSTNAME, process.platform);
+      const cwd = parseTerminalCwd(
+        seq.payload,
+        LOCAL_HOSTNAME,
+        process.platform,
+      );
       if (cwd !== null && cwd !== session.directory) {
         session.directory = cwd;
         sendToMain({
@@ -339,9 +343,11 @@ function handleProgramStatusOutput(sessionId: string, data: string): void {
 // Daemon Connection (Daemon Mode Only)
 // =============================================================================
 
-async function connectToDaemon(_socketPath: string): Promise<void> {
+async function connectToDaemon(socketPath: string): Promise<void> {
   if (!USE_DAEMON_MODE) {
-    console.warn('[TerminalWorker] CONNECT_DAEMON received but daemon mode is disabled');
+    console.warn(
+      '[TerminalWorker] CONNECT_DAEMON received but daemon mode is disabled',
+    );
     return;
   }
 
@@ -352,7 +358,7 @@ async function connectToDaemon(_socketPath: string): Promise<void> {
 
   // Dynamic import to avoid loading when not in daemon mode
   const { DaemonBridge } = await import('./DaemonBridge');
-  daemonBridge = new DaemonBridge();
+  daemonBridge = new DaemonBridge(socketPath);
 
   // Wire up daemon events
   daemonBridge.on('data', (sessionId: string, data: string) => {
@@ -372,21 +378,24 @@ async function connectToDaemon(_socketPath: string): Promise<void> {
     }
   });
 
-  daemonBridge.on('exit', (sessionId: string, exitCode: number, _signal?: string) => {
-    const session = sessions.get(sessionId);
-    if (session && session.programStatus.dropTransient()) {
-      emitProgramStatus(sessionId);
-    }
-    const exitMsg: SessionExitMessage = {
-      type: 'SESSION_EXIT',
-      id: `session-exit-${sessionId}`,
-      timestamp: Date.now(),
-      sessionId,
-      exitCode,
-    };
-    sendToMain(exitMsg);
-    cleanupSession(sessionId);
-  });
+  daemonBridge.on(
+    'exit',
+    (sessionId: string, exitCode: number, _signal?: string) => {
+      const session = sessions.get(sessionId);
+      if (session && session.programStatus.dropTransient()) {
+        emitProgramStatus(sessionId);
+      }
+      const exitMsg: SessionExitMessage = {
+        type: 'SESSION_EXIT',
+        id: `session-exit-${sessionId}`,
+        timestamp: Date.now(),
+        sessionId,
+        exitCode,
+      };
+      sendToMain(exitMsg);
+      cleanupSession(sessionId);
+    },
+  );
 
   daemonBridge.on('session-error', (sessionId: string, error: string) => {
     const pending = pendingCreations.get(sessionId);
@@ -565,12 +574,18 @@ function createSessionLegacy(
 
       // Trim by chunk count
       if (session.scrollback.length > SCROLLBACK_MAX_CHUNKS) {
-        const dropped = session.scrollback.splice(0, session.scrollback.length - SCROLLBACK_TRIM_TO);
+        const dropped = session.scrollback.splice(
+          0,
+          session.scrollback.length - SCROLLBACK_TRIM_TO,
+        );
         for (const chunk of dropped) session.scrollbackBytes -= chunk.length;
       }
 
       // Trim by byte size — drop oldest chunks until under the cap
-      while (session.scrollbackBytes > SCROLLBACK_MAX_BYTES && session.scrollback.length > 1) {
+      while (
+        session.scrollbackBytes > SCROLLBACK_MAX_BYTES &&
+        session.scrollback.length > 1
+      ) {
         const dropped = session.scrollback.shift();
         if (dropped) session.scrollbackBytes -= dropped.length;
       }
@@ -817,7 +832,12 @@ function resizeSession(
         console.info(
           `[TerminalWorker] Repaint nudge ${sessionId}: ${cols + 1}x${rows} then ${cols}x${rows}`,
         );
-        daemonBridge.send({ type: 'resize', id: sessionId, cols: cols + 1, rows });
+        daemonBridge.send({
+          type: 'resize',
+          id: sessionId,
+          cols: cols + 1,
+          rows,
+        });
         setTimeout(() => {
           if (daemonBridge?.connected) {
             daemonBridge.send({ type: 'resize', id: sessionId, cols, rows });
@@ -1110,7 +1130,9 @@ function shutdown(): void {
 }
 
 function initialize(): void {
-  console.info(`[TerminalWorker] Mode: ${USE_DAEMON_MODE ? 'DAEMON' : 'LEGACY'}`);
+  console.info(
+    `[TerminalWorker] Mode: ${USE_DAEMON_MODE ? 'DAEMON' : 'LEGACY'}`,
+  );
 
   if (!USE_DAEMON_MODE) {
     // Legacy mode: load node-pty

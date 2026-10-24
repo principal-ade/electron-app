@@ -14,15 +14,11 @@ import {
   SOCKET_PATH,
   PID_FILE,
   DAEMON_DIR,
+  DAEMON_LOG_FILE,
   DAEMON_START_TIMEOUT_MS,
   DAEMON_START_POLL_INTERVAL_MS,
 } from '../../shared/pty-daemon/constants';
 import type { DaemonStatusInfo } from '../../shared/pty-daemon/protocol';
-
-/**
- * Log file path for daemon output debugging
- */
-const DAEMON_LOG_FILE = path.join(DAEMON_DIR, 'daemon.log');
 
 /**
  * Get the path to the daemon bundle.
@@ -31,7 +27,13 @@ export function getDaemonPath(): string {
   if (app.isPackaged) {
     // In production, daemon is unpacked from asar for proper subprocess execution
     // (configured in package.json asarUnpack)
-    return path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'main', 'pty-daemon.cjs');
+    return path.join(
+      process.resourcesPath,
+      'app.asar.unpacked',
+      'dist',
+      'main',
+      'pty-daemon.cjs',
+    );
   } else {
     // In development, app.getAppPath() returns .erb/dll/ due to webpack
     // We need to go up to the actual project root
@@ -50,7 +52,11 @@ export function getDaemonPath(): string {
 function getNodePathForPackaged(): string {
   if (app.isPackaged) {
     // Native modules are in app.asar.unpacked/node_modules
-    return path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules');
+    return path.join(
+      process.resourcesPath,
+      'app.asar.unpacked',
+      'node_modules',
+    );
   }
   return '';
 }
@@ -144,7 +150,9 @@ export async function spawnDaemon(): Promise<void> {
   }
 
   // Ensure daemon directory exists
-  await fs.promises.mkdir(DAEMON_DIR, { recursive: true, mode: 0o700 }).catch(() => {});
+  await fs.promises
+    .mkdir(DAEMON_DIR, { recursive: true, mode: 0o700 })
+    .catch(() => {});
 
   // Clean up stale socket file
   if (process.platform !== 'win32') {
@@ -178,7 +186,9 @@ export async function spawnDaemon(): Promise<void> {
   console.log(`[daemonSpawner] Daemon log: ${DAEMON_LOG_FILE}`);
   console.log(`[daemonSpawner] Using execPath: ${process.execPath}`);
   console.log(`[daemonSpawner] Using daemonPath: ${daemonPath}`);
-  console.log(`[daemonSpawner] CWD: ${app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked') : 'default'}`);
+  console.log(
+    `[daemonSpawner] CWD: ${app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked') : 'default'}`,
+  );
   console.log(`[daemonSpawner] NODE_PATH: ${nodePath || 'none'}`);
   console.log(`[daemonSpawner] NODE_ENV: ${nodeEnv}`);
   console.log(`[daemonSpawner] app.isPackaged: ${app.isPackaged}`);
@@ -208,7 +218,9 @@ export async function spawnDaemon(): Promise<void> {
 /**
  * Wait for the daemon socket to become available.
  */
-export async function waitForSocket(timeoutMs: number = DAEMON_START_TIMEOUT_MS): Promise<void> {
+export async function waitForSocket(
+  timeoutMs: number = DAEMON_START_TIMEOUT_MS,
+): Promise<void> {
   const startTime = Date.now();
 
   while (Date.now() - startTime < timeoutMs) {
@@ -217,7 +229,9 @@ export async function waitForSocket(timeoutMs: number = DAEMON_START_TIMEOUT_MS)
       return;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, DAEMON_START_POLL_INTERVAL_MS));
+    await new Promise((resolve) =>
+      setTimeout(resolve, DAEMON_START_POLL_INTERVAL_MS),
+    );
   }
 
   throw new Error('Timeout waiting for daemon to start');
@@ -236,7 +250,9 @@ export async function ensureDaemonRunning(): Promise<void> {
   // Check for stale PID
   const existingPid = await getDaemonPid();
   if (existingPid) {
-    console.log(`[daemonSpawner] Found stale daemon (PID: ${existingPid}), it may have crashed`);
+    console.log(
+      `[daemonSpawner] Found stale daemon (PID: ${existingPid}), it may have crashed`,
+    );
   }
 
   // Spawn daemon
@@ -344,7 +360,9 @@ export async function stopDaemon(): Promise<void> {
     }
 
     // Force kill if still running
-    console.log('[daemonSpawner] Daemon did not exit gracefully, force killing...');
+    console.log(
+      '[daemonSpawner] Daemon did not exit gracefully, force killing...',
+    );
     process.kill(pid, 'SIGKILL');
   } catch (err) {
     console.warn('[daemonSpawner] Failed to stop daemon:', err);

@@ -46,6 +46,7 @@ import {
 } from './homeTabEntries';
 import { HomeTabRow, PinnedTabIcon } from './HomeTabItems';
 import { useHomePins } from './useHomePins';
+import { usePinnedRepoScopes } from './usePinnedRepoScopes';
 import {
   useWorkspaceTabs,
   type WorkspaceTab,
@@ -149,6 +150,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     () => new Set(pinnedTabEntries.map((entry) => entry.id)),
     [pinnedTabEntries],
   );
+  const pinnedRepoScopes = usePinnedRepoScopes(preferencePins);
   const toggleTabPin = useCallback(
     (entry: HomeTabEntry) => {
       if (entry.kind !== 'http-request') {
@@ -192,6 +194,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         pinnedRepos,
         processes,
         catalogRequests,
+        pinnedRepoScopes,
       ),
     [
       repositories,
@@ -201,6 +204,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       pinnedRepos,
       processes,
       catalogRequests,
+      pinnedRepoScopes,
     ],
   );
   // Repos the monitoring worker is watching — these have live git status;
@@ -697,15 +701,23 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                                   onTogglePin={() => toggleRepoPin(key)}
                                   tabIcons={
                                     pinnedTabs.length > 0
-                                      ? pinnedTabs.map((pin) => (
-                                          <PinnedTabIcon
-                                            key={pin.id}
-                                            entry={pin}
-                                            active={activeTabId === pin.id}
-                                            onActivate={() => onOpenEntry(pin)}
-                                            onUnpin={() => toggleTabPin(pin)}
-                                          />
-                                        ))
+                                      ? pinnedTabs
+                                          .filter(
+                                            (pin) =>
+                                              pin.kind !== 'topic' &&
+                                              pin.kind !== 'subsystem-model',
+                                          )
+                                          .map((pin) => (
+                                            <PinnedTabIcon
+                                              key={pin.id}
+                                              entry={pin}
+                                              active={activeTabId === pin.id}
+                                              onActivate={() =>
+                                                onOpenEntry(pin)
+                                              }
+                                              onUnpin={() => toggleTabPin(pin)}
+                                            />
+                                          ))
                                       : undefined
                                   }
                                 />
@@ -714,6 +726,13 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                                 {openTabs.map((tab) =>
                                   renderTabEntry(tab, true, 1),
                                 )}
+                                {pinnedTabs
+                                  .filter(
+                                    (pin) =>
+                                      pin.kind === 'topic' ||
+                                      pin.kind === 'subsystem-model',
+                                  )
+                                  .map((pin) => renderTabEntry(pin, false, 1))}
                                 {repoProcesses.map((process) => (
                                   <HomeProcessRow
                                     key={process.id}

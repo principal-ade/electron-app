@@ -6,10 +6,11 @@
  * - one child entry per **repo-rooted** tab (profile / file-city / doc /
  *   source / media / terminal whose path sits inside a registered clone),
  *   grouped under its repo row;
- * - one top-level entry per **standalone** tab (topics, drawings, subsystem
- *   models, localhost browsers, skills, and files outside any repo);
+ * - one top-level entry per **standalone** tab (drawings, localhost browsers,
+ *   skills, files outside any repo, and topics/models without a single-repo pin);
  * - pinned entries whose tab is currently closed, split the same way (repo
- *   rows carry them as icons; the rest land in the Pinned section).
+ *   rows carry them as icons, or labeled children for topics/models; the rest
+ *   land in the Pinned section).
  * - requests in a separate target-metadata hierarchy, not their caller repo.
  *
  * The entry shape is the persisted `HomePinnedTab` descriptor, so a live entry
@@ -29,6 +30,7 @@ import {
 import { getHomeRepositories, type HomeRepository } from './homeRepositories';
 import type { InProgressRepo } from './useInProgressRepos';
 import type { SavedRequest } from '../../../shared/requests/preparedRequest';
+import { repoPurlFromEntry } from '../../../shared/topics/repoPurl';
 import {
   buildRequestGroups,
   type RequestPurlGroup,
@@ -57,7 +59,7 @@ export interface HomeRepoRow extends HomeRepository {
   processes: ProcessEntry[];
   /** Open repo-rooted tabs, rendered as child rows. */
   openTabs: HomeTabEntry[];
-  /** Pinned repo-rooted tabs whose tab is closed, rendered as row icons. */
+  /** Closed repo pins: labeled children for topics/models, icons otherwise. */
   pinnedTabs: HomeTabEntry[];
   /** Whether the user pinned this repo (keeps a clean, tab-less row visible). */
   pinned: boolean;
@@ -221,6 +223,7 @@ export function buildHomeTabEntries(
   pinnedRepos: readonly string[] = [],
   processes: readonly ProcessEntry[] = [],
   rememberedRequests: readonly SavedRequest[] = [],
+  pinnedRepoScopes: ReadonlyMap<string, string> = new Map(),
 ): HomeTabEntries {
   const rows = new Map<string, HomeRepoRow>();
   const rowFor = (repo: HomeRepository): HomeRepoRow => {
@@ -243,6 +246,22 @@ export function buildHomeTabEntries(
   )) {
     rowFor(repo);
   }
+
+  const scopedRow = (id: string): HomeRepoRow | undefined => {
+    const purl = pinnedRepoScopes.get(id);
+    if (!purl) return undefined;
+    const repo = repositories.find(
+      (entry) => repoPurlFromEntry(entry) === purl,
+    );
+    if (repo?.path) {
+      const key = String(repo.path);
+      return rowFor({
+        key,
+        payload: payloadFromLocalEntry({ ...repo, purl: purl as Purl }),
+      });
+    }
+    return rowFor({ key: purl, payload: payloadFromPurl(purl as Purl) });
+  };
 
   const standaloneProcesses: ProcessEntry[] = [];
   for (const process of processes) {
@@ -338,7 +357,13 @@ export function buildHomeTabEntries(
     }
     openIds.add(tab.id);
 
-    if (repoPath) {
+    const scope =
+      entry.kind === 'topic' || entry.kind === 'subsystem-model'
+        ? scopedRow(entry.id)
+        : undefined;
+    if (scope) {
+      scope.openTabs.push(entry);
+    } else if (repoPath) {
       const repoEntry = findRepoByPath(repoPath, repositories);
       const row =
         rows.get(repoPath) ??
@@ -363,6 +388,16 @@ export function buildHomeTabEntries(
     if (pin.kind === 'http-request') continue;
     if (!isHomeTabPinnable(pin)) continue;
     if (openIds.has(pin.id)) continue;
+    if (pin.kind === 'topic' || pin.kind === 'subsystem-model') {
+      const row = scopedRow(pin.id);
+      if (row) {
+        row.pinnedTabs.push(pin);
+        continue;
+      }
+      // The current scope wins over any legacy persisted repo metadata.
+      pinnedTabs.push(pin);
+      continue;
+    }
     if (pin.repoPath) {
       const repoEntry = findRepoByPath(pin.repoPath, repositories);
       const row =

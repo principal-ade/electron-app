@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { HomeRepoRow } from './homeTabEntries';
 import { HomeLeftPanel } from './HomeLeftPanel';
@@ -36,7 +36,13 @@ jest.mock('./RepoAboutCard', () => ({ RepoAboutCard: () => null }));
 jest.mock('./useInProgressRepos', () => ({
   useInProgressRepos: () => [],
 }));
-jest.mock('./homeTabEntries', () => ({ buildHomeTabEntries: jest.fn() }));
+jest.mock('./homeTabEntries', () => ({
+  buildHomeTabEntries: jest.fn(),
+  isHomeTabPinnable: () => true,
+}));
+jest.mock('./usePinnedRepoScopes', () => ({
+  usePinnedRepoScopes: () => new Map(),
+}));
 jest.mock('./useHomePins', () => ({
   useHomePins: () => ({
     pinnedTabs: [],
@@ -77,7 +83,7 @@ const repo = {
   pinned: false,
 } as unknown as HomeRepoRow;
 
-function renderHome(row = repo) {
+function renderHome(row = repo, onOpenEntry = jest.fn()) {
   jest.mocked(buildHomeTabEntries).mockReturnValue({
     repos: [row],
     requests: [],
@@ -96,7 +102,7 @@ function renderHome(row = repo) {
       userLoading={false}
       activeTabId={null}
       onActivateTab={jest.fn()}
-      onOpenEntry={jest.fn()}
+      onOpenEntry={onOpenEntry}
     />,
   );
   return emit;
@@ -143,5 +149,31 @@ test('a Home repo without a local clone still opens its profile on click', () =>
 test('clicking the repo pin does not open a terminal or profile', () => {
   const emit = renderHome();
   fireEvent.click(screen.getByRole('button', { name: 'Pin app to Home' }));
+  expect(emit).not.toHaveBeenCalled();
+});
+
+test('closed topic and model pins render as named children, not compact repo icons', () => {
+  const pins: HomeRepoRow['pinnedTabs'] = [
+    { id: 'topic', kind: 'topic', label: 'Pinned topic', topicId: 't1' },
+    {
+      id: 'model',
+      kind: 'subsystem-model',
+      label: 'Pinned model',
+      modelId: 'm1',
+    },
+  ];
+  const open = jest.fn();
+  const emit = renderHome({ ...repo, pinnedTabs: pins }, open);
+  const group = screen.getByText('app').closest('[title]')?.parentElement;
+  if (!group) throw new Error('Missing repository group');
+  for (const pin of pins) {
+    expect(within(group).getByText(pin.label)).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: `Reopen pinned tab ${pin.label}` }),
+    ).toBeNull();
+    fireEvent.click(screen.getByText(pin.label));
+    expect(open).toHaveBeenLastCalledWith(pin);
+  }
+  expect(screen.getByRole('button', { name: 'Pin app to Home' })).toBeTruthy();
   expect(emit).not.toHaveBeenCalled();
 });

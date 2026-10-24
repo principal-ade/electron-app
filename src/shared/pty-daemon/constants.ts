@@ -12,23 +12,49 @@ import os from 'os';
 // ============================================================================
 
 /**
- * Directory for daemon files (~/.principal/)
+ * Keep production's existing paths so upgrades reconnect to surviving PTYs.
+ * Development builds use a separate directory and Windows pipe. NODE_ENV is
+ * supplied by webpack in main, worker, and daemon bundles, not the app's
+ * packaged-simulation flag.
  */
-export const DAEMON_DIR = path.join(os.homedir(), '.principal');
+export function getDaemonPaths(
+  environment = process.env.NODE_ENV,
+  platform: NodeJS.Platform = process.platform,
+  homeDirectory = os.homedir(),
+) {
+  const development = environment === 'development';
+  const directory = development
+    ? path.join(homeDirectory, '.principal', 'dev')
+    : path.join(homeDirectory, '.principal');
+  return {
+    directory,
+    socketPath:
+      platform === 'win32'
+        ? `\\\\.\\pipe\\principal-pty-daemon${development ? '-dev' : ''}`
+        : path.join(directory, 'pty-daemon.sock'),
+    pidFile: path.join(directory, 'pty-daemon.pid'),
+    logFile: path.join(directory, 'daemon.log'),
+  };
+}
+
+const daemonPaths = getDaemonPaths();
+
+/** Directory for this build's daemon files. */
+export const DAEMON_DIR = daemonPaths.directory;
 
 /**
  * Socket path for IPC communication.
  * Unix domain socket on macOS/Linux, named pipe on Windows.
  */
-export const SOCKET_PATH =
-  process.platform === 'win32'
-    ? '\\\\.\\pipe\\principal-pty-daemon'
-    : path.join(DAEMON_DIR, 'pty-daemon.sock');
+export const SOCKET_PATH = daemonPaths.socketPath;
 
 /**
  * PID file to track daemon process
  */
-export const PID_FILE = path.join(DAEMON_DIR, 'pty-daemon.pid');
+export const PID_FILE = daemonPaths.pidFile;
+
+/** Output log for this build's daemon. */
+export const DAEMON_LOG_FILE = daemonPaths.logFile;
 
 // ============================================================================
 // Scrollback Configuration

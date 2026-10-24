@@ -309,17 +309,6 @@ const registerAllIpcHandlers = async () => {
   registerGitHubArtifactHandlers();
 };
 
-// Setup terminal manager
-const setupTerminalManager = () => {
-  const terminalManager = getTerminalManager();
-  // Clean up any existing terminal sessions on startup to avoid stale PTY processes
-  console.log(
-    '[Terminal] Cleaning up any existing terminal sessions on startup...',
-  );
-  terminalManager?.destroyAllSessions();
-  return terminalManager;
-};
-
 // Main initialization function
 export const initializeServices = async () => {
   // Register TIPC routers (type-safe RPC)
@@ -361,10 +350,8 @@ export const initializeServices = async () => {
 
   // Scaffold layer handler has been removed
 
-  // Setup terminal manager AFTER storage init to avoid early access to storage
-  setTimeout(() => {
-    setupTerminalManager();
-  }, 1000);
+  // initializeTerminalSettings already warms the backend and restores surviving
+  // daemon sessions. Startup must never destroy those sessions.
 
   // Initialize repository monitoring and registration
   // This registers all repositories with the monitoring server and enables git watching

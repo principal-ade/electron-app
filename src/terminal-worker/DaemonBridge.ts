@@ -38,6 +38,10 @@ export class DaemonBridge extends EventEmitter {
   private connectResolve: ((sessions: SessionInfo[]) => void) | null = null;
   private connectReject: ((error: Error) => void) | null = null;
 
+  constructor(private readonly socketPath: string = SOCKET_PATH) {
+    super();
+  }
+
   /**
    * Connect to the daemon socket.
    * Returns a promise that resolves with the current session list.
@@ -78,15 +82,21 @@ export class DaemonBridge extends EventEmitter {
       });
 
       this.socket.on('close', (hadError: boolean) => {
-        console.info('[DaemonBridge] Socket closed', hadError ? '(with error)' : '');
+        console.info(
+          '[DaemonBridge] Socket closed',
+          hadError ? '(with error)' : '',
+        );
         this.isConnected = false;
         this.socket = null;
         this.buffer = '';
-        this.emit('disconnected', hadError ? new Error('Socket closed with error') : undefined);
+        this.emit(
+          'disconnected',
+          hadError ? new Error('Socket closed with error') : undefined,
+        );
       });
 
-      console.info('[DaemonBridge] Connecting to:', SOCKET_PATH);
-      this.socket.connect(SOCKET_PATH);
+      console.info('[DaemonBridge] Connecting to:', this.socketPath);
+      this.socket.connect(this.socketPath);
     });
   }
 
@@ -187,7 +197,10 @@ export class DaemonBridge extends EventEmitter {
         break;
 
       default:
-        console.warn('[DaemonBridge] Unknown message type:', (msg as { type: string }).type);
+        console.warn(
+          '[DaemonBridge] Unknown message type:',
+          (msg as { type: string }).type,
+        );
     }
   }
 }
@@ -195,7 +208,10 @@ export class DaemonBridge extends EventEmitter {
 // Type-safe event emitter (declaration merging)
 // eslint-disable-next-line no-redeclare
 export interface DaemonBridge {
-  on<K extends keyof DaemonBridgeEvents>(event: K, listener: DaemonBridgeEvents[K]): this;
+  on<K extends keyof DaemonBridgeEvents>(
+    event: K,
+    listener: DaemonBridgeEvents[K],
+  ): this;
   emit<K extends keyof DaemonBridgeEvents>(
     event: K,
     ...args: Parameters<DaemonBridgeEvents[K]>

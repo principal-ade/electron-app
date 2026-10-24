@@ -111,6 +111,106 @@ function profile(): WorkspaceTab {
 }
 
 describe('buildHomeTabEntries', () => {
+  const scopedPins: HomePinnedTab[] = [
+    { id: 'local-topic-t1', kind: 'topic', label: 'Topic', topicId: 't1' },
+    {
+      id: 'subsystem-model-m1',
+      kind: 'subsystem-model',
+      label: 'Model',
+      modelId: 'm1',
+    },
+  ];
+
+  it.each(scopedPins)(
+    'shows the unpinned repo for a closed $kind pin',
+    (pin) => {
+      const result = buildHomeTabEntries(
+        [entry],
+        [],
+        [],
+        [pin],
+        [],
+        [],
+        [],
+        new Map([[pin.id, purl]]),
+      );
+      expect(result.repos).toHaveLength(1);
+      expect(result.repos[0]).toMatchObject({
+        key: entry.path,
+        pinned: false,
+        pinnedTabs: [pin],
+        openTabs: [],
+      });
+      expect(result.pinnedTabs).toEqual([]);
+      expect(buildHomeTabEntries([entry], [], [], []).repos).toEqual([]);
+    },
+  );
+
+  it('shows a remote-only repo for a scoped pin without a registered clone', () => {
+    const pin = scopedPins[0];
+    const result = buildHomeTabEntries(
+      [],
+      [],
+      [],
+      [pin],
+      [],
+      [],
+      [],
+      new Map([[pin.id, purl]]),
+    );
+    expect(result.repos[0]).toMatchObject({
+      key: purl,
+      pinned: false,
+      pinnedTabs: [pin],
+    });
+    expect(result.repos[0].payload.github?.name).toBe('app');
+  });
+
+  it('nests open scoped pins once under the same repo', () => {
+    const tabs: WorkspaceTab[] = [
+      {
+        id: scopedPins[0].id,
+        label: 'Topic',
+        contentType: 'local-topic',
+        topicId: 't1',
+      },
+      {
+        id: scopedPins[1].id,
+        label: 'Model',
+        contentType: 'subsystem-model',
+        modelId: 'm1',
+      },
+    ];
+    const result = buildHomeTabEntries(
+      [entry],
+      [],
+      tabs,
+      scopedPins,
+      [],
+      [],
+      [],
+      new Map(scopedPins.map((pin) => [pin.id, purl])),
+    );
+    expect(result.repos).toHaveLength(1);
+    expect(result.repos[0].openTabs.map((tab) => tab.id)).toEqual(
+      tabs.map((tab) => tab.id),
+    );
+    expect(result.repos[0].pinnedTabs).toEqual([]);
+    expect(result.openTabs).toEqual([]);
+    expect(result.pinnedTabs).toEqual([]);
+  });
+
+  it('keeps unscoped and multi-repo pins standalone, ignoring old repo metadata', () => {
+    const pins = scopedPins.map((pin) => ({
+      ...pin,
+      purl,
+      repoPath: '/work/app',
+    }));
+    const result = buildHomeTabEntries([entry], [], [], pins);
+    expect(result.repos).toEqual([]);
+    expect(result.pinnedTabs).toEqual(pins);
+  });
+
   it('nests repo-rooted tabs under their repo row', () => {
     const { repos, openTabs } = buildHomeTabEntries(
       [entry],
