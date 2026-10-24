@@ -19,8 +19,13 @@ export interface OrgSectionHeaderCardData {
 
 export interface OrgSectionHeaderCardProps {
   header: OrgSectionHeaderCardData;
-  isCollapsed: boolean;
+  /** Edge-to-edge heading with its spacing inside the hover target. */
+  flush?: boolean;
+  showTooltips?: boolean;
+  isCollapsed?: boolean;
   onToggle?: () => void;
+  /** Open the owner profile instead of making this a collapsible section. */
+  onOpen?: () => void;
   /**
    * When provided, an "add repository" (+) button appears on the right of the
    * header (revealed on hover). Wire this only for owners the user has
@@ -39,8 +44,11 @@ export interface OrgSectionHeaderCardProps {
  */
 export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
   header,
-  isCollapsed,
+  flush = false,
+  showTooltips = true,
+  isCollapsed = false,
   onToggle,
+  onOpen,
   onAdd,
   addLabel = 'Add a repository',
 }) => {
@@ -52,27 +60,47 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
   const login = header.login ?? header.orgName;
   const avatarSrc =
     header.avatarUrl ??
-    (!header.isUntracked ? `https://github.com/${login}.png?size=48` : undefined);
+    (!header.isUntracked
+      ? `https://github.com/${login}.png?size=48`
+      : undefined);
   const Chevron = isCollapsed ? ChevronRight : ChevronDown;
-  const badgeLabel = header.badge === 'you' ? 'you' : header.badge === 'member' ? 'member' : null;
+  const onActivate = onOpen ?? onToggle;
+  const badgeLabel =
+    header.badge === 'you'
+      ? 'you'
+      : header.badge === 'member'
+        ? 'member'
+        : null;
 
   return (
     <div>
       <div
-        onClick={onToggle}
-        role={onToggle ? 'button' : undefined}
-        aria-expanded={!isCollapsed}
-        title={login !== header.orgName ? login : undefined}
+        onClick={onActivate}
+        role={onActivate ? 'button' : undefined}
+        tabIndex={onActivate ? 0 : undefined}
+        onKeyDown={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            (event.key === 'Enter' || event.key === ' ')
+          ) {
+            event.preventDefault();
+            onActivate?.();
+          }
+        }}
+        aria-expanded={!onOpen && onToggle ? !isCollapsed : undefined}
+        title={showTooltips && login !== header.orgName ? login : undefined}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          padding: '5px 10px',
-          borderRadius: 6,
-          cursor: onToggle ? 'pointer' : 'default',
-          backgroundColor: hover ? theme.colors.backgroundSecondary : 'transparent',
+          padding: flush ? '12px 10px 10px' : '5px 10px',
+          borderRadius: flush ? 0 : 6,
+          cursor: onActivate ? 'pointer' : 'default',
+          backgroundColor: hover
+            ? theme.colors.backgroundSecondary
+            : 'transparent',
           transition: 'background-color 0.15s ease',
         }}
       >
@@ -141,7 +169,7 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
               e.stopPropagation();
               onAdd();
             }}
-            title={addLabel}
+            title={showTooltips ? addLabel : undefined}
             aria-label={addLabel}
             style={{
               flexShrink: 0,
@@ -156,7 +184,9 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
               background: 'transparent',
               // Reveal on header hover to keep the "quiet list" aesthetic.
               opacity: hover ? 1 : 0,
-              color: addHover ? theme.colors.primary : theme.colors.textSecondary,
+              color: addHover
+                ? theme.colors.primary
+                : theme.colors.textSecondary,
               cursor: 'pointer',
               transition: 'opacity 0.15s ease, color 0.15s ease',
             }}
@@ -177,14 +207,20 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
         >
           {header.repoCount}
         </span>
-        <Chevron size={13} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
+        {!onOpen && onToggle && (
+          <Chevron
+            size={13}
+            color={theme.colors.textSecondary}
+            style={{ flexShrink: 0 }}
+          />
+        )}
       </div>
 
       <div
         style={{
           height: 1,
           backgroundColor: theme.colors.border,
-          margin: '5px 10px 0',
+          margin: flush ? '0 10px' : '5px 10px 0',
         }}
       />
     </div>

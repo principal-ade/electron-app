@@ -6,7 +6,8 @@ export const RequestGroupList: React.FC<{
   groups: RequestPurlGroup[];
   renderRequest: (request: RequestGroupItem, depth: number) => React.ReactNode;
   variant?: 'section' | 'sidebar';
-}> = ({ groups, renderRequest, variant = 'section' }) => {
+  showTooltips?: boolean;
+}> = ({ groups, renderRequest, variant = 'section', showTooltips = true }) => {
   const { theme } = useTheme();
   if (groups.length === 0) return null;
   const sidebar = variant === 'sidebar';
@@ -52,7 +53,10 @@ export const RequestGroupList: React.FC<{
       )}
       {groups.map((group) => (
         <details key={JSON.stringify([group.purl ?? null])} open>
-          <summary style={summaryStyle} title={group.purl}>
+          <summary
+            style={summaryStyle}
+            title={showTooltips ? group.purl : undefined}
+          >
             {group.purl ?? 'Ungrouped'}
           </summary>
           {group.identifiers.map((identifier) =>

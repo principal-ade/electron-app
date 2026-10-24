@@ -130,7 +130,7 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
   const label = homeTabLabel(entry);
-  const title =
+  const accessibleLabel =
     entry.kind === 'terminal' && !entry.repoPath && entry.path
       ? `Open terminal in ${entry.path}`
       : `Open ${label}`;
@@ -139,15 +139,15 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
     <div
       onClick={onActivate}
       role="button"
-      title={title}
+      aria-label={accessibleLabel}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex',
         alignItems: wrapLabel ? 'flex-start' : 'center',
         gap: 8,
-        padding: `4px 10px 4px ${14 + depth * 18}px`,
-        borderRadius: 6,
+        padding: `8px 10px 8px ${14 + depth * 18}px`,
+        borderRadius: 0,
         cursor: 'pointer',
         backgroundColor: hovered
           ? theme.colors.backgroundSecondary
@@ -214,7 +214,6 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
             e.stopPropagation();
             onTogglePin();
           }}
-          title={pinned ? 'Unpin from Home' : 'Pin to Home'}
           aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}
           style={{
             flexShrink: 0,
@@ -272,7 +271,6 @@ export const PinnedTabIcon: React.FC<PinnedTabIconProps> = ({
         e.stopPropagation();
         onUnpin();
       }}
-      title={`${label} — click to reopen, right-click to unpin`}
       aria-label={`Reopen pinned tab ${label}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

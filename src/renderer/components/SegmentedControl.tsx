@@ -21,6 +21,10 @@ export interface SegmentedControlProps {
   onChange: (value: string) => void;
   theme: Theme;
   variant?: SegmentedControlVariant;
+  /** Square corners for edge-to-edge controls. */
+  flush?: boolean;
+  /** Override the top and bottom button padding in pixels. */
+  verticalPadding?: number;
 }
 
 /**
@@ -32,6 +36,8 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   onChange,
   theme,
   variant = 'pill',
+  flush = false,
+  verticalPadding,
 }) => {
   const spacing = {
     xs: theme.space?.[1] || 4,
@@ -56,7 +62,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
               onClick={() => onChange(option.value)}
               style={{
                 flex: 1,
-                padding: `${spacing.sm}px ${spacing.xs}px`,
+                padding: `${verticalPadding ?? spacing.sm}px ${spacing.xs}px`,
                 fontSize: theme.fontSizes[1],
                 fontWeight: isActive ? 600 : 500,
                 color: isActive ? theme.colors.text : theme.colors.textSecondary,
@@ -95,7 +101,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
         display: 'flex',
         backgroundColor: isFlat ? 'transparent' : theme.colors.backgroundSecondary,
         border: isFlat ? 'none' : `1px solid ${theme.colors.border}`,
-        borderRadius: isFlat ? 0 : theme.radii?.[1] || 4,
+        borderRadius: flush || isFlat ? 0 : theme.radii?.[1] || 4,
         padding: isFlat ? 0 : 2,
         gap: isFlat ? 0 : 2,
       }}
@@ -109,13 +115,13 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
             onClick={() => onChange(option.value)}
             style={{
               flex: 1,
-              padding: `${spacing.xs}px ${spacing.sm}px`,
+              padding: `${verticalPadding ?? spacing.xs}px ${spacing.sm}px`,
               fontSize: theme.fontSizes[1],
               fontWeight: 500,
               color: isActive ? theme.colors.textOnPrimary : theme.colors.textSecondary,
               backgroundColor: isActive ? theme.colors.primary : 'transparent',
               border: 'none',
-              borderRadius: theme.radii?.[0] || 2,
+              borderRadius: flush ? 0 : theme.radii?.[0] || 2,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
               whiteSpace: 'nowrap',

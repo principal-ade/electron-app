@@ -142,13 +142,6 @@ export const HomeProcessRow: React.FC<{
         role={canOpen ? 'button' : undefined}
         tabIndex={canOpen ? 0 : undefined}
         aria-label={canOpen ? `Open ${entry.label} in browser` : undefined}
-        title={
-          canFocus
-            ? `Focus Tab ${openTab.number}`
-            : canOpen
-              ? `Open localhost:${entry.port}`
-              : undefined
-        }
         onClick={openBrowser}
         onKeyDown={(event) => {
           if (!canOpen || event.target !== event.currentTarget) return;
@@ -163,8 +156,8 @@ export const HomeProcessRow: React.FC<{
           display: 'flex',
           alignItems: 'center',
           gap: 6,
-          padding: `5px 10px 5px ${14 + depth * 18}px`,
-          borderRadius: 6,
+          padding: `8px 10px 8px ${14 + depth * 18}px`,
+          borderRadius: 0,
           cursor: canOpen ? 'pointer' : undefined,
           background:
             canOpen && hovered ? theme.colors.backgroundSecondary : undefined,
@@ -181,7 +174,6 @@ export const HomeProcessRow: React.FC<{
           }
         />
         <span
-          title={`${entry.command}\n${entry.cwd}\n${entry.status}`}
           style={{
             flex: 1,
             minWidth: 0,
@@ -207,7 +199,6 @@ export const HomeProcessRow: React.FC<{
         )}
         {managed && (
           <span
-            title={entry.status}
             style={{
               fontSize: theme.fontSizes[0],
               color: theme.colors.textSecondary,
@@ -222,7 +213,6 @@ export const HomeProcessRow: React.FC<{
               type="button"
               style={buttonStyle}
               disabled={busy || transitioning}
-              title={stopped ? 'Run saved command' : 'Stop process'}
               aria-label={`${stopped ? 'Run' : 'Stop'} ${entry.label}`}
               onClick={(event) => {
                 event.stopPropagation();
@@ -244,11 +234,6 @@ export const HomeProcessRow: React.FC<{
                   : theme.colors.textSecondary,
               }}
               disabled={busy}
-              title={
-                entry.pinned
-                  ? 'Unpin from Home'
-                  : 'Pin launch configuration to Home'
-              }
               aria-label={`${entry.pinned ? 'Unpin' : 'Pin'} ${entry.label}`}
               onClick={(event) => {
                 event.stopPropagation();
@@ -266,7 +251,6 @@ export const HomeProcessRow: React.FC<{
             type="button"
             style={{ ...buttonStyle, color: theme.colors.error }}
             disabled={busy || transitioning || !canKill}
-            title={canKill ? 'Kill process' : 'Process ID unavailable'}
             aria-label={`Kill ${entry.label}`}
             onClick={(event) => {
               event.stopPropagation();

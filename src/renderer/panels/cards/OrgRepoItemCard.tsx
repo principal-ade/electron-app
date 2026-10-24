@@ -21,6 +21,9 @@ export interface OrgRepoItemCardData {
 
 export interface OrgRepoItemCardProps {
   repo: OrgRepoItemCardData;
+  /** Square row edges for an edge-to-edge sidebar list. */
+  flush?: boolean;
+  showTooltips?: boolean;
   onClick?: () => void;
   /** Optional alternate action for right-clicking the repository row. */
   onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
@@ -92,6 +95,8 @@ export interface OrgRepoItemCardProps {
 
 export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   repo,
+  flush = false,
+  showTooltips = true,
   onClick,
   onContextMenu,
   title,
@@ -128,7 +133,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
     <div
       onClick={onClick}
       onContextMenu={onContextMenu}
-      title={title}
+      title={showTooltips ? title : undefined}
       role={onClick ? 'button' : undefined}
       // Projects can be dragged onto a terminal: cloned ones paste their path,
       // not-yet-cloned ones paste their GitHub URL.
@@ -149,11 +154,11 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
         gap: spacing.sm + 2,
         // "Quiet list" row: no border. A subtle background tint on hover is the
         // only chrome; hierarchy is carried by the section header above.
-        padding: '6px 10px 6px 14px',
+        padding: flush ? '8px 10px 8px 14px' : '6px 10px 6px 14px',
         backgroundColor: hovered
           ? theme.colors.backgroundSecondary
           : 'transparent',
-        borderRadius: 6,
+        borderRadius: flush ? 0 : 6,
         cursor: onClick ? 'pointer' : 'default',
         transition: 'background-color 0.15s ease',
         // Not-yet-cloned projects read as lighter than the ones on disk.
@@ -175,7 +180,10 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
         {/* Dirty badge: an "in progress" dot tucked over the icon's corner. */}
         {isDirty && (
           <span
-            title="In Progress — has uncommitted changes"
+            title={
+              showTooltips ? 'In Progress — has uncommitted changes' : undefined
+            }
+            aria-label="Has uncommitted changes"
             style={{
               position: 'absolute',
               bottom: 0,
@@ -226,7 +234,8 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
           {/* Private repos get a lock; public repos are unmarked (the default). */}
           {isPrivate === true && (
             <span
-              title="Private repository"
+              title={showTooltips ? 'Private repository' : undefined}
+              aria-label="Private repository"
               style={{
                 flexShrink: 0,
                 display: 'inline-flex',
@@ -252,7 +261,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
             e.stopPropagation();
             onClone();
           }}
-          title="Clone to disk"
+          title={showTooltips ? 'Clone to disk' : undefined}
           aria-label={`Clone ${repo.name}`}
           style={{
             flexShrink: 0,
@@ -290,7 +299,11 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
             e.stopPropagation();
             onRelocate();
           }}
-          title="Not in {owner}/{repo} layout — move to standard location"
+          title={
+            showTooltips
+              ? 'Not in {owner}/{repo} layout — move to standard location'
+              : undefined
+          }
           aria-label={`Move ${repo.name} to standard location`}
           style={{
             flexShrink: 0,
@@ -327,7 +340,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
             e.stopPropagation();
             onOpenTerminal();
           }}
-          title="Open a terminal here"
+          title={showTooltips ? 'Open a terminal here' : undefined}
           aria-label={`Open a terminal in ${repo.name}`}
           style={{
             flexShrink: 0,
@@ -364,7 +377,11 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
             e.stopPropagation();
             onRemove();
           }}
-          title="Remove from list (does not delete the folder)"
+          title={
+            showTooltips
+              ? 'Remove from list (does not delete the folder)'
+              : undefined
+          }
           aria-label={`Remove ${repo.name} from list`}
           style={{
             flexShrink: 0,
@@ -401,7 +418,11 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
       {watching && (
         <span
           className="animate-watchPulse"
-          title="Watching — live git status (push and dirty changes update automatically)"
+          title={
+            showTooltips
+              ? 'Watching — live git status (push and dirty changes update automatically)'
+              : undefined
+          }
           aria-label="Watching for live changes"
           style={{
             flexShrink: 0,
@@ -443,7 +464,11 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
                     e.stopPropagation();
                     onPushAhead();
                   }}
-                  title={`${ahead} commit${ahead === 1 ? '' : 's'} ahead of remote — push to remote`}
+                  title={
+                    showTooltips
+                      ? `${ahead} commit${ahead === 1 ? '' : 's'} ahead of remote — push to remote`
+                      : undefined
+                  }
                   aria-label={`Push ${ahead} commit${ahead === 1 ? '' : 's'} to remote`}
                   style={{
                     display: 'inline-flex',
@@ -468,7 +493,12 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
                 </button>
               ) : (
                 <span
-                  title={`${ahead} commit${ahead === 1 ? '' : 's'} ahead of remote`}
+                  title={
+                    showTooltips
+                      ? `${ahead} commit${ahead === 1 ? '' : 's'} ahead of remote`
+                      : undefined
+                  }
+                  aria-label={`${ahead} commit${ahead === 1 ? '' : 's'} ahead of remote`}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -483,7 +513,12 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
           )}
           {behind > 0 && (
             <span
-              title={`${behind} commit${behind === 1 ? '' : 's'} behind remote`}
+              title={
+                showTooltips
+                  ? `${behind} commit${behind === 1 ? '' : 's'} behind remote`
+                  : undefined
+              }
+              aria-label={`${behind} commit${behind === 1 ? '' : 's'} behind remote`}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -509,7 +544,11 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
             onTogglePin();
           }}
           title={
-            pinned ? 'Unpin repository from Home' : 'Pin repository to Home'
+            showTooltips
+              ? pinned
+                ? 'Unpin repository from Home'
+                : 'Pin repository to Home'
+              : undefined
           }
           aria-label={
             pinned ? `Unpin ${repo.name} from Home` : `Pin ${repo.name} to Home`

@@ -157,7 +157,7 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
             )}
           </div>
           <span
-            title="From global git config (user.name / user.email)"
+            aria-label="From global git config (user.name / user.email)"
             style={sourceBadgeStyle}
           >
             Git
@@ -215,7 +215,7 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
           href={profileUrl}
           target="_blank"
           rel="noopener noreferrer"
-          title={`Open @${info.login} on GitHub`}
+          aria-label={`Open @${info.login} on GitHub`}
           style={{ flexShrink: 0, opacity: 1, transition: 'opacity 0.15s' }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLElement).style.opacity = '0.8';
@@ -273,7 +273,7 @@ export const UserAboutCard: React.FC<UserAboutCardProps> = ({
         <button
           type="button"
           onClick={() => setShowAuthModal(true)}
-          title="Authenticated with GitHub CLI"
+          aria-label="Authenticated with GitHub CLI"
           style={{
             flexShrink: 0,
             display: 'flex',

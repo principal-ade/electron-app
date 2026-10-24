@@ -34,7 +34,10 @@ test.each([true, false])(
     expect(screen.getByText('Clone profile')).toBeTruthy();
     expect(screen.queryByText('owner/app')).toBeNull();
     expect(container.querySelector('.lucide-id-card')).not.toBeNull();
-    fireEvent.click(screen.getByTitle('Open Clone profile'));
+    const row = screen.getByRole('button', { name: 'Open Clone profile' });
+    expect(row.style.paddingTop).toBe('8px');
+    expect(row.style.paddingBottom).toBe('8px');
+    fireEvent.click(screen.getByRole('button', { name: 'Open Clone profile' }));
     expect(activate).toHaveBeenCalledTimes(1);
     expect(
       screen.queryByRole('button', { name: /^(Pin|Unpin) Clone profile$/ }),
@@ -58,6 +61,7 @@ test('preserves explorer pin activation and unpinning', () => {
     name: 'Reopen pinned tab Clone explorer',
   });
   expect(container.querySelector('.lucide-folder-search')).not.toBeNull();
+  expect(container.querySelector('[title]')).toBeNull();
   fireEvent.click(button);
   fireEvent.contextMenu(button);
   expect(activate).toHaveBeenCalledTimes(1);
@@ -120,6 +124,11 @@ test('keeps Clone explorer individually pinnable', () => {
     />,
   );
   fireEvent.click(screen.getByRole('button', { name: 'Pin Clone explorer' }));
+  expect(
+    screen
+      .getByRole('button', { name: 'Pin Clone explorer' })
+      .hasAttribute('title'),
+  ).toBe(false);
   expect(pin).toHaveBeenCalledTimes(1);
   expect(activate).not.toHaveBeenCalled();
 });
@@ -178,7 +187,9 @@ test('shows a standalone terminal cwd instead of its tab number', () => {
   expect(screen.getByText('~/code/scratch')).toBeTruthy();
   expect(screen.queryByText('Tab 2')).toBeNull();
   expect(
-    screen.getByTitle('Open terminal in /Users/pat/code/scratch'),
+    screen.getByRole('button', {
+      name: 'Open terminal in /Users/pat/code/scratch',
+    }),
   ).toBeTruthy();
 });
 

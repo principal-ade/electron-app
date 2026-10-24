@@ -74,7 +74,14 @@ beforeEach(() => {
 });
 
 test('clicking the process label opens its linked browser once', () => {
-  render(<HomeProcessRow entry={entry} />);
+  const { container } = render(<HomeProcessRow entry={entry} />);
+  expect(container.querySelector('[title]')).toBeNull();
+  const row = screen.getByRole('button', {
+    name: 'Open Dev server in browser',
+  });
+  expect(row.style.paddingTop).toBe('8px');
+  expect(row.style.paddingBottom).toBe('8px');
+  expect(screen.getByRole('button', { name: 'Stop Dev server' })).toBeTruthy();
   fireEvent.click(screen.getByText('Dev server'));
   expect(openBrowser).toHaveBeenCalledTimes(1);
   expect(openBrowser).toHaveBeenCalledWith(5173, '/', 'Dev server', 'server-1');

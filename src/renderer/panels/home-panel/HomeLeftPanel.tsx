@@ -23,7 +23,7 @@ import {
   type RepositorySelectedPayload,
 } from '../../events/repositorySelected';
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelsTopLeft } from 'lucide-react';
+import { PanelsTopLeft, Pin } from 'lucide-react';
 import { useAuthUser } from '../../providers/AuthProvider';
 import { OrgRepoItemCard } from '../cards/OrgRepoItemCard';
 import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
@@ -130,6 +130,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     unpinRequest,
     requestPinError,
     refreshSavedRequests,
+    openOrgProfile,
   } = useWorkspaceTabs();
   const pinnedTabEntries = useMemo(
     () => [
@@ -210,21 +211,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // Repos the monitoring worker is watching — these have live git status;
   // unwatched repos receive staggered refreshes while Home is visible.
   const watchedPaths = useWatchedRepos();
-
-  // Group the in-progress repos by owner, the way the Projects surface does:
-  // the owner is carried by the section header, the row shows only the repo.
-  // The signed-in login's group sorts first, "Untracked" last.
-  const [collapsedOwners, setCollapsedOwners] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const toggleOwner = useCallback((owner: string) => {
-    setCollapsedOwners((prev) => {
-      const next = new Set(prev);
-      if (next.has(owner)) next.delete(owner);
-      else next.add(owner);
-      return next;
-    });
-  }, []);
 
   // Search across projects / clones / starred. The nav cards hide while a
   // query is active.
@@ -463,13 +449,18 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    padding: '8px 14px 4px',
+    padding: '12px 14px 10px',
     fontFamily: theme.fonts.body,
     fontSize: theme.fontSizes[1],
     fontWeight: theme.fontWeights.semibold,
     letterSpacing: '0.04em',
     textTransform: 'uppercase',
     color: theme.colors.textSecondary,
+  };
+  const tabSectionDividerStyle: React.CSSProperties = {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    margin: '5px 10px 0',
   };
 
   const tabNumbers = useMemo(
@@ -582,7 +573,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '4px 4px',
+                padding: 0,
               }}
             >
               {requestPinError && (
@@ -600,6 +591,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 </div>
               )}
               <RequestGroupList
+                showTooltips={false}
                 groups={homeTabs.requests}
                 renderRequest={(request, depth) =>
                   renderTabEntry(
@@ -625,11 +617,12 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               {inProgressGroups.length > 0 &&
                 inProgressGroups.map(([owner, repos]) => {
                   const isUntracked = owner === 'Untracked';
-                  const isCollapsed = collapsedOwners.has(owner);
                   const identity = resolveOwnerIdentity(owner, ownerDirectory);
                   return (
-                    <div key={owner} style={{ marginBottom: 8 }}>
+                    <div key={owner}>
                       <OrgSectionHeaderCard
+                        flush
+                        showTooltips={false}
                         header={{
                           orgName: identity.label,
                           login: identity.login,
@@ -638,117 +631,106 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                           repoCount: repos.length,
                           isUntracked,
                         }}
-                        isCollapsed={isCollapsed}
-                        onToggle={() => toggleOwner(owner)}
+                        onOpen={
+                          isUntracked ? undefined : () => openOrgProfile(owner)
+                        }
                       />
-                      {!isCollapsed &&
-                        repos.map(
-                          ({
-                            key,
-                            payload,
-                            status,
-                            openTabs,
-                            pinnedTabs,
-                            processes: repoProcesses,
-                          }) => {
-                            const entry = payload.localEntry;
-                            const name =
-                              payload.github?.name ??
-                              entry?.name ??
-                              payload.purl;
-                            const path = entry?.path ? String(entry.path) : '';
-                            return (
-                              <div key={key}>
-                                <OrgRepoItemCard
-                                  repo={{ name }}
-                                  isCloned={!!path}
-                                  isDirty={status?.isDirty}
-                                  watching={
-                                    path ? watchedPaths.has(path) : false
-                                  }
-                                  sync={{
-                                    ahead: status?.ahead,
-                                    behind: status?.behind,
-                                  }}
-                                  onPushAhead={
-                                    path && (status?.ahead ?? 0) > 0
-                                      ? () =>
-                                          setPushTarget({
-                                            path,
-                                            name,
-                                            ahead: status?.ahead ?? 0,
-                                            branch: status?.branch,
-                                          })
-                                      : undefined
-                                  }
-                                  dragText={path ? shellQuote(path) : undefined}
-                                  title={
-                                    path
-                                      ? 'Click to open a terminal, right-click to open the repo profile'
-                                      : 'Open the repo profile'
-                                  }
-                                  onClick={
-                                    path && entry
-                                      ? () => openTerminalForEntry(entry, name)
-                                      : () => openInProgressRepo(payload)
-                                  }
-                                  onContextMenu={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    openInProgressRepo(payload);
-                                  }}
-                                  pinned={pinnedRepoKeys.has(key)}
-                                  onTogglePin={() => toggleRepoPin(key)}
-                                  tabIcons={
-                                    pinnedTabs.length > 0
-                                      ? pinnedTabs
-                                          .filter(
-                                            (pin) =>
-                                              pin.kind !== 'topic' &&
-                                              pin.kind !== 'subsystem-model',
-                                          )
-                                          .map((pin) => (
-                                            <PinnedTabIcon
-                                              key={pin.id}
-                                              entry={pin}
-                                              active={activeTabId === pin.id}
-                                              onActivate={() =>
-                                                onOpenEntry(pin)
-                                              }
-                                              onUnpin={() => toggleTabPin(pin)}
-                                            />
-                                          ))
-                                      : undefined
-                                  }
-                                />
-                                {/* Open repo-rooted tabs, nested under the repo
+                      {repos.map(
+                        ({
+                          key,
+                          payload,
+                          status,
+                          openTabs,
+                          pinnedTabs,
+                          processes: repoProcesses,
+                        }) => {
+                          const entry = payload.localEntry;
+                          const name =
+                            payload.github?.name ?? entry?.name ?? payload.purl;
+                          const path = entry?.path ? String(entry.path) : '';
+                          return (
+                            <div key={key}>
+                              <OrgRepoItemCard
+                                flush
+                                showTooltips={false}
+                                repo={{ name }}
+                                isCloned={!!path}
+                                isDirty={status?.isDirty}
+                                watching={path ? watchedPaths.has(path) : false}
+                                sync={{
+                                  ahead: status?.ahead,
+                                  behind: status?.behind,
+                                }}
+                                onPushAhead={
+                                  path && (status?.ahead ?? 0) > 0
+                                    ? () =>
+                                        setPushTarget({
+                                          path,
+                                          name,
+                                          ahead: status?.ahead ?? 0,
+                                          branch: status?.branch,
+                                        })
+                                    : undefined
+                                }
+                                dragText={path ? shellQuote(path) : undefined}
+                                onClick={
+                                  path && entry
+                                    ? () => openTerminalForEntry(entry, name)
+                                    : () => openInProgressRepo(payload)
+                                }
+                                onContextMenu={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  openInProgressRepo(payload);
+                                }}
+                                pinned={pinnedRepoKeys.has(key)}
+                                onTogglePin={() => toggleRepoPin(key)}
+                                tabIcons={
+                                  pinnedTabs.length > 0
+                                    ? pinnedTabs
+                                        .filter(
+                                          (pin) =>
+                                            pin.kind !== 'topic' &&
+                                            pin.kind !== 'subsystem-model',
+                                        )
+                                        .map((pin) => (
+                                          <PinnedTabIcon
+                                            key={pin.id}
+                                            entry={pin}
+                                            active={activeTabId === pin.id}
+                                            onActivate={() => onOpenEntry(pin)}
+                                            onUnpin={() => toggleTabPin(pin)}
+                                          />
+                                        ))
+                                    : undefined
+                                }
+                              />
+                              {/* Open repo-rooted tabs, nested under the repo
                                     row and focusing on click. */}
-                                {openTabs.map((tab) =>
-                                  renderTabEntry(tab, true, 1),
-                                )}
-                                {pinnedTabs
-                                  .filter(
-                                    (pin) =>
-                                      pin.kind === 'topic' ||
-                                      pin.kind === 'subsystem-model',
-                                  )
-                                  .map((pin) => renderTabEntry(pin, false, 1))}
-                                {repoProcesses.map((process) => (
-                                  <HomeProcessRow
-                                    key={process.id}
-                                    entry={process}
-                                    depth={1}
-                                    openTab={homeTabs.processTabs.get(
-                                      process.id,
-                                    )}
-                                    onActivateTab={onActivateTab}
-                                    onProcessKilled={refreshProcesses}
-                                  />
-                                ))}
-                              </div>
-                            );
-                          },
-                        )}
+                              {openTabs.map((tab) =>
+                                renderTabEntry(tab, true, 1),
+                              )}
+                              {pinnedTabs
+                                .filter(
+                                  (pin) =>
+                                    pin.kind === 'topic' ||
+                                    pin.kind === 'subsystem-model',
+                                )
+                                .map((pin) => renderTabEntry(pin, false, 1))}
+                              {repoProcesses.map((process) => (
+                                <HomeProcessRow
+                                  key={process.id}
+                                  entry={process}
+                                  depth={1}
+                                  openTab={homeTabs.processTabs.get(process.id)}
+                                  onActivateTab={onActivateTab}
+                                  onProcessKilled={refreshProcesses}
+                                />
+                              ))}
+                            </div>
+                          );
+                        },
+                      )}
                     </div>
                   );
                 })}
@@ -771,11 +753,12 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 <div style={{ marginBottom: 8 }}>
                   <div style={tabSectionStyle}>
                     <PanelsTopLeft
-                      size={16}
+                      size={22}
                       color={theme.colors.textSecondary}
                     />
                     <span>Open Tabs</span>
                   </div>
+                  <div role="separator" style={tabSectionDividerStyle} />
                   {homeTabs.openTabs.map((tab) => renderTabEntry(tab, true))}
                 </div>
               )}
@@ -783,7 +766,11 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               {/* Pinned entries whose tab is currently closed. */}
               {homeTabs.pinnedTabs.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={tabSectionStyle}>Pinned</div>
+                  <div style={tabSectionStyle}>
+                    <Pin size={22} aria-hidden="true" />
+                    <span>Pinned</span>
+                  </div>
+                  <div role="separator" style={tabSectionDividerStyle} />
                   {homeTabs.pinnedTabs.map((tab) => renderTabEntry(tab, false))}
                 </div>
               )}

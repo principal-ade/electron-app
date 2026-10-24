@@ -668,8 +668,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
 
       {/* Filter chips — hidden without a GitHub session (clones-only list). */}
       {showFilter && (
-        <div style={{ padding: spacing.sm, flexShrink: 0 }}>
+        <div style={{ padding: 0, flexShrink: 0 }}>
           <SegmentedControl
+            flush
+            verticalPadding={8}
             options={[
               { value: 'cloned', label: 'Cloned' },
               { value: 'owned', label: 'Owned' },
@@ -689,7 +691,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: spacing.xs,
-          padding: `${spacing.sm}px ${spacing.md}px`,
+          padding: `0 ${spacing.md}px 0 0`,
           flexShrink: 0,
         }}
       >
@@ -701,7 +703,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             gap: spacing.xs,
             backgroundColor: theme.colors.backgroundSecondary,
             border: `1px solid ${theme.colors.border}`,
-            borderRadius: theme.radii?.[1] || 4,
+            borderRadius: 0,
             padding: `${spacing.xs}px ${spacing.sm}px`,
           }}
         >
@@ -833,7 +835,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           overflow: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          padding: `${spacing.sm}px ${spacing.xs}px`,
+          padding: 0,
         }}
       >
         {isInitialLoading ? (
@@ -891,8 +893,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             const identity = resolveOwnerIdentity(orgName, ownerDirectory);
 
             return (
-              <div key={orgName} style={{ marginBottom: spacing.md }}>
+              <div key={orgName}>
                 <OrgSectionHeaderCard
+                  flush
                   header={{
                     orgName: identity.label,
                     login: identity.login,
@@ -916,12 +919,11 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 1,
-                      marginTop: spacing.xs,
                     }}
                   >
                     {repos.map((project) => (
                       <OrgRepoItemCard
+                        flush
                         key={project.key}
                         repo={{ name: project.name }}
                         isCloned={project.isCloned}

@@ -5,9 +5,16 @@ import type { HomeRepoRow } from './homeTabEntries';
 import { HomeLeftPanel } from './HomeLeftPanel';
 import { buildHomeTabEntries } from './homeTabEntries';
 
+const mockOpenOrgProfile = jest.fn();
+
 jest.mock('@principal-ade/industry-theme', () => ({
   useTheme: () => ({
-    theme: { colors: {}, fonts: {}, fontSizes: [10, 12, 14], fontWeights: {} },
+    theme: {
+      colors: { border: '#123456' },
+      fonts: {},
+      fontSizes: [10, 12, 14],
+      fontWeights: {},
+    },
   }),
 }));
 jest.mock('@principal-ai/alexandria-core-library', () => ({
@@ -27,7 +34,9 @@ jest.mock('../../providers/AuthProvider', () => ({
   useAuthUser: () => ({}),
 }));
 jest.mock('../../hooks/useGithubGraph', () => ({
-  useGithubOrganizations: () => ({ orgs: [] }),
+  useGithubOrganizations: () => ({
+    orgs: [{ login: 'owner', name: 'Owner organization' }],
+  }),
   useGithubProjectSections: () => [],
   useGithubStarred: () => ({ starredRepos: [], ensure: jest.fn() }),
 }));
@@ -52,7 +61,11 @@ jest.mock('./useHomePins', () => ({
   }),
 }));
 jest.mock('../../principal-window/PortalTabsContext', () => ({
-  useWorkspaceTabs: () => ({ savedRequests: [], catalogRequests: [] }),
+  useWorkspaceTabs: () => ({
+    savedRequests: [],
+    catalogRequests: [],
+    openOrgProfile: mockOpenOrgProfile,
+  }),
 }));
 jest.mock('../../requests/RequestGroupList', () => ({
   RequestGroupList: () => null,
@@ -83,14 +96,19 @@ const repo = {
   pinned: false,
 } as unknown as HomeRepoRow;
 
-function renderHome(row = repo, onOpenEntry = jest.fn()) {
+function renderHome(
+  row = repo,
+  onOpenEntry = jest.fn(),
+  pinnedTabs: HomeRepoRow['pinnedTabs'] = [],
+  openTabs: HomeRepoRow['openTabs'] = [],
+) {
   jest.mocked(buildHomeTabEntries).mockReturnValue({
     repos: [row],
     requests: [],
     processTabs: new Map(),
     processes: [],
-    openTabs: [],
-    pinnedTabs: [],
+    openTabs,
+    pinnedTabs,
   });
   const emit = jest.fn();
   render(
@@ -107,6 +125,119 @@ function renderHome(row = repo, onOpenEntry = jest.fn()) {
   );
   return emit;
 }
+
+beforeEach(() => {
+  mockOpenOrgProfile.mockClear();
+});
+
+test('Home rows have square edges and no outer horizontal inset', () => {
+  renderHome(repo, jest.fn(), [
+    { id: 'topic', kind: 'topic', label: 'Standalone topic', topicId: 't1' },
+  ]);
+  const owner = screen
+    .getByText('Owner organization')
+    .closest('[role="button"]');
+  const repository = screen.getByText('app').closest('[role="button"]');
+  const tab = screen.getByRole('button', { name: 'Open Standalone topic' });
+  if (!owner || !(repository instanceof HTMLElement))
+    throw new Error('Missing Home rows');
+  expect((owner as HTMLElement).style.borderRadius).toBe('0');
+  expect(repository.style.borderRadius).toBe('0');
+  expect(tab.style.borderRadius).toBe('0');
+  expect(owner.hasAttribute('title')).toBe(false);
+  expect(repository.querySelector('[title]')).toBeNull();
+  expect(repository.hasAttribute('title')).toBe(false);
+  expect(tab.querySelector('[title]')).toBeNull();
+  expect(tab.hasAttribute('title')).toBe(false);
+  expect(repository.style.paddingLeft).toBe('14px');
+  expect(tab.style.paddingLeft).toBe('14px');
+  const list = repository.parentElement?.parentElement?.parentElement;
+  expect(list?.style.paddingLeft).toBe('0px');
+  expect(list?.style.paddingRight).toBe('0px');
+  expect(list?.style.paddingTop).toBe('0px');
+  expect(list?.style.paddingBottom).toBe('0px');
+  expect((owner as HTMLElement).style.paddingTop).toBe('12px');
+  expect((owner as HTMLElement).style.paddingBottom).toBe('10px');
+  for (const row of [repository, tab]) {
+    expect(row.style.paddingTop).toBe('8px');
+    expect(row.style.paddingBottom).toBe('8px');
+  }
+  expect(repository.parentElement?.parentElement?.style.marginBottom).toBe('');
+});
+
+test('owner headings open the org profile by login without collapsing repositories', () => {
+  const emit = renderHome();
+  const header = screen
+    .getByText('Owner organization')
+    .closest('[role="button"]');
+  if (!header) throw new Error('Missing owner heading');
+  expect(header.hasAttribute('aria-expanded')).toBe(false);
+  expect(header.querySelector('.lucide-chevron-down')).toBeNull();
+  expect(header.querySelector('.lucide-chevron-right')).toBeNull();
+  fireEvent.click(header);
+  expect(mockOpenOrgProfile).toHaveBeenCalledWith('owner');
+  expect(screen.getByText('app')).toBeTruthy();
+  fireEvent.keyDown(header, { key: 'Enter' });
+  expect(mockOpenOrgProfile).toHaveBeenCalledTimes(2);
+  expect(screen.getByText('app')).toBeTruthy();
+  expect(emit).not.toHaveBeenCalled();
+});
+
+test('Untracked stays expanded and does not open an organization profile', () => {
+  renderHome({
+    ...repo,
+    payload: { ...repo.payload, github: undefined },
+  });
+  const label = screen.getByText('Untracked');
+  expect(label.closest('[role="button"]')).toBeNull();
+  fireEvent.click(label);
+  expect(mockOpenOrgProfile).not.toHaveBeenCalled();
+  expect(screen.getByText('app')).toBeTruthy();
+});
+
+test.each(['Open Tabs', 'Pinned'])(
+  'separates the %s heading from its content with an owner-style divider',
+  (heading) => {
+    const entries: HomeRepoRow['pinnedTabs'] = [
+      { id: 'topic', kind: 'topic', label: 'Standalone topic', topicId: 't1' },
+    ];
+    renderHome(
+      repo,
+      jest.fn(),
+      heading === 'Pinned' ? entries : [],
+      heading === 'Open Tabs' ? entries : [],
+    );
+    const divider = screen.getByRole('separator');
+    const header = screen.getByText(heading).parentElement;
+    const icon = header?.querySelector('svg');
+    expect(icon?.getAttribute('width')).toBe('22');
+    expect(icon?.getAttribute('height')).toBe('22');
+    expect(header?.style.paddingTop).toBe('12px');
+    expect(header?.style.paddingBottom).toBe('10px');
+    expect(screen.getByText(heading).parentElement?.nextElementSibling).toBe(
+      divider,
+    );
+    expect(divider.style.height).toBe('1px');
+    expect(divider.style.backgroundColor).toBe('rgb(18, 52, 86)');
+    expect(divider.style.margin).toBe('5px 10px 0px');
+    expect(
+      divider.nextElementSibling?.contains(
+        screen.getByText('Standalone topic'),
+      ),
+    ).toBe(true);
+  },
+);
+
+test('shows a pin icon before the Pinned section label', () => {
+  renderHome(repo, jest.fn(), [
+    { id: 'topic', kind: 'topic', label: 'Standalone topic', topicId: 't1' },
+  ]);
+  const label = screen.getByText('Pinned');
+  const icon = label.previousElementSibling;
+  expect(icon?.classList.contains('lucide-pin')).toBe(true);
+  expect(icon?.getAttribute('aria-hidden')).toBe('true');
+  expect(label.parentElement?.firstElementChild).toBe(icon);
+});
 
 test('clicking a Home repo opens its terminal without a separate terminal button', () => {
   const emit = renderHome();
@@ -164,7 +295,9 @@ test('closed topic and model pins render as named children, not compact repo ico
   ];
   const open = jest.fn();
   const emit = renderHome({ ...repo, pinnedTabs: pins }, open);
-  const group = screen.getByText('app').closest('[title]')?.parentElement;
+  const group = screen
+    .getByText('app')
+    .closest('[role="button"]')?.parentElement;
   if (!group) throw new Error('Missing repository group');
   for (const pin of pins) {
     expect(within(group).getByText(pin.label)).toBeTruthy();

@@ -145,7 +145,10 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
         flexShrink: 0,
       }}
     >
-      <Search size={14} style={{ color: theme.colors.textMuted, flexShrink: 0 }} />
+      <Search
+        size={14}
+        style={{ color: theme.colors.textMuted, flexShrink: 0 }}
+      />
       <input
         type="text"
         value={query}
@@ -200,11 +203,12 @@ export interface HomeSearchResultsProps {
   onSelectEntry: (entry: AlexandriaEntry) => void;
 }
 
-const KIND_META: Record<SearchKind, { label: string; icon: React.ReactNode }> = {
-  project: { label: 'Project', icon: <FolderGit2 size={11} /> },
-  clone: { label: 'Clone', icon: <HardDrive size={11} /> },
-  starred: { label: 'Starred', icon: <Star size={11} /> },
-};
+const KIND_META: Record<SearchKind, { label: string; icon: React.ReactNode }> =
+  {
+    project: { label: 'Project', icon: <FolderGit2 size={11} /> },
+    clone: { label: 'Clone', icon: <HardDrive size={11} /> },
+    starred: { label: 'Starred', icon: <Star size={11} /> },
+  };
 
 export const HomeSearchResults: React.FC<HomeSearchResultsProps> = ({
   query,
@@ -244,7 +248,7 @@ export const HomeSearchResults: React.FC<HomeSearchResultsProps> = ({
   }
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 6px' }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 0' }}>
       {results.map((item) => (
         <ResultRow
           key={item.key}
@@ -289,7 +293,9 @@ function ResultRow({
         display: 'block',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}
+      >
         <span
           style={{
             fontSize: theme.fontSizes[2],
