@@ -310,9 +310,11 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
         command?: string;
       }) => {
         const cwd = options?.cwd || repositoryPath;
-        const sessionContext = options?.context
-          ? `${terminalContext}:${options.context}`
-          : terminalContext;
+        // `context` is already fully qualified by the caller — `TabbedTerminalPanel`
+        // composes `<terminalContext>:<tabId>` exactly once. Prefixing here would
+        // double the scope and break the `session.context -> tabId` round-trip
+        // that tab restore depends on.
+        const sessionContext = options?.context ?? terminalContext;
 
         // Check existing sessions before creating
         const existingSessions = await TerminalService.list();

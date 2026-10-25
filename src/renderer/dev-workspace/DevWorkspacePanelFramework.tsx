@@ -931,17 +931,19 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       try {
         const sessionId = await terminalActions.createTerminalSession({
           cwd: incomingTab.cwd || terminalDirectory,
-          context: `tab:${incomingTab.tabId}`,
+          // Fully qualified: the panel derives its tab id by stripping
+          // `<terminalContext>:` so the transferred tab keeps its identity.
+          context: `${terminalContext}:${incomingTab.tabId}`,
         });
         window.dispatchEvent(
           new CustomEvent('terminal-session-created', {
             detail: {
               sessionId,
-              context: `${terminalContext}:tab:${incomingTab.tabId}`,
+              context: `${terminalContext}:${incomingTab.tabId}`,
             },
           }),
         );
-        setFocusTabId(`tab-restored-${sessionId}`);
+        setFocusTabId(incomingTab.tabId);
       } catch (err) {
         console.error(
           '[DevWorkspace] Failed to create session for incoming tab:',

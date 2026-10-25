@@ -74,6 +74,7 @@ import {
   TabbedTerminalPanel,
   type TerminalWorkingState,
   type TerminalPanelActions,
+  type TerminalTabOpenRequest,
 } from '@industry-theme/xterm-terminal-panel';
 import { TopicsLeftPanel } from '../panels/TopicsLeftPanel';
 import { ProjectsLeftPanel } from '../panels/ProjectsLeftPanel';
@@ -112,7 +113,6 @@ import { DocumentService } from '../services/DocumentService';
 import type { LocalTopicTab } from '../events/portalTabs';
 import {
   PORTAL_INTENTS,
-  emitTerminalOpen,
   type TerminalOpenPayload,
 } from '../events/portalIntents';
 import { DRAWING_EVENTS } from '../drawings-view/drawingsStorage';
@@ -507,15 +507,15 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   }, [events, activityActions]);
 
   // "Open a terminal here" from the Projects left panel + repository profile
-  // tab. Mirrors the dev-workspace flow: create — or
-  // reuse, since `createTerminalSession` dedupes by context — a session rooted at
-  // the path, then point `requestFocusTabId` at the `tab-restored-<id>` tab the
-  // TabbedTerminalPanel materializes from `terminalSessions`. Appending a
-  // terminal tab to the shared bucket does NOT work: the panel seeds terminal
-  // tabs from the session list, not from `initialTabs` after mount.
+  // tab. The panel owns tab identity and session creation (`requestOpenTab`), so
+  // the host supplies intent only — it never invents a session context, which is
+  // what used to collapse every terminal in a repo onto one tab.
   const [requestFocusTabId, setRequestFocusTabId] = useState<string | null>(
     null,
   );
+  const [requestOpenTab, setRequestOpenTab] =
+    useState<TerminalTabOpenRequest | null>(null);
+  const handleOpenTabHandled = useCallback(() => setRequestOpenTab(null), []);
   const handleFocusTabHandled = useCallback(
     () => setRequestFocusTabId(null),
     [],
@@ -546,17 +546,19 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       try {
         const sessionId = await terminalActions.createTerminalSession({
           cwd: incomingTab.cwd || terminalDirectory,
-          context: `tab:${incomingTab.tabId}`,
+          // Fully qualified: the receiving panel derives its tab id by stripping
+          // `<terminalContext>:`, so the transferred tab keeps its identity.
+          context: `${terminalCtx.terminalContext}:${incomingTab.tabId}`,
         });
         window.dispatchEvent(
           new CustomEvent('terminal-session-created', {
             detail: {
               sessionId,
-              context: `${terminalCtx.terminalContext}:tab:${incomingTab.tabId}`,
+              context: `${terminalCtx.terminalContext}:${incomingTab.tabId}`,
             },
           }),
         );
-        setRequestFocusTabId(`tab-restored-${sessionId}`);
+        setRequestFocusTabId(incomingTab.tabId);
       } catch (err) {
         console.error(
           '[WorkspaceShell] Failed to create session for incoming tab:',
@@ -708,12 +710,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           }
           break;
         case 'terminal':
-          if (entry.path) {
-            emitTerminalOpen(eventsRef.current, 'home-panel', {
-              directory: entry.path,
-              label: entry.label,
-            });
-          }
+          // A terminal entry's id IS its tab id, so revealing it is a focus —
+          // no session lookup, no chance of respawning a dead shell.
+          setRequestFocusTabId(entry.id);
           break;
         case 'repo-tab': {
           if (!entry.purl) break;
@@ -962,25 +961,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     const handleTerminalOpen = (event: { payload: TerminalOpenPayload }) => {
       const directory = event.payload?.directory;
       if (!directory) return;
-      void (async () => {
-        try {
-          const sessionId = await terminalActions.createTerminalSession({
-            cwd: directory,
-            context: `repo:${directory}`,
-          });
-          window.dispatchEvent(
-            new CustomEvent('terminal-session-created', {
-              detail: {
-                sessionId,
-                context: `${terminalCtx.terminalContext}:repo:${directory}`,
-              },
-            }),
-          );
-          setRequestFocusTabId(`tab-restored-${sessionId}`);
-        } catch (err) {
-          console.error('[WorkspaceShell] Failed to open terminal:', err);
-        }
-      })();
+      // The panel mints the tab id and creates the session with a context
+      // derived from it, so a second open in the same directory gets its own tab
+      // instead of reattaching to the first one's session.
+      setRequestOpenTab({ directory, label: event.payload?.label });
     };
     events.on(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
     // The titlebar search lives outside the shell, so it can only reach the
@@ -991,7 +975,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       events.off(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
       portalEvents.off(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
     };
-  }, [events, portalEvents, terminalActions, terminalCtx.terminalContext]);
+  }, [events, portalEvents]);
 
   // Route an absolute file path to the right viewer tab by extension — markdown
   // docs and media get their dedicated tabs, everything else the source viewer.
@@ -1156,6 +1140,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onActiveTabChange={setActiveTabId}
               requestFocusTabId={requestFocusTabId}
               onFocusTabHandled={handleFocusTabHandled}
+              requestOpenTab={requestOpenTab}
+              onOpenTabHandled={handleOpenTabHandled}
               requestCloseTabId={requestCloseTabId}
               renderTabContent={renderTabContent}
               renderTabIcon={renderTabIcon}
@@ -1205,6 +1191,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       setActiveTabId,
       requestFocusTabId,
       handleFocusTabHandled,
+      requestOpenTab,
+      handleOpenTabHandled,
       requestCloseTabId,
       handleOpenHomeEntry,
       renderTabContent,
