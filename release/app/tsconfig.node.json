@@ -1,0 +1,20 @@
+{
+  "//": "Safety net for tools that run node/npm/npx inside release/app while the calling shell exports NODE_OPTIONS=\"-r ts-node/register ...\" and TS_NODE_PROJECT=tsconfig.node.json (see package.json build scripts). ts-node resolves TS_NODE_PROJECT relative to the cwd, so without this file every node process started here fails with \"TS5083: Cannot read file '.../release/app/tsconfig.node.json'. Keeping this file makes such processes start normally instead of printing ts-node errors into the output (electron-builder parses `npm ls --json` output and errors out when it is not JSON).",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "ts-node": {
+    "transpileOnly": true,
+    "compilerOptions": {
+      "module": "CommonJS",
+      "moduleResolution": "node"
+    }
+  }
+}

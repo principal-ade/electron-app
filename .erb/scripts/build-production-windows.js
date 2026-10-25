@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { cleanEnv } = require('../../scripts/clean-env');
 
 const projectRoot = path.join(__dirname, '../..');
 
@@ -48,6 +49,9 @@ try {
   execSync('npm install --legacy-peer-deps', {
     cwd: projectRoot,
     stdio: 'inherit',
+    // node_modules was just deleted, so the ts-node preload inherited from the
+    // shell would fail to resolve. Install with a plain Node environment.
+    env: cleanEnv(),
   });
 
   // Step 6: Build the app
@@ -63,6 +67,9 @@ try {
   execSync(`electron-builder build --win ${publishArg}`, {
     cwd: projectRoot,
     stdio: 'inherit',
+    // electron-builder spawns npm inside release/app; keep those children free
+    // of the ts-node preload inherited from the calling shell.
+    env: cleanEnv(),
   });
 
   console.log('✨ Build completed successfully!');

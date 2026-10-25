@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { cleanEnv } = require('./clean-env');
 
 // Read both package.json files
 const rootPkgPath = path.join(__dirname, '..', 'package.json');
@@ -262,7 +263,10 @@ if (releasePackageModified) {
   try {
     execSync('npm install --legacy-peer-deps', {
       cwd: path.join(__dirname, '..', 'release', 'app'),
-      stdio: 'inherit'
+      stdio: 'inherit',
+      // release/app has no tsconfig.node.json, so inherited ts-node settings
+      // from the build scripts must not leak into this install.
+      env: cleanEnv()
     });
     console.log('✅ Dependencies updated successfully!\n');
   } catch (error) {

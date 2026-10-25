@@ -3,6 +3,7 @@
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const { cleanEnv } = require('./clean-env');
 
 // Helper function to execute commands
 function exec(command, cwd, allowFailure = false) {
@@ -11,7 +12,10 @@ function exec(command, cwd, allowFailure = false) {
     execSync(command, { 
       stdio: 'inherit', 
       cwd: cwd || process.cwd(),
-      shell: true 
+      shell: true,
+      // Don't leak ts-node/TS_NODE_PROJECT into installs that run in other
+      // directories (e.g. release/app has no tsconfig.node.json).
+      env: cleanEnv()
     });
     return true;
   } catch (error) {

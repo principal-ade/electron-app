@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { cleanEnv } = require('../../scripts/clean-env');
 
 const projectRoot = path.join(__dirname, '../..');
 
@@ -145,6 +146,9 @@ try {
   execSync('npm install --legacy-peer-deps', {
     cwd: projectRoot,
     stdio: 'inherit',
+    // node_modules was just deleted, so the ts-node preload inherited from the
+    // shell would fail to resolve. Install with a plain Node environment.
+    env: cleanEnv(),
   });
 
   // Step 3.5: Install release/app dependencies
@@ -153,6 +157,9 @@ try {
   execSync('npm install --legacy-peer-deps --ignore-scripts', {
     cwd: releaseAppDir,
     stdio: 'inherit',
+    // release/app has no tsconfig.node.json, so inherited ts-node settings
+    // from the build scripts must not leak into this install.
+    env: cleanEnv(),
   });
   
   // Run electron-rebuild manually for release/app
@@ -160,6 +167,9 @@ try {
   execSync('npx electron-rebuild --force --types prod,dev,optional --module-dir .', {
     cwd: releaseAppDir,
     stdio: 'inherit',
+    // npx is a Node process started in release/app: without this it dies with
+    // "TS5083: Cannot read file '<release/app>/tsconfig.node.json'".
+    env: cleanEnv(),
   });
 
   // Step 4: Build the app
@@ -187,6 +197,9 @@ try {
   execSync(`npx electron-builder build --publish never`, {
     cwd: projectRoot,
     stdio: 'inherit',
+    // electron-builder spawns npm inside release/app; keep those children free
+    // of the ts-node preload inherited from the calling shell.
+    env: cleanEnv(),
   });
 
   // Step 6: Rebuild DMGs with hdiutil to fix missing Electron Framework
