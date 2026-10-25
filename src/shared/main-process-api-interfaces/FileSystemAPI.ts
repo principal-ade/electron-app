@@ -63,6 +63,8 @@ export enum FileSystemAPIEvent {
 }
 
 export interface FileStats {
+  /** True only for a local regular file the app can currently write. */
+  writable?: boolean;
   size: number;
   isDirectory: boolean;
   lastModified: Date;

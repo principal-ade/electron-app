@@ -33,6 +33,7 @@ import { DocumentEvent } from '../../shared/main-process-api-interfaces/Document
 import { applicationWindows } from '../window/modernWindowManager';
 import { PrimaryWindowType } from '../window/types';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { isDocumentRange } from '../../shared/documentRange';
 
 /**
  * Primary window types that can host a doc tab next to a tabbed terminal:
@@ -54,6 +55,7 @@ export function registerDocumentRoutes(app: Application): void {
       filePath?: unknown;
       repositoryPath?: unknown;
       createIfMissing?: unknown;
+      range?: unknown;
     };
 
     const rawFilePath =
@@ -76,6 +78,19 @@ export function registerDocumentRoutes(app: Application): void {
       return;
     }
     const createIfMissing = body.createIfMissing === true;
+    if (body.range !== undefined && !isDocumentRange(body.range)) {
+      res.status(400).json({
+        success: false,
+        error: 'range must contain positive integer startLineNumber, startColumn, endLineNumber, and endColumn, with the end at or after the start',
+      });
+      return;
+    }
+    const range = body.range === undefined ? undefined : {
+      startLineNumber: body.range.startLineNumber,
+      startColumn: body.range.startColumn,
+      endLineNumber: body.range.endLineNumber,
+      endColumn: body.range.endColumn,
+    };
 
     const repositoryPath =
       typeof body.repositoryPath === 'string' && body.repositoryPath.length > 0
@@ -165,6 +180,7 @@ export function registerDocumentRoutes(app: Application): void {
     appWindow.window.webContents.send(DocumentEvent.OPEN_DOCUMENT, {
       filePath: absFilePath,
       repositoryPath,
+      ...(range !== undefined ? { range } : {}),
     });
 
     res.json({ success: true, windowOpened: true, created });

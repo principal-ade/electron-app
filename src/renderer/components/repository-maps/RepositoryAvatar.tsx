@@ -1,3 +1,4 @@
+import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type {
   Repository,

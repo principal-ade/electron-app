@@ -109,6 +109,7 @@ import {
 } from '@industry-theme/github-panels';
 import { TerminalSessionsPanel } from '../panels/terminal-sessions';
 import { SourceFileTabContent } from '../panels/SourceFileTabContent';
+import type { DocumentRange } from '../../shared/documentRange';
 import { MediaTabContent } from '../panels/MediaTabContent';
 import { FilesPanel } from './files-panel';
 import { FileCityPanel } from './file-city-panel';
@@ -168,16 +169,20 @@ interface FileEditorTab extends BaseTab {
   contentType: 'file-editor';
   filePath: string;
   fileName: string;
+  range?: DocumentRange;
+  rangeRevision?: number;
 }
 
 /**
- * Tab type for the Pierre `<File>` viewer (read-only diff-library renderer).
- * Used by the 3D file-city panel for now to compare against the overlay.
+ * Source tab. Retains the historical content type for compatibility, while
+ * SourceFileTabContent chooses Monaco or Pierre from local write access.
  */
 interface PierreFileTab extends BaseTab {
   contentType: 'pierre-file';
   filePath: string;
   fileName: string;
+  range?: DocumentRange;
+  rangeRevision?: number;
 }
 
 /**
@@ -1675,8 +1680,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         // Route by file type, mirroring how the alexandria / principal windows
         // handle `file:opened`: markdown → MarkdownTab, media → MediaTab,
-        // everything else → PierreFileTab (read-only source viewer).
-        const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
+        // everything else (including markdown range requests) → source tab.
+        const isMarkdown =
+          !payload.range && /\.(md|mdx|markdown)$/i.test(filePath);
         const isMedia =
           /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(
             filePath,
@@ -1733,6 +1739,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         setTabs((prevTabs) => {
           const existingTab = prevTabs.find((t) => {
             if (
+              isMarkdown &&
               t.contentType === 'markdown' &&
               (t as MarkdownTab).filePath === filePath
             )
@@ -1743,8 +1750,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             )
               return true;
             if (
-              t.contentType === 'pierre-file' &&
-              (t as PierreFileTab).filePath === filePath
+              (t.contentType === 'pierre-file' ||
+                t.contentType === 'file-editor') &&
+              (t as PierreFileTab | FileEditorTab).filePath === filePath
             )
               return true;
             return false;
@@ -1754,10 +1762,26 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             tabExists = true;
             tabId = existingTab.id;
             setFocusTabId(existingTab.id);
+            if (
+              payload.range &&
+              (existingTab.contentType === 'pierre-file' ||
+                existingTab.contentType === 'file-editor')
+            ) {
+              const source = existingTab as PierreFileTab | FileEditorTab;
+              return prevTabs.map((tab) =>
+                tab.id === source.id
+                  ? {
+                      ...source,
+                      range: payload.range,
+                      rangeRevision: (source.rangeRevision ?? 0) + 1,
+                    }
+                  : tab,
+              );
+            }
             return prevTabs;
           }
 
-          tabId = `file-${sanitizedPath}`;
+          tabId = `${isMarkdown || isMedia ? 'file' : 'source'}-${sanitizedPath}`;
           if (isMedia) {
             const newTab: MediaTab = {
               id: tabId,
@@ -1788,6 +1812,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             contentType: 'pierre-file',
             filePath,
             fileName,
+            range: payload.range,
+            rangeRevision: payload.range ? 1 : undefined,
             closable: true,
           };
           setFocusTabId(newTab.id);
@@ -2329,16 +2355,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Bridge handoff: a doc pushed from the Principal MCP Bridge
   // (POST /api/document/open) arrives as an OPEN_DOCUMENT IPC when this
   // dev-workspace window is focused. Re-emit it onto the panel event bus as a
-  // `file:opened` event so the handler above opens the markdown tab — the same
-  // path as clicking a doc.
+  // `file:opened` event so the handler above chooses a document/source/media
+  // tab, preserving a requested source span.
   useEffect(() => {
-    return DocumentService.onOpenDocument(({ filePath, repositoryPath }) => {
+    return DocumentService.onOpenDocument(({ filePath, repositoryPath, range }) => {
       if (!filePath) return;
       events.emit({
         type: 'file:opened',
         source: 'bridge',
         timestamp: Date.now(),
-        payload: { filePath, repositoryPath },
+        payload: { filePath, repositoryPath, range },
       });
     });
   }, [events]);
@@ -2519,36 +2545,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         case 'file-editor': {
           // Type assertion for TypeScript
           const fileEditorTab = tab as FileEditorTab;
-
-          if (!FileEditorPanelComponent) {
-            return (
-              <div
-                style={{ padding: '2rem', color: theme.colors.textSecondary }}
-              >
-                File Editor panel not available
-              </div>
-            );
-          }
-
           return (
-            <div
-              style={{
-                height: '100%',
-                width: '100%',
-                overflow: 'hidden',
-                position: 'relative',
-                display: 'flex', // TabbedTerminalPanel handles visibility
-                flexDirection: 'column',
-              }}
-            >
-              <FileEditorPanelComponent
-                context={contextRef.current}
-                actions={actionsRef.current}
-                events={eventsRef.current}
-                filePath={fileEditorTab.filePath}
-                showCloseButton={false}
-              />
-            </div>
+            <SourceFileTabContent
+              filePath={fileEditorTab.filePath}
+              fileName={fileEditorTab.fileName}
+              range={fileEditorTab.range}
+              rangeRevision={fileEditorTab.rangeRevision}
+            />
           );
         }
 
@@ -2558,6 +2561,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             <SourceFileTabContent
               filePath={pierreTab.filePath}
               fileName={pierreTab.fileName}
+              range={pierreTab.range}
+              rangeRevision={pierreTab.rangeRevision}
             />
           );
         }
@@ -2748,7 +2753,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       theme,
       SkillDetailPanelComponent,
       MarkdownPanelComponent,
-      FileEditorPanelComponent,
       MDXEditorPanelComponent,
       GitDiffPanelComponent,
       BrunoRequestPanelComponent,

@@ -441,11 +441,13 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
             'string (optional): repository root for resolving a relative filePath and providing context.',
           createIfMissing:
             'boolean (optional, default false): create the file and any missing parent directories when it does not exist. Never overwrites an existing file.',
+          range:
+            'object (optional): { startLineNumber, startColumn, endLineNumber, endColumn }. Positive 1-based integers; end is exclusive and must not precede start. Opens text source at this span.',
         },
         response: '{ success: true, windowOpened: boolean, created: boolean }',
         errors: {
           '400':
-            'Missing filePath, relative filePath without repositoryPath, non-boolean createIfMissing, or filePath resolves to a directory.',
+            'Missing filePath, relative filePath without repositoryPath, invalid range, non-boolean createIfMissing, or filePath resolves to a directory.',
           '500': 'File creation failed (permissions, read-only volume).',
         },
         notes: [
@@ -453,10 +455,12 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           'windowOpened: true means dispatch to a qualifying window, not renderer acknowledgement or successful document load. The active renderer view must host a document listener.',
           'created: true only when createIfMissing was set and the file did not exist. A missing file without createIfMissing still dispatches the tab, which then renders a not-found state.',
           'Creation is independent of window focus: a request can return windowOpened: false with created: true.',
+          'A range opens markdown as source rather than rendered prose. Existing source tabs are focused and navigated without discarding edits. Writable local source uses Monaco; read-only source uses Pierre with line-level highlighting. Ranges do not apply to media.',
         ],
         example: {
-          filePath: 'README.md',
+          filePath: 'src/index.ts',
           repositoryPath: '/absolute/path/to/repo',
+          range: { startLineNumber: 10, startColumn: 1, endLineNumber: 15, endColumn: 2 },
         },
       },
     ],

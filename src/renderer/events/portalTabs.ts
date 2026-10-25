@@ -24,6 +24,7 @@ import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { ProcessStatus } from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 import type { RequestPanelState } from '@principal-ade/bruno-panels';
 import type { RequestTarget } from '../../shared/requests/preparedRequest';
+import type { DocumentRange } from '../../shared/documentRange';
 
 export interface HttpRequestTab extends BaseTab {
   contentType: 'http-request';
@@ -47,13 +48,15 @@ export interface MarkdownDocTab extends BaseTab {
 }
 
 /**
- * Source file tab — a non-markdown code file opened from a doc link. Rendered
- * read-only via `SourceFileTabContent` / `PierreFileView`. Multi-instance,
+ * Source file tab — raw text opened from a doc link or bridge range request.
+ * Uses Monaco for writable local files, Pierre otherwise. Multi-instance,
  * keyed by absolute `filePath`.
  */
 export interface SourceFileTab extends BaseTab {
   contentType: 'source-file';
   filePath: string;
+  range?: DocumentRange;
+  rangeRevision?: number;
 }
 
 /**

@@ -51,11 +51,18 @@ export function useFileWatch(
     }
 
     let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+    const stopWatchingFile = FileSystemService.stopWatchingFile;
+    const subscribe = FileSystemService.onFileChange;
 
     const setupWatching = async () => {
       try {
         await FileSystemService.watchFile(filePath);
-        unsubscribe = FileSystemService.onFileChange((event) => {
+        if (cancelled) {
+          await stopWatchingFile(filePath);
+          return;
+        }
+        unsubscribe = subscribe((event) => {
           if (event.path === filePath) {
             // Check if reload should be skipped
             if (skipReloadWhen && skipReloadWhen()) {
@@ -84,10 +91,11 @@ export function useFileWatch(
 
     // Cleanup: unsubscribe and stop watching
     return () => {
+      cancelled = true;
       if (unsubscribe) {
         unsubscribe();
       }
-      FileSystemService.stopWatchingFile(filePath).catch((stopError) => {
+      stopWatchingFile(filePath).catch((stopError) => {
         console.error('Error stopping file watching:', stopError);
       });
     };

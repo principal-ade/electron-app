@@ -77,6 +77,60 @@ test('requires repositoryPath to resolve a relative filePath', async () => {
   expect(jsonBody(res).error).toMatch(/repositoryPath is required/);
 });
 
+test('dispatches the requested span to a focused window', async () => {
+  const send = focusWindow();
+  const range = {
+    startLineNumber: 302,
+    startColumn: 1,
+    endLineNumber: 304,
+    endColumn: 2,
+  };
+  await open({ filePath: 'src/code.ts', repositoryPath: root, range });
+  expect(send).toHaveBeenCalledWith(DocumentEvent.OPEN_DOCUMENT, {
+    filePath: path.join(root, 'src/code.ts'),
+    repositoryPath: root,
+    range,
+  });
+});
+
+test.each([
+  null,
+  [],
+  '10:20',
+  {},
+  { startLineNumber: 1 },
+  { startLineNumber: 0, startColumn: 1, endLineNumber: 2, endColumn: 1 },
+  { startLineNumber: 1, startColumn: 1.5, endLineNumber: 2, endColumn: 1 },
+  { startLineNumber: '1', startColumn: 1, endLineNumber: 2, endColumn: 1 },
+  { startLineNumber: 4, startColumn: 1, endLineNumber: 3, endColumn: 1 },
+  { startLineNumber: 1, startColumn: 4, endLineNumber: 1, endColumn: 3 },
+])(
+  'rejects malformed ranges before creation or dispatch: %j',
+  async (range) => {
+    const send = focusWindow();
+    const filePath = path.join(root, 'new.ts');
+    const res = await open({ filePath, range, createIfMissing: true });
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(send).not.toHaveBeenCalled();
+    await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
+  },
+);
+
+test('accepts a collapsed caret range', async () => {
+  const send = focusWindow();
+  const range = {
+    startLineNumber: 1,
+    startColumn: 1,
+    endLineNumber: 1,
+    endColumn: 1,
+  };
+  await open({ filePath: path.join(root, 'code.ts'), range });
+  expect(send).toHaveBeenCalledWith(
+    DocumentEvent.OPEN_DOCUMENT,
+    expect.objectContaining({ range }),
+  );
+});
+
 test('rejects a non-boolean createIfMissing', async () => {
   const res = await open({
     filePath: path.join(root, '.env'),

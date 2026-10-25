@@ -7,6 +7,7 @@
 
 import type { Skill } from '@industry-theme/agent-panels';
 import type { PackageLayer } from '@industry-theme/repository-composition-panels';
+import type { DocumentRange } from '../../shared/documentRange';
 
 /**
  * Payload when a document is selected to open in right panel
@@ -73,6 +74,7 @@ export interface FileOpenedPayload {
 export interface MDXEditorPayload {
   filePath?: string;
   path?: string;
+  range?: DocumentRange;
 }
 
 /**

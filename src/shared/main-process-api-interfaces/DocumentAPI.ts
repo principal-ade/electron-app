@@ -10,6 +10,8 @@
  * route only ever targets an already-open, already-focused window.
  */
 
+import type { DocumentRange } from '../documentRange';
+
 /** IPC event names for document operations. */
 export enum DocumentEvent {
   OPEN_DOCUMENT = 'document:open',
@@ -22,6 +24,7 @@ export enum DocumentEvent {
 export interface OpenDocumentEnvelope {
   filePath: string;
   repositoryPath?: string;
+  range?: DocumentRange;
 }
 
 export interface DocumentAPI {

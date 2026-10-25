@@ -43,6 +43,7 @@ function extensionForDroppedFile(mimeType: string, name: string): string {
 import { GitRepositoryScannerService } from './gitRepositoryScannerService';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import os from 'os';
+import { getLocalFileStats } from './localFileStats';
 
 export class ElectronFileSystemAdapter {
   private rootPath: string | null = null;
@@ -225,12 +226,7 @@ export class ElectronFileSystemAdapter {
       return null;
     }
     try {
-      const stats = await fsPromises.stat(filePath);
-      return {
-        size: stats.size,
-        isDirectory: stats.isDirectory(),
-        lastModified: stats.mtime,
-      };
+      return await getLocalFileStats(filePath);
     } catch (error) {
       console.error('Error getting file stats:', error);
       return null;

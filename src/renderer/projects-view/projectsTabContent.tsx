@@ -1643,6 +1643,8 @@ export function renderProjectsTabContent(
           key={srcTab.id}
           filePath={srcTab.filePath}
           fileName={srcTab.label}
+          range={srcTab.range}
+          rangeRevision={srcTab.rangeRevision}
         />
       );
     }

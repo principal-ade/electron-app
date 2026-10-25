@@ -31,6 +31,7 @@ import React, {
   useEffect,
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import type { DocumentRange } from '../../shared/documentRange';
 import { Globe, Network, PenTool, ToolCase, Send } from 'lucide-react';
 import { HttpRequestTabContent } from '../requests/HttpRequestTabContent';
 import { RequestsLeftPanel } from '../requests/RequestsLeftPanel';
@@ -982,18 +983,18 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   // Shared by the bridge handoff below, the `file:opened` bus handler, and the
   // Cmd+Shift+F palette.
   const openFileByPath = useCallback(
-    (filePath: string, repositoryPath?: string) => {
+    (filePath: string, repositoryPath?: string, range?: DocumentRange) => {
       const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
       const isMedia =
         /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(
           filePath,
         );
-      if (isMarkdown) {
+      if (isMarkdown && !range) {
         openMarkdownDoc(filePath, repositoryPath);
       } else if (isMedia) {
         openMedia(filePath);
       } else {
-        openSourceFile(filePath);
+        openSourceFile(filePath, range);
       }
     },
     [openMarkdownDoc, openMedia, openSourceFile],
@@ -1005,9 +1006,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   // not land in the markdown tab, which would only render
   // "Select a markdown file to preview".
   useEffect(() => {
-    return DocumentService.onOpenDocument(({ filePath, repositoryPath }) => {
+    return DocumentService.onOpenDocument(({ filePath, repositoryPath, range }) => {
       if (!filePath) return;
-      openFileByPath(filePath, repositoryPath);
+      openFileByPath(filePath, repositoryPath, range);
     });
   }, [openFileByPath]);
 
@@ -1019,12 +1020,12 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   useEffect(() => {
     const handleFileOpened = (event: {
       source?: string;
-      payload?: { filePath?: string; repositoryPath?: string };
+      payload?: { filePath?: string; repositoryPath?: string; range?: DocumentRange };
     }) => {
       if (event.source === 'tab') return; // ignore tab re-emits
       const filePath = event.payload?.filePath;
       if (!filePath) return;
-      openFileByPath(filePath, event.payload?.repositoryPath);
+      openFileByPath(filePath, event.payload?.repositoryPath, event.payload?.range);
     };
     events.on('file:opened', handleFileOpened);
     return () => {

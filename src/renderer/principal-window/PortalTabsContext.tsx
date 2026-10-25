@@ -19,6 +19,7 @@ import React, {
   useState,
 } from 'react';
 import type { TerminalTab } from '@industry-theme/xterm-terminal-panel';
+import type { DocumentRange } from '../../shared/documentRange';
 import type {
   CommitReviewTab,
   ProjectInfoTab,
@@ -105,8 +106,8 @@ export interface WorkspaceTabsContextValue {
   openLocalTopic: (topicId: string, title?: string) => void;
   /** Open a `markdown-doc-<filePath>` tab. */
   openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
-  /** Open a `source-file-<filePath>` tab (read-only code viewer). */
-  openSourceFile: (filePath: string) => void;
+  /** Open a source tab, or navigate its existing editor to the supplied span. */
+  openSourceFile: (filePath: string, range?: DocumentRange) => void;
   /** Open a `media-<filePath>` tab (image/video viewer). */
   openMedia: (filePath: string) => void;
   // Projects
@@ -284,20 +285,40 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   );
 
   const openSourceFile = useCallback(
-    (filePath: string) => {
-      openTab(
-        `source-file-${filePath}`,
-        () =>
-          ({
-            id: `source-file-${filePath}`,
+    (filePath: string, range?: DocumentRange) => {
+      const id = `source-file-${filePath}`;
+      setTabs((previous) => {
+        const existing = previous.find((tab) => tab.id === id) as
+          | SourceFileTab
+          | undefined;
+        if (existing) {
+          if (!range) return previous;
+          return previous.map((tab) =>
+            tab.id === id
+              ? {
+                  ...existing,
+                  range,
+                  rangeRevision: (existing.rangeRevision ?? 0) + 1,
+                }
+              : tab,
+          );
+        }
+        return [
+          ...previous,
+          {
+            id,
             label: filePath.split('/').pop() || 'File',
             contentType: 'source-file',
             closable: true,
             filePath,
-          }) as SourceFileTab,
-      );
+            range,
+            rangeRevision: range ? 1 : undefined,
+          } as SourceFileTab,
+        ];
+      });
+      setActiveTabId(id);
     },
-    [openTab],
+    [],
   );
 
   const openMedia = useCallback(

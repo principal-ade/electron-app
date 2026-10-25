@@ -1,6 +1,7 @@
 import type { StorybookConfig } from '@storybook/react-webpack5';
 import type { Configuration as WebpackConfiguration } from 'webpack';
 import type { Configuration as WebpackDevServerConfiguration } from 'webpack-dev-server';
+import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 
 interface Configuration extends WebpackConfiguration {
   devServer?: WebpackDevServerConfiguration;
@@ -20,6 +21,14 @@ const config: StorybookConfig = {
     "options": {}
   },
   webpackFinal: async (config: Configuration) => {
+    // Match the local worker URLs used by the app's themed Monaco editor.
+    config.plugins = [
+      ...(config.plugins ?? []),
+      new MonacoWebpackPlugin({
+        languages: ['typescript', 'javascript', 'json', 'css', 'html'],
+        filename: '[name].worker.js',
+      }),
+    ];
     // Allow Storybook to be embedded in Electron webviews
     // Based on research: don't set frame-ancestors at all, use X-Frame-Options instead
     config.devServer = {
