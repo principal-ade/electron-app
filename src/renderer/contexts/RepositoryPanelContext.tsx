@@ -121,7 +121,7 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   localhostServers: DataSlice<RunningServer[]>;
   globalSkills: DataSlice<{ skills: GlobalSkill[] } | null>;
-  // Panel-specific slices (from ExtendedPanelContextValue)
+  // Panel-specific slices
   terminal: DataSlice<TerminalSessionInfo[]>;
   feedProject: DataSlice<FeedProjectSliceData>;
   githubIssues: DataSlice<GitHubIssuesSliceData>;
@@ -2390,7 +2390,7 @@ export const RepositoryPanelProvider: React.FC<
     [globalSkillsData, globalSkillsLoading],
   );
 
-  // Panel-specific slices (from ExtendedPanelContextValue)
+  // Panel-specific slices
   // Terminal slice - provides terminal sessions data
   const terminalSlice = useMemo<DataSlice<TerminalSessionInfo[]>>(
     () => ({
@@ -2608,7 +2608,7 @@ export const RepositoryPanelProvider: React.FC<
       fileCityColorModes: fileCityColorModesSlice,
       localhostServers: localhostServersSlice,
       globalSkills: globalSkillsSlice,
-      // Panel-specific slices (from ExtendedPanelContextValue)
+      // Panel-specific slices
       terminal: terminalSlice,
       feedProject: feedProjectSlice,
       githubIssues: githubIssuesSlice,

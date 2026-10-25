@@ -6,11 +6,13 @@
 
 ## The convention
 
-Every panel is driven by **exactly three structured inputs**: `context`, `actions`, `events`. These come from `@principal-ade/panel-framework-core` and are bundled by `PanelProvider` as `PanelProviderValue` (`src/renderer/contexts/PanelContext.tsx:213`):
+Every panel is driven by **exactly three structured inputs**: `context`, `actions`, `events`. These come from `@principal-ade/panel-framework-core` and are bundled by `RepositoryPanelProvider` as `RepositoryPanelProviderValue` (`src/renderer/contexts/RepositoryPanelContext.tsx`):
 
-- **`context`** — `ExtendedPanelContextValue extends PanelContextValue` (`PanelContext.tsx:163`). State plus typed `DataSlice` accessors (`activeFile`, `fileTree`, `git`, `markdown`, `alexandriaRepositories`, `workspace`, `terminal`, …).
-- **`actions`** — `ExtendedPanelActions extends PanelActions` (`PanelContext.tsx:58`). Async operations: terminal lifecycle, workspace mutation, `readFile`, `setActiveFile`, …
+- **`context`** — `RepositoryPanelContextValue extends PanelContextValue`. State plus typed `DataSlice` properties (`activeFile`, `fileTree`, `gitStatusWithFiles`, `markdown`, `alexandriaRepositories`, `workspace`, …).
+- **`actions`** — `RepositoryPanelActions extends PanelActions`. Async operations: `readFile`, `writeFile`, `setActiveFile`, repository registration, …
 - **`events`** — `PanelEventEmitter` (a `PanelEventBus`). Pub/sub between panels.
+
+Terminal state and lifecycle actions are supplied separately by `TerminalProvider` (`src/renderer/contexts/TerminalContext.tsx`). Dev Workspace mounts both providers in `src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx`. The former workspace-wide `PanelProvider` was retired with Alexandria Workspace.
 
 **The rule:** a panel's props interface should be `{ context, actions?, events }` and nothing else. When a panel needs extra data, it should **narrow `context`** with its own `…PanelContext extends PanelContextValue` — e.g. `RecentRepositoriesPanelContext` (`src/renderer/panels/recent-repositories/RecentRepositoriesPanel.tsx:312`) — rather than adding sibling props.
 
@@ -28,7 +30,7 @@ The convention-pure fix for cross-cutting data is to carry it through `context` 
 ## Known exceptions / deviations
 
 ### `activeFile` slice is mandatory for `@industry-theme` panels
-`context.activeFile: DataSlice<ActiveFileSlice>` (`PanelContext.tsx:190`) and the `setActiveFile` action look unused locally but **cannot be removed** — third-party panels (`@industry-theme/file-editing-panels`, `@industry-theme/xterm-terminal-panel`, …) require them as part of the context contract.
+`context.activeFile: DataSlice<ActiveFileSlice>` and the `setActiveFile` action in `RepositoryPanelContext.tsx` **must be preserved** — third-party panels (`@industry-theme/file-editing-panels`, …) require them as part of the context contract.
 
 ## Related existing docs
 

@@ -123,5 +123,5 @@ interface DocOpenInRightPanelPayload {
 ## Files
 
 - `src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx` - Main event handlers
-- `src/renderer/contexts/PanelContext.tsx` - activeFile management
+- `src/renderer/contexts/RepositoryPanelContext.tsx` - activeFile management
 - `@industry-theme/xterm-terminal-panel` - TabbedTerminalPanel (external)

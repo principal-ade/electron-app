@@ -41,14 +41,6 @@ export class TerminalService {
     }));
   }
 
-  static async create(
-    dir: string,
-    context?: string,
-    metadata?: TerminalSessionMetadata,
-  ): Promise<string> {
-    return terminalClient.createTerminalSession({ cwd: dir, context, metadata });
-  }
-
   static async getOrCreate(
     dir: string,
     context?: string,
