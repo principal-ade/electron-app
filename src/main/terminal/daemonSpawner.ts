@@ -19,6 +19,7 @@ import {
   DAEMON_START_POLL_INTERVAL_MS,
 } from '../../shared/pty-daemon/constants';
 import type { DaemonStatusInfo } from '../../shared/pty-daemon/protocol';
+import { stripTsNodeEnv } from '../../shared/nodeOptions';
 
 /**
  * Get the path to the daemon bundle.
@@ -162,7 +163,7 @@ export async function spawnDaemon(): Promise<void> {
   // Build environment for daemon
   // Use app.isPackaged to determine NODE_ENV since process.env.NODE_ENV may be undefined
   const nodeEnv = app.isPackaged ? 'production' : 'development';
-  const daemonEnv: NodeJS.ProcessEnv = {
+  const daemonEnv: NodeJS.ProcessEnv = stripTsNodeEnv({
     ...process.env,
     NODE_ENV: nodeEnv,
     // CRITICAL: Tell Electron to run as Node.js, not as the full Electron app
@@ -170,7 +171,7 @@ export async function spawnDaemon(): Promise<void> {
     // Telemetry endpoint + on/off as resolved by the main process (the daemon
     // cannot read the preference store itself). Read once, at spawn.
     ...childTelemetryEnv(),
-  };
+  });
 
   // In packaged app, add NODE_PATH so daemon can find unpacked native modules
   const nodePath = getNodePathForPackaged();

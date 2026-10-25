@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import * as os from 'os';
 import * as path from 'path';
 import { EnvironmentConfig } from './utils/environmentConfig';
+import { stripTsNodeEnv } from '../shared/nodeOptions';
 
 /**
  * Professional terminal environment manager for Electron apps
@@ -237,7 +238,11 @@ export class TerminalEnvironment {
     const userPath = await this.getUserPath();
 
     // Clean the current environment
-    const cleanEnv = { ...process.env };
+    // ts-node settings (NODE_OPTIONS preload, TS_NODE_PROJECT) belong to the
+    // dev/build process. Inherited by a shell they break every `node`/`npm`
+    // command started outside the project root with
+    // "TS5083: Cannot read file '<cwd>/tsconfig.node.json'".
+    const cleanEnv = stripTsNodeEnv({ ...process.env });
 
     // Remove Electron/Node specific variables that might interfere
     delete cleanEnv.NODE_OPTIONS;

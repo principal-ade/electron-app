@@ -26,6 +26,7 @@ import {
   addPtySpawnedEvent,
   addPtySpawnFailedEvent,
 } from './telemetry';
+import { stripTsNodeEnv } from '../shared/nodeOptions';
 
 // node-pty is loaded dynamically to avoid webpack bundling issues
 let pty: typeof import('node-pty') | null = null;
@@ -85,12 +86,16 @@ export class DaemonSessionManager extends EventEmitter {
       // Determine shell to use
       const shellPath = shell || this.getDefaultShell();
 
-      // Merge environment
-      const ptyEnv = {
+      // Merge environment. The daemon inherits the Electron main process env,
+      // which in development carries NODE_OPTIONS="-r ts-node/register" and
+      // TS_NODE_PROJECT=tsconfig.node.json. Those would be re-added on top of
+      // the client's cleaned env and break `node`/`npm` runs in the shell, so
+      // strip them again here.
+      const ptyEnv = stripTsNodeEnv({
         ...process.env,
         ...env,
         TERM: TERM_TYPE,
-      };
+      });
 
       // Log spawn attempt with all details for debugging
       addPtySpawnAttemptEvent(
