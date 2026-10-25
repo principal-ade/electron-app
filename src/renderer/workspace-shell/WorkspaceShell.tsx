@@ -993,18 +993,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     };
   }, [events, portalEvents, terminalActions, terminalCtx.terminalContext]);
 
-  // Bridge handoff: a doc pushed from the Principal MCP Bridge
-  // (POST /api/document/open) opens (or focuses) a markdown tab.
-  useEffect(() => {
-    return DocumentService.onOpenDocument(({ filePath, repositoryPath }) => {
-      if (!filePath) return;
-      openMarkdownDoc(filePath, repositoryPath);
-    });
-  }, [openMarkdownDoc]);
-
   // Route an absolute file path to the right viewer tab by extension — markdown
   // docs and media get their dedicated tabs, everything else the source viewer.
-  // Shared by the `file:opened` bus handler below and the Cmd+Shift+F palette.
+  // Shared by the bridge handoff below, the `file:opened` bus handler, and the
+  // Cmd+Shift+F palette.
   const openFileByPath = useCallback(
     (filePath: string, repositoryPath?: string) => {
       const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
@@ -1022,6 +1014,18 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     },
     [openMarkdownDoc, openMedia, openSourceFile],
   );
+
+  // Bridge handoff: a doc pushed from the Principal MCP Bridge
+  // (POST /api/document/open) opens (or focuses) a tab. Route by extension like
+  // any other opened file — a non-markdown path (`.env`, source, media) must
+  // not land in the markdown tab, which would only render
+  // "Select a markdown file to preview".
+  useEffect(() => {
+    return DocumentService.onOpenDocument(({ filePath, repositoryPath }) => {
+      if (!filePath) return;
+      openFileByPath(filePath, repositoryPath);
+    });
+  }, [openFileByPath]);
 
   // Bridge in-document doc links. The shared markdown link handler
   // (`useMarkdownLinkHandler`, used by topic descriptions and other markdown
