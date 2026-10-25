@@ -113,7 +113,7 @@ import { DocumentService } from '../services/DocumentService';
 import type { LocalTopicTab } from '../events/portalTabs';
 import {
   PORTAL_INTENTS,
-  type TerminalOpenPayload,
+  type TerminalNewPayload,
 } from '../events/portalIntents';
 import { DRAWING_EVENTS } from '../drawings-view/drawingsStorage';
 import type { HomeTabEntry } from '../panels/home-panel/homeTabEntries';
@@ -958,7 +958,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     handleShowProject,
   ]);
   useEffect(() => {
-    const handleTerminalOpen = (event: { payload: TerminalOpenPayload }) => {
+    const handleTerminalOpen = (event: { payload: TerminalNewPayload }) => {
       const directory = event.payload?.directory;
       if (!directory) return;
       // The panel mints the tab id and creates the session with a context
@@ -966,14 +966,14 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       // instead of reattaching to the first one's session.
       setRequestOpenTab({ directory, label: event.payload?.label });
     };
-    events.on(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
+    events.on(PORTAL_INTENTS.terminalNew, handleTerminalOpen);
     // The titlebar search lives outside the shell, so it can only reach the
     // portal bus (like its topic opens). Listen there too so a local-clone
     // pick from the titlebar materializes a terminal tab in this host.
-    portalEvents.on(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
+    portalEvents.on(PORTAL_INTENTS.terminalNew, handleTerminalOpen);
     return () => {
-      events.off(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
-      portalEvents.off(PORTAL_INTENTS.terminalOpen, handleTerminalOpen);
+      events.off(PORTAL_INTENTS.terminalNew, handleTerminalOpen);
+      portalEvents.off(PORTAL_INTENTS.terminalNew, handleTerminalOpen);
     };
   }, [events, portalEvents]);
 

@@ -32,7 +32,7 @@ When the user selects a repo — an in-progress row or a search result — the
 | Project age | `github.createdAt` | Computed via `getRepositoryAge` (days/months/years) |
 | Last updated | `github.lastUpdated` | Relative time ("2h ago") |
 | Clone rows (per clone) | `RepositorySelectedPayload.localClones` | Green "cloned" badge, branch name, sync status |
-| Open / Terminal buttons | Per-clone, via `WindowService` / `emitTerminalOpen` | Opens workspace or terminal at clone path |
+| Open / Terminal buttons | Per-clone, via `WindowService` / `emitTerminalNew` | Opens workspace or terminal at clone path |
 | Clone / Fork buttons | `GitCloneModal` / `ForkModal` | Shown when no local clones exist |
 | Fork status | `GithubService.getCurrentUser` + `getRepository` | Shows "forked: {owner}" if user already forked |
 | Full profile button | — | Slides to `RepositoryProfilePanel` tab |
@@ -47,7 +47,7 @@ Each local clone renders a row with:
   counts (blue/red)
 - **Open button** — opens the clone in a dev workspace via
   `WindowService.openDevWorkspace`
-- **Terminal button** — emits `terminal:open` intent via `emitTerminalOpen`
+- **Terminal button** — emits `terminal:new` intent via `emitTerminalNew`
 
 When no clones exist, **Clone** and **Fork** buttons appear instead:
 

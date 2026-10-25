@@ -42,7 +42,7 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import { DocumentView } from 'themed-markdown';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { payloadFromGithub } from '../events/repositorySelected';
-import { emitTerminalOpen } from '../events/portalIntents';
+import { emitTerminalNew } from '../events/portalIntents';
 import type { LocalClone } from '../../shared/types/repository.types';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import * as LucideIcons from 'lucide-react';
@@ -1032,7 +1032,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   // the Projects open-forwarder lifts it to the portal bus where
   // PortalIntentBridge materializes the terminal tab in the shared workspace.
   const handleOpenTerminal = (clonePath: string) => {
-    emitTerminalOpen(events, 'repository-profile-panel', {
+    emitTerminalNew(events, 'repository-profile-panel', {
       directory: clonePath,
       label: repositoryData?.name,
     });

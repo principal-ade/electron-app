@@ -34,8 +34,11 @@ export const PORTAL_INTENTS = {
   repositoryGuideOpenWeek: 'repository:guide-open-week',
   /** Open a user/org profile tab (collapses the legacy `user:profile-selected`). */
   ownerSelected: 'owner:selected',
-  /** Open a terminal tab rooted at a local directory. */
-  terminalOpen: 'terminal:open',
+  /**
+   * Open a **new** terminal tab rooted at a local directory. The tab host mints a
+   * fresh tab identity; this never focuses an existing tab.
+   */
+  terminalNew: 'terminal:new',
   /** Open a local subsystem model in a workspace tab. */
   subsystemModelOpen: 'subsystem-model:open',
 } as const;
@@ -131,22 +134,22 @@ export interface OwnerSelectedPayload {
   email?: string;
 }
 
-/** Payload for {@link PORTAL_INTENTS.terminalOpen}. */
-export interface TerminalOpenPayload {
+/** Payload for {@link PORTAL_INTENTS.terminalNew}. */
+export interface TerminalNewPayload {
   /** Absolute local directory the terminal should start in. */
   directory: string;
   /** Optional tab label (defaults to the directory's basename). */
   label?: string;
 }
 
-/** Emit a {@link PORTAL_INTENTS.terminalOpen} intent. */
-export function emitTerminalOpen(
+/** Emit a {@link PORTAL_INTENTS.terminalNew} intent. */
+export function emitTerminalNew(
   events: PanelEventEmitter,
   source: string,
-  payload: TerminalOpenPayload,
+  payload: TerminalNewPayload,
 ): void {
-  events.emit<TerminalOpenPayload>({
-    type: PORTAL_INTENTS.terminalOpen,
+  events.emit<TerminalNewPayload>({
+    type: PORTAL_INTENTS.terminalNew,
     source,
     timestamp: Date.now(),
     payload,

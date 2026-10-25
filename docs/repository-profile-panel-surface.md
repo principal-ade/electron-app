@@ -121,7 +121,7 @@ Key fields: `name`, `fullName`, `owner`, `ownerAvatarUrl`, `ownerType`,
 | `repository-profile:delete-requested` | Delete entry |
 | `star:repo-toggled` | Refresh star-dependent UI |
 | `owner:selected` / nested `repository:selected` | Drill to owner / related repo |
-| `terminal:open` (via helper) | Terminal tab at clone path |
+| `terminal:new` (via helper) | Terminal tab at clone path |
 
 Delete confirmation is **always mounted** in `useProjectsHost` so it works even
 when another workspace surface is active.

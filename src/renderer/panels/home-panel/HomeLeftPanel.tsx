@@ -27,7 +27,7 @@ import { PanelsTopLeft, Pin } from 'lucide-react';
 import { useAuthUser } from '../../providers/AuthProvider';
 import { OrgRepoItemCard } from '../cards/OrgRepoItemCard';
 import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
-import { emitTerminalOpen } from '../../events/portalIntents';
+import { emitTerminalNew } from '../../events/portalIntents';
 import { shellQuote } from '../../utils/shellQuote';
 import {
   useGithubOrganizations,
@@ -414,7 +414,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const openTerminalForEntry = useCallback(
     (entry: AlexandriaEntry, label: string) => {
       if (!entry.path) return;
-      emitTerminalOpen(events, 'home-panel', {
+      emitTerminalNew(events, 'home-panel', {
         directory: String(entry.path),
         label,
       });

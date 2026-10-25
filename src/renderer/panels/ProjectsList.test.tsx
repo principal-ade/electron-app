@@ -191,7 +191,7 @@ test('keeps project profile, terminal, clone, and remove actions', async () => {
   );
   expect(emit).toHaveBeenLastCalledWith(
     expect.objectContaining({
-      type: 'terminal:open',
+      type: 'terminal:new',
       payload: { directory: '/work/owner/app', label: 'app' },
     }),
   );

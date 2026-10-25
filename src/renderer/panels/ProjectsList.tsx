@@ -25,7 +25,7 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { payloadFromGithub, payloadFromLocalEntry } from '../events/repositorySelected';
-import { emitTerminalOpen } from '../events/portalIntents';
+import { emitTerminalNew } from '../events/portalIntents';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
@@ -283,7 +283,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   // materializes the terminal tab in the shared workspace.
   const openTerminalAt = useCallback(
     (path: string, label?: string) => {
-      emitTerminalOpen(events, 'projects-list-panel', {
+      emitTerminalNew(events, 'projects-list-panel', {
         directory: path,
         label,
       });

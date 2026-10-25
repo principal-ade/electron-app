@@ -248,7 +248,7 @@ test('clicking a Home repo opens its terminal without a separate terminal button
   expect(emit).toHaveBeenCalledTimes(1);
   expect(emit).toHaveBeenCalledWith(
     expect.objectContaining({
-      type: 'terminal:open',
+      type: 'terminal:new',
       payload: { directory: '/work/app', label: 'app' },
     }),
   );

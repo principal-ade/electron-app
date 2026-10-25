@@ -37,8 +37,8 @@ import {
 } from '../../../events/repositorySelected';
 import { OnboardingWizard } from '../../../components/OnboardingWizard/OnboardingWizard';
 import {
-  emitTerminalOpen,
-  type TerminalOpenPayload,
+  emitTerminalNew,
+  type TerminalNewPayload,
 } from '../../../events/portalIntents';
 import './IntegratedShell.css';
 
@@ -202,7 +202,7 @@ export const IntegratedShell: React.FC = () => {
 
   // Queued when Quick Open asks for a terminal tab before the portal has ever
   // mounted; flushed once a surface is set and WorkspaceShell is up.
-  const pendingTerminalOpenRef = useRef<TerminalOpenPayload | null>(null);
+  const pendingTerminalOpenRef = useRef<TerminalNewPayload | null>(null);
 
   const prevOverlayRef = useRef<string | null>(null);
 
@@ -354,7 +354,7 @@ export const IntegratedShell: React.FC = () => {
   // Quick Open (Command+O) with quickOpenTarget === 'terminal': main sends
   // OPEN_TERMINAL_TAB after focusing the principal window. Ensure a workspace
   // surface is showing (so the terminal host is mounted + visible), then emit
-  // terminal:open on the portal bus for WorkspaceShell to materialize the tab.
+  // terminal:new on the portal bus for WorkspaceShell to materialize the tab.
   useEffect(() => {
     const unsubscribe = WindowService.onOpenTerminalTab((payload) => {
       if (!payload?.directory) return;
@@ -376,7 +376,7 @@ export const IntegratedShell: React.FC = () => {
         return;
       }
 
-      emitTerminalOpen(portalEvents, 'quick-open', {
+      emitTerminalNew(portalEvents, 'quick-open', {
         directory: payload.directory,
         label: payload.label,
       });
@@ -390,13 +390,13 @@ export const IntegratedShell: React.FC = () => {
     const pending = pendingTerminalOpenRef.current;
     if (!pending) return;
 
-    // WorkspaceShell mounts in the same commit as `surface`; its terminal:open
+    // WorkspaceShell mounts in the same commit as `surface`; its terminal:new
     // listener registers in a useEffect that runs after paint. Defer one
     // macrotask so the emit is not lost.
     const timer = setTimeout(() => {
       if (pendingTerminalOpenRef.current !== pending) return;
       pendingTerminalOpenRef.current = null;
-      emitTerminalOpen(portalEvents, 'quick-open', pending);
+      emitTerminalNew(portalEvents, 'quick-open', pending);
     }, 0);
     return () => clearTimeout(timer);
   }, [surface, portalEvents]);

@@ -17,7 +17,7 @@ import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { usePortalEvents } from '../../PortalEventContext';
 import { useProjectsTabs } from '../../contexts/ProjectsTabsContext';
 import {
-  emitTerminalOpen,
+  emitTerminalNew,
 } from '../../../events/portalIntents';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { findClonedGithubEntry } from '../../../utils/alexandriaIdentity';
@@ -198,14 +198,14 @@ export const TitlebarGitHubSearch: React.FC = () => {
       // Reveal the workspace shell (the persistent terminal-tab host under the
       // Home/Settings overlays), then open a terminal rooted at the checkout.
       // Mirrors how topic opens switch view before emitting on the portal
-      // bus; the shell listens for `terminal:open` on that bus.
+      // bus; the shell listens for `terminal:new` on that bus.
       events.emit({
         type: 'panel:switch',
         source: 'titlebar-search',
         timestamp: Date.now(),
         payload: { view: 'projects' },
       });
-      emitTerminalOpen(portalEvents, 'titlebar-search', {
+      emitTerminalNew(portalEvents, 'titlebar-search', {
         directory: String(entry.path),
         label: entry.name,
       });

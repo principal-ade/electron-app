@@ -41,7 +41,7 @@ import type { RepositorySelectedPayload } from '../../events/repositorySelected'
 import { payloadFromGithub } from '../../events/repositorySelected';
 import { useRepoWatch } from './useRepoWatch';
 import {
-  emitTerminalOpen,
+  emitTerminalNew,
   emitRepositoryGuideOpenReadme,
   emitRepositoryGuideOpenWeek,
   PORTAL_INTENTS,
@@ -411,7 +411,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   };
 
   const handleTerminal = (clonePath: string) => {
-    emitTerminalOpen(events, 'repo-about-card', {
+    emitTerminalNew(events, 'repo-about-card', {
       directory: clonePath,
       label: name,
     });
