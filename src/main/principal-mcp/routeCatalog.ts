@@ -439,15 +439,20 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
             'string (required): absolute path, or relative path when repositoryPath is supplied.',
           repositoryPath:
             'string (optional): repository root for resolving a relative filePath and providing context.',
+          createIfMissing:
+            'boolean (optional, default false): create the file and any missing parent directories when it does not exist. Never overwrites an existing file.',
         },
-        response: '{ success: true, windowOpened: boolean }',
+        response: '{ success: true, windowOpened: boolean, created: boolean }',
         errors: {
           '400':
-            'Missing filePath or relative filePath without repositoryPath.',
+            'Missing filePath, relative filePath without repositoryPath, non-boolean createIfMissing, or filePath resolves to a directory.',
+          '500': 'File creation failed (permissions, read-only volume).',
         },
         notes: [
           'Does not create or focus a window. No suitable focused window returns windowOpened: false.',
           'windowOpened: true means dispatch to a qualifying window, not renderer acknowledgement or successful document load. The active renderer view must host a document listener.',
+          'created: true only when createIfMissing was set and the file did not exist. A missing file without createIfMissing still dispatches the tab, which then renders a not-found state.',
+          'Creation is independent of window focus: a request can return windowOpened: false with created: true.',
         ],
         example: {
           filePath: 'README.md',

@@ -17,8 +17,15 @@
  *
  * There is no cold-start path. The route only ever targets an already-open,
  * already-focused window via a warm IPC push (`DocumentEvent.OPEN_DOCUMENT`).
+ *
+ * Opening never writes to disk by default. Callers that want "open or create"
+ * semantics opt in with `createIfMissing: true`, which creates the file (and
+ * any missing parent directories) as an empty file before dispatch. An
+ * existing file is never overwritten, and creation happens even when no
+ * doc-capable window is focused — the response reports `created` either way.
  */
 
+import { promises as fs } from 'fs';
 import path from 'path';
 import { BrowserWindow } from 'electron';
 import type { Application, Request, Response } from 'express';
@@ -46,6 +53,7 @@ export function registerDocumentRoutes(app: Application): void {
     const body = (req.body ?? {}) as {
       filePath?: unknown;
       repositoryPath?: unknown;
+      createIfMissing?: unknown;
     };
 
     const rawFilePath =
@@ -53,11 +61,21 @@ export function registerDocumentRoutes(app: Application): void {
         ? body.filePath
         : undefined;
     if (!rawFilePath) {
-      res
-        .status(400)
-        .json({ success: false, error: 'filePath is required' });
+      res.status(400).json({ success: false, error: 'filePath is required' });
       return;
     }
+
+    if (
+      body.createIfMissing !== undefined &&
+      typeof body.createIfMissing !== 'boolean'
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'createIfMissing must be a boolean',
+      });
+      return;
+    }
+    const createIfMissing = body.createIfMissing === true;
 
     const repositoryPath =
       typeof body.repositoryPath === 'string' && body.repositoryPath.length > 0
@@ -90,6 +108,44 @@ export function registerDocumentRoutes(app: Application): void {
       absFilePath = path.resolve(repoRoot, rawFilePath);
     }
 
+    // Opt-in creation: only when the caller asked for it, so a mistyped path
+    // in a plain open never litters the filesystem. Parent directories are
+    // created too, mirroring "open or create" editor semantics. An existing
+    // file (or a path that resolves to a directory) is never overwritten.
+    let created = false;
+    if (createIfMissing) {
+      try {
+        const existing = await fs.stat(absFilePath).catch(() => undefined);
+        if (existing?.isDirectory()) {
+          res.status(400).json({
+            success: false,
+            error: 'filePath points to a directory',
+          });
+          return;
+        }
+        if (!existing) {
+          await fs.mkdir(path.dirname(absFilePath), { recursive: true });
+          try {
+            await fs.writeFile(absFilePath, '', { flag: 'wx' });
+            created = true;
+          } catch (error) {
+            // Another writer won the race; the file exists, which is what
+            // the caller asked for.
+            if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+          }
+        }
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error:
+            error instanceof Error
+              ? `Failed to create file: ${error.message}`
+              : 'Failed to create file',
+        });
+        return;
+      }
+    }
+
     // Find the focused window; open only if it hosts a tabbed terminal.
     const focused = BrowserWindow.getFocusedWindow();
     const appWindow =
@@ -102,7 +158,7 @@ export function registerDocumentRoutes(app: Application): void {
       DOC_CAPABLE_WINDOW_TYPES.has(appWindow.metadata?.primaryType);
 
     if (!appWindow || !isDocCapable) {
-      res.json({ success: true, windowOpened: false });
+      res.json({ success: true, windowOpened: false, created });
       return;
     }
 
@@ -111,6 +167,6 @@ export function registerDocumentRoutes(app: Application): void {
       repositoryPath,
     });
 
-    res.json({ success: true, windowOpened: true });
+    res.json({ success: true, windowOpened: true, created });
   });
 }
