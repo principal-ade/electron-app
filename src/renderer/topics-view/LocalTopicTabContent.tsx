@@ -36,6 +36,9 @@ export const LocalTopicTabContent: React.FC<{
   // outline overlay (it has the heading DOM).
   const [tocOpen, setTocOpen] = React.useState(false);
   const [hasToc, setHasToc] = React.useState(false);
+  const [headerHovered, setHeaderHovered] = React.useState(false);
+  const [titleFocused, setTitleFocused] = React.useState(false);
+  const highlightToc = tocOpen || headerHovered || titleFocused;
   const closeToc = React.useCallback(() => setTocOpen(false), []);
 
   // Copy the topic's on-disk JSON path to the clipboard, with a brief "copied"
@@ -73,11 +76,13 @@ export const LocalTopicTabContent: React.FC<{
       }}
     >
       <div
+        onMouseEnter={() => setHeaderHovered(true)}
+        onMouseLeave={() => setHeaderHovered(false)}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          padding: '14px 20px',
+          padding: '14px 20px 14px 10px',
           borderBottom: `1px solid ${theme.colors.border}`,
           flexShrink: 0,
         }}
@@ -87,16 +92,41 @@ export const LocalTopicTabContent: React.FC<{
             flex: 1,
             minWidth: 0,
             margin: 0,
-            fontSize: theme.fontSizes[3],
+            fontSize: theme.fontSizes[4],
             fontWeight: 700,
-            color: theme.colors.primary,
+            color: theme.colors.text,
             lineHeight: 1.2,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}
         >
-          {title || 'Topic'}
+          <button
+            type="button"
+            disabled={!hasToc}
+            onClick={() => setTocOpen((open) => !open)}
+            onFocus={() => setTitleFocused(true)}
+            onBlur={() => setTitleFocused(false)}
+            aria-label={`Table of contents for ${title || 'Topic'}`}
+            aria-expanded={tocOpen}
+            style={{
+              display: 'block',
+              width: '100%',
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              color: 'inherit',
+              font: 'inherit',
+              lineHeight: 'inherit',
+              textAlign: 'left',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              cursor: hasToc ? 'pointer' : 'default',
+            }}
+          >
+            {title || 'Topic'}
+          </button>
         </h1>
         <button
           type="button"
@@ -140,10 +170,10 @@ export const LocalTopicTabContent: React.FC<{
               padding: 0,
               borderRadius: 6,
               border: `1px solid ${
-                tocOpen ? theme.colors.primary : theme.colors.border
+                highlightToc ? theme.colors.primary : theme.colors.border
               }`,
               background: theme.colors.backgroundSecondary,
-              color: tocOpen ? theme.colors.primary : theme.colors.text,
+              color: highlightToc ? theme.colors.primary : theme.colors.text,
               cursor: 'pointer',
               transition: 'color 0.15s ease, border-color 0.15s ease',
             }}

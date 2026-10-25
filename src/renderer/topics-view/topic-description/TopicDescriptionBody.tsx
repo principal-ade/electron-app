@@ -10,14 +10,14 @@
  * This is the chrome-less body shared by the Topics view and Dev Workspace
  * topic tabs, which wrap it in their own headers.
  *
- * Renders a scrollable, full-height drop-zone (so a parent flex column should
- * give it `flex: 1`), plus the markdown link-resolution notice.
+ * Renders a full-height drop-zone with independently scrolling notes and a
+ * sibling TOC overlay, plus the markdown link-resolution notice.
  */
 
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
-import { ArrowDownToLine, Pencil, X } from 'lucide-react';
+import { ArrowDownToLine, Pencil } from 'lucide-react';
 import {
   DATA_TYPES,
   useDropZone,
@@ -163,7 +163,7 @@ export interface TopicDescriptionBodyProps {
    * TOC hidden.
    */
   tocOpen?: boolean;
-  /** Close the TOC overlay — called when a heading is clicked or the panel's X. */
+  /** Close the TOC overlay when a heading is clicked. */
   onCloseToc?: () => void;
   /**
    * Reports whether the current description has any headings, so a wrapper can
@@ -431,6 +431,7 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
   // build the outline and to scrollIntoView a clicked entry.
   const wrapperRef = React.useRef<HTMLDivElement>(null);
   const [toc, setToc] = useState<TocEntry[]>([]);
+  const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
 
   // Build the outline from the rendered heading nodes (rather than re-parsing
   // the markdown) so each entry's id is exactly rehype-slug's anchor id — that's
@@ -454,7 +455,12 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
       });
       setToc((prev) =>
         prev.length === next.length &&
-        prev.every((p, i) => p.id === next[i].id && p.text === next[i].text)
+        prev.every(
+          (p, i) =>
+            p.id === next[i].id &&
+            p.text === next[i].text &&
+            p.level === next[i].level,
+        )
           ? prev
           : next,
       );
@@ -462,20 +468,118 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
     return () => cancelAnimationFrame(raf);
   }, [description, visible]);
 
+  // Track the last heading above the reading line, even while the outline is
+  // closed. Capture scroll events from the markdown's own scroll region too.
+  React.useEffect(() => {
+    const root = wrapperRef.current;
+    if (!visible || !root) return;
+    const headings = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        '.markdown-slide :is(h1, h2, h3, h4, h5, h6)[id]',
+      ),
+    ).filter((heading) => heading.textContent?.trim());
+    let frame: number | null = null;
+    const update = () => {
+      frame = null;
+      const readingLine =
+        root.getBoundingClientRect().top + root.clientTop + 24;
+      let active = headings[0]?.id ?? null;
+      for (const heading of headings) {
+        if (heading.getBoundingClientRect().top > readingLine) break;
+        active = heading.id;
+      }
+      // Short final sections may never reach the reading line.
+      if (
+        root.scrollTop > 0 &&
+        root.scrollTop + root.clientHeight >= root.scrollHeight - 1
+      ) {
+        active = headings[headings.length - 1]?.id ?? null;
+      }
+      setActiveHeadingId(active);
+    };
+    const schedule = () => {
+      if (frame === null) frame = requestAnimationFrame(update);
+    };
+    schedule();
+    root.addEventListener('scroll', schedule, { capture: true, passive: true });
+    root.addEventListener('load', schedule, true);
+    window.addEventListener('resize', schedule);
+    const observer =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(schedule);
+    observer?.observe(root);
+    const markdown = root.querySelector('.markdown-slide');
+    if (markdown) observer?.observe(markdown);
+    return () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      root.removeEventListener('scroll', schedule, true);
+      root.removeEventListener('load', schedule, true);
+      window.removeEventListener('resize', schedule);
+      observer?.disconnect();
+    };
+  }, [description, toc, visible, tocOpen]);
+
   // Let a wrapper show/enable its "Contents" button only when there's an
   // outline. Parents should pass a stable callback so this fires only on change.
   React.useEffect(() => {
     onTocAvailableChange?.(toc.length > 0);
   }, [toc.length, onTocAvailableChange]);
 
+  const cancelHeadingScrollRef = React.useRef<(() => void) | null>(null);
+  React.useEffect(() => {
+    // A manual close, topic switch, or unmount must not leave a delayed close
+    // that could dismiss a subsequently reopened outline.
+    return () => cancelHeadingScrollRef.current?.();
+  }, [tocOpen, visible, topicId, onCloseToc]);
+
   const scrollToHeading = React.useCallback(
     (id: string) => {
+      cancelHeadingScrollRef.current?.();
       const root = wrapperRef.current;
       // CSS.escape: slug ids can contain characters that need escaping in a
       // selector (digits-first, punctuation from non-ASCII headings, etc.).
       const target = root?.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
-      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      onCloseToc?.();
+      if (!root || !target) return;
+      let timer: ReturnType<typeof setTimeout>;
+      let frame: number | null = null;
+      const clearScheduledClose = () => {
+        clearTimeout(timer);
+        if (frame !== null) cancelAnimationFrame(frame);
+        frame = null;
+      };
+      const cancel = () => {
+        clearScheduledClose();
+        root.removeEventListener('scroll', onScroll, true);
+        root.removeEventListener('scrollend', finish, true);
+        if (cancelHeadingScrollRef.current === cancel) {
+          cancelHeadingScrollRef.current = null;
+        }
+      };
+      const finish = () => {
+        clearScheduledClose();
+        // Let the final active-heading update paint before hiding the outline.
+        frame = requestAnimationFrame(() => {
+          frame = requestAnimationFrame(() => {
+            cancel();
+            onCloseToc?.();
+          });
+        });
+      };
+      const onScroll = () => {
+        clearScheduledClose();
+        // Fallback for scroll regions without scrollend support.
+        timer = setTimeout(finish, 180);
+      };
+      cancelHeadingScrollRef.current = cancel;
+      root.addEventListener('scroll', onScroll, {
+        capture: true,
+        passive: true,
+      });
+      root.addEventListener('scrollend', finish, true);
+      // An already-visible heading may not cause any scroll events.
+      timer = setTimeout(finish, 250);
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     },
     [onCloseToc],
   );
@@ -486,11 +590,14 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
     <>
       <div
         {...dropZoneProps}
-        ref={wrapperRef}
         onDrop={handleDrop}
         style={{
           flex: 1,
-          overflow: 'auto',
+          minWidth: 0,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
           position: 'relative',
           outline: isDragOver ? `2px dashed ${theme.colors.primary}` : 'none',
           outlineOffset: -2,
@@ -498,45 +605,6 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
           transition: 'background 0.12s ease',
         }}
       >
-        {dropError && (
-          <div
-            role="alert"
-            style={{
-              position: 'sticky',
-              top: 0,
-              zIndex: 3,
-              padding: '8px 12px',
-              background: theme.colors.error || '#ef4444',
-              color: '#ffffff',
-              fontSize: theme.fontSizes[1],
-              fontWeight: theme.fontWeights.medium,
-            }}
-          >
-            {dropError}
-          </div>
-        )}
-        {isDragOver && (
-          <div
-            style={{
-              position: 'sticky',
-              top: 0,
-              zIndex: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              padding: '8px 12px',
-              background: theme.colors.primary,
-              color: '#ffffff',
-              fontSize: theme.fontSizes[1],
-              fontWeight: theme.fontWeights.medium,
-              pointerEvents: 'none',
-            }}
-          >
-            <ArrowDownToLine size={14} />
-            Drop text or an image to add to notes
-          </div>
-        )}
         {toc.length > 0 && (
           <nav
             aria-label="Table of contents"
@@ -561,57 +629,25 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
           >
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 8px 8px 12px',
-                borderBottom: `1px solid ${theme.colors.border}`,
-                flexShrink: 0,
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                padding: '8px 0',
               }}
             >
-              <span
-                style={{
-                  flex: 1,
-                  fontSize: theme.fontSizes[0],
-                  fontWeight: theme.fontWeights.semibold,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                Contents
-              </span>
-              <button
-                type="button"
-                onClick={onCloseToc}
-                title="Close"
-                aria-label="Close table of contents"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 22,
-                  height: 22,
-                  padding: 0,
-                  border: 'none',
-                  background: 'transparent',
-                  color: theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  borderRadius: 4,
-                }}
-              >
-                <X size={14} />
-              </button>
-            </div>
-            <div style={{ overflowY: 'auto', padding: '4px 0' }}>
               {toc.map((entry) => (
                 <button
                   key={`${entry.level}:${entry.id}:${entry.text}`}
                   type="button"
                   onClick={() => scrollToHeading(entry.id)}
                   title={entry.text}
+                  aria-current={
+                    entry.id === activeHeadingId ? 'location' : undefined
+                  }
                   style={{
-                    display: 'block',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
                     width: '100%',
                     textAlign: 'left',
                     border: 'none',
@@ -622,12 +658,12 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
                         ? theme.colors.text
                         : theme.colors.textSecondary,
                     fontFamily: theme.fonts.body,
-                    fontSize: theme.fontSizes[1],
+                    fontSize: theme.fontSizes[2],
                     fontWeight:
                       entry.level <= 1
                         ? theme.fontWeights.medium
                         : theme.fontWeights.body,
-                    padding: '6px 16px',
+                    padding: '8px 16px',
                     paddingLeft: 16 + (entry.level - 1) * 14,
                     lineHeight: theme.lineHeights.body,
                     whiteSpace: 'normal',
@@ -646,82 +682,140 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
                         : theme.colors.textSecondary;
                   }}
                 >
-                  {entry.text}
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 6,
+                      height: 6,
+                      flexShrink: 0,
+                      borderRadius: '50%',
+                      background:
+                        entry.id === activeHeadingId
+                          ? theme.colors.primary
+                          : 'transparent',
+                    }}
+                  />
+                  <span>{entry.text}</span>
                 </button>
               ))}
             </div>
           </nav>
         )}
-        {showLoadingDelay && description === null ? (
-          <div
-            style={{
-              padding: '12px 16px',
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.textSecondary,
-            }}
-          >
-            Loading…
-          </div>
-        ) : description === null ? null : trimmed ? (
-          <div style={{ width: '100%' }}>
-            <IndustryMarkdownSlide
-              content={description as string}
-              slideIdPrefix="topic-description"
-              slideIndex={0}
-              isVisible={visible}
-              theme={theme}
-              enableKeyboardScrolling={false}
-              onLinkClick={onLinkClick}
-              // Let purl doc links (`pkg:…#path`) survive href sanitize so they
-              // reach onLinkClick / the purl resolver instead of being stripped.
-              allowedLinkProtocols={PURL_LINK_PROTOCOLS}
-              onOpenMermaidInTab={handleOpenMermaidInTab}
-              selectableBlocks
-              deletionMode="text"
-              onContentChange={handleContentChange}
-              editable
-              onCheckboxChange={handleCheckboxChange}
-              transformImageUri={resolveAssetUri}
-            />
-          </div>
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: '10px',
-              padding: '16px',
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.textSecondary,
-            }}
-          >
-            <span>This topic has no description yet.</span>
-            {onEdit && (
-              <button
-                type="button"
-                onClick={onEdit}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: `1px solid ${theme.colors.primary}`,
-                  background: 'transparent',
-                  color: theme.colors.primary,
-                  cursor: 'pointer',
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[1],
-                  fontWeight: theme.fontWeights.medium,
-                }}
-              >
-                <Pencil size={13} />
-                Add a description
-              </button>
-            )}
-          </div>
-        )}
+        {/* Only the notes scroll; the TOC stays anchored to this viewport. */}
+        <div
+          ref={wrapperRef}
+          style={{ flex: 1, minHeight: 0, overflow: 'auto' }}
+        >
+          {dropError && (
+            <div
+              role="alert"
+              style={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 3,
+                padding: '8px 12px',
+                background: theme.colors.error || '#ef4444',
+                color: '#ffffff',
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.medium,
+              }}
+            >
+              {dropError}
+            </div>
+          )}
+          {isDragOver && (
+            <div
+              style={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                background: theme.colors.primary,
+                color: '#ffffff',
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.medium,
+                pointerEvents: 'none',
+              }}
+            >
+              <ArrowDownToLine size={14} />
+              Drop text or an image to add to notes
+            </div>
+          )}
+          {showLoadingDelay && description === null ? (
+            <div
+              style={{
+                padding: '12px 16px',
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textSecondary,
+              }}
+            >
+              Loading…
+            </div>
+          ) : description === null ? null : trimmed ? (
+            <div style={{ width: '100%' }}>
+              <IndustryMarkdownSlide
+                content={description as string}
+                slideIdPrefix="topic-description"
+                slideIndex={0}
+                isVisible={visible}
+                theme={theme}
+                enableKeyboardScrolling={false}
+                onLinkClick={onLinkClick}
+                // Let purl doc links (`pkg:…#path`) survive href sanitize so they
+                // reach onLinkClick / the purl resolver instead of being stripped.
+                allowedLinkProtocols={PURL_LINK_PROTOCOLS}
+                onOpenMermaidInTab={handleOpenMermaidInTab}
+                selectableBlocks
+                deletionMode="text"
+                onContentChange={handleContentChange}
+                editable
+                onCheckboxChange={handleCheckboxChange}
+                transformImageUri={resolveAssetUri}
+              />
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: '10px',
+                padding: '16px',
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textSecondary,
+              }}
+            >
+              <span>This topic has no description yet.</span>
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: `1px solid ${theme.colors.primary}`,
+                    background: 'transparent',
+                    color: theme.colors.primary,
+                    cursor: 'pointer',
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: theme.fontWeights.medium,
+                  }}
+                >
+                  <Pencil size={13} />
+                  Add a description
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {notice && (
