@@ -92,10 +92,51 @@ test('shows package metadata and opens the manifest', async () => {
   fireEvent.click(packageName);
   expect(open).toHaveBeenCalledWith('packages/components/package.json');
   expect(screen.getByText('Packages (1)')).toBeTruthy();
+  expect(screen.getByText('Packages (1)').parentElement?.style.gap).toBe('0');
+  expect(screen.getByText('Packages (1)').style.marginBottom).toBe('8px');
   expect(screen.getByText('1.2.3')).toBeTruthy();
   expect(screen.getByText('1.2.3').style.fontSize).toBe('12px');
   expect(screen.queryByText('packages/components · npm')).toBeNull();
   expect(screen.queryByText(/dependencies · \d+ dev · \d+ peer/)).toBeNull();
+});
+
+test('spotlights hovered packages and clears on leave and unmount', async () => {
+  const onPackageHover = jest.fn();
+  const { unmount } = render(<RepositoryPackageList repositoryPath="/repo" onOpenFile={jest.fn()} onPackageHover={onPackageHover} />);
+  const name = await screen.findByRole('button', { name: '@org/components' });
+  const card = name.parentElement?.parentElement;
+  if (!card) throw new Error('Package card not found');
+  fireEvent.mouseEnter(card);
+  expect(onPackageHover).toHaveBeenLastCalledWith('packages/components');
+  fireEvent.mouseLeave(card);
+  expect(onPackageHover).toHaveBeenLastCalledWith(null);
+  fireEvent.mouseEnter(card);
+  unmount();
+  expect(onPackageHover).toHaveBeenLastCalledWith(null);
+});
+
+test('keeps the spotlight while focus moves within a package', async () => {
+  const onPackageHover = jest.fn();
+  render(<RepositoryPackageList repositoryPath="/repo" onOpenFile={jest.fn()} onPackageHover={onPackageHover} />);
+  const name = await screen.findByRole('button', { name: '@org/components' });
+  const start = screen.getByRole('button', { name: 'Start Storybook' });
+  fireEvent.focus(name);
+  expect(onPackageHover).toHaveBeenLastCalledWith('packages/components');
+  fireEvent.blur(name, { relatedTarget: start });
+  expect(onPackageHover).toHaveBeenLastCalledWith('packages/components');
+  fireEvent.blur(start, { relatedTarget: document.body });
+  expect(onPackageHover).toHaveBeenLastCalledWith(null);
+});
+
+test('spotlights the root package using its empty relative path', async () => {
+  jest.mocked(RepositoryMonitoringService.getPackages).mockResolvedValue({
+    packages: [{ ...pkg, packageData: { ...pkg.packageData, path: '' } }],
+    summary: {} as NonNullable<Awaited<ReturnType<typeof RepositoryMonitoringService.getPackages>>>['summary'],
+  });
+  const onPackageHover = jest.fn();
+  render(<RepositoryPackageList repositoryPath="/repo" onOpenFile={jest.fn()} onPackageHover={onPackageHover} />);
+  fireEvent.focus(await screen.findByRole('button', { name: '@org/components' }));
+  expect(onPackageHover).toHaveBeenLastCalledWith('');
 });
 
 test('starts detected Storybook through the existing process registry', async () => {

@@ -416,8 +416,10 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const repositoryData = context.currentScope?.repository as RepositoryProfileData | undefined;
   const repositoryPath = repositoryData?.localClones?.[0]?.path;
   const [showStats, setShowStats] = useState(false);
+  const [hoveredPackagePath, setHoveredPackagePath] = useState<string | null>(null);
   useEffect(() => {
     setShowStats(false);
+    setHoveredPackagePath(null);
   }, [repositoryPath, repositoryData?.fullName]);
 
   // State for file trees (fetched via actions)
@@ -497,6 +499,37 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     date: string;
   } | null>(null);
   const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
+
+  const packageSpotlightLayers = useMemo<HighlightLayer[] | null>(() => {
+    if (hoveredPackagePath === null || !cityData) return null;
+    const directory = hoveredPackagePath.replace(/\\/g, '/').replace(/^\.\/|\/+$/g, '');
+    const paths = new Set(cityData.buildings
+      .filter(building => !directory || directory === '.' || building.path.startsWith(`${directory}/`))
+      .map(building => building.path));
+    if (paths.size === 0) return null;
+
+    // Keep existing file colors and git borders inside the package only.
+    // Leaving all-file color layers active would defeat map isolation.
+    return highlightLayers.map(layer => ({
+      ...layer,
+      items: layer.items.filter(item => item.type === 'file' && paths.has(item.path)),
+    })).filter(layer => layer.items.length > 0);
+  }, [hoveredPackagePath, cityData, highlightLayers]);
+
+  const changedFileSpotlightLayers = useMemo<HighlightLayer[] | null>(() => {
+    if (showStats || showContributors || isPlaying || !repositoryPath ||
+        !gitStatusMap.get(repositoryPath)?.isDirty || !cityData) return null;
+
+    const gitLayers = highlightLayers.filter(layer => layer.enabled && layer.id.startsWith('git-'));
+    const changedPaths = new Set(gitLayers.flatMap(layer => layer.items.map(item => item.path)));
+    // Only changed files count as highlighted, so unchanged files can dim.
+    // Use their original file colors rather than the dimmed overview colors.
+    const fileColors = createFileColorHighlightLayers(
+      cityData.buildings.filter(building => changedPaths.has(building.path)),
+    ).map(layer => ({ ...layer, priority: layer.priority + 100 }));
+    return [...fileColors, ...gitLayers];
+  }, [showStats, showContributors, isPlaying, repositoryPath, gitStatusMap, cityData, highlightLayers]);
+  const spotlightLayers = packageSpotlightLayers ?? changedFileSpotlightLayers;
 
   const CONTRIBUTORS_COLUMN_MIN_WIDTH = 900;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -2579,7 +2612,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                           }}>
                             {section.title} ({section.files.length})
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                             {section.files.map((rawPath) => {
                               // Porcelain renames arrive as "old -> new"; use the
                               // new path for opening/display.
@@ -2601,7 +2634,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: spacing.xs,
-                                    padding: spacing.xs,
+                                    padding: `${spacing.sm}px ${spacing.xs}px`,
                                     backgroundColor: theme.colors.background,
                                     border: 'none',
                                     borderRadius: theme.radii?.[1] || 4,
@@ -2649,6 +2682,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     key={repositoryPath}
                     repositoryPath={repositoryPath}
                     onOpenFile={openFileInTab}
+                    onPackageHover={setHoveredPackagePath}
                     onOpenBrowser={actions.openLocalhostBrowser}
                   />
                 )}
@@ -2823,7 +2857,10 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           {cityData ? (
             <ArchitectureMapHighlightLayers
               cityData={cityData}
-              highlightLayers={highlightLayers}
+              highlightLayers={spotlightLayers ?? highlightLayers}
+              fileColorLayers={spotlightLayers ? [] : undefined}
+              isolationMode={spotlightLayers ? 'transparent' : undefined}
+              dimOpacity={packageSpotlightLayers ? 0.15 : 0.55}
               canvasBackgroundColor={theme.colors.backgroundSecondary}
               defaultBuildingColor={theme.colors.muted}
               defaultDirectoryColor={theme.colors.backgroundSecondary}

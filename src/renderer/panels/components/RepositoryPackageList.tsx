@@ -24,10 +24,19 @@ function isActiveProcess(entry: ProcessEntry): boolean {
 export const RepositoryPackageList: React.FC<{
   repositoryPath: string;
   onOpenFile: (path: string) => void;
+  onPackageHover?: (path: string | null) => void;
   onOpenBrowser?: (port: number, path?: string, label?: string, processId?: string) => void;
-}> = ({ repositoryPath, onOpenFile, onOpenBrowser }) => {
+}> = ({ repositoryPath, onOpenFile, onPackageHover, onOpenBrowser }) => {
   const { theme } = useTheme();
   const [packages, setPackages] = useState<PackageLayer[] | null>(null);
+  const [hoveredPackageId, setHoveredPackageId] = useState<string | null>(null);
+  const [focusedPackageId, setFocusedPackageId] = useState<string | null>(null);
+  const activePackage = packages?.find((pkg) => pkg.id === (hoveredPackageId ?? focusedPackageId));
+  const activePackagePath = activePackage?.packageData.path ?? null;
+  useEffect(() => {
+    onPackageHover?.(activePackagePath);
+    return () => onPackageHover?.(null);
+  }, [activePackagePath, onPackageHover]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [launchError, setLaunchError] = useState<string | null>(null);
@@ -150,8 +159,8 @@ export const RepositoryPackageList: React.FC<{
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, color: theme.colors.text, fontFamily: theme.fonts?.body, fontSize: theme.fontSizes[1] }}>
-      <h5 style={{ margin: 0, fontSize: theme.fontSizes[2] }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, color: theme.colors.text, fontFamily: theme.fonts?.body, fontSize: theme.fontSizes[1] }}>
+      <h5 style={{ margin: '0 0 8px', fontSize: theme.fontSizes[2] }}>
         Packages{packages ? ` (${packages.length})` : ''}
       </h5>
       {loading && <div role="status">Loading packages...</div>}
@@ -163,7 +172,22 @@ export const RepositoryPackageList: React.FC<{
         const storybook = storybooks.find((candidate) => candidate.path === path);
         const processes = storybook ? storybookProcesses(entries, path).filter(isActiveProcess) : [];
         return (
-          <div key={pkg.id} style={{ padding: 8, border: `1px solid ${theme.colors.border}`, borderRadius: 4 }}>
+          <div
+            key={pkg.id}
+            onMouseEnter={() => setHoveredPackageId(pkg.id)}
+            onMouseLeave={() => setHoveredPackageId(null)}
+            onFocus={() => setFocusedPackageId(pkg.id)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                setFocusedPackageId(null);
+              }
+            }}
+            style={{
+              padding: 8,
+              border: `1px solid ${activePackage?.id === pkg.id ? theme.colors.primary : theme.colors.border}`,
+              borderRadius: 4,
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <button
                 type="button"
