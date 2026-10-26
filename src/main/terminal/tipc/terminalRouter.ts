@@ -29,6 +29,10 @@ const t = tipc.create();
 export { broadcastTerminalSessionsChanged };
 
 export const terminalRouter = {
+  getAllProgramStatus: t.procedure.action(async () =>
+    sessionManager.getAllProgramStatus(),
+  ),
+
   // ============================================
   // Terminal Session Management
   // ============================================

@@ -2,10 +2,16 @@ import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { HomeRepoRow } from './homeTabEntries';
-import { HomeLeftPanel } from './HomeLeftPanel';
+import { HomeLeftPanel, type HomeLeftPanelProps } from './HomeLeftPanel';
 import { buildHomeTabEntries } from './homeTabEntries';
 
 const mockOpenOrgProfile = jest.fn();
+
+jest.mock('@industry-theme/xterm-terminal-panel', () => ({
+  ProgramStatusBadge: ({ record }: { record: { state: string } }) => (
+    <span data-testid="program-status-badge" data-state={record.state} />
+  ),
+}));
 
 jest.mock('@principal-ade/industry-theme', () => ({
   useTheme: () => ({
@@ -101,6 +107,7 @@ function renderHome(
   onOpenEntry = jest.fn(),
   pinnedTabs: HomeRepoRow['pinnedTabs'] = [],
   openTabs: HomeRepoRow['openTabs'] = [],
+  programStatusByTab?: HomeLeftPanelProps['programStatusByTab'],
 ) {
   jest.mocked(buildHomeTabEntries).mockReturnValue({
     repos: [row],
@@ -115,6 +122,7 @@ function renderHome(
     <HomeLeftPanel
       repositories={[]}
       tabs={[]}
+      programStatusByTab={programStatusByTab}
       events={{ emit } as unknown as PanelEventEmitter}
       aboutUser={null}
       userLoading={false}
@@ -309,4 +317,63 @@ test('closed topic and model pins render as named children, not compact repo ico
   }
   expect(screen.getByRole('button', { name: 'Pin app to Home' })).toBeTruthy();
   expect(emit).not.toHaveBeenCalled();
+});
+
+test('shows independent OSC status for terminal children sharing a repository', () => {
+  const openTabs: HomeRepoRow['openTabs'] = [
+    {
+      id: 'tab-one',
+      kind: 'terminal',
+      label: 'Terminal 1',
+      path: '/work/app',
+      repoPath: '/work/app',
+    },
+    {
+      id: 'tab-two',
+      kind: 'terminal',
+      label: 'Terminal 2',
+      path: '/work/app',
+      repoPath: '/work/app',
+    },
+  ];
+  renderHome({ ...repo, openTabs }, jest.fn(), [], [], {
+    'tab-one': { state: 'working' },
+    'tab-two': { state: 'blocked', kind: 'question' },
+  });
+  expect(
+    within(screen.getByRole('button', { name: 'Open Terminal 1' }))
+      .getByRole('status')
+      .getAttribute('aria-label'),
+  ).toBe('Terminal working');
+  expect(
+    within(screen.getByRole('button', { name: 'Open Terminal 2' }))
+      .getByRole('status')
+      .getAttribute('aria-label'),
+  ).toBe('Terminal blocked: question');
+});
+
+test('shows OSC status for a standalone terminal, not a closed or nonterminal entry', () => {
+  renderHome(
+    repo,
+    jest.fn(),
+    [
+      {
+        id: 'closed-topic',
+        kind: 'topic',
+        label: 'Closed topic',
+        topicId: 't1',
+      },
+    ],
+    [{ id: 'standalone', kind: 'terminal', label: 'Tab 3', path: '/scratch' }],
+    {
+      standalone: { state: 'error' },
+      'closed-topic': { state: 'working' },
+    },
+  );
+  expect(screen.getAllByRole('status')).toHaveLength(1);
+  expect(
+    within(screen.getByRole('button', { name: 'Open terminal in /scratch' }))
+      .getByRole('status')
+      .getAttribute('aria-label'),
+  ).toBe('Terminal error');
 });

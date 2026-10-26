@@ -11,6 +11,7 @@ import React, {
 import { SpanStatusCode } from '@opentelemetry/api';
 import { getTracer } from '../telemetry';
 import { TerminalService } from '../main-process-api/TerminalService';
+import { useTerminalProgramStatusState } from './useTerminalProgramStatusState';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
 import type {
@@ -46,7 +47,6 @@ function uint8ToBase64(bytes: Uint8Array): string {
 import {
   terminalClient,
   onActivitySync,
-  onProgramStatus,
   onCwdChange,
   type TerminalActivityState,
   type UpdateActivityInput,
@@ -119,9 +119,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
   const [terminalActivities, setTerminalActivities] = useState<TerminalActivityState[]>([]);
 
   // Track OSC 7501 program-status records per session (broadcast from main)
-  const [programStatus, setProgramStatus] = useState<
-    Record<string, ProgramStatusRecord[]>
-  >({});
+  const programStatus = useTerminalProgramStatusState();
 
   // Track terminal session subscriptions for cleanup
   const terminalSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
@@ -229,16 +227,6 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     ));
   }), []);
 
-  // Listen for OSC 7501 program-status broadcasts from the main process
-  useEffect(() => {
-    const unsubscribe = onProgramStatus(({ sessionId, records }) => {
-      setProgramStatus((prev) => ({ ...prev, [sessionId]: records ?? [] }));
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
   useEffect(() => {
     const loadTerminalSessions = async () => {
       try {

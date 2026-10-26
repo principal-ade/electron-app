@@ -9,7 +9,13 @@
  * - Right: OnboardingCardPanel (draggable concept cards)
  */
 
-import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import React, {
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+} from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   ConfigurablePanelLayout,
@@ -20,14 +26,12 @@ import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import {
   TerminalProvider,
   useTerminalProvider,
-  useTerminalActivity,
 } from '../../../contexts/TerminalContext';
 import { usePanelProgramStatus } from '../../../contexts/terminalProgramStatus';
 import {
   TabbedTerminalPanel,
   type TerminalTab,
   type BaseTab,
-  type TerminalWorkingState,
   type TerminalPanelActions,
 } from '@industry-theme/xterm-terminal-panel';
 import { WelcomePanel } from './components/WelcomePanel';
@@ -81,7 +85,9 @@ interface OnboardingPanelFrameworkInnerProps {
 /**
  * Inner component that uses TerminalProvider context
  */
-const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps> = ({
+const OnboardingPanelFrameworkInner: React.FC<
+  OnboardingPanelFrameworkInnerProps
+> = ({
   onboardingState,
   onMarkCompleted,
   onDismiss,
@@ -100,8 +106,8 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
   useTerminalLinkHandler(events);
 
   // Terminal context
-  const { context: terminalCtx, actions: terminalActions, activityActions } = useTerminalProvider();
-  const { activities: terminalActivities } = useTerminalActivity();
+  const { context: terminalCtx, actions: terminalActions } =
+    useTerminalProvider();
 
   // Local collapsed state tracking
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(collapsed.left);
@@ -113,7 +119,9 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
   // Tab state
   const [tabs, setTabs] = useState<OnboardingTab[]>([]);
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
-  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
+    string | null
+  >(null);
   const terminalImplementation = useTerminalImplementation();
 
   // Layout configuration
@@ -125,19 +133,6 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
     }),
     [],
   );
-
-  // Convert terminal activities to workingStates record
-  const workingStates = useMemo(() => {
-    const states: Record<string, TerminalWorkingState> = {};
-    for (const activity of terminalActivities) {
-      states[activity.sessionId] = {
-        isWorking: activity.isWorking,
-        message: activity.workingMessage,
-        subtitle: activity.workingSubtitle,
-      };
-    }
-    return states;
-  }, [terminalActivities]);
 
   // OSC 7501 program-reported status, reduced to one record per session.
   const programStatus = usePanelProgramStatus();
@@ -203,7 +198,9 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
     (stepId: string) => {
       if (stepId === 'base-directory') {
         // Check if tab already exists
-        const existingTab = tabs.find((t) => t.contentType === 'base-directory-setup');
+        const existingTab = tabs.find(
+          (t) => t.contentType === 'base-directory-setup',
+        );
 
         if (existingTab) {
           setFocusTabId(existingTab.id);
@@ -234,14 +231,18 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
       onBaseDirectoryConfigured?.(directory);
 
       // Close the setup tab
-      setTabs((prev) => prev.filter((t) => t.contentType !== 'base-directory-setup'));
+      setTabs((prev) =>
+        prev.filter((t) => t.contentType !== 'base-directory-setup'),
+      );
     },
     [onBaseDirectoryConfigured],
   );
 
   const handleSkipBaseDirectory = useCallback(() => {
     // Just close the tab without saving
-    setTabs((prev) => prev.filter((t) => t.contentType !== 'base-directory-setup'));
+    setTabs((prev) =>
+      prev.filter((t) => t.contentType !== 'base-directory-setup'),
+    );
   }, []);
 
   const handleTabsChange = useCallback((newTabs: OnboardingTab[]) => {
@@ -277,26 +278,6 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
     [baseDefaultDirectory, handleDirectorySelected, handleSkipBaseDirectory],
   );
 
-  // Listen for terminal activity events
-  useEffect(() => {
-    const handleActivityChanged = (event: {
-      type: string;
-      payload: { sessionId: string; isWorking: boolean };
-    }) => {
-      if (event.type === 'terminal:activity-changed') {
-        activityActions.updateActivity({
-          sessionId: event.payload.sessionId,
-          isWorking: event.payload.isWorking,
-        });
-      }
-    };
-
-    events.on('terminal:activity-changed', handleActivityChanged);
-    return () => {
-      events.off('terminal:activity-changed', handleActivityChanged);
-    };
-  }, [events, activityActions]);
-
   // Load base directory from preferences
   useEffect(() => {
     const loadBaseDirectory = async () => {
@@ -306,9 +287,11 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
 
     loadBaseDirectory();
 
-    const unsubscribe = UserPreferencesService.onPreferencesUpdated((preferences) => {
-      setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
-    });
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated(
+      (preferences) => {
+        setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+      },
+    );
 
     return unsubscribe;
   }, []);
@@ -360,7 +343,6 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
             terminalContext={terminalCtx.terminalContext}
             directory={terminalDirectory}
             renderer={terminalImplementation}
-            workingStates={workingStates}
             programStatus={programStatus}
             initialTabs={tabs}
             onTabsChange={handleTabsChange}
@@ -422,7 +404,9 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
 /**
  * OnboardingPanelFramework - Main component with TerminalProvider wrapper
  */
-export const OnboardingPanelFramework: React.FC<OnboardingPanelFrameworkProps> = ({
+export const OnboardingPanelFramework: React.FC<
+  OnboardingPanelFrameworkProps
+> = ({
   onboardingState,
   onMarkCompleted,
   onDismiss,

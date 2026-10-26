@@ -50,9 +50,9 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import {
   TerminalProvider,
   useTerminalProvider,
-  useTerminalActivity,
 } from '../contexts/TerminalContext';
 import { usePanelProgramStatus } from '../contexts/terminalProgramStatus';
+import { toHomeProgramStatus } from '../panels/home-panel/homeProgramStatus';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { ProcessRegistryService } from '../main-process-api/ProcessRegistryService';
 import { useTerminalImplementation } from '../hooks/useTerminalImplementation';
@@ -73,7 +73,6 @@ import type { Purl } from '@principal-ai/alexandria-core-library';
 import { useOpenRepositoryWindows } from '../hooks/useOpenRepositoryWindows';
 import {
   TabbedTerminalPanel,
-  type TerminalWorkingState,
   type TerminalPanelActions,
   type TerminalTabOpenRequest,
 } from '@industry-theme/xterm-terminal-panel';
@@ -213,12 +212,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const { theme } = useTheme();
   const panelLayoutRef = useRef<ConfigurablePanelLayoutHandle>(null);
 
-  const {
-    context: terminalCtx,
-    actions: terminalActions,
-    activityActions,
-  } = useTerminalProvider();
-  const { activities: terminalActivities } = useTerminalActivity();
+  const { context: terminalCtx, actions: terminalActions } =
+    useTerminalProvider();
   // Resolves the active terminal's directory to repo context (owner/repo,
   // avatar, git status) for the panel's bottom status bar.
   const getRepoInfo = useTerminalRepoInfo();
@@ -322,20 +317,17 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     };
   }, []);
 
-  const workingStates = useMemo(() => {
-    const states: Record<string, TerminalWorkingState> = {};
-    for (const activity of terminalActivities) {
-      states[activity.sessionId] = {
-        isWorking: activity.isWorking,
-        message: activity.workingMessage,
-        subtitle: activity.workingSubtitle,
-      };
-    }
-    return states;
-  }, [terminalActivities]);
-
   // OSC 7501 program-reported status, reduced to one record per session.
   const programStatus = usePanelProgramStatus();
+  const homeProgramStatus = useMemo(
+    () =>
+      toHomeProgramStatus(
+        terminalCtx.terminalSessions,
+        terminalCtx.terminalContext,
+        programStatus,
+      ),
+    [terminalCtx.terminalSessions, terminalCtx.terminalContext, programStatus],
+  );
 
   const terminalPanelContext = useMemo(
     () => ({
@@ -487,25 +479,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
 
   // Open links clicked in the terminal in the default browser.
   useTerminalLinkHandler(events);
-
-  // Reflect terminal working-state broadcasts.
-  useEffect(() => {
-    const handleActivityChanged = (event: {
-      type: string;
-      payload: { sessionId: string; isWorking: boolean };
-    }) => {
-      if (event.type === 'terminal:activity-changed') {
-        activityActions.updateActivity({
-          sessionId: event.payload.sessionId,
-          isWorking: event.payload.isWorking,
-        });
-      }
-    };
-    events.on('terminal:activity-changed', handleActivityChanged);
-    return () => {
-      events.off('terminal:activity-changed', handleActivityChanged);
-    };
-  }, [events, activityActions]);
 
   // "Open a terminal here" from the Projects left panel + repository profile
   // tab. The panel owns tab identity and session creation (`requestOpenTab`), so
@@ -1006,10 +979,12 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   // not land in the markdown tab, which would only render
   // "Select a markdown file to preview".
   useEffect(() => {
-    return DocumentService.onOpenDocument(({ filePath, repositoryPath, range }) => {
-      if (!filePath) return;
-      openFileByPath(filePath, repositoryPath, range);
-    });
+    return DocumentService.onOpenDocument(
+      ({ filePath, repositoryPath, range }) => {
+        if (!filePath) return;
+        openFileByPath(filePath, repositoryPath, range);
+      },
+    );
   }, [openFileByPath]);
 
   // Bridge in-document doc links. The shared markdown link handler
@@ -1020,12 +995,20 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   useEffect(() => {
     const handleFileOpened = (event: {
       source?: string;
-      payload?: { filePath?: string; repositoryPath?: string; range?: DocumentRange };
+      payload?: {
+        filePath?: string;
+        repositoryPath?: string;
+        range?: DocumentRange;
+      };
     }) => {
       if (event.source === 'tab') return; // ignore tab re-emits
       const filePath = event.payload?.filePath;
       if (!filePath) return;
-      openFileByPath(filePath, event.payload?.repositoryPath, event.payload?.range);
+      openFileByPath(
+        filePath,
+        event.payload?.repositoryPath,
+        event.payload?.range,
+      );
     };
     events.on('file:opened', handleFileOpened);
     return () => {
@@ -1079,6 +1062,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             />
           ) : activeView === 'home-panel' ? (
             <HomeLeftPanel
+              programStatusByTab={homeProgramStatus}
               tabs={tabs}
               repositories={repositories}
               events={events}
@@ -1133,7 +1117,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               directory={terminalDirectory}
               renderer={terminalImplementation}
               getRepoInfo={getRepoInfo}
-              workingStates={workingStates}
               programStatus={programStatus}
               initialTabs={tabs}
               onTabsChange={setTabs}
@@ -1184,8 +1167,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       terminalCtx.terminalContext,
       terminalDirectory,
       getRepoInfo,
-      workingStates,
       programStatus,
+      homeProgramStatus,
       tabs,
       activeTabId,
       setTabs,

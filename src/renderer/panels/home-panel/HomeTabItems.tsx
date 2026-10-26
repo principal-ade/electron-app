@@ -11,6 +11,10 @@
  */
 
 import React, { useState } from 'react';
+import {
+  ProgramStatusBadge,
+  type ProgramStatusRecord,
+} from '@industry-theme/xterm-terminal-panel';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   Building2,
@@ -97,6 +101,8 @@ export interface HomeTabRowProps {
   open: boolean;
   /** Current 1-based tab-bar position, never persisted with a pin. */
   tabNumber?: number;
+  /** Live status for this terminal, independent of active-tab and pin state. */
+  programStatus?: ProgramStatusRecord;
   pinned: boolean;
   /** Extra left padding for child rows nested under a repo row. */
   depth?: number;
@@ -120,6 +126,7 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
   entry,
   open,
   tabNumber,
+  programStatus,
   pinned,
   depth = 0,
   pinnable = true,
@@ -192,6 +199,23 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
       >
         {label}
       </span>
+      {open &&
+        entry.kind === 'terminal' &&
+        programStatus &&
+        programStatus.state !== 'idle' &&
+        programStatus.state !== 'clear' && (
+          <span
+            role="status"
+            aria-label={`Terminal ${programStatus.state}${programStatus.kind ? `: ${programStatus.kind}` : ''}`}
+            style={{
+              display: 'inline-flex',
+              flexShrink: 0,
+              alignItems: 'center',
+            }}
+          >
+            <ProgramStatusBadge record={programStatus} />
+          </span>
+        )}
       {open &&
         tabNumber != null &&
         entry.kind === 'repo-tab' &&

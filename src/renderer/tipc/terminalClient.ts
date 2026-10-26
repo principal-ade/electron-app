@@ -71,6 +71,7 @@ export interface TerminalClient {
   createTerminalSession: (input: CreateTerminalSessionInput) => Promise<string>;
   destroyTerminalSession: (input: DestroyTerminalSessionInput) => Promise<void>;
   listTerminalSessions: () => Promise<TerminalSessionInfo[]>;
+  getAllProgramStatus: () => Promise<Record<string, ProgramStatusRecord[]>>;
   resizeTerminal: (input: ResizeTerminalInput) => Promise<void>;
   refreshTerminal: (input: RefreshTerminalInput) => Promise<RefreshResult>;
   writeToSession: (input: {

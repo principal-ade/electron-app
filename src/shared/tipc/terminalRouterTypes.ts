@@ -6,6 +6,7 @@
  */
 
 import type { ActionContext } from '@egoist/tipc/main';
+import type { ProgramStatusRecord } from '../terminal/programStatus';
 
 // Input/output types for terminal router procedures
 
@@ -183,6 +184,12 @@ export type TerminalRouterType = Record<
       context: ActionContext;
       input?: void;
     }) => Promise<TerminalSessionInfo[]>;
+  };
+  getAllProgramStatus: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<Record<string, ProgramStatusRecord[]>>;
   };
   resizeTerminal: {
     action: (args: {

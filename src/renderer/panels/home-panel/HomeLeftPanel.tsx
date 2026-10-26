@@ -9,6 +9,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ProgramStatusRecord } from '@industry-theme/xterm-terminal-panel';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { githubIdToPurl } from '@principal-ai/alexandria-core-library';
@@ -68,6 +69,8 @@ import { requestDefinition } from '../../../shared/requests/preparedRequest';
 export interface HomeLeftPanelProps {
   repositories: AlexandriaEntry[];
   tabs: WorkspaceTab[];
+  /** Live OSC status keyed by workspace tab id, never persisted with pins. */
+  programStatusByTab?: Record<string, ProgramStatusRecord>;
   events: PanelEventEmitter;
   /**
    * Home profile (GitHub or git identity), owned by WorkspaceShell so it
@@ -86,6 +89,7 @@ export interface HomeLeftPanelProps {
 export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   repositories,
   tabs,
+  programStatusByTab,
   events,
   aboutUser,
   userLoading,
@@ -474,6 +478,11 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       entry={entry}
       open={open}
       tabNumber={open ? tabNumbers.get(entry.id) : undefined}
+      programStatus={
+        open && entry.kind === 'terminal'
+          ? programStatusByTab?.[entry.id]
+          : undefined
+      }
       pinned={pinnedTabIds.has(entry.id)}
       depth={depth}
       // Topic and subsystem-model titles are user-authored and often long;

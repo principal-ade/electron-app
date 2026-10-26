@@ -3,6 +3,12 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { HomeTabEntry } from './homeTabEntries';
 import { HomeTabRow, PinnedTabIcon } from './HomeTabItems';
 
+jest.mock('@industry-theme/xterm-terminal-panel', () => ({
+  ProgramStatusBadge: ({ record }: { record: { state: string } }) => (
+    <span data-testid="program-status-badge" data-state={record.state} />
+  ),
+}));
+
 jest.mock('@principal-ade/industry-theme', () => ({
   useTheme: () => ({
     theme: { colors: {}, fonts: {}, fontSizes: [10, 12, 14] },
@@ -225,4 +231,97 @@ test('does not add a tab-number badge to other repository tab kinds', () => {
     />,
   );
   expect(screen.queryByText('Tab 2')).toBeNull();
+});
+
+test.each(['working', 'blocked', 'done', 'error'] as const)(
+  'shows OSC %s on an open terminal row and preserves activation',
+  (state) => {
+    const activate = jest.fn();
+    render(
+      <HomeTabRow
+        entry={{
+          id: 'tab-one',
+          kind: 'terminal',
+          label: 'Tab 1',
+          path: '/work/app',
+        }}
+        open
+        pinned={false}
+        programStatus={{
+          state,
+          kind: state === 'blocked' ? 'permission' : undefined,
+        }}
+        onActivate={activate}
+        onTogglePin={jest.fn()}
+      />,
+    );
+    expect(screen.getByRole('status').getAttribute('aria-label')).toContain(
+      state,
+    );
+    expect(
+      screen.getByTestId('program-status-badge').getAttribute('data-state'),
+    ).toBe(state);
+    fireEvent.click(screen.getByRole('status'));
+    expect(activate).toHaveBeenCalledTimes(1);
+  },
+);
+
+test.each(['idle', 'clear', undefined] as const)(
+  'does not show an indicator for status %s',
+  (state) => {
+    render(
+      <HomeTabRow
+        entry={{ id: 'tab-one', kind: 'terminal', label: 'Tab 1' }}
+        open
+        pinned={false}
+        programStatus={state ? { state } : undefined}
+        onActivate={jest.fn()}
+        onTogglePin={jest.fn()}
+      />,
+    );
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByTestId('program-status-badge')).toBeNull();
+  },
+);
+
+test('updates live terminal status and removes it when cleared or closed', () => {
+  const props = {
+    entry: { id: 'tab-one', kind: 'terminal' as const, label: 'Tab 1' },
+    open: true,
+    pinned: false,
+    onActivate: jest.fn(),
+    onTogglePin: jest.fn(),
+  };
+  const { rerender } = render(
+    <HomeTabRow {...props} programStatus={{ state: 'working' }} />,
+  );
+  rerender(
+    <HomeTabRow
+      {...props}
+      programStatus={{ state: 'blocked', kind: 'auth' }}
+    />,
+  );
+  expect(screen.getByRole('status').getAttribute('aria-label')).toBe(
+    'Terminal blocked: auth',
+  );
+  rerender(<HomeTabRow {...props} programStatus={{ state: 'clear' }} />);
+  expect(screen.queryByRole('status')).toBeNull();
+  rerender(
+    <HomeTabRow {...props} open={false} programStatus={{ state: 'working' }} />,
+  );
+  expect(screen.queryByRole('status')).toBeNull();
+});
+
+test('does not show terminal status on a nonterminal row', () => {
+  render(
+    <HomeTabRow
+      entry={profile}
+      open
+      pinned={false}
+      programStatus={{ state: 'working' }}
+      onActivate={jest.fn()}
+      onTogglePin={jest.fn()}
+    />,
+  );
+  expect(screen.queryByRole('status')).toBeNull();
 });

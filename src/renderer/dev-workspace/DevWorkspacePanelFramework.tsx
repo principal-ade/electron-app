@@ -45,7 +45,6 @@ import {
 import {
   TerminalProvider,
   useTerminalProvider,
-  useTerminalActivity,
 } from '../contexts/TerminalContext';
 import { usePanelProgramStatus } from '../contexts/terminalProgramStatus';
 import {
@@ -56,8 +55,6 @@ import {
   TabbedTerminalPanel,
   type BaseTab,
   type TerminalTab,
-  type TerminalWorkingState,
-  type TerminalActivityChangedEvent,
   type TerminalPanelActions,
 } from '@industry-theme/xterm-terminal-panel';
 import { SendTabButton } from '../move-tab/SendTabButton';
@@ -721,8 +718,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
     useTerminalProvider();
-  const { activities: terminalActivities, actions: activityActions } =
-    useTerminalActivity();
 
   // Unified modal state for detail panels
   type DetailModal = { panelId: 'githubIssueDetail'; data: unknown };
@@ -808,72 +803,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     [context, terminalCtx.terminalSessions, terminalCtx.terminalContext],
   );
 
-  // Convert terminal activities to workingStates record for TabbedTerminalPanel
-  const workingStates = useMemo(() => {
-    const states: Record<string, TerminalWorkingState> = {};
-    for (const activity of terminalActivities) {
-      states[activity.sessionId] = {
-        isWorking: activity.isWorking,
-        message: activity.workingMessage,
-        subtitle: activity.workingSubtitle,
-      };
-    }
-    return states;
-  }, [terminalActivities]);
-
   // Reduce each session's OSC 7501 record set to the single record the tab bar
   // should surface (most attention-worthy wins; root record breaks ties).
   const programStatus = usePanelProgramStatus();
 
   // Open links clicked in the terminal in the default browser
   useTerminalLinkHandler(events);
-
-  // Listen for terminal:activity-changed events from TabbedTerminalPanel and update activity state
-  useEffect(() => {
-    const activityTracer = getTracer('principal-ade-dev-workspace');
-
-    const unsubscribe = events.on('terminal:activity-changed', (event) => {
-      if (event.type === 'terminal:activity-changed') {
-        const payload = event.payload as TerminalActivityChangedEvent;
-
-        // Start span for host handling the activity event
-        const span = activityTracer.startSpan('terminal.activity.host_handle');
-
-        try {
-          // Event: Host received the activity change from terminal panel
-          span.addEvent('terminal.activity.host_received', {
-            'session.id': payload.sessionId,
-            is_working: payload.isWorking,
-            'handler.name': 'onTerminalActivityChanged',
-          });
-
-          // Event: TIPC invoked to update activity in main process
-          span.addEvent('terminal.activity.tipc_invoked', {
-            'procedure.name': 'updateActivity',
-            is_working: payload.isWorking,
-          });
-
-          activityActions.updateActivity({
-            sessionId: payload.sessionId,
-            isWorking: payload.isWorking,
-            workingMessage: payload.message,
-            workingSubtitle: payload.subtitle,
-          });
-
-          span.setStatus({ code: SpanStatusCode.OK });
-        } catch (error) {
-          span.recordException(
-            error instanceof Error ? error : new Error(String(error)),
-          );
-          span.setStatus({ code: SpanStatusCode.ERROR });
-        } finally {
-          span.end();
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, [events, activityActions]);
 
   // Tab state for TabbedTerminalPanel (skills only - terminals are managed by
   // the panel from context).
@@ -902,9 +837,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       (topicId) => {
         const isDeleted = (tab: DevWorkspaceTab) =>
           tab.contentType === 'topic' && tab.topicId === topicId;
-        const removedIds = new Set(
-          tabs.filter(isDeleted).map((tab) => tab.id),
-        );
+        const removedIds = new Set(tabs.filter(isDeleted).map((tab) => tab.id));
         if (removedIds.size === 0) return;
         const remaining = tabs.filter((tab) => !isDeleted(tab));
         const nextActiveId =
@@ -2358,15 +2291,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // `file:opened` event so the handler above chooses a document/source/media
   // tab, preserving a requested source span.
   useEffect(() => {
-    return DocumentService.onOpenDocument(({ filePath, repositoryPath, range }) => {
-      if (!filePath) return;
-      events.emit({
-        type: 'file:opened',
-        source: 'bridge',
-        timestamp: Date.now(),
-        payload: { filePath, repositoryPath, range },
-      });
-    });
+    return DocumentService.onOpenDocument(
+      ({ filePath, repositoryPath, range }) => {
+        if (!filePath) return;
+        events.emit({
+          type: 'file:opened',
+          source: 'bridge',
+          timestamp: Date.now(),
+          payload: { filePath, repositoryPath, range },
+        });
+      },
+    );
   }, [events]);
 
   // Listen for terminal session selection from TerminalSessionsPanel
@@ -2794,7 +2729,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               activeTabId={activeTabId}
               onActiveTabChange={setActiveTabId}
               requestCloseTabId={requestCloseTabId}
-              workingStates={workingStates}
               programStatus={programStatus}
               showAllTerminals={showAllTerminals}
               onShowAllTerminalsChange={setShowAllTerminals}

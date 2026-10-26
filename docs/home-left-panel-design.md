@@ -78,6 +78,26 @@ cards (`InProgressRepoCard`); the Home rail renders it with the Projects-surface
 presentation — grouped by owner (`OrgSectionHeaderCard`) with `OrgRepoItemCard`
 rows.
 
+### Terminal program status
+
+Open terminal rows, both nested under a repository and in the standalone list,
+show the same OSC 7501 status badges as the terminal tab bar. `WorkspaceShell`
+uses `usePanelProgramStatus()` to select one record per session, then
+`homeProgramStatus.ts` maps session contexts to workspace tab IDs. This keeps
+terminals in the same directory independent and supports restored and foreign
+tabs.
+
+`HomeLeftPanel.programStatusByTab` forwards live records to
+`HomeTabRow.programStatus`, which renders the shared `ProgramStatusBadge`.
+Working, blocked, done, and error are visible even when their tab is inactive.
+Idle, clear, and missing records render no indicator. Status is never written
+into the persisted pin descriptors.
+
+`useTerminalProgramStatusState` subscribes to broadcasts before fetching the
+current records through `getAllProgramStatus`. Updates received during that
+fetch take precedence over the snapshot, including explicit clears. No status
+is inferred from terminal output or silence.
+
 ### The SlidePane carousel
 
 `SlidePane` (`src/renderer/components/SlidePane/SlidePane.tsx`) is a
