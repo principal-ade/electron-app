@@ -81,6 +81,24 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
     ],
   },
   {
+    name: 'subsystem-models',
+    description: 'Read local subsystem models as agent context.',
+    routes: [
+      {
+        method: 'GET',
+        path: '/api/subsystem-models/:id',
+        summary:
+          'Read a local subsystem model, including components and trails.',
+        parameters: { id: 'Local stored subsystem model id.' },
+        response: '{ success: true, model }',
+        errors: {
+          '404': 'Unknown or invalid local subsystem model.',
+          '500': 'Failed to read subsystem model.',
+        },
+      },
+    ],
+  },
+  {
     name: 'topics',
     description:
       'Create, search, read, edit, open, validate, and delete local topic briefs; associate local subsystem models.',

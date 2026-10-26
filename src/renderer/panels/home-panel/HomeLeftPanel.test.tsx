@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
-import type { HomeRepoRow } from './homeTabEntries';
+import type { HomeRepoRow, HomeTabEntry } from './homeTabEntries';
 import { HomeLeftPanel, type HomeLeftPanelProps } from './HomeLeftPanel';
 import { buildHomeTabEntries } from './homeTabEntries';
 
@@ -137,6 +137,48 @@ function renderHome(
 beforeEach(() => {
   mockOpenOrgProfile.mockClear();
 });
+
+test.each(
+  (['topic', 'subsystem-model'] as const).flatMap((kind) =>
+    [true, false].flatMap((open) =>
+      [true, false].map((nested) => ({ kind, open, nested })),
+    ),
+  ),
+)(
+  'drags $kind context when open=$open and nested=$nested',
+  ({ kind, open, nested }) => {
+    const entry: HomeTabEntry = {
+      id: 'context-entry',
+      kind,
+      label: 'Context entry',
+      topicId: kind === 'topic' ? 't1' : undefined,
+      modelId: kind === 'subsystem-model' ? 'sg-1-abc' : undefined,
+    };
+    const openTabs = open ? [entry] : [];
+    const pinnedTabs = open ? [] : [entry];
+    renderHome(
+      {
+        ...repo,
+        openTabs: nested ? openTabs : [],
+        pinnedTabs: nested ? pinnedTabs : [],
+      },
+      jest.fn(),
+      nested ? [] : pinnedTabs,
+      nested ? [] : openTabs,
+    );
+    const row = screen.getByRole('button', { name: 'Open Context entry' });
+    expect(row.draggable).toBe(true);
+    const dataTransfer = { effectAllowed: 'none', setData: jest.fn() };
+    fireEvent.dragStart(row, { dataTransfer });
+    expect(dataTransfer.effectAllowed).toBe('copy');
+    expect(dataTransfer.setData).toHaveBeenCalledWith(
+      'text/plain',
+      expect.stringContaining(
+        kind === 'topic' ? '/api/topics/t1' : '/api/subsystem-models/sg-1-abc',
+      ),
+    );
+  },
+);
 
 test('Home rows have square edges and no outer horizontal inset', () => {
   renderHome(repo, jest.fn(), [

@@ -15,6 +15,7 @@ import { registerBrowserRoutes } from './browserRoutes';
 import { registerRequestRoutes } from './requestRoutes';
 import { getDocumentNotesPersistence } from '../document-notes/documentNotesPersistence';
 import { registerTopicRoutes } from '../topics/topicRoutes';
+import { registerSubsystemModelRoutes } from '../subsystem-models/subsystemModelRoutes';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
 import { registerRepoRoutes } from '../repos/repoRoutes';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
@@ -1032,6 +1033,7 @@ export class PrincipalMCPBridge extends EventEmitter {
     // TOPIC ROUTES
     // ============================================
     registerTopicRoutes(this.app, TopicRegistryService.getInstance());
+    registerSubsystemModelRoutes(this.app);
 
     // ============================================
     // REPO REGISTRY ROUTES

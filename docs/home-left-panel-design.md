@@ -200,6 +200,16 @@ in `RepositoryProfilePanel` at `getInitials(repositoryData.name)` because
 match against local clones (`repositories` prop), and build the payload with
 the shared helpers — the same pattern used by `ProjectsList`.
 
+## Drag context into a terminal
+
+Topic and subsystem model rows can be dragged into a terminal, whether their
+tabs are open or pinned closed, nested under a repository or standalone. They
+copy a plain-text agent prompt with the resource title, stable ID, and a local
+bridge fetch command. Topics use `GET /api/topics/:id`; models use
+`GET /api/subsystem-models/:id`, returning the full model with its components
+and trails. Bridge URLs follow the current development or production port.
+Dragging does not open the tab or run the command.
+
 ## Decisions locked
 
 - **Separate button.** The Home panel has its own icon in the

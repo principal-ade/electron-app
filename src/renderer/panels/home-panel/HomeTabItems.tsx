@@ -33,6 +33,8 @@ import {
   ToolCase,
 } from 'lucide-react';
 import { TopicsIcon } from '../../components/TopicsIcon';
+import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
+import { shellQuote } from '../../utils/shellQuote';
 import { tildifyPath } from '../../utils/tildifyPath';
 import { isHomeTabPinnable, type HomeTabEntry } from './homeTabEntries';
 
@@ -50,6 +52,23 @@ function homeTabLabel(entry: HomeTabEntry): string {
     return tildifyPath(entry.path);
   }
   return entry.label;
+}
+
+function homeTabDragText(entry: HomeTabEntry): string | undefined {
+  const resource =
+    entry.kind === 'topic' && entry.topicId
+      ? { kind: 'topic', id: entry.topicId, route: 'topics' }
+      : entry.kind === 'subsystem-model' && entry.modelId
+        ? {
+            kind: 'subsystem model',
+            id: entry.modelId,
+            route: 'subsystem-models',
+          }
+        : undefined;
+  if (!resource) return undefined;
+  const title = entry.title || entry.label || `Untitled ${resource.kind}`;
+  const url = `${getPrincipalBridgeUrl()}/api/${resource.route}/${encodeURIComponent(resource.id)}`;
+  return `Use ${resource.kind} "${title}" (id: ${resource.id}) as context — fetch via:\ncurl -s ${shellQuote(url)}`;
 }
 
 /** Icon for a tab entry in the Home rail. */
@@ -137,6 +156,7 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
   const label = homeTabLabel(entry);
+  const dragText = homeTabDragText(entry);
   const accessibleLabel =
     entry.kind === 'terminal' && !entry.repoPath && entry.path
       ? `Open terminal in ${entry.path}`
@@ -145,6 +165,12 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
   return (
     <div
       onClick={onActivate}
+      draggable={dragText !== undefined}
+      onDragStart={(event) => {
+        if (!dragText || !event.dataTransfer) return;
+        event.dataTransfer.effectAllowed = 'copy';
+        event.dataTransfer.setData('text/plain', dragText);
+      }}
       role="button"
       aria-label={accessibleLabel}
       onMouseEnter={() => setHovered(true)}

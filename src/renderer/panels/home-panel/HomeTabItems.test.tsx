@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { HomeTabEntry } from './homeTabEntries';
 import { HomeTabRow, PinnedTabIcon } from './HomeTabItems';
+import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 
 jest.mock('@industry-theme/xterm-terminal-panel', () => ({
   ProgramStatusBadge: ({ record }: { record: { state: string } }) => (
@@ -324,4 +325,137 @@ test('does not show terminal status on a nonterminal row', () => {
     />,
   );
   expect(screen.queryByRole('status')).toBeNull();
+});
+
+describe('dragging agent context', () => {
+  const topic: HomeTabEntry = {
+    id: 'local-topic-t1',
+    kind: 'topic',
+    label: 'Topic title',
+    topicId: 't1',
+  };
+  const model: HomeTabEntry = {
+    id: 'subsystem-model-sg-1-abc',
+    kind: 'subsystem-model',
+    label: 'Model title',
+    modelId: 'sg-1-abc',
+  };
+
+  afterEach(() => jest.restoreAllMocks());
+
+  test.each([
+    [topic, 'topic', 'topics', 't1'],
+    [model, 'subsystem model', 'subsystem-models', 'sg-1-abc'],
+  ] as const)(
+    'copies a fetchable prompt for %s without opening or pinning',
+    (entry, kind, route, id) => {
+      const activate = jest.fn();
+      const pin = jest.fn();
+      const props = {
+        entry,
+        pinned: false,
+        onActivate: activate,
+        onTogglePin: pin,
+      };
+      const { rerender } = render(<HomeTabRow {...props} open />);
+      for (const open of [true, false]) {
+        rerender(<HomeTabRow {...props} open={open} pinned={!open} />);
+        const row = screen.getByRole('button', { name: `Open ${entry.label}` });
+        expect(row.draggable).toBe(true);
+        const dataTransfer = { effectAllowed: 'none', setData: jest.fn() };
+        fireEvent.dragStart(row, { dataTransfer });
+        expect(dataTransfer.effectAllowed).toBe('copy');
+        expect(dataTransfer.setData).toHaveBeenCalledWith(
+          'text/plain',
+          `Use ${kind} "${entry.label}" (id: ${id}) as context — fetch via:\ncurl -s ${getPrincipalBridgeUrl()}/api/${route}/${id}`,
+        );
+      }
+      expect(activate).not.toHaveBeenCalled();
+      expect(pin).not.toHaveBeenCalled();
+      fireEvent.click(
+        screen.getByRole('button', { name: `Unpin ${entry.label}` }),
+      );
+      expect(pin).toHaveBeenCalledTimes(1);
+      expect(activate).not.toHaveBeenCalled();
+      fireEvent.click(
+        screen.getByRole('button', { name: `Open ${entry.label}` }),
+      );
+      expect(activate).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  test.each([
+    ['development', 3054],
+    ['production', 3044],
+  ])('uses the %s bridge port', (environment, port) => {
+    jest.replaceProperty(process, 'env', {
+      ...process.env,
+      NODE_ENV: String(environment),
+    });
+    render(
+      <HomeTabRow
+        entry={model}
+        open
+        pinned={false}
+        onActivate={jest.fn()}
+        onTogglePin={jest.fn()}
+      />,
+    );
+    const dataTransfer = { setData: jest.fn() };
+    fireEvent.dragStart(
+      screen.getByRole('button', { name: `Open ${model.label}` }),
+      { dataTransfer },
+    );
+    expect(dataTransfer.setData).toHaveBeenCalledWith(
+      'text/plain',
+      expect.stringContaining(
+        `curl -s http://localhost:${port}/api/subsystem-models/${model.modelId}`,
+      ),
+    );
+  });
+
+  test.each([
+    profile,
+    { ...topic, topicId: undefined },
+    { ...model, modelId: undefined },
+    { id: 'terminal', kind: 'terminal', label: 'Terminal' } as HomeTabEntry,
+  ])('does not drag unsupported or incomplete entries: %s', (entry) => {
+    render(
+      <HomeTabRow
+        entry={entry}
+        open
+        pinned={false}
+        onActivate={jest.fn()}
+        onTogglePin={jest.fn()}
+      />,
+    );
+    const row = screen.getByRole('button', {
+      name: `Open ${entry === profile ? 'Clone profile' : entry.label}`,
+    });
+    expect(row.draggable).toBe(false);
+    const dataTransfer = { setData: jest.fn() };
+    fireEvent.dragStart(row, { dataTransfer });
+    expect(dataTransfer.setData).not.toHaveBeenCalled();
+  });
+
+  test('encodes and shell-quotes IDs in fetch commands', () => {
+    render(
+      <HomeTabRow
+        entry={{ ...topic, topicId: "a/b'$(cmd)?" }}
+        open
+        pinned={false}
+        onActivate={jest.fn()}
+        onTogglePin={jest.fn()}
+      />,
+    );
+    const dataTransfer = { setData: jest.fn() };
+    fireEvent.dragStart(
+      screen.getByRole('button', { name: 'Open Topic title' }),
+      { dataTransfer },
+    );
+    const payload = dataTransfer.setData.mock.calls[0][1];
+    expect(payload.split('\n')[1]).toBe(
+      `curl -s '${getPrincipalBridgeUrl()}/api/topics/a%2Fb'\\''%24(cmd)%3F'`,
+    );
+  });
 });
