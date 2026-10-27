@@ -21,6 +21,7 @@ import type {
   UpdateLastOpenedInput,
   GetCodebaseViewsInput,
   GetCodebaseViewInput,
+  MoveRepositoryToConventionalPathInput,
 } from '../../shared/tipc/alexandriaRouterTypes';
 
 // =============================================================================
@@ -53,6 +54,9 @@ export interface AlexandriaClient {
     input: RefreshRepositoryInput,
   ) => Promise<AlexandriaEntry | null>;
   updateLastOpened: (input: UpdateLastOpenedInput) => Promise<void>;
+  moveRepositoryToConventionalPath: (
+    input: MoveRepositoryToConventionalPathInput,
+  ) => Promise<string>;
   clearAllData: () => Promise<{
     repositoriesRemoved: number;
     workspacesRemoved: number;
@@ -99,6 +103,9 @@ interface TipcAlexandriaClient {
   alexandria_getCodebaseView: (
     input: GetCodebaseViewInput,
   ) => Promise<CodebaseView | null>;
+  alexandria_moveRepositoryToConventionalPath: (
+    input: MoveRepositoryToConventionalPathInput,
+  ) => Promise<string>;
 }
 
 // =============================================================================
@@ -146,6 +153,8 @@ export const alexandriaClient: AlexandriaClient = {
     getTipcClient().alexandria_refreshRepository(input),
   updateLastOpened: (input) =>
     getTipcClient().alexandria_updateLastOpened(input),
+  moveRepositoryToConventionalPath: (input) =>
+    getTipcClient().alexandria_moveRepositoryToConventionalPath(input),
   clearAllData: () => getTipcClient().alexandria_clearAllData(),
   getCodebaseViews: (input) =>
     getTipcClient().alexandria_getCodebaseViews(input),
@@ -167,4 +176,5 @@ export type {
   UpdateLastOpenedInput,
   GetCodebaseViewsInput,
   GetCodebaseViewInput,
+  MoveRepositoryToConventionalPathInput,
 };

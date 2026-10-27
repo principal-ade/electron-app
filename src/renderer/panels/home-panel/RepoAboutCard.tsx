@@ -57,7 +57,6 @@ import { GitCloneModal, type CloneProgressState } from '../../components/GitClon
 import { ForkModal } from '../components/ForkModal';
 import { RelocateToConventionModal } from '../components/RelocateToConventionModal';
 import { getOffConventionTarget } from '../../../shared/utils/clonePath';
-import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 
 function getRepositoryAge(createdAt: string): string {
   const created = new Date(createdAt);
@@ -453,7 +452,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   const handleRelocate = async (clonePath: string, newOwner: string): Promise<string> => {
     const entry = await AlexandriaService.getRepositoryByPath(clonePath);
     if (!entry) throw new Error('Repository not found in registry');
-    return WorkspaceService.moveRepositoryToConventionalPath(entry, newOwner);
+    return AlexandriaService.moveRepositoryToConventionalPath(entry, newOwner);
   };
 
   const handleFixRegistration = async (clonePath: string) => {

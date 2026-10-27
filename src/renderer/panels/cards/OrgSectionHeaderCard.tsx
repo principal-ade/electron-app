@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ChevronDown, ChevronRight, FolderGit2, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, FolderGit2 } from 'lucide-react';
 
 export interface OrgSectionHeaderCardData {
   /** Human-facing section label: an org/user display name when known, else the login. */
@@ -26,14 +26,6 @@ export interface OrgSectionHeaderCardProps {
   onToggle?: () => void;
   /** Open the owner profile instead of making this a collapsible section. */
   onOpen?: () => void;
-  /**
-   * When provided, an "add repository" (+) button appears on the right of the
-   * header (revealed on hover). Wire this only for owners the user has
-   * privileges to add repos to (their own account or a member org).
-   */
-  onAdd?: () => void;
-  /** Tooltip/aria-label for the add button. */
-  addLabel?: string;
 }
 
 /**
@@ -49,12 +41,9 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
   isCollapsed = false,
   onToggle,
   onOpen,
-  onAdd,
-  addLabel = 'Add a repository',
 }) => {
   const { theme } = useTheme();
   const [hover, setHover] = useState(false);
-  const [addHover, setAddHover] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
 
   const login = header.login ?? header.orgName;
@@ -161,41 +150,6 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
 
         <span style={{ flex: 1 }} />
 
-        {onAdd && (
-          <button
-            type="button"
-            onClick={(e) => {
-              // Don't let the click bubble up to the header's collapse toggle.
-              e.stopPropagation();
-              onAdd();
-            }}
-            title={showTooltips ? addLabel : undefined}
-            aria-label={addLabel}
-            style={{
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 20,
-              height: 20,
-              padding: 0,
-              border: 'none',
-              borderRadius: 4,
-              background: 'transparent',
-              // Reveal on header hover to keep the "quiet list" aesthetic.
-              opacity: hover ? 1 : 0,
-              color: addHover
-                ? theme.colors.primary
-                : theme.colors.textSecondary,
-              cursor: 'pointer',
-              transition: 'opacity 0.15s ease, color 0.15s ease',
-            }}
-            onMouseEnter={() => setAddHover(true)}
-            onMouseLeave={() => setAddHover(false)}
-          >
-            <Plus size={14} />
-          </button>
-        )}
 
         <span
           style={{

@@ -54,6 +54,11 @@ export interface UpdateLastOpenedInput {
   path: string;
 }
 
+export interface MoveRepositoryToConventionalPathInput {
+  repository: AlexandriaEntry;
+  owner: string;
+}
+
 export interface GetCodebaseViewsInput {
   repositoryPath: string;
 }
@@ -165,5 +170,12 @@ export type AlexandriaRouterType = Record<
       context: ActionContext;
       input: GetCodebaseViewInput;
     }) => Promise<CodebaseView | null>;
+  };
+
+  alexandria_moveRepositoryToConventionalPath: {
+    action: (args: {
+      context: ActionContext;
+      input: MoveRepositoryToConventionalPathInput;
+    }) => Promise<string>;
   };
 };

@@ -28,7 +28,6 @@ import { shellAPI } from './main-process-api-implementations/shellApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
 import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi';
 import { topicAPI } from './main-process-api-implementations/topicApi';
-import { workspaceApi } from './main-process-api-implementations/workspaceApi';
 import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
 import { authenticationAPI } from './main-process-api-implementations/authenticationApi';
 import { agentSessionSDKApi } from './main-process-api-implementations/agentSessionSDKApi';
@@ -58,7 +57,6 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   window: windowAPI,
   alexandria: alexandriaAPI,
   topics: topicAPI,
-  workspace: workspaceApi,
   gitSync: gitSyncAPI,
   authentication: authenticationAPI,
   agentSessionSDK: agentSessionSDKApi,

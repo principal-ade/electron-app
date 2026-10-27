@@ -5,7 +5,6 @@ import { X, Loader2, AlertCircle, Check, GitFork } from 'lucide-react';
 import { GithubService } from '../../main-process-api/GithubService';
 import { useAuthUser } from '../../providers/AuthProvider';
 import { GitService } from '../../main-process-api/GitService';
-import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import type { GitHubUser } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { useGithubOrganizations } from '../../hooks/useGithubGraph';
@@ -29,7 +28,7 @@ interface ForkModalProps {
 }
 
 type Step = 'select' | 'progress' | 'complete';
-type ProgressStep = 'forking' | 'cloning' | 'registering' | 'adding';
+type ProgressStep = 'forking' | 'cloning' | 'registering';
 
 export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner, repoName, registerRepository }) => {
   const { theme } = useTheme();
@@ -81,7 +80,7 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
         setError('Failed to load account information.');
       })
       .finally(() => setIsLoading(false));
-  }, [isOpen, profile]);
+  }, [isOpen, profile, repoName, repoOwner]);
 
   const targetLogin = forkTarget === 'personal' ? (currentUser?.login ?? '') : forkTarget;
   const clonePath = baseDir && targetLogin ? joinClonePath(baseDir, targetLogin, repoName) : null;
@@ -107,13 +106,7 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
       if (!cloneOk) throw new Error('Clone failed — check your connection and try again.');
 
       setProgressStep('registering');
-      const registered = await registerRepository(clonePath, cloneUrl);
-
-      setProgressStep('adding');
-      const workspace = await WorkspaceService.getDefaultWorkspace();
-      if (workspace) {
-        await WorkspaceService.addRepositoryToWorkspace(registered, workspace.id);
-      }
+      await registerRepository(clonePath, cloneUrl);
 
       setStep('complete');
       setTimeout(onClose, 2000);
@@ -130,10 +123,9 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
     forking: 'Forking repository…',
     cloning: 'Cloning fork…',
     registering: 'Registering…',
-    adding: 'Adding to workspace…',
   };
 
-  const allProgressSteps: ProgressStep[] = ['forking', 'cloning', 'registering', 'adding'];
+  const allProgressSteps: ProgressStep[] = ['forking', 'cloning', 'registering'];
 
   const modalContent = (
     <div

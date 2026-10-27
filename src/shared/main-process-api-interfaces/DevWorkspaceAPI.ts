@@ -23,7 +23,6 @@ import type { ShellAPI } from './ShellAPI';
 import type { WindowAPI } from './WindowAPI';
 import type { AlexandriaAPI } from './AlexandriaAPI';
 import type { TopicAPI } from './TopicAPI';
-import type { WorkspaceAPI } from './WorkspaceAPI';
 import type { GitSyncAPI } from './GitSyncAPI';
 import type { AuthenticationAPI } from './AuthenticationAPI';
 import type { AgentSessionSDKAPI } from './AgentSessionSDKAPI';
@@ -47,7 +46,6 @@ export interface DevWorkspaceMainProcessAPI {
   window: WindowAPI;
   alexandria: AlexandriaAPI;
   topics: TopicAPI;
-  workspace: WorkspaceAPI;
   gitSync: GitSyncAPI;
   authentication: AuthenticationAPI;
   agentSessionSDK: AgentSessionSDKAPI;

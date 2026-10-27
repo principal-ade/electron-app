@@ -21,6 +21,9 @@ interface BridgeRouteGroup {
 
 export const MAX_ROUTE_LOOKUPS = 100;
 
+/** Max repos per POST /api/repos/clone request. */
+export const MAX_CLONE_BATCH = 20;
+
 const topicResponse = '{ success: true, topic }';
 const unknownTopic = { '404': 'Unknown local topic id.' };
 const noteLocation = {
@@ -249,16 +252,49 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
   {
     name: 'repos',
     description:
-      'Discover, register, and de-register local Alexandria repositories and their PURLs.',
+      'Discover, clone, register, and de-register local Alexandria repositories and their PURLs.',
     routes: [
       {
         method: 'GET',
         path: '/api/repos',
         summary: 'List registered local repository identities.',
-        response: '{ success: true, repos: [{ path, remoteUrl?, purl? }] }',
+        response:
+          '{ success: true, repos: [{ path, name, remoteUrl?, purl?, registeredAt }] }',
         notes: [
           'Use the returned PURL, not a filesystem path, in topic repos.',
         ],
+      },
+      {
+        method: 'POST',
+        path: '/api/repos/clone',
+        summary:
+          'Clone one or more repos into the base directory convention and register them.',
+        body: {
+          repos: `string[] (required unless body.repo is set): 1-${MAX_CLONE_BATCH} repo identifiers. Accepts repo PURLs (pkg:github/owner/repo), owner/repo slugs, and clone URLs (https, ssh://, git@host:owner/repo.git).`,
+          repo: 'string (optional): a single identifier, shorthand for repos: [repo].',
+          depth:
+            'number (optional): shallow clone depth; omit for full history.',
+          register:
+            'boolean (optional, default true): register each clone in the Alexandria registry.',
+        },
+        response:
+          '{ success: true|false, baseDirectory, results: [{ request, ok, action?: "cloned"|"alreadyRegistered", path?, cloneUrl?, repo?: RepoSummary, registerError?, error? }], summary: { requested, cloned, alreadyRegistered, failed } }',
+        errors: {
+          '400':
+            'Missing/empty repos, more than the batch limit, or no base directory configured.',
+          '500': 'Could not read the base directory.',
+        },
+        notes: [
+          'Clones land at <baseDefaultDirectory>/<owner>/<repo>, the same convention the app enforces; get the base directory from GET /api/repos via summary.baseDirectory or set it in Settings → General.',
+          'Results preserve request order and one entry failing does not abort the others; success is true only when every entry reported ok. Clone failures come back per entry in error, so retry only those.',
+          'Paths that already exist on disk but are not registered are reported as failures rather than overwritten. Targets already registered are reported as alreadyRegistered with no network call.',
+          'Clones are long-running; the request holds until they finish (5-minute internal timeout per clone). Use depth: 1 for large repos.',
+          'Local-only repos are not clonable — register existing checkouts with POST /api/repos instead.',
+        ],
+        example: {
+          repos: ['pkg:github/principal-ai/skills', 'acme/web'],
+          depth: 1,
+        },
       },
       {
         method: 'POST',
@@ -283,18 +319,25 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         method: 'DELETE',
         path: '/api/repos',
         summary:
-          'Remove a repository registration without deleting local files.',
+          'Remove a repository registration, optionally deleting the checkout.',
         query: {
           path: 'string (required unless body.path is supplied): absolute registered path; query form is preferred.',
+          deleteLocal:
+            'boolean (optional, default false): also delete the working tree on disk. Requires an absolute path that is a git working tree.',
         },
-        body: { path: 'string (optional): alternative to query path.' },
-        response: '{ success: true, removed: RepoSummary }',
+        body: {
+          path: 'string (optional): alternative to query path.',
+          deleteLocal: 'boolean (optional): alternative to query deleteLocal.',
+        },
+        response: '{ success: true, deleteLocal, removed: RepoSummary }',
         errors: {
-          '400': 'Missing path.',
+          '400':
+            'Missing path; or deleteLocal requested for a relative path, a non-git directory, a filesystem root, or the base directory.',
           '404': 'No repository registered at path.',
         },
         notes: [
-          'Only removes the registry entry; never deletes repository files.',
+          'Default behavior only removes the registry entry; the checkout stays on disk.',
+          'deleteLocal: true deletes the directory. It is refused unless the path is registered, absolute, a git working tree, and not / , $HOME, or the base directory.',
         ],
       },
     ],

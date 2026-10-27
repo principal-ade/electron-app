@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Trash2, AlertTriangle, FolderOpen } from 'lucide-react';
 import { FileCityLogo } from '@principal-ai/logo-component';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
+import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import type { EditorId } from '../../../../../shared/types/editor.types';
 import { EDITOR_LABELS } from '../../../../../shared/types/editor.types';
 import type { UserPreferences } from '../../../../../shared/types/userPreferences.types';
@@ -14,12 +15,16 @@ export const GeneralSettings: React.FC = () => {
   const { theme } = useTheme();
   const [currentVersion, setCurrentVersion] = useState('0.0.0');
   const [isDevMode, setIsDevMode] = useState(false);
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(
+    null,
+  );
+  const [isSelectingBaseDirectory, setIsSelectingBaseDirectory] =
+    useState(false);
   const [defaultEditor, setDefaultEditor] = useState<EditorId>('vscode');
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
   const [openLocalhostTerminalLinksInApp, setOpenLocalhostTerminalLinksInApp] =
     useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
-  const [showCreateRepoButton, setShowCreateRepoButton] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
   const [showProcessesButton, setShowProcessesButton] = useState(false);
@@ -53,12 +58,12 @@ export const GeneralSettings: React.FC = () => {
 
       const editor = (prefs.defaultEditor ?? 'vscode') as EditorId;
       setDefaultEditor(editor);
+      setBaseDefaultDirectory(prefs.baseDefaultDirectory || null);
       setEnableVimMode(prefs.enableVimMode ?? false);
       setOpenLocalhostTerminalLinksInApp(
         prefs.openLocalhostTerminalLinksInApp === true,
       );
       setShowPullMailbox(prefs.titlebarButtons?.pullMailbox ?? false);
-      setShowCreateRepoButton(prefs.titlebarButtons?.createRepository ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
       setShowProcessesButton(prefs.showProcessesButton ?? false);
@@ -103,6 +108,41 @@ export const GeneralSettings: React.FC = () => {
       );
     };
   }, []);
+
+  const handleSelectBaseDirectory = async () => {
+    setIsSelectingBaseDirectory(true);
+    try {
+      const result = await FileSystemService.selectDirectory({
+        title: 'Select Base Default Directory',
+        buttonLabel: 'Select Directory',
+        properties: ['openDirectory', 'createDirectory'],
+      });
+
+      if (!result || result.canceled || !result.filePaths?.[0]) {
+        return;
+      }
+
+      const directory = result.filePaths[0];
+      setBaseDefaultDirectory(directory);
+      await UserPreferencesService.updatePreferences({
+        baseDefaultDirectory: directory,
+      });
+    } catch (error) {
+      console.error(
+        '[GeneralSettings] Failed to select base directory:',
+        error,
+      );
+    } finally {
+      setIsSelectingBaseDirectory(false);
+    }
+  };
+
+  const handleClearBaseDirectory = async () => {
+    setBaseDefaultDirectory(null);
+    await UserPreferencesService.updatePreferences({
+      baseDefaultDirectory: undefined,
+    });
+  };
 
   const handleClearAllData = async () => {
     if (!showClearConfirm) {
@@ -280,6 +320,120 @@ export const GeneralSettings: React.FC = () => {
               Open as a terminal tab in Principal
             </option>
           </select>
+        </div>
+      </div>
+
+      {/* Base Directory */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Base Directory
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <p
+            style={{
+              fontSize: '14px',
+              color: theme.colors.textSecondary,
+              marginBottom: '12px',
+            }}
+          >
+            Where Principal clones and organizes your projects, using the
+            owner/repo layout.
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <code
+              data-testid="base-default-directory"
+              style={{
+                flex: '1 1 320px',
+                minWidth: 0,
+                padding: '10px 14px',
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.background,
+                color: baseDefaultDirectory
+                  ? theme.colors.text
+                  : theme.colors.textSecondary,
+                fontSize: '14px',
+                fontFamily: 'monospace',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {baseDefaultDirectory || 'Not set'}
+            </code>
+            <button
+              onClick={handleSelectBaseDirectory}
+              disabled={isSelectingBaseDirectory}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: theme.colors.primary,
+                color: '#ffffff',
+                cursor: isSelectingBaseDirectory ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: isSelectingBaseDirectory ? 0.6 : 1,
+                transition: 'all 0.2s',
+              }}
+            >
+              <FolderOpen size={16} />
+              {baseDefaultDirectory ? 'Change Folder…' : 'Choose Folder…'}
+            </button>
+            {baseDefaultDirectory && (
+              <button
+                onClick={handleClearBaseDirectory}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.text,
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {baseDefaultDirectory && (
+            <p
+              style={{
+                fontSize: '13px',
+                color: theme.colors.textSecondary,
+                margin: '12px 0 0 0',
+                fontFamily: 'monospace',
+              }}
+            >
+              Example: {baseDefaultDirectory}/octocat/hello-world
+            </p>
+          )}
         </div>
       </div>
 
@@ -551,32 +705,6 @@ export const GeneralSettings: React.FC = () => {
                   await UserPreferencesService.updatePreferences({
                     titlebarButtons: {
                       pullMailbox: enabled,
-                    },
-                  });
-                }}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-            </label>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '16px',
-                fontSize: '14px',
-                color: theme.colors.text,
-              }}
-            >
-              <span>Show create-repository button</span>
-              <input
-                type="checkbox"
-                checked={showCreateRepoButton}
-                onChange={async (e) => {
-                  const enabled = e.target.checked;
-                  setShowCreateRepoButton(enabled);
-                  await UserPreferencesService.updatePreferences({
-                    titlebarButtons: {
-                      createRepository: enabled,
                     },
                   });
                 }}

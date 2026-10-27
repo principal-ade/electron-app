@@ -2,6 +2,7 @@ import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import { OnboardingWizard } from './OnboardingWizard';
+import type { UserPreferences } from '../../../shared/types/userPreferences.types';
 
 // Mock FileSystemService for Storybook
 const createMockFileSystemService = () => {
@@ -86,17 +87,61 @@ const createMockFileSystemService = () => {
       }, 1000);
 
       return () => clearInterval(interval);
-    },
-    selectDirectory: async (_options?: { title?: string; buttonLabel?: string; properties?: Array<'openDirectory' | 'createDirectory' | 'promptToCreate'> }) => {
-      // Simulate folder selection dialog
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return {
-        filePaths: ['/Users/demo/Developer'],
-        canceled: false
-      };
     }
   };
 };
+
+// Mock GitHub CLI check for Storybook (mirrors AuthService.check())
+const createMockGitHubCliService = ({
+  configured,
+  source = 'gh-cli',
+}: {
+  configured: boolean;
+  source?: 'gh-cli' | 'stored-token';
+}) => ({
+  check: async () => {
+    // Small delay so the loading state is visible
+    await new Promise(resolve => setTimeout(resolve, 600));
+    if (!configured) {
+      return { authenticated: false, user: null };
+    }
+    return {
+      authenticated: true,
+      source,
+      user: {
+        login: 'octocat',
+        name: 'The Octocat',
+        email: 'octocat@github.com',
+        avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
+      },
+    };
+  },
+});
+
+// Mock user preferences for Storybook (mirrors UserPreferencesService)
+const createMockPreferencesService = (baseDefaultDirectory?: string) => ({
+  getPreferences: async (): Promise<UserPreferences> =>
+    baseDefaultDirectory ? { baseDefaultDirectory } : {},
+  updatePreferences: async (
+    _updates: Partial<UserPreferences>,
+  ): Promise<void> => undefined,
+});
+
+// Mock skill installer for Storybook (mirrors the shared skill catalog)
+const createMockSkillInstaller = ({
+  alreadyInstalled = [] as string[],
+}: {
+  alreadyInstalled?: string[];
+} = {}) => ({
+  getInstalledSkillNames: async (): Promise<Set<string>> =>
+    new Set(alreadyInstalled),
+  installSkills: async (
+    skills: ReadonlyArray<{ name: string }>,
+  ): Promise<{ installed: string[]; failures: string[] }> => {
+    await new Promise(resolve => setTimeout(resolve, 900));
+    return { installed: skills.map(skill => skill.name), failures: [] };
+  },
+});
 
 const meta: Meta<typeof OnboardingWizard> = {
   title: 'Experimental/OnboardingWizard',
@@ -112,15 +157,15 @@ const meta: Meta<typeof OnboardingWizard> = {
     layout: 'fullscreen',
     docs: {
       description: {
-        component: 'Experimental onboarding wizard for setting up repositories and GitHub connection. Focus on copy and flow before adding animations and polish.'
+        component: 'Experimental onboarding wizard for setting up git, repositories, and checking the GitHub CLI session. Focus on copy and flow before adding animations and polish.'
       }
     }
   },
   argTypes: {
-    repoLocationMode: {
+    initialStep: {
       control: 'select',
-      options: ['single', 'multiple', 'add-list'],
-      description: 'Different UX patterns for specifying repository locations'
+      options: ['welcome', 'git-config', 'home-directory', 'choose-method', 'folder-selection', 'scanning', 'github-cli', 'skills', 'ready'],
+      description: 'Jump straight to a step (story/debug aid)'
     },
     onComplete: {
       action: 'onboarding-completed'
@@ -132,27 +177,52 @@ export default meta;
 type Story = StoryObj<typeof OnboardingWizard>;
 
 /**
- * Default onboarding flow with single folder selection and optional "I keep repos in different places" checkbox
+ * Default onboarding flow: git config, clone directory, then pick how to add local projects.
  */
 export const Default: Story = {
   args: {
-    repoLocationMode: 'single',
-    fileSystemService: createMockFileSystemService()
+    fileSystemService: createMockFileSystemService(),
+    githubCliService: createMockGitHubCliService({ configured: true }),
+    preferencesService: createMockPreferencesService(),
+    skillInstaller: createMockSkillInstaller(),
   }
 };
 
 /**
- * Allows users to add multiple repository paths with an "Add another folder" interface
+ * Default clone directory step — chooses the folder future repos are cloned into.
  */
-export const MultiplePathsList: Story = {
+export const CloneDirectory: Story = {
   args: {
-    repoLocationMode: 'add-list',
-    fileSystemService: createMockFileSystemService()
+    initialStep: 'home-directory',
+    fileSystemService: createMockFileSystemService(),
+    githubCliService: createMockGitHubCliService({ configured: true }),
+    preferencesService: createMockPreferencesService('/Users/demo/Code'),
+    skillInstaller: createMockSkillInstaller(),
   },
   parameters: {
     docs: {
       description: {
-        story: 'Users can add multiple repository folders one at a time, with the ability to remove them individually.'
+        story: 'The example line under the input previews the resulting path, e.g. ~/Development/octocat/hello-world, and follows the directory name you type.'
+      }
+    }
+  }
+};
+
+/**
+ * Pick how to add local projects — automatic scan or skip for now.
+ */
+export const ChooseMethod: Story = {
+  args: {
+    initialStep: 'choose-method',
+    fileSystemService: createMockFileSystemService(),
+    githubCliService: createMockGitHubCliService({ configured: true }),
+    preferencesService: createMockPreferencesService(),
+    skillInstaller: createMockSkillInstaller(),
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Only two paths remain: scan folders for git projects, or skip and add them later.'
       }
     }
   }
@@ -163,10 +233,12 @@ export const MultiplePathsList: Story = {
  */
 export const Interactive: Story = {
   args: {
-    repoLocationMode: 'single',
     fileSystemService: createMockFileSystemService(),
+    githubCliService: createMockGitHubCliService({ configured: true }),
+    preferencesService: createMockPreferencesService(),
+    skillInstaller: createMockSkillInstaller(),
     onComplete: (data) => {
-      alert(`Onboarding complete!\n\nPaths: ${data.repoPaths.join(', ')}\nMultiple locations: ${data.hasMultipleLocations}\nGitHub connected: ${data.githubConnected}`);
+      alert(`Onboarding complete!\n\nMultiple locations: ${data.hasMultipleLocations}\nGitHub CLI configured: ${data.githubCliConfigured}\nGitHub login: ${data.githubLogin ?? 'none'}`);
     }
   },
   parameters: {
@@ -179,34 +251,121 @@ export const Interactive: Story = {
 };
 
 /**
- * Testing different copy variations for the repo location step
+ * Test the scanning flow with simulated progress
  */
-export const CopyExperiments: Story = {
+export const ScanningFlow: Story = {
   args: {
-    repoLocationMode: 'add-list',
-    fileSystemService: createMockFileSystemService()
+    fileSystemService: createMockFileSystemService(),
+    githubCliService: createMockGitHubCliService({ configured: true }),
+    preferencesService: createMockPreferencesService(),
+    skillInstaller: createMockSkillInstaller(),
   },
   parameters: {
     docs: {
       description: {
-        story: 'Use this to experiment with different copy variations. The current copy aims for a friendly, conversational tone.'
+        story: 'Simulates the full scanning experience with progress updates and discovered repositories. Choose "Automatic" to test the scan flow.'
       }
     }
   }
 };
 
 /**
- * Test the scanning flow with simulated progress
+ * Install Skills step — topic skills preselected, everything optional.
  */
-export const ScanningFlow: Story = {
+export const Skills: Story = {
   args: {
-    repoLocationMode: 'single',
-    fileSystemService: createMockFileSystemService()
+    initialStep: 'skills',
+    fileSystemService: createMockFileSystemService(),
+    githubCliService: createMockGitHubCliService({ configured: true }),
+    preferencesService: createMockPreferencesService(),
+    skillInstaller: createMockSkillInstaller(),
   },
   parameters: {
     docs: {
       description: {
-        story: 'Simulates the full scanning experience with progress updates and discovered repositories. Choose "Find for me" to test the scan flow.'
+        story: 'Installs catalog skills from GitHub. Every skill starts checked (uncheck any you do not want); the install button reports per-skill progress and failures, and Continue works whether or not anything is installed.'
+      }
+    }
+  }
+};
+
+/**
+ * Install Skills step where some skills already exist in the lock file.
+ */
+export const SkillsAlreadyInstalled: Story = {
+  args: {
+    initialStep: 'skills',
+    fileSystemService: createMockFileSystemService(),
+    githubCliService: createMockGitHubCliService({ configured: true }),
+    preferencesService: createMockPreferencesService(),
+    skillInstaller: createMockSkillInstaller({
+      alreadyInstalled: ['create-topic', 'topic-context'],
+    }),
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Already-installed skills are checked, disabled, and marked with a check; the rest stay selected so one click installs what is missing.'
+      }
+    }
+  }
+};
+
+/**
+ * GitHub CLI step when gh is signed in — shows the detected account.
+ */
+export const GitHubCliConnected: Story = {
+  args: {
+    initialStep: 'github-cli',
+    fileSystemService: createMockFileSystemService(),
+    githubCliService: createMockGitHubCliService({ configured: true }),
+    preferencesService: createMockPreferencesService(),
+    skillInstaller: createMockSkillInstaller(),
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'The step only checks the session: when gh is signed in it shows the GitHub account that Principal will use.'
+      }
+    }
+  }
+};
+
+/**
+ * GitHub CLI step when gh is missing — instructions plus a non-blocking skip.
+ */
+export const GitHubCliMissing: Story = {
+  args: {
+    initialStep: 'github-cli',
+    fileSystemService: createMockFileSystemService(),
+    githubCliService: createMockGitHubCliService({ configured: false }),
+    preferencesService: createMockPreferencesService(),
+    skillInstaller: createMockSkillInstaller(),
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'When no CLI session is found the step explains `gh auth login` and the user can continue anyway.'
+      }
+    }
+  }
+};
+
+/**
+ * GitHub CLI step when the app only has a saved token (gh not signed in).
+ */
+export const GitHubCliSavedToken: Story = {
+  args: {
+    initialStep: 'github-cli',
+    fileSystemService: createMockFileSystemService(),
+    githubCliService: createMockGitHubCliService({ configured: true, source: 'stored-token' }),
+    preferencesService: createMockPreferencesService(),
+    skillInstaller: createMockSkillInstaller(),
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Account details still render, with a note that the token came from saved credentials rather than the CLI.'
       }
     }
   }

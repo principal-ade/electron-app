@@ -7,10 +7,8 @@ import { UserPreferencesService } from '../../../main-process-api/UserPreference
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
 import {
   Radar,
-  FilePlus2,
 } from 'lucide-react';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
-import { CreateRepositoryInWorkspaceModal } from '../../../panels/components/CreateRepositoryInWorkspaceModal';
 import { StudioHeaderButton } from '../../../components/Titlebar/StudioHeaderButton';
 import { blurAfterPointerActivation } from '../../../utils/blurAfterPointerActivation';
 
@@ -54,11 +52,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
-  const [showCreateRepoButton, setShowCreateRepoButton] = useState(false);
-  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
-    string | null
-  >(null);
-  const [showCreateRepoModal, setShowCreateRepoModal] = useState(false);
   const { theme } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
@@ -78,10 +71,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       }
 
       setShowPullMailbox(preferences.titlebarButtons?.pullMailbox ?? false);
-      setShowCreateRepoButton(
-        preferences.titlebarButtons?.createRepository ?? false,
-      );
-      setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
     };
 
     void UserPreferencesService.getPreferences().then(applyPreferences);
@@ -229,43 +218,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           gap: '8px',
         }}
       >
-        {/* Create Repository — gated by titlebarButtons.createRepository.
-            Opens the modal in owner-subdir mode: skips workspace pick,
-            clones under {baseDefaultDirectory}/{owner}/{repoName}. */}
-        {showCreateRepoButton && baseDefaultDirectory && (
-          <button
-            onClick={() => setShowCreateRepoModal(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              backgroundColor: theme.colors.backgroundSecondary,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              cursor: 'pointer',
-              fontSize: theme.fontSizes[1],
-              fontWeight: 500,
-              fontFamily: theme.fonts.body,
-              transition: 'all 0.2s',
-              WebkitAppRegion:
-                'no-drag' as React.CSSProperties['WebkitAppRegion'],
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundSecondary;
-            }}
-            title="Create a new GitHub repository under your base directory"
-          >
-            <FilePlus2 size={14} />
-            Create
-          </button>
-        )}
         {showPullMailbox && <PullMailbox />}
         <StudioHeaderButton theme={theme} />
         <ThemeSelector />
@@ -399,12 +351,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         </div>
       )}
 
-      <CreateRepositoryInWorkspaceModal
-        isOpen={showCreateRepoModal}
-        onClose={() => setShowCreateRepoModal(false)}
-        baseDefaultDirectory={baseDefaultDirectory}
-        useOwnerSubdir
-      />
 
     </div>
   );

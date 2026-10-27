@@ -29,7 +29,6 @@ import { emitTerminalNew } from '../events/portalIntents';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
-import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
@@ -42,8 +41,6 @@ import { resolveOwnerIdentity } from './ownerIdentity';
 import { shellQuote } from '../utils/shellQuote';
 import { RelocateToConventionModal } from './components/RelocateToConventionModal';
 import { getOffConventionTarget } from '../../shared/utils/clonePath';
-import { CloneFromGitHubModal } from './components/CloneFromGitHubModal';
-import { CreateRepositoryInWorkspaceModal } from './components/CreateRepositoryInWorkspaceModal';
 
 /** Single-select filter applied to the unified list. */
 export type ProjectFilter = 'owned' | 'cloned' | 'starred';
@@ -90,8 +87,6 @@ interface UnifiedProject {
   clones: AlexandriaEntry[];
   /** Epoch ms of the most recent activity, for the recency sort. */
   lastActivity: number;
-  /** URL used to seed the clone flow, when known. */
-  cloneUrl?: string;
   /**
    * Set when the local clone is under the base dir but not in the canonical
    * `{baseDir}/{owner}/{repo}` layout and a known owner is derivable. Drives the
@@ -159,14 +154,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   // manual expand/collapse is never overridden on later re-renders.
   const defaultedOrgsRef = useRef<Set<string>>(new Set());
 
-  // Clone-to-disk flow
-  const [cloneUrl, setCloneUrl] = useState<string | null>(null);
-
-  // Create-a-new-repo flow, scoped to a specific owner via the "+" on an
-  // owner line. Repos land under `{baseDefaultDirectory}/{owner}/{name}`.
-  const [createTarget, setCreateTarget] = useState<
-    { owner: string; isUser: boolean } | null
-  >(null);
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
 
   // Folder-scan flow: pick a folder, find every git repo inside, and register
@@ -417,7 +404,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         isOwned,
         isPrivate: repo.private,
         lastActivity: toMs(repo.pushed_at || repo.updated_at),
-        cloneUrl: repo.clone_url || repo.html_url,
         clones: [],
       });
     };
@@ -464,7 +450,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           entry,
           clones: [entry],
           lastActivity: localActivity,
-          cloneUrl: entry.remoteUrl,
           offConvention,
         });
       }
@@ -884,10 +869,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                 ? 'member'
                 : undefined;
 
-            // We can add repos to an owner only when it's the user's own
-            // account or a member org, and a base clone directory is set.
-            const canAdd = !!baseDefaultDirectory && (isUserOwn || isMemberOrg);
-
             // Display label/avatar for the header; the login stays the key for
             // ordering, badges and the add/create flows above.
             const identity = resolveOwnerIdentity(orgName, ownerDirectory);
@@ -906,12 +887,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                   }}
                   isCollapsed={isCollapsed}
                   onToggle={() => toggleOrgCollapsed(orgName)}
-                  onAdd={
-                    canAdd
-                      ? () => setCreateTarget({ owner: orgName, isUser: isUserOwn })
-                      : undefined
-                  }
-                  addLabel={`Add a repository to ${identity.label}`}
                 />
 
                 {!isCollapsed && (
@@ -931,11 +906,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                         isPrivate={project.isPrivate}
                         dragText={projectDragText(project)}
                         onClick={() => handleProjectClick(project)}
-                        onClone={
-                          !project.isCloned && project.cloneUrl
-                            ? () => setCloneUrl(project.cloneUrl ?? null)
-                            : undefined
-                        }
                         onRemove={
                           project.entry ? () => setRemoveConfirm(project.entry ?? null) : undefined
                         }
@@ -960,14 +930,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         )}
       </div>
 
-      {/* Clone-to-disk modal, seeded with the selected repo's URL. The registry
-          change event refreshes the list so the project flips to "cloned". */}
-      <CloneFromGitHubModal
-        isOpen={cloneUrl !== null}
-        onClose={() => setCloneUrl(null)}
-        initialUrl={cloneUrl ?? undefined}
-      />
-
       {/* Relocate an off-convention clone into `{baseDir}/{owner}/{repo}`. The
           move re-keys the registry and broadcasts REPOSITORY_UPDATED, so the
           list refreshes and the off-convention icon clears automatically. */}
@@ -979,7 +941,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           currentPath={String(relocateTarget.entry.path)}
           expectedPath={relocateTarget.offConvention.expectedPath}
           onRelocate={() =>
-            WorkspaceService.moveRepositoryToConventionalPath(
+            AlexandriaService.moveRepositoryToConventionalPath(
               relocateTarget.entry as AlexandriaEntry,
               (relocateTarget.offConvention as { owner: string }).owner,
             )
@@ -1005,30 +967,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         />
       )}
 
-      {/* Create a new repo under a specific owner, seeded from the owner-line
-          "+". Skips destination/org selection; the registry-change event
-          refreshes the list once the clone lands. */}
-      <CreateRepositoryInWorkspaceModal
-        isOpen={createTarget !== null}
-        onClose={() => setCreateTarget(null)}
-        baseDefaultDirectory={baseDefaultDirectory}
-        presetOwner={createTarget?.owner}
-        presetOwnerIsUser={createTarget?.isUser ?? false}
-        onCreated={(repo) => {
-          // Open the freshly created repo's profile, same as a normal click.
-          // A local-only repo may not have a derivable purl yet; skip silently.
-          try {
-            events.emit({
-              type: 'repository:selected',
-              source: 'projects-list-panel',
-              timestamp: Date.now(),
-              payload: payloadFromLocalEntry(repo),
-            });
-          } catch (error) {
-            console.error('[ProjectsList] Could not open new repo profile:', error);
-          }
-        }}
-      />
 
       {/* Remove-from-list confirm. Does not touch files on disk. */}
       {removeConfirm && (

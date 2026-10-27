@@ -6,7 +6,6 @@ import {
   Eye,
   Circle,
   Cloud,
-  Download,
   Eraser,
   FolderGit2,
   FolderTree,
@@ -38,7 +37,6 @@ export interface OrgRepoItemCardProps {
    */
   isPrivate?: boolean;
   /** Hover-revealed action to clone a not-yet-cloned project. */
-  onClone?: () => void;
   /** Hover-revealed action to remove a cloned project from the local registry. */
   onRemove?: () => void;
   /** Hover-revealed action to open a terminal tab rooted at the clone's path. */
@@ -103,7 +101,6 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   isCloned = false,
   isDirty = false,
   isPrivate,
-  onClone,
   onRemove,
   onOpenTerminal,
   offConvention = false,
@@ -252,43 +249,6 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
       {/* Pinned-tab icons: always visible so a closed, pinned tab stays
           reachable without hovering the row. */}
       {tabIcons}
-
-      {/* Clone action for projects that aren't on disk yet. */}
-      {!isCloned && onClone && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClone();
-          }}
-          title={showTooltips ? 'Clone to disk' : undefined}
-          aria-label={`Clone ${repo.name}`}
-          style={{
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 24,
-            height: 24,
-            padding: 0,
-            border: 'none',
-            borderRadius: 4,
-            background: 'transparent',
-            color: theme.colors.textSecondary,
-            cursor: 'pointer',
-            opacity: hovered ? 1 : 0,
-            transition: 'opacity 120ms, color 120ms',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = theme.colors.primary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = theme.colors.textSecondary;
-          }}
-        >
-          <Download size={14} />
-        </button>
-      )}
 
       {/* Relocate action for off-convention clones — move into the
           {base}/{owner}/{repo} layout. Sits next to the remove action. */}

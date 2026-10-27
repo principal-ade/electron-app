@@ -41,12 +41,6 @@ import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
-import type {
-  AlexandriaRepositoriesSlice,
-  WorkspaceSlice,
-  WorkspaceRepositoriesSlice,
-  WorkspacesSlice,
-} from '@industry-theme/alexandria-panels';
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
 import type { FeedProjectSliceData, ActivityHeatmapSliceData, LineCountsSliceData } from '@industry-theme/file-city-panel';
 import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
@@ -113,10 +107,6 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   packages: DataSlice<PackagesSliceData | null>;
   repositoryEntry: DataSlice<AlexandriaEntry | null>;
   gitStatusWithFiles: DataSlice<GitStatusWithFiles | null>;
-  alexandriaRepositories: DataSlice<AlexandriaRepositoriesSlice>;
-  workspace: DataSlice<WorkspaceSlice>;
-  workspaceRepositories: DataSlice<WorkspaceRepositoriesSlice>;
-  workspaces: DataSlice<WorkspacesSlice>;
   quality: DataSlice<QualitySliceData | null>;
   fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   localhostServers: DataSlice<RunningServer[]>;
@@ -2149,96 +2139,6 @@ export const RepositoryPanelProvider: React.FC<
     [stableGitStatusData, gitStatusLoading, repositoryPath],
   );
 
-  // Explicit DataSlice: alexandriaRepositories (for alexandria panels compatibility)
-  const alexandriaRepositoriesSlice = useMemo<DataSlice<unknown>>(
-    () => ({
-      scope: 'repository' as const,
-      name: 'alexandriaRepositories',
-      data: {
-        repositories: alexandriaRepositories,
-        discoveredRepositories: [],
-        loading: alexandriaRepositoriesLoading,
-        error: undefined,
-      },
-      loading: alexandriaRepositoriesLoading,
-      error: null,
-      refresh: async () => {
-        setAlexandriaRepositoriesLoading(true);
-        try {
-          const repos = await AlexandriaService.getRepositories();
-          setAlexandriaRepositories(repos);
-        } catch (error) {
-          console.error(
-            '[RepositoryPanelProvider] Failed to refresh Alexandria repositories:',
-            error,
-          );
-          setAlexandriaRepositories([]);
-        } finally {
-          setAlexandriaRepositoriesLoading(false);
-        }
-      },
-    }),
-    [alexandriaRepositories, alexandriaRepositoriesLoading],
-  );
-
-  // Explicit DataSlice: workspace (stub for compatibility)
-  const workspaceSlice = useMemo<DataSlice<unknown>>(
-    () => ({
-      scope: 'repository' as const,
-      name: 'workspace',
-      data: {
-        workspace: null,
-        loading: false,
-        error: undefined,
-      },
-      loading: false,
-      error: null,
-      refresh: async () => {
-        // No workspace data in repository context
-      },
-    }),
-    [],
-  );
-
-  // Explicit DataSlice: workspaces (stub for compatibility)
-  const workspacesSlice = useMemo<DataSlice<unknown>>(
-    () => ({
-      scope: 'repository' as const,
-      name: 'workspaces',
-      data: {
-        workspaces: [],
-        defaultWorkspaceId: null,
-        loading: false,
-        error: undefined,
-      },
-      loading: false,
-      error: null,
-      refresh: async () => {
-        // No workspaces list in repository context
-      },
-    }),
-    [],
-  );
-
-  // Explicit DataSlice: workspaceRepositories (stub for compatibility)
-  const workspaceRepositoriesSlice = useMemo<DataSlice<unknown>>(
-    () => ({
-      scope: 'repository' as const,
-      name: 'workspaceRepositories',
-      data: {
-        repositories: [],
-        loading: false,
-        error: undefined,
-      },
-      loading: false,
-      error: null,
-      refresh: async () => {
-        // No workspace repositories in repository context
-      },
-    }),
-    [],
-  );
-
   // Explicit DataSlice: quality
   const qualitySlice = useMemo<DataSlice<QualitySliceData | null>>(
     () => ({
@@ -2600,10 +2500,6 @@ export const RepositoryPanelProvider: React.FC<
       packages: packagesSlice,
       repositoryEntry: repositoryEntrySlice,
       gitStatusWithFiles: gitStatusWithFilesSlice,
-      alexandriaRepositories: alexandriaRepositoriesSlice as DataSlice<AlexandriaRepositoriesSlice>,
-      workspace: workspaceSlice as DataSlice<WorkspaceSlice>,
-      workspaceRepositories: workspaceRepositoriesSlice as DataSlice<WorkspaceRepositoriesSlice>,
-      workspaces: workspacesSlice as DataSlice<WorkspacesSlice>,
       quality: qualitySlice,
       fileCityColorModes: fileCityColorModesSlice,
       localhostServers: localhostServersSlice,
@@ -2632,10 +2528,6 @@ export const RepositoryPanelProvider: React.FC<
       packagesSlice,
       repositoryEntrySlice,
       gitStatusWithFilesSlice,
-      alexandriaRepositoriesSlice,
-      workspaceSlice,
-      workspaceRepositoriesSlice,
-      workspacesSlice,
       qualitySlice,
       fileCityColorModesSlice,
       localhostServersSlice,

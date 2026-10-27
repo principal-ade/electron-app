@@ -46,7 +46,6 @@ import { getTerminalManager } from './terminalWrapper';
 import { setupAgentConfigHandlers } from './agent-management/agentConfigHandlers';
 import { registerFileSystemIpcHandlers } from './file-system/fileSystemHandlers';
 import { registerAlexandriaHandlers } from './stores/AlexandriaApiEventHandler';
-import { registerWorkspaceHandlers } from './stores/WorkspaceApiEventHandler';
 import { registerAlexandriaDocsHandlers } from './stores/AlexandriaDocsApiEventHandler';
 import {
   registerRepositoryMonitoringHandlers,
@@ -208,7 +207,6 @@ const registerAllIpcHandlers = async () => {
   registerSecretHandlers();
   await registerLinksHandlers();
   registerAlexandriaHandlers();
-  registerWorkspaceHandlers();
   registerAlexandriaDocsHandlers();
   registerApiProxyHandlers();
   registerBrunoHandlers(); // Register Bruno panel HTTP request handlers

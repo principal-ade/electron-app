@@ -19,9 +19,11 @@ import type {
   UpdateLastOpenedInput,
   GetCodebaseViewsInput,
   GetCodebaseViewInput,
+  MoveRepositoryToConventionalPathInput,
 } from '../../../shared/tipc/alexandriaRouterTypes';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { AlexandriaRegistryService } from '../../stores/AlexandriaRegistryService';
+import { moveRepositoryToConventionalPath } from '../moveRepositoryToConventionalPath';
 import { RepositoryRegistrationManager } from '@principal-ai/repository-monitoring-server';
 import { getManager as getRepositoryMonitoringManager } from '../../repository-monitoring/ipcHandlers';
 import { AlexandriaAPIEvent } from '../../../shared/main-process-api-interfaces/AlexandriaAPI';
@@ -213,6 +215,17 @@ export const alexandriaRouter = {
     .input<GetCodebaseViewsInput>()
     .action(async ({ input }) => {
       return registryService.getCodebaseViews(input.repositoryPath);
+    }),
+
+  alexandria_moveRepositoryToConventionalPath: t.procedure
+    .input<MoveRepositoryToConventionalPathInput>()
+    .action(async ({ input }) => {
+      const { targetPath, entry } = await moveRepositoryToConventionalPath(
+        input.repository,
+        input.owner,
+      );
+      broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_UPDATED, entry);
+      return targetPath;
     }),
 
   alexandria_getCodebaseView: t.procedure

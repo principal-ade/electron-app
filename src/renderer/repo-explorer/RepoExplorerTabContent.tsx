@@ -6,10 +6,11 @@
  * `{ owner, repo }` props and lazy-loads the page (it pulls in Monaco + the 3D
  * File City, so it must not be in the shell's eager graph).
  *
- * It also owns the desktop-only header actions: a **Clone** button (with inline
- * progress) for remote-only repos, or an **Open profile** action when the repo
- * is cloned (opens the profile panel, where the clone is managed). The ported
- * page exposes a `headerActions` slot so this stays out of the page itself.
+ * It also owns the desktop-only header actions: a **Fork** action (fork the repo
+ * and clone your fork), a **Clone** button (with inline progress) for
+ * remote-only repos, or an **Open profile** action when the repo is cloned
+ * (opens the profile panel, where the clone is managed). The ported page
+ * exposes a `headerActions` slot so this stays out of the page itself.
  *
  * The page's data goes through `repoExplorerService` (IPC-backed); see
  * `data/repoExplorerService.ts`.
@@ -17,6 +18,7 @@
 
 import React, { Suspense } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { GitFork } from 'lucide-react';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   GithubRepository,
@@ -40,6 +42,7 @@ import {
   GitCloneModal,
   type CloneProgressState,
 } from '../components/GitCloneModal';
+import { ForkModal } from '../panels/components/ForkModal';
 
 // Safe-area / base styles the page consumes (`--safe-top`). The app's global
 // CSS doesn't define it; this mirrors web-ade's globals.css for the port.
@@ -74,6 +77,7 @@ export const RepoExplorerTabContent: React.FC<RepoExplorerTabContentProps> = ({
     localEntry,
   );
   const [showCloneModal, setShowCloneModal] = React.useState(false);
+  const [showForkModal, setShowForkModal] = React.useState(false);
   const [cloneProgress, setCloneProgress] =
     React.useState<CloneProgressState | null>(null);
 
@@ -175,6 +179,31 @@ export const RepoExplorerTabContent: React.FC<RepoExplorerTabContentProps> = ({
 
   const headerActions = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {owner && repo && (
+        <button
+          type="button"
+          onClick={() => setShowForkModal(true)}
+          title={`Fork ${owner}/${repo} and clone your fork`}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: theme.fontSizes[1],
+            fontFamily: theme.fonts?.body,
+            fontWeight: theme.fontWeights?.semibold ?? 600,
+            color: theme.colors.text,
+            background: 'transparent',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 6,
+            padding: '5px 12px',
+            cursor: 'pointer',
+            lineHeight: 1.4,
+          }}
+        >
+          <GitFork size={14} />
+          Fork
+        </button>
+      )}
       {cloning ? (
         <span
           style={{
@@ -322,6 +351,18 @@ export const RepoExplorerTabContent: React.FC<RepoExplorerTabContentProps> = ({
             github ? `https://github.com/${github.owner}/${github.name}.git` : undefined
           }
         />
+
+        {owner && repo && (
+          <ForkModal
+            isOpen={showForkModal}
+            onClose={() => setShowForkModal(false)}
+            repoOwner={owner}
+            repoName={repo}
+            registerRepository={(path, remoteUrl) =>
+              AlexandriaService.registerRepository(path, remoteUrl)
+            }
+          />
+        )}
       </div>
     </AuthProvider>
   );

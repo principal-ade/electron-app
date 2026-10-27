@@ -58,6 +58,21 @@ export class AlexandriaService {
     return alexandriaClient.searchRepositories({ query });
   }
 
+  /**
+   * Move a registered clone into the `<baseDefaultDirectory>/<owner>/<repo>`
+   * convention. Renames the directory, re-keys the registry, and broadcasts the
+   * update. Returns the new path.
+   */
+  static async moveRepositoryToConventionalPath(
+    repository: AlexandriaEntry,
+    owner: string,
+  ): Promise<string> {
+    return alexandriaClient.moveRepositoryToConventionalPath({
+      repository,
+      owner,
+    });
+  }
+
   static async getRepositoriesWithViews(): Promise<AlexandriaEntry[]> {
     return alexandriaClient.getRepositoriesWithViews();
   }

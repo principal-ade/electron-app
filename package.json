@@ -154,7 +154,8 @@
     },
     "testPathIgnorePatterns": [
       "release/app/dist",
-      ".erb/dll"
+      ".erb/dll",
+      "<rootDir>/dist/"
     ],
     "transform": {
       "^.+\\.[jt]sx?$": "babel-jest"
@@ -172,7 +173,6 @@
     "@industry-theme/agent-driven-ui-panels": "^0.2.0",
     "@industry-theme/agent-panels": "^0.3.3",
     "@industry-theme/alexandria-docs-panel": "^0.5.3",
-    "@industry-theme/alexandria-panels": "^0.3.4",
     "@industry-theme/backlogmd-kanban-panel": "^1.2.17",
     "@industry-theme/excalidraw-panels": "^0.2.0",
     "@industry-theme/file-city-panel": "^0.10.1",

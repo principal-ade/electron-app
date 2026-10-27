@@ -34,9 +34,6 @@ jest.mock('../main-process-api/RepositoryMonitoringService', () => ({
 jest.mock('../main-process-api/AlexandriaService', () => ({
   AlexandriaService: {},
 }));
-jest.mock('../main-process-api/WorkspaceService', () => ({
-  WorkspaceService: {},
-}));
 jest.mock('../main-process-api/FileSystemService', () => ({
   FileSystemService: {},
 }));
@@ -47,24 +44,6 @@ jest.mock('../events/repositorySelected', () => ({
 }));
 jest.mock('./components/RelocateToConventionModal', () => ({
   RelocateToConventionModal: () => null,
-}));
-jest.mock('./components/CloneFromGitHubModal', () => ({
-  CloneFromGitHubModal: ({
-    isOpen,
-    initialUrl,
-  }: {
-    isOpen: boolean;
-    initialUrl: string;
-  }) => (isOpen ? <div role="dialog">{initialUrl}</div> : null),
-}));
-jest.mock('./components/CreateRepositoryInWorkspaceModal', () => ({
-  CreateRepositoryInWorkspaceModal: ({
-    isOpen,
-    presetOwner,
-  }: {
-    isOpen: boolean;
-    presetOwner: string;
-  }) => (isOpen ? <div role="dialog">Create in {presetOwner}</div> : null),
 }));
 const githubRepo = (name: string) => ({
   name,
@@ -104,10 +83,11 @@ function renderProjects(onFilterChange = jest.fn()) {
 }
 
 async function ownerHeading() {
-  const add = await screen.findByRole('button', {
-    name: 'Add a repository to Owner organization',
-  });
-  return add.parentElement as HTMLElement;
+  // The owner row is the collapsible header for the org section.
+  const label = await screen.findByText('Owner organization');
+  const heading = label.closest('[role="button"]');
+  if (!heading) throw new Error('Missing owner heading');
+  return heading as HTMLElement;
 }
 
 beforeEach(() => {
@@ -164,20 +144,15 @@ test('matches Home styling while keeping owner dropdown behavior', async () => {
   expect(emit).not.toHaveBeenCalled();
 });
 
-test('the owner add action still works without toggling the dropdown', async () => {
+test('owner headings no longer offer a create-repository action', async () => {
   renderProjects();
-  const heading = await ownerHeading();
-  fireEvent.click(heading);
-  fireEvent.click(
-    screen.getByRole('button', {
-      name: 'Add a repository to Owner organization',
-    }),
-  );
-  expect(screen.getByRole('dialog').textContent).toBe('Create in owner');
-  expect(heading.getAttribute('aria-expanded')).toBe('false');
+  await ownerHeading();
+  expect(
+    screen.queryByRole('button', { name: /Add a repository to/ }),
+  ).toBeNull();
 });
 
-test('keeps project profile, terminal, clone, and remove actions', async () => {
+test('keeps project profile, terminal, and remove actions', async () => {
   const emit = renderProjects();
   await ownerHeading();
   fireEvent.click(screen.getByText('app'));
@@ -195,10 +170,9 @@ test('keeps project profile, terminal, clone, and remove actions', async () => {
       payload: { directory: '/work/owner/app', label: 'app' },
     }),
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Clone remote' }));
-  expect(screen.getByRole('dialog').textContent).toBe(
-    'https://github.com/owner/remote.git',
-  );
+  // The projects panel no longer offers a per-row clone action: cloning lives
+  // in the repo explorer, forking in the fork modal.
+  expect(screen.queryByRole('button', { name: /^Clone / })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Remove app from list' }));
   expect(screen.getByText('Remove from list?')).toBeTruthy();
 });

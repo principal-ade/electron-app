@@ -13,11 +13,19 @@ export interface AuthUser {
   avatarUrl?: string;
 }
 
+/**
+ * Where the GitHub credentials came from.
+ * `gh-cli` means the GitHub CLI is installed and signed in
+ * (`gh auth token` succeeded); `stored-token` is the local fallback.
+ */
+export type AuthTokenSource = 'gh-cli' | 'stored-token';
+
 export interface AuthResult {
   success: boolean;
   authenticated?: boolean;
   token?: string;
   user?: AuthUser;
+  source?: AuthTokenSource;
   error?: string;
 }
 

@@ -1,7 +1,8 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
+import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import { GeneralSettings } from './GeneralSettings';
 
 jest.mock('@principal-ade/industry-theme', () => ({
@@ -12,6 +13,7 @@ jest.mock('@principal-ai/logo-component', () => ({
 }));
 jest.mock('../../../../main-process-api/UserPreferencesService');
 jest.mock('../../../../main-process-api/AppVersionManagerService');
+jest.mock('../../../../main-process-api/FileSystemService');
 jest.mock('../../../../main-process-api/AlexandriaService', () => ({
   AlexandriaService: { clearAllData: jest.fn() },
 }));
@@ -66,4 +68,68 @@ test('reflects preference updates from another window', async () => {
     ),
   );
   expect(checkbox.checked).toBe(true);
+});
+
+test('shows the saved base directory', async () => {
+  (UserPreferencesService.getPreferences as jest.Mock).mockResolvedValue({
+    baseDefaultDirectory: '/Users/dev/Development',
+  });
+  render(<GeneralSettings />);
+  // findByText rejects when the path is not rendered
+  expect(await screen.findByText('/Users/dev/Development')).toBeTruthy();
+});
+
+test('choosing a folder persists it as the base directory', async () => {
+  (FileSystemService.selectDirectory as jest.Mock).mockResolvedValue({
+    filePaths: ['/Users/dev/Code'],
+    canceled: false,
+  });
+  render(<GeneralSettings />);
+  await screen.findByText('Version 1.2.3');
+
+  fireEvent.click(screen.getByRole('button', { name: /choose folder/i }));
+
+  await waitFor(() =>
+    expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
+      baseDefaultDirectory: '/Users/dev/Code',
+    }),
+  );
+  expect(await screen.findByText('/Users/dev/Code')).toBeTruthy();
+});
+
+test('a cancelled folder picker leaves the base directory untouched', async () => {
+  (FileSystemService.selectDirectory as jest.Mock).mockResolvedValue({
+    canceled: true,
+    filePaths: [],
+  });
+  render(<GeneralSettings />);
+  await screen.findByText('Version 1.2.3');
+
+  fireEvent.click(screen.getByRole('button', { name: /choose folder/i }));
+
+  await waitFor(() =>
+    expect(FileSystemService.selectDirectory).toHaveBeenCalled(),
+  );
+  expect(UserPreferencesService.updatePreferences).not.toHaveBeenCalledWith(
+    expect.objectContaining({ baseDefaultDirectory: expect.anything() }),
+  );
+});
+
+test('clearing the base directory persists an empty value', async () => {
+  (UserPreferencesService.getPreferences as jest.Mock).mockResolvedValue({
+    baseDefaultDirectory: '/Users/dev/Development',
+  });
+  render(<GeneralSettings />);
+  await screen.findByText('/Users/dev/Development');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+
+  await waitFor(() =>
+    expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
+      baseDefaultDirectory: undefined,
+    }),
+  );
+  expect(
+    screen.getByTestId('base-default-directory').textContent,
+  ).toBe('Not set');
 });

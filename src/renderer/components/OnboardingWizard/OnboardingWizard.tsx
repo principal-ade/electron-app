@@ -1,19 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme, Theme } from '@principal-ade/industry-theme';
 import { FileCityLogo, FileCityLogoAnimated } from '@principal-ai/logo-component';
 import {
   FolderGit2,
   ArrowRight,
   CheckCircle,
-  FolderPlus,
   Folder,
   FolderTree,
   AlertCircle,
   Info,
-  Pencil
+  Pencil,
+  Sparkles
 } from 'lucide-react';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { GitService } from '../../main-process-api/GitService';
+import { AuthenticationService } from '../../main-process-api/AuthenticationService';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
+import type { AuthTokenSource } from '../../../shared/main-process-api-interfaces/AuthenticationAPI';
+import type { UserPreferences } from '../../../shared/types/userPreferences.types';
+import {
+  ALL_SKILL_DETAILS,
+  getInstalledCatalogSkillNames,
+  installSkills,
+} from '../../skills/skillCatalog';
+import type { SkillDetail } from '../../skills/skillCatalog';
+
+/** Home directory used to resolve the `~/<name>` base directory field. */
+function getHomeDirectory(): string {
+  return (typeof process !== 'undefined' ? process.env.HOME : '') || '';
+}
+
+/** `~/Code` -> `Code`, `/Users/me/Code` -> `Code` (last segment fallback). */
+function baseDirectoryToName(baseDirectory: string): string {
+  const home = getHomeDirectory();
+  if (home && baseDirectory.startsWith(`${home}/`)) {
+    return baseDirectory.slice(home.length + 1);
+  }
+  return baseDirectory.split('/').filter(Boolean).pop() ?? '';
+}
+
+/** `Code` -> `~/Code` as an absolute path (the form the rest of the app stores). */
+function nameToBaseDirectory(name: string): string | null {
+  const home = getHomeDirectory();
+  const trimmed = name.trim().replace(/^\/+|\/+$/g, '');
+  if (!home || !trimmed) return null;
+  return `${home}/${trimmed}`;
+}
 
 // Git Logo Component
 const GitLogo: React.FC<{ size?: number; color?: string }> = ({
@@ -54,27 +86,97 @@ const GitHubLogo: React.FC<{ size?: number; color?: string }> = ({
   </svg>
 );
 
-type OnboardingStep = 'welcome' | 'git-config' | 'choose-method' | 'folder-selection' | 'scanning' | 'repo-location' | 'home-directory' | 'github-connect' | 'ready';
+type OnboardingStep = 'welcome' | 'git-config' | 'choose-method' | 'folder-selection' | 'scanning' | 'home-directory' | 'github-cli' | 'skills' | 'ready';
 
-type RepoLocationMode = 'single' | 'multiple' | 'add-list';
-type SetupMethod = 'scan' | 'select' | 'later' | null;
+type SetupMethod = 'scan' | 'later' | null;
+
+/** GitHub account details shown on the github-cli step. */
+interface GitHubCliUser {
+  login: string;
+  name?: string;
+  email?: string;
+  avatarUrl?: string;
+}
+
+interface GitHubCliStatus {
+  isLoading: boolean;
+  isConfigured: boolean;
+  source: AuthTokenSource | 'none';
+  user: GitHubCliUser | null;
+  error?: string;
+}
+
+/** Result shape of a GitHub CLI check (matches AuthService.check()). */
+interface GitHubCliCheckResult {
+  authenticated?: boolean;
+  source?: AuthTokenSource;
+  user?: GitHubCliUser | null;
+  error?: string;
+}
+
+const defaultGitHubCliService = {
+  check: (): Promise<GitHubCliCheckResult> => AuthenticationService.check(),
+};
+
+const defaultSkillInstaller = {
+  getInstalledSkillNames: getInstalledCatalogSkillNames,
+  installSkills: (skills: ReadonlyArray<SkillDetail>) => installSkills(skills),
+};
+
+type SkillInstallState = 'idle' | 'installing' | 'installed' | 'failed';
+
+interface SkillRowState {
+  selected: boolean;
+  status: SkillInstallState;
+  error?: string;
+}
+
+/** Everything starts checked; the user can uncheck what they don't want. */
+function initialSkillRows(): Record<string, SkillRowState> {
+  const rows: Record<string, SkillRowState> = {};
+  for (const skill of ALL_SKILL_DETAILS) {
+    rows[skill.name] = {
+      selected: true,
+      status: 'idle'
+    };
+  }
+  return rows;
+}
 
 interface OnboardingWizardProps {
-  repoLocationMode?: RepoLocationMode;
+  /** Jump straight to a step. Used by Storybook stories. */
+  initialStep?: OnboardingStep;
   onComplete?: (data: OnboardingData) => void;
   // Service methods for testing/mocking
   fileSystemService?: {
     getTopLevelFolders: () => Promise<TopLevelFolder[]>;
     scanFoldersForRepos: (folderPaths: string[]) => Promise<{ success: boolean; repos: Array<{ path: string; name: string; owner?: string; registered?: boolean; alreadyRegistered?: boolean; registrationError?: string }>; error?: string }>;
     onRepoScanProgress: (callback: (progress: { current: number; total: number; currentFolder: string; foundRepos: number }) => void) => () => void;
-    selectDirectory: (options?: { title?: string; buttonLabel?: string; properties?: Array<'openDirectory' | 'createDirectory' | 'promptToCreate'> }) => Promise<{ filePaths: string[]; canceled: boolean } | { canceled: true } | null>;
+  };
+  githubCliService?: {
+    check: () => Promise<GitHubCliCheckResult>;
+  };
+  preferencesService?: {
+    getPreferences: () => Promise<UserPreferences>;
+    updatePreferences: (updates: Partial<UserPreferences>) => Promise<void>;
+  };
+  skillInstaller?: {
+    getInstalledSkillNames: () => Promise<Set<string>>;
+    installSkills: (
+      skills: ReadonlyArray<SkillDetail>
+    ) => Promise<{ installed: string[]; failures: string[] }>;
   };
 }
 
 interface OnboardingData {
-  repoPaths: string[];
   hasMultipleLocations: boolean;
-  githubConnected: boolean;
+  githubCliConfigured: boolean;
+  /** GitHub login detected by the CLI check, if any. */
+  githubLogin: string | null;
+  /** Absolute base directory chosen in the clone-directory step. */
+  baseDirectory: string | null;
+  /** Names of skills installed from the install-skills step. */
+  installedSkills: string[];
 }
 
 interface TopLevelFolder {
@@ -85,21 +187,36 @@ interface TopLevelFolder {
 }
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
-  repoLocationMode = 'single',
+  initialStep = 'welcome',
   onComplete,
-  fileSystemService = FileSystemService
+  fileSystemService = FileSystemService,
+  githubCliService = defaultGitHubCliService,
+  preferencesService = UserPreferencesService,
+  skillInstaller = defaultSkillInstaller
 }) => {
   const { theme } = useTheme();
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
-  const [setupMethod, setSetupMethod] = useState<SetupMethod>(null);
-  const [repoPaths, setRepoPaths] = useState<string[]>([]);
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>(initialStep);
+  const [setupMethod, setSetupMethod] = useState<SetupMethod>(() => {
+    // Keep activeSteps in sync when a story/test jumps into the middle of a flow.
+    if (initialStep === 'folder-selection' || initialStep === 'scanning') return 'scan';
+    return null;
+  });
   const [topLevelFolders, setTopLevelFolders] = useState<TopLevelFolder[]>([]);
   const [isLoadingFolders, setIsLoadingFolders] = useState(false);
   const [foundProjects, setFoundProjects] = useState<Array<{ currentPath: string; owner: string; name: string; registered?: boolean; alreadyRegistered?: boolean; registrationError?: string }>>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState({ current: 0, total: 0, currentFolder: '', foundRepos: 0 });
-  const [githubConnected, setGithubConnected] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
+  const [githubCliStatus, setGithubCliStatus] = useState<GitHubCliStatus>({
+    isLoading: false,
+    isConfigured: false,
+    source: 'none',
+    user: null
+  });
+  const [skillRows, setSkillRows] = useState<Record<string, SkillRowState>>(
+    initialSkillRows
+  );
+  const [isInstallingSkills, setIsInstallingSkills] = useState(false);
+  const [hasStarted, setHasStarted] = useState(initialStep !== 'welcome');
   const [showContent, setShowContent] = useState(true);
   const [devDirectoryName, setDevDirectoryName] = useState('Development');
   const [gitConfigLoaded, setGitConfigLoaded] = useState(false);
@@ -109,18 +226,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
   // Get active steps based on user's choice
   const getActiveSteps = (): OnboardingStep[] => {
-    const baseSteps: OnboardingStep[] = ['welcome', 'git-config', 'choose-method'];
+    const baseSteps: OnboardingStep[] = ['welcome', 'git-config', 'home-directory', 'choose-method'];
 
     if (setupMethod === 'scan') {
-      return [...baseSteps, 'folder-selection', 'scanning', 'home-directory', 'github-connect', 'ready'];
-    } else if (setupMethod === 'select') {
-      return [...baseSteps, 'repo-location', 'home-directory', 'github-connect', 'ready'];
+      return [...baseSteps, 'folder-selection', 'scanning', 'github-cli', 'skills', 'ready'];
     } else if (setupMethod === 'later') {
-      return [...baseSteps, 'github-connect', 'ready'];
+      return [...baseSteps, 'github-cli', 'skills', 'ready'];
     }
 
     // Before method is chosen, show all possible steps
-    return ['welcome', 'git-config', 'choose-method', 'home-directory', 'github-connect', 'ready'];
+    return ['welcome', 'git-config', 'home-directory', 'choose-method', 'github-cli', 'skills', 'ready'];
   };
 
   const activeSteps = getActiveSteps();
@@ -193,6 +308,58 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     }
   }, [currentStep, gitConfigLoaded]);
 
+  // Prefill the clone directory from the saved base directory, if any
+  useEffect(() => {
+    let cancelled = false;
+
+    preferencesService
+      .getPreferences()
+      .then(prefs => {
+        if (cancelled) return;
+        const saved = prefs.baseDefaultDirectory;
+        if (saved) {
+          setDevDirectoryName(baseDirectoryToName(saved));
+        }
+      })
+      .catch(error => {
+        console.error('[OnboardingWizard] Failed to load base directory:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [preferencesService]);
+
+  // Check the GitHub CLI session when entering the github-cli step
+  const checkGitHubCli = useCallback(async () => {
+    setGithubCliStatus(prev => ({ ...prev, isLoading: true, error: undefined }));
+
+    try {
+      const result = await githubCliService.check();
+      setGithubCliStatus({
+        isLoading: false,
+        isConfigured: !!result?.authenticated,
+        source: result?.source ?? (result?.authenticated ? 'gh-cli' : 'none'),
+        user: result?.user ?? null,
+        error: result?.error
+      });
+    } catch (error) {
+      setGithubCliStatus({
+        isLoading: false,
+        isConfigured: false,
+        source: 'none',
+        user: null,
+        error: error instanceof Error ? error.message : 'Could not check the GitHub CLI'
+      });
+    }
+  }, [githubCliService]);
+
+  useEffect(() => {
+    if (currentStep === 'github-cli') {
+      checkGitHubCli();
+    }
+  }, [currentStep, checkGitHubCli]);
+
   const handleSaveGitConfig = async (name: string, email: string) => {
     if (name !== gitUserName) {
       await GitService.execCommand('', ['config', '--global', 'user.name', name]);
@@ -240,6 +407,113 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     }
   };
 
+  // Load install state for the skill catalog when entering the skills step.
+  // Topic skills are preselected; anything already installed is locked in.
+  useEffect(() => {
+    if (currentStep !== 'skills') return;
+
+    let cancelled = false;
+
+    skillInstaller
+      .getInstalledSkillNames()
+      .catch(() => new Set<string>())
+      .then(installed => {
+        if (cancelled) return;
+        const rows: Record<string, SkillRowState> = {};
+        for (const skill of ALL_SKILL_DETAILS) {
+          const isInstalled = installed.has(skill.name);
+          rows[skill.name] = {
+            selected: true,
+            status: isInstalled ? 'installed' : 'idle'
+          };
+        }
+        setSkillRows(rows);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentStep, skillInstaller]);
+
+  const toggleSkill = useCallback((name: string) => {
+    setSkillRows(prev => {
+      const row = prev[name];
+      if (!row || row.status === 'installed' || row.status === 'installing') {
+        return prev;
+      }
+      return { ...prev, [name]: { ...row, selected: !row.selected } };
+    });
+  }, []);
+
+  const handleInstallSkills = useCallback(async () => {
+    const selected = ALL_SKILL_DETAILS.filter(
+      skill => skillRows[skill.name]?.selected && skillRows[skill.name]?.status !== 'installed'
+    );
+    if (selected.length === 0) return;
+
+    setIsInstallingSkills(true);
+    setSkillRows(prev => {
+      const next = { ...prev };
+      for (const skill of selected) {
+        next[skill.name] = { ...next[skill.name], status: 'installing', error: undefined };
+      }
+      return next;
+    });
+
+    try {
+      const result = await skillInstaller.installSkills(selected);
+      const installedNames = new Set(result.installed);
+
+      setSkillRows(prev => {
+        const next = { ...prev };
+        for (const skill of selected) {
+          if (installedNames.has(skill.name)) {
+            next[skill.name] = { selected: true, status: 'installed' };
+          } else {
+            const failure = result.failures.find(f => f.startsWith(`${skill.name}:`) || f.startsWith(`${skill.name} →`));
+            next[skill.name] = {
+              selected: true,
+              status: 'failed',
+              error: failure ?? 'Install failed'
+            };
+          }
+        }
+        return next;
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Install failed';
+      setSkillRows(prev => {
+        const next = { ...prev };
+        for (const skill of selected) {
+          next[skill.name] = { selected: true, status: 'failed', error: message };
+        }
+        return next;
+      });
+    } finally {
+      setIsInstallingSkills(false);
+    }
+  }, [skillInstaller, skillRows]);
+
+  const installedSkillNames = ALL_SKILL_DETAILS
+    .filter(skill => skillRows[skill.name]?.status === 'installed')
+    .map(skill => skill.name);
+
+  const persistBaseDirectory = useCallback(
+    async (baseDirectory: string) => {
+      try {
+        await preferencesService.updatePreferences({
+          baseDefaultDirectory: baseDirectory
+        });
+      } catch (error) {
+        console.error(
+          '[OnboardingWizard] Failed to save base directory:',
+          error
+        );
+      }
+    },
+    [preferencesService]
+  );
+
   const handleStart = () => {
     setShowContent(false);
 
@@ -258,6 +532,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const handleNext = () => {
+    // Persist the clone directory before leaving its step so General Settings
+    // always shows the value the wizard used.
+    if (currentStep === 'home-directory') {
+      const baseDirectory = nameToBaseDirectory(devDirectoryName);
+      if (baseDirectory) {
+        persistBaseDirectory(baseDirectory);
+      }
+    }
+
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < activeSteps.length) {
       setShowContent(false);
@@ -269,9 +552,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       }, 300);
     } else {
       onComplete?.({
-        repoPaths,
         hasMultipleLocations: false,
-        githubConnected
+        githubCliConfigured: githubCliStatus.isConfigured,
+        githubLogin: githubCliStatus.user?.login ?? null,
+        baseDirectory: nameToBaseDirectory(devDirectoryName),
+        installedSkills: installedSkillNames
       });
     }
   };
@@ -302,34 +587,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     }
   };
 
-  const handleAddPath = async () => {
-    const result = await fileSystemService.selectDirectory({
-      title: 'Select Git Projects Folder',
-      buttonLabel: 'Select Folder',
-      properties: ['openDirectory'],
-    });
-
-    if (!result || result.canceled || !result.filePaths?.[0]) {
-      return;
-    }
-
-    const selectedPath = result.filePaths[0];
-
-    // For single mode, replace the path; for add-list mode, add to the list
-    if (repoLocationMode === 'single') {
-      setRepoPaths([selectedPath]);
-    } else {
-      // Don't add duplicates
-      if (!repoPaths.includes(selectedPath)) {
-        setRepoPaths([...repoPaths, selectedPath]);
-      }
-    }
-  };
-
-  const handleRemovePath = (index: number) => {
-    setRepoPaths(repoPaths.filter((_, i) => i !== index));
-  };
-
   const canProceed = () => {
     if (currentStep === 'git-config') {
       return gitConfigLoaded;
@@ -342,9 +599,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     }
     if (currentStep === 'scanning') {
       return !isScanning && foundProjects.length > 0;
-    }
-    if (currentStep === 'repo-location') {
-      return repoPaths.length > 0;
     }
     return true;
   };
@@ -406,6 +660,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             />
           )}
 
+          {currentStep === 'home-directory' && (
+            <HomeDirectoryStep
+              theme={theme}
+              devDirectoryName={devDirectoryName}
+              onSetDevDirectoryName={setDevDirectoryName}
+            />
+          )}
+
           {currentStep === 'choose-method' && (
             <ChooseMethodStep
               theme={theme}
@@ -436,28 +698,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             />
           )}
 
-          {currentStep === 'repo-location' && (
-            <RepoLocationStep
+          {currentStep === 'github-cli' && (
+            <GitHubCliStep
               theme={theme}
-              paths={repoPaths}
-              onAddPath={handleAddPath}
-              onRemovePath={handleRemovePath}
+              status={githubCliStatus}
+              onRecheck={checkGitHubCli}
             />
           )}
 
-          {currentStep === 'home-directory' && (
-            <HomeDirectoryStep
+          {currentStep === 'skills' && (
+            <SkillsStep
               theme={theme}
-              devDirectoryName={devDirectoryName}
-              onSetDevDirectoryName={setDevDirectoryName}
-            />
-          )}
-
-          {currentStep === 'github-connect' && (
-            <GitHubConnectStep
-              theme={theme}
-              isConnected={githubConnected}
-              onConnect={() => setGithubConnected(true)}
+              rows={skillRows}
+              isInstalling={isInstallingSkills}
+              onToggleSkill={toggleSkill}
+              onInstall={handleInstallSkills}
             />
           )}
 
@@ -499,7 +754,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         <div style={{
           color: theme.colors.textSecondary,
           fontFamily: theme.fonts.body,
-          fontSize: `${theme.fontSizes[0]}px`,
+          fontSize: `${theme.fontSizes[2]}px`,
         }}>
           Step {actualStepIndex + 1} of {actualSteps.length}
         </div>
@@ -521,7 +776,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             transition: 'all 0.2s ease'
           }}
         >
-          {currentStep === 'ready' ? 'Finish' : currentStep === 'github-connect' && !githubConnected ? 'Skip' : 'Continue'}
+          {currentStep === 'ready' ? 'Finish' : 'Continue'}
         </button>
       </div>
       )}
@@ -910,39 +1165,6 @@ const ChooseMethodStep: React.FC<ChooseMethodStepProps> = ({
         </div>
       </button>
 
-      {/* Select Option */}
-      <button
-        onClick={() => onSelectMethod('select')}
-        style={{
-          flex: 1,
-          padding: 24,
-          backgroundColor: selectedMethod === 'select' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
-          border: `2px solid ${selectedMethod === 'select' ? theme.colors.primary : theme.colors.border}`,
-          borderRadius: 12,
-          cursor: 'pointer',
-          textAlign: 'center',
-          transition: 'all 0.2s ease'
-        }}
-      >
-        <div style={{
-          fontFamily: theme.fonts.body,
-          fontSize: `${theme.fontSizes[2]}px`,
-          fontWeight: 600,
-          color: theme.colors.text,
-          marginBottom: 8
-        }}>
-          Manual
-        </div>
-        <div style={{
-          fontFamily: theme.fonts.body,
-          fontSize: `${theme.fontSizes[1]}px`,
-          color: theme.colors.textSecondary,
-          lineHeight: 1.5
-        }}>
-          Pick using Finder
-        </div>
-      </button>
-
       {/* Setup Later Option */}
       <button
         onClick={() => onSelectMethod('later')}
@@ -1039,142 +1261,6 @@ const WelcomeStep: React.FC<WelcomeStepProps> = ({ theme, onStart }) => (
       }}
     >
       Begin
-    </button>
-  </div>
-);
-
-interface RepoLocationStepProps {
-  theme: Theme;
-  paths: string[];
-  onAddPath: () => void;
-  onRemovePath: (index: number) => void;
-}
-
-const RepoLocationStep: React.FC<RepoLocationStepProps> = ({
-  theme,
-  paths,
-  onAddPath,
-  onRemovePath
-}) => (
-  <div>
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      marginBottom: 24
-    }}>
-      <div style={{
-        display: 'inline-flex',
-        padding: 20,
-        backgroundColor: `${theme.colors.primary}15`,
-        borderRadius: '50%'
-      }}>
-        <FolderPlus size={48} color={theme.colors.primary} />
-      </div>
-    </div>
-
-    <h2 style={{
-      fontFamily: theme.fonts.heading,
-      fontSize: `${theme.fontSizes[6]}px`,
-      fontWeight: 700,
-      color: theme.colors.text,
-      marginBottom: 12,
-      textAlign: 'center'
-    }}>
-      Add your projects
-    </h2>
-
-    <p style={{
-      fontFamily: theme.fonts.body,
-      fontSize: `${theme.fontSizes[3]}px`,
-      color: theme.colors.textSecondary,
-      lineHeight: 1.6,
-      marginBottom: 32,
-      textAlign: 'center'
-    }}>
-      Pick each project folder using Finder.
-    </p>
-
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12,
-      marginBottom: 16
-    }}>
-      {paths.map((path) => (
-        <div
-          key={path}
-          style={{
-            padding: '12px 16px',
-            backgroundColor: theme.colors.backgroundSecondary,
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}
-        >
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            flex: 1,
-            minWidth: 0
-          }}>
-            <Folder size={18} color={theme.colors.textSecondary} />
-            <span style={{
-              fontFamily: theme.fonts.body,
-              color: theme.colors.text,
-              fontSize: `${theme.fontSizes[1]}px`,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}>
-              {path}
-            </span>
-          </div>
-          <button
-            onClick={() => onRemovePath(paths.indexOf(path))}
-            style={{
-              padding: '4px 12px',
-              backgroundColor: 'transparent',
-              color: theme.colors.textSecondary,
-              border: 'none',
-              borderRadius: 6,
-              cursor: 'pointer',
-              fontFamily: theme.fonts.body,
-              fontSize: `${theme.fontSizes[0]}px`,
-              flexShrink: 0,
-              transition: 'color 0.2s ease'
-            }}
-          >
-            Remove
-          </button>
-        </div>
-      ))}
-    </div>
-
-    <button
-      onClick={onAddPath}
-      style={{
-        width: '100%',
-        padding: '14px 16px',
-        backgroundColor: 'transparent',
-        color: theme.colors.primary,
-        border: `2px dashed ${theme.colors.primary}`,
-        borderRadius: 8,
-        cursor: 'pointer',
-        fontFamily: theme.fonts.body,
-        fontSize: `${theme.fontSizes[1]}px`,
-        fontWeight: 500,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        transition: 'all 0.2s ease'
-      }}
-    >
-      <FolderPlus size={18} />
-      Add Project
     </button>
   </div>
 );
@@ -1679,18 +1765,50 @@ const HomeDirectoryStep: React.FC<HomeDirectoryStepProps> = ({
         textAlign: 'center'
       }}>
         This is where we will place all future <span style={{ color: '#F05032' }}>git</span> projects in owner/reponame style.
+        You can change it later in Settings → General.
       </p>
 
-      <div style={{ marginBottom: 24 }}>
-        <label style={{
-          display: 'block',
+      <div style={{ marginBottom: 16 }}>
+        <div style={{
           fontFamily: theme.fonts.body,
-          fontSize: `${theme.fontSizes[0]}px`,
+          fontSize: `${theme.fontSizes[2]}px`,
           color: theme.colors.textSecondary,
-          marginBottom: 8
+          marginBottom: 12,
+          textAlign: 'center'
         }}>
-          Directory name
-        </label>
+          Suggestions:
+        </div>
+        <div style={{
+          display: 'flex',
+          gap: 8,
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}>
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              onClick={() => onSetDevDirectoryName(suggestion)}
+              style={{
+                width: 130,
+                padding: '8px 16px',
+                backgroundColor: devDirectoryName === suggestion ? `${theme.colors.primary}20` : theme.colors.backgroundSecondary,
+                color: devDirectoryName === suggestion ? theme.colors.primary : theme.colors.text,
+                border: `1px solid ${devDirectoryName === suggestion ? theme.colors.primary : theme.colors.border}`,
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontFamily: theme.fonts.body,
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: 500,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -1723,159 +1841,512 @@ const HomeDirectoryStep: React.FC<HomeDirectoryStepProps> = ({
             placeholder="Development"
           />
         </div>
-      </div>
 
-      <div style={{ marginBottom: 16 }}>
         <div style={{
-          fontFamily: theme.fonts.body,
-          fontSize: `${theme.fontSizes[0]}px`,
-          color: theme.colors.textSecondary,
-          marginBottom: 12
-        }}>
-          Suggestions:
-        </div>
-        <div style={{
+          marginTop: 8,
           display: 'flex',
-          gap: 8,
-          flexWrap: 'wrap'
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
+          fontFamily: theme.fonts.body,
+          fontSize: `${theme.fontSizes[2]}px`,
+          color: theme.colors.textSecondary
         }}>
-          {suggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              onClick={() => onSetDevDirectoryName(suggestion)}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: devDirectoryName === suggestion ? `${theme.colors.primary}20` : theme.colors.backgroundSecondary,
-                color: devDirectoryName === suggestion ? theme.colors.primary : theme.colors.text,
-                border: `1px solid ${devDirectoryName === suggestion ? theme.colors.primary : theme.colors.border}`,
-                borderRadius: 6,
-                cursor: 'pointer',
-                fontFamily: theme.fonts.body,
-                fontSize: `${theme.fontSizes[0]}px`,
-                fontWeight: 500,
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {suggestion}
-            </button>
-          ))}
+          Example:
+          <span style={{ fontFamily: theme.fonts.monospace }}>
+            ~/
+            <span style={{ color: theme.colors.primary, fontWeight: 600 }}>
+              {devDirectoryName || 'Development'}
+            </span>
+            /octocat/hello-world
+          </span>
         </div>
       </div>
     </div>
   );
 };
 
-interface GitHubConnectStepProps {
+interface GitHubCliStepProps {
   theme: Theme;
-  isConnected: boolean;
-  onConnect: () => void;
+  status: GitHubCliStatus;
+  onRecheck: () => void;
 }
 
-const GitHubConnectStep: React.FC<GitHubConnectStepProps> = ({
+const GitHubCliStep: React.FC<GitHubCliStepProps> = ({
   theme,
-  isConnected,
-  onConnect
-}) => (
-  <div>
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: 16,
-      marginBottom: 24
-    }}>
-      {/* ANIMATED-LOGO-TODO: was the animated sphere Logo; static for now. */}
-      <FileCityLogo mark="P" width={80} height={80} primary={theme.colors.primary} color={theme.colors.text} background="transparent" />
-      <ArrowRight size={32} color={theme.colors.textSecondary} />
+  status,
+  onRecheck
+}) => {
+  const { isLoading, isConfigured, source, user, error } = status;
+  const successColor = theme.colors.success || '#10b981';
+  const warningColor = theme.colors.warning || '#FF9800';
+
+  const subtitle = isLoading
+    ? 'Checking your GitHub CLI session.'
+    : isConfigured
+      ? 'Principal uses your GitHub CLI session for GitHub features.'
+      : 'Principal uses the GitHub CLI for GitHub features.';
+
+  return (
+    <div>
       <div style={{
-        display: 'inline-flex',
-        padding: 10,
-        backgroundColor: '#24292e',
-        borderRadius: '50%'
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 16,
+        marginBottom: 24
       }}>
-        <GitHubLogo size={48} color="#ffffff" />
+        {/* ANIMATED-LOGO-TODO: was the animated sphere Logo; static for now. */}
+        <FileCityLogo mark="P" width={80} height={80} primary={theme.colors.primary} color={theme.colors.text} background="transparent" />
+        <ArrowRight size={32} color={theme.colors.textSecondary} />
+        <div style={{
+          display: 'inline-flex',
+          padding: 10,
+          backgroundColor: '#24292e',
+          borderRadius: '50%'
+        }}>
+          <GitHubLogo size={48} color="#ffffff" />
+        </div>
       </div>
+
+      <h2 style={{
+        fontFamily: theme.fonts.heading,
+        fontSize: `${theme.fontSizes[6]}px`,
+        fontWeight: 700,
+        color: theme.colors.text,
+        marginBottom: 12,
+        textAlign: 'center'
+      }}>
+        GitHub CLI
+      </h2>
+
+      <p style={{
+        fontFamily: theme.fonts.body,
+        fontSize: `${theme.fontSizes[3]}px`,
+        color: theme.colors.textSecondary,
+        lineHeight: 1.6,
+        marginBottom: 32,
+        textAlign: 'center'
+      }}>
+        {subtitle}
+      </p>
+
+      {isLoading ? (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          padding: 24
+        }}>
+          <div style={{
+            width: 20,
+            height: 20,
+            border: `3px solid ${theme.colors.border}`,
+            borderTopColor: theme.colors.primary,
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+          <span style={{
+            fontFamily: theme.fonts.body,
+            fontSize: `${theme.fontSizes[1]}px`,
+            color: theme.colors.textSecondary
+          }}>
+            Looking for <code style={{ fontFamily: theme.fonts.monospace }}>gh auth token</code>...
+          </span>
+        </div>
+      ) : isConfigured ? (
+        <div style={{
+          padding: 20,
+          backgroundColor: `${successColor}15`,
+          border: `1px solid ${successColor}`,
+          borderRadius: 12
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16
+          }}>
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.login}
+                width={48}
+                height={48}
+                style={{ borderRadius: '50%', flexShrink: 0 }}
+              />
+            ) : (
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: `${successColor}25`,
+                color: successColor
+              }}>
+                <GitHubLogo size={24} color={successColor} />
+              </div>
+            )}
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontFamily: theme.fonts.body,
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: 600,
+                color: theme.colors.text
+              }}>
+                {user ? (
+                  <span style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {user.name || user.login}
+                  </span>
+                ) : (
+                  'GitHub CLI is set up'
+                )}
+              </div>
+              {user?.login && (
+                <div style={{
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  color: theme.colors.textSecondary
+                }}>
+                  @{user.login}
+                </div>
+              )}
+              {user?.email && (
+                <div style={{
+                  fontFamily: theme.fonts.body,
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  color: theme.colors.textSecondary,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {user.email}
+                </div>
+              )}
+            </div>
+
+            <CheckCircle size={24} color={successColor} />
+          </div>
+
+          <div style={{
+            marginTop: 16,
+            paddingTop: 12,
+            borderTop: `1px solid ${successColor}30`,
+            fontFamily: theme.fonts.body,
+            fontSize: `${theme.fontSizes[0]}px`,
+            color: theme.colors.textSecondary
+          }}>
+            {source === 'gh-cli'
+              ? 'Detected from your signed-in GitHub CLI session.'
+              : 'Using a saved GitHub token instead of the CLI. Run gh auth login to switch to the CLI.'}
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          padding: 20,
+          backgroundColor: `${warningColor}10`,
+          border: `1px solid ${warningColor}40`,
+          borderRadius: 12
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 12
+          }}>
+            <Info size={20} color={warningColor} style={{ flexShrink: 0, marginTop: 2 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{
+                fontFamily: theme.fonts.body,
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: 600,
+                color: theme.colors.text,
+                marginBottom: 4
+              }}>
+                No GitHub CLI session found
+              </div>
+              <div style={{
+                fontFamily: theme.fonts.body,
+                fontSize: `${theme.fontSizes[0]}px`,
+                color: theme.colors.textSecondary,
+                marginBottom: 12
+              }}>
+                You can skip this and set it up later. When you're ready, sign in from your terminal:
+              </div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 12px',
+                backgroundColor: theme.colors.background,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: 6
+              }}>
+                <span style={{
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  color: theme.colors.text
+                }}>
+                  gh auth login
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          marginTop: 12,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          fontFamily: theme.fonts.body,
+          fontSize: `${theme.fontSizes[0]}px`,
+          color: theme.colors.error || '#ef4444'
+        }}>
+          <AlertCircle size={14} />
+          {error}
+        </div>
+      )}
+
+      {!isLoading && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+          <button
+            onClick={onRecheck}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: 'transparent',
+              color: theme.colors.primary,
+              border: `1px solid ${theme.colors.primary}`,
+              borderRadius: 6,
+              cursor: 'pointer',
+              fontFamily: theme.fonts.body,
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontWeight: 500,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Check again
+          </button>
+        </div>
+      )}
     </div>
+  );
+};
 
-    <h2 style={{
-      fontFamily: theme.fonts.heading,
-      fontSize: `${theme.fontSizes[6]}px`,
-      fontWeight: 700,
-      color: theme.colors.text,
-      marginBottom: 12,
-      textAlign: 'center'
-    }}>
-      Connect to GitHub?
-    </h2>
+interface SkillsStepProps {
+  theme: Theme;
+  rows: Record<string, SkillRowState>;
+  isInstalling: boolean;
+  onToggleSkill: (name: string) => void;
+  onInstall: () => void;
+}
 
-    <p style={{
-      fontFamily: theme.fonts.body,
-      fontSize: `${theme.fontSizes[3]}px`,
-      color: theme.colors.textSecondary,
-      lineHeight: 1.6,
-      marginBottom: 32,
-      textAlign: 'center'
-    }}>
-      GitHub connectivity is needed to use the social features.
-    </p>
+const SkillsStep: React.FC<SkillsStepProps> = ({
+  theme,
+  rows,
+  isInstalling,
+  onToggleSkill,
+  onInstall
+}) => {
+  const successColor = theme.colors.success || '#10b981';
+  const errorColor = theme.colors.error || '#ef4444';
 
-    {!isConnected ? (
+  const selectable = ALL_SKILL_DETAILS.filter(skill => rows[skill.name]?.status !== 'installed');
+  const selectedCount = selectable.filter(skill => rows[skill.name]?.selected).length;
+  const installedCount = ALL_SKILL_DETAILS.length - selectable.length;
+
+  return (
+    <div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{
+          display: 'inline-flex',
+          padding: 20,
+          backgroundColor: `${theme.colors.primary}15`,
+          borderRadius: '50%'
+        }}>
+          <Sparkles size={48} color={theme.colors.primary} />
+        </div>
+      </div>
+
+      <h2 style={{
+        fontFamily: theme.fonts.heading,
+        fontSize: `${theme.fontSizes[6]}px`,
+        fontWeight: 700,
+        color: theme.colors.text,
+        marginBottom: 12,
+        textAlign: 'center'
+      }}>
+        Install Skills
+      </h2>
+
+      <p style={{
+        fontFamily: theme.fonts.body,
+        fontSize: `${theme.fontSizes[3]}px`,
+        color: theme.colors.textSecondary,
+        lineHeight: 1.6,
+        marginBottom: 8,
+        textAlign: 'center'
+      }}>
+        Skills teach your agent how to do specific jobs.
+      </p>
+
+      <p style={{
+        fontFamily: theme.fonts.body,
+        fontSize: `${theme.fontSizes[0]}px`,
+        color: theme.colors.textSecondary,
+        marginBottom: 24,
+        textAlign: 'center'
+      }}>
+        Pick what you want now — you can install more later from Skills.
+        {installedCount > 0 && ` ${installedCount} already installed.`}
+      </p>
+
+      <div style={{
+        maxHeight: 320,
+        overflowY: 'auto',
+        marginBottom: 20
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8
+        }}>
+          {ALL_SKILL_DETAILS.map(skill => {
+            const row: SkillRowState = rows[skill.name] ?? { selected: false, status: 'idle' };
+            const isInstalled = row.status === 'installed';
+            const isBusy = row.status === 'installing';
+            const Icon = skill.Icon;
+
+            return (
+              <label
+                key={skill.name}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                  padding: 12,
+                  backgroundColor: row.selected ? `${theme.colors.primary}10` : theme.colors.backgroundSecondary,
+                  border: `1px solid ${row.selected ? theme.colors.primary : theme.colors.border}`,
+                  borderRadius: 8,
+                  cursor: isInstalled || isBusy ? 'default' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  opacity: isBusy ? 0.7 : 1
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={row.selected}
+                  disabled={isInstalled || isBusy}
+                  onChange={() => onToggleSkill(skill.name)}
+                  style={{
+                    width: 18,
+                    height: 18,
+                    marginTop: 2,
+                    cursor: isInstalled || isBusy ? 'default' : 'pointer'
+                  }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontFamily: theme.fonts.body,
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontWeight: 600,
+                    color: theme.colors.text
+                  }}>
+                    <Icon size={16} color={theme.colors.primary} />
+                    {skill.title}
+                  </div>
+                  <div style={{
+                    fontFamily: theme.fonts.body,
+                    fontSize: `${theme.fontSizes[0]}px`,
+                    color: theme.colors.textSecondary,
+                    lineHeight: 1.5,
+                    marginTop: 4
+                  }}>
+                    {skill.description}
+                  </div>
+                  {row.status === 'failed' && row.error && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      marginTop: 6,
+                      fontFamily: theme.fonts.body,
+                      fontSize: `${theme.fontSizes[0]}px`,
+                      color: errorColor
+                    }}>
+                      <AlertCircle size={12} />
+                      {row.error}
+                    </div>
+                  )}
+                </div>
+                {isInstalled && (
+                  <CheckCircle size={20} color={successColor} style={{ flexShrink: 0 }} />
+                )}
+                {isBusy && (
+                  <div style={{
+                    width: 18,
+                    height: 18,
+                    flexShrink: 0,
+                    border: `2px solid ${theme.colors.border}`,
+                    borderTopColor: theme.colors.primary,
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite'
+                  }} />
+                )}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
       <button
-        onClick={onConnect}
+        onClick={onInstall}
+        disabled={isInstalling || selectedCount === 0}
         style={{
           width: '100%',
-          padding: '16px 24px',
-          backgroundColor: '#24292e',
+          padding: '12px 24px',
+          backgroundColor: isInstalling || selectedCount === 0 ? theme.colors.border : theme.colors.primary,
           color: '#ffffff',
           border: 'none',
           borderRadius: 8,
-          cursor: 'pointer',
+          cursor: isInstalling || selectedCount === 0 ? 'not-allowed' : 'pointer',
           fontFamily: theme.fonts.body,
           fontSize: `${theme.fontSizes[1]}px`,
           fontWeight: 500,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 12,
+          gap: 8,
           transition: 'all 0.2s ease'
         }}
       >
-        <GitHubLogo size={20} color="#ffffff" />
-        Connect with GitHub
+        <Sparkles size={16} />
+        {isInstalling
+          ? 'Installing...'
+          : `Install ${selectedCount} skill${selectedCount === 1 ? '' : 's'}`}
       </button>
-    ) : (
-      <div style={{
-        padding: 24,
-        backgroundColor: `${theme.colors.success || '#10b981'}15`,
-        border: `1px solid ${theme.colors.success || '#10b981'}`,
-        borderRadius: 12,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 16
-      }}>
-        <CheckCircle size={32} color={theme.colors.success || '#10b981'} />
-        <div>
-          <div style={{
-            fontFamily: theme.fonts.body,
-            fontSize: `${theme.fontSizes[1]}px`,
-            fontWeight: 600,
-            color: theme.colors.text,
-            marginBottom: 4
-          }}>
-            Connected successfully!
-          </div>
-          <div style={{
-            fontFamily: theme.fonts.body,
-            fontSize: `${theme.fontSizes[0]}px`,
-            color: theme.colors.textSecondary
-          }}>
-            You're all set to access GitHub features
-          </div>
-        </div>
-      </div>
-    )}
-  </div>
-);
+    </div>
+  );
+};
 
 interface ReadyStepProps {
   theme: Theme;

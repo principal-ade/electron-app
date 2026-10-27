@@ -14,17 +14,15 @@ jest.mock('@principal-ade/industry-theme', () => ({
 
 const header = { orgName: 'Owner organization', login: 'owner', repoCount: 2 };
 
-test('can hide owner and add-button tooltips without hiding accessible labels', () => {
+test('can hide owner tooltips without hiding accessible labels', () => {
   const { container } = render(
     <OrgSectionHeaderCard
       header={header}
       showTooltips={false}
       onOpen={jest.fn()}
-      onAdd={jest.fn()}
     />,
   );
   expect(container.querySelector('[title]')).toBeNull();
-  expect(screen.getByRole('button', { name: 'Add a repository' })).toBeTruthy();
 });
 
 test.each([undefined, true])(
@@ -76,9 +74,8 @@ test.each([false, true])(
 
 test('profile headings support click and keyboard navigation without collapse controls', () => {
   const onOpen = jest.fn();
-  const onAdd = jest.fn();
   const { container } = render(
-    <OrgSectionHeaderCard header={header} onOpen={onOpen} onAdd={onAdd} />,
+    <OrgSectionHeaderCard header={header} onOpen={onOpen} />,
   );
   const button = screen.getByText(header.orgName).closest('[role="button"]');
   if (!button) throw new Error('Missing owner heading');
@@ -89,10 +86,5 @@ test('profile headings support click and keyboard navigation without collapse co
   fireEvent.click(button);
   fireEvent.keyDown(button, { key: 'Enter' });
   fireEvent.keyDown(button, { key: ' ' });
-  expect(onOpen).toHaveBeenCalledTimes(3);
-  const add = screen.getByRole('button', { name: 'Add a repository' });
-  fireEvent.keyDown(add, { key: 'Enter' });
-  fireEvent.click(add);
-  expect(onAdd).toHaveBeenCalledTimes(1);
   expect(onOpen).toHaveBeenCalledTimes(3);
 });

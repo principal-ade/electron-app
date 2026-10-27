@@ -29,6 +29,8 @@ interface AuthResult {
     id?: number;
     avatarUrl?: string;
   };
+  /** `gh-cli` when the token came from `gh auth token`, `stored-token` for the local fallback. */
+  source?: 'gh-cli' | 'stored-token';
   error?: string;
 }
 
@@ -136,6 +138,7 @@ export class AuthService {
             success: true,
             authenticated: true,
             token: ghToken,
+            source: 'gh-cli',
             user: {
               login: githubUser.login,
               email: githubUser.email || '',
@@ -156,6 +159,7 @@ export class AuthService {
         success: true,
         authenticated: true,
         token: ghToken,
+        source: 'gh-cli',
       };
     }
 
@@ -178,6 +182,7 @@ export class AuthService {
       success: true,
       authenticated: true,
       token: tokenData.token,
+      source: 'stored-token',
       user: metadata?.user
         ? {
             login: metadata.user.login,

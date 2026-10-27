@@ -11,10 +11,3 @@ export {
   terminalSessionsPanelDefinition,
   TerminalSessionsPanel,
 } from './terminal-sessions';
-
-// Recent Repositories Panel
-export {
-  panels as recentRepositoriesPanels,
-  recentRepositoriesPanelDefinition,
-  RecentRepositoriesPanel,
-} from './recent-repositories';
