@@ -1,24 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import {
-  ExternalLink,
-  FolderGit2,
-  Search,
-  Star,
-  Terminal,
-  User,
-} from 'lucide-react';
+import { ExternalLink, FolderGit2, Search, Star, Terminal } from 'lucide-react';
 import { githubClient } from '../../../tipc/githubClient';
-import type {
-  GitHubRepository,
-  GitHubUser,
-} from '../../../../shared/tipc/githubRouterTypes';
+import type { GitHubRepository } from '../../../../shared/tipc/githubRouterTypes';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { usePortalEvents } from '../../PortalEventContext';
 import { useProjectsTabs } from '../../contexts/ProjectsTabsContext';
-import {
-  emitTerminalNew,
-} from '../../../events/portalIntents';
+import { emitTerminalNew } from '../../../events/portalIntents';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { findClonedGithubEntry } from '../../../utils/alexandriaIdentity';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
@@ -64,7 +52,6 @@ export const TitlebarGitHubSearch: React.FC = () => {
   const [query, setQuery] = useState('');
   const [localResults, setLocalResults] = useState<AlexandriaEntry[]>([]);
   const [repoResults, setRepoResults] = useState<GitHubRepository[]>([]);
-  const [userResults, setUserResults] = useState<GitHubUser[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -84,15 +71,14 @@ export const TitlebarGitHubSearch: React.FC = () => {
   const githubRepoResults = repoResults.filter(
     (repo) => !findClonedGithubEntry(localResults, repo.owner.login, repo.name),
   );
-  // Flat list for keyboard nav: local clones first, then users, then repos.
-  const flatResults = [...localResults, ...userResults, ...githubRepoResults];
+  // Flat list for keyboard nav: local clones first, then GitHub repos.
+  const flatResults = [...localResults, ...githubRepoResults];
   const totalResults = flatResults.length;
 
   const search = useCallback((q: string) => {
     if (!q || q.trim().length < 2) {
       searchSeq.current++;
       setLocalResults([]);
-      setUserResults([]);
       setRepoResults([]);
       setIsOpen(false);
       return;
@@ -118,18 +104,6 @@ export const TitlebarGitHubSearch: React.FC = () => {
         if (isCurrent()) setLocalResults([]);
       });
 
-    const users = githubClient
-      .searchUsers({ query: q, perPage: 5 })
-      .then((res) => {
-        if (!isCurrent()) return;
-        const found = res.users || [];
-        setUserResults(found);
-        if (found.length > 0) setIsOpen(true);
-      })
-      .catch(() => {
-        if (isCurrent()) setUserResults([]);
-      });
-
     const repos = githubClient
       .searchRepos({ query: q, perPage: 5 })
       .then((res) => {
@@ -142,7 +116,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
         if (isCurrent()) setRepoResults([]);
       });
 
-    void Promise.allSettled([local, users, repos]).then(() => {
+    void Promise.allSettled([local, repos]).then(() => {
       if (isCurrent()) setLoading(false);
     });
   }, []);
@@ -186,7 +160,6 @@ export const TitlebarGitHubSearch: React.FC = () => {
   const clearSearch = useCallback(() => {
     setQuery('');
     setLocalResults([]);
-    setUserResults([]);
     setRepoResults([]);
     setIsOpen(false);
     setSelectedIndex(-1);
@@ -239,20 +212,6 @@ export const TitlebarGitHubSearch: React.FC = () => {
       clearSearch();
     },
     [events, openProjectInfo, clearSearch],
-  );
-
-  const handleSelectUser = useCallback(
-    (user: GitHubUser) => {
-      events.emit({
-        type: 'panel:switch',
-        source: 'titlebar-search',
-        timestamp: Date.now(),
-        payload: { view: 'projects' },
-      });
-      openUserProfile(user.login);
-      clearSearch();
-    },
-    [events, openUserProfile, clearSearch],
   );
 
   const openUserByUsername = useCallback(
@@ -327,12 +286,8 @@ export const TitlebarGitHubSearch: React.FC = () => {
       if (idx < localResults.length) {
         const entry = localResults[idx];
         if (entry) handleSelectLocal(entry);
-      } else if (idx < localResults.length + userResults.length) {
-        const user = userResults[idx - localResults.length];
-        if (user) handleSelectUser(user);
       } else {
-        const repo =
-          githubRepoResults[idx - localResults.length - userResults.length];
+        const repo = githubRepoResults[idx - localResults.length];
         if (repo) handleSelectRepo(repo);
       }
     } else if (e.key === 'Escape') {
@@ -591,88 +546,6 @@ export const TitlebarGitHubSearch: React.FC = () => {
             </>
           )}
 
-          {/* Users section */}
-          {userResults.length > 0 && (
-            <>
-              <div
-                style={{
-                  padding: '5px 12px 4px',
-                  fontSize: `${theme.fontSizes[0]}px`,
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.fonts.body,
-                  fontWeight: 600,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  borderBottom: `1px solid ${theme.colors.border}`,
-                }}
-              >
-                Users
-              </div>
-              {userResults.map((user, i) => {
-                const flatIndex = localResults.length + i;
-                return (
-                  <div
-                    key={`user-${user.id}`}
-                    onMouseDown={() => handleSelectUser(user)}
-                    onMouseEnter={() => setSelectedIndex(flatIndex)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '12px 12px',
-                      cursor: 'pointer',
-                      backgroundColor:
-                        flatIndex === selectedIndex
-                          ? theme.colors.backgroundTertiary
-                          : 'transparent',
-                      borderBottom: `1px solid ${theme.colors.border}`,
-                      transition: 'background-color 0.1s',
-                    }}
-                  >
-                    <img
-                      src={`${user.avatar_url}&s=84`}
-                      alt={user.login}
-                      style={{
-                        width: 42,
-                        height: 42,
-                        borderRadius: '50%',
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: `${theme.fontSizes[2]}px`,
-                          color: theme.colors.text,
-                          fontWeight: 500,
-                          fontFamily: theme.fonts.body,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {user.name ? `${user.name} ` : ''}
-                        <span
-                          style={{
-                            color: theme.colors.textSecondary,
-                            fontWeight: 400,
-                          }}
-                        >
-                          @{user.login}
-                        </span>
-                      </div>
-                    </div>
-                    <User
-                      size={11}
-                      color={theme.colors.textSecondary}
-                      style={{ flexShrink: 0 }}
-                    />
-                  </div>
-                );
-              })}
-            </>
-          )}
-
           {/* Repositories section */}
           {githubRepoResults.length > 0 && (
             <>
@@ -691,7 +564,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
                 Repositories
               </div>
               {githubRepoResults.map((repo, i) => {
-                const flatIndex = localResults.length + userResults.length + i;
+                const flatIndex = localResults.length + i;
                 return (
                   <div
                     key={`repo-${repo.id}`}

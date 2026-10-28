@@ -33,8 +33,7 @@ import {
   ToolCase,
 } from 'lucide-react';
 import { TopicsIcon } from '../../components/TopicsIcon';
-import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
-import { shellQuote } from '../../utils/shellQuote';
+import { agentContextDragText } from '../../utils/agentContextDragText';
 import { tildifyPath } from '../../utils/tildifyPath';
 import { isHomeTabPinnable, type HomeTabEntry } from './homeTabEntries';
 
@@ -55,20 +54,14 @@ function homeTabLabel(entry: HomeTabEntry): string {
 }
 
 function homeTabDragText(entry: HomeTabEntry): string | undefined {
-  const resource =
-    entry.kind === 'topic' && entry.topicId
-      ? { kind: 'topic', id: entry.topicId, route: 'topics' }
-      : entry.kind === 'subsystem-model' && entry.modelId
-        ? {
-            kind: 'subsystem model',
-            id: entry.modelId,
-            route: 'subsystem-models',
-          }
-        : undefined;
-  if (!resource) return undefined;
-  const title = entry.title || entry.label || `Untitled ${resource.kind}`;
-  const url = `${getPrincipalBridgeUrl()}/api/${resource.route}/${encodeURIComponent(resource.id)}`;
-  return `Use ${resource.kind} "${title}" (id: ${resource.id}) as context — fetch via:\ncurl -s ${shellQuote(url)}`;
+  const title = entry.title || entry.label;
+  if (entry.kind === 'topic' && entry.topicId) {
+    return agentContextDragText('topic', entry.topicId, title);
+  }
+  if (entry.kind === 'subsystem-model' && entry.modelId) {
+    return agentContextDragText('subsystem model', entry.modelId, title);
+  }
+  return undefined;
 }
 
 /** Icon for a tab entry in the Home rail. */

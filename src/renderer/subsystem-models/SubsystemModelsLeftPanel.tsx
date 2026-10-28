@@ -6,6 +6,7 @@ import type { SubsystemModelSummary } from '../../shared/tipc/subsystemModelRout
 import { SubsystemModelService } from '../main-process-api/SubsystemModelService';
 import { emitSubsystemModelOpen } from '../events/portalIntents';
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
+import { agentContextDragText } from '../utils/agentContextDragText';
 
 interface SubsystemModelsLeftPanelProps {
   events: PanelEventEmitter;
@@ -108,15 +109,20 @@ export const SubsystemModelsLeftPanel: React.FC<
         <button
           key={model.id}
           type="button"
+          draggable
+          onDragStart={(event) => {
+            if (!event.dataTransfer) return;
+            event.dataTransfer.effectAllowed = 'copy';
+            event.dataTransfer.setData(
+              'text/plain',
+              agentContextDragText('subsystem model', model.id, model.title),
+            );
+          }}
           onClick={() =>
-            emitSubsystemModelOpen(
-              events,
-              'subsystem-models-left-panel',
-              {
-                modelId: model.id,
-                title: model.title,
-              },
-            )
+            emitSubsystemModelOpen(events, 'subsystem-models-left-panel', {
+              modelId: model.id,
+              title: model.title,
+            })
           }
           onMouseEnter={() => setHoveredId(model.id)}
           onMouseLeave={() => setHoveredId(null)}
