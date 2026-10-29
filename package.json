@@ -222,7 +222,7 @@
     "@principal-ai/repository-monitoring": "^0.1.12",
     "@principal-ai/repository-monitoring-server": "^2.2.25",
     "@principal-ai/subsystems-core": "^0.51.0",
-    "@principal-ai/subsystems-react": "^0.55.3",
+    "@principal-ai/subsystems-react": "^0.56.15",
     "@radix-ui/react-tabs": "^1.1.13",
     "@react-spring/three": "^9.7.5",
     "@react-three/drei": "^10.0.0",
