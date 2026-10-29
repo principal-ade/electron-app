@@ -42,6 +42,7 @@ export const PortalIntentBridge: React.FC = () => {
   useDetachedTabAdopter({
     openLocalTopic: ws.openLocalTopic,
     openSubsystemModel: ws.openSubsystemModel,
+    openC4Sketch: ws.openC4Sketch,
   });
 
   useEffect(() => {
@@ -101,33 +102,39 @@ export const PortalIntentBridge: React.FC = () => {
     };
 
     events.on(PORTAL_INTENTS.topicOpen, handleTopicOpen);
-    events.on(
-      PORTAL_INTENTS.subsystemModelOpen,
-      handleSubsystemModelOpen,
-    );
+    events.on(PORTAL_INTENTS.subsystemModelOpen, handleSubsystemModelOpen);
     events.on(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
     events.on(
       PORTAL_INTENTS.repositoryExplorerOpen,
       handleRepositoryExplorerOpen,
     );
     events.on(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
-    events.on(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);
-    events.on(PORTAL_INTENTS.repositoryGuideOpenWeek, handleRepositoryGuideOpenWeek);
+    events.on(
+      PORTAL_INTENTS.repositoryGuideOpenReadme,
+      handleRepositoryGuideOpenReadme,
+    );
+    events.on(
+      PORTAL_INTENTS.repositoryGuideOpenWeek,
+      handleRepositoryGuideOpenWeek,
+    );
     events.on(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
     return () => {
       events.off(PORTAL_INTENTS.topicOpen, handleTopicOpen);
-      events.off(
-        PORTAL_INTENTS.subsystemModelOpen,
-        handleSubsystemModelOpen,
-      );
+      events.off(PORTAL_INTENTS.subsystemModelOpen, handleSubsystemModelOpen);
       events.off(PORTAL_INTENTS.repositorySelected, handleRepositorySelected);
       events.off(
         PORTAL_INTENTS.repositoryExplorerOpen,
         handleRepositoryExplorerOpen,
       );
       events.off(PORTAL_INTENTS.repositoryGuideOpen, handleRepositoryGuideOpen);
-      events.off(PORTAL_INTENTS.repositoryGuideOpenReadme, handleRepositoryGuideOpenReadme);
-      events.off(PORTAL_INTENTS.repositoryGuideOpenWeek, handleRepositoryGuideOpenWeek);
+      events.off(
+        PORTAL_INTENTS.repositoryGuideOpenReadme,
+        handleRepositoryGuideOpenReadme,
+      );
+      events.off(
+        PORTAL_INTENTS.repositoryGuideOpenWeek,
+        handleRepositoryGuideOpenWeek,
+      );
       events.off(PORTAL_INTENTS.ownerSelected, handleOwnerSelected);
     };
   }, [events, ws]);

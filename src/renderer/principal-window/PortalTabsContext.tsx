@@ -35,6 +35,7 @@ import type {
   DrawingTab,
   SkillTab,
   SubsystemModelTab,
+  C4SketchTab,
   LocalhostBrowserTab,
   HttpRequestTab,
 } from '../events/portalTabs';
@@ -75,6 +76,7 @@ export type WorkspaceTab =
   // Skills
   | SkillTab
   | SubsystemModelTab
+  | C4SketchTab
   // Processes
   | LocalhostBrowserTab
   | HttpRequestTab;
@@ -142,6 +144,8 @@ export interface WorkspaceTabsContextValue {
   openSkill: (label: string) => void;
   /** Open or focus a subsystem model tab. */
   openSubsystemModel: (modelId: string, title: string) => void;
+  /** Open or focus a standalone authored C4 sketch tab. */
+  openC4Sketch: (sketchId: string, title: string) => void;
   /** Open or navigate a browser tab, keyed by managed process or localhost origin. */
   openLocalhostBrowser: (
     port: number,
@@ -585,6 +589,20 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [openTab],
   );
 
+  const openC4Sketch = useCallback(
+    (sketchId: string, title: string) => {
+      const id = `c4-sketch-${sketchId}`;
+      openTab(id, () => ({
+        id,
+        label: title || 'C4 Sketch',
+        contentType: 'c4-sketch',
+        closable: true,
+        sketchId,
+      }));
+    },
+    [openTab],
+  );
+
   const openLocalhostBrowser = useCallback(
     (port: number, path = '/', label?: string, processId?: string) => {
       const target = { port, path, label, processId };
@@ -643,6 +661,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openDrawing,
       openSkill,
       openSubsystemModel,
+      openC4Sketch,
       openLocalhostBrowser,
     }),
     [
@@ -662,6 +681,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openDrawing,
       openSkill,
       openSubsystemModel,
+      openC4Sketch,
       openLocalhostBrowser,
     ],
   );

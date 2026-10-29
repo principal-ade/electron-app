@@ -6,17 +6,18 @@
  * `src/main/window/detachedTabHandlers.ts`); renderers only ever exchange an
  * opaque transfer token plus this descriptor.
  *
- * First slice: only content that reloads by identity — topics and subsystem
- * models. Terminals, editors, and drawings (which carry live state) are out of
+ * Only content that reloads by identity — topics, subsystem models, and C4
+ * sketches. Terminals, editors, and drawings (which carry live state) are out of
  * scope until their own state-transfer paths exist.
  */
 
-export type DetachableTabKind = 'local-topic' | 'subsystem-model';
+export type DetachableTabKind = 'local-topic' | 'subsystem-model' | 'c4-sketch';
 
 /** Content types a detached window can host today. */
 export const DETACHABLE_TAB_KINDS: readonly DetachableTabKind[] = [
   'local-topic',
   'subsystem-model',
+  'c4-sketch',
 ];
 
 /** Hard caps on untrusted IPC strings. */
@@ -39,6 +40,8 @@ export interface DetachableTabDescriptor {
   title?: string;
   /** `subsystem-model` payload. */
   modelId?: string;
+  /** `c4-sketch` payload. */
+  sketchId?: string;
 }
 
 /** Result of asking main to open a detached window for a tab. */
@@ -87,7 +90,11 @@ export function isDetachableTabDescriptor(
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Record<string, unknown>;
   const kind = candidate['kind'];
-  if (kind !== 'local-topic' && kind !== 'subsystem-model') {
+  if (
+    kind !== 'local-topic' &&
+    kind !== 'subsystem-model' &&
+    kind !== 'c4-sketch'
+  ) {
     return false;
   }
   if (
@@ -95,7 +102,8 @@ export function isDetachableTabDescriptor(
     !isString(candidate['label'], MAX_LABEL_LENGTH) ||
     !isOptionalString(candidate['topicId'], MAX_ID_LENGTH) ||
     !isOptionalString(candidate['title'], MAX_LABEL_LENGTH) ||
-    !isOptionalString(candidate['modelId'], MAX_ID_LENGTH)
+    !isOptionalString(candidate['modelId'], MAX_ID_LENGTH) ||
+    !isOptionalString(candidate['sketchId'], MAX_ID_LENGTH)
   ) {
     return false;
   }
@@ -103,6 +111,9 @@ export function isDetachableTabDescriptor(
   // render an error and the source would be removed for nothing.
   if (kind === 'local-topic') {
     return isString(candidate['topicId'], MAX_ID_LENGTH);
+  }
+  if (kind === 'c4-sketch') {
+    return isString(candidate['sketchId'], MAX_ID_LENGTH);
   }
   return isString(candidate['modelId'], MAX_ID_LENGTH);
 }

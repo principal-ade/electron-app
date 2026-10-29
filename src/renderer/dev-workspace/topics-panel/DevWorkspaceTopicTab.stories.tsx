@@ -150,6 +150,8 @@ const meta: Meta<typeof DevWorkspaceTopicTab> = {
     isActive: true,
     events: new PanelEventBus(),
     onOpenModel: () => {},
+    onOpenTopic: () => {},
+    onOpenSketch: () => {},
   },
   decorators: [
     (Story) => (

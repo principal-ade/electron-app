@@ -4,6 +4,7 @@ import { FolderGit2 } from 'lucide-react';
 import { parsePurl } from '@principal-ai/alexandria-core-library';
 import { repoDisplayNameFromPurl } from '../../../shared/topics/repoPurl';
 import { TopicService } from '../../main-process-api/TopicService';
+import type { TopicProjectTarget } from '../../utils/topicProjectNavigation';
 import {
   ProjectRepoCard,
   type ProjectRepoCardData,
@@ -28,7 +29,7 @@ function projectFromPurl(purl: string): ProjectEntry | null {
 
 export interface TopicProjectsRailProps {
   topicId: string;
-  onOpenProject?: (purl: string) => void;
+  onOpenProject?: (purl: string, target?: TopicProjectTarget) => void;
   width?: React.CSSProperties['width'];
 }
 
@@ -68,9 +69,10 @@ export const TopicProjectsRail: React.FC<TopicProjectsRailProps> = ({
   }, [topicId]);
 
   const handleProjectClick = React.useCallback(
-    (purl: string) => {
+    (purl: string, target: TopicProjectTarget = 'profile') => {
       if (onOpenProject) {
-        onOpenProject(purl);
+        if (target === 'terminal') onOpenProject(purl, target);
+        else onOpenProject(purl);
         return;
       }
       void navigator.clipboard.writeText(purl).catch(() => {});
@@ -129,7 +131,20 @@ export const TopicProjectsRail: React.FC<TopicProjectsRailProps> = ({
             key={project.purl}
             repo={project.data}
             dense
-            onClick={() => handleProjectClick(project.purl)}
+            onClick={(event) => {
+              if (event.metaKey) {
+                event.preventDefault();
+                event.stopPropagation();
+                handleProjectClick(project.purl, 'terminal');
+              } else {
+                handleProjectClick(project.purl);
+              }
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              handleProjectClick(project.purl, 'terminal');
+            }}
           />
         ))}
       </div>

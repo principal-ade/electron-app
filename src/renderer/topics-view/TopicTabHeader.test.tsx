@@ -43,6 +43,24 @@ jest.mock('./topic-description/TopicProjectsRail', () => ({
 jest.mock('./topic-description/TopicSubsystemModelsRail', () => ({
   TopicSubsystemModelsRail: () => null,
 }));
+jest.mock('./topic-description/TopicReferencesRail', () => ({
+  TopicReferencesRail: ({
+    onOpenTopic,
+    onOpenSketch,
+  }: {
+    onOpenTopic: (id: string, title: string) => void;
+    onOpenSketch: (id: string, title: string) => void;
+  }) => (
+    <>
+      <button onClick={() => onOpenTopic('topic-b', 'Related')}>
+        Open related topic
+      </button>
+      <button onClick={() => onOpenSketch('c4s-123-abc', 'Architecture')}>
+        Open C4 sketch
+      </button>
+    </>
+  ),
+}));
 jest.mock('./TopicPinHeaderButton', () => ({
   TopicPinHeaderButton: () => <button>Pin topic</button>,
 }));
@@ -58,6 +76,8 @@ const props = {
   title: 'My topic',
   events: { emit: jest.fn() } as unknown as PanelEventEmitter,
   onOpenModel: jest.fn(),
+  onOpenTopic: jest.fn(),
+  onOpenSketch: jest.fn(),
 };
 
 beforeEach(() => {
@@ -69,6 +89,17 @@ describe.each([
   ['Topics view', () => <LocalTopicTabContent {...props} />],
   ['Dev Workspace', () => <DevWorkspaceTopicTab {...props} isActive />],
 ])('%s header', (_name, createTab) => {
+  test('passes reference navigation through to the hosting tab system', () => {
+    render(createTab());
+    fireEvent.click(screen.getByRole('button', { name: 'Open related topic' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open C4 sketch' }));
+    expect(props.onOpenTopic).toHaveBeenCalledWith('topic-b', 'Related');
+    expect(props.onOpenSketch).toHaveBeenCalledWith(
+      'c4s-123-abc',
+      'Architecture',
+    );
+  });
+
   test('title and contents button toggle the same outline', () => {
     render(createTab());
     const title = screen.getByRole('button', {

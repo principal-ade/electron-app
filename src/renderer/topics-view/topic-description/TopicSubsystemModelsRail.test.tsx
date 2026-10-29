@@ -1,9 +1,13 @@
 /// <reference types="jest" />
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { TopicSubsystemModelsRail } from './TopicSubsystemModelsRail';
 import { TopicService } from '../../main-process-api/TopicService';
 import { SubsystemModelService } from '../../main-process-api/SubsystemModelService';
+import {
+  TopicEventType,
+  type TopicChangeEvent,
+} from '../../../shared/main-process-api-interfaces/TopicAPI';
 
 jest.mock('@principal-ade/industry-theme', () => ({
   useTheme: () => ({
@@ -46,6 +50,39 @@ beforeEach(() => {
   (SubsystemModelService.list as jest.Mock).mockResolvedValue([
     { id: 'model-a', title: 'Request handling', componentCount: 3 },
   ]);
+});
+
+test.each([undefined, []])(
+  'hides the models section without associations: %p',
+  async (subsystemModels) => {
+    (TopicService.getTopic as jest.Mock).mockResolvedValue({ subsystemModels });
+    const { container } = await act(async () =>
+      render(
+        <TopicSubsystemModelsRail topicId="topic-a" onOpenModel={jest.fn()} />,
+      ),
+    );
+    expect(container.firstChild).toBeNull();
+    expect(screen.queryByText('Models')).toBeNull();
+  },
+);
+
+test('hides the models section when its last association is removed', async () => {
+  let changed: ((event: TopicChangeEvent) => void) | undefined;
+  (TopicService.onTopicChange as jest.Mock).mockImplementation((listener) => {
+    changed = listener;
+    return jest.fn();
+  });
+  const { container } = render(
+    <TopicSubsystemModelsRail topicId="topic-a" onOpenModel={jest.fn()} />,
+  );
+  await screen.findByText('Request handling');
+  (TopicService.getTopic as jest.Mock).mockResolvedValue({
+    subsystemModels: [],
+  });
+  await act(async () =>
+    changed?.({ type: TopicEventType.UPDATED, id: 'topic-a' }),
+  );
+  expect(container.firstChild).toBeNull();
 });
 
 test('opens a linked model with its id and title', async () => {

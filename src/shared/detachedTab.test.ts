@@ -3,6 +3,24 @@
 import { isDetachableTabDescriptor } from './detachedTab';
 
 describe('isDetachableTabDescriptor', () => {
+  it('accepts a C4 sketch only with its reload key', () => {
+    const descriptor = {
+      kind: 'c4-sketch',
+      tabId: 'c4-sketch-c4s-123-abc',
+      label: 'Architecture',
+    };
+    expect(isDetachableTabDescriptor(descriptor)).toBe(false);
+    expect(
+      isDetachableTabDescriptor({ ...descriptor, sketchId: 'c4s-123-abc' }),
+    ).toBe(true);
+    expect(isDetachableTabDescriptor({ ...descriptor, sketchId: 42 })).toBe(
+      false,
+    );
+    expect(
+      isDetachableTabDescriptor({ ...descriptor, sketchId: 'x'.repeat(513) }),
+    ).toBe(false);
+  });
+
   it('accepts a local topic with its reload key', () => {
     expect(
       isDetachableTabDescriptor({

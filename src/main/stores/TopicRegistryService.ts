@@ -92,6 +92,9 @@ export class TopicRegistryService {
       ...(input.subsystemModels !== undefined
         ? { subsystemModels: input.subsystemModels }
         : {}),
+      ...(input.references !== undefined
+        ? { references: input.references }
+        : {}),
     });
   }
 

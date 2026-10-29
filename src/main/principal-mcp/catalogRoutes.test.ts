@@ -75,7 +75,10 @@ test('POST returns the requested contracts in request order, normalizing method 
         category: 'topics',
         method: 'POST',
         path: '/api/topics',
-        body: { title: expect.any(String) },
+        body: {
+          title: expect.any(String),
+          references: expect.stringContaining('c4-sketch'),
+        },
         response: expect.stringContaining('201'),
         errors: { '400': expect.any(String) },
         notes: expect.any(Array),

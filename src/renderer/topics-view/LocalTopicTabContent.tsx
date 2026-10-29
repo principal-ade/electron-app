@@ -17,20 +17,33 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from './topic-description/TopicDescriptionBody';
 import { TopicProjectsRail } from './topic-description/TopicProjectsRail';
 import { TopicSubsystemModelsRail } from './topic-description/TopicSubsystemModelsRail';
+import { TopicReferencesRail } from './topic-description/TopicReferencesRail';
 import { TopicService } from '../main-process-api/TopicService';
 import { TopicDeleteHeaderButton } from './TopicDeleteHeaderButton';
 import { TopicPinHeaderButton } from './TopicPinHeaderButton';
+import type { TopicProjectsRailProps } from './topic-description/TopicProjectsRail';
 
 export const LocalTopicTabContent: React.FC<{
   topicId: string;
   title?: string;
   events: PanelEventEmitter;
-  /** Open a repo declared by the topic (a pick from the Projects rail). */
-  onOpenProject?: (purl: string) => void;
+  /** Open a repo profile/explorer, or a terminal for an alternate gesture. */
+  onOpenProject?: TopicProjectsRailProps['onOpenProject'];
   onOpenModel: (modelId: string, title: string) => void;
+  onOpenTopic: (topicId: string, title: string) => void;
+  onOpenSketch: (sketchId: string, title: string) => void;
   /** Move this tab into its own window. Hidden when the host can't detach. */
   onDetach?: () => void;
-}> = ({ topicId, title, events, onOpenProject, onOpenModel, onDetach }) => {
+}> = ({
+  topicId,
+  title,
+  events,
+  onOpenProject,
+  onOpenModel,
+  onOpenTopic,
+  onOpenSketch,
+  onDetach,
+}) => {
   const { theme } = useTheme();
 
   // Table-of-contents drawer: the body reports whether the description has
@@ -234,8 +247,7 @@ export const LocalTopicTabContent: React.FC<{
           />
         </div>
 
-        {/* Right column: the topic's repos, then the subsystem models it concerns.
-            Scrolls as one so both sections stay reachable on short windows. */}
+        {/* References scroll as one so every section stays reachable on short windows. */}
         <div
           style={{
             display: 'flex',
@@ -258,6 +270,12 @@ export const LocalTopicTabContent: React.FC<{
             topicId={topicId}
             width="100%"
             onOpenModel={onOpenModel}
+          />
+          <TopicReferencesRail
+            topicId={topicId}
+            width="100%"
+            onOpenTopic={onOpenTopic}
+            onOpenSketch={onOpenSketch}
           />
         </div>
       </div>

@@ -34,6 +34,13 @@ export function toDetachableTabDescriptor(
         label: tab.label,
         modelId: tab.modelId,
       };
+    case 'c4-sketch':
+      return {
+        kind: 'c4-sketch',
+        tabId: tab.id,
+        label: tab.label,
+        sketchId: tab.sketchId,
+      };
     default:
       return null;
   }

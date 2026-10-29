@@ -194,6 +194,12 @@ export interface SubsystemModelTab extends BaseTab {
   modelId: string;
 }
 
+/** Standalone, authored C4 sketch tab. */
+export interface C4SketchTab extends BaseTab {
+  contentType: 'c4-sketch';
+  sketchId: string;
+}
+
 /**
  * Localhost browser tab — an embedded `<webview>` (via
  * `@industry-theme/localhost-panels`) pointed at a local dev server. Opened from

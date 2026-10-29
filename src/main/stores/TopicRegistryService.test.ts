@@ -77,3 +77,58 @@ describe('TopicRegistryService deletion', () => {
     expect(service.getSessionLinks()).toEqual({});
   });
 });
+
+describe('TopicRegistryService references', () => {
+  let service: TopicRegistryService;
+  let createTopic: jest.Mock;
+  let updateTopic: jest.Mock;
+
+  beforeEach(() => {
+    (homedir as jest.Mock).mockReturnValue('/unused');
+    createTopic = jest.fn().mockResolvedValue({ id: 'topic-owner' });
+    updateTopic = jest.fn().mockResolvedValue({ id: 'topic-owner' });
+    (TopicStore as jest.Mock).mockImplementation(() => ({
+      createTopic,
+      updateTopic,
+    }));
+    (
+      TopicRegistryService as unknown as {
+        instance: TopicRegistryService | undefined;
+      }
+    ).instance = undefined;
+    service = TopicRegistryService.getInstance();
+  });
+
+  it('forwards topic and C4 sketch references on create', async () => {
+    const input = {
+      title: 'Architecture',
+      references: [
+        { kind: 'topic' as const, topicId: 'topic-related' },
+        { kind: 'c4-sketch' as const, sketchId: 'c4s-123-abc' },
+      ],
+    };
+
+    await service.createTopic(input);
+
+    expect(createTopic).toHaveBeenCalledWith(expect.objectContaining(input));
+  });
+
+  it('preserves omission and explicit empty references on create', async () => {
+    await service.createTopic({ title: 'No attachments' });
+    expect(createTopic.mock.calls[0][0]).not.toHaveProperty('references');
+
+    await service.createTopic({ title: 'Empty attachments', references: [] });
+    expect(createTopic.mock.calls[1][0]).toHaveProperty('references', []);
+  });
+
+  it('forwards reference replacements and clearing without changing description links', async () => {
+    const references = [{ kind: 'topic' as const, topicId: 'topic-related' }];
+    await service.updateTopic('topic-owner', { references });
+    expect(updateTopic).toHaveBeenLastCalledWith('topic-owner', { references });
+
+    await service.updateTopic('topic-owner', { references: [] });
+    expect(updateTopic).toHaveBeenLastCalledWith('topic-owner', {
+      references: [],
+    });
+  });
+});

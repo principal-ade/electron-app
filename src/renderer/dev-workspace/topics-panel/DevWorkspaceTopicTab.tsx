@@ -5,6 +5,7 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from '../../topics-view/topic-description/TopicDescriptionBody';
 import { TopicProjectsRail } from '../../topics-view/topic-description/TopicProjectsRail';
 import { TopicSubsystemModelsRail } from '../../topics-view/topic-description/TopicSubsystemModelsRail';
+import { TopicReferencesRail } from '../../topics-view/topic-description/TopicReferencesRail';
 import { TopicService } from '../../main-process-api/TopicService';
 import { TopicDeleteHeaderButton } from '../../topics-view/TopicDeleteHeaderButton';
 import { TopicPinHeaderButton } from '../../topics-view/TopicPinHeaderButton';
@@ -19,6 +20,8 @@ export interface DevWorkspaceTopicTabProps {
   /** Current repo, used as a link-resolution fallback (optional). */
   repositoryPath?: string;
   onOpenModel: (modelId: string, title: string) => void;
+  onOpenTopic: (topicId: string, title: string) => void;
+  onOpenSketch: (sketchId: string, title: string) => void;
 }
 
 /**
@@ -36,6 +39,8 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
   events,
   repositoryPath,
   onOpenModel,
+  onOpenTopic,
+  onOpenSketch,
 }) => {
   const { theme } = useTheme();
 
@@ -230,6 +235,12 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
             topicId={topicId}
             width="100%"
             onOpenModel={onOpenModel}
+          />
+          <TopicReferencesRail
+            topicId={topicId}
+            width="100%"
+            onOpenTopic={onOpenTopic}
+            onOpenSketch={onOpenSketch}
           />
         </div>
       </div>

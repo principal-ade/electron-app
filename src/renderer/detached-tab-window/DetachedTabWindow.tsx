@@ -29,6 +29,8 @@ import { ArrowLeftToLine } from 'lucide-react';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
 import { LocalTopicTabContent } from '../topics-view/LocalTopicTabContent';
 import { SubsystemModelTabContent } from '../subsystem-models/SubsystemModelTabContent';
+import { C4SketchTabContent } from '../c4-sketches/C4SketchTabContent';
+import { C4SketchService } from '../main-process-api/C4SketchService';
 import { TopicService } from '../main-process-api/TopicService';
 import { SubsystemModelService } from '../main-process-api/SubsystemModelService';
 import { WindowService } from '../main-process-api/WindowService';
@@ -50,6 +52,12 @@ async function preflight(tab: DetachableTabDescriptor): Promise<string | null> {
   if (tab.kind === 'local-topic') {
     const topic = tab.topicId ? await TopicService.getTopic(tab.topicId) : null;
     return topic ? null : 'This topic could not be found.';
+  }
+  if (tab.kind === 'c4-sketch') {
+    const sketch = tab.sketchId
+      ? await C4SketchService.get(tab.sketchId)
+      : null;
+    return sketch ? null : 'This C4 sketch could not be found.';
   }
   const model = tab.modelId
     ? await SubsystemModelService.get(tab.modelId)
@@ -135,6 +143,29 @@ export const DetachedTabWindow: React.FC = () => {
       tabId: `subsystem-model-${modelId}`,
       label: title || 'Subsystem Model',
       modelId,
+    };
+    setTab(next);
+    document.title = next.label;
+  }, []);
+
+  const handleOpenTopic = useCallback((topicId: string, title: string) => {
+    const next: DetachableTabDescriptor = {
+      kind: 'local-topic',
+      tabId: `local-topic-${topicId}`,
+      label: title || 'Topic',
+      title,
+      topicId,
+    };
+    setTab(next);
+    document.title = next.label;
+  }, []);
+
+  const handleOpenSketch = useCallback((sketchId: string, title: string) => {
+    const next: DetachableTabDescriptor = {
+      kind: 'c4-sketch',
+      tabId: `c4-sketch-${sketchId}`,
+      label: title || 'C4 Sketch',
+      sketchId,
     };
     setTab(next);
     document.title = next.label;
@@ -237,10 +268,14 @@ export const DetachedTabWindow: React.FC = () => {
         title={tab.title}
         events={events}
         onOpenModel={handleOpenModel}
+        onOpenTopic={handleOpenTopic}
+        onOpenSketch={handleOpenSketch}
       />
     );
   } else if (tab.kind === 'subsystem-model' && tab.modelId) {
     body = <SubsystemModelTabContent modelId={tab.modelId} />;
+  } else if (tab.kind === 'c4-sketch' && tab.sketchId) {
+    body = <C4SketchTabContent sketchId={tab.sketchId} />;
   } else {
     body = centered(
       'This tab type cannot be opened in a detached window.',

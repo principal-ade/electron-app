@@ -2,6 +2,23 @@ import { toDetachableTabDescriptor } from './detachedTabDescriptor';
 import type { WorkspaceTab } from '../principal-window/PortalTabsContext';
 
 describe('toDetachableTabDescriptor', () => {
+  it('maps a C4 sketch tab', () => {
+    expect(
+      toDetachableTabDescriptor({
+        id: 'c4-sketch-c4s-123-abc',
+        label: 'Architecture',
+        contentType: 'c4-sketch',
+        closable: true,
+        sketchId: 'c4s-123-abc',
+      }),
+    ).toEqual({
+      kind: 'c4-sketch',
+      tabId: 'c4-sketch-c4s-123-abc',
+      label: 'Architecture',
+      sketchId: 'c4s-123-abc',
+    });
+  });
+
   it('maps a local topic tab', () => {
     expect(
       toDetachableTabDescriptor({

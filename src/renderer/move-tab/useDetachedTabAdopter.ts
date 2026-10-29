@@ -16,6 +16,7 @@ import { WindowService } from '../main-process-api/WindowService';
 export interface DetachedTabOpeners {
   openLocalTopic: (topicId: string, title?: string) => void;
   openSubsystemModel: (modelId: string, title: string) => void;
+  openC4Sketch: (sketchId: string, title: string) => void;
 }
 
 export function useDetachedTabAdopter(openers: DetachedTabOpeners): void {
@@ -33,6 +34,9 @@ export function useDetachedTabAdopter(openers: DetachedTabOpeners): void {
           if (tab.kind === 'local-topic') {
             if (!tab.topicId) throw new Error('missing topicId');
             openersRef.current.openLocalTopic(tab.topicId, tab.title);
+          } else if (tab.kind === 'c4-sketch') {
+            if (!tab.sketchId) throw new Error('missing sketchId');
+            openersRef.current.openC4Sketch(tab.sketchId, tab.label);
           } else {
             if (!tab.modelId) throw new Error('missing modelId');
             openersRef.current.openSubsystemModel(tab.modelId, tab.label);

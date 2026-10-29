@@ -28,6 +28,7 @@ import {
   ExternalLink,
   AlertCircle,
   Network,
+  PencilRuler,
 } from 'lucide-react';
 import { TopicsIcon } from '../components/TopicsIcon';
 import {
@@ -126,6 +127,8 @@ import { DocumentService } from '../services/DocumentService';
 import { TopicsPanel } from './topics-panel/TopicsPanel';
 import { DevWorkspaceTopicTab } from './topics-panel/DevWorkspaceTopicTab';
 import { SubsystemModelTabContent } from '../subsystem-models/SubsystemModelTabContent';
+import { C4SketchTabContent } from '../c4-sketches/C4SketchTabContent';
+import type { C4SketchTab } from '../events/portalTabs';
 import { TOPIC_EVENT, type TopicOpenEvent } from './topics-panel/topic-events';
 import { topicClient } from '../tipc/topicClient';
 import { useTopicRemoved } from '../topics-view/useTopicRemoved';
@@ -282,7 +285,8 @@ type DevWorkspaceTab =
   | BrunoRequestTab
   | FileCity3DTab
   | TopicTab
-  | SubsystemModelTab;
+  | SubsystemModelTab
+  | C4SketchTab;
 
 /**
  * History item for right panel document viewing
@@ -2274,6 +2278,25 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     [],
   );
 
+  const openC4SketchTab = useCallback((sketchId: string, title: string) => {
+    const tabId = `c4-sketch-${sketchId}`;
+    setTabs((previous) =>
+      previous.some((tab) => tab.id === tabId)
+        ? previous
+        : [
+            ...previous,
+            {
+              id: tabId,
+              label: title || 'C4 Sketch',
+              contentType: 'c4-sketch',
+              sketchId,
+              closable: true,
+            },
+          ],
+    );
+    setFocusTabId(tabId);
+  }, []);
+
   // Cross-window bridge activation (`POST /api/topics/:id/activate` →
   // `TopicAPIEvent.TOPIC_ACTIVATE`). When this dev-workspace window is the one
   // the bridge targeted (the focused window), open the topic in our own tab
@@ -2374,6 +2397,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return <TopicsIcon size={14} />;
       case 'subsystem-model':
         return <Network size={14} />;
+      case 'c4-sketch':
+        return <PencilRuler size={14} />;
       case 'media': {
         const mediaTab = tab as MediaTab;
         const isVideo = /\.(mp4|webm|mov|avi|mkv|ogv)$/i.test(
@@ -2653,6 +2678,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               isActive={isActive}
               events={eventsRef.current}
               onOpenModel={openSubsystemModelTab}
+              onOpenTopic={openTopicTab}
+              onOpenSketch={openC4SketchTab}
               repositoryPath={
                 contextRef.current?.currentScope?.repository?.path
               }
@@ -2663,6 +2690,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         case 'subsystem-model': {
           return <SubsystemModelTabContent modelId={tab.modelId} />;
         }
+
+        case 'c4-sketch':
+          return <C4SketchTabContent sketchId={tab.sketchId} />;
 
         case 'media': {
           const mediaTab = tab as MediaTab;
@@ -2692,6 +2722,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       GitDiffPanelComponent,
       BrunoRequestPanelComponent,
       openSubsystemModelTab,
+      openTopicTab,
+      openC4SketchTab,
     ],
   );
 

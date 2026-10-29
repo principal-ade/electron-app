@@ -8,6 +8,7 @@
 import type {
   DraftTopic as Topic,
   TopicAsset,
+  TopicReference,
   TopicSubsystemModelRef,
 } from '@principal-ai/subsystems-core/node';
 
@@ -71,6 +72,8 @@ export interface CreateTopicInput {
    * topic with no association omits it entirely.
    */
   subsystemModels?: TopicSubsystemModelRef[];
+  /** Attached topics and C4 sketches, independent of description links. */
+  references?: TopicReference[];
 }
 
 /** Input to {@link TopicAPI.updateTopic} — partial patch. */
@@ -92,6 +95,8 @@ export interface UpdateTopicInput {
    * local store ids and never travel on publish.
    */
   subsystemModels?: TopicSubsystemModelRef[];
+  /** Replace attached topics and C4 sketches; pass `[]` to clear. */
+  references?: TopicReference[];
 }
 
 export interface TopicAPI {
@@ -110,7 +115,7 @@ export interface TopicAPI {
   /** Create a topic. Server-assigned ids round-trip via the optional `id`. */
   createTopic(input: CreateTopicInput): Promise<Topic>;
 
-  /** Patch title/description/createdBy. */
+  /** Patch topic fields, assets, and references. */
   updateTopic(id: string, updates: UpdateTopicInput): Promise<Topic>;
 
   /** Permanently delete a topic. */

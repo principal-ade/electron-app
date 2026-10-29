@@ -12,6 +12,7 @@ import type { Application, Request, Response } from 'express';
 import { upsertSection } from '@principal-ade/markdown-utils';
 import type {
   DraftTopic as Topic,
+  TopicReference,
   TopicSubsystemModelRef,
 } from '@principal-ai/subsystems-core/node';
 import type { TopicRegistryService } from '../stores/TopicRegistryService';
@@ -66,6 +67,31 @@ function parseSubsystemModelRefs(
       trailIds = raw.trailIds as string[];
     }
     refs.push({ modelId, ...(trailIds !== undefined ? { trailIds } : {}) });
+  }
+  return refs;
+}
+
+/** Keep only canonical reference fields, trimming IDs and deduplicating by kind. */
+function parseTopicRefs(value: unknown): TopicReference[] | null {
+  if (!Array.isArray(value)) return null;
+  const refs: TopicReference[] = [];
+  const seen = new Set<string>();
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry))
+      return null;
+    const raw = entry as Record<string, unknown>;
+    if (raw.kind !== 'topic' && raw.kind !== 'c4-sketch') return null;
+    const field = raw.kind === 'topic' ? 'topicId' : 'sketchId';
+    const id = typeof raw[field] === 'string' ? raw[field].trim() : '';
+    if (!id) return null;
+    const key = `${raw.kind}:${id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    refs.push(
+      raw.kind === 'topic'
+        ? { kind: 'topic', topicId: id }
+        : { kind: 'c4-sketch', sketchId: id },
+    );
   }
   return refs;
 }
@@ -130,12 +156,26 @@ export function registerTopicRoutes(
       }
       subsystemModels = parsed;
     }
+    let references: TopicReference[] | undefined;
+    if (body && body.references !== undefined) {
+      const parsed = parseTopicRefs(body.references);
+      if (!parsed) {
+        res.status(400).json({
+          success: false,
+          error:
+            'references must be an array of { kind: "topic", topicId: string } or { kind: "c4-sketch", sketchId: string } with non-empty ids',
+        });
+        return;
+      }
+      references = parsed;
+    }
     try {
       const topic = await registry.createTopic({
         title,
         ...(description !== undefined ? { description } : {}),
         ...(repos !== undefined ? { repos } : {}),
         ...(subsystemModels !== undefined ? { subsystemModels } : {}),
+        ...(references !== undefined ? { references } : {}),
       });
       broadcastTopicEvent(TopicAPIEvent.TOPIC_ADDED, topic);
       res.status(201).json({ success: true, topic });

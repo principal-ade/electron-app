@@ -32,7 +32,14 @@ import React, {
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { DocumentRange } from '../../shared/documentRange';
-import { Globe, Network, PenTool, ToolCase, Send } from 'lucide-react';
+import {
+  Globe,
+  Network,
+  PenTool,
+  PencilRuler,
+  ToolCase,
+  Send,
+} from 'lucide-react';
 import { HttpRequestTabContent } from '../requests/HttpRequestTabContent';
 import { RequestsLeftPanel } from '../requests/RequestsLeftPanel';
 import { requestDefinition } from '../../shared/requests/preparedRequest';
@@ -73,6 +80,10 @@ import {
 } from '../events/repositorySelected';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
 import { findEntriesByPurl } from '../utils/alexandriaIdentity';
+import {
+  openTopicProject,
+  type TopicProjectTarget,
+} from '../utils/topicProjectNavigation';
 import type { Purl } from '@principal-ai/alexandria-core-library';
 import { useOpenRepositoryWindows } from '../hooks/useOpenRepositoryWindows';
 import {
@@ -101,6 +112,7 @@ import { SkillDetailTabContent } from '../skills-view/SkillDetailTabContent';
 import { SubsystemModelsLeftPanel } from '../subsystem-models/SubsystemModelsLeftPanel';
 import { ProcessesView } from '../principal-window/views/ProcessesView';
 import { SubsystemModelTabContent } from '../subsystem-models/SubsystemModelTabContent';
+import { C4SketchTabContent } from '../c4-sketches/C4SketchTabContent';
 import { LocalhostBrowserTabContent } from '../principal-window/views/ProcessesView/LocalhostBrowserTabContent';
 import type {
   FeedTab,
@@ -277,6 +289,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     openRepoExplorer,
     openFileCityGuide,
     openSubsystemModel,
+    openC4Sketch,
     openSkill,
     openLocalhostBrowser,
     openHttpRequest,
@@ -424,6 +437,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         return <ToolCase size={14} />;
       case 'subsystem-model':
         return <Network size={14} />;
+      case 'c4-sketch':
+        return <PencilRuler size={14} />;
       case 'localhost-browser':
         return <Globe size={14} />;
       case 'http-request':
@@ -435,21 +450,22 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
 
   // Open a repo from a topic tab's Projects rail. Mirrors a pick from the
   // Projects surface: a purl that matches a local clone opens that repo's
-  // profile (with every clone aggregated); a remote-only GitHub purl opens the
-  // explorer. Emitted on the shell's local bus, which the Projects open-intent
+  // profile (with every clone aggregated), or a terminal for alternate gestures;
+  // a remote-only GitHub purl opens the explorer for either gesture.
+  // Emitted on the shell's local bus, which the Projects open-intent
   // forwarder lifts to the portal where `PortalIntentBridge` materializes the
   // tab.
-  const handleOpenTopicProject = useCallback((purl: string) => {
-    const matches = findEntriesByPurl(repositoriesRef.current, purl as Purl);
-    eventsRef.current.emit({
-      type: PORTAL_INTENTS.repositorySelected,
-      source: 'topic-projects-rail',
-      timestamp: Date.now(),
-      payload: matches[0]
-        ? payloadFromLocalEntry(matches[0], matches)
-        : payloadFromPurl(purl as Purl),
-    });
-  }, []);
+  const handleOpenTopicProject = useCallback(
+    (purl: string, target?: TopicProjectTarget) => {
+      openTopicProject(
+        eventsRef.current,
+        repositoriesRef.current,
+        purl,
+        target,
+      );
+    },
+    [],
+  );
 
   const renderTabContent = useCallback(
     (tab: WorkspaceTab, _isActive: boolean) => {
@@ -479,6 +495,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               events={eventsRef.current}
               onOpenProject={handleOpenTopicProject}
               onOpenModel={openSubsystemModel}
+              onOpenTopic={openLocalTopic}
+              onOpenSketch={openC4Sketch}
               onDetach={() => void detachTabToWindow(topicTab.id)}
             />
           );
@@ -505,6 +523,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             />
           );
         }
+        case 'c4-sketch':
+          return <C4SketchTabContent key={tab.id} sketchId={tab.sketchId} />;
         case 'localhost-browser': {
           const browserTab = tab as LocalhostBrowserTab;
           return (
@@ -528,7 +548,13 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           return null;
       }
     },
-    [handleOpenTopicProject, openSubsystemModel, detachTabToWindow],
+    [
+      handleOpenTopicProject,
+      openSubsystemModel,
+      openLocalTopic,
+      openC4Sketch,
+      detachTabToWindow,
+    ],
   );
 
   // Open links clicked in the terminal in the default browser.

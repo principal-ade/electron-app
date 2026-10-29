@@ -12,24 +12,35 @@ export interface ProjectRepoCardData {
 
 export interface ProjectRepoCardProps {
   repo: ProjectRepoCardData;
-  onClick?: () => void;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
+  onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
   /** Tighter padding for dense contexts like the topic rail. */
   dense?: boolean;
 }
 
-export const ProjectRepoCard: React.FC<ProjectRepoCardProps> = ({ repo, onClick, dense }) => {
+export const ProjectRepoCard: React.FC<ProjectRepoCardProps> = ({
+  repo,
+  onClick,
+  onContextMenu,
+  dense,
+}) => {
   const { theme } = useTheme();
   const spacing = { md: dense ? 10 : 16 };
   const radius = theme.radii?.[1] || 4;
   const avatarSrc =
     repo.ownerAvatarUrl ??
-    (repo.ownerLogin ? `https://github.com/${repo.ownerLogin}.png?size=120` : undefined);
+    (repo.ownerLogin
+      ? `https://github.com/${repo.ownerLogin}.png?size=120`
+      : undefined);
 
-  const secondary = [repo.ownerLogin, repo.timeLabel].filter(Boolean).join(' · ');
+  const secondary = [repo.ownerLogin, repo.timeLabel]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <div
       onClick={onClick}
+      onContextMenu={onContextMenu}
       role={onClick ? 'button' : undefined}
       style={{
         padding: spacing.md,
@@ -46,7 +57,8 @@ export const ProjectRepoCard: React.FC<ProjectRepoCardProps> = ({ repo, onClick,
       }}
       onMouseLeave={(e) => {
         if (!onClick) return;
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+        e.currentTarget.style.backgroundColor =
+          theme.colors.backgroundSecondary;
         e.currentTarget.style.borderColor = theme.colors.border;
       }}
     >
@@ -122,7 +134,11 @@ export const ProjectRepoCard: React.FC<ProjectRepoCardProps> = ({ repo, onClick,
                 title="In Progress — has uncommitted changes"
                 style={{ flexShrink: 0, display: 'inline-flex' }}
               >
-                <Circle size={8} fill={theme.colors.warning} color={theme.colors.warning} />
+                <Circle
+                  size={8}
+                  fill={theme.colors.warning}
+                  color={theme.colors.warning}
+                />
               </span>
             )}
           </div>
