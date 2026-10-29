@@ -5,29 +5,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 
-import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { QuickOpenItem } from '../../shared/quickOpen';
 import { tildifyPath } from '../utils/tildifyPath';
-
-interface QuickOpenItem {
-  id: string;
-  type: 'repository' | 'workspace' | 'github';
-  name: string;
-  description?: string;
-  remoteUrl?: string;
-  localPath?: string;
-  isOpen: boolean;
-  openWindowId?: number;
-  // Avatar URL for display (GitHub owner avatar for repositories)
-  avatarUrl?: string;
-  // Full AlexandriaEntry for repositories (passed through to main process when opening)
-  alexandriaEntry?: AlexandriaEntry;
-  // Last opened timestamp for sorting and display
-  lastOpenedAt?: string;
-  // GitHub-specific fields
-  fullName?: string; // e.g., "facebook/react"
-  stars?: number;
-  cloneUrl?: string;
-}
 
 interface GitHubSearchResult {
   id: number;
@@ -43,7 +22,23 @@ interface GitHubSearchResult {
   html_url: string;
 }
 
-type QuickOpenMode = 'local' | 'github';
+type QuickOpenMode = 'clones' | 'orgs' | 'github';
+
+/** Mode pills, in display order. */
+const MODES: Array<{ id: QuickOpenMode; label: string }> = [
+  { id: 'clones', label: 'Clones' },
+  { id: 'orgs', label: 'Orgs' },
+  { id: 'github', label: 'GitHub' },
+];
+
+/** The items a non-GitHub mode lists, before the query filter. */
+const itemsForMode = (
+  items: QuickOpenItem[],
+  mode: QuickOpenMode,
+): QuickOpenItem[] =>
+  mode === 'orgs'
+    ? items.filter((item) => item.type === 'ownerDirectory')
+    : items.filter((item) => item.type !== 'ownerDirectory');
 
 // Quick Open specific window type - electronAPI is always defined in this context
 interface QuickOpenWindow extends Window {
@@ -149,7 +144,7 @@ const QuickOpenApp: React.FC = () => {
   const selectedItemRef = useRef<HTMLDivElement>(null);
 
   // GitHub search mode state
-  const [mode, setMode] = useState<QuickOpenMode>('local');
+  const [mode, setMode] = useState<QuickOpenMode>('clones');
   const [isSearching, setIsSearching] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -214,21 +209,20 @@ const QuickOpenApp: React.FC = () => {
     quickOpenWindow.electronAPI.isAuthenticated().then(setIsAuthenticated);
   }, []);
 
-  // Filter local items or search GitHub based on mode
+  // Filter the Clones/Orgs lists, or search GitHub, based on mode
   useEffect(() => {
-    if (mode === 'local') {
-      // Local mode: filter items based on search query
-      if (searchQuery.trim() === '') {
-        setFilteredItems(items);
-      } else {
-        const query = searchQuery.toLowerCase();
-        const filtered = items.filter(
-          (item) =>
-            item.name.toLowerCase().includes(query) ||
-            item.description?.toLowerCase().includes(query),
-        );
-        setFilteredItems(filtered);
-      }
+    if (mode !== 'github') {
+      const query = searchQuery.trim().toLowerCase();
+      const pool = itemsForMode(items, mode);
+      setFilteredItems(
+        query === ''
+          ? pool
+          : pool.filter(
+              (item) =>
+                item.name.toLowerCase().includes(query) ||
+                item.description?.toLowerCase().includes(query),
+            ),
+      );
       setSelectedIndex(0);
     } else {
       // GitHub mode: debounced search
@@ -375,8 +369,15 @@ const QuickOpenApp: React.FC = () => {
       });
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      console.info('[Quick Open] Tab - toggling mode');
-      setMode((prev) => (prev === 'local' ? 'github' : 'local'));
+      console.info('[Quick Open] Tab - cycling mode');
+      setMode((prev) => {
+        // Skip GitHub while signed out — its pill is disabled.
+        const enabled = MODES.filter(
+          (m) => m.id !== 'github' || isAuthenticated,
+        );
+        const index = enabled.findIndex((m) => m.id === prev);
+        return enabled[(index + 1) % enabled.length].id;
+      });
       setSearchQuery(''); // Clear search when switching modes
       setSelectedIndex(0);
     } else if (e.key === 'Enter') {
@@ -438,7 +439,7 @@ const QuickOpenApp: React.FC = () => {
           flexDirection: 'column',
         }}
       >
-        {/* Mode Toggle Pills */}
+        {/* Mode Toggle Pills — Clones · Orgs · GitHub */}
         <div
           style={{
             display: 'flex',
@@ -447,65 +448,43 @@ const QuickOpenApp: React.FC = () => {
             borderBottom: `1px solid ${theme.colors.border}`,
           }}
         >
-          <button
-            type="button"
-            onClick={() => {
-              setMode('local');
-              setSearchQuery('');
-              setSelectedIndex(0);
-            }}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '16px',
-              border: 'none',
-              background:
-                mode === 'local'
-                  ? theme.colors.primary
-                  : theme.colors.backgroundSecondary,
-              color:
-                mode === 'local'
-                  ? theme.colors.background
-                  : theme.colors.textSecondary,
-              fontSize: theme.fontSizes[2],
-              fontFamily: theme.fonts.body,
-              fontWeight: mode === 'local' ? 600 : 400,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            Local
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode('github');
-              setSearchQuery('');
-              setSelectedIndex(0);
-            }}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '16px',
-              border: 'none',
-              background:
-                mode === 'github'
-                  ? theme.colors.primary
-                  : theme.colors.backgroundSecondary,
-              color:
-                mode === 'github'
-                  ? theme.colors.background
-                  : theme.colors.textSecondary,
-              fontSize: theme.fontSizes[2],
-              fontFamily: theme.fonts.body,
-              fontWeight: mode === 'github' ? 600 : 400,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              opacity: isAuthenticated ? 1 : 0.5,
-            }}
-            disabled={!isAuthenticated}
-            title={!isAuthenticated ? 'Sign in to search GitHub' : undefined}
-          >
-            GitHub
-          </button>
+          {MODES.map(({ id, label }) => {
+            const requiresAuth = id === 'github';
+            const disabled = requiresAuth && !isAuthenticated;
+            const active = mode === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  setMode(id);
+                  setSearchQuery('');
+                  setSelectedIndex(0);
+                }}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '16px',
+                  border: 'none',
+                  background: active
+                    ? theme.colors.primary
+                    : theme.colors.backgroundSecondary,
+                  color: active
+                    ? theme.colors.background
+                    : theme.colors.textSecondary,
+                  fontSize: theme.fontSizes[2],
+                  fontFamily: theme.fonts.body,
+                  fontWeight: active ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  opacity: disabled ? 0.5 : 1,
+                }}
+                disabled={disabled}
+                title={disabled ? 'Sign in to search GitHub' : undefined}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Search Input */}
@@ -519,9 +498,11 @@ const QuickOpenApp: React.FC = () => {
             ref={searchInputRef}
             type="text"
             placeholder={
-              mode === 'local'
-                ? 'Search projects and workspaces...'
-                : 'Search GitHub repositories...'
+              {
+                clones: 'Search cloned repositories...',
+                orgs: 'Search owner folders...',
+                github: 'Search GitHub repositories...',
+              }[mode]
             }
             value={searchQuery}
             onChange={handleSearchChange}
@@ -594,19 +575,17 @@ const QuickOpenApp: React.FC = () => {
                 fontFamily: theme.fonts.body,
               }}
             >
-              {mode === 'local' ? (
-                items.length === 0 ? (
-                  'Loading...'
-                ) : (
-                  'No matching items found'
-                )
-              ) : isSearching ? (
-                'Searching GitHub...'
-              ) : searchQuery.trim() === '' ? (
-                'Type to search GitHub repositories'
-              ) : (
-                'No repositories found'
-              )}
+              {mode === 'github'
+                ? isSearching
+                  ? 'Searching GitHub...'
+                  : searchQuery.trim() === ''
+                    ? 'Type to search GitHub repositories'
+                    : 'No repositories found'
+                : items.length === 0
+                  ? 'Loading...'
+                  : mode === 'orgs'
+                    ? 'No owner folders found'
+                    : 'No matching clones found'}
             </div>
           ) : (
             filteredItems.map((item, index) => {
@@ -784,6 +763,22 @@ const QuickOpenApp: React.FC = () => {
                               ? `${(item.stars / 1000).toFixed(1)}k`
                               : item.stars}
                           </span>
+                        ) : item.type === 'ownerDirectory' ? (
+                          <span
+                            style={{
+                              color: theme.colors.textSecondary,
+                              fontSize: theme.fontSizes[2],
+                              fontFamily: theme.fonts.body,
+                              fontWeight: 400,
+                              flexShrink: 0,
+                              marginLeft: '12px',
+                            }}
+                          >
+                            {item.cloneCount === 1
+                              ? '1 clone'
+                              : `${item.cloneCount ?? 0} clones`}{' '}
+                            · terminal
+                          </span>
                         ) : item.lastOpenedAt ? (
                           <span
                             style={{
@@ -858,9 +853,13 @@ const QuickOpenApp: React.FC = () => {
               color: theme.colors.textSecondary,
             }}
           >
-            {mode === 'local' ? 'Enter Open' : 'Enter Explore'}
+            {mode === 'clones'
+              ? 'Enter Open'
+              : mode === 'orgs'
+                ? 'Enter Terminal'
+                : 'Enter Explore'}
           </span>
-          {mode === 'local' && (
+          {mode !== 'github' && (
             <>
               <span
                 style={{

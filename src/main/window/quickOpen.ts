@@ -14,7 +14,6 @@ import {
   getRepositoryLocalPath,
 } from './types';
 import { openDevWorkspaceWindow } from './devWorkspaceWindowHandlers';
-import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { gitHubAPICore } from '../version-control-providers/github/apiCore';
 import { authService } from '../services/AuthService';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -23,6 +22,8 @@ import type {
   OpenRepositoryExplorerPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import { focusOrCreateMainWindow } from './modernWindowManager';
+import { collectOwnerDirectories } from './ownerDirectories';
+import type { QuickOpenItem } from '../../shared/quickOpen';
 
 interface GitHubSearchResult {
   id: number;
@@ -36,27 +37,6 @@ interface GitHubSearchResult {
   stargazers_count: number;
   clone_url: string;
   html_url: string;
-}
-
-interface QuickOpenItem {
-  id: string;
-  type: 'repository' | 'github';
-  name: string;
-  description?: string;
-  remoteUrl?: string;
-  localPath?: string;
-  isOpen: boolean;
-  openWindowId?: number;
-  // Avatar URL for display (GitHub owner avatar for repositories)
-  avatarUrl?: string;
-  // Full AlexandriaEntry for repositories (so we can pass complete data when opening)
-  alexandriaEntry?: AlexandriaEntry;
-  // Last opened timestamp for sorting and display
-  lastOpenedAt?: string;
-  // GitHub-specific fields
-  fullName?: string;
-  stars?: number;
-  cloneUrl?: string;
 }
 
 class QuickOpen {
@@ -286,6 +266,22 @@ class QuickOpen {
         });
       }
 
+      // Owner directories — the folders holding this owner's checkouts
+      // (`<base>/<owner>/<repo>`), so the palette can offer "clone here"
+      // targets. Selecting one opens a terminal rooted at the folder.
+      for (const ownerDir of collectOwnerDirectories(repositories)) {
+        items.push({
+          id: `owner-directory:${ownerDir.directory}`,
+          type: 'ownerDirectory',
+          name: ownerDir.label,
+          description: ownerDir.directory,
+          localPath: ownerDir.directory,
+          isOpen: false,
+          avatarUrl: `https://github.com/${ownerDir.ownerLogin}.png?size=80`,
+          cloneCount: ownerDir.cloneCount,
+        });
+      }
+
       // Sort items: open windows first, then by lastOpenedAt (most recent first)
       items.sort((a, b) => {
         // Open items come first
@@ -402,6 +398,14 @@ export function setupQuickOpenHandlers(): void {
       } else {
         send();
       }
+      return;
+    }
+
+    // Owner directories always open a terminal rooted at the folder, whatever
+    // the Quick Open destination preference is — the point is to land in the
+    // folder, ready to clone a sibling repo.
+    if (item.type === 'ownerDirectory' && item.localPath) {
+      await openTerminalTabInPrincipal(item.localPath, item.name);
       return;
     }
 

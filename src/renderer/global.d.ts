@@ -1,23 +1,5 @@
 import type { MainProcessAPI } from '../shared/main-process-api-interfaces/index';
-import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
-
-// QuickOpenItem type for Quick Open API
-interface QuickOpenItem {
-  id: string;
-  type: 'repository' | 'workspace' | 'github';
-  name: string;
-  description?: string;
-  remoteUrl?: string;
-  localPath?: string;
-  isOpen: boolean;
-  openWindowId?: number;
-  avatarUrl?: string;
-  alexandriaEntry?: AlexandriaEntry;
-  // GitHub-specific fields
-  fullName?: string;
-  stars?: number;
-  cloneUrl?: string;
-}
+import type { QuickOpenItem } from '../shared/quickOpen';
 
 // GitHub search result type
 interface GitHubSearchResult {

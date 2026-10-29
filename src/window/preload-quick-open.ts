@@ -9,30 +9,12 @@ console.info('[Preload-QuickOpen] Script starting...');
 
 import { contextBridge, ipcRenderer } from 'electron';
 import { ClipboardAPIEvent } from '../shared/main-process-api-interfaces/ClipboardAPI';
-import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
+import type { QuickOpenItem } from '../shared/quickOpen';
 
 console.info('[Preload-QuickOpen] Electron imports successful');
 
 // Import only the required API
 import { userPreferencesAPI } from './main-process-api-implementations/userPreferencesApi';
-
-// QuickOpenItem type definition (matches the one in quickOpen.ts)
-interface QuickOpenItem {
-  id: string;
-  type: 'repository' | 'workspace' | 'github';
-  name: string;
-  description?: string;
-  remoteUrl?: string;
-  localPath?: string;
-  isOpen: boolean;
-  openWindowId?: number;
-  avatarUrl?: string;
-  alexandriaEntry?: AlexandriaEntry;
-  // GitHub-specific fields
-  fullName?: string;
-  stars?: number;
-  cloneUrl?: string;
-}
 
 interface GitHubSearchResult {
   id: number;
