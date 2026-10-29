@@ -69,6 +69,11 @@ const windowSwitcherEntryPath = path.join(
   'window-switcher',
   'index.tsx',
 );
+const detachedTabEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'detached-tab-window',
+  'index.tsx',
+);
 
 // Use principal entry if it exists, otherwise fall back to legacy
 if (fs.existsSync(principalEntryPath)) {
@@ -134,6 +139,25 @@ if (fs.existsSync(windowSwitcherEntryPath)) {
       filename: 'window-switcher.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['window-switcher'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: true,
+    }),
+  );
+}
+
+// Detached tab window (single workspace tab moved out of the main window)
+if (fs.existsSync(detachedTabEntryPath)) {
+  entryPoints['detached-tab-window'] = detachedTabEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'detached-tab.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['detached-tab-window'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
@@ -419,6 +443,7 @@ const configuration: webpack.Configuration = {
       rewrites: [
         { from: /^\/principal.html/, to: '/principal.html' },
         { from: /^\/dev-workspace.html/, to: '/dev-workspace.html' },
+        { from: /^\/detached-tab.html/, to: '/detached-tab.html' },
         { from: /^\/index.html/, to: '/index.html' },
         { from: /./, to: '/index.html' },
       ],

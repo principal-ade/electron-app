@@ -30,10 +30,19 @@ import {
   type RepositoryGuideOpenWeekPayload,
   type SubsystemModelOpenPayload,
 } from '../../events/portalIntents';
+import { useDetachedTabAdopter } from '../../move-tab/useDetachedTabAdopter';
 
 export const PortalIntentBridge: React.FC = () => {
   const { events } = usePortalEvents();
   const ws = useWorkspaceTabs();
+
+  // Return-to-main half of the detached-tab protocol. This bridge is always
+  // mounted (even before a workspace surface exists), so a tab handed back from
+  // a detached window can never be missed while the shell is unmounted.
+  useDetachedTabAdopter({
+    openLocalTopic: ws.openLocalTopic,
+    openSubsystemModel: ws.openSubsystemModel,
+  });
 
   useEffect(() => {
     const handleTopicOpen = (event: { payload: TopicOpenPayload }) => {

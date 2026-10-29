@@ -56,6 +56,11 @@ const extensionWindowEntryPath = path.join(
   'extension-window',
   'index.tsx',
 );
+const detachedTabEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'detached-tab-window',
+  'index.tsx',
+);
 
 // Use principal entry if it exists, otherwise fall back to legacy
 if (fs.existsSync(principalEntryPath)) {
@@ -158,6 +163,25 @@ if (fs.existsSync(extensionWindowEntryPath)) {
       filename: 'extension-window.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['extension-window'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    }),
+  );
+}
+
+// Register Detached Tab Window entry when present
+if (fs.existsSync(detachedTabEntryPath)) {
+  entryPoints['detached-tab-window'] = detachedTabEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'detached-tab.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['detached-tab-window'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,

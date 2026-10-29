@@ -7,6 +7,7 @@
     "src/window/preload.ts",
     "src/window/preload-dev-workspace.ts",
     "src/window/preload-extension-window.ts",
+    "src/window/preload-detached-tab.ts",
     "src/window/preload-quick-open.ts",
     "src/window/preload-window-switcher.ts",
     "src/window/preload-remote-terminal-viewer.ts",
@@ -18,6 +19,7 @@
     "src/renderer/window-switcher/index.tsx",
     "src/renderer/dev-workspace/index.tsx",
     "src/renderer/extension-window/index.tsx",
+    "src/renderer/detached-tab-window/index.tsx",
     "src/event-processing-server/server.ts",
     "src/event-processing-server/worker-entry.ts"
   ],

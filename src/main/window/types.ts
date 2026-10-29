@@ -33,6 +33,7 @@ export enum PrimaryWindowType {
   REPOSITORY = 'repository',
   DEV_WORKSPACE = 'dev-workspace',
   EXTENSION = 'extension',
+  DETACHED_TAB = 'detached-tab',
   UNKNOWN = 'unknown',
 }
 

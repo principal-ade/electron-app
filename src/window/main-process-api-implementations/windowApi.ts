@@ -13,6 +13,10 @@ import type {
   OpenTerminalTabPayload,
   OpenRepositoryExplorerPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
+import type {
+  DetachableTabDescriptor,
+  DetachedTabIncomingPayload,
+} from '../../shared/detachedTab';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 
@@ -146,4 +150,47 @@ export const windowAPI: WindowAPI = {
       ipcRenderer.removeListener(WindowEvent.TAB_RECEIVED, handler);
     };
   },
+
+  // -------------------------------------------------------------------------
+  // Detached workspace tabs
+  // -------------------------------------------------------------------------
+
+  openDetachedTab: (tab: DetachableTabDescriptor) =>
+    ipcRenderer.invoke(WindowEvent.OPEN_DETACHED_TAB, tab),
+
+  claimDetachedTab: (token: string) =>
+    ipcRenderer.invoke(WindowEvent.DETACHED_TAB_CLAIM, token),
+
+  acceptDetachedTab: (token: string) =>
+    ipcRenderer.invoke(WindowEvent.DETACHED_TAB_ACCEPT, token),
+
+  rejectDetachedTab: (token: string, reason?: string) =>
+    ipcRenderer.invoke(WindowEvent.DETACHED_TAB_REJECT, token, reason),
+
+  returnDetachedTabToMain: (tab: DetachableTabDescriptor) =>
+    ipcRenderer.invoke(WindowEvent.RETURN_DETACHED_TAB, tab),
+
+  onIncomingDetachedTab: (
+    callback: (payload: DetachedTabIncomingPayload) => void,
+  ) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: DetachedTabIncomingPayload,
+    ) => {
+      callback(payload);
+    };
+    ipcRenderer.on(WindowEvent.DETACHED_TAB_INCOMING, handler);
+    return () => {
+      ipcRenderer.removeListener(WindowEvent.DETACHED_TAB_INCOMING, handler);
+    };
+  },
+
+  claimIncomingDetachedTab: (token: string) =>
+    ipcRenderer.invoke(WindowEvent.DETACHED_TAB_CLAIM_INCOMING, token),
+
+  acceptIncomingDetachedTab: (token: string) =>
+    ipcRenderer.invoke(WindowEvent.DETACHED_TAB_ACCEPT_INCOMING, token),
+
+  rejectIncomingDetachedTab: (token: string, reason?: string) =>
+    ipcRenderer.invoke(WindowEvent.DETACHED_TAB_REJECT_INCOMING, token, reason),
 };

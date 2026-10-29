@@ -61,7 +61,11 @@ import { RepoFileSearchPalette } from './RepoFileSearchPalette';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { useTerminalRepoInfo } from '../hooks/useTerminalRepoInfo';
 import { SendTabButton } from '../move-tab/SendTabButton';
+import { DetachTabButton } from '../move-tab/DetachTabButton';
 import { useTabReceiver } from '../move-tab/useTabReceiver';
+import { toDetachableTabDescriptor } from '../move-tab/detachedTabDescriptor';
+import { useDragOutDetach } from '../move-tab/useDragOutDetach';
+import { WindowService } from '../main-process-api/WindowService';
 import { RepoAboutCard } from '../panels/home-panel/RepoAboutCard';
 import {
   payloadFromLocalEntry,
@@ -356,6 +360,55 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
 
   const terminalDirectory = baseDefaultDirectory || process.env.HOME || '/';
 
+  // Remove the source tab only after the destination window accepted it.
+  const handleTabDetached = useCallback(
+    (tabId: string) => {
+      const remaining = tabs.filter((tab) => tab.id !== tabId);
+      setTabs(remaining);
+      setActiveTabId((current) =>
+        current === tabId ? (remaining[0]?.id ?? null) : current,
+      );
+    },
+    [tabs, setTabs, setActiveTabId],
+  );
+
+  // Shared transfer entry for the bottom-bar button, topic header, and
+  // drag-out. Resolves after main's claim/accept handshake; the source tab is
+  // removed only on accept.
+  const [detachingTabId, setDetachingTabId] = useState<string | null>(null);
+  const [detachNotice, setDetachNotice] = useState<string | null>(null);
+  const detachingRef = useRef(false);
+  const detachTabToWindow = useCallback(
+    async (tabId: string): Promise<boolean> => {
+      if (detachingRef.current) return false;
+      const descriptor = toDetachableTabDescriptor(
+        tabs.find((tab) => tab.id === tabId),
+      );
+      if (!descriptor) return false;
+
+      detachingRef.current = true;
+      setDetachingTabId(tabId);
+      setDetachNotice(null);
+      const result = await WindowService.openDetachedTab(descriptor);
+      detachingRef.current = false;
+      setDetachingTabId(null);
+
+      if (result.ok && result.transferred) {
+        handleTabDetached(tabId);
+        return true;
+      }
+      setDetachNotice(
+        result.ok && result.alreadyOpen
+          ? 'Already open in its own window'
+          : 'Could not open a new window; the tab was kept',
+      );
+      return false;
+    },
+    [tabs, handleTabDetached],
+  );
+
+  useDragOutDetach({ tabs, onDragOut: detachTabToWindow });
+
   const renderTabIcon = useCallback((tab: WorkspaceTab) => {
     // Projects owns the icons for its tabs + the shared document tabs.
     const projectsIcon = renderProjectsTabIcon(tab as FeedTab);
@@ -426,6 +479,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               events={eventsRef.current}
               onOpenProject={handleOpenTopicProject}
               onOpenModel={openSubsystemModel}
+              onDetach={() => void detachTabToWindow(topicTab.id)}
             />
           );
         }
@@ -474,7 +528,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           return null;
       }
     },
-    [handleOpenTopicProject, openSubsystemModel],
+    [handleOpenTopicProject, openSubsystemModel, detachTabToWindow],
   );
 
   // Open links clicked in the terminal in the default browser.
@@ -884,12 +938,24 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     return () => clearTimeout(timer);
   }, [fileSearchNotice]);
 
-  // bottom-bar content for cross-window tab transfer (principal → dev-workspace).
+  // The active tab and its detached-window descriptor (null for tabs that
+  // carry live state and cannot be reconstructed in another window).
+  const activeTab = useMemo(
+    () => tabs.find((tab) => tab.id === activeTabId),
+    [tabs, activeTabId],
+  );
+  const detachableTab = useMemo(
+    () => toDetachableTabDescriptor(activeTab),
+    [activeTab],
+  );
+
+  // bottom-bar content for cross-window tab transfer (principal → dev-workspace)
+  // and detaching the active tab into its own window.
   const bottomBarContent = useMemo(() => {
     const hasRepo = activeTabDirectory
       ? findEntryForDirectory(activeTabDirectory) !== undefined
       : false;
-    if (!showSendTabButton && !hasRepo) return null;
+    if (!showSendTabButton && !hasRepo && !detachableTab) return null;
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         {hasRepo && (
@@ -908,6 +974,13 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           >
             show project
           </button>
+        )}
+        {detachableTab && (
+          <DetachTabButton
+            busy={detachingTabId === detachableTab.tabId}
+            notice={detachNotice}
+            onDetach={() => void detachTabToWindow(detachableTab.tabId)}
+          />
         )}
         {showSendTabButton && (
           <SendTabButton
@@ -930,6 +1003,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     activeTabDirectory,
     findEntryForDirectory,
     handleShowProject,
+    detachableTab,
+    detachingTabId,
+    detachNotice,
+    detachTabToWindow,
   ]);
   useEffect(() => {
     const handleTerminalOpen = (event: { payload: TerminalNewPayload }) => {

@@ -76,6 +76,11 @@ const extensionWindowEntryPath = path.join(
   'extension-window',
   'index.tsx',
 );
+const detachedTabEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'detached-tab-window',
+  'index.tsx',
+);
 const goodbyeScreenEntryPath = path.join(
   webpackPaths.srcRendererPath,
   'goodbye-screen',
@@ -192,6 +197,25 @@ if (fs.existsSync(extensionWindowEntryPath)) {
       filename: 'extension-window.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['extension-window'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: true,
+    }),
+  );
+}
+
+// Add Detached Tab Window entry if it exists
+if (fs.existsSync(detachedTabEntryPath)) {
+  entryPoints['detached-tab-window'] = detachedTabEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'detached-tab.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['detached-tab-window'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
@@ -535,6 +559,10 @@ const configuration: webpack.Configuration = {
         {
           from: /^\/extension-window.html/,
           to: '/extension-window.html',
+        },
+        {
+          from: /^\/detached-tab.html/,
+          to: '/detached-tab.html',
         },
         {
           from: /^\/window-switcher.html/,

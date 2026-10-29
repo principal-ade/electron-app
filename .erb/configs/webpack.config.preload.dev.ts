@@ -32,6 +32,10 @@ const configuration: webpack.Configuration = {
       webpackPaths.srcWindowPath,
       'preload-extension-window.ts',
     ),
+    'preload-detached-tab': path.join(
+      webpackPaths.srcWindowPath,
+      'preload-detached-tab.ts',
+    ),
     'preload-quick-open': path.join(
       webpackPaths.srcWindowPath,
       'preload-quick-open.ts',

@@ -15,10 +15,24 @@ import type {
   OpenTerminalTabPayload,
   OpenRepositoryExplorerPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
+import type {
+  DetachableTabDescriptor,
+  DetachedTabIncomingPayload,
+  DetachedTabOpenResult,
+  DetachedTabReturnResult,
+} from '../../shared/detachedTab';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 // Re-export for convenience
-export type { RepositoryWindowState, TabTransferData, OpenTerminalTabPayload };
+export type {
+  RepositoryWindowState,
+  TabTransferData,
+  OpenTerminalTabPayload,
+  DetachableTabDescriptor,
+  DetachedTabIncomingPayload,
+  DetachedTabOpenResult,
+  DetachedTabReturnResult,
+};
 
 /**
  * Service for managing application windows
@@ -238,6 +252,130 @@ export class WindowService {
         error,
       );
       return () => {};
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Detached workspace tabs
+  // -------------------------------------------------------------------------
+
+  /**
+   * Ask main to move `tab` into a standalone window. Resolves once the
+   * destination accepts (transferred = true), or after a failure/timeout in
+   * which case the caller keeps the source tab.
+   */
+  static async openDetachedTab(
+    tab: DetachableTabDescriptor,
+  ): Promise<DetachedTabOpenResult> {
+    try {
+      return await window.mainProcess.window.openDetachedTab(tab);
+    } catch (error) {
+      console.error('[WindowService] Failed to open detached tab:', error);
+      return { ok: false, transferred: false, reason: 'ipc-failed' };
+    }
+  }
+
+  /** Destination window: claim the transfer token from the URL hash. */
+  static async claimDetachedTab(
+    token: string,
+  ): Promise<DetachableTabDescriptor | null> {
+    try {
+      return await window.mainProcess.window.claimDetachedTab(token);
+    } catch (error) {
+      console.error('[WindowService] Failed to claim detached tab:', error);
+      return null;
+    }
+  }
+
+  /** Destination window: report that the tab rendered successfully. */
+  static async acceptDetachedTab(token: string): Promise<boolean> {
+    try {
+      return await window.mainProcess.window.acceptDetachedTab(token);
+    } catch (error) {
+      console.error('[WindowService] Failed to accept detached tab:', error);
+      return false;
+    }
+  }
+
+  /** Destination window: report that the tab could not render. */
+  static async rejectDetachedTab(
+    token: string,
+    reason?: string,
+  ): Promise<void> {
+    try {
+      await window.mainProcess.window.rejectDetachedTab(token, reason);
+    } catch (error) {
+      console.error('[WindowService] Failed to reject detached tab:', error);
+    }
+  }
+
+  /** Detached window: hand the current tab back to the main window. */
+  static async returnDetachedTabToMain(
+    tab: DetachableTabDescriptor,
+  ): Promise<DetachedTabReturnResult> {
+    try {
+      return await window.mainProcess.window.returnDetachedTabToMain(tab);
+    } catch (error) {
+      console.error('[WindowService] Failed to return detached tab:', error);
+      return { ok: false, reason: 'ipc-failed' };
+    }
+  }
+
+  /** Main window: subscribe to pending return transfers. */
+  static onIncomingDetachedTab(
+    callback: (payload: DetachedTabIncomingPayload) => void,
+  ): () => void {
+    try {
+      return window.mainProcess.window.onIncomingDetachedTab(callback);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to register detached-tab listener:',
+        error,
+      );
+      return () => {};
+    }
+  }
+
+  /** Main window: claim a pending return transfer by token. */
+  static async claimIncomingDetachedTab(
+    token: string,
+  ): Promise<DetachableTabDescriptor | null> {
+    try {
+      return await window.mainProcess.window.claimIncomingDetachedTab(token);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to claim incoming detached tab:',
+        error,
+      );
+      return null;
+    }
+  }
+
+  /** Main window: the tab is open; main may close the detached window. */
+  static async acceptIncomingDetachedTab(token: string): Promise<boolean> {
+    try {
+      return await window.mainProcess.window.acceptIncomingDetachedTab(token);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to accept incoming detached tab:',
+        error,
+      );
+      return false;
+    }
+  }
+
+  /** Main window: adoption failed; the detached window stays open. */
+  static async rejectIncomingDetachedTab(
+    token: string,
+    reason?: string,
+  ): Promise<void> {
+    try {
+      await window.mainProcess.window.rejectIncomingDetachedTab(token, reason);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to reject incoming detached tab:',
+        error,
+      );
     }
   }
 }

@@ -29,4 +29,17 @@ export enum WindowEvent {
   // path; main pushes a TAB_RECEIVED event to the target window's webContents.
   SEND_TAB_TO_WINDOW = 'window:send-tab-to-window',
   TAB_RECEIVED = 'window:tab-received',
+
+  // Detached-tab transfer protocol. `OPEN_DETACHED_TAB` resolves only after the
+  // destination renderer claims the token and explicitly accepts; the other
+  // channels are the claim/accept/reject handshake plus the return-to-main path.
+  OPEN_DETACHED_TAB = 'window:open-detached-tab',
+  DETACHED_TAB_CLAIM = 'window:detached-tab-claim',
+  DETACHED_TAB_ACCEPT = 'window:detached-tab-accept',
+  DETACHED_TAB_REJECT = 'window:detached-tab-reject',
+  RETURN_DETACHED_TAB = 'window:return-detached-tab',
+  DETACHED_TAB_INCOMING = 'window:detached-tab-incoming',
+  DETACHED_TAB_CLAIM_INCOMING = 'window:detached-tab-claim-incoming',
+  DETACHED_TAB_ACCEPT_INCOMING = 'window:detached-tab-accept-incoming',
+  DETACHED_TAB_REJECT_INCOMING = 'window:detached-tab-reject-incoming',
 }

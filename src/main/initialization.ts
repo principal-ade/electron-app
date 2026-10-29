@@ -74,6 +74,7 @@ import { setupGoodbyeScreenHandlers } from './window/goodbyeScreen';
 import { setupSplashScreenHandlers } from './window/splashScreen';
 import { registerDevWorkspaceWindowHandlers } from './window/devWorkspaceWindowHandlers';
 import { registerExtensionWindowHandlers } from './window/extensionWindowHandlers';
+import { registerDetachedTabHandlers } from './window/detachedTabHandlers';
 import { extensionDiscoveryService } from './services/ExtensionDiscoveryService';
 import {
   registerLocalhostDetectionHandlers,
@@ -194,6 +195,7 @@ const registerAllIpcHandlers = async () => {
   registerModernWindowHandlers(); // Register modern window creation handlers
   registerDevWorkspaceWindowHandlers(); // Register dev-workspace window handlers
   registerExtensionWindowHandlers(); // Register extension browser window handlers
+  registerDetachedTabHandlers(); // Register detached workspace-tab window handlers
   setupWindowSwitcherHandlers(); // Register window switcher handlers
   setupQuickOpenHandlers(); // Register quick open handlers
   setupGoodbyeScreenHandlers(); // Register goodbye screen handlers

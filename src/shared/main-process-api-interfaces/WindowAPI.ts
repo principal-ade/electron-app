@@ -3,6 +3,12 @@
  */
 
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
+import type {
+  DetachableTabDescriptor,
+  DetachedTabIncomingPayload,
+  DetachedTabOpenResult,
+  DetachedTabReturnResult,
+} from '../detachedTab';
 
 export interface RepositoryWindowState {
   remoteUrl: string;
@@ -72,4 +78,45 @@ export interface WindowAPI {
 
   sendTabToWindow(data: TabTransferData): Promise<void>;
   onTabReceived(callback: (data: TabTransferData) => void): () => void;
+
+  // -------------------------------------------------------------------------
+  // Detached workspace tabs
+  // -------------------------------------------------------------------------
+
+  /**
+   * Create (or focus) a standalone window for `tab`. Resolves only after the
+   * destination renderer has claimed the transfer token and accepted it, or
+   * after creation/loading fails or times out. The source must remove its tab
+   * only when `transferred` is true.
+   */
+  openDetachedTab(tab: DetachableTabDescriptor): Promise<DetachedTabOpenResult>;
+
+  /** Destination side: exchange the URL token for the descriptor. */
+  claimDetachedTab(token: string): Promise<DetachableTabDescriptor | null>;
+  /** Destination side: content rendered successfully; source may drop its tab. */
+  acceptDetachedTab(token: string): Promise<boolean>;
+  /** Destination side: content failed; main closes the window, source keeps tab. */
+  rejectDetachedTab(token: string, reason?: string): Promise<void>;
+
+  /** Detached window: hand the current tab back to the main window. */
+  returnDetachedTabToMain(
+    tab: DetachableTabDescriptor,
+  ): Promise<DetachedTabReturnResult>;
+
+  /**
+   * Main window: the main process has a return transfer waiting. The callback
+   * may fire more than once for the same token until it is claimed — call
+   * `claimIncomingDetachedTab` exactly once per token.
+   */
+  onIncomingDetachedTab(
+    callback: (payload: DetachedTabIncomingPayload) => void,
+  ): () => void;
+  /** Main window: claim the incoming transfer and get its descriptor. */
+  claimIncomingDetachedTab(
+    token: string,
+  ): Promise<DetachableTabDescriptor | null>;
+  /** Main window: tab opened successfully; main closes the detached window. */
+  acceptIncomingDetachedTab(token: string): Promise<boolean>;
+  /** Main window: adoption failed; the detached window stays open. */
+  rejectIncomingDetachedTab(token: string, reason?: string): Promise<void>;
 }
