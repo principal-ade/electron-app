@@ -9,6 +9,7 @@ import { useProjectsTabs } from '../../contexts/ProjectsTabsContext';
 import { emitTerminalNew } from '../../../events/portalIntents';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { findClonedGithubEntry } from '../../../utils/alexandriaIdentity';
+import { useGithubProjectSections } from '../../../hooks/useGithubGraph';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import {
   payloadFromGithub,
@@ -41,8 +42,170 @@ const formatStars = (n?: number): string => {
   return String(n);
 };
 
+/** One query-matched slice of the shared GitHub project graph. */
+interface MatchedProjectSection {
+  key: string;
+  label: string;
+  avatarUrl?: string;
+  repos: GitHubRepository[];
+}
+
+/** Cap per owner so a single org can't fill the whole dropdown. */
+const MAX_PROJECT_RESULTS_PER_SECTION = 3;
+
+/** Minimum query length before any source is searched. */
+const MIN_QUERY_LENGTH = 2;
+
+const repoKey = (owner: string, name: string): string =>
+  `${owner}/${name}`.toLowerCase();
+
+/** Match the way GitHub lists a repo: name, owner/name, and description. */
+const repoMatchesQuery = (repo: GitHubRepository, q: string): boolean =>
+  repo.name.toLowerCase().includes(q) ||
+  repo.full_name.toLowerCase().includes(q) ||
+  (repo.description?.toLowerCase().includes(q) ?? false);
+
+const avatarSrc = (url: string, size: number): string =>
+  `${url}${url.includes('?') ? '&' : '?'}s=${size}`;
+
+/** Uppercase divider naming a result group. */
+const SectionHeader: React.FC<{ label: string; avatarUrl?: string }> = ({
+  label,
+  avatarUrl,
+}) => {
+  const { theme } = useTheme();
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '5px 12px 4px',
+        fontSize: `${theme.fontSizes[0]}px`,
+        color: theme.colors.textSecondary,
+        fontFamily: theme.fonts.body,
+        fontWeight: 600,
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+        borderBottom: `1px solid ${theme.colors.border}`,
+      }}
+    >
+      {avatarUrl && (
+        <img
+          src={avatarSrc(avatarUrl, 28)}
+          alt=""
+          style={{ width: 12, height: 12, borderRadius: '50%', flexShrink: 0 }}
+        />
+      )}
+      {label}
+    </div>
+  );
+};
+
+/** A GitHub repo row, shared by the project-graph sections and global search. */
+const RepositoryRow: React.FC<{
+  repo: GitHubRepository;
+  flatIndex: number;
+  selectedIndex: number;
+  onSelect: (repo: GitHubRepository) => void;
+  onHover: (index: number) => void;
+  isLast?: boolean;
+}> = ({ repo, flatIndex, selectedIndex, onSelect, onHover, isLast }) => {
+  const { theme } = useTheme();
+  return (
+    <div
+      onMouseDown={() => onSelect(repo)}
+      onMouseEnter={() => onHover(flatIndex)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '12px 12px',
+        cursor: 'pointer',
+        backgroundColor:
+          flatIndex === selectedIndex
+            ? theme.colors.backgroundTertiary
+            : 'transparent',
+        borderBottom: isLast ? 'none' : `1px solid ${theme.colors.border}`,
+        transition: 'background-color 0.1s',
+      }}
+    >
+      <img
+        src={avatarSrc(repo.owner.avatar_url, 84)}
+        alt={repo.owner.login}
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: '50%',
+          flexShrink: 0,
+        }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: `${theme.fontSizes[1]}px`,
+            color: theme.colors.text,
+            fontWeight: 500,
+            fontFamily: theme.fonts.body,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {repo.full_name}
+        </div>
+        {repo.description && (
+          <div
+            style={{
+              fontSize: `${theme.fontSizes[0]}px`,
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.body,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              marginTop: '1px',
+            }}
+          >
+            {repo.description}
+          </div>
+        )}
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '3px',
+          color: theme.colors.textSecondary,
+          fontSize: `${theme.fontSizes[0]}px`,
+          fontFamily: theme.fonts.body,
+          flexShrink: 0,
+        }}
+      >
+        <Star size={11} />
+        {formatStars(repo.stargazers_count)}
+      </div>
+    </div>
+  );
+};
+
+/**
+ * The titlebar (Command+K) search. Results are grouped so each repo appears
+ * once, in its most specific group:
+ *
+ *   1. Your repositories + one group per org — filtered locally over the cached
+ *      GitHub project graph (`githubProjectsStore`), so they paint instantly and
+ *      cost no API calls. Capped at 100 recently-updated repos per owner.
+ *   2. Local clones — Alexandria registry entries; selecting one opens a
+ *      terminal at the checkout.
+ *   3. Repositories — the global GitHub search, for anything outside the graph.
+ *
+ * Pasting a GitHub URL bypasses search entirely (see `handlePaste`).
+ */
 export const TitlebarGitHubSearch: React.FC = () => {
   const { theme } = useTheme();
+  // Cached GitHub project graph — the user's own repos plus one group per org.
+  // Read, not fetched: the store owns the cadence, so this costs no API calls.
+  const projectSections = useGithubProjectSections();
   // `events` (principalEvents) carries the `panel:switch` navigation; the portal
   // bus carries the content-open intents. Repo/user profile opens still call the
   // Projects tab context directly (a separate, view-local domain).
@@ -65,18 +228,60 @@ export const TitlebarGitHubSearch: React.FC = () => {
   // newer query's results.
   const searchSeq = useRef(0);
 
-  // A GitHub repo we already have cloned locally is dropped from the GitHub
-  // section — the local row (which opens a terminal) supersedes it, so the same
-  // repo never appears twice.
-  const githubRepoResults = repoResults.filter(
-    (repo) => !findClonedGithubEntry(localResults, repo.owner.login, repo.name),
+  // Matches from the cached graph: your repos first, then one group per org.
+  // Filtered locally against the shared store, so results appear as fast as you
+  // type; repos that aren't cached still surface via the global search below.
+  const trimmedQuery = query.trim().toLowerCase();
+  const projectMatches: MatchedProjectSection[] =
+    trimmedQuery.length < MIN_QUERY_LENGTH
+      ? []
+      : (projectSections ?? [])
+          .map((section) => ({
+            key: section.key,
+            label: section.label,
+            avatarUrl: section.avatar_url,
+            repos: section.repos
+              .filter((repo) => repoMatchesQuery(repo, trimmedQuery))
+              // A cloned repo gets a terminal row in its own group; the clone
+              // wins so the same repo never appears twice.
+              .filter(
+                (repo) =>
+                  !findClonedGithubEntry(
+                    localResults,
+                    repo.owner.login,
+                    repo.name,
+                  ),
+              )
+              .slice(0, MAX_PROJECT_RESULTS_PER_SECTION),
+          }))
+          .filter((section) => section.repos.length > 0);
+  const projectRepos = projectMatches.flatMap((section) => section.repos);
+  const projectKeys = new Set(
+    projectRepos.map((repo) => repoKey(repo.owner.login, repo.name)),
   );
-  // Flat list for keyboard nav: local clones first, then GitHub repos.
-  const flatResults = [...localResults, ...githubRepoResults];
+
+  // Global GitHub hits already shown as a clone or in a project group are
+  // dropped, so each repo appears once, in its most specific group.
+  const githubRepoResults = repoResults.filter(
+    (repo) =>
+      !findClonedGithubEntry(localResults, repo.owner.login, repo.name) &&
+      !projectKeys.has(repoKey(repo.owner.login, repo.name)),
+  );
+
+  // Flat list for keyboard nav: project groups, then local clones, then global.
+  const flatResults = [...projectRepos, ...localResults, ...githubRepoResults];
   const totalResults = flatResults.length;
 
+  // Where each project group's first row sits in the flat list.
+  let projectOffset = 0;
+  const projectSectionViews = projectMatches.map((section) => {
+    const start = projectOffset;
+    projectOffset += section.repos.length;
+    return { section, start };
+  });
+
   const search = useCallback((q: string) => {
-    if (!q || q.trim().length < 2) {
+    if (!q || q.trim().length < MIN_QUERY_LENGTH) {
       searchSeq.current++;
       setLocalResults([]);
       setRepoResults([]);
@@ -156,6 +361,13 @@ export const TitlebarGitHubSearch: React.FC = () => {
     }, 30);
     return () => clearInterval(id);
   }, [flashLabel]);
+
+  // Project matches come off the cache, so they can be the only results. Open
+  // the dropdown for them without waiting on either async source.
+  const hasProjectMatches = projectRepos.length > 0;
+  useEffect(() => {
+    if (hasProjectMatches) setIsOpen(true);
+  }, [hasProjectMatches, trimmedQuery.length]);
 
   const clearSearch = useCallback(() => {
     setQuery('');
@@ -283,11 +495,15 @@ export const TitlebarGitHubSearch: React.FC = () => {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       const idx = selectedIndex >= 0 ? selectedIndex : 0;
-      if (idx < localResults.length) {
-        const entry = localResults[idx];
+      if (idx < projectRepos.length) {
+        const repo = projectRepos[idx];
+        if (repo) handleSelectRepo(repo);
+      } else if (idx < projectRepos.length + localResults.length) {
+        const entry = localResults[idx - projectRepos.length];
         if (entry) handleSelectLocal(entry);
       } else {
-        const repo = githubRepoResults[idx - localResults.length];
+        const repo =
+          githubRepoResults[idx - projectRepos.length - localResults.length];
         if (repo) handleSelectRepo(repo);
       }
     } else if (e.key === 'Escape') {
@@ -426,25 +642,32 @@ export const TitlebarGitHubSearch: React.FC = () => {
             overflow: 'hidden',
           }}
         >
+          {/* Your repos, then one group per org — cached graph, local filter */}
+          {projectSectionViews.map(({ section, start }) => (
+            <React.Fragment key={`project-${section.key}`}>
+              <SectionHeader
+                label={section.label}
+                avatarUrl={section.avatarUrl}
+              />
+              {section.repos.map((repo, i) => (
+                <RepositoryRow
+                  key={`project-${section.key}-${repo.id}`}
+                  repo={repo}
+                  flatIndex={start + i}
+                  selectedIndex={selectedIndex}
+                  onSelect={handleSelectRepo}
+                  onHover={setSelectedIndex}
+                />
+              ))}
+            </React.Fragment>
+          ))}
+
           {/* Local clones section — selecting one opens a terminal at the checkout */}
           {localResults.length > 0 && (
             <>
-              <div
-                style={{
-                  padding: '5px 12px 4px',
-                  fontSize: `${theme.fontSizes[0]}px`,
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.fonts.body,
-                  fontWeight: 600,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  borderBottom: `1px solid ${theme.colors.border}`,
-                }}
-              >
-                Local clones
-              </div>
+              <SectionHeader label="Local clones" />
               {localResults.map((entry, i) => {
-                const flatIndex = i;
+                const flatIndex = projectRepos.length + i;
                 // The registry entry carries no avatar URL; when it has a GitHub
                 // owner, derive the avatar GitHub serves by login. Local-only
                 // clones (no GitHub remote) fall back to a folder icon.
@@ -546,104 +769,21 @@ export const TitlebarGitHubSearch: React.FC = () => {
             </>
           )}
 
-          {/* Repositories section */}
+          {/* Repositories section — global GitHub search */}
           {githubRepoResults.length > 0 && (
             <>
-              <div
-                style={{
-                  padding: '5px 12px 4px',
-                  fontSize: `${theme.fontSizes[0]}px`,
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.fonts.body,
-                  fontWeight: 600,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  borderBottom: `1px solid ${theme.colors.border}`,
-                }}
-              >
-                Repositories
-              </div>
-              {githubRepoResults.map((repo, i) => {
-                const flatIndex = localResults.length + i;
-                return (
-                  <div
-                    key={`repo-${repo.id}`}
-                    onMouseDown={() => handleSelectRepo(repo)}
-                    onMouseEnter={() => setSelectedIndex(flatIndex)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '12px 12px',
-                      cursor: 'pointer',
-                      backgroundColor:
-                        flatIndex === selectedIndex
-                          ? theme.colors.backgroundTertiary
-                          : 'transparent',
-                      borderBottom:
-                        i < githubRepoResults.length - 1
-                          ? `1px solid ${theme.colors.border}`
-                          : 'none',
-                      transition: 'background-color 0.1s',
-                    }}
-                  >
-                    <img
-                      src={`${repo.owner.avatar_url}&s=84`}
-                      alt={repo.owner.login}
-                      style={{
-                        width: 42,
-                        height: 42,
-                        borderRadius: '50%',
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: `${theme.fontSizes[1]}px`,
-                          color: theme.colors.text,
-                          fontWeight: 500,
-                          fontFamily: theme.fonts.body,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {repo.full_name}
-                      </div>
-                      {repo.description && (
-                        <div
-                          style={{
-                            fontSize: `${theme.fontSizes[0]}px`,
-                            color: theme.colors.textSecondary,
-                            fontFamily: theme.fonts.body,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            marginTop: '1px',
-                          }}
-                        >
-                          {repo.description}
-                        </div>
-                      )}
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px',
-                        color: theme.colors.textSecondary,
-                        fontSize: `${theme.fontSizes[0]}px`,
-                        fontFamily: theme.fonts.body,
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Star size={11} />
-                      {formatStars(repo.stargazers_count)}
-                    </div>
-                  </div>
-                );
-              })}
+              <SectionHeader label="Repositories" />
+              {githubRepoResults.map((repo, i) => (
+                <RepositoryRow
+                  key={`repo-${repo.id}`}
+                  repo={repo}
+                  flatIndex={projectRepos.length + localResults.length + i}
+                  selectedIndex={selectedIndex}
+                  onSelect={handleSelectRepo}
+                  onHover={setSelectedIndex}
+                  isLast={i === githubRepoResults.length - 1}
+                />
+              ))}
             </>
           )}
         </div>
