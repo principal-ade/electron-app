@@ -25,7 +25,7 @@ import React, {
 } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
-import { ArrowLeftToLine } from 'lucide-react';
+import { ArrowLeftToLine, Loader2 } from 'lucide-react';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
 import { LocalTopicTabContent } from '../topics-view/LocalTopicTabContent';
 import { SubsystemModelTabContent } from '../subsystem-models/SubsystemModelTabContent';
@@ -238,7 +238,7 @@ export const DetachedTabWindow: React.FC = () => {
     </BaseTitlebar>
   );
 
-  const centered = (message: string, role?: 'alert') => (
+  const centered = (message: React.ReactNode, role?: 'alert' | 'status') => (
     <div
       role={role}
       style={{
@@ -258,7 +258,22 @@ export const DetachedTabWindow: React.FC = () => {
 
   let body: React.ReactNode;
   if (phase === 'claiming' || phase === 'preparing') {
-    body = centered('Preparing tab…');
+    // The window is already on screen where the tab was dropped; show that
+    // the tab is on its way rather than an empty pane.
+    body = centered(
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 10,
+        }}
+      >
+        <Loader2 size={20} style={{ animation: 'spin 0.8s linear infinite' }} />
+        <span>{tab ? `Opening "${tab.label}"…` : 'Opening tab…'}</span>
+      </div>,
+      'status',
+    );
   } else if (phase === 'error' || !tab) {
     body = centered(error ?? 'This tab could not be opened.', 'alert');
   } else if (tab.kind === 'local-topic' && tab.topicId) {

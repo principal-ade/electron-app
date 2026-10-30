@@ -6,6 +6,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type {
   DetachableTabDescriptor,
   DetachedTabIncomingPayload,
+  DetachedTabOpenOptions,
   DetachedTabOpenResult,
   DetachedTabReturnResult,
 } from '../detachedTab';
@@ -87,9 +88,13 @@ export interface WindowAPI {
    * Create (or focus) a standalone window for `tab`. Resolves only after the
    * destination renderer has claimed the transfer token and accepted it, or
    * after creation/loading fails or times out. The source must remove its tab
-   * only when `transferred` is true.
+   * only when `transferred` is true. `options.dropPoint` places the window
+   * where a drag-out was released.
    */
-  openDetachedTab(tab: DetachableTabDescriptor): Promise<DetachedTabOpenResult>;
+  openDetachedTab(
+    tab: DetachableTabDescriptor,
+    options?: DetachedTabOpenOptions,
+  ): Promise<DetachedTabOpenResult>;
 
   /** Destination side: exchange the URL token for the descriptor. */
   claimDetachedTab(token: string): Promise<DetachableTabDescriptor | null>;

@@ -29,11 +29,35 @@ window closes, so a renderer reload can re-claim the tab it already owns.
 ### Drag-out
 
 The tab library has no external-drop callback, so `useDragOutDetach` observes
-the native drag lifecycle on the tab strip (`data-tab-id`): it records a
-detachable tab on `dragstart`, treats a `dragleave` with no related target as
+the native drag lifecycle on the tab strip (`data-tab-id`): it records the
+dragged tab on `dragstart`, treats a `dragleave` with no related target as
 leaving the window, and starts a transfer on `dragend` only when the drag left
 the window (with clearly out-of-bounds coordinates as a fallback). Reorders and
 cancelled drags end inside and are left to the library.
+
+Feedback during the gesture:
+
+- `dragstart` swaps in a card-shaped drag image (a clone of the tab) so the
+  drag reads as carrying a tab rather than a translucent sliver.
+- The hook reports a `TabDragState` to the host. While the pointer is outside
+  the window, `WorkspaceShell` shows an overlay: _Release to open "X" in a new
+  window_ for detachable tabs, or _"X" can't be moved to its own window_ for
+  terminals, editors, drawings, browsers and requests (which are tracked only
+  for this hint and never start a transfer).
+- The release's `screenX/screenY` travel with the request as
+  `DetachedTabOpenOptions.dropPoint`. Main validates them, picks the display
+  under that point, and opens the window with its titlebar under the cursor,
+  clamped to that display's work area (`dropPointPlacement.ts`). Button and
+  topic-header detaches send no drop point and use Electron's default placement.
+
+### Feedback during the handshake
+
+`openDetachedTab` can take up to the 20s timeout. While it is pending the
+source tab is dimmed and its icon becomes a spinner (`detachingTabId`); the
+destination window is already on screen (it shows on `ready-to-show`) with an
+_Opening "X"…_ placeholder until preflight finishes. The outcome
+(`alreadyOpen`, failure) is shown as an auto-dismissing toast under the tab
+strip as well as next to the bottom-bar button.
 
 ### Return to main
 
@@ -58,6 +82,7 @@ at the app root even before a workspace surface exists.
 | Detached window app     | `src/renderer/detached-tab-window/`                                                                               |
 | Source actions          | `src/renderer/move-tab/DetachTabButton.tsx` (+ bottom bar in `WorkspaceShell`, topic header button)               |
 | Drag-out detection      | `src/renderer/move-tab/useDragOutDetach.ts`                                                                       |
+| Drop-point placement    | `src/main/window/dropPointPlacement.ts`                                                                           |
 | Return adopter          | `src/renderer/move-tab/useDetachedTabAdopter.ts`                                                                  |
 | Renderer entry          | `detached-tab.html` in the three multi-entry webpack configs                                                      |
 
@@ -81,5 +106,7 @@ when you also add a state-transfer path for its live state.
 - A detached window hosts one tab. A detached topic's model rail navigates that
   window to the model; project links copy the purl.
 - Drag-out is implemented from the tab strip (native drag lifecycle); reorders
-  and cancelled drags stay inside and are left to the library.
+  and cancelled drags stay inside and are left to the library. A dragged-out
+  window opens where the tab was released; the size is still fixed (1100×800,
+  shrunk to fit small displays).
 - Multi-tab detached windows and restart restoration are not implemented.

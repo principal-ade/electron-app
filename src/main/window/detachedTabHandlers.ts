@@ -20,7 +20,7 @@
  * record before returning the descriptor or settling it.
  */
 
-import { BrowserWindow, ipcMain, app } from 'electron';
+import { BrowserWindow, ipcMain, app, screen } from 'electron';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { resolveHtmlPath } from '../util';
@@ -30,6 +30,7 @@ import {
   focusOrCreateMainWindow,
   getApplicationWindows,
 } from './modernWindowManager';
+import { placeWindowAtDropPoint } from './dropPointPlacement';
 import {
   getMainWindowId,
   PrimaryWindowType,
@@ -38,12 +39,14 @@ import {
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import {
   isDetachableTabDescriptor,
+  isDetachedTabDropPoint,
   type DetachableTabDescriptor,
   type DetachedTabOpenResult,
   type DetachedTabReturnResult,
 } from '../../shared/detachedTab';
 
 const DETACHED_PURPOSE_PREFIX = 'detached-tab:';
+const DETACHED_WINDOW_SIZE = { width: 1100, height: 800 };
 const TRANSFER_TIMEOUT_MS = 20_000;
 const INCOMING_NOTIFY_INTERVAL_MS = 500;
 
@@ -175,9 +178,27 @@ function getTransferForTarget(
   return record;
 }
 
+/**
+ * Bounds for a new detached window. A drag-out opens under the cursor on the
+ * display it was dropped on; otherwise Electron's default placement applies.
+ */
+function detachedWindowBounds(
+  options: unknown,
+): Partial<Electron.Rectangle> & typeof DETACHED_WINDOW_SIZE {
+  const dropPoint =
+    options && typeof options === 'object'
+      ? (options as Record<string, unknown>)['dropPoint']
+      : undefined;
+  if (!isDetachedTabDropPoint(dropPoint)) return DETACHED_WINDOW_SIZE;
+  const point = { x: dropPoint.screenX, y: dropPoint.screenY };
+  const { workArea } = screen.getDisplayNearestPoint(point);
+  return placeWindowAtDropPoint(point, DETACHED_WINDOW_SIZE, workArea);
+}
+
 async function openDetachedTab(
   event: Electron.IpcMainInvokeEvent,
   tab: unknown,
+  options?: unknown,
 ): Promise<DetachedTabOpenResult> {
   const sourceWindowId = senderWindowId(event);
   if (!sourceWindowId) {
@@ -207,8 +228,7 @@ async function openDetachedTab(
   const appWindow = createSpecialWindow(
     purpose,
     {
-      width: 1100,
-      height: 800,
+      ...detachedWindowBounds(options),
       minWidth: 600,
       minHeight: 400,
       title: tab.label,

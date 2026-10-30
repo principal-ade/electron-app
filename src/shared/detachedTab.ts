@@ -44,6 +44,19 @@ export interface DetachableTabDescriptor {
   sketchId?: string;
 }
 
+/**
+ * Screen coordinates where a drag-out was released. Main opens the new window
+ * there (clamped to that display) so the window appears where the tab landed.
+ */
+export interface DetachedTabDropPoint {
+  screenX: number;
+  screenY: number;
+}
+
+export interface DetachedTabOpenOptions {
+  dropPoint?: DetachedTabDropPoint;
+}
+
 /** Result of asking main to open a detached window for a tab. */
 export interface DetachedTabOpenResult {
   ok: boolean;
@@ -78,6 +91,20 @@ function isString(value: unknown, maxLength: number): value is string {
 
 function isOptionalString(value: unknown, maxLength: number): boolean {
   return value === undefined || isString(value, maxLength);
+}
+
+/** Validate untrusted drop coordinates; anything non-finite is ignored. */
+export function isDetachedTabDropPoint(
+  value: unknown,
+): value is DetachedTabDropPoint {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate['screenX'] === 'number' &&
+    Number.isFinite(candidate['screenX']) &&
+    typeof candidate['screenY'] === 'number' &&
+    Number.isFinite(candidate['screenY'])
+  );
 }
 
 /**

@@ -16,6 +16,7 @@ import type {
 import type {
   DetachableTabDescriptor,
   DetachedTabIncomingPayload,
+  DetachedTabOpenOptions,
 } from '../../shared/detachedTab';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -155,8 +156,10 @@ export const windowAPI: WindowAPI = {
   // Detached workspace tabs
   // -------------------------------------------------------------------------
 
-  openDetachedTab: (tab: DetachableTabDescriptor) =>
-    ipcRenderer.invoke(WindowEvent.OPEN_DETACHED_TAB, tab),
+  openDetachedTab: (
+    tab: DetachableTabDescriptor,
+    options?: DetachedTabOpenOptions,
+  ) => ipcRenderer.invoke(WindowEvent.OPEN_DETACHED_TAB, tab, options),
 
   claimDetachedTab: (token: string) =>
     ipcRenderer.invoke(WindowEvent.DETACHED_TAB_CLAIM, token),

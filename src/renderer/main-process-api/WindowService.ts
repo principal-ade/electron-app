@@ -18,6 +18,7 @@ import type {
 import type {
   DetachableTabDescriptor,
   DetachedTabIncomingPayload,
+  DetachedTabOpenOptions,
   DetachedTabOpenResult,
   DetachedTabReturnResult,
 } from '../../shared/detachedTab';
@@ -30,6 +31,7 @@ export type {
   OpenTerminalTabPayload,
   DetachableTabDescriptor,
   DetachedTabIncomingPayload,
+  DetachedTabOpenOptions,
   DetachedTabOpenResult,
   DetachedTabReturnResult,
 };
@@ -262,13 +264,15 @@ export class WindowService {
   /**
    * Ask main to move `tab` into a standalone window. Resolves once the
    * destination accepts (transferred = true), or after a failure/timeout in
-   * which case the caller keeps the source tab.
+   * which case the caller keeps the source tab. Pass `options.dropPoint` so a
+   * dragged-out tab opens where it was released.
    */
   static async openDetachedTab(
     tab: DetachableTabDescriptor,
+    options?: DetachedTabOpenOptions,
   ): Promise<DetachedTabOpenResult> {
     try {
-      return await window.mainProcess.window.openDetachedTab(tab);
+      return await window.mainProcess.window.openDetachedTab(tab, options);
     } catch (error) {
       console.error('[WindowService] Failed to open detached tab:', error);
       return { ok: false, transferred: false, reason: 'ipc-failed' };

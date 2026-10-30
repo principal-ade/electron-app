@@ -15,6 +15,11 @@ jest.mock('electron', () => ({
   ipcMain: { handle: jest.fn() },
   app: { isPackaged: false },
   BrowserWindow: { fromId: jest.fn(), fromWebContents: jest.fn() },
+  screen: {
+    getDisplayNearestPoint: jest.fn(() => ({
+      workArea: { x: 0, y: 25, width: 1920, height: 1055 },
+    })),
+  },
 }));
 jest.mock('../util', () => ({
   resolveHtmlPath: (name: string) => `app://${name}`,
@@ -83,6 +88,7 @@ describe('detached tab transfer protocol', () => {
     (getApplicationWindows as jest.Mock).mockReturnValue(new Map());
     (getMainWindowId as jest.Mock).mockReturnValue(null);
     (focusExistingSpecialWindow as jest.Mock).mockReturnValue(null);
+    (createSpecialWindow as jest.Mock).mockClear();
   });
 
   function registerWindow(window: FakeWindow): object {
@@ -96,6 +102,20 @@ describe('detached tab transfer protocol', () => {
     const value = handlers.get(channel);
     if (!value) throw new Error(`No handler for ${channel}`);
     return value;
+  }
+
+  /** Finish an in-flight open so its 20s timeout does not outlive the test. */
+  async function settle(
+    open: unknown,
+    target: FakeWindow,
+    targetSender: object,
+  ): Promise<void> {
+    const token = /#transfer\/([0-9a-f-]+)$/.exec(
+      target.loadURL.mock.calls[0][0],
+    )?.[1];
+    handler(WindowEvent.DETACHED_TAB_CLAIM)({ sender: targetSender }, token);
+    handler(WindowEvent.DETACHED_TAB_ACCEPT)({ sender: targetSender }, token);
+    await open;
   }
 
   it('transfers only after the destination claims and accepts', async () => {
@@ -151,6 +171,50 @@ describe('detached tab transfer protocol', () => {
     expect(
       handler(WindowEvent.DETACHED_TAB_ACCEPT)({ sender: targetSender }, token),
     ).toBe(true);
+  });
+
+  it('opens a dragged-out tab where it was dropped, clamped to the display', async () => {
+    const source = makeWindow(1);
+    const target = makeWindow(2);
+    const sourceSender = registerWindow(source);
+    const targetSender = registerWindow(target);
+    (createSpecialWindow as jest.Mock).mockReturnValue({ window: target });
+
+    const open = handler(WindowEvent.OPEN_DETACHED_TAB)(
+      { sender: sourceSender },
+      topicTab,
+      { dropPoint: { screenX: 1900, screenY: 10 } },
+    );
+    await Promise.resolve();
+
+    expect((createSpecialWindow as jest.Mock).mock.calls[0][1]).toMatchObject({
+      x: 820,
+      y: 25,
+      width: 1100,
+      height: 800,
+    });
+    await settle(open, target, targetSender);
+  });
+
+  it('falls back to default placement without a valid drop point', async () => {
+    const source = makeWindow(1);
+    const target = makeWindow(2);
+    const sourceSender = registerWindow(source);
+    const targetSender = registerWindow(target);
+    (createSpecialWindow as jest.Mock).mockReturnValue({ window: target });
+
+    const open = handler(WindowEvent.OPEN_DETACHED_TAB)(
+      { sender: sourceSender },
+      topicTab,
+      { dropPoint: { screenX: 'nope', screenY: NaN } },
+    );
+    await Promise.resolve();
+
+    const options = (createSpecialWindow as jest.Mock).mock.calls[0][1];
+    expect(options).toMatchObject({ width: 1100, height: 800 });
+    expect(options.x).toBeUndefined();
+    expect(options.y).toBeUndefined();
+    await settle(open, target, targetSender);
   });
 
   it('keeps the source tab when the destination rejects', async () => {

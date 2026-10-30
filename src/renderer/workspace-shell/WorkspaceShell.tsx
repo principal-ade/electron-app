@@ -34,11 +34,13 @@ import { useTheme } from '@principal-ade/industry-theme';
 import type { DocumentRange } from '../../shared/documentRange';
 import {
   Globe,
+  Loader2,
   Network,
   PenTool,
   PencilRuler,
   ToolCase,
   Send,
+  SquareArrowOutUpRight,
   Terminal,
 } from 'lucide-react';
 import { HttpRequestTabContent } from '../requests/HttpRequestTabContent';
@@ -72,8 +74,13 @@ import { SendTabButton } from '../move-tab/SendTabButton';
 import { DetachTabButton } from '../move-tab/DetachTabButton';
 import { useTabReceiver } from '../move-tab/useTabReceiver';
 import { toDetachableTabDescriptor } from '../move-tab/detachedTabDescriptor';
-import { useDragOutDetach } from '../move-tab/useDragOutDetach';
+import {
+  describeTabDrag,
+  useDragOutDetach,
+  type TabDragState,
+} from '../move-tab/useDragOutDetach';
 import { WindowService } from '../main-process-api/WindowService';
+import type { DetachedTabDropPoint } from '../../shared/detachedTab';
 import { RepoAboutCard } from '../panels/home-panel/RepoAboutCard';
 import {
   payloadFromLocalEntry,
@@ -394,7 +401,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const [detachNotice, setDetachNotice] = useState<string | null>(null);
   const detachingRef = useRef(false);
   const detachTabToWindow = useCallback(
-    async (tabId: string): Promise<boolean> => {
+    async (
+      tabId: string,
+      dropPoint?: DetachedTabDropPoint,
+    ): Promise<boolean> => {
       if (detachingRef.current) return false;
       const descriptor = toDetachableTabDescriptor(
         tabs.find((tab) => tab.id === tabId),
@@ -404,7 +414,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       detachingRef.current = true;
       setDetachingTabId(tabId);
       setDetachNotice(null);
-      const result = await WindowService.openDetachedTab(descriptor);
+      const result = await WindowService.openDetachedTab(descriptor, {
+        dropPoint,
+      });
       detachingRef.current = false;
       setDetachingTabId(null);
 
@@ -422,35 +434,61 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     [tabs, handleTabDetached],
   );
 
-  useDragOutDetach({ tabs, onDragOut: detachTabToWindow });
+  // Live drag state so the shell can say what releasing outside will do.
+  const [tabDrag, setTabDrag] = useState<TabDragState | null>(null);
+  useDragOutDetach({
+    tabs,
+    onDragOut: detachTabToWindow,
+    onDragStateChange: setTabDrag,
+  });
+  const tabDragHint = describeTabDrag(tabDrag);
 
-  const renderTabIcon = useCallback((tab: WorkspaceTab) => {
-    // Projects owns the icons for its tabs + the shared document tabs.
-    const projectsIcon = renderProjectsTabIcon(tab as FeedTab);
-    if (projectsIcon) return projectsIcon;
-    switch (tab.contentType) {
-      case 'terminal':
-        return <Terminal size={14} />;
-      case 'topics-home':
-        return <TopicsIcon size={14} />;
-      case 'local-topic':
-        return <TopicsIcon size={14} />;
-      case 'drawing':
-        return <PenTool size={14} />;
-      case 'skill':
-        return <ToolCase size={14} />;
-      case 'subsystem-model':
-        return <Network size={14} />;
-      case 'c4-sketch':
-        return <PencilRuler size={14} />;
-      case 'localhost-browser':
-        return <Globe size={14} />;
-      case 'http-request':
-        return <Send size={14} />;
-      default:
-        return null;
-    }
-  }, []);
+  // Auto-dismiss the transient detach notice (also shown as a toast).
+  useEffect(() => {
+    if (!detachNotice) return;
+    const timer = setTimeout(() => setDetachNotice(null), 3500);
+    return () => clearTimeout(timer);
+  }, [detachNotice]);
+
+  const renderTabIcon = useCallback(
+    (tab: WorkspaceTab) => {
+      // The tab being moved shows the handshake in progress (up to 20s).
+      if (tab.id === detachingTabId) {
+        return (
+          <Loader2
+            size={14}
+            style={{ animation: 'spin 0.8s linear infinite' }}
+          />
+        );
+      }
+      // Projects owns the icons for its tabs + the shared document tabs.
+      const projectsIcon = renderProjectsTabIcon(tab as FeedTab);
+      if (projectsIcon) return projectsIcon;
+      switch (tab.contentType) {
+        case 'terminal':
+          return <Terminal size={14} />;
+        case 'topics-home':
+          return <TopicsIcon size={14} />;
+        case 'local-topic':
+          return <TopicsIcon size={14} />;
+        case 'drawing':
+          return <PenTool size={14} />;
+        case 'skill':
+          return <ToolCase size={14} />;
+        case 'subsystem-model':
+          return <Network size={14} />;
+        case 'c4-sketch':
+          return <PencilRuler size={14} />;
+        case 'localhost-browser':
+          return <Globe size={14} />;
+        case 'http-request':
+          return <Send size={14} />;
+        default:
+          return null;
+      }
+    },
+    [detachingTabId],
+  );
 
   // Open a repo from a topic tab's Projects rail. Mirrors a pick from the
   // Projects surface: a purl that matches a local clone opens that repo's
@@ -1361,6 +1399,71 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               }}
             >
               {fileSearchNotice}
+            </div>
+          )}
+          {/* Detach feedback: the source tab dims while main runs the
+              claim/accept handshake, and the outcome surfaces as a toast under
+              the tab strip rather than only in the bottom bar. */}
+          {detachingTabId && (
+            <style>{`[data-tab-id="${detachingTabId.replace(/"/g, '\\"')}"] { opacity: 0.45 !important; pointer-events: none; }`}</style>
+          )}
+          {detachNotice && (
+            <div
+              role="status"
+              style={{
+                position: 'fixed',
+                top: 56,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 10000,
+                padding: '8px 16px',
+                borderRadius: 6,
+                background: theme.colors.backgroundSecondary,
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.textSecondary,
+                fontSize: theme.fontSizes[2],
+                fontFamily: theme.fonts.body,
+                boxShadow: '0 6px 24px rgba(0, 0, 0, 0.4)',
+                pointerEvents: 'none',
+              }}
+            >
+              {detachNotice}
+            </div>
+          )}
+          {/* While a tab drag is outside the window, say what releasing does. */}
+          {tabDragHint && (
+            <div
+              aria-live="polite"
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 10001,
+                display: 'grid',
+                placeItems: 'center',
+                background: 'rgba(0, 0, 0, 0.25)',
+                pointerEvents: 'none',
+              }}
+            >
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 18px',
+                  borderRadius: 8,
+                  background: theme.colors.backgroundSecondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  color: tabDrag?.detachable
+                    ? theme.colors.text
+                    : theme.colors.textSecondary,
+                  fontSize: theme.fontSizes[2],
+                  fontFamily: theme.fonts.body,
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
+                }}
+              >
+                {tabDrag?.detachable && <SquareArrowOutUpRight size={14} />}
+                {tabDragHint}
+              </div>
             </div>
           )}
         </div>
