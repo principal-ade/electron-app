@@ -8,8 +8,9 @@
  *
  * It also owns the desktop-only header actions: a **Fork** action (fork the repo
  * and clone your fork), a **Clone** button (with inline progress) for
- * remote-only repos, or an **Open profile** action when the repo is cloned
- * (opens the profile panel, where the clone is managed). The ported page
+ * remote-only repos, or **Open profile** / **Terminal** actions when the repo
+ * is cloned (the profile panel manages the clone; the terminal opens a tab at
+ * the clone's path). The ported page
  * exposes a `headerActions` slot so this stays out of the page itself.
  *
  * The page's data goes through `repoExplorerService` (IPC-backed); see
@@ -18,7 +19,7 @@
 
 import React, { Suspense } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitFork } from 'lucide-react';
+import { GitFork, Terminal } from 'lucide-react';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   GithubRepository,
@@ -26,6 +27,8 @@ import type {
 } from '@principal-ai/alexandria-core-library';
 import { AuthProvider } from './contexts/AuthContext';
 import { useWorkspaceTabs } from '../principal-window/PortalTabsContext';
+import { usePortalEvents } from '../principal-window/PortalEventContext';
+import { emitTerminalNew } from '../events/portalIntents';
 import { GithubService } from '../main-process-api/GithubService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import {
@@ -71,6 +74,7 @@ export const RepoExplorerTabContent: React.FC<RepoExplorerTabContentProps> = ({
   const repo = identity?.name;
 
   const ws = useWorkspaceTabs();
+  const { events: portalEvents } = usePortalEvents();
 
   // ---- desktop header actions (clone) ----
   const [clone, setClone] = React.useState<AlexandriaEntry | undefined>(
@@ -177,6 +181,14 @@ export const RepoExplorerTabContent: React.FC<RepoExplorerTabContentProps> = ({
     }
   };
 
+  const openTerminal = () => {
+    if (!clone?.path) return;
+    emitTerminalNew(portalEvents, 'repo-explorer', {
+      directory: String(clone.path),
+      label: repo,
+    });
+  };
+
   const headerActions = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       {owner && repo && (
@@ -216,28 +228,55 @@ export const RepoExplorerTabContent: React.FC<RepoExplorerTabContentProps> = ({
           {cloneProgress?.message ?? 'Cloning…'}
         </span>
       ) : clone ? (
-        <button
-          type="button"
-          onClick={openProfile}
-          title="Open the repository profile (manage the clone)"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: theme.fontSizes[1],
-            fontFamily: theme.fonts?.body,
-            fontWeight: theme.fontWeights?.semibold ?? 600,
-            color: theme.colors.primary,
-            background: 'transparent',
-            border: `1px solid ${theme.colors.primary}`,
-            borderRadius: 6,
-            padding: '5px 12px',
-            cursor: 'pointer',
-            lineHeight: 1.4,
-          }}
-        >
-          Open profile
-        </button>
+        <>
+          {clone.path && (
+            <button
+              type="button"
+              onClick={openTerminal}
+              title="Open a terminal at the clone"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts?.body,
+                fontWeight: theme.fontWeights?.semibold ?? 600,
+                color: theme.colors.text,
+                background: 'transparent',
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: 6,
+                padding: '5px 12px',
+                cursor: 'pointer',
+                lineHeight: 1.4,
+              }}
+            >
+              <Terminal size={14} />
+              Terminal
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={openProfile}
+            title="Open the repository profile (manage the clone)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts?.body,
+              fontWeight: theme.fontWeights?.semibold ?? 600,
+              color: theme.colors.primary,
+              background: 'transparent',
+              border: `1px solid ${theme.colors.primary}`,
+              borderRadius: 6,
+              padding: '5px 12px',
+              cursor: 'pointer',
+              lineHeight: 1.4,
+            }}
+          >
+            Open profile
+          </button>
+        </>
       ) : (
         <button
           type="button"
