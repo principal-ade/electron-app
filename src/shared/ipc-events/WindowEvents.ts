@@ -42,4 +42,8 @@ export enum WindowEvent {
   DETACHED_TAB_CLAIM_INCOMING = 'window:detached-tab-claim-incoming',
   DETACHED_TAB_ACCEPT_INCOMING = 'window:detached-tab-accept-incoming',
   DETACHED_TAB_REJECT_INCOMING = 'window:detached-tab-reject-incoming',
+  // Tabs currently living in their own windows, so other windows can show
+  // them and focus the window instead of opening a duplicate tab.
+  GET_DETACHED_TABS = 'window:get-detached-tabs',
+  DETACHED_TABS_CHANGED = 'window:detached-tabs-changed',
 }

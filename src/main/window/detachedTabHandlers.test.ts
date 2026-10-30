@@ -299,4 +299,48 @@ describe('detached tab transfer protocol', () => {
     await expect(returned).resolves.toEqual({ ok: true });
     expect(detached.close).toHaveBeenCalled();
   });
+  it('lists accepted detached tabs and broadcasts changes', async () => {
+    // Earlier tests leave accepted transfers in the module-level map, so use
+    // window ids no other test reuses.
+    const source = makeWindow(41);
+    const target = makeWindow(42);
+    const sourceSender = registerWindow(source);
+    const targetSender = registerWindow(target);
+    (createSpecialWindow as jest.Mock).mockReturnValue({ window: target });
+    (getApplicationWindows as jest.Mock).mockReturnValue(
+      new Map([
+        [41, { window: source }],
+        [42, { window: target }],
+      ]),
+    );
+
+    const open = handler(WindowEvent.OPEN_DETACHED_TAB)(
+      { sender: sourceSender },
+      topicTab,
+    );
+    await Promise.resolve();
+    // In flight: not detached yet.
+    expect(handler(WindowEvent.GET_DETACHED_TABS)({})).toEqual([]);
+
+    await settle(open, target, targetSender);
+    const detached = [{ tab: topicTab, windowId: 42 }];
+    expect(handler(WindowEvent.GET_DETACHED_TABS)({})).toEqual(detached);
+    expect(source.webContents.send).toHaveBeenCalledWith(
+      WindowEvent.DETACHED_TABS_CHANGED,
+      detached,
+    );
+
+    // Closing the window drops it from the list and rebroadcasts.
+    const onClosed = target.once.mock.calls.find(
+      ([event]) => event === 'closed',
+    )?.[1] as () => void;
+    target.isDestroyed.mockReturnValue(true);
+    source.webContents.send.mockClear();
+    onClosed();
+    expect(handler(WindowEvent.GET_DETACHED_TABS)({})).toEqual([]);
+    expect(source.webContents.send).toHaveBeenCalledWith(
+      WindowEvent.DETACHED_TABS_CHANGED,
+      [],
+    );
+  });
 });

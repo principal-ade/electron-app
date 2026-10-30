@@ -51,6 +51,8 @@ import {
   type TopicAssociation,
 } from './topicAssociationDrag';
 import { useHomePins } from './useHomePins';
+import { detachedTabEntry, useDetachedTabs } from './useDetachedTabs';
+import { WindowService } from '../../main-process-api/WindowService';
 import { usePinnedRepoScopes } from './usePinnedRepoScopes';
 import {
   useWorkspaceTabs,
@@ -160,6 +162,15 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     [pinnedTabEntries],
   );
   const pinnedRepoScopes = usePinnedRepoScopes(preferencePins);
+  const detachedTabs = useDetachedTabs();
+  const detachedEntries = useMemo(
+    () =>
+      [...detachedTabs.values()].flatMap(({ tab }) => {
+        const entry = detachedTabEntry(tab);
+        return entry ? [entry] : [];
+      }),
+    [detachedTabs],
+  );
   const toggleTabPin = useCallback(
     (entry: HomeTabEntry) => {
       if (entry.kind !== 'http-request') {
@@ -204,6 +215,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         processes,
         catalogRequests,
         pinnedRepoScopes,
+        detachedEntries,
       ),
     [
       repositories,
@@ -214,6 +226,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       processes,
       catalogRequests,
       pinnedRepoScopes,
+      detachedEntries,
     ],
   );
   // Repos the monitoring worker is watching — these have live git status;
@@ -485,27 +498,47 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       : undefined;
   };
 
-  const renderTabEntry = (entry: HomeTabEntry, open: boolean, depth = 0) => (
-    <HomeTabRow
-      key={entry.id}
-      entry={entry}
-      open={open}
-      tabNumber={open ? tabNumbers.get(entry.id) : undefined}
-      programStatus={
-        open && entry.kind === 'terminal'
-          ? programStatusByTab?.[entry.id]
-          : undefined
-      }
-      pinned={pinnedTabIds.has(entry.id)}
-      depth={depth}
-      // Topic and subsystem-model titles are user-authored and often long;
-      // wrap rather than truncate them in the narrow rail.
-      wrapLabel={entry.kind === 'topic' || entry.kind === 'subsystem-model'}
-      onActivate={() => (open ? onActivateTab(entry.id) : onOpenEntry(entry))}
-      onTogglePin={() => toggleTabPin(entry)}
-      onDropAssociation={topicDropHandler(entry)}
-    />
-  );
+  // Bring a detached tab's window forward; reopen here if it has since closed.
+  const focusDetachedTab = (entry: HomeTabEntry, windowId: number) => {
+    void WindowService.focusWindowById(windowId).then((focused) => {
+      if (!focused) onOpenEntry(entry);
+    });
+  };
+
+  const renderTabEntry = (entry: HomeTabEntry, open: boolean, depth = 0) => {
+    const detachedWindowId = detachedTabs.get(entry.id)?.windowId;
+    return (
+      <HomeTabRow
+        key={entry.id}
+        entry={entry}
+        open={open}
+        active={open && activeTabId === entry.id}
+        tabNumber={open ? tabNumbers.get(entry.id) : undefined}
+        inOwnWindow={detachedWindowId !== undefined}
+        programStatus={
+          open && entry.kind === 'terminal'
+            ? programStatusByTab?.[entry.id]
+            : undefined
+        }
+        pinned={pinnedTabIds.has(entry.id)}
+        depth={depth}
+        // Topic and subsystem-model titles are user-authored and often long;
+        // wrap rather than truncate them in the narrow rail.
+        wrapLabel={entry.kind === 'topic' || entry.kind === 'subsystem-model'}
+        onActivate={() => {
+          if (detachedWindowId !== undefined) {
+            focusDetachedTab(entry, detachedWindowId);
+          } else if (open) {
+            onActivateTab(entry.id);
+          } else {
+            onOpenEntry(entry);
+          }
+        }}
+        onTogglePin={() => toggleTabPin(entry)}
+        onDropAssociation={topicDropHandler(entry)}
+      />
+    );
+  };
 
   return (
     <div

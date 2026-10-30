@@ -9,6 +9,7 @@ import type {
   DetachedTabOpenOptions,
   DetachedTabOpenResult,
   DetachedTabReturnResult,
+  DetachedTabWindow,
 } from '../detachedTab';
 
 export interface RepositoryWindowState {
@@ -124,4 +125,11 @@ export interface WindowAPI {
   acceptIncomingDetachedTab(token: string): Promise<boolean>;
   /** Main window: adoption failed; the detached window stays open. */
   rejectIncomingDetachedTab(token: string, reason?: string): Promise<void>;
+
+  /** Tabs currently hosted in their own windows. */
+  getDetachedTabs(): Promise<DetachedTabWindow[]>;
+  /** Fires with the full list whenever a tab is detached or its window closes. */
+  onDetachedTabsChanged(
+    callback: (detached: DetachedTabWindow[]) => void,
+  ): () => void;
 }

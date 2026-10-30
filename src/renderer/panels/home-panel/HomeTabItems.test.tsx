@@ -13,7 +13,11 @@ jest.mock('@industry-theme/xterm-terminal-panel', () => ({
 
 jest.mock('@principal-ade/industry-theme', () => ({
   useTheme: () => ({
-    theme: { colors: {}, fonts: {}, fontSizes: [10, 12, 14] },
+    theme: {
+      colors: { backgroundSecondary: '#222222', backgroundTertiary: '#333333' },
+      fonts: {},
+      fontSizes: [10, 12, 14],
+    },
   }),
 }));
 
@@ -163,6 +167,61 @@ test.each(['project-info', 'repo-explorer'] as const)(
   },
 );
 
+test.each([
+  { id: 'local-topic-t1', kind: 'topic', label: 'Topic title', topicId: 't1' },
+  {
+    id: 'subsystem-model-sg-1',
+    kind: 'subsystem-model',
+    label: 'Model title',
+    modelId: 'sg-1',
+  },
+] as HomeTabEntry[])(
+  'shows the tab number for an open $kind row only while it is open',
+  (entry) => {
+    const props = {
+      entry,
+      pinned: true,
+      wrapLabel: true,
+      onActivate: jest.fn(),
+      onTogglePin: jest.fn(),
+    };
+    const { rerender } = render(<HomeTabRow {...props} open tabNumber={4} />);
+    const badge = screen.getByText('Tab 4');
+    const pin = screen.getByRole('button', { name: `Unpin ${entry.label}` });
+    expect(badge.parentElement).toBe(pin.parentElement);
+    expect(pin.nextElementSibling).toBe(badge);
+    rerender(<HomeTabRow {...props} open={false} tabNumber={4} />);
+    expect(screen.queryByText('Tab 4')).toBeNull();
+  },
+);
+
+test('a tab in its own window shows a Window badge instead of a tab number', () => {
+  const onActivate = jest.fn();
+  render(
+    <HomeTabRow
+      entry={{
+        id: 'local-topic-t1',
+        kind: 'topic',
+        label: 'Topic title',
+        topicId: 't1',
+      }}
+      open
+      inOwnWindow
+      tabNumber={4}
+      pinned
+      onActivate={onActivate}
+      onTogglePin={jest.fn()}
+    />,
+  );
+  expect(screen.queryByText('Tab 4')).toBeNull();
+  const badge = screen.getByText('Window');
+  const pin = screen.getByRole('button', { name: 'Unpin Topic title' });
+  expect(pin.nextElementSibling).toBe(badge);
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Focus window for Topic title' }),
+  );
+  expect(onActivate).toHaveBeenCalledTimes(1);
+});
 test('does not invent a tab number for a profile with no open tab position', () => {
   render(
     <HomeTabRow
@@ -649,4 +708,24 @@ describe('dropping onto topic rows', () => {
       }),
     ).toBe(true);
   });
+});
+
+test('tints the focused tab row more strongly than hover', () => {
+  const props = {
+    entry: profile,
+    open: true,
+    pinned: false,
+    onActivate: jest.fn(),
+    onTogglePin: jest.fn(),
+  };
+  const { rerender } = render(<HomeTabRow {...props} />);
+  const row = screen.getByRole('button', { name: 'Open Clone profile' });
+  expect(row.style.backgroundColor).toBe('transparent');
+  fireEvent.mouseEnter(row);
+  expect(row.style.backgroundColor).toBe('rgb(34, 34, 34)');
+  fireEvent.mouseLeave(row);
+  rerender(<HomeTabRow {...props} active />);
+  expect(row.style.backgroundColor).toBe('rgb(51, 51, 51)');
+  fireEvent.mouseEnter(row);
+  expect(row.style.backgroundColor).toBe('rgb(51, 51, 51)');
 });

@@ -21,6 +21,7 @@ import type {
   DetachedTabOpenOptions,
   DetachedTabOpenResult,
   DetachedTabReturnResult,
+  DetachedTabWindow,
 } from '../../shared/detachedTab';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
@@ -34,6 +35,7 @@ export type {
   DetachedTabOpenOptions,
   DetachedTabOpenResult,
   DetachedTabReturnResult,
+  DetachedTabWindow,
 };
 
 /**
@@ -380,6 +382,31 @@ export class WindowService {
         '[WindowService] Failed to reject incoming detached tab:',
         error,
       );
+    }
+  }
+
+  /** Tabs currently hosted in their own windows (empty array on failure). */
+  static async getDetachedTabs(): Promise<DetachedTabWindow[]> {
+    try {
+      return await window.mainProcess.window.getDetachedTabs();
+    } catch (error) {
+      console.error('[WindowService] Failed to get detached tabs:', error);
+      return [];
+    }
+  }
+
+  /** Subscribe to the detached-tab list. */
+  static onDetachedTabsChanged(
+    callback: (detached: DetachedTabWindow[]) => void,
+  ): () => void {
+    try {
+      return window.mainProcess.window.onDetachedTabsChanged(callback);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to register detached-tabs listener:',
+        error,
+      );
+      return () => {};
     }
   }
 }

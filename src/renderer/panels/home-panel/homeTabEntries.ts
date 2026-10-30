@@ -224,6 +224,7 @@ export function buildHomeTabEntries(
   processes: readonly ProcessEntry[] = [],
   rememberedRequests: readonly SavedRequest[] = [],
   pinnedRepoScopes: ReadonlyMap<string, string> = new Map(),
+  detachedTabs: readonly HomeTabEntry[] = [],
 ): HomeTabEntries {
   const rows = new Map<string, HomeRepoRow>();
   const rowFor = (repo: HomeRepository): HomeRepoRow => {
@@ -379,6 +380,16 @@ export function buildHomeTabEntries(
     } else {
       openTabs.push(entry);
     }
+  }
+
+  // Tabs living in their own window are still open, just not in this window's
+  // tab bar. A tab present here too (mid-transfer) wins.
+  for (const entry of detachedTabs) {
+    if (openIds.has(entry.id)) continue;
+    openIds.add(entry.id);
+    const scope = scopedRow(entry.id);
+    if (scope) scope.openTabs.push(entry);
+    else openTabs.push(entry);
   }
 
   // Pinned entries whose tab is closed (open ones already render as rows).

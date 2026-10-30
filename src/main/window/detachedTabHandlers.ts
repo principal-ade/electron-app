@@ -43,6 +43,7 @@ import {
   type DetachableTabDescriptor,
   type DetachedTabOpenResult,
   type DetachedTabReturnResult,
+  type DetachedTabWindow,
 } from '../../shared/detachedTab';
 
 const DETACHED_PURPOSE_PREFIX = 'detached-tab:';
@@ -108,6 +109,25 @@ function clearRecord(record: TransferRecord): void {
   }
 }
 
+/** Accepted detaches whose window is still open. */
+function listDetachedTabs(): DetachedTabWindow[] {
+  const detached: DetachedTabWindow[] = [];
+  for (const record of transfers.values()) {
+    if (record.direction !== 'detach' || !record.accepted) continue;
+    if (!getWindow(record.targetWindowId)) continue;
+    detached.push({ tab: record.tab, windowId: record.targetWindowId });
+  }
+  return detached;
+}
+
+function broadcastDetachedTabsChanged(): void {
+  const detached = listDetachedTabs();
+  getApplicationWindows().forEach(({ window }) => {
+    if (window.isDestroyed() || window.webContents.isDestroyed()) return;
+    window.webContents.send(WindowEvent.DETACHED_TABS_CHANGED, detached);
+  });
+}
+
 function settleTransfer(
   record: TransferRecord,
   accepted: boolean,
@@ -128,6 +148,9 @@ function settleTransfer(
     clearRecord(record);
   }
   record.settle({ accepted, reason });
+  if (accepted && record.direction === 'detach') {
+    broadcastDetachedTabsChanged();
+  }
 }
 
 interface CreatedTransfer {
@@ -263,6 +286,7 @@ async function openDetachedTab(
   appWindow.window.once('closed', () => {
     settleTransfer(record, false, 'window-closed');
     clearRecord(record);
+    if (record.accepted) broadcastDetachedTabsChanged();
   });
 
   const url = `${resolveHtmlPath('detached-tab.html')}#transfer/${record.token}`;
@@ -414,6 +438,8 @@ export function registerDetachedTabHandlers(): void {
   );
 
   ipcMain.handle(WindowEvent.RETURN_DETACHED_TAB, returnDetachedTab);
+
+  ipcMain.handle(WindowEvent.GET_DETACHED_TABS, listDetachedTabs);
 
   ipcMain.handle(
     WindowEvent.DETACHED_TAB_CLAIM_INCOMING,

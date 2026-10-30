@@ -73,6 +73,19 @@ function homeTabLabel(entry: HomeTabEntry): string {
   return entry.label;
 }
 
+/**
+ * Rows whose label doesn't already say where the tab is get a "Tab N" badge.
+ * Topics and models carry user-authored titles, so the badge is the only cue
+ * that they're open and where.
+ */
+function showsTabNumber(entry: HomeTabEntry): boolean {
+  if (entry.kind === 'topic' || entry.kind === 'subsystem-model') return true;
+  return (
+    entry.kind === 'repo-tab' &&
+    (entry.variant === 'project-info' || entry.variant === 'repo-explorer')
+  );
+}
+
 function homeTabDragText(entry: HomeTabEntry): string | undefined {
   const title = entry.title || entry.label;
   if (entry.kind === 'topic' && entry.topicId) {
@@ -134,8 +147,15 @@ export interface HomeTabRowProps {
   entry: HomeTabEntry;
   /** Whether the entry's tab is currently open (vs a pinned closed entry). */
   open: boolean;
+  /** Whether the entry's tab is the focused workspace tab. */
+  active?: boolean;
   /** Current 1-based tab-bar position, never persisted with a pin. */
   tabNumber?: number;
+  /**
+   * The tab lives in its own window: show a "Window" badge instead of a tab
+   * number, and activation focuses that window.
+   */
+  inOwnWindow?: boolean;
   /** Live status for this terminal, independent of active-tab and pin state. */
   programStatus?: ProgramStatusRecord;
   pinned: boolean;
@@ -167,7 +187,9 @@ export interface HomeTabRowProps {
 export const HomeTabRow: React.FC<HomeTabRowProps> = ({
   entry,
   open,
+  active = false,
   tabNumber,
+  inOwnWindow = false,
   programStatus,
   pinned,
   depth = 0,
@@ -203,12 +225,58 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
     );
   };
 
+  const badgeText = inOwnWindow
+    ? 'Window'
+    : open && tabNumber != null && showsTabNumber(entry)
+      ? `Tab ${tabNumber}`
+      : null;
+  const tabBadge = badgeText ? (
+    <span
+      style={{
+        fontSize: theme.fontSizes[0],
+        color: theme.colors.textSecondary,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {badgeText}
+    </span>
+  ) : null;
+  const pinButton =
+    pinnable && isHomeTabPinnable(entry) ? (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onTogglePin();
+        }}
+        aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 22,
+          height: 22,
+          padding: 0,
+          border: 'none',
+          borderRadius: 4,
+          background: 'transparent',
+          color: pinned ? theme.colors.primary : theme.colors.textSecondary,
+          cursor: 'pointer',
+          opacity: pinned || hovered ? 1 : 0,
+          transition: 'opacity 120ms, color 120ms',
+        }}
+      >
+        <Pin size={12} fill={pinned ? 'currentColor' : 'none'} />
+      </button>
+    ) : null;
+
   const acceptsDrop = (event: React.DragEvent) =>
     dropTopicId !== undefined &&
     hasTopicAssociation(event.dataTransfer) &&
     !isSelfAssociation(dropTopicId, getActiveTopicAssociationDrag());
-  const accessibleLabel =
-    entry.kind === 'terminal' && !entry.repoPath && entry.path
+  const accessibleLabel = inOwnWindow
+    ? `Focus window for ${label}`
+    : entry.kind === 'terminal' && !entry.repoPath && entry.path
       ? `Open terminal in ${entry.path}`
       : `Open ${label}`;
 
@@ -269,11 +337,13 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
         padding: `8px 10px 8px ${14 + depth * 18}px`,
         borderRadius: 0,
         cursor: 'pointer',
-        backgroundColor: dropActive
-          ? theme.colors.backgroundTertiary
-          : hovered
-            ? theme.colors.backgroundSecondary
-            : 'transparent',
+        // Focus uses a stronger tint than hover so the two stay distinguishable.
+        backgroundColor:
+          dropActive || active
+            ? theme.colors.backgroundTertiary
+            : hovered
+              ? theme.colors.backgroundSecondary
+              : 'transparent',
         outline: dropActive ? `1px dashed ${theme.colors.primary}` : 'none',
         outlineOffset: -1,
         transition: 'background-color 0.15s ease',
@@ -345,48 +415,20 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
             <ProgramStatusBadge record={programStatus} />
           </span>
         )}
-      {open &&
-        tabNumber != null &&
-        entry.kind === 'repo-tab' &&
-        (entry.variant === 'project-info' ||
-          entry.variant === 'repo-explorer') && (
-          <span
-            style={{
-              flexShrink: 0,
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-            }}
-          >
-            Tab {tabNumber}
-          </span>
-        )}
-      {pinnable && isHomeTabPinnable(entry) && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onTogglePin();
-          }}
-          aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}
+      {(tabBadge || pinButton) && (
+        // The tab number sits under the pin so long labels keep their width.
+        <div
           style={{
             flexShrink: 0,
-            display: 'inline-flex',
+            display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            width: 22,
-            height: 22,
-            padding: 0,
-            border: 'none',
-            borderRadius: 4,
-            background: 'transparent',
-            color: pinned ? theme.colors.primary : theme.colors.textSecondary,
-            cursor: 'pointer',
-            opacity: pinned || hovered ? 1 : 0,
-            transition: 'opacity 120ms, color 120ms',
+            gap: 2,
           }}
         >
-          <Pin size={12} fill={pinned ? 'currentColor' : 'none'} />
-        </button>
+          {pinButton}
+          {tabBadge}
+        </div>
       )}
     </div>
   );

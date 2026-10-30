@@ -145,6 +145,62 @@ describe('buildHomeTabEntries', () => {
       expect(buildHomeTabEntries([entry], [], [], []).repos).toEqual([]);
     },
   );
+  it.each(scopedPins)(
+    'treats a $kind open in its own window as open, not as a closed pin',
+    (pin) => {
+      const standalone = buildHomeTabEntries(
+        [],
+        [],
+        [],
+        [pin],
+        [],
+        [],
+        [],
+        new Map(),
+        [pin],
+      );
+      expect(standalone.openTabs).toEqual([pin]);
+      expect(standalone.pinnedTabs).toEqual([]);
+
+      const scoped = buildHomeTabEntries(
+        [entry],
+        [],
+        [],
+        [pin],
+        [],
+        [],
+        [],
+        new Map([[pin.id, purl]]),
+        [pin],
+      );
+      expect(scoped.repos[0]).toMatchObject({
+        openTabs: [pin],
+        pinnedTabs: [],
+      });
+    },
+  );
+
+  it('prefers the tab in this window when a detached copy is also listed', () => {
+    const tab: WorkspaceTab = {
+      id: 'local-topic-t1',
+      label: 'Topic',
+      contentType: 'local-topic',
+      topicId: 't1',
+      title: 'Topic',
+    } as WorkspaceTab;
+    const result = buildHomeTabEntries(
+      [],
+      [],
+      [tab],
+      [],
+      [],
+      [],
+      [],
+      new Map(),
+      [scopedPins[0]],
+    );
+    expect(result.openTabs).toHaveLength(1);
+  });
 
   it('shows a remote-only repo for a scoped pin without a registered clone', () => {
     const pin = scopedPins[0];

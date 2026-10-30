@@ -88,6 +88,17 @@ jest.mock('../../hooks/useProcessRegistry', () => ({
   useProcessRegistry: () => ({ entries: [] }),
 }));
 jest.mock('./HomeProcessRow', () => ({ HomeProcessRow: () => null }));
+const mockDetachedTabs = new Map<string, { windowId: number }>();
+jest.mock('./useDetachedTabs', () => ({
+  useDetachedTabs: () => mockDetachedTabs,
+  detachedTabEntry: () => null,
+}));
+const mockFocusWindowById = jest.fn();
+jest.mock('../../main-process-api/WindowService', () => ({
+  WindowService: {
+    focusWindowById: (id: number) => mockFocusWindowById(id),
+  },
+}));
 
 const repo = {
   key: '/work/app',
@@ -418,4 +429,46 @@ test('shows OSC status for a standalone terminal, not a closed or nonterminal en
       .getByRole('status')
       .getAttribute('aria-label'),
   ).toBe('Terminal error');
+});
+describe('tabs open in their own window', () => {
+  const topic: HomeTabEntry = {
+    id: 'local-topic-t1',
+    kind: 'topic',
+    label: 'Detached topic',
+    topicId: 't1',
+  };
+
+  beforeEach(() => {
+    mockDetachedTabs.set(topic.id, { windowId: 7 });
+  });
+  afterEach(() => {
+    mockDetachedTabs.clear();
+    mockFocusWindowById.mockReset();
+  });
+
+  test('clicking focuses that window instead of opening a tab', async () => {
+    mockFocusWindowById.mockResolvedValue(true);
+    const open = jest.fn();
+    renderHome(repo, open, [], [topic]);
+    expect(screen.getByText('Window')).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Focus window for Detached topic' }),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mockFocusWindowById).toHaveBeenCalledWith(7);
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  test('reopens here when the window is already gone', async () => {
+    mockFocusWindowById.mockResolvedValue(false);
+    const open = jest.fn();
+    renderHome(repo, open, [], [topic]);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Focus window for Detached topic' }),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(open).toHaveBeenCalledWith(topic);
+  });
 });

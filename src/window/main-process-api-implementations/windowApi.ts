@@ -17,6 +17,7 @@ import type {
   DetachableTabDescriptor,
   DetachedTabIncomingPayload,
   DetachedTabOpenOptions,
+  DetachedTabWindow,
 } from '../../shared/detachedTab';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -196,4 +197,21 @@ export const windowAPI: WindowAPI = {
 
   rejectIncomingDetachedTab: (token: string, reason?: string) =>
     ipcRenderer.invoke(WindowEvent.DETACHED_TAB_REJECT_INCOMING, token, reason),
+
+  getDetachedTabs: () => ipcRenderer.invoke(WindowEvent.GET_DETACHED_TABS),
+
+  onDetachedTabsChanged: (
+    callback: (detached: DetachedTabWindow[]) => void,
+  ) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      detached: DetachedTabWindow[],
+    ) => {
+      callback(detached);
+    };
+    ipcRenderer.on(WindowEvent.DETACHED_TABS_CHANGED, handler);
+    return () => {
+      ipcRenderer.removeListener(WindowEvent.DETACHED_TABS_CHANGED, handler);
+    };
+  },
 };

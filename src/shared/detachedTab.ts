@@ -71,6 +71,12 @@ export interface DetachedTabOpenResult {
   reason?: string;
 }
 
+/** A tab currently hosted in its own window, keyed by the source tab id. */
+export interface DetachedTabWindow {
+  tab: DetachableTabDescriptor;
+  windowId: number;
+}
+
 /** Result of returning a detached tab to the main window. */
 export interface DetachedTabReturnResult {
   ok: boolean;
