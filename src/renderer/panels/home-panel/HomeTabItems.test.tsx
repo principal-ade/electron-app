@@ -340,8 +340,53 @@ describe('dragging agent context', () => {
     label: 'Model title',
     modelId: 'sg-1-abc',
   };
+  const drawing: HomeTabEntry = {
+    id: 'drawing-architecture',
+    kind: 'drawing',
+    drawingId: 'architecture',
+    label: 'Drawing tab',
+    name: 'Architecture',
+    path: '/drawings/architecture.excalidraw',
+  };
 
   afterEach(() => jest.restoreAllMocks());
+
+  test.each([true, false])(
+    'drags a saved drawing when open=%s and preserves activation and pinning',
+    (open) => {
+      const activate = jest.fn();
+      const pin = jest.fn();
+      render(
+        <HomeTabRow
+          entry={drawing}
+          open={open}
+          pinned={!open}
+          onActivate={activate}
+          onTogglePin={pin}
+        />,
+      );
+      const row = screen.getByRole('button', { name: 'Open Drawing tab' });
+      expect(row.draggable).toBe(true);
+      const dataTransfer = { effectAllowed: 'none', setData: jest.fn() };
+      fireEvent.dragStart(row, { dataTransfer });
+      expect(dataTransfer.effectAllowed).toBe('copy');
+      expect(dataTransfer.setData).toHaveBeenCalledWith(
+        'text/plain',
+        'Use drawing "Architecture" as context — read the local Excalidraw file:\ncat /drawings/architecture.excalidraw',
+      );
+      expect(activate).not.toHaveBeenCalled();
+      expect(pin).not.toHaveBeenCalled();
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: `${open ? 'Pin' : 'Unpin'} Drawing tab`,
+        }),
+      );
+      expect(pin).toHaveBeenCalledTimes(1);
+      expect(activate).not.toHaveBeenCalled();
+      fireEvent.click(row);
+      expect(activate).toHaveBeenCalledTimes(1);
+    },
+  );
 
   test.each([
     [topic, 'topic', 'topics', 't1'],
@@ -418,6 +463,7 @@ describe('dragging agent context', () => {
     profile,
     { ...topic, topicId: undefined },
     { ...model, modelId: undefined },
+    { ...drawing, path: undefined },
     { id: 'terminal', kind: 'terminal', label: 'Terminal' } as HomeTabEntry,
   ])('does not drag unsupported or incomplete entries: %s', (entry) => {
     render(

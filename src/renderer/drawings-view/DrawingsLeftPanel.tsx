@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
+import { drawingContextDragText } from '../utils/agentContextDragText';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import {
   DRAWING_EVENTS,
@@ -359,6 +360,15 @@ export const DrawingsLeftPanel: React.FC<DrawingsLeftPanelProps> = ({
               >
                 <button
                   type="button"
+                  draggable
+                  onDragStart={(event) => {
+                    if (!event.dataTransfer) return;
+                    event.dataTransfer.effectAllowed = 'copy';
+                    event.dataTransfer.setData(
+                      'text/plain',
+                      drawingContextDragText(item.path, item.name),
+                    );
+                  }}
                   onClick={() => handleOpen(item)}
                   style={{
                     display: 'flex',

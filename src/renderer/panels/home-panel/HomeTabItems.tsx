@@ -33,7 +33,10 @@ import {
   ToolCase,
 } from 'lucide-react';
 import { TopicsIcon } from '../../components/TopicsIcon';
-import { agentContextDragText } from '../../utils/agentContextDragText';
+import {
+  agentContextDragText,
+  drawingContextDragText,
+} from '../../utils/agentContextDragText';
 import { tildifyPath } from '../../utils/tildifyPath';
 import { isHomeTabPinnable, type HomeTabEntry } from './homeTabEntries';
 
@@ -60,6 +63,9 @@ function homeTabDragText(entry: HomeTabEntry): string | undefined {
   }
   if (entry.kind === 'subsystem-model' && entry.modelId) {
     return agentContextDragText('subsystem model', entry.modelId, title);
+  }
+  if (entry.kind === 'drawing' && entry.path) {
+    return drawingContextDragText(entry.path, entry.name || title);
   }
   return undefined;
 }

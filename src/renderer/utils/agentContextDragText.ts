@@ -1,6 +1,11 @@
 import { getPrincipalBridgeUrl } from '../../shared/config/appBranding';
 import { shellQuote } from './shellQuote';
 
+/** Drawings are local files rather than bridge-backed resources. */
+export function drawingContextDragText(path: string, title: string): string {
+  return `Use drawing "${title || 'Untitled drawing'}" as context — read the local Excalidraw file:\ncat ${shellQuote(path)}`;
+}
+
 /** Plain-text context prompt pasted by terminal drop targets. */
 export function agentContextDragText(
   kind: 'topic' | 'subsystem model',
