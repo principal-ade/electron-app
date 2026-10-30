@@ -290,6 +290,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     openFileCityGuide,
     openSubsystemModel,
     openC4Sketch,
+    openDrawing,
     openSkill,
     openLocalhostBrowser,
     openHttpRequest,
@@ -497,6 +498,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onOpenModel={openSubsystemModel}
               onOpenTopic={openLocalTopic}
               onOpenSketch={openC4Sketch}
+              onOpenDrawing={(drawingId, name, path) =>
+                openDrawing({ drawingId, name, path })
+              }
               onDetach={() => void detachTabToWindow(topicTab.id)}
             />
           );
@@ -553,6 +557,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       openSubsystemModel,
       openLocalTopic,
       openC4Sketch,
+      openDrawing,
       detachTabToWindow,
     ],
   );

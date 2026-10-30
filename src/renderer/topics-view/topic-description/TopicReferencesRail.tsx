@@ -1,15 +1,49 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { MessagesSquare, PencilRuler } from 'lucide-react';
+import { MessagesSquare, PencilRuler, PenTool } from 'lucide-react';
 import type { TopicReference } from '@principal-ai/subsystems-core';
 import { TopicService } from '../../main-process-api/TopicService';
 import { C4SketchService } from '../../main-process-api/C4SketchService';
+import { getDrawingSummary } from '../../drawings-view/drawingsStorage';
 
 interface ReferenceRow {
   reference: TopicReference;
   id: string;
   title: string;
   status: 'ready' | 'missing' | 'error';
+  /** Resolved `.excalidraw` path, for drawing rows. */
+  path?: string;
+}
+
+function referenceId(reference: TopicReference): string {
+  switch (reference.kind) {
+    case 'topic':
+      return reference.topicId;
+    case 'c4-sketch':
+      return reference.sketchId;
+    case 'drawing':
+      return reference.drawingId;
+  }
+}
+
+async function resolveReference(
+  reference: TopicReference,
+): Promise<{ title: string; path?: string } | null> {
+  const id = referenceId(reference);
+  switch (reference.kind) {
+    case 'topic': {
+      const topic = await TopicService.getTopic(id);
+      return topic ? { title: topic.title } : null;
+    }
+    case 'c4-sketch': {
+      const sketch = await C4SketchService.getSummary(id);
+      return sketch ? { title: sketch.title } : null;
+    }
+    case 'drawing': {
+      const drawing = await getDrawingSummary(id);
+      return drawing ? { title: drawing.name, path: drawing.path } : null;
+    }
+  }
 }
 
 export interface TopicReferencesRailProps {
@@ -17,6 +51,8 @@ export interface TopicReferencesRailProps {
   width?: React.CSSProperties['width'];
   onOpenTopic: (topicId: string, title: string) => void;
   onOpenSketch: (sketchId: string, title: string) => void;
+  /** Omit when the host can't show drawing tabs; drawing rows then can't be opened. */
+  onOpenDrawing?: (drawingId: string, title: string, path?: string) => void;
 }
 
 function ReferenceSection({
@@ -32,7 +68,7 @@ function ReferenceSection({
   rows: ReferenceRow[];
   error: boolean;
   loading: boolean;
-  onOpen: (id: string, title: string) => void;
+  onOpen?: (row: ReferenceRow) => void;
 }) {
   const { theme } = useTheme();
   if (!loading && !error && rows.length === 0) return null;
@@ -76,75 +112,80 @@ function ReferenceSection({
             {loading ? 'Loading…' : 'References unavailable.'}
           </span>
         ) : (
-          rows.map((row) => (
-            <div
-              key={row.id}
-              style={{
-                borderRadius: theme.radii?.[1] || 4,
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.backgroundSecondary,
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(event) => {
-                if (row.status !== 'ready') return;
-                event.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundTertiary;
-                event.currentTarget.style.borderColor = theme.colors.primary;
-              }}
-              onMouseLeave={(event) => {
-                event.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundSecondary;
-                event.currentTarget.style.borderColor = theme.colors.border;
-              }}
-            >
-              <button
-                type="button"
-                disabled={row.status !== 'ready'}
-                aria-label={
-                  row.status === 'ready'
-                    ? `Open ${row.title} in a new tab`
-                    : `${row.title} unavailable`
-                }
-                onClick={() => onOpen(row.id, row.title)}
+          rows.map((row) => {
+            const openable = row.status === 'ready' && onOpen !== undefined;
+            return (
+              <div
+                key={row.id}
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 4,
-                  width: '100%',
-                  minWidth: 0,
-                  padding: 10,
-                  border: 'none',
-                  background: 'transparent',
-                  color:
-                    row.status === 'ready'
-                      ? theme.colors.text
-                      : theme.colors.textSecondary,
-                  fontFamily: theme.fonts.body,
-                  textAlign: 'left',
-                  cursor: row.status === 'ready' ? 'pointer' : 'default',
+                  borderRadius: theme.radii?.[1] || 4,
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(event) => {
+                  if (!openable) return;
+                  event.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                  event.currentTarget.style.borderColor = theme.colors.primary;
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundSecondary;
+                  event.currentTarget.style.borderColor = theme.colors.border;
                 }}
               >
-                <span
+                <button
+                  type="button"
+                  disabled={!openable}
+                  aria-label={
+                    openable
+                      ? `Open ${row.title} in a new tab`
+                      : row.status === 'ready'
+                        ? row.title
+                        : `${row.title} unavailable`
+                  }
+                  onClick={() => onOpen?.(row)}
                   style={{
-                    fontSize: theme.fontSizes[1],
-                    fontWeight: 600,
-                    whiteSpace: 'normal',
-                    overflowWrap: 'anywhere',
-                    fontStyle: row.status === 'ready' ? 'normal' : 'italic',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                    width: '100%',
+                    minWidth: 0,
+                    padding: 10,
+                    border: 'none',
+                    background: 'transparent',
+                    color:
+                      row.status === 'ready'
+                        ? theme.colors.text
+                        : theme.colors.textSecondary,
+                    fontFamily: theme.fonts.body,
+                    textAlign: 'left',
+                    cursor: openable ? 'pointer' : 'default',
                   }}
                 >
-                  {row.title}
-                </span>
-                {row.status !== 'ready' && (
-                  <span style={{ fontSize: theme.fontSizes[0] }}>
-                    {row.status === 'missing'
-                      ? 'Reference not found'
-                      : 'Could not load reference'}
+                  <span
+                    style={{
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: 600,
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
+                      fontStyle: row.status === 'ready' ? 'normal' : 'italic',
+                    }}
+                  >
+                    {row.title}
                   </span>
-                )}
-              </button>
-            </div>
-          ))
+                  {row.status !== 'ready' && (
+                    <span style={{ fontSize: theme.fontSizes[0] }}>
+                      {row.status === 'missing'
+                        ? 'Reference not found'
+                        : 'Could not load reference'}
+                    </span>
+                  )}
+                </button>
+              </div>
+            );
+          })
         )}
       </div>
     </section>
@@ -157,6 +198,7 @@ export const TopicReferencesRail: React.FC<TopicReferencesRailProps> = ({
   width = 280,
   onOpenTopic,
   onOpenSketch,
+  onOpenDrawing,
 }) => {
   const { theme } = useTheme();
   const [state, setState] = React.useState<{
@@ -181,29 +223,22 @@ export const TopicReferencesRail: React.FC<TopicReferencesRailProps> = ({
         const references = [
           ...new Map(
             (owner.references ?? []).map((reference) => [
-              reference.kind === 'topic'
-                ? `topic:${reference.topicId}`
-                : `sketch:${reference.sketchId}`,
+              `${reference.kind}:${referenceId(reference)}`,
               reference,
             ]),
           ).values(),
         ];
         const rows = await Promise.all(
           references.map(async (reference): Promise<ReferenceRow> => {
-            const id =
-              reference.kind === 'topic'
-                ? reference.topicId
-                : reference.sketchId;
+            const id = referenceId(reference);
             try {
-              const target =
-                reference.kind === 'topic'
-                  ? await TopicService.getTopic(id)
-                  : await C4SketchService.getSummary(id);
+              const target = await resolveReference(reference);
               return {
                 reference,
                 id,
                 title: target?.title ?? id,
                 status: target ? 'ready' : 'missing',
+                ...(target?.path ? { path: target.path } : {}),
               };
             } catch {
               return { reference, id, title: id, status: 'error' };
@@ -223,7 +258,7 @@ export const TopicReferencesRail: React.FC<TopicReferencesRailProps> = ({
     const unsubscribe = TopicService.onTopicChange(() => {
       void reload();
     });
-    // Sketch files may be edited by Studio, outside the Electron event bus.
+    // Sketch and drawing files may change outside the Electron event bus.
     const onFocus = () => {
       void reload();
     };
@@ -263,7 +298,19 @@ export const TopicReferencesRail: React.FC<TopicReferencesRailProps> = ({
         rows={rows.filter((row) => row.reference.kind === 'c4-sketch')}
         error={error}
         loading={loading}
-        onOpen={onOpenSketch}
+        onOpen={(row) => onOpenSketch(row.id, row.title)}
+      />
+      <ReferenceSection
+        title="Drawings"
+        icon={<PenTool size={14} />}
+        rows={rows.filter((row) => row.reference.kind === 'drawing')}
+        error={error}
+        loading={loading}
+        onOpen={
+          onOpenDrawing
+            ? (row) => onOpenDrawing(row.id, row.title, row.path)
+            : undefined
+        }
       />
       <ReferenceSection
         title="Related topics"
@@ -271,7 +318,7 @@ export const TopicReferencesRail: React.FC<TopicReferencesRailProps> = ({
         rows={rows.filter((row) => row.reference.kind === 'topic')}
         error={error}
         loading={loading}
-        onOpen={onOpenTopic}
+        onOpen={(row) => onOpenTopic(row.id, row.title)}
       />
     </aside>
   );

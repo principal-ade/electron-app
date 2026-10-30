@@ -76,6 +76,34 @@ export function diagramPath(dir: string, id: string): string {
   return `${dir}/${id}.excalidraw`;
 }
 
+/**
+ * Look up one saved drawing by id for a reference (e.g. a topic attachment).
+ * Returns null when the id is not a single file-name segment or the file is
+ * missing.
+ */
+export async function getDrawingSummary(
+  id: string,
+): Promise<{ id: string; name: string; path: string } | null> {
+  if (!id || id === '.' || id === '..' || /[/\\\s\p{Cc}]/u.test(id)) {
+    return null;
+  }
+  const dir = await resolveDrawingsDir();
+  if (!dir) throw new Error('Drawings folder unavailable');
+  const path = diagramPath(dir, id);
+  const res = await FileSystemService.readFile(path);
+  if (!res) return null;
+  let name = id;
+  try {
+    const parsed = JSON.parse(res.content);
+    if (typeof parsed?.appState?.name === 'string' && parsed.appState.name) {
+      name = parsed.appState.name;
+    }
+  } catch {
+    // corrupt file — still openable, fall back to the id as the name
+  }
+  return { id, name, path };
+}
+
 /** Scan the drawings directory and read each file's display name + mtime. */
 export async function scanDrawings(dir: string): Promise<DrawingItem[]> {
   const names = await FileSystemService.readDirectory(dir);

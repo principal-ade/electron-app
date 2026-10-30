@@ -34,7 +34,7 @@ function response() {
 
 beforeEach(() => jest.clearAllMocks());
 
-test('creates and broadcasts a topic with all four reference types', async () => {
+test('creates and broadcasts a topic with all five reference types', async () => {
   const body = {
     title: '  All references  ',
     description: '## Goal\nExercise the reference rail.',
@@ -42,6 +42,7 @@ test('creates and broadcasts a topic with all four reference types', async () =>
     subsystemModels: [{ modelId: 'sg-123-abc', trailIds: ['flow-a'] }],
     references: [
       { kind: 'c4-sketch', sketchId: 'c4s-123-abc' },
+      { kind: 'drawing', drawingId: 'drawing-123' },
       { kind: 'topic', topicId: 'topic-related' },
     ],
   };
@@ -79,7 +80,9 @@ test('trims and deduplicates references while keeping kinds distinct and removin
             url: 'https://storage.invalid',
           },
           { kind: 'c4-sketch', sketchId: 'shared-id' },
+          { kind: 'drawing', drawingId: ' shared-id ' },
           { kind: 'topic', topicId: 'shared-id' },
+          { kind: 'drawing', drawingId: 'shared-id' },
         ],
       },
     } as Request,
@@ -90,6 +93,7 @@ test('trims and deduplicates references while keeping kinds distinct and removin
     references: [
       { kind: 'topic', topicId: 'shared-id' },
       { kind: 'c4-sketch', sketchId: 'shared-id' },
+      { kind: 'drawing', drawingId: 'shared-id' },
     ],
   });
 });
@@ -125,6 +129,13 @@ test.each([
   [{ kind: 'c4-sketch', sketchId: [] }],
   [{ kind: 'c4-sketch', sketchId: ' ' }],
   [{ kind: 'topic', topicId: 'valid' }, { kind: 'c4-sketch' }],
+  [{ kind: 'drawing', sketchId: 'd1' }],
+  [{ kind: 'drawing', drawingId: '' }],
+  [{ kind: 'drawing', drawingId: '../secrets' }],
+  [{ kind: 'drawing', drawingId: 'a/b' }],
+  [{ kind: 'drawing', drawingId: 'a\\b' }],
+  [{ kind: 'drawing', drawingId: '..' }],
+  [{ kind: 'drawing', drawingId: 'a b' }],
 ])(
   'rejects malformed references without writing or broadcasting: %p',
   async (references) => {

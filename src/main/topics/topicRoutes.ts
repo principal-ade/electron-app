@@ -71,6 +71,18 @@ function parseSubsystemModelRefs(
   return refs;
 }
 
+const REFERENCE_ID_FIELD = {
+  topic: 'topicId',
+  'c4-sketch': 'sketchId',
+  drawing: 'drawingId',
+} as const;
+
+// Drawing IDs become file names under the drawings folder, so they must be a
+// single path segment.
+function isDrawingId(id: string): boolean {
+  return id !== '.' && id !== '..' && !/[/\\\s\p{Cc}]/u.test(id);
+}
+
 /** Keep only canonical reference fields, trimming IDs and deduplicating by kind. */
 function parseTopicRefs(value: unknown): TopicReference[] | null {
   if (!Array.isArray(value)) return null;
@@ -80,17 +92,22 @@ function parseTopicRefs(value: unknown): TopicReference[] | null {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry))
       return null;
     const raw = entry as Record<string, unknown>;
-    if (raw.kind !== 'topic' && raw.kind !== 'c4-sketch') return null;
-    const field = raw.kind === 'topic' ? 'topicId' : 'sketchId';
+    const kind = raw.kind;
+    if (kind !== 'topic' && kind !== 'c4-sketch' && kind !== 'drawing')
+      return null;
+    const field = REFERENCE_ID_FIELD[kind];
     const id = typeof raw[field] === 'string' ? raw[field].trim() : '';
     if (!id) return null;
-    const key = `${raw.kind}:${id}`;
+    if (kind === 'drawing' && !isDrawingId(id)) return null;
+    const key = `${kind}:${id}`;
     if (seen.has(key)) continue;
     seen.add(key);
     refs.push(
-      raw.kind === 'topic'
-        ? { kind: 'topic', topicId: id }
-        : { kind: 'c4-sketch', sketchId: id },
+      kind === 'topic'
+        ? { kind, topicId: id }
+        : kind === 'c4-sketch'
+          ? { kind, sketchId: id }
+          : { kind, drawingId: id },
     );
   }
   return refs;
@@ -163,7 +180,7 @@ export function registerTopicRoutes(
         res.status(400).json({
           success: false,
           error:
-            'references must be an array of { kind: "topic", topicId: string } or { kind: "c4-sketch", sketchId: string } with non-empty ids',
+            'references must be an array of { kind: "topic", topicId: string }, { kind: "c4-sketch", sketchId: string }, or { kind: "drawing", drawingId: string } with non-empty ids (drawing ids must be a single file-name segment)',
         });
         return;
       }

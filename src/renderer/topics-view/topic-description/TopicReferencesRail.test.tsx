@@ -10,6 +10,7 @@ import {
 import { TopicReferencesRail } from './TopicReferencesRail';
 import { TopicService } from '../../main-process-api/TopicService';
 import { C4SketchService } from '../../main-process-api/C4SketchService';
+import { getDrawingSummary } from '../../drawings-view/drawingsStorage';
 import {
   TopicEventType,
   type TopicChangeEvent,
@@ -42,6 +43,9 @@ jest.mock('../../main-process-api/TopicService', () => ({
 }));
 jest.mock('../../main-process-api/C4SketchService', () => ({
   C4SketchService: { getSummary: jest.fn() },
+}));
+jest.mock('../../drawings-view/drawingsStorage', () => ({
+  getDrawingSummary: jest.fn(),
 }));
 
 const references = [
@@ -247,4 +251,55 @@ test('shows an owner load error instead of pretending there are no references', 
   expect((await screen.findByRole('alert')).textContent).toContain(
     'Could not load references.',
   );
+});
+
+describe('drawing references', () => {
+  const drawingRef = { kind: 'drawing', drawingId: 'd-123' };
+  beforeEach(() => {
+    (TopicService.getTopic as jest.Mock).mockImplementation(
+      async (id: string) =>
+        id === 'topic-owner' ? { references: [drawingRef] } : null,
+    );
+    (getDrawingSummary as jest.Mock).mockResolvedValue({
+      id: 'd-123',
+      name: 'Whiteboard',
+      path: '/home/.alexandria/drawings/d-123.excalidraw',
+    });
+  });
+
+  test('shows the drawing name and opens it with its resolved path', async () => {
+    const onOpenDrawing = jest.fn();
+    render(<TopicReferencesRail {...props} onOpenDrawing={onOpenDrawing} />);
+    const button = await screen.findByRole('button', {
+      name: 'Open Whiteboard in a new tab',
+    });
+    expect(screen.getByRole('region', { name: 'Drawings' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'C4 sketches' })).toBeNull();
+    fireEvent.click(button);
+    expect(getDrawingSummary).toHaveBeenCalledWith('d-123');
+    expect(onOpenDrawing).toHaveBeenCalledWith(
+      'd-123',
+      'Whiteboard',
+      '/home/.alexandria/drawings/d-123.excalidraw',
+    );
+  });
+
+  test('lists but cannot open drawings when the host has no drawing tabs', async () => {
+    render(<TopicReferencesRail {...props} />);
+    const button = (await screen.findByRole('button', {
+      name: 'Whiteboard',
+    })) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  test('marks a deleted drawing as not found', async () => {
+    (getDrawingSummary as jest.Mock).mockResolvedValue(null);
+    const onOpenDrawing = jest.fn();
+    render(<TopicReferencesRail {...props} onOpenDrawing={onOpenDrawing} />);
+    expect(await screen.findByText('Reference not found')).toBeTruthy();
+    const button = screen.getByRole('button', {
+      name: 'd-123 unavailable',
+    }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
 });

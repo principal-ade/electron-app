@@ -17,7 +17,10 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from './topic-description/TopicDescriptionBody';
 import { TopicProjectsRail } from './topic-description/TopicProjectsRail';
 import { TopicSubsystemModelsRail } from './topic-description/TopicSubsystemModelsRail';
-import { TopicReferencesRail } from './topic-description/TopicReferencesRail';
+import {
+  TopicReferencesRail,
+  type TopicReferencesRailProps,
+} from './topic-description/TopicReferencesRail';
 import { TopicService } from '../main-process-api/TopicService';
 import { TopicDeleteHeaderButton } from './TopicDeleteHeaderButton';
 import { TopicPinHeaderButton } from './TopicPinHeaderButton';
@@ -32,6 +35,7 @@ export const LocalTopicTabContent: React.FC<{
   onOpenModel: (modelId: string, title: string) => void;
   onOpenTopic: (topicId: string, title: string) => void;
   onOpenSketch: (sketchId: string, title: string) => void;
+  onOpenDrawing?: TopicReferencesRailProps['onOpenDrawing'];
   /** Move this tab into its own window. Hidden when the host can't detach. */
   onDetach?: () => void;
 }> = ({
@@ -42,6 +46,7 @@ export const LocalTopicTabContent: React.FC<{
   onOpenModel,
   onOpenTopic,
   onOpenSketch,
+  onOpenDrawing,
   onDetach,
 }) => {
   const { theme } = useTheme();
@@ -276,6 +281,7 @@ export const LocalTopicTabContent: React.FC<{
             width="100%"
             onOpenTopic={onOpenTopic}
             onOpenSketch={onOpenSketch}
+            onOpenDrawing={onOpenDrawing}
           />
         </div>
       </div>
