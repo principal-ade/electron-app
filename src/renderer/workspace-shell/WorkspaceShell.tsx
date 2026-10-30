@@ -39,6 +39,7 @@ import {
   PencilRuler,
   ToolCase,
   Send,
+  Terminal,
 } from 'lucide-react';
 import { HttpRequestTabContent } from '../requests/HttpRequestTabContent';
 import { RequestsLeftPanel } from '../requests/RequestsLeftPanel';
@@ -428,6 +429,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     const projectsIcon = renderProjectsTabIcon(tab as FeedTab);
     if (projectsIcon) return projectsIcon;
     switch (tab.contentType) {
+      case 'terminal':
+        return <Terminal size={14} />;
       case 'topics-home':
         return <TopicsIcon size={14} />;
       case 'local-topic':
