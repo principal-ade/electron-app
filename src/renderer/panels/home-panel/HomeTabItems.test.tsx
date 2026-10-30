@@ -1,7 +1,8 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { HomeTabEntry } from './homeTabEntries';
 import { HomeTabRow, PinnedTabIcon } from './HomeTabItems';
+import { TOPIC_ASSOCIATION_MIME } from './topicAssociationDrag';
 import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 
 jest.mock('@industry-theme/xterm-terminal-panel', () => ({
@@ -503,5 +504,149 @@ describe('dragging agent context', () => {
     expect(payload.split('\n')[1]).toBe(
       `curl -s '${getPrincipalBridgeUrl()}/api/topics/a%2Fb'\\''%24(cmd)%3F'`,
     );
+  });
+});
+
+describe('dropping onto topic rows', () => {
+  const target: HomeTabEntry = {
+    id: 'local-topic-owner',
+    kind: 'topic',
+    label: 'Owner topic',
+    topicId: 'owner',
+  };
+  const drawingEntry: HomeTabEntry = {
+    id: 'drawing-d1',
+    kind: 'drawing',
+    drawingId: 'd1',
+    label: 'Sketchpad',
+    name: 'Sketchpad',
+    path: '/drawings/d1.excalidraw',
+  };
+
+  function transfer(payload?: unknown) {
+    const data = new Map<string, string>();
+    if (payload !== undefined) {
+      data.set(TOPIC_ASSOCIATION_MIME, JSON.stringify(payload));
+    }
+    return {
+      effectAllowed: 'none',
+      dropEffect: 'none',
+      get types() {
+        return [...data.keys()];
+      },
+      getData: (type: string) => data.get(type) ?? '',
+      setData: (type: string, value: string) => data.set(type, value),
+    };
+  }
+
+  function renderTarget(onDropAssociation = jest.fn()) {
+    render(
+      <HomeTabRow
+        entry={target}
+        open
+        pinned={false}
+        onActivate={jest.fn()}
+        onTogglePin={jest.fn()}
+        onDropAssociation={onDropAssociation}
+      />,
+    );
+    return screen.getByRole('button', { name: 'Open Owner topic' });
+  }
+
+  afterEach(() => jest.useRealTimers());
+
+  test('adds the association payload when dragging an associable row', () => {
+    render(
+      <HomeTabRow
+        entry={drawingEntry}
+        open
+        pinned={false}
+        onActivate={jest.fn()}
+        onTogglePin={jest.fn()}
+      />,
+    );
+    const dataTransfer = transfer();
+    const row = screen.getByRole('button', { name: 'Open Sketchpad' });
+    fireEvent.dragStart(row, { dataTransfer });
+    expect(JSON.parse(dataTransfer.getData(TOPIC_ASSOCIATION_MIME))).toEqual({
+      kind: 'drawing',
+      drawingId: 'd1',
+    });
+    expect(dataTransfer.getData('text/plain')).toContain('Use drawing');
+    fireEvent.dragEnd(row);
+  });
+
+  test('accepts a drop, links the item, and shows brief feedback', async () => {
+    jest.useFakeTimers();
+    const onDrop = jest.fn().mockResolvedValue('added');
+    const row = renderTarget(onDrop);
+    const dataTransfer = transfer({ kind: 'drawing', drawingId: 'd1' });
+    expect(fireEvent.dragOver(row, { dataTransfer })).toBe(false);
+    expect(row.style.outline).toContain('dashed');
+    fireEvent.drop(row, { dataTransfer });
+    expect(onDrop).toHaveBeenCalledWith({ kind: 'drawing', drawingId: 'd1' });
+    expect(row.style.outline).toBe('none');
+    expect((await screen.findByRole('status')).textContent).toBe('Linked');
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  test.each([
+    ['exists', 'Already linked'],
+    ['error', 'Could not link'],
+  ])('reports %s as %s', async (outcome, message) => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const onDrop = jest.fn(() =>
+      outcome === 'error'
+        ? Promise.reject(new Error('write failed'))
+        : Promise.resolve(outcome),
+    );
+    const row = renderTarget(onDrop);
+    fireEvent.drop(row, {
+      dataTransfer: transfer({ kind: 'subsystem-model', modelId: 'sg-1' }),
+    });
+    expect((await screen.findByRole('status')).textContent).toBe(message);
+  });
+
+  test('ignores drags without an association payload', () => {
+    const onDrop = jest.fn();
+    const row = renderTarget(onDrop);
+    const dataTransfer = transfer();
+    dataTransfer.setData('text/plain', 'hello');
+    expect(fireEvent.dragOver(row, { dataTransfer })).toBe(true);
+    fireEvent.drop(row, { dataTransfer });
+    expect(onDrop).not.toHaveBeenCalled();
+  });
+
+  test('refuses dropping a topic row onto itself', () => {
+    const onDrop = jest.fn();
+    const row = renderTarget(onDrop);
+    const dataTransfer = transfer();
+    fireEvent.dragStart(row, { dataTransfer });
+    expect(fireEvent.dragOver(row, { dataTransfer })).toBe(true);
+    fireEvent.drop(row, { dataTransfer });
+    fireEvent.dragEnd(row);
+    expect(onDrop).not.toHaveBeenCalled();
+  });
+
+  test('non-topic rows are not drop targets', () => {
+    render(
+      <HomeTabRow
+        entry={drawingEntry}
+        open
+        pinned={false}
+        onActivate={jest.fn()}
+        onTogglePin={jest.fn()}
+        onDropAssociation={jest.fn()}
+      />,
+    );
+    const row = screen.getByRole('button', { name: 'Open Sketchpad' });
+    expect(
+      fireEvent.dragOver(row, {
+        dataTransfer: transfer({ kind: 'topic', topicId: 't2' }),
+      }),
+    ).toBe(true);
   });
 });

@@ -10,7 +10,7 @@
  * Both are pure: the panel owns activation + pin state.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ProgramStatusBadge,
   type ProgramStatusRecord,
@@ -39,6 +39,23 @@ import {
 } from '../../utils/agentContextDragText';
 import { tildifyPath } from '../../utils/tildifyPath';
 import { isHomeTabPinnable, type HomeTabEntry } from './homeTabEntries';
+import {
+  associationFromEntry,
+  getActiveTopicAssociationDrag,
+  hasTopicAssociation,
+  isSelfAssociation,
+  readTopicAssociation,
+  setActiveTopicAssociationDrag,
+  TOPIC_ASSOCIATION_MIME,
+  type TopicAssociation,
+  type TopicAssociationResult,
+} from './topicAssociationDrag';
+
+const DROP_FEEDBACK: Record<Exclude<TopicAssociationResult, 'self'>, string> = {
+  added: 'Linked',
+  exists: 'Already linked',
+};
+const DROP_FEEDBACK_MS = 2000;
 
 /**
  * Label the tab's purpose in Home, where its repository is already shown. A
@@ -133,6 +150,13 @@ export interface HomeTabRowProps {
   wrapLabel?: boolean;
   onActivate: () => void;
   onTogglePin: () => void;
+  /**
+   * Makes a topic row a drop target for drawings, models, and other topics
+   * dragged from Home. Resolves with whether the item was newly linked.
+   */
+  onDropAssociation?: (
+    association: TopicAssociation,
+  ) => Promise<TopicAssociationResult>;
 }
 
 /**
@@ -151,11 +175,38 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
   wrapLabel = false,
   onActivate,
   onTogglePin,
+  onDropAssociation,
 }) => {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
+  const [dropActive, setDropActive] = useState(false);
+  const [dropFeedback, setDropFeedback] = useState<string | null>(null);
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    },
+    [],
+  );
   const label = homeTabLabel(entry);
   const dragText = homeTabDragText(entry);
+  const association = associationFromEntry(entry);
+  const dropTopicId =
+    onDropAssociation && entry.kind === 'topic' ? entry.topicId : undefined;
+
+  const showDropFeedback = (message: string) => {
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    setDropFeedback(message);
+    feedbackTimer.current = setTimeout(
+      () => setDropFeedback(null),
+      DROP_FEEDBACK_MS,
+    );
+  };
+
+  const acceptsDrop = (event: React.DragEvent) =>
+    dropTopicId !== undefined &&
+    hasTopicAssociation(event.dataTransfer) &&
+    !isSelfAssociation(dropTopicId, getActiveTopicAssociationDrag());
   const accessibleLabel =
     entry.kind === 'terminal' && !entry.repoPath && entry.path
       ? `Open terminal in ${entry.path}`
@@ -169,6 +220,43 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
         if (!dragText || !event.dataTransfer) return;
         event.dataTransfer.effectAllowed = 'copy';
         event.dataTransfer.setData('text/plain', dragText);
+        if (association) {
+          event.dataTransfer.setData(
+            TOPIC_ASSOCIATION_MIME,
+            JSON.stringify(association),
+          );
+        }
+        setActiveTopicAssociationDrag(association);
+      }}
+      onDragEnd={() => setActiveTopicAssociationDrag(null)}
+      onDragOver={(event) => {
+        if (!acceptsDrop(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        setDropActive(true);
+      }}
+      onDragLeave={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          return;
+        }
+        setDropActive(false);
+      }}
+      onDrop={(event) => {
+        if (!dropTopicId || !onDropAssociation) return;
+        const dropped = readTopicAssociation(event.dataTransfer);
+        setDropActive(false);
+        if (!dropped || isSelfAssociation(dropTopicId, dropped)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onDropAssociation(dropped).then(
+          (result) => {
+            if (result !== 'self') showDropFeedback(DROP_FEEDBACK[result]);
+          },
+          (err) => {
+            console.error('[HomeTabRow] Failed to link item to topic:', err);
+            showDropFeedback('Could not link');
+          },
+        );
       }}
       role="button"
       aria-label={accessibleLabel}
@@ -181,9 +269,13 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
         padding: `8px 10px 8px ${14 + depth * 18}px`,
         borderRadius: 0,
         cursor: 'pointer',
-        backgroundColor: hovered
-          ? theme.colors.backgroundSecondary
-          : 'transparent',
+        backgroundColor: dropActive
+          ? theme.colors.backgroundTertiary
+          : hovered
+            ? theme.colors.backgroundSecondary
+            : 'transparent',
+        outline: dropActive ? `1px dashed ${theme.colors.primary}` : 'none',
+        outlineOffset: -1,
         transition: 'background-color 0.15s ease',
       }}
     >
@@ -224,6 +316,18 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
       >
         {label}
       </span>
+      {dropFeedback && (
+        <span
+          role="status"
+          style={{
+            flexShrink: 0,
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textSecondary,
+          }}
+        >
+          {dropFeedback}
+        </span>
+      )}
       {open &&
         entry.kind === 'terminal' &&
         programStatus &&

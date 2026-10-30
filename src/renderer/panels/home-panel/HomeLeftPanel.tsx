@@ -46,6 +46,10 @@ import {
   type HomeTabEntry,
 } from './homeTabEntries';
 import { HomeTabRow, PinnedTabIcon } from './HomeTabItems';
+import {
+  associateWithTopic,
+  type TopicAssociation,
+} from './topicAssociationDrag';
 import { useHomePins } from './useHomePins';
 import { usePinnedRepoScopes } from './usePinnedRepoScopes';
 import {
@@ -472,6 +476,15 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     [tabs],
   );
 
+  // Topic rows accept drawings, models, and other topics dragged from Home.
+  const topicDropHandler = (entry: HomeTabEntry) => {
+    const topicId = entry.kind === 'topic' ? entry.topicId : undefined;
+    return topicId
+      ? (association: TopicAssociation) =>
+          associateWithTopic(topicId, association)
+      : undefined;
+  };
+
   const renderTabEntry = (entry: HomeTabEntry, open: boolean, depth = 0) => (
     <HomeTabRow
       key={entry.id}
@@ -490,6 +503,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       wrapLabel={entry.kind === 'topic' || entry.kind === 'subsystem-model'}
       onActivate={() => (open ? onActivateTab(entry.id) : onOpenEntry(entry))}
       onTogglePin={() => toggleTabPin(entry)}
+      onDropAssociation={topicDropHandler(entry)}
     />
   );
 
