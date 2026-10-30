@@ -5,12 +5,13 @@ import {
   ArrowUp,
   Eye,
   Circle,
+  Bookmark,
+  BookmarkCheck,
   Cloud,
   Eraser,
   FolderGit2,
   FolderTree,
   Lock,
-  Pin,
   Terminal,
 } from 'lucide-react';
 
@@ -530,7 +531,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
             transition: 'opacity 120ms, color 120ms',
           }}
         >
-          <Pin size={12} fill={pinned ? 'currentColor' : 'none'} />
+          {pinned ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
         </button>
       )}
     </div>

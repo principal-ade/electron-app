@@ -289,13 +289,13 @@ test.each(['Open Tabs', 'Pinned'])(
   },
 );
 
-test('shows a pin icon before the Pinned section label', () => {
+test('shows a bookmark icon before the Pinned section label', () => {
   renderHome(repo, jest.fn(), [
     { id: 'topic', kind: 'topic', label: 'Standalone topic', topicId: 't1' },
   ]);
   const label = screen.getByText('Pinned');
   const icon = label.previousElementSibling;
-  expect(icon?.classList.contains('lucide-pin')).toBe(true);
+  expect(icon?.classList.contains('lucide-bookmark')).toBe(true);
   expect(icon?.getAttribute('aria-hidden')).toBe('true');
   expect(label.parentElement?.firstElementChild).toBe(icon);
 });

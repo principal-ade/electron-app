@@ -17,6 +17,8 @@ import {
 } from '@industry-theme/xterm-terminal-panel';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
+  Bookmark,
+  BookmarkCheck,
   Building2,
   FileCode2,
   FileText,
@@ -27,7 +29,6 @@ import {
   Image as ImageIcon,
   Network,
   PenTool,
-  Pin,
   Send,
   Terminal,
   ToolCase,
@@ -266,7 +267,7 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
           transition: 'opacity 120ms, color 120ms',
         }}
       >
-        <Pin size={12} fill={pinned ? 'currentColor' : 'none'} />
+        {pinned ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
       </button>
     ) : null;
 

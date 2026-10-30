@@ -1,5 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { Pin, RefreshCw, Search, Send, Trash2, X } from 'lucide-react';
+import {
+  Bookmark,
+  BookmarkCheck,
+  RefreshCw,
+  Search,
+  Send,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useWorkspaceTabs } from '../principal-window/PortalTabsContext';
 import { RequestGroupList } from './RequestGroupList';
@@ -405,7 +413,11 @@ export const RequestsLeftPanel: React.FC = () => {
                         cursor: requestPinBusy ? 'default' : 'pointer',
                       }}
                     >
-                      <Pin size={14} fill={pinned ? 'currentColor' : 'none'} />
+                      {pinned ? (
+                        <BookmarkCheck size={14} />
+                      ) : (
+                        <Bookmark size={14} />
+                      )}
                     </button>
                     {remembered && !pinned && (
                       <button

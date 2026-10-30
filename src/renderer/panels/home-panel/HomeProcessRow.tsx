@@ -1,6 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Cpu, Pin, Play, Power, Square } from 'lucide-react';
+import {
+  Bookmark,
+  BookmarkCheck,
+  Cpu,
+  Play,
+  Power,
+  Square,
+} from 'lucide-react';
 import type {
   ProcessControlResult,
   ProcessEntry,
@@ -242,7 +249,11 @@ export const HomeProcessRow: React.FC<{
                 );
               }}
             >
-              <Pin size={13} fill={entry.pinned ? 'currentColor' : 'none'} />
+              {entry.pinned ? (
+                <BookmarkCheck size={13} />
+              ) : (
+                <Bookmark size={13} />
+              )}
             </button>
           </>
         )}

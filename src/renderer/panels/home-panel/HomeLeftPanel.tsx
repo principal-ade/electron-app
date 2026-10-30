@@ -24,7 +24,7 @@ import {
   type RepositorySelectedPayload,
 } from '../../events/repositorySelected';
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelsTopLeft, Pin } from 'lucide-react';
+import { Bookmark, PanelsTopLeft } from 'lucide-react';
 import { useAuthUser } from '../../providers/AuthProvider';
 import { OrgRepoItemCard } from '../cards/OrgRepoItemCard';
 import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
@@ -823,7 +823,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               {homeTabs.pinnedTabs.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
                   <div style={tabSectionStyle}>
-                    <Pin size={22} aria-hidden="true" />
+                    <Bookmark size={22} aria-hidden="true" />
                     <span>Pinned</span>
                   </div>
                   <div role="separator" style={tabSectionDividerStyle} />

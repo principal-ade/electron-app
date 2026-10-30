@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Pin } from 'lucide-react';
+import { Bookmark, BookmarkCheck } from 'lucide-react';
 import type { HomePinnedTab } from '../../shared/types/userPreferences.types';
 import { useHomePins } from '../panels/home-panel/useHomePins';
 
@@ -52,7 +52,7 @@ export const TopicPinHeaderButton: React.FC<{
         transition: 'color 0.15s ease, border-color 0.15s ease',
       }}
     >
-      <Pin size={16} fill={pinned ? 'currentColor' : 'none'} />
+      {pinned ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
     </button>
   );
 };

@@ -40,7 +40,8 @@ import {
   Terminal,
   AlertCircle,
   Loader2,
-  Pin,
+  Bookmark,
+  BookmarkCheck,
 } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
@@ -525,7 +526,11 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
                   cursor: 'pointer',
                 }}
               >
-                <Pin size={12} fill={entry.pinned ? 'currentColor' : 'none'} />
+                {entry.pinned ? (
+                  <BookmarkCheck size={12} />
+                ) : (
+                  <Bookmark size={12} />
+                )}
               </button>
             ) : (
               <span
