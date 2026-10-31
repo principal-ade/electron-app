@@ -15,6 +15,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
+  ArrowDownToLine,
   Check,
   FolderPlus,
   Github,
@@ -231,6 +232,8 @@ interface SkillRowProps {
   active: boolean;
   /** Right-hand monospace tag (source, or install state in Browse). */
   tag?: React.ReactNode;
+  /** Icon buttons rendered on the right, outside the click target. */
+  actions?: React.ReactNode;
   draggable?: boolean;
   onClick: () => void;
 }
@@ -239,6 +242,7 @@ const SkillRow: React.FC<SkillRowProps> = ({
   skill,
   active,
   tag,
+  actions,
   draggable,
   onClick,
 }) => {
@@ -246,90 +250,113 @@ const SkillRow: React.FC<SkillRowProps> = ({
   const spacing = useSpacing(theme);
   const [hovered, setHovered] = useState(false);
   return (
-    <button
-      type="button"
-      draggable={draggable}
-      onDragStart={
-        draggable
-          ? (event) => {
-              if (!event.dataTransfer) return;
-              event.dataTransfer.effectAllowed = 'copy';
-              event.dataTransfer.setData(
-                'text/plain',
-                skillContextDragText(skill.path, skill.name),
-              );
-            }
-          : undefined
-      }
-      onClick={onClick}
+    <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         gap: spacing.sm,
         width: '100%',
         padding: `${spacing.sm * 1.5}px ${spacing.sm * 2}px`,
+        boxSizing: 'border-box',
         backgroundColor:
           active || hovered ? theme.colors.backgroundSecondary : 'transparent',
-        border: 'none',
         borderBottom: `1px solid ${theme.colors.border}`,
-        cursor: 'pointer',
-        textAlign: 'left',
         transition: 'background-color 0.15s ease',
       }}
     >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[2],
-            fontWeight: active ? 700 : 500,
-            color: theme.colors.text,
-            marginBottom: 2,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {skill.name}
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            gap: spacing.sm,
-            fontFamily: theme.fonts.monospace,
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.textMuted,
-          }}
-        >
-          <span
+      <button
+        type="button"
+        draggable={draggable}
+        onDragStart={
+          draggable
+            ? (event) => {
+                if (!event.dataTransfer) return;
+                event.dataTransfer.effectAllowed = 'copy';
+                event.dataTransfer.setData(
+                  'text/plain',
+                  skillContextDragText(skill.path, skill.name),
+                );
+              }
+            : undefined
+        }
+        onClick={onClick}
+        style={{
+          display: 'flex',
+          flex: 1,
+          minWidth: 0,
+          padding: 0,
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
             style={{
-              flex: 1,
-              minWidth: 0,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[2],
+              fontWeight: active ? 700 : 500,
+              color: theme.colors.text,
+              marginBottom: 2,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}
           >
-            {skill.description || skill.skillFolderPath}
-          </span>
-          {tag && (
+            {skill.name}
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: spacing.sm,
+              fontFamily: theme.fonts.monospace,
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.textMuted,
+            }}
+          >
             <span
               style={{
-                flexShrink: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
+                flex: 1,
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
-              {tag}
+              {skill.description || skill.skillFolderPath}
             </span>
-          )}
+            {tag && (
+              <span
+                style={{
+                  flexShrink: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                {tag}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+      {actions && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            flexShrink: 0,
+          }}
+        >
+          {actions}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -337,10 +364,14 @@ const InstalledSkillRows: React.FC<{
   s: SkillsSurfaceValue;
   query: string;
 }> = ({ s, query }) => {
+  const { theme } = useTheme();
+  const spacing = useSpacing(theme);
   const { activeTabId } = useWorkspaceTabs();
   const { skills, isLoading, error } = useSkillsData({ context: s.context });
   const showLoading = useDelayedLoading(isLoading);
   const [lock, setLock] = useState<Record<string, SkillLockEntry>>({});
+  const [hasUpdate, setHasUpdate] = useState<Record<string, boolean>>({});
+  const [updating, setUpdating] = useState<Record<string, boolean>>({});
 
   const loadLock = useCallback(async () => {
     try {
@@ -349,7 +380,33 @@ const InstalledSkillRows: React.FC<{
     } catch (err) {
       console.error('[SkillsLeftPanel] Failed to read skill lock:', err);
     }
+    try {
+      const results = await SkillLockService.checkUpdates();
+      const next: Record<string, boolean> = {};
+      for (const r of results) next[r.name] = r.hasUpdate;
+      setHasUpdate(next);
+    } catch (err) {
+      console.error('[SkillsLeftPanel] Failed to check skill updates:', err);
+    }
   }, []);
+
+  const updateSkill = useCallback(
+    async (skill: Skill) => {
+      const name = skillFolderName(skill);
+      setUpdating((prev) => ({ ...prev, [name]: true }));
+      try {
+        await s.updateInstalledSkill(skill);
+      } catch (err) {
+        console.error('[SkillsLeftPanel] Failed to update skill:', err);
+        alert(
+          `Failed to update ${skill.name}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      } finally {
+        setUpdating((prev) => ({ ...prev, [name]: false }));
+      }
+    },
+    [s],
+  );
 
   useEffect(() => {
     void loadLock();
@@ -422,26 +479,69 @@ const InstalledSkillRows: React.FC<{
                   : undefined
               }
             />
-            {group.skills.map((skill) => (
-              <SkillRow
-                key={skill.id}
-                skill={skill}
-                draggable
-                active={
-                  activeTabId === 'skill-detail' &&
-                  s.selectedSkill?.id === skill.id
-                }
-                tag={sourceLabel(skill)}
-                onClick={() =>
-                  s.events.emit({
-                    type: 'skill:selected',
-                    source: 'skills-left-panel',
-                    timestamp: Date.now(),
-                    payload: { skillId: skill.id, skill },
-                  })
-                }
-              />
-            ))}
+            {group.skills.map((skill) => {
+              const name = skillFolderName(skill);
+              const entry = lock[name];
+              const updatable =
+                entry?.sourceType === 'github' && !!entry.skillPath;
+              const isUpdating = !!updating[name];
+              const outdated = !!hasUpdate[name];
+              return (
+                <SkillRow
+                  key={skill.id}
+                  skill={skill}
+                  draggable
+                  active={
+                    activeTabId === 'skill-detail' &&
+                    s.selectedSkill?.id === skill.id
+                  }
+                  tag={sourceLabel(skill)}
+                  actions={
+                    updatable ? (
+                      <button
+                        type="button"
+                        title={
+                          isUpdating
+                            ? 'Updating…'
+                            : outdated
+                              ? `Update ${skill.name} from ${entry.source}`
+                              : `Reinstall ${skill.name} from ${entry.source}`
+                        }
+                        disabled={isUpdating}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void updateSkill(skill);
+                        }}
+                        style={{
+                          ...iconButtonStyle(theme, spacing),
+                          color: outdated
+                            ? theme.colors.primary
+                            : theme.colors.textSecondary,
+                          cursor: isUpdating ? 'default' : 'pointer',
+                        }}
+                      >
+                        {isUpdating ? (
+                          <RefreshCw
+                            size={14}
+                            style={{ animation: 'spin 1s linear infinite' }}
+                          />
+                        ) : (
+                          <ArrowDownToLine size={14} />
+                        )}
+                      </button>
+                    ) : undefined
+                  }
+                  onClick={() =>
+                    s.events.emit({
+                      type: 'skill:selected',
+                      source: 'skills-left-panel',
+                      timestamp: Date.now(),
+                      payload: { skillId: skill.id, skill },
+                    })
+                  }
+                />
+              );
+            })}
           </React.Fragment>
         );
       })}

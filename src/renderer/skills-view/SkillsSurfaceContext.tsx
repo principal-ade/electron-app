@@ -27,9 +27,7 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import {
-  type Skill,
-} from '../panels/agent-panels';
+import { type Skill } from '../panels/agent-panels';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { useSkillBrowserPanelProvider } from '../principal-window/views/SkillBrowserView/SkillBrowserPanelProvider';
@@ -131,7 +129,11 @@ export interface SkillsSurfaceValue {
   getSkillTreeSha: (skillFolderPath: string) => string | undefined;
   getInstalledSkillMetadata: (skill: Skill) => Promise<SkillMetadata | null>;
   handleInstallSkillToDirectories: (directoryIds: string[]) => Promise<void>;
-  handleUninstallSkillFromDirectories: (directoryIds: string[]) => Promise<void>;
+  handleUninstallSkillFromDirectories: (
+    directoryIds: string[],
+  ) => Promise<void>;
+  /** Re-install an installed skill from its lock-file source into the same directories. */
+  updateInstalledSkill: (skill: Skill) => Promise<void>;
   openInstallModal: () => void;
 }
 
@@ -721,7 +723,9 @@ export const SkillsSurfaceProvider: React.FC<{
           skillTreeSha,
         });
         if (!result.success) {
-          throw new Error(result.error || `Installation to ${directoryId} failed`);
+          throw new Error(
+            result.error || `Installation to ${directoryId} failed`,
+          );
         }
         actions.notifyPanels?.({
           type: 'skill:installed',
@@ -753,7 +757,8 @@ export const SkillsSurfaceProvider: React.FC<{
         throw new Error('No skill selected');
       }
       const skillFolderName = getSkillFolderName(selectedSkill);
-      const deletedPaths: Array<{ skillPath: string; directoryId: string }> = [];
+      const deletedPaths: Array<{ skillPath: string; directoryId: string }> =
+        [];
       for (const directoryId of directoryIds) {
         const directory = detectedDirectories.find(
           (dir) => dir.id === directoryId,
@@ -787,6 +792,65 @@ export const SkillsSurfaceProvider: React.FC<{
       loadInstalledSkills,
       actions,
       getSkillFolderName,
+    ],
+  );
+
+  const updateInstalledSkill = useCallback(
+    async (skill: Skill) => {
+      const skillFolderName = getSkillFolderName(skill);
+      const entry = await SkillLockService.getSkillEntry(skillFolderName);
+      if (!entry || entry.sourceType !== 'github' || !entry.skillPath) {
+        throw new Error('This skill has no GitHub source to update from');
+      }
+      const [owner, repo] = entry.source.split('/');
+      const branch = entry.branch || 'main';
+      const result = await GithubService.getTree(owner, repo, branch);
+      if (!result?.success || !result.data) {
+        throw new Error(`Failed to fetch ${entry.source}`);
+      }
+      const skillPath = entry.skillPath.replace(/^\/+|\/+$/g, '');
+      const fileList = result.data.tree
+        .filter(
+          (item) =>
+            item.type === 'blob' && item.path.startsWith(skillPath + '/'),
+        )
+        .map((item) => item.path);
+      const skillTreeSha = result.data.tree.find(
+        (item) => item.type === 'tree' && item.path === skillPath,
+      )?.sha;
+      const directoryIds = getSkillInstalledDirectories(skill);
+      for (const directoryId of directoryIds) {
+        const destination = DIRECTORY_ID_TO_DESTINATION[directoryId];
+        if (!destination) continue;
+        const install = await GithubService.installSkill({
+          githubUrl: `https://github.com/${entry.source}`,
+          skillPath,
+          destination,
+          skillName: skillFolderName,
+          fileList,
+          skillTreeSha,
+        });
+        if (!install.success) {
+          throw new Error(install.error || `Update to ${directoryId} failed`);
+        }
+        actions.notifyPanels?.({
+          type: 'skill:installed',
+          source: 'SkillsSurface',
+          timestamp: Date.now(),
+          payload: {
+            skillName: skillFolderName,
+            destination,
+            installedPath: install.installedPath,
+          },
+        });
+      }
+      await loadInstalledSkills();
+    },
+    [
+      getSkillFolderName,
+      getSkillInstalledDirectories,
+      actions,
+      loadInstalledSkills,
     ],
   );
 
@@ -834,6 +898,7 @@ export const SkillsSurfaceProvider: React.FC<{
       getInstalledSkillMetadata,
       handleInstallSkillToDirectories,
       handleUninstallSkillFromDirectories,
+      updateInstalledSkill,
       openInstallModal: () => setShowInstallModal(true),
     }),
     [
@@ -863,6 +928,7 @@ export const SkillsSurfaceProvider: React.FC<{
       getInstalledSkillMetadata,
       handleInstallSkillToDirectories,
       handleUninstallSkillFromDirectories,
+      updateInstalledSkill,
     ],
   );
 
