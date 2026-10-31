@@ -512,14 +512,17 @@ const BrowseSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = ({
 
 /** Browse mode's top bar: a repo input, or the loaded repo with a clear button. */
 /** Owner avatar in the same rounded-square style as the section headers. */
-const OwnerAvatar: React.FC<{ login: string }> = ({ login }) => {
+const OwnerAvatar: React.FC<{ login: string; size: number }> = ({
+  login,
+  size,
+}) => {
   const { theme } = useTheme();
   const [broken, setBroken] = useState(false);
   return (
     <div
       style={{
-        width: 22,
-        height: 22,
+        width: size,
+        height: size,
         flexShrink: 0,
         borderRadius: 6,
         overflow: 'hidden',
@@ -530,17 +533,84 @@ const OwnerAvatar: React.FC<{ login: string }> = ({ login }) => {
       }}
     >
       {broken ? (
-        <Github size={13} color={theme.colors.textSecondary} />
+        <Github
+          size={Math.round(size * 0.55)}
+          color={theme.colors.textSecondary}
+        />
       ) : (
         <img
-          src={`https://github.com/${login}.png?size=48`}
+          src={`https://github.com/${login}.png?size=${size * 2}`}
           alt={login}
-          width={22}
-          height={22}
+          width={size}
+          height={size}
           style={{ objectFit: 'cover', display: 'block' }}
           onError={() => setBroken(true)}
         />
       )}
+    </div>
+  );
+};
+
+/** Two-line repo identity: avatar as tall as both lines, repo over owner. */
+const RepoIdentity: React.FC<{
+  owner: string;
+  repo: string;
+  /** Replaces the owner line's trailing text (e.g. branch, last visited). */
+  detail?: React.ReactNode;
+  bold?: boolean;
+}> = ({ owner, repo, detail, bold }) => {
+  const { theme } = useTheme();
+  const spacing = useSpacing(theme);
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing.sm,
+        flex: 1,
+        minWidth: 0,
+      }}
+    >
+      <OwnerAvatar login={owner} size={34} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[2],
+            fontWeight: bold ? 600 : 500,
+            color: theme.colors.text,
+            marginBottom: 2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {repo}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: spacing.sm,
+            fontFamily: theme.fonts.monospace,
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textMuted,
+          }}
+        >
+          <span
+            style={{
+              flex: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {owner}
+          </span>
+          {detail && <span style={{ flexShrink: 0 }}>{detail}</span>}
+        </div>
+      </div>
     </div>
   );
 };
@@ -564,7 +634,7 @@ const RepoBar: React.FC<{ s: SkillsSurfaceValue }> = ({ s }) => {
         display: 'flex',
         alignItems: 'center',
         gap: spacing.sm,
-        height: repo ? 44 : 30,
+        height: repo ? 50 : 30,
         boxSizing: 'border-box',
         padding: `0 ${spacing.sm}px`,
         borderBottom: `1px solid ${theme.colors.border}`,
@@ -574,38 +644,12 @@ const RepoBar: React.FC<{ s: SkillsSurfaceValue }> = ({ s }) => {
     >
       {repo ? (
         <>
-          <OwnerAvatar login={repo.owner} />
-          <div
-            style={{ flex: 1, minWidth: 0 }}
-            title={`${repo.owner}/${repo.repo} @ ${repo.branch}`}
-          >
-            <div
-              style={{
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[2],
-                fontWeight: 600,
-                color: theme.colors.text,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {repo.repo}
-            </div>
-            <div
-              style={{
-                fontFamily: theme.fonts.monospace,
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.textMuted,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {repo.owner}
-              {repo.branch !== 'main' && ` @ ${repo.branch}`}
-            </div>
-          </div>
+          <RepoIdentity
+            owner={repo.owner}
+            repo={repo.repo}
+            bold
+            detail={repo.branch !== 'main' ? repo.branch : undefined}
+          />
           <button
             type="button"
             onClick={() => {
@@ -677,10 +721,10 @@ const RecentRepoRows: React.FC<{
             onMouseLeave={() => setHoveredKey(null)}
             style={{
               display: 'flex',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               gap: spacing.sm,
               width: '100%',
-              padding: `${spacing.sm * 1.5}px ${spacing.sm * 2}px`,
+              padding: `${spacing.sm}px ${spacing.sm}px`,
               backgroundColor: hovered
                 ? theme.colors.backgroundSecondary
                 : 'transparent',
@@ -691,37 +735,15 @@ const RecentRepoRows: React.FC<{
               transition: 'background-color 0.15s ease',
             }}
           >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontFamily: theme.fonts.body,
-                  fontSize: theme.fontSizes[2],
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  marginBottom: 2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {key}
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  gap: spacing.sm,
-                  fontFamily: theme.fonts.monospace,
-                  fontSize: theme.fontSizes[1],
-                  color: theme.colors.textMuted,
-                }}
-              >
-                <span style={{ flex: 1, minWidth: 0 }}>{repo.branch}</span>
-                <span style={{ flexShrink: 0 }}>
-                  {timeAgo(repo.lastVisited)}
-                </span>
-              </div>
-            </div>
+            <RepoIdentity
+              owner={repo.owner}
+              repo={repo.repo}
+              detail={
+                repo.branch !== 'main'
+                  ? `${repo.branch} · ${timeAgo(repo.lastVisited)}`
+                  : timeAgo(repo.lastVisited)
+              }
+            />
           </button>
         );
       })}
