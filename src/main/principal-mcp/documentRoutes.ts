@@ -3,20 +3,20 @@
  * Mounted on the Principal MCP Bridge.
  *
  * Documents are NOT routed by repo/topic to a specific window.
- * The contract is deliberately narrow: open the doc in whichever window is
- * *currently focused*, when that window is one of the primary surfaces that
- * can host a doc tab next to a tabbed terminal — the principal window
- * (Projects / Topics views) or the dev-workspace.
+ * The doc opens in whichever window is *currently focused*, when that window
+ * is one of the primary surfaces that can host a doc tab next to a tabbed
+ * terminal — the principal window (Projects / Topics views) or the
+ * dev-workspace. When nothing suitable is focused (app in the background, a
+ * detached tab window in front, no window at all) the request falls back to
+ * the principal window, focusing it or creating one, so a caller never has to
+ * click into the app first.
  *
  * The main process can't see which *view* the principal window is showing, so
  * the final gate is renderer-side: each terminal framework subscribes to
- * `OPEN_DOCUMENT` only while it is mounted. If the focused principal window is
- * on a non-terminal view (Settings, Auth…), nothing happens there. A focused
- * window of any other type (or no focus) is a no-op:
- * `{ success: true, windowOpened: false }`.
- *
- * There is no cold-start path. The route only ever targets an already-open,
- * already-focused window via a warm IPC push (`DocumentEvent.OPEN_DOCUMENT`).
+ * `OPEN_DOCUMENT` only while it is mounted. If the target principal window is
+ * on a non-terminal view (Settings, Auth…), nothing happens there.
+ * `{ success: true, windowOpened: false }` is only returned when no window
+ * could be resolved at all.
  *
  * Opening never writes to disk by default. Callers that want "open or create"
  * semantics opt in with `createIfMissing: true`, which creates the file (and
@@ -30,7 +30,11 @@ import path from 'path';
 import { BrowserWindow } from 'electron';
 import type { Application, Request, Response } from 'express';
 import { DocumentEvent } from '../../shared/main-process-api-interfaces/DocumentAPI';
-import { applicationWindows } from '../window/modernWindowManager';
+import {
+  applicationWindows,
+  focusOrCreateMainWindow,
+} from '../window/modernWindowManager';
+import type { IModernApplicationWindow } from '../window/types';
 import { PrimaryWindowType } from '../window/types';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { isDocumentRange } from '../../shared/documentRange';
@@ -161,23 +165,43 @@ export function registerDocumentRoutes(app: Application): void {
       }
     }
 
-    // Find the focused window; open only if it hosts a tabbed terminal.
+    // Prefer the focused window when it hosts a tabbed terminal; otherwise
+    // surface the principal window so the tab lands somewhere visible.
     const focused = BrowserWindow.getFocusedWindow();
-    const appWindow =
+    const focusedWindow =
       focused && !focused.isDestroyed()
         ? applicationWindows.get(focused.id)
         : undefined;
-
     const isDocCapable =
-      !!appWindow &&
-      DOC_CAPABLE_WINDOW_TYPES.has(appWindow.metadata?.primaryType);
+      !!focusedWindow &&
+      DOC_CAPABLE_WINDOW_TYPES.has(focusedWindow.metadata?.primaryType);
 
-    if (!appWindow || !isDocCapable) {
+    let appWindow: IModernApplicationWindow | null = isDocCapable
+      ? focusedWindow
+      : null;
+    if (!appWindow) {
+      try {
+        appWindow = await focusOrCreateMainWindow();
+      } catch (error) {
+        console.error('[documentRoutes] main window fallback failed', error);
+        appWindow = null;
+      }
+    }
+
+    if (!appWindow || appWindow.window.isDestroyed()) {
       res.json({ success: true, windowOpened: false, created });
       return;
     }
 
-    appWindow.window.webContents.send(DocumentEvent.OPEN_DOCUMENT, {
+    // A freshly created window drops IPC sent before its renderer loads.
+    const { webContents } = appWindow.window;
+    if (webContents.isLoading()) {
+      await new Promise<void>((resolve) => {
+        webContents.once('did-finish-load', () => resolve());
+      });
+    }
+
+    webContents.send(DocumentEvent.OPEN_DOCUMENT, {
       filePath: absFilePath,
       repositoryPath,
       ...(range !== undefined ? { range } : {}),

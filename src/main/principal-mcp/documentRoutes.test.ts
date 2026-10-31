@@ -5,7 +5,10 @@ import path from 'path';
 import { BrowserWindow } from 'electron';
 import type { Application, Request, Response } from 'express';
 import { DocumentEvent } from '../../shared/main-process-api-interfaces/DocumentAPI';
-import { applicationWindows } from '../window/modernWindowManager';
+import {
+  applicationWindows,
+  focusOrCreateMainWindow,
+} from '../window/modernWindowManager';
 import { PrimaryWindowType } from '../window/types';
 import { registerDocumentRoutes } from './documentRoutes';
 
@@ -14,6 +17,7 @@ jest.mock('electron', () => ({
 }));
 jest.mock('../window/modernWindowManager', () => ({
   applicationWindows: new Map(),
+  focusOrCreateMainWindow: jest.fn(),
 }));
 jest.mock('../stores/AlexandriaRegistryService', () => ({
   AlexandriaRegistryService: {
@@ -47,15 +51,30 @@ function open(body: Record<string, unknown>) {
   return route()({ body } as unknown as Request, res).then(() => res);
 }
 
-function focusWindow(primaryType = PrimaryWindowType.DEV_WORKSPACE) {
+function appWindow(id: number, primaryType: PrimaryWindowType) {
   const send = jest.fn();
-  const window = { id: 1, isDestroyed: () => false, webContents: { send } };
+  const window = {
+    id,
+    isDestroyed: () => false,
+    webContents: { send, isLoading: () => false, once: jest.fn() },
+  };
+  applicationWindows.set(id, { window, metadata: { primaryType } } as never);
+  return { window, send };
+}
+
+function focusWindow(primaryType = PrimaryWindowType.DEV_WORKSPACE) {
+  const { window, send } = appWindow(1, primaryType);
   getFocusedWindow.mockReturnValue(window);
-  applicationWindows.set(1, {
-    window,
-    metadata: { primaryType },
-  } as never);
   return send;
+}
+
+/** No doc-capable window is focused; the fallback resolves to `main`. */
+function fallbackToMain() {
+  const main = appWindow(2, PrimaryWindowType.MAIN);
+  jest
+    .mocked(focusOrCreateMainWindow)
+    .mockResolvedValue(applicationWindows.get(2) as never);
+  return main.send;
 }
 
 let root: string;
@@ -64,6 +83,7 @@ beforeEach(async () => {
   jest.clearAllMocks();
   applicationWindows.clear();
   getFocusedWindow.mockReturnValue(null);
+  jest.mocked(focusOrCreateMainWindow).mockResolvedValue(null);
   root = await fs.mkdtemp(path.join(tmpdir(), 'document-routes-'));
 });
 
@@ -201,6 +221,56 @@ test('dispatch is unchanged: a focused doc-capable window receives the path', as
     filePath,
     repositoryPath: undefined,
   });
+});
+
+test('falls back to the principal window when nothing doc-capable is focused', async () => {
+  const send = fallbackToMain();
+  const filePath = path.join(root, 'README.md');
+
+  const res = await open({ filePath });
+
+  expect(focusOrCreateMainWindow).toHaveBeenCalled();
+  expect(jsonBody(res)).toMatchObject({ windowOpened: true });
+  expect(send).toHaveBeenCalledWith(DocumentEvent.OPEN_DOCUMENT, {
+    filePath,
+    repositoryPath: undefined,
+  });
+});
+
+test('a focused non-doc window also falls back to the principal window', async () => {
+  const focusedSend = focusWindow(PrimaryWindowType.DETACHED_TAB);
+  const mainSend = fallbackToMain();
+
+  await open({ filePath: path.join(root, 'README.md') });
+
+  expect(focusedSend).not.toHaveBeenCalled();
+  expect(mainSend).toHaveBeenCalledTimes(1);
+});
+
+test('waits for a freshly created window to finish loading before dispatch', async () => {
+  const send = jest.fn();
+  let loading = true;
+  const once = jest.fn((_event: string, cb: () => void) => {
+    loading = false;
+    cb();
+  });
+  const window = {
+    id: 3,
+    isDestroyed: () => false,
+    webContents: { send, once, isLoading: () => loading },
+  };
+  applicationWindows.set(3, {
+    window,
+    metadata: { primaryType: PrimaryWindowType.MAIN },
+  } as never);
+  jest
+    .mocked(focusOrCreateMainWindow)
+    .mockResolvedValue(applicationWindows.get(3) as never);
+
+  await open({ filePath: path.join(root, 'README.md') });
+
+  expect(once).toHaveBeenCalledWith('did-finish-load', expect.any(Function));
+  expect(send).toHaveBeenCalledTimes(1);
 });
 
 test('a missing file without createIfMissing still dispatches, so the tab can report it', async () => {

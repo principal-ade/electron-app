@@ -576,13 +576,13 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
   {
     name: 'documents',
     description:
-      'Dispatch document-open requests to an already-focused document-capable window.',
+      'Dispatch document-open requests to the focused document-capable window, falling back to the principal window.',
     routes: [
       {
         method: 'POST',
         path: '/api/document/open',
         summary:
-          'Open a document tab in a focused MAIN or Dev Workspace window.',
+          'Open a document tab in the focused MAIN or Dev Workspace window, or in the principal window when neither is focused.',
         body: {
           filePath:
             'string (required): absolute path, or relative path when repositoryPath is supplied.',
@@ -600,7 +600,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           '500': 'File creation failed (permissions, read-only volume).',
         },
         notes: [
-          'Does not create or focus a window. No suitable focused window returns windowOpened: false.',
+          'Prefers the focused MAIN or Dev Workspace window. Otherwise focuses the principal window (creating one if needed) and opens there; windowOpened: false only when no window could be resolved.',
           'windowOpened: true means dispatch to a qualifying window, not renderer acknowledgement or successful document load. The active renderer view must host a document listener.',
           'created: true only when createIfMissing was set and the file did not exist. A missing file without createIfMissing still dispatches the tab, which then renders a not-found state.',
           'Creation is independent of window focus: a request can return windowOpened: false with created: true.',
