@@ -59,16 +59,6 @@ function timeAgo(ts: number): string {
   return `${Math.floor(months / 12)}y ago`;
 }
 
-function sourceLabel(skill: Skill): string {
-  const sources = new Set(
-    (skill.installedLocations?.length
-      ? skill.installedLocations.map((loc) => loc.source)
-      : [skill.source]
-    ).map((source) => (source.endsWith('-claude') ? 'Claude' : 'Global')),
-  );
-  return [...sources].join(' · ');
-}
-
 /** Lock file entries are keyed by the skill's folder name. */
 function skillFolderName(skill: Skill): string {
   const parts = (skill.skillFolderPath || skill.path)
@@ -499,7 +489,6 @@ const InstalledSkillRows: React.FC<{
                     activeTabId === 'skill-detail' &&
                     s.selectedSkill?.id === skill.id
                   }
-                  tag={sourceLabel(skill)}
                   actions={
                     showUpdate ? (
                       <button
