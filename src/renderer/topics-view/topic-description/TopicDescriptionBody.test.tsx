@@ -35,8 +35,18 @@ jest.mock('@principal-ade/panel-framework-core', () => ({
   useDropZone: () => ({ isDragOver: false, onDrop: jest.fn() }),
 }));
 jest.mock('themed-markdown', () => ({
-  IndustryMarkdownSlide: ({ content }: { content: string }) => (
-    <div className="markdown-slide">
+  IndustryMarkdownSlide: ({
+    content,
+    fontSizeScale,
+  }: {
+    content: string;
+    fontSizeScale?: number;
+  }) => (
+    <div
+      className="markdown-slide"
+      data-testid="slide"
+      data-scale={String(fontSizeScale)}
+    >
       <h1 id="overview">Overview</h1>
       <p>{content}</p>
       <h2 id="details">Details</h2>
@@ -341,4 +351,39 @@ test('marks a short final section at the bottom and updates after resizing', asy
   await waitFor(() =>
     expect(entry.getAttribute('aria-current')).toBe('location'),
   );
+});
+
+test('Cmd+= scales the description font and offers to set the default', async () => {
+  localStorage.clear();
+  const { setDefaultFontScale } = jest.requireActual<
+    typeof import('../../hooks/markdownFontScale')
+  >('../../hooks/markdownFontScale');
+  setDefaultFontScale(1);
+  render(<TopicDescriptionBody topicId="topic-a" events={events} />);
+  const slide = await screen.findByTestId('slide');
+  expect(slide.getAttribute('data-scale')).toBe('1');
+  expect(
+    screen.queryByRole('button', { name: /as the default font size/ }),
+  ).toBeNull();
+
+  const surface = slide.parentElement?.parentElement; // scroll wrapper
+  if (!surface) throw new Error('Notes scroll container is missing');
+  surface.getClientRects = () => [{} as DOMRect] as unknown as DOMRectList;
+  fireEvent.keyDown(document.body, { key: '=', metaKey: true });
+  expect(slide.getAttribute('data-scale')).toBe('1.1');
+
+  const setDefault = screen.getByRole('button', {
+    name: 'Set 110% as the default font size',
+  });
+  fireEvent.click(setDefault);
+  expect(
+    screen.queryByRole('button', { name: /as the default font size/ }),
+  ).toBeNull();
+
+  fireEvent.keyDown(document.body, { key: '0', metaKey: true });
+  expect(slide.getAttribute('data-scale')).toBe('1');
+  expect(
+    screen.getByRole('button', { name: 'Set 100% as the default font size' }),
+  ).toBeTruthy();
+  act(() => setDefaultFontScale(1));
 });

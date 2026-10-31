@@ -33,6 +33,13 @@ import {
 import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
 import { useRepoPurlResolver } from '../../hooks/useRepoPurlResolver';
 import { useFileWatch } from '../../hooks/useFileWatch';
+import {
+  FONT_SCALE_DEFAULT,
+  getDefaultFontScale,
+  stepFontScale,
+  useFontScaleShortcuts,
+} from '../../hooks/markdownFontScale';
+import { FontScaleDefaultButton } from '../../components/FontScaleDefaultButton';
 
 /**
  * Extra URI scheme to keep on link hrefs through markdown sanitize, so
@@ -217,6 +224,9 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
   // broadcast; the load closure lives inside the effect below.
   const reloadRef = React.useRef<() => void>(() => {});
   const [topicFilePath, setTopicFilePath] = useState<string | null>(null);
+  // Per-tab font scale, seeded from the shared default. Cmd/Ctrl +/-/0 adjust
+  // it while this body is the visible/focused markdown surface.
+  const [fontScale, setFontScale] = useState<number>(getDefaultFontScale);
 
   // Load the description when visible, and refresh whenever this topic changes
   // while visible — so edits made elsewhere flow into the preview live.
@@ -460,6 +470,11 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
   // The scrollable description region. We read rendered headings out of it to
   // build the outline and to scrollIntoView a clicked entry.
   const wrapperRef = React.useRef<HTMLDivElement>(null);
+  useFontScaleShortcuts(wrapperRef, {
+    increase: () => setFontScale((s) => stepFontScale(s, 1)),
+    decrease: () => setFontScale((s) => stepFontScale(s, -1)),
+    reset: () => setFontScale(FONT_SCALE_DEFAULT),
+  });
   const [toc, setToc] = useState<TocEntry[]>([]);
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
 
@@ -731,6 +746,16 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
             </div>
           </nav>
         )}
+        <FontScaleDefaultButton
+          scale={fontScale}
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 3,
+            background: theme.colors.backgroundSecondary,
+          }}
+        />
         {/* Only the notes scroll; the TOC stays anchored to this viewport. */}
         <div
           ref={wrapperRef}
@@ -793,6 +818,7 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
                 slideIndex={0}
                 isVisible={visible}
                 theme={theme}
+                fontSizeScale={fontScale}
                 enableKeyboardScrolling={false}
                 onLinkClick={onLinkClick}
                 // Let purl doc links (`pkg:…#path`) survive href sanitize so they

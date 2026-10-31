@@ -20,6 +20,13 @@ import type {
 } from '../../../shared/types/document-notes.types';
 import { DocumentNotesService } from '../../main-process-api/DocumentNotesService';
 import { useFileWatch } from '../../hooks/useFileWatch';
+import {
+  FONT_SCALE_DEFAULT,
+  getDefaultFontScale,
+  stepFontScale,
+  useFontScaleShortcuts,
+} from '../../hooks/markdownFontScale';
+import { FontScaleDefaultButton } from '../../components/FontScaleDefaultButton';
 import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
 import { MarkdownLinkNotice } from '../../components/MarkdownLinkNotice';
 import { MarkdownSelectionPill } from '../../dev-workspace/file-city-panel/MarkdownNotes';
@@ -96,8 +103,11 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
   showEditButton = false,
 }) => {
   const { theme } = useTheme();
-  const [fontSizeScale, setFontSizeScale] = useState<number>(1.0);
+  const [fontSizeScale, setFontSizeScale] = useState<number>(
+    getDefaultFontScale,
+  );
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const previousContentRef = useRef<{ path: string; content: string } | null>(
     null,
@@ -541,31 +551,35 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
     });
   }, [events, currentFilePath]);
 
-  const handleFontSizeIncrease = () => {
-    setFontSizeScale((prev) => {
-      const newScale = Math.min(prev + 0.1, 3.0);
-      events.emit({
-        type: 'markdown-panel:font-scale-change',
-        source: 'markdown-panel',
-        timestamp: Date.now(),
-        payload: { fontSizeScale: newScale },
+  const applyFontScale = useCallback(
+    (compute: (prev: number) => number) => {
+      setFontSizeScale((prev) => {
+        const newScale = compute(prev);
+        if (newScale !== prev) {
+          events.emit({
+            type: 'markdown-panel:font-scale-change',
+            source: 'markdown-panel',
+            timestamp: Date.now(),
+            payload: { fontSizeScale: newScale },
+          });
+        }
+        return newScale;
       });
-      return newScale;
-    });
-  };
+    },
+    [events],
+  );
 
-  const handleFontSizeDecrease = () => {
-    setFontSizeScale((prev) => {
-      const newScale = Math.max(prev - 0.1, 0.5);
-      events.emit({
-        type: 'markdown-panel:font-scale-change',
-        source: 'markdown-panel',
-        timestamp: Date.now(),
-        payload: { fontSizeScale: newScale },
-      });
-      return newScale;
-    });
-  };
+  const handleFontSizeIncrease = () =>
+    applyFontScale((prev) => stepFontScale(prev, 1));
+  const handleFontSizeDecrease = () =>
+    applyFontScale((prev) => stepFontScale(prev, -1));
+  const handleFontSizeReset = () => applyFontScale(() => FONT_SCALE_DEFAULT);
+
+  useFontScaleShortcuts(rootRef, {
+    increase: handleFontSizeIncrease,
+    decrease: handleFontSizeDecrease,
+    reset: handleFontSizeReset,
+  });
 
   if (fileState?.loading && !fileState.content) {
     return (
@@ -631,6 +645,7 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
 
   return (
     <div
+      ref={rootRef}
       style={{
         width: '100%',
         height: '100%',
@@ -784,6 +799,8 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
           >
             <Plus size={14} />
           </button>
+
+          <FontScaleDefaultButton scale={fontSizeScale} showPercent={false} />
 
           {canPresent && (
             <>
