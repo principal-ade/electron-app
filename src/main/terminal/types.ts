@@ -42,6 +42,10 @@ export interface TerminalSession {
   // Repository tracking for WebSocket room organization
   repoPath?: string;
   repoId?: string; // Format: "owner/repo"
+  // Repos this terminal holds monitoring watches for when its cwd is an owner
+  // directory (a non-repo folder of checkouts) rather than a repo. Released in
+  // cleanupSession alongside the repoPath watch.
+  watchedRepoPaths?: string[];
   // Agent session linkage — set when a Claude SessionStart hook fires in a
   // matching repo and claims this terminal. Undefined means "unclaimed."
   agentSessionId?: string;

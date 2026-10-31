@@ -20,6 +20,7 @@ import { ensureDaemonRunning } from './daemonSpawner';
 import { SOCKET_PATH } from '../../shared/pty-daemon/constants';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
+import { findChildRepositories } from './ownerDirectoryRepos';
 import { getTracer } from '../telemetry';
 
 // Tracer for terminal telemetry (main process scope)
@@ -565,6 +566,8 @@ export class TerminalSessionManager {
           });
           // A restored terminal is still an open terminal — hold its watch too.
           this.acquireTerminalWatch(info.id, repoPath);
+        } else {
+          this.acquireOwnerDirectoryWatches(session);
         }
       });
 
@@ -935,6 +938,10 @@ export class TerminalSessionManager {
     // cleanupSession.
     if (repoPath) {
       this.acquireTerminalWatch(sessionId, repoPath);
+    } else {
+      // Not in a repo, but possibly in an owner directory holding several —
+      // watch each of those instead.
+      this.acquireOwnerDirectoryWatches(session);
     }
 
     // Create promise for session creation result
@@ -1010,6 +1017,9 @@ export class TerminalSessionManager {
     // Drop the watch this terminal held (paired with acquireTerminalWatch).
     if (session?.repoPath) {
       this.releaseTerminalWatch(sessionId, session.repoPath);
+    }
+    for (const watched of session?.watchedRepoPaths ?? []) {
+      this.releaseTerminalWatch(sessionId, watched);
     }
 
     this.closeAllPortsForSession(sessionId);
@@ -1513,6 +1523,24 @@ export class TerminalSessionManager {
           error,
         );
       });
+  }
+
+  /**
+   * For a terminal whose cwd is not inside a repo, hold a watch for every
+   * checkout directly inside it (an owner directory such as
+   * `~/Developer/acme`). Records the paths on the session so cleanupSession
+   * releases exactly what was acquired.
+   */
+  private acquireOwnerDirectoryWatches(session: TerminalSession): void {
+    const repos = findChildRepositories(session.directory);
+    if (repos.length === 0) return;
+    session.watchedRepoPaths = repos;
+    console.log(
+      `[Terminal] Watching ${repos.length} repos under owner directory ${session.directory} for session ${session.id}`,
+    );
+    for (const repoPath of repos) {
+      this.acquireTerminalWatch(session.id, repoPath);
+    }
   }
 
   /** Release the watch a terminal held. Best-effort. */
