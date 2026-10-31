@@ -48,7 +48,12 @@ import { getLocalFileStats } from './localFileStats';
 export class ElectronFileSystemAdapter {
   private rootPath: string | null = null;
 
-  private fileWatcher: FSWatcher | null = null;
+  // One watcher per watched file, refcounted so several tabs on the same path
+  // share it and the last one to leave closes it.
+  private fileWatchers = new Map<
+    string,
+    { watcher: FSWatcher; refCount: number }
+  >();
 
   private directoryWatcher: FSWatcher | null = null;
 
@@ -321,28 +326,15 @@ export class ElectronFileSystemAdapter {
       );
       return false;
     }
-    // Watcher logic needs careful review for multi-window state
-    if (this.fileWatcher) {
-      try {
-        await this.fileWatcher.close();
-        console.info(
-          '[File System] Closed previous file watcher before starting a new one.',
-        );
-      } catch (closeError) {
-        console.warn(
-          '[File System] Failed to close existing file watcher cleanly:',
-          closeError,
-        );
-      }
-      this.fileWatcher = null;
+    const key = path.resolve(filePath);
+    const existing = this.fileWatchers.get(key);
+    if (existing) {
+      existing.refCount += 1;
+      return true;
     }
 
-    this.fileWatcher = this.createFileWatcher(filePath, this.mainWindow);
-    this.currentlyWatchingPath = filePath;
     try {
       await fsPromises.access(filePath);
-      this.fileWatcher.add(filePath);
-      return true;
     } catch (error) {
       console.error(
         `[File System] File does not exist or cannot be accessed: ${filePath}`,
@@ -350,6 +342,10 @@ export class ElectronFileSystemAdapter {
       );
       return false;
     }
+
+    const watcher = this.createFileWatcher(filePath, this.mainWindow);
+    this.fileWatchers.set(key, { watcher, refCount: 1 });
+    return true;
   }
 
   async watchDirectory(options: {
@@ -705,12 +701,17 @@ export class ElectronFileSystemAdapter {
     let stoppedDir = true;
     let stoppedGit = true;
 
-    if (this.fileWatcher) {
-      console.log('[File System] Stopping file watcher...');
-      await this.fileWatcher.close();
-      this.fileWatcher = null;
-      stoppedFile = true;
-      console.log('[File System] File watcher stopped.');
+    if (this.fileWatchers.size > 0) {
+      console.log(
+        `[File System] Stopping ${this.fileWatchers.size} file watcher(s)...`,
+      );
+      const watchers = Array.from(this.fileWatchers.values());
+      this.fileWatchers.clear();
+      const results = await Promise.allSettled(
+        watchers.map(({ watcher }) => watcher.close()),
+      );
+      stoppedFile = results.every((r) => r.status === 'fulfilled');
+      console.log('[File System] File watchers stopped.');
     }
     if (this.directoryWatcher) {
       console.log('[File System] Stopping directory watcher...');
@@ -727,32 +728,27 @@ export class ElectronFileSystemAdapter {
   }
 
   async stopWatchingFile(filePath: string): Promise<boolean> {
-    if (!this.fileWatcher) {
+    const key = path.resolve(filePath);
+    const entry = this.fileWatchers.get(key);
+    if (!entry) {
       console.info(
-        '[File System] stopWatchingFile: No active file watcher to stop.',
-      );
-      return false;
-    }
-    if (this.currentlyWatchingPath && this.currentlyWatchingPath !== filePath) {
-      console.warn(
-        '[File System] stopWatchingFile: Requested path does not match current watcher. Ignoring request.',
-        {
-          current: this.currentlyWatchingPath,
-          requested: filePath,
-        },
+        `[File System] stopWatchingFile: No active watcher for ${filePath}.`,
       );
       return false;
     }
 
+    entry.refCount -= 1;
+    if (entry.refCount > 0) {
+      return true;
+    }
+
+    this.fileWatchers.delete(key);
     try {
-      await this.fileWatcher.close();
-      console.info('[File System] File watcher stopped.');
+      await entry.watcher.close();
+      console.info(`[File System] File watcher stopped for ${filePath}.`);
     } catch (error) {
       console.error('[File System] Error stopping file watcher:', error);
       return false;
-    } finally {
-      this.fileWatcher = null;
-      this.currentlyWatchingPath = null;
     }
 
     return true;

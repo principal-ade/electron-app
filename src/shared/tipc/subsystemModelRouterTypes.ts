@@ -35,4 +35,10 @@ export type SubsystemModelRouterType = Record<
       input: GetSubsystemModelInput;
     }) => Promise<SubsystemModelHydrated | null>;
   };
+  subsystemModel_getFilePath: {
+    action: (args: {
+      context: ActionContext;
+      input: GetSubsystemModelInput;
+    }) => Promise<string | null>;
+  };
 };

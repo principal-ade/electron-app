@@ -11,6 +11,9 @@ interface TipcSubsystemModelClient {
   subsystemModel_get: (
     input: GetSubsystemModelInput,
   ) => Promise<SubsystemModelHydrated | null>;
+  subsystemModel_getFilePath: (
+    input: GetSubsystemModelInput,
+  ) => Promise<string | null>;
 }
 
 let client: TipcSubsystemModelClient | null = null;
@@ -30,4 +33,6 @@ function getClient(): TipcSubsystemModelClient {
 export const subsystemModelClient = {
   list: () => getClient().subsystemModel_list(),
   get: (input: GetSubsystemModelInput) => getClient().subsystemModel_get(input),
+  getFilePath: (input: GetSubsystemModelInput) =>
+    getClient().subsystemModel_getFilePath(input),
 };

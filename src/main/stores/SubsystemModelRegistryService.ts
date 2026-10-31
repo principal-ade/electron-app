@@ -99,6 +99,18 @@ export class SubsystemModelRegistryService {
     return this.rebuildModelSummaries();
   }
 
+  /** Absolute on-disk path of a model's JSON, or null if the id is invalid or the file is missing. */
+  async getModelFilePath(id: string): Promise<string | null> {
+    if (!MODEL_ID_PATTERN.test(id)) return null;
+    const filePath = join(this.directory, `${id}.json`);
+    try {
+      await fs.access(filePath);
+      return filePath;
+    } catch {
+      return null;
+    }
+  }
+
   async getModel(id: string): Promise<SubsystemModelHydrated | null> {
     if (!MODEL_ID_PATTERN.test(id)) return null;
 

@@ -32,6 +32,7 @@ import {
 } from './topicImageDrop';
 import { useMarkdownLinkHandler } from '../../hooks/useMarkdownLinkHandler';
 import { useRepoPurlResolver } from '../../hooks/useRepoPurlResolver';
+import { useFileWatch } from '../../hooks/useFileWatch';
 
 /**
  * Extra URI scheme to keep on link hrefs through markdown sanitize, so
@@ -212,6 +213,10 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
   // Transient banner for a rejected image drop (too large / wrong type / attach
   // failure). Auto-clears so it doesn't linger over the notes.
   const [dropError, setDropError] = useState<string | null>(null);
+  // Lets the on-disk watcher trigger the same refresh as a TOPIC_UPDATED
+  // broadcast; the load closure lives inside the effect below.
+  const reloadRef = React.useRef<() => void>(() => {});
+  const [topicFilePath, setTopicFilePath] = useState<string | null>(null);
 
   // Load the description when visible, and refresh whenever this topic changes
   // while visible — so edits made elsewhere flow into the preview live.
@@ -247,15 +252,40 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
       }
     };
     load(true);
+    reloadRef.current = () => void load(false);
     const off = TopicService.onTopicChange((event) => {
       const changedId = event.topic?.id ?? event.id;
       if (changedId === topicId) load(false);
     });
     return () => {
       cancelled = true;
+      reloadRef.current = () => {};
       off();
     };
   }, [visible, topicId]);
+
+  // Edits made straight to the topic JSON (outside the app's write paths) do
+  // not broadcast TOPIC_UPDATED, so watch the file itself. The path is null
+  // while the legacy single-blob store is the backend.
+  useEffect(() => {
+    if (!visible || !topicId) return;
+    let cancelled = false;
+    setTopicFilePath(null);
+    void TopicService.getFilePath(topicId)
+      .then((path) => {
+        if (!cancelled) setTopicFilePath(path);
+      })
+      .catch(() => {
+        if (!cancelled) setTopicFilePath(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, topicId]);
+  const reloadFromDisk = React.useCallback(() => reloadRef.current(), []);
+  useFileWatch(topicFilePath, reloadFromDisk, {
+    enabled: visible && !!topicFilePath,
+  });
 
   // Reveal the loading placeholder only if `loading` stays true past a short
   // grace period; a load that finishes first clears the timer and nothing

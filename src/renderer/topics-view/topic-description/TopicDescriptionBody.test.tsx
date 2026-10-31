@@ -44,8 +44,13 @@ jest.mock('themed-markdown', () => ({
   ),
 }));
 jest.mock('../../main-process-api/TopicService', () => ({
-  TopicService: { getTopic: jest.fn(), onTopicChange: jest.fn() },
+  TopicService: {
+    getTopic: jest.fn(),
+    onTopicChange: jest.fn(),
+    getFilePath: jest.fn().mockResolvedValue(null),
+  },
 }));
+jest.mock('../../hooks/useFileWatch', () => ({ useFileWatch: jest.fn() }));
 jest.mock('../../hooks/useMarkdownLinkHandler', () => ({
   useMarkdownLinkHandler: () => ({}),
 }));

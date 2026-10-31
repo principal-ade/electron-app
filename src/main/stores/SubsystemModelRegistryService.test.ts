@@ -46,4 +46,15 @@ describe('SubsystemModelRegistryService', () => {
       'sg-100-old',
     ]);
   });
+
+  it('resolves the on-disk path only for existing, well-formed ids', async () => {
+    await writeFile(join(directory, 'sg-100-old.json'), '{}');
+    const service = new SubsystemModelRegistryService(directory);
+
+    expect(await service.getModelFilePath('sg-100-old')).toBe(
+      join(directory, 'sg-100-old.json'),
+    );
+    expect(await service.getModelFilePath('sg-200-missing')).toBeNull();
+    expect(await service.getModelFilePath('../escape')).toBeNull();
+  });
 });

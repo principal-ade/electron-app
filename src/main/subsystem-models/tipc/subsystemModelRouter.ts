@@ -10,6 +10,9 @@ export const subsystemModelRouter = {
   subsystemModel_get: t.procedure
     .input<GetSubsystemModelInput>()
     .action(({ input }) => registry.getModel(input.id)),
+  subsystemModel_getFilePath: t.procedure
+    .input<GetSubsystemModelInput>()
+    .action(({ input }) => registry.getModelFilePath(input.id)),
 };
 
 export type SubsystemModelRouter = typeof subsystemModelRouter;
