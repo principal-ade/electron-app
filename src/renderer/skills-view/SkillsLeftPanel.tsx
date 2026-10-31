@@ -511,6 +511,40 @@ const BrowseSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = ({
 };
 
 /** Browse mode's top bar: a repo input, or the loaded repo with a clear button. */
+/** Owner avatar in the same rounded-square style as the section headers. */
+const OwnerAvatar: React.FC<{ login: string }> = ({ login }) => {
+  const { theme } = useTheme();
+  const [broken, setBroken] = useState(false);
+  return (
+    <div
+      style={{
+        width: 22,
+        height: 22,
+        flexShrink: 0,
+        borderRadius: 6,
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.backgroundTertiary,
+      }}
+    >
+      {broken ? (
+        <Github size={13} color={theme.colors.textSecondary} />
+      ) : (
+        <img
+          src={`https://github.com/${login}.png?size=48`}
+          alt={login}
+          width={22}
+          height={22}
+          style={{ objectFit: 'cover', display: 'block' }}
+          onError={() => setBroken(true)}
+        />
+      )}
+    </div>
+  );
+};
+
 const RepoBar: React.FC<{ s: SkillsSurfaceValue }> = ({ s }) => {
   const { theme } = useTheme();
   const spacing = useSpacing(theme);
@@ -530,7 +564,7 @@ const RepoBar: React.FC<{ s: SkillsSurfaceValue }> = ({ s }) => {
         display: 'flex',
         alignItems: 'center',
         gap: spacing.sm,
-        height: 30,
+        height: repo ? 44 : 30,
         boxSizing: 'border-box',
         padding: `0 ${spacing.sm}px`,
         borderBottom: `1px solid ${theme.colors.border}`,
@@ -538,28 +572,40 @@ const RepoBar: React.FC<{ s: SkillsSurfaceValue }> = ({ s }) => {
         flexShrink: 0,
       }}
     >
-      <Github size={14} color={theme.colors.textSecondary} />
       {repo ? (
         <>
-          <span
-            style={{
-              flex: 1,
-              minWidth: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              fontFamily: theme.fonts.monospace,
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.text,
-            }}
+          <OwnerAvatar login={repo.owner} />
+          <div
+            style={{ flex: 1, minWidth: 0 }}
             title={`${repo.owner}/${repo.repo} @ ${repo.branch}`}
           >
-            {repo.owner}/{repo.repo}
-            <span style={{ color: theme.colors.textMuted }}>
-              {' '}
-              @ {repo.branch}
-            </span>
-          </span>
+            <div
+              style={{
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[2],
+                fontWeight: 600,
+                color: theme.colors.text,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {repo.repo}
+            </div>
+            <div
+              style={{
+                fontFamily: theme.fonts.monospace,
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textMuted,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {repo.owner}
+              {repo.branch !== 'main' && ` @ ${repo.branch}`}
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -574,27 +620,30 @@ const RepoBar: React.FC<{ s: SkillsSurfaceValue }> = ({ s }) => {
           </button>
         </>
       ) : (
-        <input
-          type="text"
-          placeholder="owner/repo or GitHub URL"
-          aria-label="GitHub repository"
-          value={value}
-          disabled={s.isLoading}
-          onChange={(event) => setValue(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') submit();
-          }}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            background: 'transparent',
-            border: 'none',
-            outline: 'none',
-            color: theme.colors.text,
-            fontFamily: theme.fonts.monospace,
-            fontSize: theme.fontSizes[1],
-          }}
-        />
+        <>
+          <Github size={14} color={theme.colors.textSecondary} />
+          <input
+            type="text"
+            placeholder="owner/repo or GitHub URL"
+            aria-label="GitHub repository"
+            value={value}
+            disabled={s.isLoading}
+            onChange={(event) => setValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') submit();
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: theme.colors.text,
+              fontFamily: theme.fonts.monospace,
+              fontSize: theme.fontSizes[1],
+            }}
+          />
+        </>
       )}
     </div>
   );
