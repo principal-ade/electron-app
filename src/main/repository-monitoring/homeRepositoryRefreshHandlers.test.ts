@@ -1,10 +1,8 @@
 /** @jest-environment node */
 import { EventEmitter } from 'events';
 import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron';
-import type {
-  RepositoryMonitoringManager,
-  GitStatusWithFiles,
-} from '@principal-ai/repository-monitoring-server';
+import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
+import type { RepositoryMonitoringManager } from './RepositoryMonitoringManager';
 import { HOME_REPOSITORY_REFRESH_INTEREST } from '../../shared/homeRepositoryRefresh';
 import { registerHomeRepositoryRefreshHandlers } from './homeRepositoryRefreshHandlers';
 

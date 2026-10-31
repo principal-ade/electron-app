@@ -1,11 +1,10 @@
 /**
  * IPC Handlers for Repository Monitoring
- * Updated to use @principal-ai/repository-monitoring-server package
+ * Desktop-owned Electron adapters over the shared repository monitoring daemon
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
 import {
-  RepositoryMonitoringManager,
   RepositoryMonitoringAPIEvent,
   type GitStatusWithFiles,
   type ToolExecutionRequest,
@@ -15,6 +14,7 @@ import {
   type LogTailRequest,
   type FileWatcherImpl,
 } from '@principal-ai/repository-monitoring-server';
+import { RepositoryMonitoringManager } from './RepositoryMonitoringManager';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 import { applicationWindows, PrimaryWindowType } from '../window/types';

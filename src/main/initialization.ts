@@ -52,7 +52,8 @@ import {
   registerRepositoryMonitoringHandlers,
   getManager as getRepositoryMonitoringManager,
 } from './repository-monitoring/ipcHandlers';
-import { RepositoryRegistrationManager } from '@principal-ai/repository-monitoring-server';
+import { RepositoryRegistrationManager } from './repository-monitoring/RepositoryRegistrationManager';
+import { AlexandriaRegistryService } from './stores/AlexandriaRegistryService';
 import { registerApiProxyHandlers } from './services/ApiProxyService';
 import { registerCLIBridgeHandlers } from './services/ipc/cliBridgeHandlers';
 import { JWTService } from './services/JWTService';
@@ -356,8 +357,8 @@ export const initializeServices = async () => {
   // initializeTerminalSettings already warms the backend and restores surviving
   // daemon sessions. Startup must never destroy those sessions.
 
-  // Initialize repository monitoring and registration
-  // This registers all repositories with the monitoring server and enables git watching
+  // Initialize repository monitoring and registration: warms watches for the
+  // most recently opened repositories (see RepositoryRegistrationManager).
   setTimeout(async () => {
     try {
       console.log(
@@ -368,6 +369,7 @@ export const initializeServices = async () => {
 
       const registrationManager = RepositoryRegistrationManager.getInstance({
         monitoringManager,
+        alexandriaRegistryService: AlexandriaRegistryService.getInstance(),
       });
       await registrationManager.initialize();
       console.log(

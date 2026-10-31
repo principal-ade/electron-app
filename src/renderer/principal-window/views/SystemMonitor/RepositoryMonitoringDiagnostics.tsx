@@ -25,6 +25,7 @@ import type {
 } from '@principal-ai/repository-monitoring-server';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { ShellService } from '../../../main-process-api/ShellService';
+import { getRemoteDriftStatus } from './remoteDriftStatus';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
 
@@ -117,6 +118,7 @@ const Collapsible: React.FC<{
   return (
     <div style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
       <button
+        aria-expanded={expanded}
         onClick={onToggle}
         style={{
           width: '100%',
@@ -273,9 +275,7 @@ const DaemonRepoTable: React.FC<{ nowTick: number; theme: ThemeShape }> = ({
   nowTick,
   theme,
 }) => {
-  const [snapshot, setSnapshot] = useState<RepoMonitorDiagnostics | null>(
-    null,
-  );
+  const [snapshot, setSnapshot] = useState<RepoMonitorDiagnostics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rebuilding, setRebuilding] = useState<string | null>(null);
 
@@ -328,7 +328,8 @@ const DaemonRepoTable: React.FC<{ nowTick: number; theme: ThemeShape }> = ({
     <div style={{ padding: '12px 20px', fontSize: '12px', color }}>{text}</div>
   );
 
-  if (error) return message(`Status request failed: ${error}`, theme.colors.error);
+  if (error)
+    return message(`Status request failed: ${error}`, theme.colors.error);
   if (!snapshot) return message('Checking the daemon…');
   if (snapshot.state === 'unreachable') {
     return message(
@@ -363,10 +364,19 @@ const DaemonRepoTable: React.FC<{ nowTick: number; theme: ThemeShape }> = ({
         </thead>
         <tbody>
           {snapshot.repos.map((repo) => {
+            const remoteStatus = getRemoteDriftStatus(repo.remoteDrift);
+            const remoteColor =
+              remoteStatus?.kind === 'synced'
+                ? theme.colors.success
+                : remoteStatus?.kind === 'changed'
+                  ? theme.colors.warning
+                  : remoteStatus?.kind === 'error'
+                    ? theme.colors.error
+                    : theme.colors.textSecondary;
             const name =
               repo.path.split('/').filter(Boolean).pop() ?? repo.path;
             const watchTitle = repo.isWatching
-              ? `Watching (${repo.watchingMode}${repo.fsMonitorEnabled ? ', git fsmonitor' : ''}) — ${String(repo.watchReferenceCount)} reference${repo.watchReferenceCount === 1 ? '' : 's'}`
+              ? `Watching — ${String(repo.watchReferenceCount)} reference${repo.watchReferenceCount === 1 ? '' : 's'}`
               : 'Not watching — slices refresh only on request';
             const isRebuilding = rebuilding === repo.path;
             return (
@@ -376,7 +386,11 @@ const DaemonRepoTable: React.FC<{ nowTick: number; theme: ThemeShape }> = ({
               >
                 <td style={cellStyle}>
                   <div
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
                   >
                     <span
                       title={watchTitle}
@@ -387,21 +401,18 @@ const DaemonRepoTable: React.FC<{ nowTick: number; theme: ThemeShape }> = ({
                           : theme.colors.textSecondary,
                       }}
                     >
-                      {repo.isWatching ? <Eye size={13} /> : <EyeOff size={13} />}
+                      {repo.isWatching ? (
+                        <Eye size={13} />
+                      ) : (
+                        <EyeOff size={13} />
+                      )}
                     </span>
-                    <span title={repo.path} style={{ color: theme.colors.text }}>
+                    <span
+                      title={repo.path}
+                      style={{ color: theme.colors.text }}
+                    >
                       {name}
                     </span>
-                    {repo.isWatching && repo.watchingMode === 'fallback' && (
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          color: theme.colors.textSecondary,
-                        }}
-                      >
-                        fallback
-                      </span>
-                    )}
                   </div>
                 </td>
                 {SLICE_META.map(({ slice }) => (
@@ -409,11 +420,21 @@ const DaemonRepoTable: React.FC<{ nowTick: number; theme: ThemeShape }> = ({
                     key={slice}
                     style={{ ...cellStyle, color: theme.colors.textSecondary }}
                   >
-                    <SliceCell
-                      state={repo.slices[slice]}
-                      now={nowTick}
-                      theme={theme}
-                    />
+                    {slice === 'gitRemote' && remoteStatus ? (
+                      <span
+                        title={remoteStatus.title}
+                        style={{ color: remoteColor }}
+                      >
+                        {remoteStatus.label} · checked{' '}
+                        {formatAge(remoteStatus.checkedAt, nowTick)}
+                      </span>
+                    ) : (
+                      <SliceCell
+                        state={repo.slices[slice]}
+                        now={nowTick}
+                        theme={theme}
+                      />
+                    )}
                   </td>
                 ))}
                 <td style={{ ...cellStyle, textAlign: 'right' }}>
@@ -460,8 +481,8 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
   nowTick: number;
 }> = ({ diagnostics, nowTick }) => {
   const { theme } = useTheme();
-  const [historyExpanded, setHistoryExpanded] = useState(true);
-  const [reposExpanded, setReposExpanded] = useState(true);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [reposExpanded, setReposExpanded] = useState(false);
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const [switchingImpl, setSwitchingImpl] = useState<
     'parcel' | 'chokidar' | null
@@ -727,7 +748,10 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
                 </div>
               ) : (
                 <div
-                  style={{ fontSize: '11px', color: theme.colors.textSecondary }}
+                  style={{
+                    fontSize: '11px',
+                    color: theme.colors.textSecondary,
+                  }}
                 >
                   Not connected. Repositories cannot load until the daemon is
                   reachable; see the last error below and the daemon log.
@@ -1066,6 +1090,15 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
           </div>
 
           <Collapsible
+            title="Repositories in the daemon"
+            expanded={reposExpanded}
+            onToggle={() => setReposExpanded((v) => !v)}
+            theme={theme}
+          >
+            <DaemonRepoTable nowTick={nowTick} theme={theme} />
+          </Collapsible>
+
+          <Collapsible
             title={`Lifecycle history (${diagnostics.lifecycleHistory.length})`}
             expanded={historyExpanded}
             onToggle={() => setHistoryExpanded((v) => !v)}
@@ -1102,15 +1135,6 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
                   ))}
               </div>
             )}
-          </Collapsible>
-
-          <Collapsible
-            title="Repositories in the daemon"
-            expanded={reposExpanded}
-            onToggle={() => setReposExpanded((v) => !v)}
-            theme={theme}
-          >
-            <DaemonRepoTable nowTick={nowTick} theme={theme} />
           </Collapsible>
         </div>
       )}
