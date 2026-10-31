@@ -132,6 +132,7 @@ export class TerminalSessionManager {
   // Minimal session state in main - just enough to track existence and metadata
   private sessions: Map<string, TerminalSession> = new Map();
   private sessionsByRepo: Map<string, string> = new Map(); // "repoPath:context" -> sessionId
+  private pendingSessionExits = new Map<string, () => void>();
   private maxSessions = 20;
   private rendererWindows: Set<BrowserWindow> = new Set();
 
@@ -401,6 +402,7 @@ export class TerminalSessionManager {
       }
 
       case 'SESSION_EXIT':
+        this.pendingSessionExits.get(msg.sessionId)?.();
         this.broadcastToRendererWindows(TerminalAPIEvents.ON_EXIT, {
           sessionId: msg.sessionId,
           code: msg.exitCode,
@@ -1040,7 +1042,30 @@ export class TerminalSessionManager {
     }
   }
 
-  async destroySession(sessionId: string): Promise<void> {
+  /** Wait for backend confirmation before removing a terminal's working tree. */
+  async destroySessionAndWaitForExit(sessionId: string): Promise<void> {
+    if (!this.sessions.has(sessionId)) return;
+
+    let timeout: NodeJS.Timeout | undefined;
+    const exited = new Promise<void>((resolve, reject) => {
+      this.pendingSessionExits.set(sessionId, resolve);
+      timeout = setTimeout(() => {
+        reject(new Error(`Timed out closing terminal ${sessionId}`));
+      }, 15_000);
+    });
+
+    try {
+      await this.destroySession(sessionId, exited);
+    } finally {
+      if (timeout) clearTimeout(timeout);
+      this.pendingSessionExits.delete(sessionId);
+    }
+  }
+
+  async destroySession(
+    sessionId: string,
+    exitConfirmation?: Promise<void>,
+  ): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (session) {
       const message: DestroySessionMessage = {
@@ -1050,6 +1075,9 @@ export class TerminalSessionManager {
         sessionId,
       };
       this.sendToWorker(message);
+      // Keep timed-out sessions tracked so retrying deletion cannot overlook
+      // a backend process that failed to stop.
+      if (exitConfirmation) await exitConfirmation;
       this.cleanupSession(sessionId);
 
       console.log(`[Terminal] Session destroyed: ${sessionId}`);

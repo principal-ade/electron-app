@@ -157,15 +157,24 @@ export function useProjectsHost({
   const handleConfirmDelete = useCallback(
     async (deleteLocal: boolean) => {
       if (!entryToDelete) return;
+      const clonePath = deleteClonePath ?? entryToDelete.path;
       try {
-        await AlexandriaService.removeRepository(entryToDelete.path, deleteLocal);
+        const removed = await AlexandriaService.removeRepository(
+          clonePath,
+          deleteLocal,
+        );
+        if (!removed) {
+          throw new Error(
+            'Could not delete the clone. Its terminals or files could not be removed.',
+          );
+        }
 
         // If this repo has a project-info tab open, convert it to remote-only
         // (or close it when there's nothing remote to show).
         const openTab = tabs.find(
           (tab) =>
             tab.contentType === 'project-info' &&
-            (tab as ProjectInfoTab).localEntry?.path === entryToDelete.path,
+            (tab as ProjectInfoTab).localEntry?.path === clonePath,
         ) as ProjectInfoTab | undefined;
 
         if (openTab && entryToDelete.github) {
@@ -197,7 +206,15 @@ export function useProjectsHost({
         throw error; // Re-throw so the modal can surface the failure.
       }
     },
-    [entryToDelete, tabs, activeTabId, events, setTabs, setActiveTabId],
+    [
+      entryToDelete,
+      deleteClonePath,
+      tabs,
+      activeTabId,
+      events,
+      setTabs,
+      setActiveTabId,
+    ],
   );
 
   const deleteModal = (

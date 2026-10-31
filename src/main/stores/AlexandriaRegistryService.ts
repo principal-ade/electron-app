@@ -21,6 +21,7 @@ import { FileSystemService } from '../file-system-service';
 import { homedir } from 'os';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
+import { closeRepositoryTerminals } from '../terminal/closeRepositoryTerminals';
 
 export class AlexandriaRegistryService {
   private static instance: AlexandriaRegistryService;
@@ -232,20 +233,20 @@ export class AlexandriaRegistryService {
         return false;
       }
 
+      if (deleteLocal) {
+        const { getSessionManagerInstance } = await import(
+          '../terminal/sessionManagerSingleton'
+        );
+        await closeRepositoryTerminals(getSessionManagerInstance(), path);
+        await FileSystemService.deleteDirectory(path);
+        console.log(`Deleted local files for repository at ${path}`);
+      }
+
       const removed = this.outpostManager.removeRepository(path);
 
       if (!removed) {
         console.warn(`Failed to remove repository at path: ${path}`);
         return false;
-      }
-
-      if (deleteLocal) {
-        try {
-          await FileSystemService.deleteDirectory(path);
-          console.log(`Deleted local files for repository at ${path}`);
-        } catch (error) {
-          console.error(`Failed to delete local files at ${path}:`, error);
-        }
       }
 
       console.log(`Repository removed from registry: ${path}`);

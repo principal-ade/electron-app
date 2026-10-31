@@ -232,7 +232,7 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 wordBreak: 'break-all',
               }}
             >
-              {entry.path}
+              {clonePath ?? entry.path}
             </div>
             <div
               style={{
@@ -242,7 +242,10 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 lineHeight: '1.5',
               }}
             >
-              This will remove the project folder. You can clone from the remote at any time to recover.
+              This will remove the project folder. Any open terminals for this
+              clone will be closed first, stopping their running commands.
+              You can clone from the remote again, but local-only work cannot
+              be recovered.
             </div>
           </div>
 
@@ -334,7 +337,7 @@ export const DeleteAlexandriaEntryModal: React.FC<
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {/* Open in Finder */}
             <button
-              onClick={() => ShellService.openPath(entry.path)}
+              onClick={() => ShellService.openPath(clonePath ?? entry.path)}
               style={{
                 width: '100%',
                 padding: '12px 16px',
