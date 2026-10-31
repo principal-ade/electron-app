@@ -35,14 +35,9 @@ import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { useSkillBrowserPanelProvider } from '../principal-window/views/SkillBrowserView/SkillBrowserPanelProvider';
 import { useSkillsSync } from '../hooks/useSkillsSync';
 import {
-  type ViewMode,
-  type DetectedDirectory,
-} from '../principal-window/views/SkillBrowserView/SkillBrowserViewHeader';
-import {
   type SkillDestination,
   DIRECTORY_ID_TO_DESTINATION,
 } from '../principal-window/views/SkillBrowserView/InstallSkillToolbar';
-import { type RecentRepo } from '../principal-window/views/SkillBrowserView/RecentSkillsPanel';
 import { AgentSetupModal } from '../principal-window/views/SkillBrowserView/AgentSetupModal';
 import { SkillInstallationModal } from '../principal-window/views/SkillBrowserView/SkillInstallationModal';
 import { SkillEditorModal } from '../principal-window/views/SkillBrowserView/SkillEditorModal';
@@ -51,6 +46,26 @@ import { FileSystemService } from '../main-process-api/FileSystemService';
 import { SkillLockService } from '../main-process-api/SkillLockService';
 import { RecentReposService } from '../main-process-api/RecentReposService';
 import { useWorkspaceTabs } from '../principal-window/PortalTabsContext';
+
+export type ViewMode = 'installed' | 'browse';
+
+/** An agent skills directory found on disk (e.g. ~/.claude/skills). */
+export interface DetectedDirectory {
+  id: string;
+  path: string;
+  displayName: string;
+  icon: string;
+  skillCount: number;
+  skills: string[];
+}
+
+export interface RecentRepo {
+  url: string;
+  owner: string;
+  repo: string;
+  branch: string;
+  lastVisited: number;
+}
 
 interface GithubRepoInfo {
   owner: string;

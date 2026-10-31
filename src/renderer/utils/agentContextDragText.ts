@@ -6,6 +6,11 @@ export function drawingContextDragText(path: string, title: string): string {
   return `Use drawing "${title || 'Untitled drawing'}" as context — read the local Excalidraw file:\ncat ${shellQuote(path)}`;
 }
 
+/** Installed skills are local folders; point the agent at the SKILL.md. */
+export function skillContextDragText(path: string, name: string): string {
+  return `Use skill "${name || 'Untitled skill'}" as context — read its SKILL.md:\ncat ${shellQuote(path)}`;
+}
+
 /** Plain-text context prompt pasted by terminal drop targets. */
 export function agentContextDragText(
   kind: 'topic' | 'subsystem model',

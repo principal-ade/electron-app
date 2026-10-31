@@ -2,41 +2,573 @@
  * SkillsLeftPanel
  *
  * The Skills surface's swappable left-panel slot in `WorkspaceShell` — the
- * launcher: the view-mode header (Installed / Browse) atop the skills list
- * (`GlobalSkillsPanel` / `SkillsBrowsePanel`, or `RecentSkillsPanel` when
- * browsing with no repo loaded). Selecting a skill emits `skill:selected` on the
- * provider bus, which `SkillsSurfaceProvider` turns into the detail tab.
+ * launcher list. A My Skills / Browse switch sits under the header: My Skills
+ * lists skills installed in the detected agent directories; Browse takes a
+ * GitHub repo (or a recently browsed one) and lists the skills it contains.
+ * Selecting a row emits `skill:selected` on the provider bus, which
+ * `SkillsSurfaceProvider` turns into the detail tab.
  *
- * All state comes from `useSkillsSurface`; this is purely presentational —
- * the list/header JSX lifted out of the former `SkillBrowserView`.
+ * All state comes from `useSkillsSurface`; the skill lists themselves come from
+ * the agent-panels data hooks. Layout mirrors the other left panels
+ * (Drawings, Topics, Requests): 40px header, 30px filter bar, flat rows.
  */
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { SkillsBrowsePanel, GlobalSkillsPanel } from '../panels/agent-panels';
-import { SkillBrowserViewHeader } from '../principal-window/views/SkillBrowserView/SkillBrowserViewHeader';
+import {
+  Check,
+  FolderPlus,
+  Github,
+  RefreshCw,
+  Search,
+  ToolCase,
+  X,
+} from 'lucide-react';
+import { SegmentedControl } from '../components/SegmentedControl';
+import {
+  useSkillsData,
+  type Skill,
+} from '../panels/agent-panels/skills/hooks/useSkillsData';
+import { useSkillsBrowseData } from '../panels/agent-panels/skills/hooks/useSkillsBrowseData';
 import { SkillsRepoOnboarding } from '../principal-window/views/SkillBrowserView/SkillsRepoOnboarding';
-import { RecentSkillsPanel } from '../principal-window/views/SkillBrowserView/RecentSkillsPanel';
-import { useSkillsSurface } from './SkillsSurfaceContext';
+import { useWorkspaceTabs } from '../principal-window/PortalTabsContext';
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
+import { skillContextDragText } from '../utils/agentContextDragText';
+import {
+  useSkillsSurface,
+  type RecentRepo,
+  type SkillsSurfaceValue,
+} from './SkillsSurfaceContext';
+
+type Theme = ReturnType<typeof useTheme>['theme'];
+
+function timeAgo(ts: number): string {
+  const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
+
+function sourceLabel(skill: Skill): string {
+  const sources = new Set(
+    (skill.installedLocations?.length
+      ? skill.installedLocations.map((loc) => loc.source)
+      : [skill.source]
+    ).map((source) => (source.endsWith('-claude') ? 'Claude' : 'Global')),
+  );
+  return [...sources].join(' · ');
+}
+
+function matchesQuery(skill: Skill, query: string): boolean {
+  if (!query) return true;
+  return (
+    skill.name.toLowerCase().includes(query) ||
+    (skill.description ?? '').toLowerCase().includes(query) ||
+    (skill.capabilities ?? []).some((cap) =>
+      cap.toLowerCase().includes(query),
+    )
+  );
+}
+
+const useSpacing = (theme: Theme) => ({
+  xs: theme.space?.[1] || 4,
+  sm: theme.space?.[2] || 8,
+});
+
+const iconButtonStyle = (theme: Theme, spacing: { xs: number }) =>
+  ({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xs,
+    background: 'transparent',
+    border: 'none',
+    color: theme.colors.textSecondary,
+    cursor: 'pointer',
+  }) satisfies React.CSSProperties;
+
+const EmptyState: React.FC<{ text: string }> = ({ text }) => {
+  const { theme } = useTheme();
+  const spacing = useSpacing(theme);
+  return (
+    <div
+      style={{
+        padding: `${spacing.sm * 3}px ${spacing.sm * 2}px`,
+        color: theme.colors.textSecondary,
+        fontFamily: theme.fonts.body,
+        fontSize: theme.fontSizes[1],
+        textAlign: 'center',
+      }}
+    >
+      {text}
+    </div>
+  );
+};
+
+/** A 30px search field matching the other left panels' filter bars. */
+const FilterBar: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}> = ({ value, onChange, placeholder }) => {
+  const { theme } = useTheme();
+  const spacing = useSpacing(theme);
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing.sm,
+        height: 30,
+        boxSizing: 'border-box',
+        padding: `0 ${spacing.sm}px`,
+        borderBottom: `1px solid ${theme.colors.border}`,
+        backgroundColor: theme.colors.backgroundSecondary,
+        flexShrink: 0,
+      }}
+    >
+      <Search size={14} color={theme.colors.textSecondary} />
+      <input
+        type="text"
+        placeholder={placeholder}
+        aria-label={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          color: theme.colors.text,
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[1],
+        }}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange('')}
+          title="Clear filter"
+          aria-label="Clear filter"
+          style={{ ...iconButtonStyle(theme, spacing), padding: 0 }}
+        >
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  );
+};
+
+interface SkillRowProps {
+  skill: Skill;
+  active: boolean;
+  /** Right-hand monospace tag (source, or install state in Browse). */
+  tag?: React.ReactNode;
+  draggable?: boolean;
+  onClick: () => void;
+}
+
+const SkillRow: React.FC<SkillRowProps> = ({
+  skill,
+  active,
+  tag,
+  draggable,
+  onClick,
+}) => {
+  const { theme } = useTheme();
+  const spacing = useSpacing(theme);
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      draggable={draggable}
+      onDragStart={
+        draggable
+          ? (event) => {
+              if (!event.dataTransfer) return;
+              event.dataTransfer.effectAllowed = 'copy';
+              event.dataTransfer.setData(
+                'text/plain',
+                skillContextDragText(skill.path, skill.name),
+              );
+            }
+          : undefined
+      }
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: spacing.sm,
+        width: '100%',
+        padding: `${spacing.sm * 1.5}px ${spacing.sm * 2}px`,
+        backgroundColor:
+          active || hovered ? theme.colors.backgroundSecondary : 'transparent',
+        border: 'none',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        cursor: 'pointer',
+        textAlign: 'left',
+        transition: 'background-color 0.15s ease',
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[2],
+            fontWeight: active ? 700 : 500,
+            color: theme.colors.text,
+            marginBottom: 2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {skill.name}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: spacing.sm,
+            fontFamily: theme.fonts.monospace,
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textMuted,
+          }}
+        >
+          <span
+            style={{
+              flex: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {skill.description || skill.skillFolderPath}
+          </span>
+          {tag && (
+            <span
+              style={{
+                flexShrink: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              {tag}
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+};
+
+const InstalledSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = ({
+  s,
+  query,
+}) => {
+  const { activeTabId } = useWorkspaceTabs();
+  const { skills, isLoading, error } = useSkillsData({ context: s.context });
+  const showLoading = useDelayedLoading(isLoading);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return skills.filter((skill) => {
+      const locations = skill.installedLocations?.length
+        ? skill.installedLocations.map((loc) => loc.source)
+        : [skill.source];
+      return locations.some((src) => src.startsWith('global-')) && matchesQuery(skill, q);
+    });
+  }, [skills, query]);
+
+  if (isLoading && skills.length === 0) {
+    return showLoading ? <EmptyState text="Loading…" /> : null;
+  }
+  if (error) return <EmptyState text={error} />;
+  if (s.detectedDirectories.length === 0) {
+    return (
+      <EmptyState text="No agent skill directories found. Use the folder button above to set one up." />
+    );
+  }
+  if (skills.length === 0) {
+    return <EmptyState text="No skills installed yet. Use Browse to find some." />;
+  }
+  if (visible.length === 0) {
+    return <EmptyState text="No skills match this filter." />;
+  }
+
+  return (
+    <>
+      {visible.map((skill) => (
+        <SkillRow
+          key={skill.id}
+          skill={skill}
+          draggable
+          active={activeTabId === 'skill-detail' && s.selectedSkill?.id === skill.id}
+          tag={sourceLabel(skill)}
+          onClick={() =>
+            s.events.emit({
+              type: 'skill:selected',
+              source: 'skills-left-panel',
+              timestamp: Date.now(),
+              payload: { skillId: skill.id, skill },
+            })
+          }
+        />
+      ))}
+    </>
+  );
+};
+
+const BrowseSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = ({
+  s,
+  query,
+}) => {
+  const { theme } = useTheme();
+  const { activeTabId } = useWorkspaceTabs();
+  const { skills, isLoading, error } = useSkillsBrowseData({ context: s.context });
+  const showLoading = useDelayedLoading(isLoading || s.isLoading);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return skills.filter((skill) => matchesQuery(skill, q));
+  }, [skills, query]);
+
+  if ((isLoading || s.isLoading) && skills.length === 0) {
+    return showLoading ? <EmptyState text="Loading…" /> : null;
+  }
+  if (error) return <EmptyState text={error} />;
+  if (skills.length === 0) {
+    return <EmptyState text="No skills found in this repository." />;
+  }
+  if (visible.length === 0) {
+    return <EmptyState text="No skills match this filter." />;
+  }
+
+  return (
+    <>
+      {visible.map((skill) => {
+        const installed = s.isSkillInstalled(skill);
+        return (
+          <SkillRow
+            key={skill.id}
+            skill={skill}
+            active={activeTabId === 'skill-detail' && s.selectedSkill?.id === skill.id}
+            tag={
+              installed ? (
+                <>
+                  <Check size={12} color={theme.colors.success} />
+                  Installed
+                </>
+              ) : undefined
+            }
+            onClick={() =>
+              s.events.emit({
+                type: 'skill:selected',
+                source: 'skills-left-panel',
+                timestamp: Date.now(),
+                payload: { skillId: skill.id, skill },
+              })
+            }
+          />
+        );
+      })}
+    </>
+  );
+};
+
+/** Browse mode's top bar: a repo input, or the loaded repo with a clear button. */
+const RepoBar: React.FC<{ s: SkillsSurfaceValue }> = ({ s }) => {
+  const { theme } = useTheme();
+  const spacing = useSpacing(theme);
+  const [value, setValue] = useState(s.githubUrl);
+  const repo = s.githubRepoInfo;
+
+  const submit = () => {
+    const trimmed = value.trim();
+    if (!trimmed || s.isLoading) return;
+    s.setGithubUrl(trimmed);
+    void s.handleFetchSkills(trimmed);
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing.sm,
+        height: 30,
+        boxSizing: 'border-box',
+        padding: `0 ${spacing.sm}px`,
+        borderBottom: `1px solid ${theme.colors.border}`,
+        backgroundColor: theme.colors.backgroundSecondary,
+        flexShrink: 0,
+      }}
+    >
+      <Github size={14} color={theme.colors.textSecondary} />
+      {repo ? (
+        <>
+          <span
+            style={{
+              flex: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              fontFamily: theme.fonts.monospace,
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.text,
+            }}
+            title={`${repo.owner}/${repo.repo} @ ${repo.branch}`}
+          >
+            {repo.owner}/{repo.repo}
+            <span style={{ color: theme.colors.textMuted }}> @ {repo.branch}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              s.clearRepo();
+              setValue('');
+            }}
+            title="Clear repository"
+            aria-label="Clear repository"
+            style={{ ...iconButtonStyle(theme, spacing), padding: 0 }}
+          >
+            <X size={14} />
+          </button>
+        </>
+      ) : (
+        <input
+          type="text"
+          placeholder="owner/repo or GitHub URL"
+          aria-label="GitHub repository"
+          value={value}
+          disabled={s.isLoading}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') submit();
+          }}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: theme.colors.text,
+            fontFamily: theme.fonts.monospace,
+            fontSize: theme.fontSizes[1],
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+const RecentRepoRows: React.FC<{
+  repos: RecentRepo[];
+  onSelect: (repo: RecentRepo) => void;
+}> = ({ repos, onSelect }) => {
+  const { theme } = useTheme();
+  const spacing = useSpacing(theme);
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+
+  if (repos.length === 0) {
+    return (
+      <EmptyState text="Enter a GitHub repository above to browse its skills. Repositories you visit appear here." />
+    );
+  }
+
+  return (
+    <>
+      {repos.map((repo) => {
+        const key = `${repo.owner}/${repo.repo}`;
+        const hovered = hoveredKey === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onSelect(repo)}
+            onMouseEnter={() => setHoveredKey(key)}
+            onMouseLeave={() => setHoveredKey(null)}
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: spacing.sm,
+              width: '100%',
+              padding: `${spacing.sm * 1.5}px ${spacing.sm * 2}px`,
+              backgroundColor: hovered
+                ? theme.colors.backgroundSecondary
+                : 'transparent',
+              border: 'none',
+              borderBottom: `1px solid ${theme.colors.border}`,
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background-color 0.15s ease',
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  marginBottom: 2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {key}
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: spacing.sm,
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.textMuted,
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0 }}>{repo.branch}</span>
+                <span style={{ flexShrink: 0 }}>{timeAgo(repo.lastVisited)}</span>
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </>
+  );
+};
 
 export const SkillsLeftPanel: React.FC = () => {
   const { theme } = useTheme();
+  const spacing = useSpacing(theme);
   const s = useSkillsSurface();
   const showLoading = useDelayedLoading(s.checkingConfig);
+  const [query, setQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   if (showLoading) {
     return (
       <div
         style={{
           height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: theme.colors.textSecondary,
           backgroundColor: theme.colors.background,
         }}
       >
-        Loading…
+        <EmptyState text="Loading…" />
       </div>
     );
   }
@@ -50,63 +582,159 @@ export const SkillsLeftPanel: React.FC = () => {
     );
   }
 
-  const showRecent = s.viewMode === 'browse' && !s.browseFileTree;
+  const browsing = s.viewMode === 'browse';
+  const repoLoaded = browsing && !!s.browseFileTree;
+  const detectedNames = s.detectedDirectories
+    .filter((dir) => dir.id !== 'agent-universal')
+    .map((dir) => dir.displayName);
+  const setupTitle =
+    detectedNames.length > 0
+      ? `Agent directories: ${detectedNames.join(', ')}`
+      : 'Set up agent skill directories';
+
+  const refresh = () => {
+    if (browsing) {
+      if (s.githubRepoInfo) {
+        void s.handleFetchSkills(s.githubUrl || `${s.githubRepoInfo.owner}/${s.githubRepoInfo.repo}`);
+      }
+      return;
+    }
+    setRefreshing(true);
+    s.events.emit({
+      type: 'skills:refresh',
+      source: 'skills-left-panel',
+      timestamp: Date.now(),
+      payload: {},
+    });
+    setTimeout(() => setRefreshing(false), 800);
+  };
+  const refreshBusy = refreshing || s.isLoading;
+  const refreshDisabled = refreshBusy || (browsing && !s.githubRepoInfo);
 
   return (
     <div
       style={{
         height: '100%',
+        width: '100%',
+        minHeight: 0,
+        overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
         backgroundColor: theme.colors.background,
       }}
     >
-      <SkillBrowserViewHeader
-        viewMode={s.viewMode}
-        onViewModeChange={s.setViewMode}
-        currentRepo={s.githubRepoInfo}
-        onClearRepo={s.clearRepo}
-        hasDetectedDirectories={s.detectedDirectories.length > 0}
-        onOpenSetup={s.openSetup}
-        detectedDirectories={s.detectedDirectories}
-      />
+      {/* Header: title + actions */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing.sm,
+          height: 40,
+          boxSizing: 'border-box',
+          padding: `0 ${spacing.sm}px`,
+          borderBottom: `1px solid ${theme.colors.border}`,
+          flexShrink: 0,
+        }}
+      >
+        <ToolCase size={16} color={theme.colors.text} style={{ marginLeft: 4 }} />
+        <span
+          style={{
+            flex: 1,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            fontWeight: 600,
+            color: theme.colors.text,
+          }}
+        >
+          Skills
+        </span>
+        <button
+          type="button"
+          onClick={s.openSetup}
+          title={setupTitle}
+          aria-label="Set up agent directories"
+          style={{
+            ...iconButtonStyle(theme, spacing),
+            color:
+              s.detectedDirectories.length === 0
+                ? theme.colors.primary
+                : theme.colors.textSecondary,
+          }}
+        >
+          <FolderPlus size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={refresh}
+          title="Refresh"
+          aria-label="Refresh skills"
+          disabled={refreshDisabled}
+          style={{
+            ...iconButtonStyle(theme, spacing),
+            cursor: refreshDisabled ? 'default' : 'pointer',
+          }}
+        >
+          <RefreshCw
+            size={14}
+            style={{
+              animation: refreshBusy ? 'spin 0.8s linear infinite' : undefined,
+            }}
+          />
+        </button>
+      </div>
+
+      <div style={{ flexShrink: 0 }}>
+        <SegmentedControl
+          flush
+          verticalPadding={8}
+          options={[
+            { value: 'installed', label: 'My Skills' },
+            { value: 'browse', label: 'Browse' },
+          ]}
+          value={s.viewMode}
+          onChange={(value) => {
+            setQuery('');
+            s.setViewMode(value as typeof s.viewMode);
+          }}
+          theme={theme}
+          variant="pill-flat"
+        />
+      </div>
+
+      {browsing && <RepoBar s={s} />}
+
+      {(!browsing || repoLoaded) && (
+        <FilterBar
+          value={query}
+          onChange={setQuery}
+          placeholder="Filter skills"
+        />
+      )}
 
       {s.error && (
         <div
           style={{
-            padding: '12px 16px',
-            backgroundColor: theme.colors.error + '20',
-            borderBottom: `1px solid ${theme.colors.error}`,
+            padding: `${spacing.sm}px ${spacing.sm * 2}px`,
+            borderBottom: `1px solid ${theme.colors.border}`,
             color: theme.colors.error,
+            fontFamily: theme.fonts.body,
             fontSize: theme.fontSizes[1],
+            flexShrink: 0,
           }}
         >
           {s.error}
         </div>
       )}
 
-      <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-        {showRecent ? (
-          <RecentSkillsPanel
-            recentRepos={s.recentRepos}
-            onSelectRepo={s.handleSelectRecentRepo}
-            githubUrl={s.githubUrl}
-            onGithubUrlChange={s.setGithubUrl}
-            onFetchSkills={s.handleFetchSkills}
-            isLoading={s.isLoading}
-          />
-        ) : s.viewMode === 'browse' ? (
-          <SkillsBrowsePanel
-            context={s.context}
-            actions={s.actions}
-            events={s.events}
-          />
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        {!browsing ? (
+          <InstalledSkillRows s={s} query={query} />
+        ) : repoLoaded ? (
+          <BrowseSkillRows s={s} query={query} />
         ) : (
-          <GlobalSkillsPanel
-            context={s.context}
-            actions={s.actions}
-            events={s.events}
+          <RecentRepoRows
+            repos={s.recentRepos}
+            onSelect={(repo) => void s.handleSelectRecentRepo(repo)}
           />
         )}
       </div>
