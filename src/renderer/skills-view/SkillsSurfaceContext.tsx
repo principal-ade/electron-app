@@ -114,6 +114,7 @@ export interface SkillsSurfaceValue {
   setGithubUrl: (v: string) => void;
   handleFetchSkills: (url?: string) => Promise<void>;
   handleSelectRecentRepo: (repo: RecentRepo) => Promise<void>;
+  removeRecentRepo: (repo: RecentRepo) => Promise<void>;
   isLoading: boolean;
   error: string | null;
 
@@ -558,6 +559,18 @@ export const SkillsSurfaceProvider: React.FC<{
     [handleFetchSkills],
   );
 
+  const removeRecentRepo = useCallback(
+    async (repo: RecentRepo) => {
+      try {
+        await RecentReposService.removeRecentRepo(repo.owner, repo.repo);
+        await loadRecentRepos();
+      } catch (err) {
+        console.error('[SkillsSurface] Failed to remove recent repo:', err);
+      }
+    },
+    [loadRecentRepos],
+  );
+
   const getSkillFolderName = useCallback((skill: Skill): string => {
     const folderPath = skill.skillFolderPath || skill.path;
     const parts = folderPath.split('/').filter(Boolean);
@@ -807,6 +820,7 @@ export const SkillsSurfaceProvider: React.FC<{
       setGithubUrl,
       handleFetchSkills,
       handleSelectRecentRepo,
+      removeRecentRepo,
       isLoading,
       error,
       detectedDirectories,
@@ -837,6 +851,7 @@ export const SkillsSurfaceProvider: React.FC<{
       githubUrl,
       handleFetchSkills,
       handleSelectRecentRepo,
+      removeRecentRepo,
       isLoading,
       error,
       detectedDirectories,

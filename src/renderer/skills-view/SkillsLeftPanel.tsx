@@ -696,7 +696,8 @@ const RepoBar: React.FC<{ s: SkillsSurfaceValue }> = ({ s }) => {
 const RecentRepoRows: React.FC<{
   repos: RecentRepo[];
   onSelect: (repo: RecentRepo) => void;
-}> = ({ repos, onSelect }) => {
+  onRemove: (repo: RecentRepo) => void;
+}> = ({ repos, onSelect, onRemove }) => {
   const { theme } = useTheme();
   const spacing = useSpacing(theme);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
@@ -713,10 +714,8 @@ const RecentRepoRows: React.FC<{
         const key = `${repo.owner}/${repo.repo}`;
         const hovered = hoveredKey === key;
         return (
-          <button
+          <div
             key={key}
-            type="button"
-            onClick={() => onSelect(repo)}
             onMouseEnter={() => setHoveredKey(key)}
             onMouseLeave={() => setHoveredKey(null)}
             style={{
@@ -728,23 +727,44 @@ const RecentRepoRows: React.FC<{
               backgroundColor: hovered
                 ? theme.colors.backgroundSecondary
                 : 'transparent',
-              border: 'none',
               borderBottom: `1px solid ${theme.colors.border}`,
-              cursor: 'pointer',
-              textAlign: 'left',
               transition: 'background-color 0.15s ease',
             }}
           >
-            <RepoIdentity
-              owner={repo.owner}
-              repo={repo.repo}
-              detail={
-                repo.branch !== 'main'
-                  ? `${repo.branch} · ${timeAgo(repo.lastVisited)}`
-                  : timeAgo(repo.lastVisited)
-              }
-            />
-          </button>
+            <button
+              type="button"
+              onClick={() => onSelect(repo)}
+              style={{
+                display: 'flex',
+                flex: 1,
+                minWidth: 0,
+                padding: 0,
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <RepoIdentity
+                owner={repo.owner}
+                repo={repo.repo}
+                detail={
+                  repo.branch !== 'main'
+                    ? `${repo.branch} · ${timeAgo(repo.lastVisited)}`
+                    : timeAgo(repo.lastVisited)
+                }
+              />
+            </button>
+            <button
+              type="button"
+              onClick={() => onRemove(repo)}
+              title="Remove from recent"
+              aria-label={`Remove ${key} from recent`}
+              style={iconButtonStyle(theme, spacing)}
+            >
+              <X size={14} />
+            </button>
+          </div>
         );
       })}
     </>
@@ -940,6 +960,7 @@ export const SkillsLeftPanel: React.FC = () => {
           <RecentRepoRows
             repos={s.recentRepos}
             onSelect={(repo) => void s.handleSelectRecentRepo(repo)}
+            onRemove={(repo) => void s.removeRecentRepo(repo)}
           />
         )}
       </div>
