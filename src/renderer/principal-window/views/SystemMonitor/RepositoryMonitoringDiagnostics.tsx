@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   AlertTriangle,
+  ArrowUpCircle,
   Bug,
   CheckCircle,
   ChevronDown,
@@ -660,11 +661,48 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
                     style={{
                       color: theme.colors.text,
                       fontFamily: theme.fonts.monospace,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      flexWrap: 'wrap',
                     }}
                   >
-                    {diagnostics.daemon.version} · protocol{' '}
-                    {diagnostics.daemon.protocolVersion} · node{' '}
-                    {diagnostics.daemon.nodeVersion ?? '—'}
+                    {diagnostics.daemon.version}
+                    {diagnostics.daemon.updateAvailable ? (
+                      <span
+                        title={`This app ships ${diagnostics.daemon.bundledVersion}. Update daemon restarts it on that version; apps also do this automatically when they connect.`}
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          padding: '1px 6px',
+                          borderRadius: '999px',
+                          backgroundColor: `${theme.colors.warning}20`,
+                          color: theme.colors.warning,
+                          fontFamily: theme.fonts.body,
+                        }}
+                      >
+                        {diagnostics.daemon.bundledVersion} available
+                      </span>
+                    ) : (
+                      <span
+                        title={`Matches the daemon this app ships (${diagnostics.daemon.bundledVersion}).`}
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          padding: '1px 6px',
+                          borderRadius: '999px',
+                          backgroundColor: `${theme.colors.success}20`,
+                          color: theme.colors.success,
+                          fontFamily: theme.fonts.body,
+                        }}
+                      >
+                        Latest
+                      </span>
+                    )}
+                    <span style={{ color: theme.colors.textSecondary }}>
+                      · protocol {diagnostics.daemon.protocolVersion} · node{' '}
+                      {diagnostics.daemon.nodeVersion ?? '—'}
+                    </span>
                   </span>
                   <span>Socket</span>
                   <span
@@ -696,35 +734,52 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
                 </div>
               )}
             </div>
-            <button
-              onClick={handleRestartDaemon}
-              disabled={restartingDaemon}
-              title="Stop the shared daemon and spawn a fresh one. Other apps using it reconnect automatically."
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 14px',
-                fontSize: '12px',
-                fontWeight: 500,
-                borderRadius: '6px',
-                border: `1px solid ${theme.colors.warning}`,
-                backgroundColor: theme.colors.background,
-                color: theme.colors.warning,
-                cursor: restartingDaemon ? 'not-allowed' : 'pointer',
-                opacity: restartingDaemon ? 0.6 : 1,
-              }}
-            >
-              {restartingDaemon ? (
-                <Loader2
-                  size={12}
-                  style={{ animation: 'spin 1s linear infinite' }}
-                />
-              ) : (
-                <RotateCcw size={12} />
-              )}
-              Restart daemon
-            </button>
+            {(() => {
+              const updateAvailable =
+                diagnostics.daemon?.updateAvailable ?? false;
+              const accent = updateAvailable
+                ? theme.colors.primary
+                : theme.colors.warning;
+              return (
+                <button
+                  onClick={handleRestartDaemon}
+                  disabled={restartingDaemon}
+                  title={
+                    updateAvailable
+                      ? `Replace the daemon with the ${diagnostics.daemon?.bundledVersion ?? ''} bundle this app ships. Other apps reconnect automatically.`
+                      : 'Stop the shared daemon and spawn a fresh one. Other apps using it reconnect automatically.'
+                  }
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    borderRadius: '6px',
+                    border: `1px solid ${accent}`,
+                    backgroundColor: updateAvailable
+                      ? `${accent}15`
+                      : theme.colors.background,
+                    color: accent,
+                    cursor: restartingDaemon ? 'not-allowed' : 'pointer',
+                    opacity: restartingDaemon ? 0.6 : 1,
+                  }}
+                >
+                  {restartingDaemon ? (
+                    <Loader2
+                      size={12}
+                      style={{ animation: 'spin 1s linear infinite' }}
+                    />
+                  ) : updateAvailable ? (
+                    <ArrowUpCircle size={12} />
+                  ) : (
+                    <RotateCcw size={12} />
+                  )}
+                  {updateAvailable ? 'Update daemon' : 'Restart daemon'}
+                </button>
+              );
+            })()}
           </div>
 
           {/* Watcher impl switcher. Lets users A/B test Parcel vs Chokidar

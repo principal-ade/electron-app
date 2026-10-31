@@ -29,7 +29,7 @@
     "@principal-ai/file-city-server": "^0.3.9",
     "@principal-ai/markdown-search": "^2.0.7",
     "@principal-ai/repository-abstraction": "^0.5.7",
-    "@principal-ai/repository-monitoring-server": "^3.0.0",
+    "@principal-ai/repository-monitoring-server": "^3.1.0",
     "@principal-ai/subsystems-core": "^0.51.2",
     "@usebruno/lang": "^0.35.0",
     "@usebruno/requests": "^0.16.0",
