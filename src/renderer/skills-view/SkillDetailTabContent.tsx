@@ -15,7 +15,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   panels as agentPanels,
   type SkillDetailPanelProps,
-} from '@industry-theme/agent-panels';
+} from '../panels/agent-panels';
 import { useSkillsSurface } from './SkillsSurfaceContext';
 
 const SkillDetailPanelComponent = agentPanels.find(

@@ -5,7 +5,7 @@
  * used throughout the DevWorkspace panel framework.
  */
 
-import type { Skill } from '@industry-theme/agent-panels';
+import type { Skill } from '../panels/agent-panels';
 import type { PackageLayer } from '@industry-theme/repository-composition-panels';
 import type { DocumentRange } from '../../shared/documentRange';
 

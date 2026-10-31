@@ -12,7 +12,7 @@
  */
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { SkillsBrowsePanel, GlobalSkillsPanel } from '@industry-theme/agent-panels';
+import { SkillsBrowsePanel, GlobalSkillsPanel } from '../panels/agent-panels';
 import { SkillBrowserViewHeader } from '../principal-window/views/SkillBrowserView/SkillBrowserViewHeader';
 import { SkillsRepoOnboarding } from '../principal-window/views/SkillBrowserView/SkillsRepoOnboarding';
 import { RecentSkillsPanel } from '../principal-window/views/SkillBrowserView/RecentSkillsPanel';

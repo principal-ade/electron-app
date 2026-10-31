@@ -100,7 +100,7 @@ import {
   panels as agentPanels,
   type Skill,
   type SkillDetailPanelProps,
-} from '@industry-theme/agent-panels';
+} from '../panels/agent-panels';
 import {
   GitHubIssuesPanel,
   GitHubIssueDetailPanel,

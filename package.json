@@ -171,7 +171,6 @@
     "@excalidraw/excalidraw": "^0.18.0",
     "@excalidraw/math": "^0.18.0-f0063e113",
     "@industry-theme/agent-driven-ui-panels": "^0.2.0",
-    "@industry-theme/agent-panels": "^0.3.3",
     "@industry-theme/alexandria-docs-panel": "^0.5.3",
     "@industry-theme/backlogmd-kanban-panel": "^1.2.17",
     "@industry-theme/excalidraw-panels": "^0.2.0",

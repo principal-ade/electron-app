@@ -29,7 +29,7 @@ import React, {
 } from 'react';
 import {
   type Skill,
-} from '@industry-theme/agent-panels';
+} from '../panels/agent-panels';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { useSkillBrowserPanelProvider } from '../principal-window/views/SkillBrowserView/SkillBrowserPanelProvider';
