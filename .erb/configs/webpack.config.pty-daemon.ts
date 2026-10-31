@@ -5,12 +5,17 @@
  * This runs independently of Electron.
  */
 
+import fs from 'fs';
 import path from 'path';
 import webpack from 'webpack';
 import TsconfigPathsPlugins from 'tsconfig-paths-webpack-plugin';
 import webpackPaths from './webpack.paths';
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+const { version: appVersion } = JSON.parse(
+  fs.readFileSync(path.join(webpackPaths.rootPath, 'package.json'), 'utf-8'),
+) as { version: string };
 
 const configuration: webpack.Configuration = {
   mode: isProduction ? 'production' : 'development',
@@ -72,6 +77,7 @@ const configuration: webpack.Configuration = {
   plugins: [
     new webpack.EnvironmentPlugin({
       NODE_ENV: isProduction ? 'production' : 'development',
+      PTY_DAEMON_VERSION: appVersion,
     }),
   ],
 

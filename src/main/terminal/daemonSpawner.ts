@@ -19,6 +19,12 @@ import {
   DAEMON_START_POLL_INTERVAL_MS,
 } from '../../shared/pty-daemon/constants';
 import type { DaemonStatusInfo } from '../../shared/pty-daemon/protocol';
+import {
+  describeDaemonBuildMismatch,
+  hashBundleFile,
+  type DaemonBuildInfo,
+  type DaemonBuildMismatch,
+} from '../../shared/pty-daemon/buildIdentity';
 import { stripTsNodeEnv } from '../../shared/nodeOptions';
 
 /**
@@ -44,6 +50,23 @@ export function getDaemonPath(): string {
       : appPath;
     return path.join(projectRoot, 'dist', 'main', 'pty-daemon.cjs');
   }
+}
+
+let localBuildPromise: Promise<DaemonBuildInfo> | null = null;
+
+/**
+ * Describe the daemon bundle this app would spawn. Hashed once per process;
+ * the bundle on disk only changes with an app update or a dev rebuild, both
+ * of which restart main.
+ */
+export function getLocalDaemonBuild(): Promise<DaemonBuildInfo> {
+  if (!localBuildPromise) {
+    localBuildPromise = hashBundleFile(getDaemonPath()).then((bundleHash) => ({
+      version: app.getVersion(),
+      bundleHash,
+    }));
+  }
+  return localBuildPromise;
 }
 
 /**
@@ -238,14 +261,39 @@ export async function waitForSocket(
   throw new Error('Timeout waiting for daemon to start');
 }
 
+export interface EnsureDaemonResult {
+  /** True when this call spawned the daemon; false when it reused a running one. */
+  spawned: boolean;
+  /** Status of the reused daemon, when one was found. */
+  status: DaemonStatusInfo | null;
+  /**
+   * Set when the reused daemon runs an older bundle than this app ships. The
+   * daemon is left running; the caller decides when it is safe to replace it.
+   */
+  outdated: DaemonBuildMismatch | null;
+}
+
 /**
  * Ensure daemon is running, spawning if necessary.
+ *
+ * A running daemon is never replaced here, even when outdated: it may own
+ * live terminal sessions that a restart would kill.
  */
-export async function ensureDaemonRunning(): Promise<void> {
+export async function ensureDaemonRunning(): Promise<EnsureDaemonResult> {
   // Check if already running
   if (await isDaemonRunning()) {
     console.log('[daemonSpawner] Daemon already running');
-    return;
+    const status = await getDaemonStatus();
+    const outdated = describeDaemonBuildMismatch(
+      status?.build,
+      await getLocalDaemonBuild(),
+    );
+    if (outdated) {
+      console.log(
+        `[daemonSpawner] Running daemon is outdated (running ${describeBuild(outdated.running)}, available ${describeBuild(outdated.available)}; ${status?.sessionCount ?? '?'} sessions)`,
+      );
+    }
+    return { spawned: false, status, outdated };
   }
 
   // Check for stale PID
@@ -263,6 +311,24 @@ export async function ensureDaemonRunning(): Promise<void> {
   // Wait for socket
   await waitForSocket();
   console.log('[daemonSpawner] Daemon is ready');
+  return { spawned: true, status: null, outdated: null };
+}
+
+function describeBuild(build: DaemonBuildInfo | null): string {
+  if (!build) return 'unreported build';
+  return `v${build.version} ${build.bundleHash?.slice(0, 8) ?? 'unhashed'}`;
+}
+
+/**
+ * Replace the running daemon with the bundle this app ships. Kills every
+ * session the old daemon still owns, so callers must only do this when it
+ * has none.
+ */
+export async function restartDaemon(): Promise<void> {
+  await stopDaemon();
+  await spawnDaemon();
+  await waitForSocket();
+  console.log('[daemonSpawner] Daemon restarted');
 }
 
 /**
@@ -335,7 +401,9 @@ export async function getDaemonStatus(): Promise<DaemonStatusInfo | null> {
  * Stop the daemon gracefully.
  */
 export async function stopDaemon(): Promise<void> {
-  const pid = await getDaemonPid();
+  // Prefer the PID file, but a daemon whose PID file was removed still answers
+  // on the socket; without this fallback it would be orphaned by a restart.
+  const pid = (await getDaemonPid()) ?? (await getDaemonStatus())?.pid ?? null;
 
   if (!pid) {
     console.log('[daemonSpawner] No daemon running');

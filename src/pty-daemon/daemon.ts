@@ -21,6 +21,10 @@ import {
   DEFAULT_LOG_LEVEL,
 } from '../shared/pty-daemon/constants';
 import {
+  hashBundleFile,
+  type DaemonBuildInfo,
+} from '../shared/pty-daemon/buildIdentity';
+import {
   daemonTelemetry,
   addPhaseEvent,
   addIdleEvent,
@@ -83,10 +87,25 @@ async function main(): Promise<void> {
     logger.warn('Failed to write PID file:', err);
   }
 
+  // Describe the bundle this process is running so a newer app can tell when
+  // the daemon it reconnected to is stale. argv[1] is the bundle path because
+  // the app launches this file directly with the embedded Node runtime.
+  const build: DaemonBuildInfo = {
+    version: process.env.PTY_DAEMON_VERSION ?? 'unknown',
+    bundleHash: process.argv[1] ? await hashBundleFile(process.argv[1]) : null,
+  };
+  logger.info(`Build: v${build.version} (${build.bundleHash ?? 'unhashed'})`);
+
   // Initialize components
   const daemonStartedAt = new Date();
   const sessionManager = new DaemonSessionManager();
-  const server = new SocketServer(sessionManager, logger, socketPath, daemonStartedAt);
+  const server = new SocketServer(
+    sessionManager,
+    logger,
+    socketPath,
+    daemonStartedAt,
+    build,
+  );
 
   // Idle shutdown timer
   let idleTimer: NodeJS.Timeout | null = null;

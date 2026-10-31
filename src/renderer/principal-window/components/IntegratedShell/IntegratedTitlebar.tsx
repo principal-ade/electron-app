@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 import { StudioHeaderButton } from '../../../components/Titlebar/StudioHeaderButton';
+import { TerminalDaemonUpdateIndicator } from '../../../components/Titlebar/TerminalDaemonUpdateIndicator';
 import { blurAfterPointerActivation } from '../../../utils/blurAfterPointerActivation';
 
 declare global {
@@ -218,6 +219,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           gap: '8px',
         }}
       >
+        <TerminalDaemonUpdateIndicator />
         {showPullMailbox && <PullMailbox />}
         <StudioHeaderButton theme={theme} />
         <ThemeSelector />

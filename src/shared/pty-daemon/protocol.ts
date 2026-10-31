@@ -5,6 +5,8 @@
  * and the external PTY daemon over Unix domain socket.
  */
 
+import type { DaemonBuildInfo } from './buildIdentity';
+
 // ============================================================================
 // Client → Daemon Messages
 // ============================================================================
@@ -131,6 +133,8 @@ export interface DaemonStatusInfo {
     rss: number;
   };
   startedAt: string; // ISO timestamp
+  /** Bundle the daemon is running. Absent from daemons that predate build reporting. */
+  build?: DaemonBuildInfo;
 }
 
 export interface DaemonStatusMessage {

@@ -18,6 +18,7 @@ import {
 } from '../shared/pty-daemon/protocol';
 import { DaemonSessionManager } from './DaemonSessionManager';
 import { SOCKET_PATH, DAEMON_DIR } from '../shared/pty-daemon/constants';
+import type { DaemonBuildInfo } from '../shared/pty-daemon/buildIdentity';
 import { contextFromTraceparent } from '../shared/telemetry/traceparent';
 import { Logger } from './Logger';
 import {
@@ -40,13 +41,21 @@ export class SocketServer extends EventEmitter {
   private socketPath: string;
   private logger: Logger;
   private daemonStartedAt: Date;
+  private build: DaemonBuildInfo | undefined;
 
-  constructor(sessionManager: DaemonSessionManager, logger: Logger, socketPath?: string, startedAt?: Date) {
+  constructor(
+    sessionManager: DaemonSessionManager,
+    logger: Logger,
+    socketPath?: string,
+    startedAt?: Date,
+    build?: DaemonBuildInfo,
+  ) {
     super();
     this.sessionManager = sessionManager;
     this.socketPath = socketPath || SOCKET_PATH;
     this.logger = logger;
     this.daemonStartedAt = startedAt || new Date();
+    this.build = build;
 
     // Forward session manager messages to all clients
     this.sessionManager.on('message', (msg: DaemonMessage) => {
@@ -148,6 +157,7 @@ export class SocketServer extends EventEmitter {
         rss: memUsage.rss,
       },
       startedAt: this.daemonStartedAt.toISOString(),
+      build: this.build,
     };
   }
 

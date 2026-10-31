@@ -20,6 +20,7 @@ import type {
   TerminalOwnershipResult,
   RequestDataPortResult,
   TerminalSessionMetadata,
+  TerminalDaemonUpdateEvent,
 } from '../../shared/main-process-api-interfaces/TerminalService';
 
 export class TerminalService {
@@ -162,6 +163,16 @@ export class TerminalService {
     callback: (payload: { sessions: unknown[] }) => void,
   ): () => void {
     return onTerminalEvent('terminal:sessionsRestored', callback);
+  }
+
+  /**
+   * Subscribe to progress of replacing an outdated PTY daemon. Fired once per
+   * phase ('updating', then 'updated' or 'failed').
+   */
+  static onDaemonUpdate(
+    callback: (event: TerminalDaemonUpdateEvent) => void,
+  ): () => void {
+    return onTerminalEvent('terminal:daemon-update', callback);
   }
 
   /**

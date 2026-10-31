@@ -2,6 +2,7 @@
 export type { TerminalSessionMetadata } from '../tipc/terminalRouterTypes';
 
 import type { TerminalSessionMetadata } from '../tipc/terminalRouterTypes';
+import type { DaemonBuildInfo } from '../pty-daemon/buildIdentity';
 
 // Type alias for MessagePort to avoid TypeScript type/value confusion
 type Port = InstanceType<typeof MessagePort>;
@@ -28,6 +29,21 @@ export enum TerminalAPIEvents {
   SESSIONS_RESTORED = 'terminal:sessionsRestored', // Sessions restored from daemon after app restart
   PROGRAM_STATUS = 'terminal:program-status', // OSC 7501 program-status records changed
   CWD_CHANGED = 'terminal:cwd-change',
+  DAEMON_UPDATE = 'terminal:daemon-update', // Outdated PTY daemon being replaced
+}
+
+/**
+ * Progress of replacing an outdated PTY daemon with the bundle this app
+ * ships. Fired once per phase; a restart is sub-second so renderers should
+ * hold the final phase briefly before hiding it.
+ */
+export interface TerminalDaemonUpdateEvent {
+  phase: 'updating' | 'updated' | 'failed';
+  /** Build the old daemon reported, or null when it predates build reporting. */
+  from: DaemonBuildInfo | null;
+  /** Build the new daemon runs. */
+  to: DaemonBuildInfo;
+  error?: string;
 }
 
 export interface TerminalInfo {

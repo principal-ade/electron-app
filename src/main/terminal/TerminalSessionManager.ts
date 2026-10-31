@@ -15,8 +15,12 @@ import type {
 } from '../../shared/tipc/terminalRouterTypes';
 import { ownershipManager } from './TerminalOwnershipManager';
 import { terminalEnvironment } from '../terminalEnvironment';
-import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/TerminalService';
-import { ensureDaemonRunning } from './daemonSpawner';
+import {
+  TerminalAPIEvents,
+  type TerminalDaemonUpdateEvent,
+} from '../../shared/main-process-api-interfaces/TerminalService';
+import { ensureDaemonRunning, restartDaemon } from './daemonSpawner';
+import type { DaemonBuildMismatch } from '../../shared/pty-daemon/buildIdentity';
 import { SOCKET_PATH } from '../../shared/pty-daemon/constants';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
@@ -183,6 +187,11 @@ export class TerminalSessionManager {
   private isDaemonConnected = false;
   private daemonConnectedPromise: Promise<void> | null = null;
   private daemonConnectedResolve: (() => void) | null = null;
+
+  // An outdated daemon found at startup that still owned sessions. Replaced
+  // once the last of them closes; restarting earlier would kill them.
+  private pendingDaemonUpdate: DaemonBuildMismatch | null = null;
+  private daemonUpdateInFlight = false;
 
   constructor() {
     // The worker is spawned lazily on first use (see ensureWorkerReady). Doing
@@ -502,17 +511,22 @@ export class TerminalSessionManager {
 
       // Ensure daemon is running
       console.log('[Terminal] Starting PTY daemon...');
-      await ensureDaemonRunning();
+      const result = await ensureDaemonRunning();
       console.log('[Terminal] PTY daemon is running');
 
-      // Tell worker to connect to daemon
-      const connectMsg: ConnectDaemonMessage = {
-        type: 'CONNECT_DAEMON',
-        id: 'connect-daemon',
-        timestamp: Date.now(),
-        socketPath: SOCKET_PATH,
-      };
-      this.sendToWorker(connectMsg);
+      if (result.outdated) {
+        if ((result.status?.sessionCount ?? 0) === 0) {
+          // Nothing to preserve, so swap it before the worker attaches.
+          await this.replaceDaemon(result.outdated);
+        } else {
+          console.log(
+            `[Terminal] Outdated PTY daemon owns ${result.status?.sessionCount} sessions; deferring update until they close`,
+          );
+          this.pendingDaemonUpdate = result.outdated;
+        }
+      }
+
+      this.connectWorkerToDaemon();
     } catch (error) {
       console.error('[Terminal] Failed to initialize daemon connection:', error);
       // Settle anything awaiting the connection (ensureDaemonReady) and allow a
@@ -521,6 +535,93 @@ export class TerminalSessionManager {
       this.daemonConnectedResolve?.();
       this.daemonConnectedResolve = null;
     }
+  }
+
+  private connectWorkerToDaemon(): void {
+    const connectMsg: ConnectDaemonMessage = {
+      type: 'CONNECT_DAEMON',
+      id: 'connect-daemon',
+      timestamp: Date.now(),
+      socketPath: SOCKET_PATH,
+    };
+    this.sendToWorker(connectMsg);
+  }
+
+  /**
+   * Replace the daemon with this app's bundle and tell renderers about it.
+   * Rejects if the new daemon never comes up; the caller owns the connection
+   * promise and decides how to settle it.
+   */
+  private async replaceDaemon(update: DaemonBuildMismatch): Promise<void> {
+    const base = { from: update.running, to: update.available };
+    this.broadcastDaemonUpdate({ ...base, phase: 'updating' });
+    try {
+      await restartDaemon();
+      this.broadcastDaemonUpdate({ ...base, phase: 'updated' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Terminal] Failed to replace PTY daemon:', error);
+      this.broadcastDaemonUpdate({ ...base, phase: 'failed', error: message });
+      throw error;
+    }
+  }
+
+  /**
+   * Replace a deferred outdated daemon now that it owns no sessions.
+   *
+   * The worker's bridge does not reconnect on its own, so the sequence is
+   * owned here: mark the daemon disconnected first so new session requests
+   * wait on the connection promise instead of hitting a dying socket, detach
+   * the worker, restart, then reattach.
+   */
+  private applyPendingDaemonUpdate(): void {
+    const update = this.pendingDaemonUpdate;
+    if (!update || this.daemonUpdateInFlight || !this.worker) return;
+    this.pendingDaemonUpdate = null;
+    this.daemonUpdateInFlight = true;
+
+    this.isDaemonConnected = false;
+    this.daemonConnectedPromise = new Promise((resolve) => {
+      this.daemonConnectedResolve = resolve;
+    });
+
+    const disconnectMsg: DisconnectDaemonMessage = {
+      type: 'DISCONNECT_DAEMON',
+      id: 'disconnect-daemon-for-update',
+      timestamp: Date.now(),
+    };
+    this.sendToWorker(disconnectMsg);
+
+    void this.replaceDaemon(update)
+      .then(() => {
+        this.connectWorkerToDaemon();
+      })
+      .catch(() => {
+        // Settle anything awaiting the connection; a later session request
+        // will retry through the normal path.
+        this.daemonConnectedPromise = null;
+        this.daemonConnectedResolve?.();
+        this.daemonConnectedResolve = null;
+      })
+      .finally(() => {
+        this.daemonUpdateInFlight = false;
+      });
+  }
+
+  private broadcastDaemonUpdate(event: TerminalDaemonUpdateEvent): void {
+    console.log(
+      `[Terminal] PTY daemon update ${event.phase}${event.error ? `: ${event.error}` : ''}`,
+    );
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send(TerminalAPIEvents.DAEMON_UPDATE, event);
+      }
+    }
+  }
+
+  /** Exposed for the daemon status surface and tests. */
+  hasPendingDaemonUpdate(): boolean {
+    return this.pendingDaemonUpdate !== null;
   }
 
   /**
@@ -1027,6 +1128,10 @@ export class TerminalSessionManager {
     this.closeAllPortsForSession(sessionId);
     ownershipManager.removeSession(sessionId);
     this.sessions.delete(sessionId);
+
+    if (this.sessions.size === 0) {
+      this.applyPendingDaemonUpdate();
+    }
 
     // Clean up activity tracking (prevents ghost entries)
     this.activityStore.delete(sessionId);
