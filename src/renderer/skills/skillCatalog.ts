@@ -56,7 +56,10 @@ export type GitHubTreeEntry = {
 };
 
 /** GitHub tree URL for the skill's folder, opened by clicking an installed badge. */
-export function skillFolderUrl(skill: { repo: SkillRepo; path: string }): string {
+export function skillFolderUrl(skill: {
+  repo: SkillRepo;
+  path: string;
+}): string {
   return `${skillRepoUrl(skill.repo)}/tree/${skill.repo.branch}/${skill.path}`;
 }
 
@@ -185,9 +188,7 @@ export const ALL_SKILL_DETAILS: ReadonlyArray<SkillDetail> = [
 ];
 
 const isTopicSkill = (skill: SkillDetail) =>
-  TOPIC_SKILL_NAMES.includes(
-    skill.name as (typeof TOPIC_SKILL_NAMES)[number],
-  );
+  TOPIC_SKILL_NAMES.includes(skill.name as (typeof TOPIC_SKILL_NAMES)[number]);
 
 const isOptionalSkill = (skill: SkillDetail) =>
   OPTIONAL_SKILL_NAMES.includes(
@@ -232,7 +233,18 @@ export function matchInstalledFromLock(
 /** Names of catalog skills installed from their advertised repo. */
 export async function getInstalledCatalogSkillNames(): Promise<Set<string>> {
   try {
-    return matchInstalledFromLock(await SkillLockService.getLockFile());
+    const [lockFile, skills] = await Promise.all([
+      SkillLockService.getLockFile(),
+      SkillLockService.getInstalledSkills(),
+    ]);
+    const fromSource = matchInstalledFromLock(lockFile);
+    return new Set(
+      skills
+        .filter(
+          (skill) => skill.available === true && fromSource.has(skill.name),
+        )
+        .map((skill) => skill.name),
+    );
   } catch (error) {
     console.error('[skillCatalog] Failed to read the skill lock file:', error);
     return new Set();
@@ -244,10 +256,8 @@ export async function getInstalledCatalogSkillNames(): Promise<Set<string>> {
  * directory and the Claude-specific one. Mirrors
  * `DIRECTORY_ID_TO_DESTINATION['agent-universal' | 'claude-specific']`.
  */
-const INSTALL_DESTINATIONS: ReadonlyArray<InstallSkillOptions['destination']> = [
-  'global-claude',
-  'global-universal',
-];
+const INSTALL_DESTINATIONS: ReadonlyArray<InstallSkillOptions['destination']> =
+  ['global-claude', 'global-universal'];
 
 export interface SkillInstallResult {
   /** Names that installed successfully into at least one destination. */
@@ -265,7 +275,9 @@ export interface SkillInstallResult {
  */
 export async function installSkills(
   skills: ReadonlyArray<SkillDetail>,
-  options?: { destinations?: ReadonlyArray<InstallSkillOptions['destination']> },
+  options?: {
+    destinations?: ReadonlyArray<InstallSkillOptions['destination']>;
+  },
 ): Promise<SkillInstallResult> {
   const destinations = options?.destinations ?? INSTALL_DESTINATIONS;
   const failures: string[] = [];
@@ -308,9 +320,9 @@ export async function installSkills(
       const fileList = tree
         .filter((item) => item.type === 'blob' && item.path.startsWith(prefix))
         .map((item) => item.path);
-      if (fileList.length === 0) {
+      if (!fileList.includes(`${skill.path}/SKILL.md`)) {
         failures.push(
-          `${skill.name}: not found at ${skill.path} in ${skillRepoSource(repo)}`,
+          `${skill.name}: SKILL.md not found at ${skill.path} in ${skillRepoSource(repo)}`,
         );
         continue;
       }

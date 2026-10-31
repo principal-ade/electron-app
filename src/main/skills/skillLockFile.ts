@@ -38,9 +38,14 @@ export class SkillLockFileService {
 
     try {
       await fs.mkdir(lockDir, { recursive: true });
-      console.log(`[SkillLockFile] Lock file directory initialized: ${lockDir}`);
+      console.log(
+        `[SkillLockFile] Lock file directory initialized: ${lockDir}`,
+      );
     } catch (error) {
-      console.error('[SkillLockFile] Failed to create lock file directory:', error);
+      console.error(
+        '[SkillLockFile] Failed to create lock file directory:',
+        error,
+      );
       throw error;
     }
   }
@@ -67,7 +72,9 @@ export class SkillLockFileService {
 
       // Validate version and migrate if necessary
       if (parsed.version !== SKILL_LOCK_VERSION) {
-        console.log(`[SkillLockFile] Migrating lock file from v${parsed.version} to v${SKILL_LOCK_VERSION}`);
+        console.log(
+          `[SkillLockFile] Migrating lock file from v${parsed.version} to v${SKILL_LOCK_VERSION}`,
+        );
         this.cache = this.migrateLockFile(parsed);
         await this.writeLockFile(this.cache);
       } else {
@@ -78,7 +85,9 @@ export class SkillLockFileService {
     } catch (error: unknown) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         // Lock file doesn't exist, return empty
-        console.log('[SkillLockFile] No existing lock file found, creating empty');
+        console.log(
+          '[SkillLockFile] No existing lock file found, creating empty',
+        );
         this.cache = createEmptyLockFile();
         return this.cache;
       }
@@ -166,7 +175,9 @@ export class SkillLockFileService {
     const lockFile = await this.readLockFile();
 
     if (!lockFile.skills[options.name]) {
-      console.log(`[SkillLockFile] Skill not found for update: ${options.name}`);
+      console.log(
+        `[SkillLockFile] Skill not found for update: ${options.name}`,
+      );
       return false;
     }
 
@@ -195,17 +206,39 @@ export class SkillLockFileService {
   async getAllSkills(): Promise<InstalledSkillInfo[]> {
     const lockFile = await this.readLockFile();
 
-    return Object.entries(lockFile.skills).map(([name, entry]) => ({
-      name,
-      source: entry.source,
-      sourceType: entry.sourceType,
-      sourceUrl: entry.sourceUrl,
-      skillPath: entry.skillPath,
-      skillFolderHash: entry.skillFolderHash,
-      installedAt: entry.installedAt,
-      updatedAt: entry.updatedAt,
-      canonicalPath: entry.canonicalPath,
-    }));
+    return Promise.all(
+      Object.entries(lockFile.skills).map(async ([name, entry]) => ({
+        name,
+        available: await this.isEntryAvailable(name, entry),
+        source: entry.source,
+        sourceType: entry.sourceType,
+        sourceUrl: entry.sourceUrl,
+        skillPath: entry.skillPath,
+        skillFolderHash: entry.skillFolderHash,
+        installedAt: entry.installedAt,
+        updatedAt: entry.updatedAt,
+        canonicalPath: entry.canonicalPath,
+      })),
+    );
+  }
+
+  private async isEntryAvailable(
+    name: string,
+    entry: SkillLockEntry,
+  ): Promise<boolean> {
+    const directory =
+      entry.canonicalPath ??
+      path.join(app.getPath('home'), '.agents', 'skills', name);
+    try {
+      // Reading follows symlinks and rejects directories and unreadable files.
+      const content = await fs.readFile(
+        path.join(directory, 'SKILL.md'),
+        'utf8',
+      );
+      return content.trim().length > 0;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -213,7 +246,8 @@ export class SkillLockFileService {
    */
   async isSkillInstalled(name: string): Promise<boolean> {
     const lockFile = await this.readLockFile();
-    return name in lockFile.skills;
+    const entry = lockFile.skills[name];
+    return entry != null && this.isEntryAvailable(name, entry);
   }
 
   /**

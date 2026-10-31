@@ -189,6 +189,8 @@ export interface SkillsChangedPayload {
  */
 export interface InstalledSkillInfo {
   name: string;
+  /** True only when the canonical SKILL.md can be read (symlinks are followed). */
+  available?: boolean;
   source: string;
   sourceType: SkillSourceType;
   sourceUrl: string;

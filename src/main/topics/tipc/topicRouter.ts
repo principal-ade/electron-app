@@ -10,6 +10,7 @@ import { tipc } from '@egoist/tipc/main';
 import { BrowserWindow } from 'electron';
 import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import { TopicRegistryService } from '../../stores/TopicRegistryService';
+import { topicRevision } from '../topicRevision';
 import { TopicAPIEvent } from '../../../shared/main-process-api-interfaces/TopicAPI';
 import type {
   AppendDescriptionInput,
@@ -106,9 +107,13 @@ export const topicRouter = {
       }
       const prior = (existing.description ?? '').replace(/\s+$/, '');
       const description = prior.length > 0 ? `${prior}\n\n${text}` : text;
-      const topic = await registryService.updateTopic(input.id, {
-        description,
-      });
+      const topic = await registryService.updateTopic(
+        input.id,
+        {
+          description,
+        },
+        topicRevision(existing),
+      );
       broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
       return topic;
     }),
@@ -141,10 +146,14 @@ export const topicRouter = {
       const prior = (existing.description ?? '').replace(/\s+$/, '');
       const description = prior.length > 0 ? `${prior}\n\n${ref}` : ref;
 
-      const topic = await registryService.updateTopic(topicId, {
-        description,
-        assets,
-      });
+      const topic = await registryService.updateTopic(
+        topicId,
+        {
+          description,
+          assets,
+        },
+        topicRevision(existing),
+      );
       broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
       return topic;
     }),

@@ -66,9 +66,8 @@ export class SkillLockService {
    * Check if a skill is installed (by name)
    */
   static async isSkillInstalled(name: string): Promise<boolean> {
-    const lockFile = await this.getLockFile();
-    if (!lockFile) return false;
-    return name in lockFile.skills;
+    const skills = await this.getInstalledSkills();
+    return skills.some((skill) => skill.name === name && skill.available === true);
   }
 
   /**

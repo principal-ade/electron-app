@@ -16,6 +16,11 @@ import { TopicStore, TOPICS_DIR } from '@principal-ai/subsystems-core/node';
 import { homedir } from 'os';
 import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import {
+  topicRevision,
+  TopicNotFoundError,
+  TopicUpdateConflictError,
+} from '../topics/topicRevision';
 import type {
   CreateTopicInput,
   UpdateTopicInput,
@@ -38,6 +43,7 @@ export class TopicRegistryService {
   private topicStore: TopicStore;
   private syncFilePath: string;
   private registryDir: string;
+  private writeQueue: Promise<unknown> = Promise.resolve();
 
   private constructor() {
     const homeDir = homedir();
@@ -98,8 +104,25 @@ export class TopicRegistryService {
     });
   }
 
-  async updateTopic(id: string, updates: UpdateTopicInput): Promise<Topic> {
-    return this.topicStore.updateTopic(id, updates);
+  async updateTopic(
+    id: string,
+    updates: UpdateTopicInput,
+    expectedRevision?: string,
+  ): Promise<Topic> {
+    // Share the queue with UI updates so revision checking and writing cannot
+    // interleave with another update in the running app.
+    const write = this.writeQueue.then(async () => {
+      if (expectedRevision !== undefined) {
+        const existing = await this.topicStore.getTopic(id);
+        if (!existing) throw new TopicNotFoundError();
+        if (topicRevision(existing) !== expectedRevision) {
+          throw new TopicUpdateConflictError(existing);
+        }
+      }
+      return this.topicStore.updateTopic(id, updates);
+    });
+    this.writeQueue = write.catch(() => {});
+    return write;
   }
 
   async deleteTopic(id: string): Promise<boolean> {

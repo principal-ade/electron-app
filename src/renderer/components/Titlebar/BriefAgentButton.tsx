@@ -38,6 +38,8 @@ export function buildBriefingText(payload: BriefAgentDragPayload): string {
     `Fetch ${getPrincipalBridgeUrl()}/api/topics/${payload.topicId} to begin working on topic "${payload.topicTitle}". The response returns its description and declared projects.`,
     '',
     'Use the topic-context skill to read this brief and leave context as you work.',
+    `If that skill is unavailable, discover the running API at ${getPrincipalBridgeUrl()}/routes. Read the topic, then PATCH the same topic URL with the editable fields and expectedRevision from the GET response's revision. On 409, reread and reconcile your edits. If PATCH is unavailable, discover the description/section or description/append routes; do not write topic files directly or delete and recreate the topic.`,
+    'Before reporting completion, update the brief with the current outcome and remaining work, then read it back to verify the changes.',
     '',
   ].join('\n');
 }

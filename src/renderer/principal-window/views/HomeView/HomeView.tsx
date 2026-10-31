@@ -15,7 +15,7 @@ import {
   TOPIC_SKILL_NAMES,
   TRACKED_SKILL_NAMES,
   installSkills,
-  matchInstalledFromLock,
+  getInstalledCatalogSkillNames,
 } from '../../../skills/skillCatalog';
 import type { SkillDetail } from '../../../skills/skillCatalog';
 import { SkyRepositoriesPanel } from './SkyRepositoriesPanel';
@@ -170,9 +170,8 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
     let cancelled = false;
     (async () => {
       try {
-        const lockFile = await SkillLockService.getLockFile();
+        const installed = await getInstalledCatalogSkillNames();
         if (!cancelled) {
-          const installed = matchInstalledFromLock(lockFile);
           setInstalledSkillNames(installed);
           setTopicSkillsInstalled(
             TOPIC_SKILL_NAMES.every((name) => installed.has(name)),
@@ -215,8 +214,7 @@ export function HomeView({ onDismissOverlay }: HomeViewProps) {
     const tracked = new Set<string>(TRACKED_SKILL_NAMES);
     const recheck = async () => {
       try {
-        const lockFile = await SkillLockService.getLockFile();
-        const installed = matchInstalledFromLock(lockFile);
+        const installed = await getInstalledCatalogSkillNames();
         setInstalledSkillNames(installed);
         setTopicSkillsInstalled(
           TOPIC_SKILL_NAMES.every((name) => installed.has(name)),

@@ -164,8 +164,46 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         path: '/api/topics/:id',
         summary: 'Read a local topic, including its full Markdown description.',
         parameters: { id: 'Local topic id.' },
-        response: topicResponse,
+        response: '{ success: true, topic, revision: string }',
         errors: unknownTopic,
+      },
+      {
+        method: 'PATCH',
+        path: '/api/topics/:id',
+        summary:
+          'Update a local topic in place, preserving its ID and session links.',
+        body: {
+          expectedRevision:
+            'string (required): opaque revision returned by GET /api/topics/:id.',
+          title: 'string (optional): non-empty, trimmed title.',
+          description:
+            'string (optional): full replacement Markdown; an empty string clears it.',
+          repos:
+            'string[] (optional): replace repository PURLs; [] clears them.',
+          subsystemModels:
+            'Array<{ modelId: string, trailIds?: string[] }> (optional): replace local model associations; [] clears them.',
+          references:
+            'Array<{ kind: "topic", topicId: string } | { kind: "c4-sketch", sketchId: string } | { kind: "drawing", drawingId: string }> (optional): replace attachments; [] clears them.',
+        },
+        response: '{ success: true, topic, revision: string }',
+        errors: {
+          ...unknownTopic,
+          '400':
+            'Missing revision, empty patch, unsupported fields, or malformed field values.',
+          '409':
+            'Topic changed since it was read. Fetch it again and reapply edits; do not blindly retry with the new revision.',
+        },
+        notes: [
+          'Omitted fields are preserved. At least one editable field is required. Publishing, assets, status, visibility, identity, and timestamp edits are not supported.',
+          'Use description replacement to delete, reorder, rename, or disambiguate Markdown sections. Never delete and recreate a topic just to edit it, or bypass the API by writing its JSON file.',
+          'Writes broadcast TOPIC_UPDATED to app windows. Read back the topic and verify requested changes before reporting completion.',
+          'The revision check is serialized with updates in this app process; direct file writes and other app processes are not coordinated.',
+        ],
+        example: {
+          expectedRevision: '<revision from GET>',
+          title: 'Updated brief',
+          description: '## Goal\nKeep the brief current.',
+        },
       },
       {
         method: 'POST',
@@ -173,7 +211,12 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         summary: 'Append new context to the topic description.',
         body: { text: 'string (required): non-empty Markdown to append.' },
         response: topicResponse,
-        errors: { ...unknownTopic, '400': 'Missing or empty text.' },
+        errors: {
+          ...unknownTopic,
+          '400': 'Missing or empty text.',
+          '409':
+            'Topic changed while appending. Reread and reconcile before retrying.',
+        },
         notes: [
           'Reads existing content and inserts a blank-line separator. Prefer section upsert when replacing status or findings.',
         ],
@@ -192,7 +235,8 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         errors: {
           ...unknownTopic,
           '400': 'Missing heading or body.',
-          '409': 'Multiple headings match; resolve duplicates first.',
+          '409':
+            'Multiple headings match, or the topic changed while editing. Reread; use a revision-checked PATCH to resolve duplicate headings.',
         },
         notes: [
           'Fetch the topic before editing. Replacement includes nested deeper subsections through the next heading at the same level.',
@@ -234,6 +278,8 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         errors: {
           ...unknownTopic,
           '400': 'Missing modelId or invalid trailIds.',
+          '409':
+            'Topic changed while editing associations. Reread before retrying.',
         },
         notes: [
           'Replaces an existing association with the same modelId. Associations are local-only and do not travel on publish.',
@@ -248,7 +294,11 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           modelId: 'Local subsystem-model id.',
         },
         response: topicResponse,
-        errors: unknownTopic,
+        errors: {
+          ...unknownTopic,
+          '409':
+            'Topic changed while editing associations. Reread before retrying.',
+        },
         notes: ['Idempotent for an unlinked model on an existing topic.'],
       },
       {

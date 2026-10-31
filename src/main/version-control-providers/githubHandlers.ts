@@ -32,6 +32,7 @@ import {
   SearchReposResponse,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { getSkillLockFileService } from '../skills/skillLockFile';
+import { hasSkillEntrypoint } from '../skills/skillDownload';
 import { normalizeGitHubSource, SkillLockAPIEvent } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 import { createSkillSymlink } from '../skills/symlinkUtils';
 import { sendToAllWindows } from '../window/modernWindowManager';
@@ -3864,6 +3865,14 @@ export function registerGitHubIpcHandlers(
           } else {
             console.warn(`[GitHub] Failed to download file: ${filePath}`);
           }
+        }
+
+        // A partial download must not be advertised as an installed skill.
+        if (!hasSkillEntrypoint(normalizedSkillPath, downloadedFiles)) {
+          return {
+            success: false,
+            error: 'Skill download is missing a non-empty SKILL.md',
+          };
         }
 
         // Determine installation destination

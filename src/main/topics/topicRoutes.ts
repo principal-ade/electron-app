@@ -19,10 +19,32 @@ import type { TopicRegistryService } from '../stores/TopicRegistryService';
 import { validateTopicLinks } from './validateTopicLinks';
 import { TopicAPIEvent } from '../../shared/main-process-api-interfaces/TopicAPI';
 import type { TopicActivateEvent } from '../../shared/main-process-api-interfaces/TopicAPI';
+import type { UpdateTopicInput } from '../../shared/main-process-api-interfaces/TopicAPI';
+import {
+  topicRevision,
+  TopicNotFoundError,
+  TopicUpdateConflictError,
+} from './topicRevision';
 import { broadcastTopicEvent } from './tipc/topicRouter';
 import { focusedOrMainWindow } from '../window/modernWindowManager';
 
 const DESCRIPTION_PREVIEW_MAX = 200;
+
+function respondToMutationConflict(err: unknown, res: Response): boolean {
+  if (err instanceof TopicNotFoundError) {
+    res.status(404).json({ success: false, error: err.message });
+    return true;
+  }
+  if (err instanceof TopicUpdateConflictError) {
+    res.status(409).json({
+      success: false,
+      error: err.message,
+      revision: topicRevision(err.topic),
+    });
+    return true;
+  }
+  return false;
+}
 
 /** First ~200 chars of a topic description, for the payload-free list route. */
 function descriptionPreview(description?: string): string {
@@ -247,10 +269,123 @@ export function registerTopicRoutes(
         res.status(404).json({ success: false, error: 'unknown topic id' });
         return;
       }
-      res.json({ success: true, topic });
+      res.json({ success: true, topic, revision: topicRevision(topic) });
     } catch (err) {
       console.error('[topicRoutes] read failed', err);
       res.status(500).json({ success: false, error: 'failed to read topic' });
+    }
+  });
+
+  // General edits preserve the topic's identity and notify every window.
+  // Require the revision from GET so a stale brief cannot overwrite new work.
+  app.patch('/api/topics/:id', async (req: Request, res: Response) => {
+    const body = req.body as unknown;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      res.status(400).json({ success: false, error: 'body must be an object' });
+      return;
+    }
+    const raw = body as Record<string, unknown>;
+    const allowed = new Set([
+      'title',
+      'description',
+      'repos',
+      'subsystemModels',
+      'references',
+      'expectedRevision',
+    ]);
+    if (Object.keys(raw).some((key) => !allowed.has(key))) {
+      res.status(400).json({
+        success: false,
+        error:
+          'Unsupported fields. Only title, description, repos, subsystemModels, references, and expectedRevision are accepted.',
+      });
+      return;
+    }
+    if (
+      typeof raw.expectedRevision !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(raw.expectedRevision)
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'expectedRevision from GET /api/topics/:id is required',
+      });
+      return;
+    }
+    const updates: UpdateTopicInput = {};
+    if ('title' in raw) {
+      if (typeof raw.title !== 'string' || !raw.title.trim()) {
+        res
+          .status(400)
+          .json({ success: false, error: 'title must be a non-empty string' });
+        return;
+      }
+      updates.title = raw.title.trim();
+    }
+    if ('description' in raw) {
+      if (typeof raw.description !== 'string') {
+        res
+          .status(400)
+          .json({ success: false, error: 'description must be a string' });
+        return;
+      }
+      updates.description = raw.description;
+    }
+    if ('repos' in raw) {
+      if (
+        !Array.isArray(raw.repos) ||
+        !raw.repos.every((repo) => typeof repo === 'string')
+      ) {
+        res.status(400).json({
+          success: false,
+          error: 'repos must be an array of PURL strings',
+        });
+        return;
+      }
+      updates.repos = raw.repos;
+    }
+    if ('subsystemModels' in raw) {
+      const refs = parseSubsystemModelRefs(raw.subsystemModels);
+      if (!refs) {
+        res.status(400).json({
+          success: false,
+          error:
+            'subsystemModels must be an array of { modelId: string, trailIds?: string[] }',
+        });
+        return;
+      }
+      updates.subsystemModels = refs;
+    }
+    if ('references' in raw) {
+      const refs = parseTopicRefs(raw.references);
+      if (!refs) {
+        res.status(400).json({
+          success: false,
+          error:
+            'references must be an array of valid topic, c4-sketch, or drawing references',
+        });
+        return;
+      }
+      updates.references = refs;
+    }
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({
+        success: false,
+        error: 'At least one editable field is required',
+      });
+      return;
+    }
+    try {
+      const topic = await registry.updateTopic(
+        String(req.params.id),
+        updates,
+        raw.expectedRevision,
+      );
+      broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
+      res.json({ success: true, topic, revision: topicRevision(topic) });
+    } catch (err) {
+      if (respondToMutationConflict(err, res)) return;
+      console.error('[topicRoutes] update failed', err);
+      res.status(500).json({ success: false, error: 'failed to update topic' });
     }
   });
 
@@ -287,10 +422,15 @@ export function registerTopicRoutes(
         }
         const prior = (existing.description ?? '').replace(/\s+$/, '');
         const description = prior.length > 0 ? `${prior}\n\n${text}` : text;
-        const topic = await registry.updateTopic(id, { description });
+        const topic = await registry.updateTopic(
+          id,
+          { description },
+          topicRevision(existing),
+        );
         broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
         res.json({ success: true, topic });
       } catch (err) {
+        if (respondToMutationConflict(err, res)) return;
         console.error('[topicRoutes] append failed', err);
         res
           .status(500)
@@ -357,12 +497,15 @@ export function registerTopicRoutes(
           });
           return;
         }
-        const topic = await registry.updateTopic(id, {
-          description: result.markdown,
-        });
+        const topic = await registry.updateTopic(
+          id,
+          { description: result.markdown },
+          topicRevision(existing),
+        );
         broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
         res.json({ success: true, topic, action: result.action });
       } catch (err) {
+        if (respondToMutationConflict(err, res)) return;
         console.error('[topicRoutes] section upsert failed', err);
         res.status(500).json({
           success: false,
@@ -500,10 +643,15 @@ export function registerTopicRoutes(
         const next = current.some((r) => r.modelId === modelId)
           ? current.map((r) => (r.modelId === modelId ? ref : r))
           : [...current, ref];
-        const topic = await registry.updateTopic(id, { subsystemModels: next });
+        const topic = await registry.updateTopic(
+          id,
+          { subsystemModels: next },
+          topicRevision(existing),
+        );
         broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
         res.json({ success: true, topic });
       } catch (err) {
+        if (respondToMutationConflict(err, res)) return;
         console.error('[topicRoutes] link subsystem model failed', err);
         res
           .status(500)
@@ -534,10 +682,15 @@ export function registerTopicRoutes(
         }
         const current = existing.subsystemModels ?? [];
         const next = current.filter((r) => r.modelId !== modelId);
-        const topic = await registry.updateTopic(id, { subsystemModels: next });
+        const topic = await registry.updateTopic(
+          id,
+          { subsystemModels: next },
+          topicRevision(existing),
+        );
         broadcastTopicEvent(TopicAPIEvent.TOPIC_UPDATED, topic);
         res.json({ success: true, topic });
       } catch (err) {
+        if (respondToMutationConflict(err, res)) return;
         console.error('[topicRoutes] unlink subsystem model failed', err);
         res
           .status(500)
