@@ -68,6 +68,9 @@ export const SkillDetailTabContent: React.FC = () => {
         context={s.context}
         actions={s.actions}
         events={s.events}
+        // Pass the skill directly: the tab mounts after the first
+        // skill:selected event fires, so the panel can't rely on hearing it.
+        skill={selectedSkill}
         installConfig={{
           isInstalled: s.isSkillInstalled(selectedSkill),
           hasUpdate: (() => {
