@@ -49,9 +49,9 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
   // outline overlay (it has the heading DOM).
   const [tocOpen, setTocOpen] = React.useState(false);
   const [hasToc, setHasToc] = React.useState(false);
-  const [headerHovered, setHeaderHovered] = React.useState(false);
+  const [titleHovered, setTitleHovered] = React.useState(false);
   const [titleFocused, setTitleFocused] = React.useState(false);
-  const highlightToc = tocOpen || headerHovered || titleFocused;
+  const highlightToc = tocOpen || titleHovered || titleFocused;
   const closeToc = React.useCallback(() => setTocOpen(false), []);
 
   // Copy the topic's on-disk JSON path to the clipboard, with a brief "copied"
@@ -91,8 +91,6 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
       }}
     >
       <div
-        onMouseEnter={() => setHeaderHovered(true)}
-        onMouseLeave={() => setHeaderHovered(false)}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -121,6 +119,8 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
             type="button"
             disabled={!hasToc}
             onClick={() => setTocOpen((open) => !open)}
+            onMouseEnter={() => setTitleHovered(true)}
+            onMouseLeave={() => setTitleHovered(false)}
             onFocus={() => setTitleFocused(true)}
             onBlur={() => setTitleFocused(false)}
             aria-label={`Table of contents for ${title || 'Topic'}`}

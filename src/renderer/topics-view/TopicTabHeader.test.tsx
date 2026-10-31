@@ -118,7 +118,17 @@ describe.each([
     expect(title.getAttribute('aria-expanded')).toBe('false');
   });
 
-  test('header hover and title focus highlight only the contents button', () => {
+  test('hovering other header actions does not highlight the contents button', () => {
+    render(createTab());
+    const contents = screen.getByRole('button', { name: 'Table of contents' });
+    for (const name of ['Copy topic file path', 'Pin topic', 'Delete topic']) {
+      fireEvent.mouseEnter(screen.getByRole('button', { name }));
+      expect(contents.style.color).toBe('rgb(255, 255, 255)');
+      expect(contents.style.borderColor).not.toBe('#00aaff');
+    }
+  });
+
+  test('title hover and focus highlight only the contents button', () => {
     render(createTab());
     const title = screen.getByRole('button', {
       name: 'Table of contents for My topic',
