@@ -256,6 +256,10 @@ export const repositoryMonitoringAPI: ExtendedRepositoryMonitoringAPI = {
     return ipcRenderer.invoke('repository-monitoring:set-watcher-impl', impl);
   },
 
+  restartDaemon: async () => {
+    return ipcRenderer.invoke('repository-monitoring:restart-daemon');
+  },
+
   // Manually trigger workspace sync to otel-events-manager
   syncWorkspace: async (repoPath: string) => {
     return ipcRenderer.invoke('repository-monitoring:sync-workspace', repoPath);

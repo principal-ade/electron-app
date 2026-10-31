@@ -20,6 +20,10 @@ import { QualityLensService } from '../quality-lenses/QualityLensService';
 import { applicationWindows, PrimaryWindowType } from '../window/types';
 import { otelEventsManagerBridge } from '../services/OtelEventsManagerBridge';
 import { registerHomeRepositoryRefreshHandlers } from './homeRepositoryRefreshHandlers';
+import {
+  resolveRepoMonitorDaemonEntryPath,
+  resolveRepoMonitorLauncher,
+} from './daemonLaunch';
 
 // Type alias for git state event payload (structure defined in repository-monitoring-server)
 type GitStateEventPayload = { event: { type: string }; [key: string]: unknown };
@@ -116,16 +120,26 @@ async function broadcastToRelevantWindows<T extends { repoPath: string }>(
  * on the *first* call to inject startup-only settings (e.g. watcherImpl)
  * sourced from user preferences. Later calls receive the cached instance and
  * ignore the seed.
+ *
+ * The manager connects to the shared repo-monitor daemon (one per user, also
+ * used by Subsystems Studio) and spawns it when nothing is listening.
  */
 export function getManager(
   seedConfig: { watcherImpl?: FileWatcherImpl } = {},
 ): RepositoryMonitoringManager {
   if (!repositoryMonitoringManager) {
+    const launcher = resolveRepoMonitorLauncher();
+    const daemonEntryPath = resolveRepoMonitorDaemonEntryPath();
+    console.log(
+      `[RepositoryMonitoring] daemon launcher: ${launcher.runtime} node at ${launcher.nodeBinary}; bundle ${daemonEntryPath}`,
+    );
     repositoryMonitoringManager = new RepositoryMonitoringManager({
       autoStart: true,
-      restartOnCrash: true,
-      maxRestartAttempts: 3,
       logLevel: 'info',
+      spawnedBy: 'desktop',
+      nodeBinary: launcher.nodeBinary,
+      daemonEntryPath,
+      daemonEnv: launcher.env,
       watcherImpl: seedConfig.watcherImpl ?? 'parcel',
     });
   }
@@ -400,6 +414,7 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
           lifecycleHistory: [],
           stdoutTail: [],
           stderrTail: [],
+          daemon: null,
         };
       }
     },
@@ -422,9 +437,10 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
     },
   );
 
-  // Switch the worker's filesystem watcher implementation at runtime. The
-  // request is persisted to UserPreferences so it survives app restarts, and
-  // the worker is restarted in-place so the change is immediately visible.
+  // Switch the daemon's filesystem watcher implementation. The request is
+  // persisted to UserPreferences so it survives app restarts, and the shared
+  // daemon is restarted so the change is immediately visible (other clients
+  // reconnect on their own).
   ipcMain.handle(
     'repository-monitoring:set-watcher-impl',
     async (_event, impl: FileWatcherImpl) => {
@@ -438,12 +454,7 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
           repositoryMonitoringWatcherImpl: impl,
         });
         if (changed) {
-          // stop() is sync; the auto-restart machinery would then bring a new
-          // worker up. We do an explicit start() here so the UI sees the
-          // 'stopping -> spawning' transitions immediately rather than going
-          // through the crash-recovery path.
-          manager.stop();
-          await manager.start();
+          await manager.restartDaemon();
         }
         return { success: true, changed };
       } catch (error) {
@@ -458,6 +469,21 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
       }
     },
   );
+
+  // Replace the shared daemon with a fresh one (every client reconnects).
+  ipcMain.handle('repository-monitoring:restart-daemon', async () => {
+    console.log('[RepositoryMonitoring] restart-daemon request');
+    try {
+      await manager.restartDaemon();
+      return { success: true };
+    } catch (error) {
+      console.error('[RepositoryMonitoring] Error restarting daemon:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
 
   // Start monitoring
   ipcMain.handle(RepositoryMonitoringAPIEvent.START_MONITORING, async () => {

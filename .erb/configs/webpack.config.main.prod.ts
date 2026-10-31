@@ -151,6 +151,16 @@ const configuration: webpack.Configuration = {
             ignore: ['**/*.ts', '**/*.map'],
           },
         },
+        // Shared repository monitor daemon, spawned under node by
+        // src/main/repository-monitoring/daemonLaunch.ts. Staged as .cjs so
+        // Node never treats it as ESM, and unpacked from asar (package.json
+        // asarUnpack) so a child process can execute it.
+        {
+          from: require.resolve(
+            '@principal-ai/repository-monitoring-server/dist/daemon/repository-monitoring-daemon.js',
+          ),
+          to: path.join(webpackPaths.distMainPath, 'repo-monitor-daemon.cjs'),
+        },
       ],
     }),
   ],

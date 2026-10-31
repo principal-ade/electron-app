@@ -168,6 +168,7 @@ export class RepositoryMonitoringService {
         currentMemory: 0,
         currentCpu: 0,
         history: [],
+        daemon: null,
       };
     }
   }
@@ -457,6 +458,7 @@ export class RepositoryMonitoringService {
         lifecycleHistory: [],
         stdoutTail: [],
         stderrTail: [],
+        daemon: null,
       };
     }
   }
@@ -490,8 +492,8 @@ export class RepositoryMonitoringService {
   }
 
   /**
-   * Switch the monitoring worker's filesystem watcher implementation.
-   * Persists the choice and triggers a worker restart.
+   * Switch the monitoring daemon's filesystem watcher implementation.
+   * Persists the choice and restarts the shared daemon.
    */
   static async setWatcherImpl(
     impl: 'parcel' | 'chokidar',
@@ -503,6 +505,19 @@ export class RepositoryMonitoringService {
         '[RepositoryMonitoring] Error setting watcher impl:',
         error,
       );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /** Replace the shared repository monitor daemon; every client reconnects. */
+  static async restartDaemon(): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.restartDaemon();
+    } catch (error) {
+      console.error('[RepositoryMonitoring] Error restarting daemon:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),

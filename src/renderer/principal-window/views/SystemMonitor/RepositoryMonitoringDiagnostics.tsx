@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   AlertTriangle,
@@ -9,6 +9,7 @@ import {
   ClipboardCopy,
   ExternalLink,
   Loader2,
+  RotateCcw,
 } from 'lucide-react';
 import type {
   ServerDiagnostics,
@@ -30,6 +31,15 @@ const PHASE_LABELS: Record<LifecyclePhase, string> = {
   crashed: 'Crashed',
   restarting: 'Restarting',
   fatal: 'Fatal',
+};
+
+const OWNER_LABELS: Record<
+  NonNullable<ServerDiagnostics['daemon']>['owner'],
+  string
+> = {
+  desktop: 'this app',
+  studio: 'Subsystems Studio',
+  external: 'another process',
 };
 
 export function phaseLabel(phase: LifecyclePhase): string {
@@ -203,86 +213,29 @@ const LifecycleRow: React.FC<{ evt: LifecycleEvent; theme: ThemeShape }> = ({
   );
 };
 
-const LogStream: React.FC<{
-  lines: { ts: number; stream: 'stdout' | 'stderr'; line: string }[];
-  empty: string;
-  theme: ThemeShape;
-}> = ({ lines, empty, theme }) => {
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [lines.length]);
-  if (lines.length === 0) {
-    return (
-      <div
-        style={{
-          padding: '12px 20px',
-          color: theme.colors.textSecondary,
-          fontSize: '12px',
-        }}
-      >
-        {empty}
-      </div>
-    );
-  }
-  return (
-    <div
-      ref={scrollRef}
-      style={{
-        maxHeight: '280px',
-        overflowY: 'auto',
-        backgroundColor: theme.colors.background,
-        fontFamily: theme.fonts.monospace,
-        fontSize: '12px',
-        padding: '8px 0',
-      }}
-    >
-      {lines.map((entry) => (
-        <div
-          key={`${String(entry.ts)}-${entry.line.slice(0, 32)}`}
-          style={{
-            display: 'flex',
-            gap: '12px',
-            padding: '2px 20px',
-            color:
-              entry.stream === 'stderr'
-                ? theme.colors.warning
-                : theme.colors.text,
-          }}
-        >
-          <span
-            style={{
-              color: theme.colors.textSecondary,
-              flexShrink: 0,
-              minWidth: '92px',
-            }}
-          >
-            {formatClockTime(entry.ts)}
-          </span>
-          <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {entry.line}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
 export const RepositoryMonitoringDiagnostics: React.FC<{
   diagnostics: ServerDiagnostics | null;
   /** Wall-clock now, ticked by parent so phase elapsed updates each second. */
   nowTick: number;
 }> = ({ diagnostics, nowTick }) => {
   const { theme } = useTheme();
-  const [stderrExpanded, setStderrExpanded] = useState(true);
-  const [stdoutExpanded, setStdoutExpanded] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(true);
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const [switchingImpl, setSwitchingImpl] = useState<
     'parcel' | 'chokidar' | null
   >(null);
+  const [restartingDaemon, setRestartingDaemon] = useState(false);
+
+  const handleRestartDaemon = async () => {
+    setRestartingDaemon(true);
+    try {
+      await RepositoryMonitoringService.restartDaemon();
+    } catch (error) {
+      console.error('Failed to restart daemon:', error);
+    } finally {
+      setRestartingDaemon(false);
+    }
+  };
 
   const handleSwitchImpl = async (impl: 'parcel' | 'chokidar') => {
     setSwitchingImpl(impl);
@@ -375,8 +328,8 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
                   : '—',
               },
               {
-                label: 'Restarts',
-                value: `${diagnostics.restartAttempts}/${diagnostics.maxRestartAttempts}`,
+                label: 'Reconnects',
+                value: String(diagnostics.restartAttempts),
                 color:
                   diagnostics.restartAttempts > 0
                     ? theme.colors.warning
@@ -420,10 +373,121 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
             ))}
           </div>
 
+          {/* The shared daemon this app is connected to. One daemon serves
+              every client on the machine (this app, Subsystems Studio, …). */}
+          <div
+            style={{
+              padding: '12px 20px',
+              borderBottom: `1px solid ${theme.colors.border}`,
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ flex: 1, minWidth: '240px' }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  marginBottom: '4px',
+                }}
+              >
+                Shared daemon
+              </div>
+              {diagnostics.daemon ? (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'auto 1fr',
+                    columnGap: '12px',
+                    rowGap: '2px',
+                    fontSize: '11px',
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  <span>Spawned by</span>
+                  <span style={{ color: theme.colors.text }}>
+                    {OWNER_LABELS[diagnostics.daemon.owner]}
+                    {diagnostics.daemon.owner === 'external' &&
+                      ` (${diagnostics.daemon.spawnedBy})`}
+                  </span>
+                  <span>Version</span>
+                  <span
+                    style={{
+                      color: theme.colors.text,
+                      fontFamily: theme.fonts.monospace,
+                    }}
+                  >
+                    {diagnostics.daemon.version} · protocol{' '}
+                    {diagnostics.daemon.protocolVersion} · node{' '}
+                    {diagnostics.daemon.nodeVersion ?? '—'}
+                  </span>
+                  <span>Socket</span>
+                  <span
+                    style={{
+                      color: theme.colors.text,
+                      fontFamily: theme.fonts.monospace,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {diagnostics.daemon.socketPath}
+                  </span>
+                  <span>Log</span>
+                  <span
+                    style={{
+                      color: theme.colors.text,
+                      fontFamily: theme.fonts.monospace,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {diagnostics.daemon.logPath}
+                  </span>
+                </div>
+              ) : (
+                <div
+                  style={{ fontSize: '11px', color: theme.colors.textSecondary }}
+                >
+                  Not connected. Repositories cannot load until the daemon is
+                  reachable; see the last error below and the daemon log.
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleRestartDaemon}
+              disabled={restartingDaemon}
+              title="Stop the shared daemon and spawn a fresh one. Other apps using it reconnect automatically."
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 14px',
+                fontSize: '12px',
+                fontWeight: 500,
+                borderRadius: '6px',
+                border: `1px solid ${theme.colors.warning}`,
+                backgroundColor: theme.colors.background,
+                color: theme.colors.warning,
+                cursor: restartingDaemon ? 'not-allowed' : 'pointer',
+                opacity: restartingDaemon ? 0.6 : 1,
+              }}
+            >
+              {restartingDaemon ? (
+                <Loader2
+                  size={12}
+                  style={{ animation: 'spin 1s linear infinite' }}
+                />
+              ) : (
+                <RotateCcw size={12} />
+              )}
+              Restart daemon
+            </button>
+          </div>
+
           {/* Watcher impl switcher. Lets users A/B test Parcel vs Chokidar
               without restarting the app — useful when isolating which
-              implementation is responsible for crashes or silent failures. */}
-          <div
+              implementation is responsible for crashes or silent failures. */}          <div
             style={{
               padding: '12px 20px',
               borderBottom: `1px solid ${theme.colors.border}`,
@@ -443,6 +507,15 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
                 }}
               >
                 File watcher implementation
+              </div>
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: theme.colors.textSecondary,
+                  marginBottom: '2px',
+                }}
+              >
+                Switching restarts the shared daemon for every connected app.
               </div>
               <div
                 style={{
@@ -733,36 +806,6 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
             )}
           </Collapsible>
 
-          <Collapsible
-            title={`Worker stderr (${diagnostics.stderrTail.length})`}
-            expanded={stderrExpanded}
-            onToggle={() => setStderrExpanded((v) => !v)}
-            theme={theme}
-            accent={
-              diagnostics.stderrTail.length > 0
-                ? theme.colors.warning
-                : undefined
-            }
-          >
-            <LogStream
-              lines={diagnostics.stderrTail}
-              empty="No stderr captured."
-              theme={theme}
-            />
-          </Collapsible>
-
-          <Collapsible
-            title={`Worker stdout (${diagnostics.stdoutTail.length})`}
-            expanded={stdoutExpanded}
-            onToggle={() => setStdoutExpanded((v) => !v)}
-            theme={theme}
-          >
-            <LogStream
-              lines={diagnostics.stdoutTail}
-              empty="No stdout captured."
-              theme={theme}
-            />
-          </Collapsible>
         </div>
       )}
     </section>

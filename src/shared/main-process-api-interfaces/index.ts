@@ -26,14 +26,16 @@ export interface ExtendedRepositoryMonitoringAPI extends RepositoryMonitoringAPI
     error?: string;
   }>;
   /**
-   * Switch the worker's filesystem watcher implementation at runtime. Persists
-   * the choice to UserPreferences and restarts the worker so the new adapter
-   * is picked up. Returns { success, changed } where `changed` is true only
+   * Switch the daemon's filesystem watcher implementation. Persists the choice
+   * to UserPreferences and restarts the shared daemon so the new adapter is
+   * picked up. Returns { success, changed } where `changed` is true only
    * when the impl actually differed from what was already set.
    */
   setWatcherImpl: (
     impl: 'parcel' | 'chokidar',
   ) => Promise<{ success: boolean; changed?: boolean; error?: string }>;
+  /** Replace the shared repository monitor daemon; every client reconnects. */
+  restartDaemon: () => Promise<{ success: boolean; error?: string }>;
 }
 import type { SecretsAPI } from './SecretsAPI';
 import type { LinksAPI } from './LinksAPI';

@@ -119,6 +119,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
           currentMemory: 0,
           currentCpu: 0,
           history: [],
+          daemon: null,
         });
         setLoading(false);
         setIsRunning(false);
@@ -1028,6 +1029,19 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               >
                 {formatBytes(status.currentMemory)}
               </div>
+              {status.daemon && (
+                <div
+                  style={{
+                    fontSize: '11px',
+                    color: theme.colors.textSecondary,
+                    marginTop: '-10px',
+                    marginBottom: '12px',
+                  }}
+                >
+                  shared daemon · {status.daemon.clients}{' '}
+                  {status.daemon.clients === 1 ? 'client' : 'clients'}
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <Sparkline
                   data={status.history.map((h) => h.memory / 1024 / 1024)}
