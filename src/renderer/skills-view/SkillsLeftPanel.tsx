@@ -254,9 +254,7 @@ const SkillRow: React.FC<SkillRowProps> = ({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: spacing.sm,
+        position: 'relative',
         width: '100%',
         padding: `${spacing.sm * 1.5}px ${spacing.sm * 2}px`,
         boxSizing: 'border-box',
@@ -284,7 +282,7 @@ const SkillRow: React.FC<SkillRowProps> = ({
         onClick={onClick}
         style={{
           display: 'flex',
-          flex: 1,
+          width: '100%',
           minWidth: 0,
           padding: 0,
           background: 'transparent',
@@ -301,6 +299,8 @@ const SkillRow: React.FC<SkillRowProps> = ({
               fontWeight: active ? 700 : 500,
               color: theme.colors.text,
               marginBottom: 2,
+              // Leave room for the action buttons, which sit on this line.
+              paddingRight: actions ? 24 : 0,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -347,10 +347,12 @@ const SkillRow: React.FC<SkillRowProps> = ({
       {actions && (
         <div
           style={{
+            position: 'absolute',
+            top: spacing.sm * 1.5 - 2,
+            right: spacing.sm * 2 - spacing.xs,
             display: 'flex',
             alignItems: 'center',
             gap: 2,
-            flexShrink: 0,
           }}
         >
           {actions}
