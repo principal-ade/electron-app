@@ -20,6 +20,8 @@ import type {
   RepositoryCacheSyncEvent,
   WorkspaceChangeEventPayload,
   ServerDiagnostics,
+  ServerStatus,
+  RepoMonitorDiagnostics,
   LifecycleEvent,
   LogTailRequest,
   LogTailResponse,
@@ -174,13 +176,9 @@ export class RepositoryMonitoringService {
   }
 
   /**
-   * Get server status (running state)
+   * Get connection status
    */
-  static async getServerStatus(): Promise<{
-    running: boolean;
-    ready: boolean;
-    restartAttempts: number;
-  }> {
+  static async getServerStatus(): Promise<ServerStatus> {
     try {
       return await window.mainProcess.repositoryMonitoring.getServerStatus();
     } catch (error) {
@@ -188,12 +186,7 @@ export class RepositoryMonitoringService {
         '[RepositoryMonitoring] Error getting server status:',
         error,
       );
-      // Return stopped status on error
-      return {
-        running: false,
-        ready: false,
-        restartAttempts: 0,
-      };
+      return { connected: false, reconnectAttempts: 0 };
     }
   }
 
@@ -425,9 +418,8 @@ export class RepositoryMonitoringService {
   }
 
   /**
-   * Get a rich diagnostic snapshot of the monitoring worker:
-   * current phase, PID, restart attempts, last error, last exit,
-   * recent lifecycle history, and tail of worker stdout/stderr.
+   * Snapshot of this app's connection to the shared daemon: phase, daemon
+   * PID, reconnect attempts, last error, last disconnect, lifecycle history.
    */
   static async getDiagnostics(): Promise<ServerDiagnostics> {
     try {
@@ -439,32 +431,36 @@ export class RepositoryMonitoringService {
       );
       return {
         phase: 'idle',
-        running: false,
-        ready: false,
-        workerPid: null,
+        connected: false,
+        daemonPid: null,
         startedAt: null,
-        lastReadyAt: null,
+        lastConnectedAt: null,
         phaseEnteredAt: Date.now(),
-        restartAttempts: 0,
-        maxRestartAttempts: 0,
-        shutdownRequested: false,
+        reconnectAttempts: 0,
+        disconnectRequested: false,
         lastError: {
           message: error instanceof Error ? error.message : String(error),
         },
-        lastExit: null,
+        lastDisconnect: null,
         watcherImpl: null,
         requestedWatcherImpl: 'parcel',
         watcherImplFallbackReason: null,
         lifecycleHistory: [],
-        stdoutTail: [],
-        stderrTail: [],
         daemon: null,
       };
     }
   }
 
   /**
-   * Read the tail of the main + worker log files.
+   * Daemon-wide snapshot: process status plus every registered repository
+   * with the freshness of its cache slices. Throws when the IPC fails.
+   */
+  static async getDaemonDiagnostics(): Promise<RepoMonitorDiagnostics> {
+    return window.mainProcess.repositoryMonitoring.getDaemonDiagnostics();
+  }
+
+  /**
+   * Read the tail of the main + daemon log files.
    */
   static async getLogTail(
     request?: LogTailRequest,
@@ -476,14 +472,14 @@ export class RepositoryMonitoringService {
       console.error('[RepositoryMonitoring] Error reading log tail:', error);
       return {
         mainLog: { path: '', content: '', error: message },
-        workerLog: { path: '', content: '', error: message },
+        daemonLog: { path: '', content: '', error: message },
       };
     }
   }
 
   /**
-   * Subscribe to worker lifecycle transitions (spawning, ready, running,
-   * stopping, stopped, crashed, restarting, fatal).
+   * Subscribe to daemon connection transitions (connecting, connected,
+   * reconnecting, disconnecting, disconnected, unreachable).
    */
   static onLifecycleEvent(
     callback: (event: LifecycleEvent) => void,

@@ -61,9 +61,9 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [loading, setLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
-  // Rich diagnostics for the repository monitoring worker. Driven by lifecycle
-  // events (pushed from main) plus a periodic getDiagnostics() poll for tail
-  // log lines + initial state.
+  // Diagnostics for this app's connection to the shared repository monitor
+  // daemon. Driven by lifecycle events (pushed from main) plus a periodic
+  // getDiagnostics() poll for the initial state.
   const [diagnostics, setDiagnostics] = useState<ServerDiagnostics | null>(
     null,
   );
@@ -109,8 +109,8 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
           await RepositoryMonitoringService.getServerStatus();
         setStatus(data);
         setLoading(false);
-        // Use the actual server running state instead of inferring from data
-        setIsRunning(serverStatus?.running ?? false);
+        // Use the actual connection state instead of inferring from data
+        setIsRunning(serverStatus?.connected ?? false);
       } catch (error) {
         console.error('Failed to fetch monitoring status:', error);
         // Use fallback data if service is not available
@@ -195,60 +195,52 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
           // Apply the transition to the local copy so the UI updates
           // immediately, without waiting for the next poll.
           const nextHistory = [...prev.lifecycleHistory, event].slice(-100);
-          const nextRunning =
-            event.phase === 'ready' ||
-            event.phase === 'running' ||
-            event.phase === 'spawning' ||
-            event.phase === 'restarting';
-          const nextReady =
-            event.phase === 'ready' || event.phase === 'running';
+          const connected = event.phase === 'connected';
+          const dropped =
+            event.phase === 'disconnected' ||
+            (event.phase === 'reconnecting' && prev.connected);
           return {
             ...prev,
             phase: event.phase,
             phaseEnteredAt: event.ts,
-            running: nextRunning,
-            ready: nextReady,
-            workerPid: event.workerPid ?? prev.workerPid,
-            lastReadyAt:
-              event.phase === 'ready' ? event.ts : prev.lastReadyAt,
+            connected,
+            daemonPid: connected
+              ? (event.daemonPid ?? prev.daemonPid)
+              : prev.daemonPid,
+            lastConnectedAt: connected ? event.ts : prev.lastConnectedAt,
             lastError: event.error ?? prev.lastError,
-            lastExit:
-              event.phase === 'stopped' ||
-              event.phase === 'crashed' ||
-              event.phase === 'fatal'
-                ? {
-                    code: event.exitCode ?? null,
-                    signal: event.exitSignal ?? null,
-                    at: event.ts,
-                  }
-                : prev.lastExit,
+            lastDisconnect: dropped
+              ? { at: event.ts, reason: event.note ?? event.phase }
+              : prev.lastDisconnect,
             lifecycleHistory: nextHistory,
-            restartAttempts:
+            reconnectAttempts:
               typeof event.attempt === 'number'
                 ? event.attempt
-                : prev.restartAttempts,
+                : connected
+                  ? 0
+                  : prev.reconnectAttempts,
           };
         });
 
-        // Mirror the run/transition state onto the legacy isRunning flag the
+        // Mirror the connection state onto the legacy isRunning flag the
         // existing UI sections use for sparkline coloring etc.
-        if (event.phase === 'ready' || event.phase === 'running') {
+        if (event.phase === 'connected') {
           setIsRunning(true);
         } else if (
-          event.phase === 'stopped' ||
-          event.phase === 'fatal' ||
+          event.phase === 'disconnected' ||
+          event.phase === 'unreachable' ||
           event.phase === 'idle'
         ) {
           setIsRunning(false);
         }
 
-        // Clear the toggle spinner once the worker has reached a terminal
-        // phase (or once 'ready' arrives after a user-initiated start).
+        // Clear the toggle spinner once the connection has settled (connected
+        // after a user-initiated start, disconnected after a stop, or
+        // unreachable when the daemon could not be spawned).
         const terminal =
-          event.phase === 'ready' ||
-          event.phase === 'running' ||
-          event.phase === 'stopped' ||
-          event.phase === 'fatal';
+          event.phase === 'connected' ||
+          event.phase === 'disconnected' ||
+          event.phase === 'unreachable';
         if (terminal && toggleRequestedAtRef.current) {
           toggleRequestedAtRef.current = null;
           setIsToggling(false);
@@ -592,11 +584,10 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
 
   const handleToggleMonitoring = async () => {
     // We mark the toggle request time so the lifecycle event subscription
-    // knows it's responsible for clearing isToggling once a terminal phase
-    // arrives (ready/stopped/fatal). The IPC promise resolving is NOT a
-    // signal of success — the worker may spawn, crash on init, and the
-    // manager may auto-restart, all between the IPC resolution and the
-    // next status poll. The lifecycle stream catches all of that.
+    // knows it's responsible for clearing isToggling once a settled phase
+    // arrives (connected/disconnected/unreachable). The lifecycle stream is
+    // the source of truth; the IPC promise resolving only means the request
+    // was accepted.
     toggleRequestedAtRef.current = Date.now();
     setIsToggling(true);
     const startingFromRunning = isRunning;
@@ -605,7 +596,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
         await RepositoryMonitoringService.stopMonitoring();
       } else {
         await RepositoryMonitoringService.startMonitoring();
-        // Refresh resource snapshot a beat after the worker is asked to start.
+        // Refresh resource snapshot a beat after connecting.
         setTimeout(async () => {
           const data = await RepositoryMonitoringService.getMonitoringStatus();
           setStatus(data);
@@ -839,12 +830,12 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 {/* Repository Monitoring Status (phase-aware). */}
                 {(() => {
                   const phase: LifecyclePhase =
-                    diagnostics?.phase ?? (isRunning ? 'running' : 'idle');
+                    diagnostics?.phase ?? (isRunning ? 'connected' : 'idle');
                   const color = phaseAccentColor(phase, theme);
                   const isTransitional =
-                    phase === 'spawning' ||
-                    phase === 'stopping' ||
-                    phase === 'restarting';
+                    phase === 'connecting' ||
+                    phase === 'disconnecting' ||
+                    phase === 'reconnecting';
                   return (
                     <div
                       style={{
@@ -867,7 +858,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                           borderRadius: '50%',
                           backgroundColor: color,
                           animation:
-                            phase === 'ready' || phase === 'running'
+                            phase === 'connected'
                               ? 'pulse 2s infinite'
                               : isTransitional
                                 ? 'pulse 1s infinite'
@@ -876,13 +867,10 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                       />
                       {phaseLabel(phase)}
                       {diagnostics &&
-                        diagnostics.restartAttempts > 0 &&
-                        (phase === 'restarting' ||
-                          phase === 'crashed' ||
-                          phase === 'fatal') && (
+                        diagnostics.reconnectAttempts > 0 &&
+                        phase === 'reconnecting' && (
                           <span style={{ opacity: 0.8, fontSize: '11px' }}>
-                            ({diagnostics.restartAttempts}/
-                            {diagnostics.maxRestartAttempts})
+                            (attempt {diagnostics.reconnectAttempts})
                           </span>
                         )}
                     </div>

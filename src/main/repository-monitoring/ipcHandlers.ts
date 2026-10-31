@@ -360,7 +360,7 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
     },
   );
 
-  // Get Server Status (running state)
+  // Get connection status
   ipcMain.handle(RepositoryMonitoringAPIEvent.GET_SERVER_STATUS, async () => {
     console.log('[RepositoryMonitoring] GET_SERVER_STATUS request');
     try {
@@ -371,16 +371,11 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
         '[RepositoryMonitoring] Error getting server status:',
         error,
       );
-      // Return stopped status on error
-      return {
-        running: false,
-        ready: false,
-        restartAttempts: 0,
-      };
+      return { connected: false, reconnectAttempts: 0 };
     }
   });
 
-  // Get rich diagnostics snapshot (phase, PID, lifecycle history, log buffers)
+  // Get rich diagnostics snapshot (phase, daemon PID, lifecycle history)
   ipcMain.handle(
     RepositoryMonitoringAPIEvent.GET_DIAGNOSTICS,
     async () => {
@@ -395,32 +390,33 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
         // "no data" rather than crashing.
         return {
           phase: 'idle' as const,
-          running: false,
-          ready: false,
-          workerPid: null,
+          connected: false,
+          daemonPid: null,
           startedAt: null,
-          lastReadyAt: null,
+          lastConnectedAt: null,
           phaseEnteredAt: Date.now(),
-          restartAttempts: 0,
-          maxRestartAttempts: 0,
-          shutdownRequested: false,
+          reconnectAttempts: 0,
+          disconnectRequested: false,
           lastError: {
             message: error instanceof Error ? error.message : String(error),
           },
-          lastExit: null,
+          lastDisconnect: null,
           watcherImpl: null,
           requestedWatcherImpl: 'parcel' as const,
           watcherImplFallbackReason: null,
           lifecycleHistory: [],
-          stdoutTail: [],
-          stderrTail: [],
           daemon: null,
         };
       }
     },
   );
 
-  // Get tail of the main + worker log files
+  // Daemon-wide snapshot: process status plus every repo's cache slices
+  ipcMain.handle(RepositoryMonitoringAPIEvent.GET_DAEMON_DIAGNOSTICS, async () => {
+    return manager.getDaemonDiagnostics();
+  });
+
+  // Get tail of the main + daemon log files
   ipcMain.handle(
     RepositoryMonitoringAPIEvent.GET_LOG_TAIL,
     async (_event, request?: LogTailRequest) => {
@@ -431,7 +427,7 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
         console.error('[RepositoryMonitoring] Error reading log tail:', error);
         return {
           mainLog: { path: '', content: '', error: message },
-          workerLog: { path: '', content: '', error: message },
+          daemonLog: { path: '', content: '', error: message },
         };
       }
     },
@@ -442,7 +438,7 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
   // daemon is restarted so the change is immediately visible (other clients
   // reconnect on their own).
   ipcMain.handle(
-    'repository-monitoring:set-watcher-impl',
+    RepositoryMonitoringAPIEvent.SET_WATCHER_IMPL,
     async (_event, impl: FileWatcherImpl) => {
       if (impl !== 'parcel' && impl !== 'chokidar') {
         return { success: false, error: `Invalid watcher impl: ${String(impl)}` };
@@ -471,8 +467,8 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
   );
 
   // Replace the shared daemon with a fresh one (every client reconnects).
-  ipcMain.handle('repository-monitoring:restart-daemon', async () => {
-    console.log('[RepositoryMonitoring] restart-daemon request');
+  ipcMain.handle(RepositoryMonitoringAPIEvent.RESTART_DAEMON, async () => {
+    console.log('[RepositoryMonitoring] RESTART_DAEMON request');
     try {
       await manager.restartDaemon();
       return { success: true };
@@ -735,9 +731,9 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
     });
   });
 
-  // Forward worker lifecycle transitions (spawning -> ready -> running
-  // -> stopping/crashed -> restarting -> stopped/fatal) so the renderer
-  // can show "why is the server in this state".
+  // Forward daemon connection transitions (connecting -> connected
+  // -> reconnecting/disconnecting -> disconnected/unreachable) so the
+  // renderer can show "why is the connection in this state".
   manager.on('lifecycle', (event: LifecycleEvent) => {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((window) => {

@@ -34,8 +34,6 @@ export interface ExtendedRepositoryMonitoringAPI extends RepositoryMonitoringAPI
   setWatcherImpl: (
     impl: 'parcel' | 'chokidar',
   ) => Promise<{ success: boolean; changed?: boolean; error?: string }>;
-  /** Replace the shared repository monitor daemon; every client reconnects. */
-  restartDaemon: () => Promise<{ success: boolean; error?: string }>;
 }
 import type { SecretsAPI } from './SecretsAPI';
 import type { LinksAPI } from './LinksAPI';

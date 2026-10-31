@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   AlertTriangle,
@@ -8,13 +8,19 @@ import {
   ChevronRight,
   ClipboardCopy,
   ExternalLink,
+  Eye,
+  EyeOff,
   Loader2,
+  RefreshCw,
   RotateCcw,
 } from 'lucide-react';
 import type {
+  CacheSlice,
+  CacheSliceState,
   ServerDiagnostics,
   LifecycleEvent,
   LifecyclePhase,
+  RepoMonitorDiagnostics,
 } from '@principal-ai/repository-monitoring-server';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { ShellService } from '../../../main-process-api/ShellService';
@@ -23,14 +29,12 @@ type ThemeShape = ReturnType<typeof useTheme>['theme'];
 
 const PHASE_LABELS: Record<LifecyclePhase, string> = {
   idle: 'Idle',
-  spawning: 'Spawning',
-  ready: 'Ready',
-  running: 'Running',
-  stopping: 'Stopping',
-  stopped: 'Stopped',
-  crashed: 'Crashed',
-  restarting: 'Restarting',
-  fatal: 'Fatal',
+  connecting: 'Connecting',
+  connected: 'Connected',
+  reconnecting: 'Reconnecting',
+  disconnecting: 'Disconnecting',
+  disconnected: 'Disconnected',
+  unreachable: 'Unreachable',
 };
 
 const OWNER_LABELS: Record<
@@ -51,18 +55,16 @@ export function phaseAccentColor(
   theme: ThemeShape,
 ): string {
   switch (phase) {
-    case 'running':
-    case 'ready':
+    case 'connected':
       return theme.colors.success;
-    case 'spawning':
-    case 'restarting':
+    case 'connecting':
+    case 'reconnecting':
       return theme.colors.info ?? theme.colors.primary;
-    case 'stopping':
+    case 'disconnecting':
       return theme.colors.warning;
-    case 'crashed':
-    case 'fatal':
+    case 'unreachable':
       return theme.colors.error;
-    case 'stopped':
+    case 'disconnected':
     case 'idle':
     default:
       return theme.colors.textSecondary;
@@ -75,13 +77,9 @@ export function phaseTooltip(
 ): string {
   if (!diag) return phaseLabel(phase);
   const parts: string[] = [phaseLabel(phase)];
-  if (diag.workerPid) parts.push(`pid ${String(diag.workerPid)}`);
-  if (diag.lastExit) {
-    const code =
-      diag.lastExit.code === null ? 'null' : String(diag.lastExit.code);
-    parts.push(
-      `last exit: code ${code}${diag.lastExit.signal ? ` (${diag.lastExit.signal})` : ''}`,
-    );
+  if (diag.daemonPid) parts.push(`daemon pid ${String(diag.daemonPid)}`);
+  if (diag.lastDisconnect) {
+    parts.push(`last disconnect: ${diag.lastDisconnect.reason}`);
   }
   if (diag.lastError) parts.push(`last error: ${diag.lastError.message}`);
   return parts.join(' — ');
@@ -150,17 +148,9 @@ const LifecycleRow: React.FC<{ evt: LifecycleEvent; theme: ThemeShape }> = ({
   const color = phaseAccentColor(evt.phase, theme);
   const details: string[] = [];
   if (typeof evt.attempt === 'number') {
-    details.push(
-      `attempt ${String(evt.attempt)}${
-        evt.maxAttempts ? `/${String(evt.maxAttempts)}` : ''
-      }`,
-    );
+    details.push(`attempt ${String(evt.attempt)}`);
   }
-  if (evt.workerPid) details.push(`pid ${String(evt.workerPid)}`);
-  if (evt.exitCode !== undefined && evt.exitCode !== null) {
-    details.push(`code ${String(evt.exitCode)}`);
-  }
-  if (evt.exitSignal) details.push(`signal ${evt.exitSignal}`);
+  if (evt.daemonPid) details.push(`pid ${String(evt.daemonPid)}`);
   if (typeof evt.durationInPrevPhaseMs === 'number') {
     details.push(`+${formatRelativeDuration(evt.durationInPrevPhaseMs)}`);
   }
@@ -213,6 +203,256 @@ const LifecycleRow: React.FC<{ evt: LifecycleEvent; theme: ThemeShape }> = ({
   );
 };
 
+const SLICE_META: Array<{ slice: CacheSlice; label: string }> = [
+  { slice: 'fileTree', label: 'File tree' },
+  { slice: 'packages', label: 'Packages' },
+  { slice: 'gitStatus', label: 'Git status' },
+  { slice: 'gitRemote', label: 'Git remote' },
+];
+
+function formatAge(ts: number | undefined, now: number): string {
+  if (ts === undefined) return 'never';
+  const s = Math.max(0, Math.round((now - ts) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+
+const SliceCell: React.FC<{
+  state: CacheSliceState | undefined;
+  now: number;
+  theme: ThemeShape;
+}> = ({ state, now, theme }) => {
+  if (
+    !state ||
+    (state.updatedAt === undefined && !state.building && !state.error)
+  ) {
+    return <span style={{ color: theme.colors.textSecondary }}>—</span>;
+  }
+  if (state.error) {
+    return (
+      <span
+        title={state.error}
+        style={{
+          color: theme.colors.error,
+          display: 'inline-flex',
+          gap: '4px',
+          alignItems: 'center',
+        }}
+      >
+        <AlertTriangle size={11} /> failed
+      </span>
+    );
+  }
+  const detail =
+    state.count !== undefined ? ` · ${state.count.toLocaleString()}` : '';
+  return (
+    <span
+      title={state.sha ? `built at ${state.sha.slice(0, 7)}` : undefined}
+      style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}
+    >
+      {state.building && (
+        <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} />
+      )}
+      {state.building ? 'rebuilding' : formatAge(state.updatedAt, now)}
+      {detail}
+    </span>
+  );
+};
+
+/**
+ * Every repository the shared daemon knows about (registered by any client)
+ * with the freshness of each cache slice. Polled while the section is
+ * mounted; the data is daemon-wide, so repos other apps registered show too.
+ */
+const DaemonRepoTable: React.FC<{ nowTick: number; theme: ThemeShape }> = ({
+  nowTick,
+  theme,
+}) => {
+  const [snapshot, setSnapshot] = useState<RepoMonitorDiagnostics | null>(
+    null,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [rebuilding, setRebuilding] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const next = await RepositoryMonitoringService.getDaemonDiagnostics();
+        if (cancelled) return;
+        setSnapshot(next);
+        setError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    };
+    void poll();
+    const id = setInterval(poll, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+
+  const handleRebuild = async (repoPath: string) => {
+    setRebuilding(repoPath);
+    try {
+      await RepositoryMonitoringService.refreshRepository(repoPath);
+    } finally {
+      setRebuilding(null);
+    }
+  };
+
+  const cellStyle: React.CSSProperties = {
+    padding: '8px 12px',
+    whiteSpace: 'nowrap',
+    fontSize: '12px',
+  };
+  const headStyle: React.CSSProperties = {
+    ...cellStyle,
+    textAlign: 'left',
+    fontWeight: 500,
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    fontSize: '11px',
+  };
+
+  const message = (text: string, color = theme.colors.textSecondary) => (
+    <div style={{ padding: '12px 20px', fontSize: '12px', color }}>{text}</div>
+  );
+
+  if (error) return message(`Status request failed: ${error}`, theme.colors.error);
+  if (!snapshot) return message('Checking the daemon…');
+  if (snapshot.state === 'unreachable') {
+    return message(
+      `Daemon unreachable at ${snapshot.socketPath}${snapshot.error ? `: ${snapshot.error}` : ''}`,
+      theme.colors.error,
+    );
+  }
+  if (snapshot.state === 'starting') return message('Daemon is starting…');
+  if (snapshot.repos.length === 0) {
+    return message('No repositories registered with the daemon.');
+  }
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontFamily: theme.fonts.monospace,
+        }}
+      >
+        <thead>
+          <tr>
+            <th style={headStyle}>Repository</th>
+            {SLICE_META.map(({ slice, label }) => (
+              <th key={slice} style={headStyle}>
+                {label}
+              </th>
+            ))}
+            <th style={headStyle} />
+          </tr>
+        </thead>
+        <tbody>
+          {snapshot.repos.map((repo) => {
+            const name =
+              repo.path.split('/').filter(Boolean).pop() ?? repo.path;
+            const watchTitle = repo.isWatching
+              ? `Watching (${repo.watchingMode}${repo.fsMonitorEnabled ? ', git fsmonitor' : ''}) — ${String(repo.watchReferenceCount)} reference${repo.watchReferenceCount === 1 ? '' : 's'}`
+              : 'Not watching — slices refresh only on request';
+            const isRebuilding = rebuilding === repo.path;
+            return (
+              <tr
+                key={repo.path}
+                style={{ borderTop: `1px solid ${theme.colors.border}` }}
+              >
+                <td style={cellStyle}>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <span
+                      title={watchTitle}
+                      style={{
+                        display: 'inline-flex',
+                        color: repo.isWatching
+                          ? theme.colors.success
+                          : theme.colors.textSecondary,
+                      }}
+                    >
+                      {repo.isWatching ? <Eye size={13} /> : <EyeOff size={13} />}
+                    </span>
+                    <span title={repo.path} style={{ color: theme.colors.text }}>
+                      {name}
+                    </span>
+                    {repo.isWatching && repo.watchingMode === 'fallback' && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          color: theme.colors.textSecondary,
+                        }}
+                      >
+                        fallback
+                      </span>
+                    )}
+                  </div>
+                </td>
+                {SLICE_META.map(({ slice }) => (
+                  <td
+                    key={slice}
+                    style={{ ...cellStyle, color: theme.colors.textSecondary }}
+                  >
+                    <SliceCell
+                      state={repo.slices[slice]}
+                      now={nowTick}
+                      theme={theme}
+                    />
+                  </td>
+                ))}
+                <td style={{ ...cellStyle, textAlign: 'right' }}>
+                  <button
+                    onClick={() => void handleRebuild(repo.path)}
+                    disabled={rebuilding !== null}
+                    title="Drop every cached slice for this repo and rebuild."
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '3px 8px',
+                      fontSize: '11px',
+                      borderRadius: '4px',
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.background,
+                      color: theme.colors.text,
+                      cursor: rebuilding !== null ? 'not-allowed' : 'pointer',
+                      opacity: rebuilding !== null && !isRebuilding ? 0.5 : 1,
+                    }}
+                  >
+                    {isRebuilding ? (
+                      <Loader2
+                        size={11}
+                        style={{ animation: 'spin 1s linear infinite' }}
+                      />
+                    ) : (
+                      <RefreshCw size={11} />
+                    )}
+                    Rebuild
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 export const RepositoryMonitoringDiagnostics: React.FC<{
   diagnostics: ServerDiagnostics | null;
   /** Wall-clock now, ticked by parent so phase elapsed updates each second. */
@@ -220,6 +460,7 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
 }> = ({ diagnostics, nowTick }) => {
   const { theme } = useTheme();
   const [historyExpanded, setHistoryExpanded] = useState(true);
+  const [reposExpanded, setReposExpanded] = useState(true);
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const [switchingImpl, setSwitchingImpl] = useState<
     'parcel' | 'chokidar' | null
@@ -309,10 +550,10 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
                 color: phaseAccentColor(diagnostics.phase, theme),
               },
               {
-                label: 'PID',
+                label: 'Daemon PID',
                 value:
-                  diagnostics.workerPid !== null
-                    ? String(diagnostics.workerPid)
+                  diagnostics.daemonPid !== null
+                    ? String(diagnostics.daemonPid)
                     : '—',
               },
               {
@@ -322,29 +563,30 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
                 ),
               },
               {
-                label: 'Uptime',
-                value: diagnostics.lastReadyAt
-                  ? formatRelativeDuration(nowTick - diagnostics.lastReadyAt)
-                  : '—',
+                label: 'Connected for',
+                value:
+                  diagnostics.connected && diagnostics.lastConnectedAt
+                    ? formatRelativeDuration(
+                        nowTick - diagnostics.lastConnectedAt,
+                      )
+                    : '—',
               },
               {
                 label: 'Reconnects',
-                value: String(diagnostics.restartAttempts),
+                value: String(diagnostics.reconnectAttempts),
                 color:
-                  diagnostics.restartAttempts > 0
+                  diagnostics.reconnectAttempts > 0
                     ? theme.colors.warning
                     : undefined,
               },
               {
-                label: 'Last Exit',
-                value: diagnostics.lastExit
-                  ? `code ${diagnostics.lastExit.code ?? 'null'}${
-                      diagnostics.lastExit.signal
-                        ? ` (${diagnostics.lastExit.signal})`
-                        : ''
-                    }`
+                label: 'Last disconnect',
+                value: diagnostics.lastDisconnect
+                  ? `${formatAge(diagnostics.lastDisconnect.at, nowTick)} · ${diagnostics.lastDisconnect.reason}`
                   : '—',
-                color: diagnostics.lastExit ? theme.colors.error : undefined,
+                color: diagnostics.lastDisconnect
+                  ? theme.colors.warning
+                  : undefined,
               },
             ].map((cell) => (
               <div key={cell.label}>
@@ -487,7 +729,8 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
 
           {/* Watcher impl switcher. Lets users A/B test Parcel vs Chokidar
               without restarting the app — useful when isolating which
-              implementation is responsible for crashes or silent failures. */}          <div
+              implementation is responsible for crashes or silent failures. */}
+          <div
             style={{
               padding: '12px 20px',
               borderBottom: `1px solid ${theme.colors.border}`,
@@ -692,17 +935,17 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
               }}
             >
               <ExternalLink size={12} />
-              Open Main Log
+              Open app log
             </button>
             <button
               onClick={async () => {
                 try {
                   const logs = await RepositoryMonitoringService.getLogTail();
-                  if (logs.workerLog.path) {
-                    await ShellService.openPath(logs.workerLog.path);
+                  if (logs.daemonLog.path) {
+                    await ShellService.openPath(logs.daemonLog.path);
                   }
                 } catch (error) {
-                  console.error('Failed to open worker log:', error);
+                  console.error('Failed to open daemon log:', error);
                 }
               }}
               style={{
@@ -720,7 +963,7 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
               }}
             >
               <ExternalLink size={12} />
-              Open Worker Log
+              Open daemon log
             </button>
             <button
               onClick={async () => {
@@ -763,7 +1006,7 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
               ) : (
                 <ClipboardCopy size={12} />
               )}
-              {copyState === 'copied' ? 'Copied' : 'Copy Diagnostics JSON'}
+              {copyState === 'copied' ? 'Copied' : 'Copy diagnostics JSON'}
             </button>
           </div>
 
@@ -806,6 +1049,14 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
             )}
           </Collapsible>
 
+          <Collapsible
+            title="Repositories in the daemon"
+            expanded={reposExpanded}
+            onToggle={() => setReposExpanded((v) => !v)}
+            theme={theme}
+          >
+            <DaemonRepoTable nowTick={nowTick} theme={theme} />
+          </Collapsible>
         </div>
       )}
     </section>

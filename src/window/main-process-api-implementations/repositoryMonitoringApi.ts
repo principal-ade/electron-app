@@ -229,6 +229,12 @@ export const repositoryMonitoringAPI: ExtendedRepositoryMonitoringAPI = {
     return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_DIAGNOSTICS);
   },
 
+  getDaemonDiagnostics: async () => {
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.GET_DAEMON_DIAGNOSTICS,
+    );
+  },
+
   getLogTail: async (request?: LogTailRequest) => {
     return ipcRenderer.invoke(
       RepositoryMonitoringAPIEvent.GET_LOG_TAIL,
@@ -253,11 +259,14 @@ export const repositoryMonitoringAPI: ExtendedRepositoryMonitoringAPI = {
   },
 
   setWatcherImpl: async (impl: 'parcel' | 'chokidar') => {
-    return ipcRenderer.invoke('repository-monitoring:set-watcher-impl', impl);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.SET_WATCHER_IMPL,
+      impl,
+    );
   },
 
   restartDaemon: async () => {
-    return ipcRenderer.invoke('repository-monitoring:restart-daemon');
+    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.RESTART_DAEMON);
   },
 
   // Manually trigger workspace sync to otel-events-manager
