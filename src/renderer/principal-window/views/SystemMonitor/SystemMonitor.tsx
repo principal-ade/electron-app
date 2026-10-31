@@ -53,6 +53,67 @@ interface SystemMonitorProps {
 }
 
 
+const MonitorNavButton: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  badge?: number;
+  theme: ReturnType<typeof useTheme>['theme'];
+}> = ({ active, onClick, icon, label, badge, theme }) => (
+  <button
+    onClick={onClick}
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '12px 16px',
+      borderRadius: '8px',
+      border: 'none',
+      backgroundColor: active ? theme.colors.primary + '20' : 'transparent',
+      color: active ? theme.colors.primary : theme.colors.text,
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      fontSize: '14px',
+      fontWeight: active ? 600 : 500,
+      textAlign: 'left',
+      width: '100%',
+    }}
+    onMouseEnter={(e) => {
+      if (!active) {
+        e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+      }
+    }}
+    onMouseLeave={(e) => {
+      if (!active) {
+        e.currentTarget.style.backgroundColor = 'transparent';
+      }
+    }}
+  >
+    {icon}
+    {label}
+    {badge !== undefined && badge > 0 && (
+      <span
+        style={{
+          marginLeft: 'auto',
+          minWidth: '18px',
+          height: '18px',
+          borderRadius: '9px',
+          backgroundColor: theme.colors.success,
+          color: '#fff',
+          fontSize: '11px',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0 4px',
+        }}
+      >
+        {badge}
+      </span>
+    )}
+  </button>
+);
 export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   sidebarCollapsed,
 }) => {
@@ -657,7 +718,9 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
         backgroundColor: theme.colors.background,
         color: theme.colors.text,
         height: '100%',
-        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
       {/* CSS for animations */}
@@ -682,151 +745,104 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
       {/* Header */}
       <div
         style={{
-          padding: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '20px 24px',
           borderBottom: `1px solid ${theme.colors.border}`,
           backgroundColor: theme.colors.backgroundSecondary,
+          flexShrink: 0,
         }}
       >
+        <Activity size={20} color={theme.colors.primary} />
+        <h2
+          style={{
+            fontSize: '20px',
+            fontWeight: 600,
+            margin: 0,
+            fontFamily: theme.fonts.heading,
+          }}
+        >
+          System Monitor
+        </h2>
+      </div>
+
+      {/* Main Content Area */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Sidebar */}
+        <div
+          style={{
+            width: '240px',
+            borderRight: `1px solid ${theme.colors.border}`,
+            padding: '20px',
+            flexShrink: 0,
+            backgroundColor: theme.colors.backgroundSecondary,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <MonitorNavButton
+              active={activeTab === 'repository'}
+              onClick={() => setActiveTab('repository')}
+              icon={<HardDrive size={18} />}
+              label="Repository Monitoring"
+              theme={theme}
+            />
+            <MonitorNavButton
+              active={activeTab === 'terminals'}
+              onClick={() => setActiveTab('terminals')}
+              icon={<Terminal size={18} />}
+              label="Agent Activity"
+              badge={terminalActivities?.filter((a) => a.isWorking).length ?? 0}
+              theme={theme}
+            />
+            <MonitorNavButton
+              active={activeTab === 'clibridge'}
+              onClick={() => setActiveTab('clibridge')}
+              icon={<Wrench size={18} />}
+              label="CLI Bridge"
+              theme={theme}
+            />
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div style={{ flex: 1, padding: '32px', overflowY: 'auto' }}>
+        {/* Repository Monitoring Content */}
+        {activeTab === 'repository' && (
+          <>
+        {/* Section header: connection phase + start/stop */}
         <div
           style={{
             display: 'flex',
+            alignItems: 'center',
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
+            gap: '12px',
+            marginBottom: '24px',
           }}
         >
-          <div style={{ flex: 1 }}>
-            <h2
+          <div>
+            <h3
               style={{
-                fontSize: '20px',
+                fontSize: '18px',
                 fontWeight: 600,
                 margin: 0,
                 fontFamily: theme.fonts.heading,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
               }}
             >
-              <Activity size={20} style={{ color: theme.colors.primary }} />
-              System Monitor
-            </h2>
+              Repository Monitoring
+            </h3>
             <p
               style={{
-                fontSize: '14px',
+                fontSize: '13px',
                 color: theme.colors.textSecondary,
-                margin: '4px 0 12px 32px',
-                fontFamily: theme.fonts.body,
+                margin: '4px 0 0',
               }}
             >
-              Monitor repository and telemetry services
+              Shared daemon that watches repositories and caches file trees,
+              packages and git state.
             </p>
-
-            {/* Tab Selector */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '8px',
-                marginLeft: '32px',
-              }}
-            >
-              <button
-                onClick={() => setActiveTab('repository')}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  borderRadius: '6px',
-                  border: `1px solid ${activeTab === 'repository' ? theme.colors.primary : theme.colors.border}`,
-                  backgroundColor: activeTab === 'repository' ? `${theme.colors.primary}15` : 'transparent',
-                  color: activeTab === 'repository' ? theme.colors.primary : theme.colors.text,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontFamily: theme.fonts.body,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <HardDrive size={14} />
-                Repository Monitoring
-              </button>
-              <button
-                onClick={() => setActiveTab('terminals')}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  borderRadius: '6px',
-                  border: `1px solid ${activeTab === 'terminals' ? theme.colors.primary : theme.colors.border}`,
-                  backgroundColor: activeTab === 'terminals' ? `${theme.colors.primary}15` : 'transparent',
-                  color: activeTab === 'terminals' ? theme.colors.primary : theme.colors.text,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontFamily: theme.fonts.body,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  position: 'relative',
-                }}
-              >
-                <Terminal size={14} />
-                Agent Activity
-                {(terminalActivities?.filter(a => a.isWorking).length ?? 0) > 0 && (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: '-4px',
-                      right: '-4px',
-                      minWidth: '18px',
-                      height: '18px',
-                      borderRadius: '9px',
-                      backgroundColor: theme.colors.success,
-                      color: '#fff',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0 4px',
-                    }}
-                  >
-                    {terminalActivities?.filter(a => a.isWorking).length ?? 0}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab('clibridge')}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  borderRadius: '6px',
-                  border: `1px solid ${activeTab === 'clibridge' ? theme.colors.primary : theme.colors.border}`,
-                  backgroundColor: activeTab === 'clibridge' ? `${theme.colors.primary}15` : 'transparent',
-                  color: activeTab === 'clibridge' ? theme.colors.primary : theme.colors.text,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontFamily: theme.fonts.body,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <Wrench size={14} />
-                CLI Bridge
-              </button>
-            </div>
           </div>
-
-          {/* Power Control - Shows based on active tab */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-            }}
-          >
-            {activeTab === 'repository' && (
-              <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {/* Repository Monitoring Status (phase-aware). */}
                 {(() => {
                   const phase: LifecyclePhase =
@@ -897,20 +913,12 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                     opacity: isToggling ? 0.5 : 1,
                     transition: 'all 0.2s ease',
                   }}
-                  title={isRunning ? 'Stop monitoring' : 'Start monitoring'}
+                  title={isRunning ? 'Disconnect from the daemon' : 'Connect to the daemon'}
                 >
                   <Power size={20} />
                 </button>
-              </>
-            )}
           </div>
         </div>
-      </div>
-
-      <div style={{ padding: '20px' }}>
-        {/* Repository Monitoring Content */}
-        {activeTab === 'repository' && (
-          <>
         {/* Memory Warning */}
         {status && status.currentMemory > 500 * 1024 * 1024 && (
           <div
@@ -2862,6 +2870,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
           </div>
         </section>
         )}
+        </div>
       </div>
     </div>
   );
