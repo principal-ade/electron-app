@@ -406,7 +406,7 @@ export const SkillsSurfaceProvider: React.FC<{
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, enabled]);
+  }, [viewMode, enabled, browseFileTree]);
 
   // Load detected directories, recent repos, and installed skills (when in use).
   useEffect(() => {

@@ -70,7 +70,9 @@ function sourceLabel(skill: Skill): string {
 
 /** Lock file entries are keyed by the skill's folder name. */
 function skillFolderName(skill: Skill): string {
-  const parts = (skill.skillFolderPath || skill.path).split('/').filter(Boolean);
+  const parts = (skill.skillFolderPath || skill.path)
+    .split('/')
+    .filter(Boolean);
   return parts[parts.length - 1] || skill.name;
 }
 
@@ -79,6 +81,8 @@ interface SkillGroup {
   label: string;
   /** GitHub owner, for the avatar. Absent for non-GitHub or untracked skills. */
   login?: string;
+  /** URL to browse this group's source repo; absent for the Local group. */
+  browseUrl?: string;
   skills: Skill[];
 }
 
@@ -95,12 +99,24 @@ function groupBySource(
     let key = LOCAL_GROUP_KEY;
     let label = 'Local';
     let login: string | undefined;
+    let browseUrl: string | undefined;
     if (entry?.source) {
       key = entry.source;
       label = entry.source;
-      if (entry.sourceType === 'github') login = entry.source.split('/')[0];
+      if (entry.sourceType === 'github') {
+        login = entry.source.split('/')[0];
+        browseUrl = entry.branch
+          ? `https://github.com/${entry.source}/tree/${entry.branch}`
+          : entry.sourceUrl || `https://github.com/${entry.source}`;
+      }
     }
-    const group = groups.get(key) ?? { key, label, login, skills: [] };
+    const group = groups.get(key) ?? {
+      key,
+      label,
+      login,
+      browseUrl,
+      skills: [],
+    };
     group.skills.push(skill);
     groups.set(key, group);
   }
@@ -116,9 +132,7 @@ function matchesQuery(skill: Skill, query: string): boolean {
   return (
     skill.name.toLowerCase().includes(query) ||
     (skill.description ?? '').toLowerCase().includes(query) ||
-    (skill.capabilities ?? []).some((cap) =>
-      cap.toLowerCase().includes(query),
-    )
+    (skill.capabilities ?? []).some((cap) => cap.toLowerCase().includes(query))
   );
 }
 
@@ -319,15 +333,14 @@ const SkillRow: React.FC<SkillRowProps> = ({
   );
 };
 
-const InstalledSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = ({
-  s,
-  query,
-}) => {
+const InstalledSkillRows: React.FC<{
+  s: SkillsSurfaceValue;
+  query: string;
+}> = ({ s, query }) => {
   const { activeTabId } = useWorkspaceTabs();
   const { skills, isLoading, error } = useSkillsData({ context: s.context });
   const showLoading = useDelayedLoading(isLoading);
   const [lock, setLock] = useState<Record<string, SkillLockEntry>>({});
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const loadLock = useCallback(async () => {
     try {
@@ -341,7 +354,10 @@ const InstalledSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = (
   useEffect(() => {
     void loadLock();
     const offInstalled = s.events.on('skill:installed', () => void loadLock());
-    const offUninstalled = s.events.on('skill:uninstalled', () => void loadLock());
+    const offUninstalled = s.events.on(
+      'skill:uninstalled',
+      () => void loadLock(),
+    );
     return () => {
       offInstalled();
       offUninstalled();
@@ -354,7 +370,10 @@ const InstalledSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = (
       const locations = skill.installedLocations?.length
         ? skill.installedLocations.map((loc) => loc.source)
         : [skill.source];
-      return locations.some((src) => src.startsWith('global-')) && matchesQuery(skill, q);
+      return (
+        locations.some((src) => src.startsWith('global-')) &&
+        matchesQuery(skill, q)
+      );
     });
   }, [skills, query]);
 
@@ -370,24 +389,23 @@ const InstalledSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = (
     );
   }
   if (skills.length === 0) {
-    return <EmptyState text="No skills installed yet. Use Browse to find some." />;
+    return (
+      <EmptyState text="No skills installed yet. Use Browse to find some." />
+    );
   }
   if (visible.length === 0) {
     return <EmptyState text="No skills match this filter." />;
   }
 
-  const toggle = (key: string) =>
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+  const browseSource = (url: string) => {
+    s.setViewMode('browse');
+    s.setGithubUrl(url);
+    void s.handleFetchSkills(url);
+  };
 
   return (
     <>
       {groups.map((group) => {
-        const isCollapsed = collapsed.has(group.key);
         return (
           <React.Fragment key={group.key}>
             <OrgSectionHeaderCard
@@ -398,30 +416,32 @@ const InstalledSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = (
                 isUntracked: !group.login,
                 repoCount: group.skills.length,
               }}
-              isCollapsed={isCollapsed}
-              onToggle={() => toggle(group.key)}
+              onOpen={
+                group.browseUrl
+                  ? () => browseSource(group.browseUrl as string)
+                  : undefined
+              }
             />
-            {!isCollapsed &&
-              group.skills.map((skill) => (
-                <SkillRow
-                  key={skill.id}
-                  skill={skill}
-                  draggable
-                  active={
-                    activeTabId === 'skill-detail' &&
-                    s.selectedSkill?.id === skill.id
-                  }
-                  tag={sourceLabel(skill)}
-                  onClick={() =>
-                    s.events.emit({
-                      type: 'skill:selected',
-                      source: 'skills-left-panel',
-                      timestamp: Date.now(),
-                      payload: { skillId: skill.id, skill },
-                    })
-                  }
-                />
-              ))}
+            {group.skills.map((skill) => (
+              <SkillRow
+                key={skill.id}
+                skill={skill}
+                draggable
+                active={
+                  activeTabId === 'skill-detail' &&
+                  s.selectedSkill?.id === skill.id
+                }
+                tag={sourceLabel(skill)}
+                onClick={() =>
+                  s.events.emit({
+                    type: 'skill:selected',
+                    source: 'skills-left-panel',
+                    timestamp: Date.now(),
+                    payload: { skillId: skill.id, skill },
+                  })
+                }
+              />
+            ))}
           </React.Fragment>
         );
       })}
@@ -435,7 +455,9 @@ const BrowseSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = ({
 }) => {
   const { theme } = useTheme();
   const { activeTabId } = useWorkspaceTabs();
-  const { skills, isLoading, error } = useSkillsBrowseData({ context: s.context });
+  const { skills, isLoading, error } = useSkillsBrowseData({
+    context: s.context,
+  });
   const showLoading = useDelayedLoading(isLoading || s.isLoading);
 
   const visible = useMemo(() => {
@@ -462,7 +484,9 @@ const BrowseSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = ({
           <SkillRow
             key={skill.id}
             skill={skill}
-            active={activeTabId === 'skill-detail' && s.selectedSkill?.id === skill.id}
+            active={
+              activeTabId === 'skill-detail' && s.selectedSkill?.id === skill.id
+            }
             tag={
               installed ? (
                 <>
@@ -531,7 +555,10 @@ const RepoBar: React.FC<{ s: SkillsSurfaceValue }> = ({ s }) => {
             title={`${repo.owner}/${repo.repo} @ ${repo.branch}`}
           >
             {repo.owner}/{repo.repo}
-            <span style={{ color: theme.colors.textMuted }}> @ {repo.branch}</span>
+            <span style={{ color: theme.colors.textMuted }}>
+              {' '}
+              @ {repo.branch}
+            </span>
           </span>
           <button
             type="button"
@@ -641,7 +668,9 @@ const RecentRepoRows: React.FC<{
                 }}
               >
                 <span style={{ flex: 1, minWidth: 0 }}>{repo.branch}</span>
-                <span style={{ flexShrink: 0 }}>{timeAgo(repo.lastVisited)}</span>
+                <span style={{ flexShrink: 0 }}>
+                  {timeAgo(repo.lastVisited)}
+                </span>
               </div>
             </div>
           </button>
@@ -694,7 +723,9 @@ export const SkillsLeftPanel: React.FC = () => {
   const refresh = () => {
     if (browsing) {
       if (s.githubRepoInfo) {
-        void s.handleFetchSkills(s.githubUrl || `${s.githubRepoInfo.owner}/${s.githubRepoInfo.repo}`);
+        void s.handleFetchSkills(
+          s.githubUrl || `${s.githubRepoInfo.owner}/${s.githubRepoInfo.repo}`,
+        );
       }
       return;
     }
@@ -735,7 +766,11 @@ export const SkillsLeftPanel: React.FC = () => {
           flexShrink: 0,
         }}
       >
-        <ToolCase size={16} color={theme.colors.text} style={{ marginLeft: 4 }} />
+        <ToolCase
+          size={16}
+          color={theme.colors.text}
+          style={{ marginLeft: 4 }}
+        />
         <span
           style={{
             flex: 1,
