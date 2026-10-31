@@ -484,10 +484,12 @@ const InstalledSkillRows: React.FC<{
             {group.skills.map((skill) => {
               const name = skillFolderName(skill);
               const entry = lock[name];
-              const updatable =
-                entry?.sourceType === 'github' && !!entry.skillPath;
               const isUpdating = !!updating[name];
-              const outdated = !!hasUpdate[name];
+              // Only offer Update when the lock check found newer files upstream.
+              const showUpdate =
+                entry?.sourceType === 'github' &&
+                !!entry.skillPath &&
+                (!!hasUpdate[name] || isUpdating);
               return (
                 <SkillRow
                   key={skill.id}
@@ -499,15 +501,13 @@ const InstalledSkillRows: React.FC<{
                   }
                   tag={sourceLabel(skill)}
                   actions={
-                    updatable ? (
+                    showUpdate ? (
                       <button
                         type="button"
                         title={
                           isUpdating
                             ? 'Updating…'
-                            : outdated
-                              ? `Update ${skill.name} from ${entry.source}`
-                              : `Reinstall ${skill.name} from ${entry.source}`
+                            : `Update ${skill.name} from ${entry.source}`
                         }
                         disabled={isUpdating}
                         onClick={(e) => {
@@ -516,9 +516,7 @@ const InstalledSkillRows: React.FC<{
                         }}
                         style={{
                           ...iconButtonStyle(theme, spacing),
-                          color: outdated
-                            ? theme.colors.primary
-                            : theme.colors.textSecondary,
+                          color: theme.colors.primary,
                           cursor: isUpdating ? 'default' : 'pointer',
                         }}
                       >
