@@ -18,6 +18,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import { broadcastRepositoryWindowsChanged } from './modernWindowHandlers';
 import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { registerRepository } from '../alexandria/registerRepository';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
 
@@ -50,13 +51,13 @@ export async function openDevWorkspaceWindow(
   // Every dev-workspace window must be backed by a registered AlexandriaEntry —
   // path is the registry primary key, and downstream slices/lookups depend on
   // it. If the caller passed an entry whose path isn't in the registry
-  // (stale state, external trigger, race), register it now.
-  const alexandriaEntry =
-    (await registry.getRepositoryByPath(options.alexandriaEntry.path)) ??
-    (await registry.registerRepository(
-      options.alexandriaEntry.path,
-      options.alexandriaEntry.remoteUrl,
-    ));
+  // (stale state, external trigger, race), register it now — through the
+  // shared path so other windows learn about it too.
+  const { entry: alexandriaEntry } = await registerRepository(
+    options.alexandriaEntry.path,
+    options.alexandriaEntry.remoteUrl,
+    { registry },
+  );
 
   const windowName = `${DEV_WORKSPACE_PURPOSE}-${alexandriaEntry.path}`;
   const tracer = getTracer('principal-ade-main');

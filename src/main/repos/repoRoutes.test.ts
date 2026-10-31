@@ -41,6 +41,16 @@ function setup(options: SetupOptions = {}) {
   const deps: RepoRouteDependencies = {
     cloneRepository: jest.fn().mockResolvedValue(undefined),
     getBaseDefaultDirectory: jest.fn().mockResolvedValue(BASE),
+    // Side-effect-free registration: exercises the registry mock without the
+    // window broadcast / monitoring the shared path adds in production.
+    registerRepository: async (repoPath, remoteUrl) => {
+      const existing = await registry.getRepositoryByPath(repoPath);
+      if (existing) return { entry: existing, created: false };
+      return {
+        entry: await registry.registerRepository(repoPath, remoteUrl),
+        created: true,
+      };
+    },
     ...options.deps,
   };
 

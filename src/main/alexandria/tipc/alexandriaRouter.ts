@@ -9,7 +9,6 @@
  */
 
 import { tipc } from '@egoist/tipc/main';
-import { BrowserWindow } from 'electron';
 import type {
   GetRepositoryByPathInput,
   RegisterRepositoryInput,
@@ -21,11 +20,13 @@ import type {
   GetCodebaseViewInput,
   MoveRepositoryToConventionalPathInput,
 } from '../../../shared/tipc/alexandriaRouterTypes';
-import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { AlexandriaRegistryService } from '../../stores/AlexandriaRegistryService';
 import { moveRepositoryToConventionalPath } from '../moveRepositoryToConventionalPath';
-import { RepositoryRegistrationManager } from '@principal-ai/repository-monitoring-server';
-import { getManager as getRepositoryMonitoringManager } from '../../repository-monitoring/ipcHandlers';
+import {
+  broadcastAlexandriaEvent,
+  registerRepository,
+  unregisterFromMonitoring,
+} from '../registerRepository';
 import { AlexandriaAPIEvent } from '../../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { getTracer } from '../../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
@@ -34,77 +35,6 @@ import { SpanStatusCode } from '@opentelemetry/api';
 const registryService = AlexandriaRegistryService.getInstance();
 
 const t = tipc.create();
-
-/**
- * Broadcast Alexandria events to all windows
- */
-function broadcastAlexandriaEvent(
-  eventType:
-    | AlexandriaAPIEvent.REPOSITORY_ADDED
-    | AlexandriaAPIEvent.REPOSITORY_UPDATED
-    | AlexandriaAPIEvent.REPOSITORY_REMOVED,
-  data: AlexandriaEntry | { path: string },
-): void {
-  const windows = BrowserWindow.getAllWindows();
-  const activeWindows = windows.filter((w) => !w.isDestroyed());
-
-  // Track broadcast for recently-opened flow
-  if (eventType === AlexandriaAPIEvent.REPOSITORY_UPDATED && 'name' in data) {
-    const tracer = getTracer('principal-ade-main');
-    const span = tracer.startSpan(
-      'alexandria.event.repository_updated_broadcast',
-    );
-    span.setAttributes({
-      repository_name: data.name,
-      window_count: activeWindows.length,
-    });
-    span.end();
-  }
-
-  activeWindows.forEach((window) => {
-    window.webContents.send(eventType, data);
-  });
-}
-
-/**
- * Register repository with monitoring system
- */
-async function registerWithMonitoring(repo: AlexandriaEntry): Promise<void> {
-  if (!repo?.path) {
-    return;
-  }
-
-  try {
-    const monitoringManager = getRepositoryMonitoringManager();
-    const registrationManager = RepositoryRegistrationManager.getInstance({
-      monitoringManager,
-    });
-    await registrationManager.handleRepositoryAdded(repo);
-  } catch (error) {
-    console.error(
-      '[Alexandria] Failed to register repository with monitoring:',
-      error,
-    );
-  }
-}
-
-/**
- * Unregister repository from monitoring system
- */
-async function unregisterFromMonitoring(repoPath: string): Promise<void> {
-  try {
-    const monitoringManager = getRepositoryMonitoringManager();
-    const registrationManager = RepositoryRegistrationManager.getInstance({
-      monitoringManager,
-    });
-    await registrationManager.handleRepositoryRemoved(repoPath);
-  } catch (error) {
-    console.error(
-      '[Alexandria] Failed to unregister repository from monitoring:',
-      error,
-    );
-  }
-}
 
 export const alexandriaRouter = {
   // ===========================================================================
@@ -142,17 +72,12 @@ export const alexandriaRouter = {
   alexandria_registerRepository: t.procedure
     .input<RegisterRepositoryInput>()
     .action(async ({ input }) => {
-      const existing = await registryService.getRepositoryByPath(input.path);
-      if (existing) {
-        return existing;
-      }
-      const repo = await registryService.registerRepository(
-        input.path,
-        input.remoteUrl,
-      );
-      broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_ADDED, repo);
-      await registerWithMonitoring(repo);
-      return repo;
+      // Shared with the bridge routes: writes the registry, broadcasts
+      // REPOSITORY_ADDED, registers with monitoring.
+      const { entry } = await registerRepository(input.path, input.remoteUrl, {
+        registry: registryService,
+      });
+      return entry;
     }),
 
   alexandria_removeRepository: t.procedure

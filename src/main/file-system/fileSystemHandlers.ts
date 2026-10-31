@@ -42,6 +42,7 @@ function extensionForDroppedFile(mimeType: string, name: string): string {
 }
 import { GitRepositoryScannerService } from './gitRepositoryScannerService';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { registerRepository } from '../alexandria/registerRepository';
 import os from 'os';
 import { getLocalFileStats } from './localFileStats';
 
@@ -2775,9 +2776,11 @@ This placeholder skill can be safely deleted once you've installed your first sk
 
             // Path is the canonical key — name collisions across forks are
             // expected and handled by the library (purl-based identity).
-            const registered = await alexandriaService.registerRepository(
+            // Shared path so open windows reload their repository lists.
+            const { entry: registered } = await registerRepository(
               repo.path,
               remoteUrl,
+              { registry: alexandriaService },
             );
 
             console.log(`[scanFoldersForRepos] Successfully registered: ${registered.name} at ${repo.path}`);

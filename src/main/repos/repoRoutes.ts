@@ -20,6 +20,10 @@ import { joinClonePath } from '../../shared/utils/clonePath';
 import { MAX_CLONE_BATCH } from '../principal-mcp/routeCatalog';
 import { parseCloneTarget } from './cloneTarget';
 import { cloneRepositoryToPath } from './cloneRepository';
+import {
+  registerRepository as registerRepositoryShared,
+  type RegisterRepositoryResult,
+} from '../alexandria/registerRepository';
 
 /**
  * Injectables for tests. Production callers pass nothing and get the real git
@@ -32,6 +36,14 @@ export interface RepoRouteDependencies {
     options: { depth?: number },
   ) => Promise<void>;
   getBaseDefaultDirectory?: () => Promise<string | undefined>;
+  /**
+   * Registration with its side effects (REPOSITORY_ADDED broadcast, monitoring).
+   * Defaults to the shared main-process path bound to `registry`.
+   */
+  registerRepository?: (
+    repoPath: string,
+    remoteUrl?: string,
+  ) => Promise<RegisterRepositoryResult>;
 }
 
 /**
@@ -154,6 +166,12 @@ export function registerRepoRoutes(
         .getUserPreferences();
       return preferences.baseDefaultDirectory;
     });
+  // Same side effects as the in-app register (window reload, monitoring); a
+  // repo added from a terminal must show up in the UI without a restart.
+  const registerRepository =
+    deps.registerRepository ??
+    ((repoPath, remoteUrl) =>
+      registerRepositoryShared(repoPath, remoteUrl, { registry }));
   // List registered repositories. Cheap discovery affordance so an agent can
   // check whether a path is already registered before POSTing.
   app.get('/api/repos', async (_req: Request, res: Response) => {
@@ -275,7 +293,7 @@ export function registerRepoRoutes(
         if (shouldRegister) {
           try {
             repo = summarizeEntry(
-              await registry.registerRepository(targetPath, cloneUrl),
+              (await registerRepository(targetPath, cloneUrl)).entry,
             );
           } catch (err) {
             // The clone is on disk; surfacing registration failure separately
@@ -361,11 +379,10 @@ export function registerRepoRoutes(
     }
 
     try {
-      const existing = await registry.getRepositoryByPath(repoPath);
-      const entry = await registry.registerRepository(repoPath, remoteUrl);
-      res.status(existing ? 200 : 201).json({
+      const { entry, created } = await registerRepository(repoPath, remoteUrl);
+      res.status(created ? 201 : 200).json({
         success: true,
-        alreadyRegistered: !!existing,
+        alreadyRegistered: !created,
         repo: summarizeEntry(entry),
       });
     } catch (err) {
