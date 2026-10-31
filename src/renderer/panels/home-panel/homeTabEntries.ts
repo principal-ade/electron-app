@@ -157,7 +157,7 @@ export function entryFromTab(
         title: tab.label,
       };
     case 'skill':
-      return { ...base, kind: 'skill' };
+      return { ...base, kind: 'skill', skillId: tab.skillId };
     case 'localhost-browser':
       return {
         ...base,

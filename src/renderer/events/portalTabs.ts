@@ -25,6 +25,7 @@ import type { ProcessStatus } from '../../shared/main-process-api-interfaces/Pro
 import type { RequestPanelState } from '@principal-ade/bruno-panels';
 import type { RequestTarget } from '../../shared/requests/preparedRequest';
 import type { DocumentRange } from '../../shared/documentRange';
+import type { Skill } from '../panels/agent-panels/skills/hooks/useSkillsData';
 
 export interface HttpRequestTab extends BaseTab {
   contentType: 'http-request';
@@ -179,13 +180,15 @@ export interface DrawingTab extends BaseTab {
 // ---------------------------------------------------------------------------
 
 /**
- * Skill detail tab — a singleton view of the currently-selected skill. The body
- * (`SkillDetailTabContent`) reads the selected skill + install config from the
- * Skills surface context, so the tab carries no per-skill data; selecting a
- * different skill in the left list just updates this one tab's label + content.
+ * Skill detail tab — one per skill (`skill-<skillId>`). Carries the full skill
+ * so the body (`SkillDetailTabContent`) renders immediately; install state and
+ * metadata still come from the Skills surface context, which follows the
+ * active skill tab.
  */
 export interface SkillTab extends BaseTab {
   contentType: 'skill';
+  skillId: string;
+  skill: Skill;
 }
 
 /** Read-only subsystem model graph tab. */

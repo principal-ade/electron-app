@@ -360,6 +360,7 @@ export interface HomePinnedTab {
   drawingId?: string;
   name?: string;
   modelId?: string;
+  skillId?: string;
   /** Secure request-store id only. Never put a request payload in preferences. */
   savedRequestId?: string;
   /** Drawing file path, localhost URL path, or terminal directory (by kind). */

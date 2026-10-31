@@ -126,6 +126,7 @@ import type {
   FeedTab,
   DrawingTab,
   SubsystemModelTab,
+  SkillTab,
   LocalhostBrowserTab,
 } from '../events/portalTabs';
 import {
@@ -299,7 +300,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     openSubsystemModel,
     openC4Sketch,
     openDrawing,
-    openSkill,
     openLocalhostBrowser,
     openHttpRequest,
     catalogRequests,
@@ -585,8 +585,12 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             />
           );
         }
-        case 'skill':
-          return <SkillDetailTabContent key={tab.id} />;
+        case 'skill': {
+          const skillTab = tab as SkillTab;
+          return (
+            <SkillDetailTabContent key={skillTab.id} skill={skillTab.skill} />
+          );
+        }
         case 'http-request':
           return <HttpRequestTabContent key={tab.sessionId} tab={tab} />;
         default:
@@ -773,7 +777,16 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           }
           break;
         case 'skill':
-          openSkill(entry.label);
+          // The shell has no skill data; the Skills surface resolves the id
+          // against its loaded skills and opens the tab.
+          if (entry.skillId) {
+            skillsBus.emit({
+              type: 'skill:selected',
+              source: 'home-panel',
+              timestamp: Date.now(),
+              payload: { skillId: entry.skillId },
+            });
+          }
           break;
         case 'localhost-browser':
           if (entry.port != null) {
@@ -837,7 +850,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       openSourceFile,
       openMedia,
       openSubsystemModel,
-      openSkill,
+      skillsBus,
       openLocalhostBrowser,
       openRepoExplorer,
       openFileCityGuide,

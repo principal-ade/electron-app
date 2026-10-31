@@ -20,6 +20,7 @@ import React, {
 } from 'react';
 import type { TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import type { DocumentRange } from '../../shared/documentRange';
+import type { Skill } from '../panels/agent-panels/skills/hooks/useSkillsData';
 import type {
   CommitReviewTab,
   ProjectInfoTab,
@@ -141,7 +142,7 @@ export interface WorkspaceTabsContextValue {
     name: string;
   }) => void;
   /** Open (or focus) the singleton `skill` detail tab; updates its label. */
-  openSkill: (label: string) => void;
+  openSkill: (skill: Skill) => void;
   /** Open or focus a subsystem model tab. */
   openSubsystemModel: (modelId: string, title: string) => void;
   /** Open or focus a standalone authored C4 sketch tab. */
@@ -550,26 +551,24 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [tabs],
   );
 
-  // Singleton skill detail tab — one tab follows the current selection; opening
-  // a different skill just relabels + focuses it (content reads the surface
-  // context, so no per-skill tab data).
-  const openSkill = useCallback((label: string) => {
-    const id = 'skill-detail';
-    setTabs((prev) =>
-      prev.some((t) => t.id === id)
-        ? prev.map((t) => (t.id === id ? { ...t, label } : t))
-        : [
-            ...prev,
-            {
-              id,
-              label: label || 'Skill',
-              contentType: 'skill',
-              closable: true,
-            } as SkillTab,
-          ],
-    );
-    setActiveTabId(id);
-  }, []);
+  const openSkill = useCallback(
+    (skill: Skill) => {
+      const id = `skill-${skill.id}`;
+      openTab(
+        id,
+        () =>
+          ({
+            id,
+            label: skill.name || 'Skill',
+            contentType: 'skill',
+            closable: true,
+            skillId: skill.id,
+            skill,
+          }) as SkillTab,
+      );
+    },
+    [openTab],
+  );
 
   const openSubsystemModel = useCallback(
     (modelId: string, title: string) => {

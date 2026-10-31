@@ -32,6 +32,7 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { useSkillBrowserPanelProvider } from '../principal-window/views/SkillBrowserView/SkillBrowserPanelProvider';
 import { useSkillsSync } from '../hooks/useSkillsSync';
+import { useSkillsData } from '../panels/agent-panels/skills/hooks/useSkillsData';
 import {
   type SkillDestination,
   DIRECTORY_ID_TO_DESTINATION,
@@ -156,7 +157,8 @@ export const SkillsSurfaceProvider: React.FC<{
 }> = ({ enabled, children }) => {
   const { context, actions, events } = useSkillBrowserPanelProvider();
   const { getConfig } = useSkillsSync();
-  const { openSkill } = useWorkspaceTabs();
+  const { openSkill, tabs, activeTabId } = useWorkspaceTabs();
+  const { skills: installedSkills } = useSkillsData({ context });
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingConfig, setCheckingConfig] = useState(true);
@@ -202,19 +204,16 @@ export const SkillsSurfaceProvider: React.FC<{
     };
   }, [enabled, getConfig]);
 
-  // Clear selected skill when switching view modes
+  // The selection (and the metadata/edit state derived from it) follows the
+  // active skill tab, so each open tab gets its own install state when focused.
   useEffect(() => {
-    setSelectedSkill(null);
-    setSelectedSkillMetadata(null);
-  }, [viewMode]);
-
-  // Clear selected skill when loading a new GitHub repo
-  useEffect(() => {
-    if (viewMode === 'browse' && githubRepoInfo) {
-      setSelectedSkill(null);
-      setSelectedSkillMetadata(null);
+    const tab = tabs.find((t) => t.id === activeTabId);
+    if (tab?.contentType === 'skill') {
+      setSelectedSkill((prev) =>
+        prev?.id === tab.skill.id ? prev : tab.skill,
+      );
     }
-  }, [githubRepoInfo, viewMode]);
+  }, [tabs, activeTabId]);
 
   const parseGithubUrl = useCallback((url: string) => {
     const trimmed = url.trim();
@@ -353,17 +352,33 @@ export const SkillsSurfaceProvider: React.FC<{
     [loadDetectedDirectories, loadInstalledSkills],
   );
 
-  // Listen for skill selection → track it + open/focus the detail tab.
+  // Listen for skill selection → track it + open/focus its detail tab. An
+  // id-only payload (e.g. a pinned Home entry) is resolved against the loaded
+  // installed skills.
   useEffect(() => {
     const unsubscribe = events.on('skill:selected', (event) => {
-      const payload = event.payload as { skill: Skill } | undefined;
-      if (payload?.skill) {
-        setSelectedSkill(payload.skill);
-        openSkill(payload.skill.name);
+      const payload = event.payload as
+        | { skill?: Skill; skillId?: string }
+        | undefined;
+      const skill =
+        payload?.skill ??
+        (payload?.skillId
+          ? installedSkills.find((s) => s.id === payload.skillId)
+          : undefined);
+      if (!skill) {
+        if (payload?.skillId) {
+          console.warn(
+            '[SkillsSurface] skill:selected for unknown skill id',
+            payload.skillId,
+          );
+        }
+        return;
       }
+      setSelectedSkill(skill);
+      openSkill(skill);
     });
     return unsubscribe;
-  }, [events, openSkill]);
+  }, [events, openSkill, installedSkills]);
 
   // Refresh installed skills after an install
   useEffect(() => {

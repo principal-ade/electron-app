@@ -485,10 +485,7 @@ const InstalledSkillRows: React.FC<{
                   key={skill.id}
                   skill={skill}
                   draggable
-                  active={
-                    activeTabId === 'skill-detail' &&
-                    s.selectedSkill?.id === skill.id
-                  }
+                  active={activeTabId === `skill-${skill.id}`}
                   actions={
                     showUpdate ? (
                       <button
@@ -573,9 +570,7 @@ const BrowseSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = ({
           <SkillRow
             key={skill.id}
             skill={skill}
-            active={
-              activeTabId === 'skill-detail' && s.selectedSkill?.id === skill.id
-            }
+            active={activeTabId === `skill-${skill.id}`}
             tag={
               installed ? (
                 <>
