@@ -12,6 +12,7 @@ import { ElectronFileAdapter, BrunoLangParserAdapter } from '../bruno/adapters';
 import { registerDocumentNotesRoutes } from '../document-notes/documentNotesRoutes';
 import { registerDocumentRoutes } from './documentRoutes';
 import { registerBrowserRoutes } from './browserRoutes';
+import { registerRepoOpenRoutes } from './repoOpenRoutes';
 import { registerRequestRoutes } from './requestRoutes';
 import { getDocumentNotesPersistence } from '../document-notes/documentNotesPersistence';
 import { registerTopicRoutes } from '../topics/topicRoutes';
@@ -1027,6 +1028,7 @@ export class PrincipalMCPBridge extends EventEmitter {
     // ============================================
     registerDocumentRoutes(this.app);
     registerBrowserRoutes(this.app, getProcessRegistry());
+    registerRepoOpenRoutes(this.app);
     registerRequestRoutes(this.app);
 
     // ============================================

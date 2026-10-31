@@ -317,8 +317,31 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
   {
     name: 'repos',
     description:
-      'Discover, clone, register, and de-register local Alexandria repositories and their PURLs.',
+      'Open GitHub repository tabs; discover, clone, register, and de-register local Alexandria repositories and their PURLs.',
     routes: [
+      {
+        method: 'POST',
+        path: '/api/repos/open',
+        summary:
+          'Open or focus the native GitHub repository explorer tab without cloning.',
+        body: {
+          repo: 'string (required): owner/repo, pkg:github/owner/repo, or https://github.com/owner/repo. Repository roots only; optional .git suffix and trailing slash.',
+        },
+        response:
+          '{ success: true, delivered: boolean, purl, reason?: "no-focused-repository-host" }',
+        errors: {
+          '400': 'Missing, invalid, or unsupported repository identifier.',
+          '403': 'Origin or Sec-Fetch-Site header present.',
+          '500': 'Failed to dispatch the repository-open event.',
+        },
+        notes: [
+          'Reuses the same native repository explorer as GitHub Quick Open results, not an embedded browser page. Works for remote-only and already-cloned GitHub repositories; never clones, registers, or forks.',
+          'Requires an already-focused Principal MAIN window. Does not create or focus a window. Ask the user to focus MAIN when delivered is false.',
+          'delivered: true means the event was sent, not a renderer acknowledgement or successful data load. The renderer reveals the workspace and opens or focuses a tab keyed by repository PURL.',
+          'Only github.com repository roots are supported. Rejects other hosts, filesystem paths, credentials, query strings, fragments, and subpaths such as /issues or /tree/main. GitHub data uses the app’s existing authentication and network access.',
+        ],
+        example: { repo: 'https://github.com/TimBroddin/gitstatus' },
+      },
       {
         method: 'GET',
         path: '/api/repos',

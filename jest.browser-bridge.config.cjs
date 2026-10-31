@@ -4,6 +4,7 @@ module.exports = {
   setupFiles: [],
   testMatch: [
     '<rootDir>/src/main/principal-mcp/browser*.test.ts',
+    '<rootDir>/src/main/principal-mcp/repoOpenRoutes.test.ts',
     '<rootDir>/src/main/principal-mcp/documentRoutes.test.ts',
     '<rootDir>/src/renderer/hooks/useTerminalLinkRouting.test.tsx',
     '<rootDir>/src/renderer/dev-workspace/file-city-panel/FloatingTerminalOverlay.test.tsx',
