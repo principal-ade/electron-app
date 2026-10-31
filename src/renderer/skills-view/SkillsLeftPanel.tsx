@@ -12,7 +12,7 @@
  * the agent-panels data hooks. Layout mirrors the other left panels
  * (Drawings, Topics, Requests): 40px header, 30px filter bar, flat rows.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   Check,
@@ -24,6 +24,9 @@ import {
   X,
 } from 'lucide-react';
 import { SegmentedControl } from '../components/SegmentedControl';
+import { OrgSectionHeaderCard } from '../panels/cards/OrgSectionHeaderCard';
+import { SkillLockService } from '../main-process-api/SkillLockService';
+import type { SkillLockEntry } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 import {
   useSkillsData,
   type Skill,
@@ -63,6 +66,49 @@ function sourceLabel(skill: Skill): string {
     ).map((source) => (source.endsWith('-claude') ? 'Claude' : 'Global')),
   );
   return [...sources].join(' · ');
+}
+
+/** Lock file entries are keyed by the skill's folder name. */
+function skillFolderName(skill: Skill): string {
+  const parts = (skill.skillFolderPath || skill.path).split('/').filter(Boolean);
+  return parts[parts.length - 1] || skill.name;
+}
+
+interface SkillGroup {
+  key: string;
+  label: string;
+  /** GitHub owner, for the avatar. Absent for non-GitHub or untracked skills. */
+  login?: string;
+  skills: Skill[];
+}
+
+const LOCAL_GROUP_KEY = 'local';
+
+/** Group installed skills by the source repo they were installed from. */
+function groupBySource(
+  skills: Skill[],
+  lock: Record<string, SkillLockEntry>,
+): SkillGroup[] {
+  const groups = new Map<string, SkillGroup>();
+  for (const skill of skills) {
+    const entry = lock[skillFolderName(skill)];
+    let key = LOCAL_GROUP_KEY;
+    let label = 'Local';
+    let login: string | undefined;
+    if (entry?.source) {
+      key = entry.source;
+      label = entry.source;
+      if (entry.sourceType === 'github') login = entry.source.split('/')[0];
+    }
+    const group = groups.get(key) ?? { key, label, login, skills: [] };
+    group.skills.push(skill);
+    groups.set(key, group);
+  }
+  return [...groups.values()].sort((a, b) => {
+    if (a.key === LOCAL_GROUP_KEY) return 1;
+    if (b.key === LOCAL_GROUP_KEY) return -1;
+    return a.label.localeCompare(b.label);
+  });
 }
 
 function matchesQuery(skill: Skill, query: string): boolean {
@@ -280,6 +326,27 @@ const InstalledSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = (
   const { activeTabId } = useWorkspaceTabs();
   const { skills, isLoading, error } = useSkillsData({ context: s.context });
   const showLoading = useDelayedLoading(isLoading);
+  const [lock, setLock] = useState<Record<string, SkillLockEntry>>({});
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const loadLock = useCallback(async () => {
+    try {
+      const file = await SkillLockService.getLockFile();
+      setLock(file?.skills ?? {});
+    } catch (err) {
+      console.error('[SkillsLeftPanel] Failed to read skill lock:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadLock();
+    const offInstalled = s.events.on('skill:installed', () => void loadLock());
+    const offUninstalled = s.events.on('skill:uninstalled', () => void loadLock());
+    return () => {
+      offInstalled();
+      offUninstalled();
+    };
+  }, [s.events, loadLock]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -290,6 +357,8 @@ const InstalledSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = (
       return locations.some((src) => src.startsWith('global-')) && matchesQuery(skill, q);
     });
   }, [skills, query]);
+
+  const groups = useMemo(() => groupBySource(visible, lock), [visible, lock]);
 
   if (isLoading && skills.length === 0) {
     return showLoading ? <EmptyState text="Loading…" /> : null;
@@ -307,25 +376,55 @@ const InstalledSkillRows: React.FC<{ s: SkillsSurfaceValue; query: string }> = (
     return <EmptyState text="No skills match this filter." />;
   }
 
+  const toggle = (key: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   return (
     <>
-      {visible.map((skill) => (
-        <SkillRow
-          key={skill.id}
-          skill={skill}
-          draggable
-          active={activeTabId === 'skill-detail' && s.selectedSkill?.id === skill.id}
-          tag={sourceLabel(skill)}
-          onClick={() =>
-            s.events.emit({
-              type: 'skill:selected',
-              source: 'skills-left-panel',
-              timestamp: Date.now(),
-              payload: { skillId: skill.id, skill },
-            })
-          }
-        />
-      ))}
+      {groups.map((group) => {
+        const isCollapsed = collapsed.has(group.key);
+        return (
+          <React.Fragment key={group.key}>
+            <OrgSectionHeaderCard
+              flush
+              header={{
+                orgName: group.label,
+                login: group.login,
+                isUntracked: !group.login,
+                repoCount: group.skills.length,
+              }}
+              isCollapsed={isCollapsed}
+              onToggle={() => toggle(group.key)}
+            />
+            {!isCollapsed &&
+              group.skills.map((skill) => (
+                <SkillRow
+                  key={skill.id}
+                  skill={skill}
+                  draggable
+                  active={
+                    activeTabId === 'skill-detail' &&
+                    s.selectedSkill?.id === skill.id
+                  }
+                  tag={sourceLabel(skill)}
+                  onClick={() =>
+                    s.events.emit({
+                      type: 'skill:selected',
+                      source: 'skills-left-panel',
+                      timestamp: Date.now(),
+                      payload: { skillId: skill.id, skill },
+                    })
+                  }
+                />
+              ))}
+          </React.Fragment>
+        );
+      })}
     </>
   );
 };
