@@ -1884,6 +1884,55 @@ export class GitHubAdapter {
     return [];
   }
 
+  /** List a pull request's submitted reviews, oldest first. */
+  async getPullRequestReviews(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<unknown[]> {
+    const endpoint = `/repos/${owner}/${repo}/pulls/${number}/reviews?per_page=100`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    if (apiResult.success && Array.isArray(apiResult.data)) {
+      return apiResult.data as unknown[];
+    }
+    return [];
+  }
+
+  /** List check runs for a commit (GitHub Actions and other check apps). */
+  async getCommitCheckRuns(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<unknown[]> {
+    const endpoint = `/repos/${owner}/${repo}/commits/${sha}/check-runs?per_page=100`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    const data = apiResult.data as { check_runs?: unknown } | undefined;
+    if (apiResult.success && Array.isArray(data?.check_runs)) {
+      return data.check_runs as unknown[];
+    }
+    return [];
+  }
+
+  /** Combined legacy commit status (external CI that reports via the status API). */
+  async getCommitStatus(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<{ state: string; statuses: unknown[] } | null> {
+    const endpoint = `/repos/${owner}/${repo}/commits/${sha}/status`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    const data = apiResult.data as
+      | { state?: unknown; statuses?: unknown }
+      | undefined;
+    if (apiResult.success && typeof data?.state === 'string') {
+      return {
+        state: data.state,
+        statuses: Array.isArray(data.statuses) ? data.statuses : [],
+      };
+    }
+    return null;
+  }
+
   /** Fetch a single commit (message, author, stats, changed files). */
   async getCommit(
     owner: string,

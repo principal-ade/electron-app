@@ -25,6 +25,9 @@ import { TopicService } from '../main-process-api/TopicService';
 import { TopicDeleteHeaderButton } from './TopicDeleteHeaderButton';
 import { TopicPinHeaderButton } from './TopicPinHeaderButton';
 import type { TopicProjectsRailProps } from './topic-description/TopicProjectsRail';
+import { withReadingTheme } from '../themes/withReadingTheme';
+
+const ReadingTopicDescriptionBody = withReadingTheme(TopicDescriptionBody);
 
 export const LocalTopicTabContent: React.FC<{
   topicId: string;
@@ -100,7 +103,7 @@ export const LocalTopicTabContent: React.FC<{
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          padding: '14px 20px 14px 10px',
+          padding: '14px 20px 14px 16px',
           borderBottom: `1px solid ${theme.colors.border}`,
           flexShrink: 0,
         }}
@@ -240,10 +243,11 @@ export const LocalTopicTabContent: React.FC<{
             overflow: 'hidden',
             // Match the markdown slide's own background (theme.colors.backgroundDark)
             // so the area reads uniform when the centered prose leaves side gaps.
-            backgroundColor: theme.colors.backgroundDark,
+            backgroundColor:
+              theme.colors.backgroundDark ?? theme.colors.background,
           }}
         >
-          <TopicDescriptionBody
+          <ReadingTopicDescriptionBody
             topicId={topicId}
             events={events}
             tocOpen={tocOpen}

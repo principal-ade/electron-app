@@ -9,6 +9,9 @@ import { TopicReferencesRail } from '../../topics-view/topic-description/TopicRe
 import { TopicService } from '../../main-process-api/TopicService';
 import { TopicDeleteHeaderButton } from '../../topics-view/TopicDeleteHeaderButton';
 import { TopicPinHeaderButton } from '../../topics-view/TopicPinHeaderButton';
+import { withReadingTheme } from '../../themes/withReadingTheme';
+
+const ReadingTopicDescriptionBody = withReadingTheme(TopicDescriptionBody);
 
 export interface DevWorkspaceTopicTabProps {
   topicId: string;
@@ -95,7 +98,7 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          padding: '14px 20px 14px 10px',
+          padding: '14px 20px 14px 16px',
           borderBottom: `1px solid ${theme.colors.border}`,
           flexShrink: 0,
         }}
@@ -206,7 +209,7 @@ export const DevWorkspaceTopicTab: React.FC<DevWorkspaceTopicTabProps> = ({
         <div
           style={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex' }}
         >
-          <TopicDescriptionBody
+          <ReadingTopicDescriptionBody
             topicId={topicId}
             visible={isActive}
             events={events}

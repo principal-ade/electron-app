@@ -203,7 +203,7 @@ export class NamespaceDataValidator {
     data: unknown,
   ): data is NamespaceDataTypes[StaticNamespaces.USER_PREFERENCES] {
     // UserPreferences can have various optional fields, so just check it's an object
-    // The actual fields are: defaultEditor, defaultView, ollamaModel, agentAutoUpdate, etc.
+    // The actual fields are: defaultView, ollamaModel, agentAutoUpdate, etc.
     return !!(data && typeof data === 'object');
   }
 

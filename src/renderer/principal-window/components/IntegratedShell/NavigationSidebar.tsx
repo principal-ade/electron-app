@@ -114,13 +114,11 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     useState<NavigationView | 'repository' | null>(null);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showConnectionsButton, setShowConnectionsButton] = useState(false);
-  const [showProcessesButton, setShowProcessesButton] = useState(false);
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   useEffect(() => {
     UserPreferencesService.getPreferences().then((prefs) => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowConnectionsButton(prefs.showConnectionsButton ?? false);
-      setShowProcessesButton(prefs.showProcessesButton ?? false);
       setShowOnboardingButton(prefs.showOnboardingButton ?? false);
     });
 
@@ -132,9 +130,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }
         if ('showConnectionsButton' in detail) {
           setShowConnectionsButton(detail.showConnectionsButton ?? false);
-        }
-        if ('showProcessesButton' in detail) {
-          setShowProcessesButton(detail.showProcessesButton ?? false);
         }
         if ('showOnboardingButton' in detail) {
           setShowOnboardingButton(detail.showOnboardingButton ?? false);
@@ -206,8 +201,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           },
         ]
       : []),
-    // Processes: shown when enabled in preferences, or whenever processes run.
-    ...(showProcessesButton || hasProcesses
+    // Processes: shown whenever processes run.
+    ...(hasProcesses
       ? [
           {
             id: 'processes' as NavigationView,

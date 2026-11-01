@@ -312,24 +312,6 @@ class QuickOpen {
 export const quickOpen = new QuickOpen();
 
 /**
- * Resolve the Quick Open destination preference. Defaults to opening a
- * dedicated project window (historical behavior).
- */
-async function getQuickOpenTarget(): Promise<'window' | 'terminal'> {
-  try {
-    const {
-      UserPreferencesHandler,
-    } = require('../stores/userPreferencesHandler');
-    const prefsService = UserPreferencesHandler.getInstance();
-    const preferences = await prefsService.getUserPreferences();
-    return preferences.quickOpenTarget === 'terminal' ? 'terminal' : 'window';
-  } catch (error) {
-    log.error('[Quick Open] Failed to read quickOpenTarget preference:', error);
-    return 'window';
-  }
-}
-
-/**
  * Focus/create the principal window and ask its renderer to open a terminal
  * tab at `directory`. Waits for the renderer to finish loading when the
  * principal window was just created, so the IPC isn't dropped.
@@ -401,22 +383,9 @@ export function setupQuickOpenHandlers(): void {
       return;
     }
 
-    // Owner directories always open a terminal rooted at the folder, whatever
-    // the Quick Open destination preference is — the point is to land in the
-    // folder, ready to clone a sibling repo.
+    // Owner directories open a terminal rooted at the folder — the point is
+    // to land in the folder, ready to clone a sibling repo.
     if (item.type === 'ownerDirectory' && item.localPath) {
-      await openTerminalTabInPrincipal(item.localPath, item.name);
-      return;
-    }
-
-    const openTarget = await getQuickOpenTarget();
-
-    // Terminal mode opens a terminal tab in the principal window.
-    if (
-      openTarget === 'terminal' &&
-      item.type === 'repository' &&
-      item.localPath
-    ) {
       await openTerminalTabInPrincipal(item.localPath, item.name);
       return;
     }

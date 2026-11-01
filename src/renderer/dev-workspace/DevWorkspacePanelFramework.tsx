@@ -58,9 +58,7 @@ import {
   type TerminalTab,
   type TerminalPanelActions,
 } from '@industry-theme/xterm-terminal-panel';
-import { SendTabButton } from '../move-tab/SendTabButton';
 import { useTabReceiver } from '../move-tab/useTabReceiver';
-import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import {
   CodeCityPanel,
   type CodeCityPanelPropsTyped,
@@ -516,24 +514,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Derive collapsed state from actual layout
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(collapsed.left);
   const [isRightCollapsed, setIsRightCollapsed] = useState(collapsed.right);
-  const [showSendTabButton, setShowSendTabButton] = useState(false);
   const terminalImplementation = useTerminalImplementation();
-
-  useEffect(() => {
-    let isMounted = true;
-    const loadPreferences = async () => {
-      const prefs = await UserPreferencesService.getPreferences();
-      if (isMounted) setShowSendTabButton(prefs.showSendTabButton ?? false);
-    };
-    loadPreferences();
-    const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
-      if (isMounted) setShowSendTabButton(prefs.showSendTabButton ?? false);
-    });
-    return () => {
-      isMounted = false;
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
 
   // Store callbacks and state in refs to avoid stale closures
   const onCollapsedChangeRef = useRef(onCollapsedChange);
@@ -858,11 +839,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     ),
   );
 
-  // Tab close after cross-window transfer (sender removes the tab).
-  const [requestCloseTabId, setRequestCloseTabId] = useState<string | null>(
-    null,
-  );
-
   // Cross-window tab receiver.
   const { incomingTab, clearIncomingTab } = useTabReceiver();
 
@@ -901,21 +877,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     terminalContext,
     terminalDirectory,
   ]);
-
-  // bottom-bar content for cross-window tab transfer (dev-workspace → principal).
-  const bottomBarContent = useMemo(() => {
-    if (!showSendTabButton || !activeTabId) return null;
-    return (
-      <SendTabButton
-        direction="to-principal"
-        activeTabId={activeTabId}
-        cwd={terminalDirectory}
-        onTabDispatched={() => {
-          setRequestCloseTabId(activeTabId);
-        }}
-      />
-    );
-  }, [showSendTabButton, activeTabId, terminalDirectory]);
 
   // Right panel history - tracks documents opened in the right panel for quick navigation
   const [rightPanelHistory, setRightPanelHistory] = useState<
@@ -2760,11 +2721,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               onFocusTabHandled={handleFocusTabHandled}
               activeTabId={activeTabId}
               onActiveTabChange={setActiveTabId}
-              requestCloseTabId={requestCloseTabId}
               programStatus={programStatus}
               showAllTerminals={showAllTerminals}
               onShowAllTerminalsChange={setShowAllTerminals}
-              bottomBarContent={bottomBarContent}
             />
           </div>
         ),
@@ -3574,8 +3533,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       showRightPanelHistory,
       handleHistoryItemClick,
       activeTabId,
-      requestCloseTabId,
-      bottomBarContent,
     ],
   );
 

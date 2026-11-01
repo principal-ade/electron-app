@@ -38,6 +38,7 @@ import {
 } from './frontmatter';
 import { MarkdownFrontmatterHeader } from './MarkdownFrontmatterHeader';
 import { splitIntoSlides } from './slides';
+import { withReadingTheme } from '../../themes/withReadingTheme';
 
 export interface MarkdownPanelActions extends PanelActions {
   readFile: (path: string) => Promise<string>;
@@ -93,7 +94,7 @@ export interface MarkdownPanelProps extends PanelComponentProps<MarkdownPanelAct
   showEditButton?: boolean;
 }
 
-export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
+const MarkdownPanelBody: React.FC<MarkdownPanelProps> = ({
   actions,
   events,
   filePath: filePathProp,
@@ -103,9 +104,8 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
   showEditButton = false,
 }) => {
   const { theme } = useTheme();
-  const [fontSizeScale, setFontSizeScale] = useState<number>(
-    getDefaultFontScale,
-  );
+  const [fontSizeScale, setFontSizeScale] =
+    useState<number>(getDefaultFontScale);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -891,3 +891,5 @@ export const MarkdownPanel: React.FC<MarkdownPanelProps> = ({
     </div>
   );
 };
+
+export const MarkdownPanel = withReadingTheme(MarkdownPanelBody);

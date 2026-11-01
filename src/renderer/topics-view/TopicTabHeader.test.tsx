@@ -5,24 +5,14 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { LocalTopicTabContent } from './LocalTopicTabContent';
 import { DevWorkspaceTopicTab } from '../dev-workspace/topics-panel/DevWorkspaceTopicTab';
 import { TopicService } from '../main-process-api/TopicService';
+import {
+  ThemeProvider,
+  slateNeonTheme,
+  slatePeachTheme,
+} from '@principal-ade/industry-theme';
 
 let mockHasToc = true;
 
-jest.mock('@principal-ade/industry-theme', () => ({
-  useTheme: () => ({
-    theme: {
-      colors: {
-        primary: '#00aaff',
-        text: '#ffffff',
-        border: '#444444',
-        background: '#111111',
-        backgroundSecondary: '#222222',
-      },
-      fonts: { heading: 'sans-serif' },
-      fontSizes: [12, 14, 16, 20],
-    },
-  }),
-}));
 jest.mock('./topic-description/TopicDescriptionBody', () => ({
   TopicDescriptionBody: ({
     onTocAvailableChange,
@@ -31,10 +21,23 @@ jest.mock('./topic-description/TopicDescriptionBody', () => ({
     onTocAvailableChange: (available: boolean) => void;
     onCloseToc: () => void;
   }) => {
+    const { theme } = jest
+      .requireActual<
+        typeof import('@principal-ade/industry-theme')
+      >('@principal-ade/industry-theme')
+      .useTheme();
     jest.requireActual<typeof React>('react').useEffect(() => {
       onTocAvailableChange(mockHasToc);
     }, [onTocAvailableChange]);
-    return <button onClick={onCloseToc}>Close outline</button>;
+    return (
+      <button
+        onClick={onCloseToc}
+        data-primary={theme.colors.primary}
+        data-accent={theme.colors.accent}
+      >
+        Close outline
+      </button>
+    );
   },
 }));
 jest.mock('./topic-description/TopicProjectsRail', () => ({
@@ -61,8 +64,8 @@ jest.mock('./topic-description/TopicReferencesRail', () => ({
     </>
   ),
 }));
-jest.mock('./TopicPinHeaderButton', () => ({
-  TopicPinHeaderButton: () => <button>Pin topic</button>,
+jest.mock('../panels/home-panel/useHomePins', () => ({
+  useHomePins: () => ({ isTabPinned: () => true, toggleTabPin: jest.fn() }),
 }));
 jest.mock('./TopicDeleteHeaderButton', () => ({
   TopicDeleteHeaderButton: () => <button>Delete topic</button>,
@@ -89,8 +92,33 @@ describe.each([
   ['Topics view', () => <LocalTopicTabContent {...props} />],
   ['Dev Workspace', () => <DevWorkspaceTopicTab {...props} isActive />],
 ])('%s header', (_name, createTab) => {
+  const renderTab = () =>
+    render(<ThemeProvider theme={slateNeonTheme}>{createTab()}</ThemeProvider>);
+
+  test('keeps the pinned header action on the sidebar theme', () => {
+    renderTab();
+    const pin = screen.getByRole('button', {
+      name: 'Unpin My topic from Home',
+    });
+    expect(pin.getAttribute('aria-pressed')).toBe('true');
+    expect(pin.style.color).toBe('rgb(243, 111, 65)');
+    expect(pin.style.borderColor.toLowerCase()).toBe(
+      slateNeonTheme.colors.primary.toLowerCase(),
+    );
+  });
+  test('supplies Slate Peach to the shared topic description', () => {
+    renderTab();
+    const body = screen.getByRole('button', { name: 'Close outline' });
+    expect(body.getAttribute('data-primary')).toBe(
+      slatePeachTheme.colors.primary,
+    );
+    expect(body.getAttribute('data-accent')).toBe(
+      slatePeachTheme.colors.accent,
+    );
+  });
+
   test('passes reference navigation through to the hosting tab system', () => {
-    render(createTab());
+    renderTab();
     fireEvent.click(screen.getByRole('button', { name: 'Open related topic' }));
     fireEvent.click(screen.getByRole('button', { name: 'Open C4 sketch' }));
     expect(props.onOpenTopic).toHaveBeenCalledWith('topic-b', 'Related');
@@ -101,7 +129,7 @@ describe.each([
   });
 
   test('title and contents button toggle the same outline', () => {
-    render(createTab());
+    renderTab();
     const title = screen.getByRole('button', {
       name: 'Table of contents for My topic',
     });
@@ -119,41 +147,51 @@ describe.each([
   });
 
   test('hovering other header actions does not highlight the contents button', () => {
-    render(createTab());
+    renderTab();
     const contents = screen.getByRole('button', { name: 'Table of contents' });
-    for (const name of ['Copy topic file path', 'Pin topic', 'Delete topic']) {
+    for (const name of [
+      'Copy topic file path',
+      'Unpin My topic from Home',
+      'Delete topic',
+    ]) {
       fireEvent.mouseEnter(screen.getByRole('button', { name }));
-      expect(contents.style.color).toBe('rgb(255, 255, 255)');
-      expect(contents.style.borderColor).not.toBe('#00aaff');
+      expect(contents.style.color).toBe('rgb(208, 214, 224)');
+      expect(contents.style.borderColor.toLowerCase()).not.toBe(
+        slateNeonTheme.colors.primary.toLowerCase(),
+      );
     }
   });
 
   test('title hover and focus highlight only the contents button', () => {
-    render(createTab());
+    renderTab();
     const title = screen.getByRole('button', {
       name: 'Table of contents for My topic',
     });
     const contents = screen.getByRole('button', { name: 'Table of contents' });
     fireEvent.mouseEnter(title);
-    expect(contents.style.color).toBe('rgb(0, 170, 255)');
-    expect(contents.style.borderColor).toBe('#00aaff');
+    expect(contents.style.color).toBe('rgb(243, 111, 65)');
+    expect(contents.style.borderColor.toLowerCase()).toBe(
+      slateNeonTheme.colors.primary.toLowerCase(),
+    );
     fireEvent.mouseLeave(title);
-    expect(contents.style.color).toBe('rgb(255, 255, 255)');
+    expect(contents.style.color).toBe('rgb(208, 214, 224)');
     fireEvent.focus(title);
-    expect(contents.style.color).toBe('rgb(0, 170, 255)');
+    expect(contents.style.color).toBe('rgb(243, 111, 65)');
     fireEvent.blur(title);
-    expect(contents.style.color).toBe('rgb(255, 255, 255)');
+    expect(contents.style.color).toBe('rgb(208, 214, 224)');
     fireEvent.click(title);
     fireEvent.mouseLeave(title);
-    expect(contents.style.color).toBe('rgb(0, 170, 255)');
+    expect(contents.style.color).toBe('rgb(243, 111, 65)');
   });
 
   test('other header actions do not toggle the outline', () => {
-    render(createTab());
+    renderTab();
     fireEvent.click(
       screen.getByRole('button', { name: 'Copy topic file path' }),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Pin topic' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Unpin My topic from Home' }),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Delete topic' }));
     expect(TopicService.getFilePath).toHaveBeenCalledWith('topic-a');
     expect(
@@ -165,7 +203,7 @@ describe.each([
 
   test('title is disabled when the topic has no headings', () => {
     mockHasToc = false;
-    render(createTab());
+    renderTab();
     const title = screen.getByRole('button', {
       name: 'Table of contents for My topic',
     }) as HTMLButtonElement;

@@ -15,9 +15,7 @@ import {
   type WorkspaceView,
 } from '../PrincipalPortal';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
-import { PresenceService } from '../../../main-process-api/PresenceService';
 import { WindowService } from '../../../main-process-api/WindowService';
-import { SecureAuthService } from '../../../services/SecureAuthService';
 import type { InteractiveShellNavigationView } from '../../../../shared/types/userPreferences.types';
 import type { QuickCommand } from '@principal-ade/panel-layouts';
 import {
@@ -351,7 +349,7 @@ export const IntegratedShell: React.FC = () => {
     });
   }, [openRepoExplorer]);
 
-  // Quick Open (Command+O) with quickOpenTarget === 'terminal': main sends
+  // Quick Open (Command+O) on an owner directory: main sends
   // OPEN_TERMINAL_TAB after focusing the principal window. Ensure a workspace
   // surface is showing (so the terminal host is mounted + visible), then emit
   // terminal:new on the portal bus for WorkspaceShell to materialize the tab.
@@ -400,60 +398,6 @@ export const IntegratedShell: React.FC = () => {
     }, 0);
     return () => clearTimeout(timer);
   }, [surface, portalEvents]);
-
-  // Auto-connect to presence on startup if enabled
-  useEffect(() => {
-    const autoConnectPresence = async () => {
-      try {
-        const prefs = await UserPreferencesService.getPreferences();
-
-        // Check if auto-connect is disabled (defaults to false if undefined)
-        if (prefs.presenceAutoConnect !== true) {
-          return;
-        }
-
-        // Check if user is authenticated
-        const authService = SecureAuthService.getInstance();
-        const authResult = await authService.checkAuth();
-
-        if (!authResult.authenticated || !authResult.token) {
-          console.info(
-            '[IntegratedShell] Skipping presence auto-connect: not authenticated',
-          );
-          return;
-        }
-
-        // Auto-connect to presence
-        console.info(
-          '[IntegratedShell] Auto-connecting to presence on startup',
-        );
-        const result = await PresenceService.connectToPresence(
-          authResult.token,
-        );
-
-        if (result.success) {
-          console.info(
-            '[IntegratedShell] Successfully auto-connected to presence',
-          );
-        } else {
-          console.warn(
-            '[IntegratedShell] Failed to auto-connect to presence:',
-            result.error,
-          );
-        }
-      } catch (error) {
-        console.error(
-          '[IntegratedShell] Error during presence auto-connect:',
-          error,
-        );
-      }
-    };
-
-    // Only run after preferences are loaded
-    if (preferencesLoaded) {
-      autoConnectPresence();
-    }
-  }, [preferencesLoaded]);
 
   // The stored preference stays a single field — whatever the user last saw.
   // The overlay wins when one is up (that is what's on screen); otherwise the

@@ -24,7 +24,7 @@ import {
   type RepositorySelectedPayload,
 } from '../../events/repositorySelected';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Bookmark, PanelsTopLeft } from 'lucide-react';
+import { Bookmark, GitPullRequest, PanelsTopLeft } from 'lucide-react';
 import { useAuthUser } from '../../providers/AuthProvider';
 import { OrgRepoItemCard } from '../cards/OrgRepoItemCard';
 import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
@@ -65,6 +65,8 @@ import { HomeSearchBar, HomeSearchResults } from './HomeSearch';
 import { PushToRemoteModal } from '../components/PushToRemoteModal';
 import { useProcessRegistry } from '../../hooks/useProcessRegistry';
 import { HomeProcessRow } from './HomeProcessRow';
+import { HomePullRequestRow } from './HomePullRequestRow';
+import { useWatchedPullRequests } from '../../hooks/useWatchedPullRequests';
 import { requestDefinition } from '../../../shared/requests/preparedRequest';
 
 // ---------------------------------------------------------------------------
@@ -124,6 +126,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     error: processesError,
     refresh: refreshProcesses,
   } = useProcessRegistry();
+  // PRs the user (or an agent via the bridge) asked the app to keep an eye on.
+  const { pullRequests: watchedPullRequests, error: pullRequestsError } =
+    useWatchedPullRequests();
   // Pinned tab entries + pinned repos (persisted in preferences) so a closed
   // tab or a clean, tab-less repo can stay reachable from the rail.
   const {
@@ -801,6 +806,30 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                   );
                 })}
 
+              {pullRequestsError && (
+                <div
+                  role="alert"
+                  style={{ padding: '8px 14px', color: theme.colors.error }}
+                >
+                  Could not load watched pull requests: {pullRequestsError}
+                </div>
+              )}
+              {watchedPullRequests.length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={tabSectionStyle}>
+                    <GitPullRequest
+                      size={22}
+                      color={theme.colors.textSecondary}
+                    />
+                    <span>Pull Requests</span>
+                  </div>
+                  <div role="separator" style={tabSectionDividerStyle} />
+                  {watchedPullRequests.map((pr) => (
+                    <HomePullRequestRow key={pr.id} pullRequest={pr} />
+                  ))}
+                </div>
+              )}
+
               {homeTabs.processes.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
                   <div style={tabSectionStyle}>Processes</div>
@@ -843,6 +872,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 
               {inProgressGroups.length === 0 &&
                 homeTabs.requests.length === 0 &&
+                watchedPullRequests.length === 0 &&
                 homeTabs.processes.length === 0 &&
                 homeTabs.openTabs.length === 0 &&
                 homeTabs.pinnedTabs.length === 0 && (

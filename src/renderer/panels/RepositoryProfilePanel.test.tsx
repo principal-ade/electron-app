@@ -33,7 +33,11 @@ jest.mock('../main-process-api/GitService', () => ({
 }));
 jest.mock('../main-process-api/GithubService', () => ({ GithubService: {} }));
 jest.mock('../main-process-api/RepositoryMonitoringService', () => ({
-  RepositoryMonitoringService: { getGitStatusWithFiles: jest.fn(), onGitStatusChanged: jest.fn() },
+  RepositoryMonitoringService: {
+    getGitStatusWithFiles: jest.fn(), onGitStatusChanged: jest.fn(),
+    acquireWatch: jest.fn().mockResolvedValue({ success: true }),
+    releaseWatch: jest.fn().mockResolvedValue({ success: true }),
+  },
 }));
 jest.mock('../components/GitCloneModal', () => ({ GitCloneModal: () => null }));
 jest.mock('./components/ForkModal', () => ({ ForkModal: () => null }));
@@ -69,11 +73,13 @@ const context = (data = repository) => ({
   currentScope: { type: 'repository', repository: data },
 }) as unknown as RepositoryProfilePanelContext;
 let statusChanged: Parameters<typeof RepositoryMonitoringService.onGitStatusChanged>[0];
-const dirtyStatus = {
+const dirtyStatus: GitStatusWithFiles = {
   repoPath: '/repo', isDirty: true,
+  branch: 'main', ahead: 0, behind: 0, hasStaged: false, hasUntracked: false,
+  watchingEnabled: true, hash: 'dirty',
   modifiedFiles: ['src/changed.ts'],
-  stagedFiles: [], untrackedFiles: [], deletedFiles: [],
-} as unknown as GitStatusWithFiles;
+  stagedFiles: [], untrackedFiles: [], deletedFiles: [], createdFiles: [],
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -87,11 +93,28 @@ beforeEach(() => {
   jest.mocked(GitService.getOwnershipMap).mockResolvedValue({
     byEmail: new Map(), totalLines: new Map(), totalLinesGlobal: 0,
   });
-  jest.mocked(RepositoryMonitoringService.getGitStatusWithFiles).mockResolvedValue(dirtyStatus);
+  jest.mocked(RepositoryMonitoringService.getGitStatusWithFiles).mockImplementation(async (repoPath) => ({
+    ...dirtyStatus, repoPath,
+  }));
   jest.mocked(RepositoryMonitoringService.onGitStatusChanged).mockImplementation((handler) => {
     statusChanged = handler;
     return jest.fn();
   });
+});
+
+test('updates branch counts and changed files from the same monitored event without fetching Git', async () => {
+  render(<RepositoryProfilePanel context={context()} actions={actions} events={events} />);
+  await screen.findByRole('button', { name: /src\/changed\.ts/ });
+  expect(screen.queryByText('no remote')).toBeNull();
+  expect(screen.queryByText('in sync')).toBeNull();
+  act(() => statusChanged({
+    ...dirtyStatus, branch: 'feature/monitor', ahead: 2, behind: 1,
+    modifiedFiles: ['src/live.ts'],
+  }));
+  expect(await screen.findByText('feature/monitor')).toBeTruthy();
+  expect(screen.getByText('2↑ 1↓')).toBeTruthy();
+  expect(screen.getByRole('button', { name: /src\/live\.ts/ })).toBeTruthy();
+  expect(GitService.getBranchStatus).not.toHaveBeenCalled();
 });
 
 test('spotlights only package files without zooming and restores existing layers on leave', async () => {
@@ -150,6 +173,8 @@ test('defaults to changed files when dirty and switches both ways to package sta
   fireEvent.click(screen.getByRole('button', { name: 'Changed Files' }));
   expect(screen.getByRole('button', { name: 'Repository Info' })).toBeTruthy();
   expect(screen.getByRole('button', { name: /src\/changed\.ts/ })).toBeTruthy();
+  expect(GitService.getBranchStatus).not.toHaveBeenCalled();
+  expect(RepositoryMonitoringService.getGitStatusWithFiles).toHaveBeenCalledTimes(1);
 });
 
 test('subtly dims files without git borders only while the changed-file list is visible', async () => {

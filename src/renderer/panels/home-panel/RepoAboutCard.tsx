@@ -16,10 +16,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
-  AlertCircle,
   Building2,
   CalendarDays,
-  CheckCircle2,
   Circle,
   Download,
   FileText,
@@ -39,7 +37,6 @@ import { parsePurl } from '@principal-ai/alexandria-core-library';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { RepositorySelectedPayload } from '../../events/repositorySelected';
 import { payloadFromGithub } from '../../events/repositorySelected';
-import { useRepoWatch } from './useRepoWatch';
 import {
   emitTerminalNew,
   emitRepositoryGuideOpenReadme,
@@ -50,7 +47,7 @@ import {
 } from '../../events/portalIntents';
 import { GithubService } from '../../main-process-api/GithubService';
 import { useAuthUser } from '../../providers/AuthProvider';
-import { GitService, type GitBranchStatus } from '../../main-process-api/GitService';
+import { useRepositoryStatuses } from '../../hooks/useRepositoryStatuses';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WindowService } from '../../main-process-api/WindowService';
 import { GitCloneModal, type CloneProgressState } from '../../components/GitCloneModal';
@@ -142,7 +139,6 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
     repo.localEntry?.path != null
       ? String(repo.localEntry.path)
       : (repo.localClones?.[0]?.path ?? null);
-  useRepoWatch(watchedRepoPath);
 
 
   // Guide mode — owned here (not HomeLeftPanel). Single 3-way switch:
@@ -310,32 +306,11 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   }, [owner]);
 
   // Branch status for cloned repos (one per clone)
-  const [branchStatusMap, setBranchStatusMap] = useState<Map<string, GitBranchStatus>>(new Map());
-  const [branchLoading, setBranchLoading] = useState(false);
   const clones = repo.localClones;
-  useEffect(() => {
-    if (!clones || clones.length === 0) { setBranchStatusMap(new Map()); return; }
-    let cancelled = false;
-    setBranchLoading(true);
-    Promise.all(
-      clones.map(async (clone) => {
-        try {
-          const status = await GitService.getBranchStatus(clone.path);
-          if (!cancelled) return [clone.path, status] as const;
-          return null;
-        } catch { return null; }
-      }),
-    ).then((results) => {
-      if (cancelled) return;
-      const map = new Map<string, GitBranchStatus>();
-      for (const r of results) {
-        if (r) map.set(r[0], r[1]);
-      }
-      setBranchStatusMap(map);
-      setBranchLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, [clones]);
+  const { statuses: branchStatusMap, loading: branchLoading, refresh: refreshBranchStatus } =
+    useRepositoryStatuses(clones?.length
+      ? clones.map((clone) => clone.path)
+      : watchedRepoPath ? [watchedRepoPath] : []);
 
   // Copy-path feedback
   const [copiedClonePath, setCopiedClonePath] = useState<string | null>(null);
@@ -469,12 +444,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
   const handleRefreshBranchStatus = async (clonePath: string) => {
     try {
       setRefreshingClonePath(clonePath);
-      const status = await GitService.getBranchStatus(clonePath);
-      setBranchStatusMap((prev) => {
-        const next = new Map(prev);
-        next.set(clonePath, status);
-        return next;
-      });
+      await refreshBranchStatus(clonePath);
     } catch (error) {
       console.error('Failed to refresh branch status:', error);
     } finally {
@@ -757,23 +727,7 @@ export const RepoAboutCard: React.FC<RepoAboutCardProps> = ({
                   >
                     <GitBranch size={12} />
                     {branchStatus.branch}
-                    {branchStatus.ahead === 0 && branchStatus.behind === 0 && branchStatus.hasUpstream ? (
-                      <>
-                        <span style={{ color: theme.colors.textSecondary }}>·</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: theme.colors.success }}>
-                          <CheckCircle2 size={11} />
-                          in sync
-                        </span>
-                      </>
-                    ) : !branchStatus.hasUpstream ? (
-                      <>
-                        <span style={{ color: theme.colors.textSecondary }}>·</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: theme.colors.warning }}>
-                          <AlertCircle size={11} />
-                          no remote
-                        </span>
-                      </>
-                    ) : (
+                    {(branchStatus.ahead > 0 || branchStatus.behind > 0) && (
                       <>
                         <span style={{ color: theme.colors.textSecondary }}>·</span>
                         <span

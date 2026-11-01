@@ -620,6 +620,58 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
     ],
   },
   {
+    name: 'pull-requests',
+    description:
+      'Keep the user informed about GitHub pull requests: add a PR to the Home watch list, which the app polls for checks, review, and merge state.',
+    routes: [
+      {
+        method: 'GET',
+        path: '/api/pull-requests/watch',
+        summary: 'List watched pull requests with their latest snapshots.',
+        response: '{ success: true, pullRequests: WatchedPullRequest[] }',
+        notes: [
+          'Each entry has id (owner/repo#number), url, title, author, state (open | closed | merged), draft, headSha, mergeable, checks { status, total, passed, failed, pending }, review (none | pending | approved | changes_requested), and addedAt/updatedAt/lastPolledAt timestamps.',
+        ],
+      },
+      {
+        method: 'POST',
+        path: '/api/pull-requests/watch',
+        summary:
+          'Watch a pull request so Home shows its status and the user is notified on changes.',
+        body: {
+          pr: 'string (required): https://github.com/owner/repo/pull/123, owner/repo#123, or owner/repo/pull/123.',
+        },
+        response:
+          '201 { success: true, pullRequest: WatchedPullRequest, alreadyWatched: false } or 200 with alreadyWatched: true',
+        errors: {
+          '400': 'Missing or unrecognised pr reference.',
+          '403': 'Origin or Sec-Fetch-Site header present.',
+          '404':
+            'The pull request could not be loaded (unknown, private without access, or GitHub unreachable), or the watch list is full.',
+        },
+        notes: [
+          'Intended for the user, not the agent: the app polls GitHub about once a minute, lists the PR in Home with a link to open it in the browser, and raises a desktop notification when checks finish, a review is decided, or the PR is merged or closed. Do not poll this route to wait for CI.',
+          'Watching an already-watched PR refreshes it and returns the current snapshot. Merged and closed PRs stay listed for a day, then drop off automatically.',
+          'Uses the app’s existing GitHub authentication (OAuth token or gh CLI); private repositories require access.',
+        ],
+        example: {
+          pr: 'https://github.com/principal-ade/electron-app/pull/42',
+        },
+      },
+      {
+        method: 'DELETE',
+        path: '/api/pull-requests/watch/:owner/:repo/:number',
+        summary: 'Stop watching a pull request.',
+        response: '{ success: true }',
+        errors: {
+          '400': 'number is not a positive integer.',
+          '403': 'Origin or Sec-Fetch-Site header present.',
+          '404': 'The pull request is not being watched.',
+        },
+      },
+    ],
+  },
+  {
     name: 'processes',
     description:
       'Start, inspect, stop, restart, and remove app-owned managed processes.',

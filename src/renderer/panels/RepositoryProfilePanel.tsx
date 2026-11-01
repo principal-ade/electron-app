@@ -7,6 +7,7 @@
  */
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { useRepositoryStatuses } from '../hooks/useRepositoryStatuses';
 import { useTheme } from '@principal-ade/industry-theme';
 import type {
   PanelContextValue,
@@ -31,7 +32,10 @@ import {
   Download,
   GitFork,
   Terminal,
+  Bookmark,
+  BookmarkCheck,
 } from 'lucide-react';
+import { useHomePins } from './home-panel/useHomePins';
 import { ArchitectureMapHighlightLayers, type HighlightLayer, createFileColorHighlightLayers } from '@principal-ai/file-city-react';
 import {
   buildCityDataFromFileTree,
@@ -44,13 +48,11 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import { payloadFromGithub } from '../events/repositorySelected';
 import { emitTerminalNew } from '../events/portalIntents';
 import type { LocalClone } from '../../shared/types/repository.types';
-import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import * as LucideIcons from 'lucide-react';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
 import { useAuthUser } from '../providers/AuthProvider';
 import { ShellService } from '../main-process-api/ShellService';
-import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import {
   GitCloneModal,
   type CloneProgressState,
@@ -415,6 +417,27 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   // Read repository from context
   const repositoryData = context.currentScope?.repository as RepositoryProfileData | undefined;
   const repositoryPath = repositoryData?.localClones?.[0]?.path;
+  // Home pin key: clone path when cloned, otherwise GitHub purl so uncloned
+  // repos pin the same way the Home rail does (`path ?? pkg:github/o/n`).
+  const { isRepoPinned, toggleRepoPin } = useHomePins();
+  const pinPurl = repositoryData?.github
+    ? `pkg:github/${repositoryData.github.owner}/${repositoryData.github.name}`
+    : undefined;
+  const pinPathKey = repositoryPath ?? undefined;
+  const isPinned =
+    (pinPathKey ? isRepoPinned(pinPathKey) : false) ||
+    (pinPurl ? isRepoPinned(pinPurl) : false);
+  const handleTogglePin = () => {
+    if (isPinned) {
+      // Unpin both keys so a purl-pin made before cloning doesn't linger
+      // after the row migrates to its clone path (see buildHomeTabEntries).
+      if (pinPathKey && isRepoPinned(pinPathKey)) toggleRepoPin(pinPathKey);
+      if (pinPurl && isRepoPinned(pinPurl)) toggleRepoPin(pinPurl);
+    } else if (pinPathKey ?? pinPurl) {
+      toggleRepoPin((pinPathKey ?? pinPurl) as string);
+    }
+  };
+  const pinKeyAvailable = Boolean(pinPathKey ?? pinPurl);
   const [showStats, setShowStats] = useState(false);
   const [hoveredPackagePath, setHoveredPackagePath] = useState<string | null>(null);
   useEffect(() => {
@@ -470,16 +493,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return `hsl(${hue}, 70%, 55%)`;
   };
 
-  // State for git branch status (sync status) per clone
-  const [branchStatusMap, setBranchStatusMap] = useState<Map<string, {
-    ahead: number;
-    behind: number;
-    hasUpstream: boolean;
-    branch: string;
-  }>>(new Map());
-
-  // State for git working directory status per clone
-  const [gitStatusMap, setGitStatusMap] = useState<Map<string, GitStatusWithFiles>>(new Map());
+  // Branch badges and changed files share the same monitored snapshot.
+  const { statuses: gitStatusMap } = useRepositoryStatuses(
+    repositoryData?.localClones?.map((clone) => clone.path) ?? [],
+  );
+  const branchStatusMap = gitStatusMap;
 
   // State for showing path in cloned badge
   const [showPath, setShowPath] = useState(false);
@@ -568,104 +586,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  // Fetch branch status for all local clones
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchBranchStatuses = async () => {
-      const clones = repositoryData?.localClones;
-      if (!repositoryData || !clones || clones.length === 0) {
-        setBranchStatusMap(new Map());
-        return;
-      }
-
-      const newStatusMap = new Map();
-
-      // Fetch status for each clone
-      await Promise.all(
-        clones.map(async (clone) => {
-          try {
-            const status = await GitService.getBranchStatus(clone.path);
-            if (!cancelled) {
-              newStatusMap.set(clone.path, status);
-            }
-          } catch (error) {
-            console.error(`[RepositoryProfilePanel] Failed to fetch branch status for ${clone.path}:`, error);
-          }
-        })
-      );
-
-      if (!cancelled) {
-        setBranchStatusMap(newStatusMap);
-      }
-    };
-
-    fetchBranchStatuses();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [repositoryData]);
-
-  // Fetch git working directory status for all local clones
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchGitStatuses = async () => {
-      const clones = repositoryData?.localClones;
-      if (!repositoryData || !clones || clones.length === 0) {
-        setGitStatusMap(new Map());
-        return;
-      }
-
-      const newStatusMap = new Map<string, GitStatusWithFiles>();
-
-      // Fetch status for each clone using RepositoryMonitoringService
-      await Promise.all(
-        clones.map(async (clone) => {
-          try {
-            const status = await RepositoryMonitoringService.getGitStatusWithFiles(clone.path);
-
-            if (cancelled) return;
-
-            if (status) {
-              newStatusMap.set(clone.path, status);
-            }
-          } catch (error) {
-            console.error(`[RepositoryProfilePanel] Failed to fetch git status for ${clone.path}:`, error);
-          }
-        })
-      );
-
-      if (!cancelled) {
-        setGitStatusMap(newStatusMap);
-      }
-    };
-
-    fetchGitStatuses();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [repositoryData]);
-
-  // Subscribe to live git status changes for all local clones
-  useEffect(() => {
-    const clonePaths = new Set(repositoryData?.localClones?.map(c => c.path) ?? []);
-    if (clonePaths.size === 0) return;
-
-    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged((status) => {
-      if (clonePaths.has(status.repoPath)) {
-        setGitStatusMap(prev => {
-          const updated = new Map(prev);
-          updated.set(status.repoPath, status);
-          return updated;
-        });
-      }
-    });
-
-    return unsubscribe;
-  }, [repositoryData?.localClones]);
 
   // Create initial highlight layers from git status and file suffixes when data loads
   useEffect(() => {
@@ -1608,6 +1528,31 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   </button>
                 );
               })()}
+              {pinKeyAvailable && (
+                <button
+                  onClick={handleTogglePin}
+                  title={isPinned ? 'Unpin repository from Home' : 'Pin repository to Home'}
+                  aria-pressed={isPinned}
+                  style={{
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    color: isPinned ? theme.colors.primary : theme.colors.textSecondary,
+                    border: `1px solid ${isPinned ? theme.colors.primary : theme.colors.border}`,
+                    borderRadius: 4,
+                    padding: '2px 8px',
+                    backgroundColor: isPinned ? `${theme.colors.primary}18` : 'transparent',
+                    cursor: 'pointer',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {isPinned ? <BookmarkCheck size={11} /> : <Bookmark size={11} />}
+                  {isPinned ? 'Pinned' : 'Pin'}
+                </button>
+              )}
             </div>
             <h2
               onClick={repositoryData.htmlUrl ? handleOpenInGitHub : undefined}
@@ -2036,31 +1981,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                           }}
                         >
                           {/* Sync status vs remote (shown regardless of local changes) */}
-                          {!branchStatus.hasUpstream ? (
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                color: theme.colors.warning,
-                              }}
-                            >
-                              <AlertCircle size={12} />
-                              <span>no remote</span>
-                            </div>
-                          ) : branchStatus.ahead === 0 && branchStatus.behind === 0 ? (
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                color: theme.colors.success,
-                              }}
-                            >
-                              <CheckCircle2 size={12} />
-                              <span>in sync</span>
-                            </div>
-                          ) : (
+                          {(branchStatus.ahead > 0 || branchStatus.behind > 0) && (
                             <div
                               style={{
                                 display: 'flex',
@@ -2084,7 +2005,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                             </div>
                           )}
 
-                          <span style={{ color: theme.colors.textSecondary }}>•</span>
+                          {(branchStatus.ahead > 0 || branchStatus.behind > 0) && (
+                            <span style={{ color: theme.colors.textSecondary }}>•</span>
+                          )}
                           <GitBranch size={12} />
                           <span>{branchStatus.branch}</span>
 

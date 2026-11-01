@@ -19,7 +19,7 @@
 
 import React, { Suspense } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitFork, Terminal } from 'lucide-react';
+import { Bookmark, BookmarkCheck, GitFork, Terminal } from 'lucide-react';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   GithubRepository,
@@ -41,6 +41,7 @@ import {
   githubRepoPurl,
 } from '../utils/alexandriaIdentity';
 import { setNavigationHandler } from './shims/navigation';
+import { useHomePins } from '../panels/home-panel/useHomePins';
 import {
   GitCloneModal,
   type CloneProgressState,
@@ -189,8 +190,49 @@ export const RepoExplorerTabContent: React.FC<RepoExplorerTabContentProps> = ({
     });
   };
 
+  // Home pin: same key scheme as the Home rail (`clone path ?? purl`) so
+  // uncloned repos pin by purl and survive cloning (see buildHomeTabEntries).
+  const { isRepoPinned, toggleRepoPin } = useHomePins();
+  const pinPathKey = clone?.path ? String(clone.path) : undefined;
+  const pinPurlKey = String(purl);
+  const isPinned =
+    (pinPathKey ? isRepoPinned(pinPathKey) : false) ||
+    isRepoPinned(pinPurlKey);
+  const handleTogglePin = () => {
+    if (isPinned) {
+      if (pinPathKey && isRepoPinned(pinPathKey)) toggleRepoPin(pinPathKey);
+      if (isRepoPinned(pinPurlKey)) toggleRepoPin(pinPurlKey);
+    } else {
+      toggleRepoPin(pinPathKey ?? pinPurlKey);
+    }
+  };
+
   const headerActions = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <button
+        type="button"
+        onClick={handleTogglePin}
+        title={isPinned ? 'Unpin repository from Home' : 'Pin repository to Home'}
+        aria-pressed={isPinned}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          fontSize: theme.fontSizes[1],
+          fontFamily: theme.fonts?.body,
+          fontWeight: theme.fontWeights?.semibold ?? 600,
+          color: isPinned ? theme.colors.primary : theme.colors.text,
+          background: isPinned ? `${theme.colors.primary}18` : 'transparent',
+          border: `1px solid ${isPinned ? theme.colors.primary : theme.colors.border}`,
+          borderRadius: 6,
+          padding: '5px 12px',
+          cursor: 'pointer',
+          lineHeight: 1.4,
+        }}
+      >
+        {isPinned ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+        {isPinned ? 'Pinned' : 'Pin'}
+      </button>
       {owner && repo && (
         <button
           type="button"

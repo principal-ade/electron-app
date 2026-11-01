@@ -88,6 +88,10 @@ jest.mock('../../hooks/useProcessRegistry', () => ({
   useProcessRegistry: () => ({ entries: [] }),
 }));
 jest.mock('./HomeProcessRow', () => ({ HomeProcessRow: () => null }));
+jest.mock('../../hooks/useWatchedPullRequests', () => ({
+  useWatchedPullRequests: () => ({ pullRequests: [], error: null }),
+}));
+jest.mock('./HomePullRequestRow', () => ({ HomePullRequestRow: () => null }));
 const mockDetachedTabs = new Map<string, { windowId: number }>();
 jest.mock('./useDetachedTabs', () => ({
   useDetachedTabs: () => mockDetachedTabs,

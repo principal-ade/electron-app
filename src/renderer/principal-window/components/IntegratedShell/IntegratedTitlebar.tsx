@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ThemeSelector } from './ThemeSelector';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
 import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -222,7 +221,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         <TerminalDaemonUpdateIndicator />
         {showPullMailbox && <PullMailbox />}
         <StudioHeaderButton theme={theme} />
-        <ThemeSelector />
         {showSidebarControl && onToggleSidebar && (
           <ViewSidebarControls
             isCollapsed={sidebarCollapsed}

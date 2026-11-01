@@ -83,6 +83,7 @@ import {
   cleanupLocalhostWatchers,
 } from './services/ipc/localhost/localhostDetectionHandlers';
 import { registerProcessHandlers } from './processes/processHandlers';
+import { registerPullRequestWatchHandlers } from './pr-watching/pullRequestWatchHandlers';
 import { getProcessRegistry } from './processes/ProcessRegistry';
 import { registerBrowserIpcHandlers } from './principal-mcp/browserRoutes';
 import { registerProcessQuitHandler } from './processes/processLifecycle';
@@ -306,6 +307,7 @@ const registerAllIpcHandlers = async () => {
   registerFeedbackHandlers();
   registerLocalhostDetectionHandlers();
   registerProcessHandlers();
+  registerPullRequestWatchHandlers();
   registerBrowserIpcHandlers(getProcessRegistry());
   registerProcessQuitHandler();
   registerGitHubArtifactHandlers();

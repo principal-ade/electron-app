@@ -1,4 +1,3 @@
-import { EditorId } from './editor.types';
 import { TerminalId } from './terminal.types';
 import type { RepositoryPanelVisibility } from './repositoryPanel.types';
 import type { PanelLayout } from '@principal-ade/panels';
@@ -88,16 +87,12 @@ export interface UserPreferences {
   repoExcludedTags?: string[]; // Tags to exclude from filter
 
   // Editor preferences
-  /** Default editor for opening local repositories */
-  defaultEditor?: EditorId;
   /** Enable vim mode in Monaco editors */
   enableVimMode?: boolean;
 
   // Terminal preferences
   /** Open supported HTTP localhost terminal links in an app tab (default: false). */
   openLocalhostTerminalLinksInApp?: boolean;
-  /** Show the "open in repo window" / "open in main window" button in the terminal bottom bar (default: false) */
-  showSendTabButton?: boolean;
   /** Default terminal for opening shells */
   defaultTerminal?: TerminalId;
   /** Terminal implementation for panel framework mode */
@@ -106,14 +101,6 @@ export interface UserPreferences {
   showTerminalImplementationToggle?: boolean;
   /** Use PTY daemon for terminal sessions (default: false). Requires app restart to take effect. */
   usePtyDaemon?: boolean;
-
-  /**
-   * Where Command+O (Quick Open) opens a selected local repository.
-   * - `'window'` (default): open/focus a dedicated project (dev-workspace) window
-   * - `'terminal'`: open a terminal tab in the principal window at the repo path
-   * Workspaces always open as their own window regardless of this setting.
-   */
-  quickOpenTarget?: 'window' | 'terminal';
 
   // Repository management
   /** Base default directory - the top-level directory for all Principal work (cloning, workspaces, discovery) */
@@ -134,15 +121,10 @@ export interface UserPreferences {
   defaultView?: 'projects' | 'customization';
   showRepoFilterBar?: boolean; // Show/hide the filter bar in repos view
   showMonitorButton?: boolean; // Show/hide the monitor button in side nav (default: false)
-  showSearchButton?: boolean; // Show/hide the search button in side nav (default: false)
   showConnectionsButton?: boolean; // Show/hide the connections button in side nav (default: false)
-  showProcessesButton?: boolean; // Show/hide the processes button in side nav (default: false)
   showOnboardingButton?: boolean; // Show/hide the onboarding/tutorials button in side nav (default: false)
   showExtensionsButton?: boolean; // Show/hide the extensions button in settings (default: false)
   onboardingCompleted?: boolean; // Whether the onboarding wizard has been completed (default: false)
-
-  // Presence preferences
-  presenceAutoConnect?: boolean; // Automatically connect to presence server on startup (default: false)
 
   /**
    * OpenTelemetry trace export.
@@ -370,13 +352,3 @@ export interface HomePinnedTab {
   purl?: string;
   variant?: 'project-info' | 'repo-explorer' | 'file-city-guide';
 }
-
-/**
- * Centralized default values for user preferences.
- * Import and use these instead of hardcoding defaults throughout the codebase.
- */
-export const USER_PREFERENCE_DEFAULTS: {
-  presenceAutoConnect: boolean;
-} = {
-  presenceAutoConnect: false,
-};

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { RefreshCw, Trash2, AlertTriangle, FolderOpen } from 'lucide-react';
 import { FileCityLogo } from '@principal-ai/logo-component';
@@ -6,10 +6,7 @@ import { UserPreferencesService } from '../../../../main-process-api/UserPrefere
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
-import type { EditorId } from '../../../../../shared/types/editor.types';
-import { EDITOR_LABELS } from '../../../../../shared/types/editor.types';
 import type { UserPreferences } from '../../../../../shared/types/userPreferences.types';
-import { USER_PREFERENCE_DEFAULTS } from '../../../../../shared/types/userPreferences.types';
 
 export const GeneralSettings: React.FC = () => {
   const { theme } = useTheme();
@@ -20,32 +17,17 @@ export const GeneralSettings: React.FC = () => {
   );
   const [isSelectingBaseDirectory, setIsSelectingBaseDirectory] =
     useState(false);
-  const [defaultEditor, setDefaultEditor] = useState<EditorId>('vscode');
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
   const [openLocalhostTerminalLinksInApp, setOpenLocalhostTerminalLinksInApp] =
     useState(false);
   const [showPullMailbox, setShowPullMailbox] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
-  const [showSearchButton, setShowSearchButton] = useState(false);
-  const [showProcessesButton, setShowProcessesButton] = useState(false);
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
-  const [presenceAutoConnect, setPresenceAutoConnect] = useState(
-    USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
-  );
-  const [showSendTabButton, setShowSendTabButton] = useState(false);
-  const [quickOpenTarget, setQuickOpenTarget] = useState<'window' | 'terminal'>(
-    'window',
-  );
   const [terminalImplementation, setTerminalImplementation] = useState<
     'xterm' | 'ghostty'
   >('ghostty');
   const [isClearing, setIsClearing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-
-  const editorOptions = useMemo(
-    () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
-    [],
-  );
 
   useEffect(() => {
     AppVersionManagerService.getVersion().then(setCurrentVersion);
@@ -56,8 +38,6 @@ export const GeneralSettings: React.FC = () => {
     const applyPreferences = (prefs: UserPreferences) => {
       if (!isMounted) return;
 
-      const editor = (prefs.defaultEditor ?? 'vscode') as EditorId;
-      setDefaultEditor(editor);
       setBaseDefaultDirectory(prefs.baseDefaultDirectory || null);
       setEnableVimMode(prefs.enableVimMode ?? false);
       setOpenLocalhostTerminalLinksInApp(
@@ -65,17 +45,7 @@ export const GeneralSettings: React.FC = () => {
       );
       setShowPullMailbox(prefs.titlebarButtons?.pullMailbox ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
-      setShowSearchButton(prefs.showSearchButton ?? false);
-      setShowProcessesButton(prefs.showProcessesButton ?? false);
       setShowOnboardingButton(prefs.showOnboardingButton ?? false);
-      setPresenceAutoConnect(
-        prefs.presenceAutoConnect ??
-          USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
-      );
-      setShowSendTabButton(prefs.showSendTabButton ?? false);
-      setQuickOpenTarget(
-        prefs.quickOpenTarget === 'terminal' ? 'terminal' : 'window',
-      );
       setTerminalImplementation(
         prefs.terminalImplementation === 'xterm' ? 'xterm' : 'ghostty',
       );
@@ -84,7 +54,6 @@ export const GeneralSettings: React.FC = () => {
     UserPreferencesService.getPreferences()
       .then(applyPreferences)
       .catch(() => {
-        setDefaultEditor('vscode');
         setEnableVimMode(false);
       });
 
@@ -235,91 +204,12 @@ export const GeneralSettings: React.FC = () => {
             style={{
               fontSize: '14px',
               lineHeight: 1.6,
-              margin: '0 0 12px 0',
+              margin: 0,
               color: theme.colors.textSecondary,
             }}
           >
             Frame.io for code collaboration
           </p>
-          <a
-            href="https://principle-md.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontSize: '14px',
-              color: theme.colors.primary,
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.textDecoration = 'underline';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.textDecoration = 'none';
-            }}
-          >
-            Visit our website →
-          </a>
-        </div>
-      </div>
-
-      {/* Quick Open (Command+O) destination */}
-      <div style={{ marginBottom: '32px' }}>
-        <h4
-          style={{
-            fontSize: '16px',
-            fontWeight: 600,
-            marginBottom: '16px',
-            color: theme.colors.text,
-          }}
-        >
-          Quick Open (⌘O)
-        </h4>
-        <div
-          style={{
-            backgroundColor: theme.colors.backgroundSecondary,
-            borderRadius: '12px',
-            padding: '20px',
-            border: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          <p
-            style={{
-              fontSize: '14px',
-              color: theme.colors.textSecondary,
-              marginBottom: '12px',
-            }}
-          >
-            Choose where selecting a project from Quick Open lands. Workspaces
-            always open in their own window.
-          </p>
-          <select
-            value={quickOpenTarget}
-            onChange={async (e) => {
-              const value = e.target.value as 'window' | 'terminal';
-              setQuickOpenTarget(value);
-              await UserPreferencesService.updatePreferences({
-                quickOpenTarget: value,
-              });
-            }}
-            style={{
-              padding: '10px 14px',
-              borderRadius: '8px',
-              border: `1px solid ${theme.colors.border}`,
-              backgroundColor: theme.colors.background,
-              color: theme.colors.text,
-              cursor: 'pointer',
-              fontSize: '14px',
-              minWidth: '280px',
-            }}
-          >
-            <option value="window">Open in a project window</option>
-            <option value="terminal">
-              Open as a terminal tab in Principal
-            </option>
-          </select>
         </div>
       </div>
 
@@ -434,64 +324,6 @@ export const GeneralSettings: React.FC = () => {
               Example: {baseDefaultDirectory}/octocat/hello-world
             </p>
           )}
-        </div>
-      </div>
-
-      {/* Editor Preference */}
-      <div style={{ marginBottom: '32px' }}>
-        <h4
-          style={{
-            fontSize: '16px',
-            fontWeight: 600,
-            marginBottom: '16px',
-            color: theme.colors.text,
-          }}
-        >
-          Default Code Editor
-        </h4>
-        <div
-          style={{
-            backgroundColor: theme.colors.backgroundSecondary,
-            borderRadius: '12px',
-            padding: '20px',
-            border: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          <p
-            style={{
-              fontSize: '14px',
-              color: theme.colors.textSecondary,
-              marginBottom: '12px',
-            }}
-          >
-            Choose your preferred editor for opening local repositories
-          </p>
-          <select
-            value={defaultEditor}
-            onChange={async (e) => {
-              const value = e.target.value as EditorId;
-              setDefaultEditor(value);
-              await UserPreferencesService.updatePreferences({
-                defaultEditor: value,
-              });
-            }}
-            style={{
-              padding: '10px 14px',
-              borderRadius: '8px',
-              border: `1px solid ${theme.colors.border}`,
-              backgroundColor: theme.colors.background,
-              color: theme.colors.text,
-              cursor: 'pointer',
-              fontSize: '14px',
-              minWidth: '200px',
-            }}
-          >
-            {editorOptions.map(([id, label]) => (
-              <option key={id} value={id}>
-                {label}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 
@@ -735,107 +567,12 @@ export const GeneralSettings: React.FC = () => {
             border: `1px solid ${theme.colors.border}`,
           }}
         >
-          {/* Presence Auto-Connect */}
           <div
             style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'flex-start',
               gap: '16px',
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="presenceAutoConnect"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Auto-Connect to Presence on Startup
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled (default), automatically connects to the presence
-                server on app startup if you're authenticated with GitHub. You
-                can manually control your connection in the Auth view.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="presenceAutoConnect"
-                type="checkbox"
-                checked={presenceAutoConnect}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setPresenceAutoConnect(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    presenceAutoConnect: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: presenceAutoConnect
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: presenceAutoConnect ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
             }}
           >
             <div style={{ flex: 1 }}>
@@ -911,288 +648,6 @@ export const GeneralSettings: React.FC = () => {
                     height: '18px',
                     width: '18px',
                     left: showMonitorButton ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="showSearchButton"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show Search Button
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled, the Search button will appear in the side
-                navigation. When disabled (default), the button is hidden.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showSearchButton"
-                type="checkbox"
-                checked={showSearchButton}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowSearchButton(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showSearchButton: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showSearchButton
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showSearchButton ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="showProcessesButton"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show Processes Button
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled, the Processes button will appear in the side
-                navigation. When disabled (default), the button is hidden.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showProcessesButton"
-                type="checkbox"
-                checked={showProcessesButton}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowProcessesButton(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showProcessesButton: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showProcessesButton
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showProcessesButton ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-
-          {/* Terminal bottom bar "open in repo window" button */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="showSendTabButton"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show Tab Transfer Button
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled, the "open in repo window" / "open in main window"
-                button appears in the terminal bottom bar. When disabled
-                (default), the button is hidden.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showSendTabButton"
-                type="checkbox"
-                checked={showSendTabButton}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowSendTabButton(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showSendTabButton: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showSendTabButton
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showSendTabButton ? '27px' : '3px',
                     bottom: '3px',
                     backgroundColor: theme.colors.background,
                     transition: '0.3s',

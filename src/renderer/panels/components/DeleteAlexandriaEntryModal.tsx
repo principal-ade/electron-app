@@ -9,7 +9,10 @@ import type {
   AlexandriaEntry,
 } from '@principal-ai/alexandria-core-library/types';
 import { ShellService } from '../../main-process-api/ShellService';
-import { GitService } from '../../main-process-api/GitService';
+import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
+import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
+
+const STATUS_CHECK_TIMEOUT_MS = 5_000;
 
 interface GitStatusSummary {
   hasUncommittedChanges: boolean;
@@ -25,8 +28,8 @@ interface DeleteAlexandriaEntryModalProps {
   onConfirm: (deleteLocal: boolean) => Promise<void>;
   /**
    * Absolute path of the local clone whose git status should be checked.
-   * The modal fetches the status itself (async) so opening it is instant —
-   * the git commands no longer block the click that triggers the modal.
+   * Defaults to the entry path. The modal reads repository-monitor status
+   * asynchronously, without fetching from the remote.
    */
   clonePath?: string | null;
 }
@@ -37,13 +40,25 @@ export const DeleteAlexandriaEntryModal: React.FC<
   const { theme } = useTheme();
 
   const [isDeleting, setIsDeleting] = useState(false);
-  const [gitStatus, setGitStatus] = useState<GitStatusSummary | null>(null);
-  const [loadingGitStatus, setLoadingGitStatus] = useState(false);
+  const repositoryPath = clonePath ?? entry?.path ?? null;
+  const [statusCheck, setStatusCheck] = useState<{
+    path: string;
+    result: GitStatusSummary | 'loading' | 'unavailable';
+  } | null>(null);
+  const [statusAttempt, setStatusAttempt] = useState(0);
+  const result =
+    statusCheck?.path === repositoryPath ? statusCheck?.result : undefined;
+  const gitStatus = typeof result === 'object' ? result : null;
+  const loadingGitStatus =
+    !!repositoryPath && (result === undefined || result === 'loading');
+  const statusUnavailable = !repositoryPath || result === 'unavailable';
+  const canDelete = !isDeleting && gitStatus !== null;
 
   // Always delete local files
   const deleteLocal = true;
 
   const handleConfirm = async () => {
+    if (!canDelete) return;
     try {
       setIsDeleting(true);
       await onConfirm(deleteLocal);
@@ -62,53 +77,72 @@ export const DeleteAlexandriaEntryModal: React.FC<
     }
   }, [isDeleting, onClose]);
 
-  // Check git status when the modal opens. Runs here (async, non-blocking) so
-  // the click that opens the modal stays instant — the user sees the dialog
-  // immediately and the uncommitted-work warning fills in when git returns.
+  // Subscribe before reading so an older snapshot cannot replace a live update.
   useEffect(() => {
-    if (!isOpen || !clonePath) {
-      setGitStatus(null);
-      setLoadingGitStatus(false);
+    if (!isOpen || !repositoryPath) {
+      setStatusCheck(null);
       return;
     }
 
     let cancelled = false;
+    let completed = false;
+    let unsubscribe = () => {};
+    setStatusCheck({ path: repositoryPath, result: 'loading' });
+
+    const timeout = setTimeout(() => {
+      completed = true;
+      setStatusCheck({ path: repositoryPath, result: 'unavailable' });
+    }, STATUS_CHECK_TIMEOUT_MS);
+
+    const applyStatus = (status: GitStatusWithFiles) => {
+      if (cancelled || status.repoPath !== repositoryPath) return;
+      completed = true;
+      clearTimeout(timeout);
+      const uncommittedCount = new Set([
+        ...status.stagedFiles,
+        ...status.modifiedFiles,
+        ...status.createdFiles,
+        ...status.deletedFiles,
+        ...status.untrackedFiles,
+      ]).size;
+      setStatusCheck({
+        path: repositoryPath,
+        result: {
+          hasUncommittedChanges: status.isDirty || uncommittedCount > 0,
+          uncommittedCount,
+          unpushedCommits: status.ahead,
+          currentBranch: status.branch,
+        },
+      });
+    };
+
     const fetchGitStatus = async () => {
       try {
-        setLoadingGitStatus(true);
-        // Branch tracking info (unpushed commits) + working-tree status.
-        const branchStatus = await GitService.getBranchStatus(clonePath);
-        const statusResult = await GitService.execCommand(clonePath, [
-          'status',
-          '--porcelain',
-        ]);
-        if (cancelled) return;
-
-        const uncommittedCount = statusResult.stdout
-          .trim()
-          .split('\n')
-          .filter(Boolean).length;
-
-        setGitStatus({
-          hasUncommittedChanges: statusResult.stdout.trim().length > 0,
-          uncommittedCount,
-          unpushedCommits: branchStatus.ahead,
-          currentBranch: branchStatus.branch,
-        });
+        unsubscribe = RepositoryMonitoringService.onGitStatusChanged(applyStatus);
+        const status = await (statusAttempt === 0
+          ? RepositoryMonitoringService.getGitStatusWithFiles(repositoryPath)
+          : RepositoryMonitoringService.refreshGitStatus(repositoryPath));
+        if (cancelled || completed) return;
+        if (!status || status.repoPath !== repositoryPath) {
+          throw new Error('Repository-monitor status is unavailable');
+        }
+        applyStatus(status);
       } catch (error) {
-        if (cancelled) return;
+        if (cancelled || completed) return;
+        completed = true;
+        clearTimeout(timeout);
         console.warn('[DeleteAlexandriaEntryModal] Failed to check git status:', error);
-        setGitStatus(null);
-      } finally {
-        if (!cancelled) setLoadingGitStatus(false);
+        setStatusCheck({ path: repositoryPath, result: 'unavailable' });
       }
     };
 
     fetchGitStatus();
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
+      unsubscribe();
     };
-  }, [isOpen, clonePath]);
+  }, [isOpen, repositoryPath, statusAttempt]);
 
   // Handle ESC key
   useEffect(() => {
@@ -281,6 +315,32 @@ export const DeleteAlexandriaEntryModal: React.FC<
             </div>
           )}
 
+          {statusUnavailable && (
+            <div
+              role="alert"
+              style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.error || '#ef4444'}`,
+                marginBottom: '20px',
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts.body,
+                color: theme.colors.textSecondary,
+              }}
+            >
+              Status unavailable. Repository-monitor could not check this clone
+              for uncommitted changes or unpushed commits. Retry before deleting.
+              <button
+                type="button"
+                onClick={() => setStatusAttempt((attempt) => attempt + 1)}
+                disabled={isDeleting || !repositoryPath}
+                style={{ marginTop: '8px', display: 'block' }}
+              >
+                Retry status check
+              </button>
+            </div>
+          )}
+
           {/* Git Status Warning */}
           {!loadingGitStatus && gitStatus && (gitStatus.hasUncommittedChanges || gitStatus.unpushedCommits > 0) && (
             <div
@@ -321,7 +381,11 @@ export const DeleteAlexandriaEntryModal: React.FC<
               >
                 {gitStatus.hasUncommittedChanges && (
                   <div style={{ marginBottom: '4px' }}>
-                    • <strong>{gitStatus.uncommittedCount}</strong> uncommitted {gitStatus.uncommittedCount === 1 ? 'change' : 'changes'} will be permanently lost
+                    {gitStatus.uncommittedCount > 0 ? (
+                      <>• <strong>{gitStatus.uncommittedCount}</strong> uncommitted {gitStatus.uncommittedCount === 1 ? 'change' : 'changes'} will be permanently lost</>
+                    ) : (
+                      <>• Uncommitted changes will be permanently lost</>
+                    )}
                   </div>
                 )}
                 {gitStatus.unpushedCommits > 0 && (
@@ -466,21 +530,21 @@ export const DeleteAlexandriaEntryModal: React.FC<
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={isDeleting}
+            disabled={!canDelete}
             style={{
               padding: '10px 20px',
               borderRadius: '6px',
               border: 'none',
               backgroundColor: theme.colors.error || '#ef4444',
               color: theme.colors.background,
-              cursor: isDeleting ? 'not-allowed' : 'pointer',
+              cursor: canDelete ? 'pointer' : 'not-allowed',
               fontSize: theme.fontSizes[2],
               fontWeight: theme.fontWeights.medium,
               fontFamily: theme.fonts.body,
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              opacity: isDeleting ? 0.5 : 1,
+              opacity: canDelete ? 1 : 0.5,
             }}
           >
             <Trash2 size={16} />

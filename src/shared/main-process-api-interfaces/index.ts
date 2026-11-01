@@ -59,6 +59,7 @@ import type { FeedbackAPI } from './FeedbackAPI';
 import type { DocumentSearchAPI } from '../ipc/DocumentSearchIPC';
 import type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 import type { ProcessRegistryAPI } from './ProcessRegistryAPI';
+import type { PullRequestWatchAPI } from './PullRequestWatchAPI';
 import type { GitHubArtifactAPI } from './GitHubArtifactAPI';
 import type { RecentReposAPI } from './RecentReposAPI';
 import type { SkillLockAPI } from './SkillLockAPI';
@@ -147,6 +148,7 @@ export interface MainProcessAPI {
   browser: BrowserAPI;
   bruno: BrunoAPI;
   processes: ProcessRegistryAPI;
+  pullRequestWatch: PullRequestWatchAPI;
   /** Only available in Remote Terminal Viewer window */
   terminalBridge?: TerminalBridgeAPI;
 }

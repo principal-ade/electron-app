@@ -1,7 +1,7 @@
 /**
  * useRepoWatch
  *
- * Hold a monitoring watch reference for a repository while the caller is
+ * Hold monitoring watch references for repositories while the caller is
  * mounted.
  *
  * Opening a repository's profile is the signal that the user is now working on
@@ -16,39 +16,62 @@
  * clears the "ahead" indicator within a debounce instead of minutes.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 
-export function useRepoWatch(repoPath: string | null | undefined): void {
-  // A fresh reference id per mount: two mounted profiles of the same repo must
-  // be two references, so unmounting one doesn't stop watching for the other.
-  const referenceId = useMemo(
-    () => `repo-profile:${Math.random().toString(36).slice(2)}`,
-    [],
+export function useRepoWatch(
+  repoPaths: string | string[] | null | undefined,
+): void {
+  const pathKey = JSON.stringify(
+    [
+      ...new Set(
+        Array.isArray(repoPaths) ? repoPaths : repoPaths ? [repoPaths] : [],
+      ),
+    ].sort(),
   );
 
   useEffect(() => {
-    if (!repoPath) return;
+    const paths = JSON.parse(pathKey) as string[];
+    if (paths.length === 0) return;
+    // Each effect lifetime owns a distinct reference, including Strict Mode
+    // remounts. A late cleanup must never release a newer effect's reference.
+    const referenceId = `repo-profile:${Math.random().toString(36).slice(2)}`;
     let cancelled = false;
 
-    void RepositoryMonitoringService.acquireWatch(repoPath, referenceId)
-      .then(() => {
-        // Watch state has no push notification — tell mounted panels to re-pull.
-        if (!cancelled) notifyWatchChanged();
-      })
-      .catch((err) => {
-        console.warn('[useRepoWatch] Failed to acquire watch:', repoPath, err);
-      });
+    const acquisitions = paths.map((repoPath) =>
+      RepositoryMonitoringService.acquireWatch(repoPath, referenceId)
+        .then(() => {
+          // Watch state has no push notification — tell mounted panels to re-pull.
+          if (!cancelled) notifyWatchChanged();
+        })
+        .catch((err) => {
+          console.warn(
+            '[useRepoWatch] Failed to acquire watch:',
+            repoPath,
+            err,
+          );
+        }),
+    );
 
     return () => {
       cancelled = true;
-      void RepositoryMonitoringService.releaseWatch(repoPath, referenceId)
-        .then(() => notifyWatchChanged())
-        .catch((err) => {
-          console.warn('[useRepoWatch] Failed to release watch:', repoPath, err);
-        });
+      paths.forEach((repoPath, index) => {
+        // Wait for an in-flight acquisition before releasing its reference.
+        void acquisitions[index]
+          .then(() =>
+            RepositoryMonitoringService.releaseWatch(repoPath, referenceId),
+          )
+          .then(() => notifyWatchChanged())
+          .catch((err) => {
+            console.warn(
+              '[useRepoWatch] Failed to release watch:',
+              repoPath,
+              err,
+            );
+          });
+      });
     };
-  }, [repoPath, referenceId]);
+  }, [pathKey]);
 }
 
 /**

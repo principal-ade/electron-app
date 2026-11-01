@@ -48,6 +48,7 @@ import { testDebugAPI } from './main-process-api-implementations/testDebugApi';
 import { documentSearchAPI } from './main-process-api-implementations/documentSearchApi';
 import { localhostDetectionAPI } from './main-process-api-implementations/localhostDetectionApi';
 import { processRegistryAPI } from './main-process-api-implementations/processRegistryApi';
+import { pullRequestWatchAPI } from './main-process-api-implementations/pullRequestWatchApi';
 import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
 import { recentReposAPI } from './main-process-api-implementations/recentReposApi';
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
@@ -132,6 +133,7 @@ const mainProcessExposure: MainProcessAPI = {
   documentSearch: documentSearchAPI,
   localhostDetection: localhostDetectionAPI,
   processes: processRegistryAPI,
+  pullRequestWatch: pullRequestWatchAPI,
   githubArtifact: githubArtifactAPI,
   recentRepos: recentReposAPI,
   skillLock: skillLockAPI,

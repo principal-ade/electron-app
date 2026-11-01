@@ -36,7 +36,6 @@ export class UserPreferencesHandler {
 
     if (!result.success || !result.data) {
       const defaultPreferences: UserPreferences = {
-        defaultEditor: 'vscode',
         defaultView: 'projects',
         titlebarButtons: {
           theme: true,

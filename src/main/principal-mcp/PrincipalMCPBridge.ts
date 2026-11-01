@@ -26,6 +26,8 @@ import { registerProcessRoutes } from '../processes/processRoutes';
 import { registerTerminalRoutes } from '../terminal/terminalRoutes';
 import { getProcessRegistry } from '../processes/ProcessRegistry';
 import { registerCatalogRoutes } from './catalogRoutes';
+import { registerPullRequestWatchRoutes } from '../pr-watching/pullRequestWatchRoutes';
+import { getPullRequestWatcher } from '../pr-watching/PullRequestWatcher';
 
 // Tracer for Principal MCP Bridge instrumentation
 const tracer = getTracer('principal-ade-main');
@@ -1030,6 +1032,11 @@ export class PrincipalMCPBridge extends EventEmitter {
     registerBrowserRoutes(this.app, getProcessRegistry());
     registerRepoOpenRoutes(this.app);
     registerRequestRoutes(this.app);
+
+    // ============================================
+    // PULL REQUEST WATCH ROUTES
+    // ============================================
+    registerPullRequestWatchRoutes(this.app, getPullRequestWatcher());
 
     // ============================================
     // TOPIC ROUTES

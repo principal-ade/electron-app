@@ -4,7 +4,6 @@ import { ipcMain } from 'electron';
 import { setupQuickOpenHandlers } from './quickOpen';
 import { focusOrCreateMainWindow } from './modernWindowManager';
 import { openDevWorkspaceWindow } from './devWorkspaceWindowHandlers';
-import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 
 jest.mock('electron', () => ({
@@ -28,16 +27,12 @@ jest.mock('../version-control-providers/github/apiCore', () => ({
   gitHubAPICore: {},
 }));
 jest.mock('../services/AuthService', () => ({ authService: {} }));
-jest.mock('../stores/userPreferencesHandler', () => ({
-  UserPreferencesHandler: { getInstance: jest.fn() },
-}));
 
 describe('Quick Open selection', () => {
   const send = jest.fn();
   const once = jest.fn();
   const isLoading = jest.fn();
   const isDestroyed = jest.fn();
-  const getUserPreferences = jest.fn();
   let select: (event: unknown, item: unknown) => Promise<void>;
 
   beforeEach(() => {
@@ -49,9 +44,6 @@ describe('Quick Open selection', () => {
     } as unknown as NonNullable<
       Awaited<ReturnType<typeof focusOrCreateMainWindow>>
     >);
-    jest.mocked(UserPreferencesHandler.getInstance).mockReturnValue({
-      getUserPreferences,
-    } as unknown as UserPreferencesHandler);
     setupQuickOpenHandlers();
     const registration = jest.mocked(ipcMain.on).mock.calls.find(
       ([channel]) => channel === 'quick-open:select',
@@ -70,24 +62,19 @@ describe('Quick Open selection', () => {
     isOpen: false,
   };
 
-  it.each(['window', 'terminal'])(
-    'opens GitHub results in Explorer regardless of the %s preference',
-    async (quickOpenTarget) => {
-      getUserPreferences.mockResolvedValue({ quickOpenTarget });
-      await select({}, githubItem);
+  it('opens GitHub results in Explorer', async () => {
+    await select({}, githubItem);
 
-      expect(send).toHaveBeenCalledWith(WindowEvent.OPEN_REPOSITORY_EXPLORER, {
-        owner: 'acme',
-        name: 'widgets',
-        description: 'Widgets',
-        stars: 42,
-      });
-      expect(getUserPreferences).not.toHaveBeenCalled();
-      expect(openDevWorkspaceWindow).not.toHaveBeenCalled();
-      expect(jest.mocked(ipcMain.handle).mock.calls.map(([channel]) => channel))
-        .not.toContain('quick-open:clone-github');
-    },
-  );
+    expect(send).toHaveBeenCalledWith(WindowEvent.OPEN_REPOSITORY_EXPLORER, {
+      owner: 'acme',
+      name: 'widgets',
+      description: 'Widgets',
+      stars: 42,
+    });
+    expect(openDevWorkspaceWindow).not.toHaveBeenCalled();
+    expect(jest.mocked(ipcMain.handle).mock.calls.map(([channel]) => channel))
+      .not.toContain('quick-open:clone-github');
+  });
 
   it('waits for a newly created principal window to load', async () => {
     isLoading.mockReturnValue(true);
@@ -109,22 +96,20 @@ describe('Quick Open selection', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('still opens local repositories in a terminal when configured', async () => {
-    getUserPreferences.mockResolvedValue({ quickOpenTarget: 'terminal' });
+  it('opens owner directories in a terminal tab', async () => {
     await select({}, {
-      type: 'repository',
-      name: 'widgets',
-      localPath: '/work/widgets',
+      type: 'ownerDirectory',
+      name: 'acme',
+      localPath: '/work/acme',
       isOpen: false,
     });
     expect(send).toHaveBeenCalledWith(WindowEvent.OPEN_TERMINAL_TAB, {
-      directory: '/work/widgets',
-      label: 'widgets',
+      directory: '/work/acme',
+      label: 'acme',
     });
   });
 
-  it('still opens local repositories in a workspace by default', async () => {
-    getUserPreferences.mockResolvedValue({});
+  it('opens local repositories in a workspace', async () => {
     const alexandriaEntry = { name: 'widgets', path: '/work/widgets' };
     await select({}, {
       type: 'repository',

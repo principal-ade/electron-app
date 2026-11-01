@@ -70,7 +70,6 @@ import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { RepoFileSearchPalette } from './RepoFileSearchPalette';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { useTerminalRepoInfo } from '../hooks/useTerminalRepoInfo';
-import { SendTabButton } from '../move-tab/SendTabButton';
 import { DetachTabButton } from '../move-tab/DetachTabButton';
 import { useTabReceiver } from '../move-tab/useTabReceiver';
 import { toDetachableTabDescriptor } from '../move-tab/detachedTabDescriptor';
@@ -93,7 +92,6 @@ import {
   type TopicProjectTarget,
 } from '../utils/topicProjectNavigation';
 import type { Purl } from '@principal-ai/alexandria-core-library';
-import { useOpenRepositoryWindows } from '../hooks/useOpenRepositoryWindows';
 import {
   TabbedTerminalPanel,
   type TerminalPanelActions,
@@ -254,7 +252,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
     string | null
   >(null);
-  const [showSendTabButton, setShowSendTabButton] = useState(false);
   const terminalImplementation = useTerminalImplementation();
 
   useEffect(() => {
@@ -329,13 +326,11 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     const loadPreferences = async () => {
       const preferences = await UserPreferencesService.getPreferences();
       setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
-      setShowSendTabButton(preferences.showSendTabButton ?? false);
     };
     loadPreferences();
     const unsubscribe = UserPreferencesService.onPreferencesUpdated(
       (preferences) => {
         setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
-        setShowSendTabButton(preferences.showSendTabButton ?? false);
       },
     );
     return () => {
@@ -625,11 +620,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     [],
   );
 
-  // Tab close after cross-window transfer.
-  const [requestCloseTabId, setRequestCloseTabId] = useState<string | null>(
-    null,
-  );
-
   // Cmd+Shift+F file search: the git repo the active terminal sits in, resolved
   // lazily when the chord fires (see the keydown effect below).
   const [fileSearchRepo, setFileSearchRepo] = useState<{
@@ -641,7 +631,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
 
   // Cross-window tab receiver.
   const { incomingTab, clearIncomingTab } = useTabReceiver();
-  const repoWindows = useOpenRepositoryWindows();
 
   // When a tab arrives from another window, create a terminal session for it.
   useEffect(() => {
@@ -1034,13 +1023,13 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     [activeTab],
   );
 
-  // bottom-bar content for cross-window tab transfer (principal → dev-workspace)
-  // and detaching the active tab into its own window.
+  // bottom-bar content: show the active tab's project in the side panel and
+  // detach the active tab into its own window.
   const bottomBarContent = useMemo(() => {
     const hasRepo = activeTabDirectory
       ? findEntryForDirectory(activeTabDirectory) !== undefined
       : false;
-    if (!showSendTabButton && !hasRepo && !detachableTab) return null;
+    if (!hasRepo && !detachableTab) return null;
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         {hasRepo && (
@@ -1067,24 +1056,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             onDetach={() => void detachTabToWindow(detachableTab.tabId)}
           />
         )}
-        {showSendTabButton && (
-          <SendTabButton
-            direction="to-dev-workspace"
-            activeTabId={activeTabId}
-            cwd={terminalDirectory}
-            repoWindows={repoWindows}
-            onTabDispatched={() => {
-              if (activeTabId) setRequestCloseTabId(activeTabId);
-            }}
-          />
-        )}
       </div>
     );
   }, [
-    showSendTabButton,
-    activeTabId,
-    terminalDirectory,
-    repoWindows,
     activeTabDirectory,
     findEntryForDirectory,
     handleShowProject,
@@ -1288,7 +1262,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onFocusTabHandled={handleFocusTabHandled}
               requestOpenTab={requestOpenTab}
               onOpenTabHandled={handleOpenTabHandled}
-              requestCloseTabId={requestCloseTabId}
               renderTabContent={renderTabContent}
               renderTabIcon={renderTabIcon}
               renderEmptyState={renderTerminalEmptyState}
@@ -1339,7 +1312,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       handleFocusTabHandled,
       requestOpenTab,
       handleOpenTabHandled,
-      requestCloseTabId,
       handleOpenHomeEntry,
       renderTabContent,
       renderTabIcon,

@@ -19,7 +19,7 @@ export enum WindowEvent {
   NAVIGATE_TO_UPDATES = 'window:navigate-to-updates',
   /**
    * Open (or focus) a terminal tab in the principal window at a local path.
-   * Used by Quick Open when `quickOpenTarget === 'terminal'`.
+   * Used by Quick Open for owner directories.
    */
   OPEN_TERMINAL_TAB = 'window:open-terminal-tab',
   // Browse a remote GitHub repository without cloning it.

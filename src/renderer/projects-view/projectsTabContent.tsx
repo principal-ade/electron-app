@@ -34,6 +34,8 @@ import {
   githubRepoPurl,
 } from '../utils/alexandriaIdentity';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { useRepositoryStatuses } from '../hooks/useRepositoryStatuses';
+import { monitoredDirtyFiles } from './monitoredDirtyFiles';
 import type {
   MarkdownDocTab,
   SourceFileTab,
@@ -661,33 +663,6 @@ function mapChangedStatus(
   return status;
 }
 
-/** Parse `git status --porcelain` into panel dirty file rows. */
-function dirtyFilesFromPorcelain(stdout: string): CommitFileChange[] {
-  const files: CommitFileChange[] = [];
-  for (const line of stdout.split('\n')) {
-    if (line.length < 4) continue;
-    const xy = line.slice(0, 2);
-    let path = line.slice(3).trim();
-    // Renames: `R  old -> new`
-    if (path.includes(' -> ')) {
-      path = path.split(' -> ').pop()?.trim() ?? path;
-    }
-    // Untracked
-    if (xy === '??') {
-      files.push({ path, status: 'added' });
-      continue;
-    }
-    const code = (xy[0] !== ' ' && xy[0] !== '?' ? xy[0] : xy[1]) ?? 'M';
-    let status: CommitFileStatus = 'modified';
-    if (code === 'A') status = 'added';
-    else if (code === 'D') status = 'removed';
-    else if (code === 'R') status = 'renamed';
-    else if (code === 'C') status = 'copied';
-    else if (code === 'M') status = 'modified';
-    files.push({ path, status });
-  }
-  return files;
-}
 
 /**
  * Wrapper component for the File City guide tab content.
@@ -729,6 +704,10 @@ const FileCityGuideTabContent: React.FC<{
   const [weekLoading, setWeekLoading] = React.useState(false);
 
   const localPath = localEntry?.path ?? null;
+  const { statuses: monitoredStatuses } = useRepositoryStatuses(
+    weekActive && localPath ? [localPath] : [],
+  );
+  const monitoredStatus = localPath ? monitoredStatuses.get(localPath) : undefined;
 
   // Fetch file tree + line counts when the repo identity changes.
   React.useEffect(() => {
@@ -1040,21 +1019,6 @@ const FileCityGuideTabContent: React.FC<{
             new Date(b.authoredAt).getTime() - new Date(a.authoredAt).getTime(),
         );
 
-        let dirty: DirtyWorkingTree | null = null;
-        if (localPath) {
-          try {
-            const status = await GitService.execCommand(localPath, [
-              'status',
-              '--porcelain',
-            ]);
-            const files = dirtyFilesFromPorcelain(status.stdout);
-            if (files.length > 0) {
-              dirty = { asOf: asOfIso, files };
-            }
-          } catch (err) {
-            console.warn('[FileCityGuideTab] dirty status failed', err);
-          }
-        }
 
         if (cancelled) return;
         setWeekView({
@@ -1062,7 +1026,6 @@ const FileCityGuideTabContent: React.FC<{
           asOf: asOfIso,
           weekStartsOn: WEEK_STARTS_ON,
           commits,
-          dirty,
           loading: false,
         });
       } catch (err) {
@@ -1141,12 +1104,16 @@ const FileCityGuideTabContent: React.FC<{
     if (!weekActive) {
       return makeGuideSlice<WeekCommitsView | null>('weekCommits', null);
     }
+    const files = monitoredStatus ? monitoredDirtyFiles(monitoredStatus) : [];
+    const dirty: DirtyWorkingTree | null = files.length > 0
+      ? { asOf: monitoredStatus?.lastChangedAt ?? new Date().toISOString(), files }
+      : null;
     return makeGuideSlice<WeekCommitsView | null>(
       'weekCommits',
-      weekView,
+      weekView ? { ...weekView, dirty } : null,
       weekLoading,
     );
-  }, [weekActive, weekView, weekLoading]);
+  }, [weekActive, weekView, weekLoading, monitoredStatus]);
 
   const repository = React.useMemo<FileCityGuideRepository | null>(() => {
     if (!localPath && !github?.name) return null;

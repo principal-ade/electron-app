@@ -168,26 +168,6 @@ export class ShellService {
   }
 
   /**
-   * Open a path in the default editor (simplified version)
-   * This is a convenience method that uses VS Code as the default editor
-   */
-  static async openInDefaultEditor(
-    path: string,
-  ): Promise<{ success: boolean; error?: string }> {
-    console.info(`[ShellService] Opening in default editor: ${path}`);
-    // Try VS Code first, then Cursor as fallback
-    const result = await this.openInEditor({
-      editor: 'vscode' as EditorId,
-      dir: path,
-    });
-    if (!result.success) {
-      // Try Cursor as fallback
-      return this.openInEditor({ editor: 'cursor' as EditorId, dir: path });
-    }
-    return result;
-  }
-
-  /**
    * Show a file or directory in the system file manager (Finder/Explorer).
    * Opens the parent folder and selects the item.
    */
