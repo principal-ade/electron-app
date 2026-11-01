@@ -44,8 +44,6 @@ import type { TerminalAPI } from './TerminalService';
 import type { UserPreferencesAPI } from './UserPreferencesAPI';
 import type { WindowManagerAPI } from './WindowManagerAPI';
 import { AgentSessionEventsAPI } from './AgentSessionEventsAPI';
-import type { OrbitAPI } from './OrbitAPI';
-import type { ApiProxyAPI } from './ApiProxyAPI';
 import type { PackageManagerAPI } from './PackageManagerAPI';
 import type { TypeExtractionAPI } from './TypeExtractionAPI';
 import type { DockerAPI } from './DockerAPI';
@@ -121,8 +119,6 @@ export interface MainProcessAPI {
   terminal: TerminalAPI;
   userPreferences: UserPreferencesAPI;
   windowManager: WindowManagerAPI;
-  orbit: OrbitAPI;
-  apiProxy: ApiProxyAPI;
   packageManager: PackageManagerAPI;
   typeExtraction: TypeExtractionAPI;
   docker: DockerAPI;

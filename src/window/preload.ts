@@ -33,9 +33,7 @@ import { repositoryMonitoringAPI } from './main-process-api-implementations/repo
 import { cliBridgeApi } from './main-process-api-implementations/cliBridgeApi';
 import { secretsAPI } from './main-process-api-implementations/secretsApi';
 import { linksAPI } from './main-process-api-implementations/linksApi';
-import { apiProxyApi } from './main-process-api-implementations/apiProxyApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
-import { orbitAPI } from './main-process-api-implementations/orbitApi';
 import { dockerAPI } from './main-process-api-implementations/dockerApi';
 import { presenceAPI } from './main-process-api-implementations/presenceApi';
 import { sshSetupAPI } from './main-process-api-implementations/sshSetupApi';
@@ -114,9 +112,7 @@ const mainProcessExposure: MainProcessAPI = {
   system: systemAPI,
   terminal: terminalAPI,
   userPreferences: userPreferencesAPI,
-  apiProxy: apiProxyApi,
   windowManager: windowManagerAPI,
-  orbit: orbitAPI,
   packageManager: packageManagerApi,
   typeExtraction: typeExtractionApi,
   docker: dockerAPI,

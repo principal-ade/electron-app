@@ -35,8 +35,7 @@ class UnifiedSecureStorage {
   "version": "1.0.0",
   "encrypted": {
     "tokens": {
-      "github_token": "...",
-      "orbit_auth": "..."
+      "github_token": "..."
     },
     "secrets": {
       "repo-{id}": {

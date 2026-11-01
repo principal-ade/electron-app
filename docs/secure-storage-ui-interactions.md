@@ -259,7 +259,6 @@ The `UnifiedSecureStorage` has been **already implemented** and is currently in 
 
 ### Application-Wide Tokens
 - `github_token`: GitHub API authentication
-- `orbit_auth`: Orbit authentication token
 
 ### Repository-Specific Secrets
 - `repo-{id}`: Repository-specific credentials

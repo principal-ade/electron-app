@@ -461,8 +461,6 @@ The app is already set up to work with localhost services:
 ```typescript
 // Dev Server configs
 'http://localhost:3000'      // Main dev server
-'http://localhost:3002'      // Orbit server
-'ws://localhost:3003/orbit/signal'  // WebSocket
 
 // Callimachus connection
 'http://localhost:8000/api/v1'

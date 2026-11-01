@@ -1,5 +1,5 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
-import { UnifiedSecureStorage, TOKEN_KEYS } from './UnifiedSecureStorage';
+import { UnifiedSecureStorage } from './UnifiedSecureStorage';
 import { SecureTokenAPIEvent } from '../../shared/main-process-api-interfaces/SecureTokenAPI';
 import { authService } from './AuthService';
 import type { TokenMetadata } from './storage-domains/TokenDomain';
@@ -23,94 +23,6 @@ export class SecureTokenIPC {
     }
     return this.storage;
   }
-
-  private setupHandlers(): void {
-    // Get GitHub auth token
-    ipcMain.handle(SecureTokenAPIEvent.GET_GITHUB_AUTH, async () => {
-      try {
-        // Try GITHUB_TOKEN first (current auth system)
-        let data = await this.getStorage().getTokenWithMetadata(
-          TOKEN_KEYS.GITHUB_TOKEN,
-        );
-
-        // Fallback to ORBIT_AUTH for legacy/P2P
-        if (!data) {
-          data = await this.getStorage().getTokenWithMetadata(
-            TOKEN_KEYS.ORBIT_AUTH,
-          );
-        }
-
-        if (!data) {
-          // No tokens found
-          return { authenticated: false };
-        }
-
-        return {
-          authenticated: true,
-          token: data.token,
-          user: data.metadata?.user,
-        };
-      } catch (error) {
-        console.error('Failed to get GitHub auth:', error);
-        return { authenticated: false };
-      }
-    });
-
-    // Check if authenticated
-    ipcMain.handle(SecureTokenAPIEvent.IS_AUTHENTICATED, async () => {
-      const token = await this.getStorage().getToken(TOKEN_KEYS.ORBIT_AUTH);
-      return token !== null;
-    });
-
-    // Generic token operations
-    ipcMain.handle(
-      SecureTokenAPIEvent.SET,
-      async (
-        event: IpcMainInvokeEvent,
-        key: string,
-        token: string,
-        metadata?: unknown,
-      ) => {
-        try {
-          await this.getStorage().setToken(
-            key,
-            token,
-            metadata as TokenMetadata | undefined,
-          );
-          return { success: true };
-        } catch (error) {
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          };
-        }
-      },
-    );
-
-    ipcMain.handle(SecureTokenAPIEvent.GET, async (event, key: string) => {
-      try {
-        const token = await this.getStorage().getToken(key);
-        return { success: true, token };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
-    });
-
-    ipcMain.handle(SecureTokenAPIEvent.DELETE, async (event, key: string) => {
-      try {
-        await this.getStorage().deleteToken(key);
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
-    });
-  }
 }
 
 // Lazy initialization to avoid keychain access on startup
@@ -126,12 +38,6 @@ function getSecureTokenIPC(): SecureTokenIPC {
 // Register IPC handlers without creating the SecureTokenIPC instance
 // The instance will be created lazily when the first IPC call is made
 export function registerSecureTokenHandlers(): void {
-  // Register handlers without creating the SecureTokenIPC instance
-  const { ipcMain } = require('electron');
-  const { TOKEN_KEYS } = require('./UnifiedSecureStorage');
-  const {
-    SecureTokenAPIEvent,
-  } = require('../../shared/main-process-api-interfaces/SecureTokenAPI');
   const AuthStateManager = require('./AuthStateManager').default;
 
   // Get GitHub auth token
@@ -171,21 +77,6 @@ export function registerSecureTokenHandlers(): void {
         }
       }
 
-      // Fallback to ORBIT_AUTH for legacy/P2P
-      console.log('[SecureTokenIPC] Trying ORBIT_AUTH fallback');
-      const orbitData = await getSecureTokenIPC()
-        .getStorage()
-        .getTokenWithMetadata(TOKEN_KEYS.ORBIT_AUTH);
-
-      if (orbitData) {
-        console.log('[SecureTokenIPC] Found ORBIT_AUTH token');
-        return {
-          authenticated: true,
-          token: orbitData.token,
-          user: orbitData.metadata?.user,
-        };
-      }
-
       // No tokens found
       console.warn(
         '[SecureTokenIPC] No tokens found, returning authenticated: false',
@@ -199,9 +90,7 @@ export function registerSecureTokenHandlers(): void {
 
   // Check if authenticated
   ipcMain.handle(SecureTokenAPIEvent.IS_AUTHENTICATED, async () => {
-    const token = await getSecureTokenIPC()
-      .getStorage()
-      .getToken(TOKEN_KEYS.ORBIT_AUTH);
+    const token = await authService.getValidToken();
     return token !== null;
   });
 
