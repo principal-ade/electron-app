@@ -17,11 +17,16 @@ import type { TopicSubsystemModelRef } from '@principal-ai/subsystems-core/node'
 import type { SubsystemModelSummary } from '../../../shared/tipc/subsystemModelRouterTypes';
 import { TopicService } from '../../main-process-api/TopicService';
 import { SubsystemModelService } from '../../main-process-api/SubsystemModelService';
+import {
+  openGestureFromEvent,
+  type OpenGesture,
+} from '../../move-tab/openInNewWindow';
 
 export interface TopicSubsystemModelsRailProps {
   topicId: string;
   width?: React.CSSProperties['width'];
-  onOpenModel: (modelId: string, title: string) => void;
+  /** Cmd/Ctrl+click sets `gesture.newWindow`; hosts without windows may ignore it. */
+  onOpenModel: (modelId: string, title: string, gesture: OpenGesture) => void;
 }
 
 export const TopicSubsystemModelsRail: React.FC<
@@ -140,7 +145,14 @@ export const TopicSubsystemModelsRail: React.FC<
               <button
                 type="button"
                 aria-label={`Open ${titleFor(ref.modelId)} in a new tab`}
-                onClick={() => onOpenModel(ref.modelId, titleFor(ref.modelId))}
+                title="Cmd/Ctrl+click to open in a new window"
+                onClick={(event) =>
+                  onOpenModel(
+                    ref.modelId,
+                    titleFor(ref.modelId),
+                    openGestureFromEvent(event),
+                  )
+                }
                 style={{
                   display: 'flex',
                   flexDirection: 'column',

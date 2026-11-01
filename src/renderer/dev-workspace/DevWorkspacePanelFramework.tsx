@@ -59,6 +59,7 @@ import {
   type TerminalPanelActions,
 } from '@industry-theme/xterm-terminal-panel';
 import { useTabReceiver } from '../move-tab/useTabReceiver';
+import { routeOpenGesture } from '../move-tab/openInNewWindow';
 import {
   CodeCityPanel,
   type CodeCityPanelPropsTyped,
@@ -2258,6 +2259,20 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     setFocusTabId(tabId);
   }, []);
 
+  // Cmd/Ctrl+click on a topic reference opens it in its own window.
+  const openTopicFromReference = useMemo(
+    () => routeOpenGesture('local-topic', openTopicTab),
+    [openTopicTab],
+  );
+  const openModelFromReference = useMemo(
+    () => routeOpenGesture('subsystem-model', openSubsystemModelTab),
+    [openSubsystemModelTab],
+  );
+  const openSketchFromReference = useMemo(
+    () => routeOpenGesture('c4-sketch', openC4SketchTab),
+    [openC4SketchTab],
+  );
+
   // Cross-window bridge activation (`POST /api/topics/:id/activate` →
   // `TopicAPIEvent.TOPIC_ACTIVATE`). When this dev-workspace window is the one
   // the bridge targeted (the focused window), open the topic in our own tab
@@ -2638,9 +2653,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               title={topicTab.title}
               isActive={isActive}
               events={eventsRef.current}
-              onOpenModel={openSubsystemModelTab}
-              onOpenTopic={openTopicTab}
-              onOpenSketch={openC4SketchTab}
+              onOpenModel={openModelFromReference}
+              onOpenTopic={openTopicFromReference}
+              onOpenSketch={openSketchFromReference}
               repositoryPath={
                 contextRef.current?.currentScope?.repository?.path
               }
@@ -2682,9 +2697,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       MDXEditorPanelComponent,
       GitDiffPanelComponent,
       BrunoRequestPanelComponent,
-      openSubsystemModelTab,
-      openTopicTab,
-      openC4SketchTab,
+      openModelFromReference,
+      openTopicFromReference,
+      openSketchFromReference,
     ],
   );
 

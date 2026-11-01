@@ -202,16 +202,24 @@ function getTransferForTarget(
 }
 
 /**
- * Bounds for a new detached window. A drag-out opens under the cursor on the
+ * Bounds for a new detached window. An `open`-mode window fills the work area
+ * of the display under the cursor; a drag-out opens under the cursor on the
  * display it was dropped on; otherwise Electron's default placement applies.
  */
 function detachedWindowBounds(
   options: unknown,
 ): Partial<Electron.Rectangle> & typeof DETACHED_WINDOW_SIZE {
-  const dropPoint =
+  const record =
     options && typeof options === 'object'
-      ? (options as Record<string, unknown>)['dropPoint']
-      : undefined;
+      ? (options as Record<string, unknown>)
+      : {};
+  if (record['mode'] === 'open') {
+    const { workArea } = screen.getDisplayNearestPoint(
+      screen.getCursorScreenPoint(),
+    );
+    return { ...workArea };
+  }
+  const dropPoint = record['dropPoint'];
   if (!isDetachedTabDropPoint(dropPoint)) return DETACHED_WINDOW_SIZE;
   const point = { x: dropPoint.screenX, y: dropPoint.screenY };
   const { workArea } = screen.getDisplayNearestPoint(point);

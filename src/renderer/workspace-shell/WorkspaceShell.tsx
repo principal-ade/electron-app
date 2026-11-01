@@ -73,6 +73,7 @@ import { useTerminalRepoInfo } from '../hooks/useTerminalRepoInfo';
 import { DetachTabButton } from '../move-tab/DetachTabButton';
 import { useTabReceiver } from '../move-tab/useTabReceiver';
 import { toDetachableTabDescriptor } from '../move-tab/detachedTabDescriptor';
+import { routeOpenGesture } from '../move-tab/openInNewWindow';
 import {
   describeTabDrag,
   useDragOutDetach,
@@ -429,6 +430,22 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     [tabs, handleTabDetached],
   );
 
+  // Cmd/Ctrl+click on a topic reference opens it in its own window instead
+  // of a tab; the current tab is untouched.
+  const openTopicFromReference = useMemo(
+    () => routeOpenGesture('local-topic', openLocalTopic, setDetachNotice),
+    [openLocalTopic],
+  );
+  const openSketchFromReference = useMemo(
+    () => routeOpenGesture('c4-sketch', openC4Sketch, setDetachNotice),
+    [openC4Sketch],
+  );
+  const openModelFromReference = useMemo(
+    () =>
+      routeOpenGesture('subsystem-model', openSubsystemModel, setDetachNotice),
+    [openSubsystemModel],
+  );
+
   // Live drag state so the shell can say what releasing outside will do.
   const [tabDrag, setTabDrag] = useState<TabDragState | null>(null);
   useDragOutDetach({
@@ -531,9 +548,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               title={topicTab.title}
               events={eventsRef.current}
               onOpenProject={handleOpenTopicProject}
-              onOpenModel={openSubsystemModel}
-              onOpenTopic={openLocalTopic}
-              onOpenSketch={openC4Sketch}
+              onOpenModel={openModelFromReference}
+              onOpenTopic={openTopicFromReference}
+              onOpenSketch={openSketchFromReference}
               onOpenDrawing={(drawingId, name, path) =>
                 openDrawing({ drawingId, name, path })
               }
@@ -594,9 +611,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     },
     [
       handleOpenTopicProject,
-      openSubsystemModel,
-      openLocalTopic,
-      openC4Sketch,
+      openModelFromReference,
+      openTopicFromReference,
+      openSketchFromReference,
       openDrawing,
       detachTabToWindow,
     ],

@@ -90,7 +90,8 @@ export interface WindowAPI {
    * destination renderer has claimed the transfer token and accepted it, or
    * after creation/loading fails or times out. The source must remove its tab
    * only when `transferred` is true. `options.dropPoint` places the window
-   * where a drag-out was released.
+   * where a drag-out was released; `options.mode: 'open'` opens an entity by
+   * identity in a work-area-sized window with no source tab to remove.
    */
   openDetachedTab(
     tab: DetachableTabDescriptor,

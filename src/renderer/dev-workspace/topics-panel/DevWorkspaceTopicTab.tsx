@@ -4,8 +4,14 @@ import { Check, Copy, List } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { TopicDescriptionBody } from '../../topics-view/topic-description/TopicDescriptionBody';
 import { TopicProjectsRail } from '../../topics-view/topic-description/TopicProjectsRail';
-import { TopicSubsystemModelsRail } from '../../topics-view/topic-description/TopicSubsystemModelsRail';
-import { TopicReferencesRail } from '../../topics-view/topic-description/TopicReferencesRail';
+import {
+  TopicSubsystemModelsRail,
+  type TopicSubsystemModelsRailProps,
+} from '../../topics-view/topic-description/TopicSubsystemModelsRail';
+import {
+  TopicReferencesRail,
+  type TopicReferencesRailProps,
+} from '../../topics-view/topic-description/TopicReferencesRail';
 import { TopicService } from '../../main-process-api/TopicService';
 import { TopicDeleteHeaderButton } from '../../topics-view/TopicDeleteHeaderButton';
 import { TopicPinHeaderButton } from '../../topics-view/TopicPinHeaderButton';
@@ -22,9 +28,9 @@ export interface DevWorkspaceTopicTabProps {
   events: PanelEventEmitter;
   /** Current repo, used as a link-resolution fallback (optional). */
   repositoryPath?: string;
-  onOpenModel: (modelId: string, title: string) => void;
-  onOpenTopic: (topicId: string, title: string) => void;
-  onOpenSketch: (sketchId: string, title: string) => void;
+  onOpenModel: TopicSubsystemModelsRailProps['onOpenModel'];
+  onOpenTopic: TopicReferencesRailProps['onOpenTopic'];
+  onOpenSketch: TopicReferencesRailProps['onOpenSketch'];
 }
 
 /**

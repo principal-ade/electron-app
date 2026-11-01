@@ -53,8 +53,17 @@ export interface DetachedTabDropPoint {
   screenY: number;
 }
 
+/**
+ * `transfer` (default) moves an existing tab: the source removes its copy once
+ * the destination accepts. `open` creates a window for an entity by identity
+ * (a modifier-click on a reference); nothing is removed, and the window fills
+ * the work area of the display under the cursor.
+ */
+export type DetachedTabOpenMode = 'transfer' | 'open';
+
 export interface DetachedTabOpenOptions {
   dropPoint?: DetachedTabDropPoint;
+  mode?: DetachedTabOpenMode;
 }
 
 /** Result of asking main to open a detached window for a tab. */

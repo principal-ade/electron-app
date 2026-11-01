@@ -35,6 +35,10 @@ import { TopicService } from '../main-process-api/TopicService';
 import { SubsystemModelService } from '../main-process-api/SubsystemModelService';
 import { WindowService } from '../main-process-api/WindowService';
 import type { DetachableTabDescriptor } from '../../shared/detachedTab';
+import {
+  openEntityInNewWindow,
+  type OpenGesture,
+} from '../move-tab/openInNewWindow';
 
 type Phase = 'claiming' | 'preparing' | 'ready' | 'error';
 
@@ -137,39 +141,61 @@ export const DetachedTabWindow: React.FC = () => {
     return () => cancelAnimationFrame(frame);
   }, [phase, token]);
 
-  const handleOpenModel = useCallback((modelId: string, title: string) => {
-    const next: DetachableTabDescriptor = {
-      kind: 'subsystem-model',
-      tabId: `subsystem-model-${modelId}`,
-      label: title || 'Subsystem Model',
-      modelId,
-    };
-    setTab(next);
-    document.title = next.label;
-  }, []);
+  // Plain click swaps this window's content; Cmd/Ctrl+click opens another.
+  const handleOpenModel = useCallback(
+    (modelId: string, title: string, gesture?: OpenGesture) => {
+      if (gesture?.newWindow) {
+        void openEntityInNewWindow('subsystem-model', modelId, title);
+        return;
+      }
+      const next: DetachableTabDescriptor = {
+        kind: 'subsystem-model',
+        tabId: `subsystem-model-${modelId}`,
+        label: title || 'Subsystem Model',
+        modelId,
+      };
+      setTab(next);
+      document.title = next.label;
+    },
+    [],
+  );
 
-  const handleOpenTopic = useCallback((topicId: string, title: string) => {
-    const next: DetachableTabDescriptor = {
-      kind: 'local-topic',
-      tabId: `local-topic-${topicId}`,
-      label: title || 'Topic',
-      title,
-      topicId,
-    };
-    setTab(next);
-    document.title = next.label;
-  }, []);
+  const handleOpenTopic = useCallback(
+    (topicId: string, title: string, gesture?: OpenGesture) => {
+      if (gesture?.newWindow) {
+        void openEntityInNewWindow('local-topic', topicId, title);
+        return;
+      }
+      const next: DetachableTabDescriptor = {
+        kind: 'local-topic',
+        tabId: `local-topic-${topicId}`,
+        label: title || 'Topic',
+        title,
+        topicId,
+      };
+      setTab(next);
+      document.title = next.label;
+    },
+    [],
+  );
 
-  const handleOpenSketch = useCallback((sketchId: string, title: string) => {
-    const next: DetachableTabDescriptor = {
-      kind: 'c4-sketch',
-      tabId: `c4-sketch-${sketchId}`,
-      label: title || 'C4 Sketch',
-      sketchId,
-    };
-    setTab(next);
-    document.title = next.label;
-  }, []);
+  const handleOpenSketch = useCallback(
+    (sketchId: string, title: string, gesture?: OpenGesture) => {
+      if (gesture?.newWindow) {
+        void openEntityInNewWindow('c4-sketch', sketchId, title);
+        return;
+      }
+      const next: DetachableTabDescriptor = {
+        kind: 'c4-sketch',
+        tabId: `c4-sketch-${sketchId}`,
+        label: title || 'C4 Sketch',
+        sketchId,
+      };
+      setTab(next);
+      document.title = next.label;
+    },
+    [],
+  );
 
   const handleReturn = useCallback(async () => {
     if (!tab || returning) return;

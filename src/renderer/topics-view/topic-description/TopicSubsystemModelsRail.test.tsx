@@ -102,7 +102,13 @@ test('opens a linked model with its id and title', async () => {
   ).toBeNull();
   expect(screen.getAllByRole('button')).toHaveLength(1);
   fireEvent.click(screen.getByText('request-flow'));
-  expect(onOpenModel).toHaveBeenCalledWith('model-a', 'Request handling');
+  expect(onOpenModel).toHaveBeenCalledWith('model-a', 'Request handling', {
+    newWindow: false,
+  });
+  fireEvent.click(card, { metaKey: true });
+  expect(onOpenModel).toHaveBeenLastCalledWith('model-a', 'Request handling', {
+    newWindow: true,
+  });
 });
 
 test('matches project card hover colors and restores them on mouse leave', async () => {
@@ -154,5 +160,7 @@ test('uses the model id as the tab title when its summary is missing', async () 
   fireEvent.click(
     await screen.findByRole('button', { name: 'Open model-a in a new tab' }),
   );
-  expect(onOpenModel).toHaveBeenCalledWith('model-a', 'model-a');
+  expect(onOpenModel).toHaveBeenCalledWith('model-a', 'model-a', {
+    newWindow: false,
+  });
 });

@@ -5,6 +5,10 @@ import type { TopicReference } from '@principal-ai/subsystems-core';
 import { TopicService } from '../../main-process-api/TopicService';
 import { C4SketchService } from '../../main-process-api/C4SketchService';
 import { getDrawingSummary } from '../../drawings-view/drawingsStorage';
+import {
+  openGestureFromEvent,
+  type OpenGesture,
+} from '../../move-tab/openInNewWindow';
 
 interface ReferenceRow {
   reference: TopicReference;
@@ -49,8 +53,9 @@ async function resolveReference(
 export interface TopicReferencesRailProps {
   topicId: string;
   width?: React.CSSProperties['width'];
-  onOpenTopic: (topicId: string, title: string) => void;
-  onOpenSketch: (sketchId: string, title: string) => void;
+  /** Cmd/Ctrl+click sets `gesture.newWindow`; hosts without windows may ignore it. */
+  onOpenTopic: (topicId: string, title: string, gesture: OpenGesture) => void;
+  onOpenSketch: (sketchId: string, title: string, gesture: OpenGesture) => void;
   /** Omit when the host can't show drawing tabs; drawing rows then can't be opened. */
   onOpenDrawing?: (drawingId: string, title: string, path?: string) => void;
 }
@@ -68,7 +73,7 @@ function ReferenceSection({
   rows: ReferenceRow[];
   error: boolean;
   loading: boolean;
-  onOpen?: (row: ReferenceRow) => void;
+  onOpen?: (row: ReferenceRow, gesture: OpenGesture) => void;
 }) {
   const { theme } = useTheme();
   if (!loading && !error && rows.length === 0) return null;
@@ -145,7 +150,14 @@ function ReferenceSection({
                         ? row.title
                         : `${row.title} unavailable`
                   }
-                  onClick={() => onOpen?.(row)}
+                  title={
+                    openable
+                      ? 'Cmd/Ctrl+click to open in a new window'
+                      : undefined
+                  }
+                  onClick={(event) =>
+                    onOpen?.(row, openGestureFromEvent(event))
+                  }
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -298,7 +310,7 @@ export const TopicReferencesRail: React.FC<TopicReferencesRailProps> = ({
         rows={rows.filter((row) => row.reference.kind === 'c4-sketch')}
         error={error}
         loading={loading}
-        onOpen={(row) => onOpenSketch(row.id, row.title)}
+        onOpen={(row, gesture) => onOpenSketch(row.id, row.title, gesture)}
       />
       <ReferenceSection
         title="Drawings"
@@ -318,7 +330,7 @@ export const TopicReferencesRail: React.FC<TopicReferencesRailProps> = ({
         rows={rows.filter((row) => row.reference.kind === 'topic')}
         error={error}
         loading={loading}
-        onOpen={(row) => onOpenTopic(row.id, row.title)}
+        onOpen={(row, gesture) => onOpenTopic(row.id, row.title, gesture)}
       />
     </aside>
   );

@@ -87,14 +87,22 @@ test('shows both sections with wrapping titles and opens the correct tabs', asyn
   expect(screen.getByRole('region', { name: 'Related topics' })).toBeTruthy();
   expect(screen.getByText('Related brief').style.overflowWrap).toBe('anywhere');
   fireEvent.click(sketch);
-  fireEvent.click(topic);
+  fireEvent.click(topic, { metaKey: true });
   expect(props.onOpenSketch).toHaveBeenCalledWith(
     'c4s-123-abc',
     'Architecture',
+    { newWindow: false },
   );
   expect(props.onOpenTopic).toHaveBeenCalledWith(
     'topic-related',
     'Related brief',
+    { newWindow: true },
+  );
+  fireEvent.click(sketch, { ctrlKey: true });
+  expect(props.onOpenSketch).toHaveBeenLastCalledWith(
+    'c4s-123-abc',
+    'Architecture',
+    { newWindow: true },
   );
   expect(TopicService.updateTopic).not.toHaveBeenCalled();
   const card = sketch.parentElement;
