@@ -19,7 +19,7 @@ import {
   TerminalAPIEvents,
   type TerminalDaemonUpdateEvent,
 } from '../../shared/main-process-api-interfaces/TerminalService';
-import { ensureDaemonRunning, restartDaemon } from './daemonSpawner';
+import { ensureDaemonRunning, restartDaemon, stopDaemon } from './daemonSpawner';
 import type { DaemonBuildMismatch } from '../../shared/pty-daemon/buildIdentity';
 import { SOCKET_PATH } from '../../shared/pty-daemon/constants';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
@@ -366,6 +366,9 @@ export class TerminalSessionManager {
       }
 
       this.isWorkerReady = false;
+      // The bridge died with the worker; let the next request reconnect.
+      this.isDaemonConnected = false;
+      this.settleDaemonConnection();
 
       // Fail any pending session callbacks
       for (const [, callback] of this.pendingSessionCallbacks) {
@@ -432,9 +435,7 @@ export class TerminalSessionManager {
       case 'DAEMON_CONNECTED':
         console.log('[Terminal] Worker connected to PTY daemon');
         this.isDaemonConnected = true;
-        if (this.daemonConnectedResolve) {
-          this.daemonConnectedResolve();
-        }
+        this.settleDaemonConnection();
         break;
 
       case 'DAEMON_DISCONNECTED':
@@ -443,6 +444,9 @@ export class TerminalSessionManager {
           msg.error,
         );
         this.isDaemonConnected = false;
+        // Every session lived in that daemon, so they are gone with it; tell
+        // renderers so tabs close instead of sitting on a dead stream.
+        this.dropDaemonSessions();
         break;
 
       case 'DAEMON_SESSIONS':
@@ -503,6 +507,8 @@ export class TerminalSessionManager {
    * Initialize daemon and connect worker to it
    */
   private async initializeDaemonConnection(): Promise<void> {
+    // A connection attempt is already in flight; callers await its promise.
+    if (this.daemonConnectedPromise) return;
     try {
       // Create promise for daemon connection
       this.daemonConnectedPromise = new Promise((resolve) => {
@@ -531,9 +537,78 @@ export class TerminalSessionManager {
       console.error('[Terminal] Failed to initialize daemon connection:', error);
       // Settle anything awaiting the connection (ensureDaemonReady) and allow a
       // later attempt, instead of leaving every session request to time out.
-      this.daemonConnectedPromise = null;
-      this.daemonConnectedResolve?.();
-      this.daemonConnectedResolve = null;
+      this.settleDaemonConnection();
+    }
+  }
+
+  /**
+   * Resolve and clear the in-flight connection promise. A null promise means
+   * no attempt is running, which lets ensureDaemonReady() start a fresh one
+   * after the daemon was stopped or died.
+   */
+  private settleDaemonConnection(): void {
+    const resolve = this.daemonConnectedResolve;
+    this.daemonConnectedPromise = null;
+    this.daemonConnectedResolve = null;
+    resolve?.();
+  }
+
+  /**
+   * Forget every session once the daemon that owned them is gone. Sessions
+   * exit silently with their daemon, so the exit has to be synthesised here.
+   */
+  private dropDaemonSessions(): void {
+    for (const sessionId of Array.from(this.sessions.keys())) {
+      this.broadcastToRendererWindows(TerminalAPIEvents.ON_EXIT, {
+        sessionId,
+        code: -1,
+      });
+      this.cleanupSession(sessionId);
+    }
+  }
+
+  /**
+   * Stop the PTY daemon on request (System Monitor). Kills every session it
+   * owns; the worker is detached first so it does not report the dying socket
+   * as an unexpected disconnect.
+   */
+  async stopDaemon(): Promise<void> {
+    // The next daemon is spawned from this app's bundle, so nothing is pending.
+    this.pendingDaemonUpdate = null;
+    this.isDaemonConnected = false;
+    this.settleDaemonConnection();
+
+    if (this.worker) {
+      const disconnectMsg: DisconnectDaemonMessage = {
+        type: 'DISCONNECT_DAEMON',
+        id: 'disconnect-daemon-for-stop',
+        timestamp: Date.now(),
+      };
+      this.sendToWorker(disconnectMsg);
+    }
+
+    await stopDaemon();
+    this.dropDaemonSessions();
+  }
+
+  /**
+   * Start the PTY daemon on request and reattach the worker so terminals can
+   * be created again. Spawning the daemon alone is not enough: the worker's
+   * bridge never reconnects on its own.
+   */
+  async startDaemon(): Promise<void> {
+    const workerReady = await this.ensureWorkerReady();
+    if (!workerReady) {
+      throw new Error('Terminal worker is not available');
+    }
+    if (this.isDaemonConnected) return;
+
+    await this.initializeDaemonConnection();
+    if (this.daemonConnectedPromise) {
+      await this.daemonConnectedPromise;
+    }
+    if (!this.isDaemonConnected) {
+      throw new Error('Worker failed to connect to the PTY daemon');
     }
   }
 
@@ -599,9 +674,7 @@ export class TerminalSessionManager {
       .catch(() => {
         // Settle anything awaiting the connection; a later session request
         // will retry through the normal path.
-        this.daemonConnectedPromise = null;
-        this.daemonConnectedResolve?.();
-        this.daemonConnectedResolve = null;
+        this.settleDaemonConnection();
       })
       .finally(() => {
         this.daemonUpdateInFlight = false;
@@ -752,6 +825,12 @@ export class TerminalSessionManager {
 
     // In daemon mode, also wait for daemon connection
     if (this.isDaemonConnected) return true;
+
+    // No attempt in flight: the daemon was stopped or died after the worker
+    // attached. Respawn it and reattach instead of failing every request.
+    if (!this.daemonConnectedPromise) {
+      void this.initializeDaemonConnection();
+    }
 
     // Wait for daemon connection
     if (this.daemonConnectedPromise) {

@@ -11,7 +11,7 @@ import { SpanStatusCode } from '@opentelemetry/api';
 import { getSessionManagerInstance } from '../sessionManagerSingleton';
 import { ownershipManager } from '../TerminalOwnershipManager';
 import { getTracer } from '../../telemetry';
-import { getDaemonStatus, isDaemonRunning, stopDaemon, ensureDaemonRunning } from '../daemonSpawner';
+import { getDaemonStatus, isDaemonRunning } from '../daemonSpawner';
 import {
   broadcastTerminalSessionsChanged,
   createTerminalSession,
@@ -542,7 +542,9 @@ export const terminalRouter = {
 
   startDaemon: t.procedure.action(async () => {
     try {
-      await ensureDaemonRunning();
+      // Goes through the session manager so the worker reattaches; a daemon
+      // nobody is connected to cannot host terminals.
+      await sessionManager.startDaemon();
       return { success: true };
     } catch (error) {
       console.error('[Terminal] Failed to start daemon:', error);
@@ -552,7 +554,7 @@ export const terminalRouter = {
 
   stopDaemon: t.procedure.action(async () => {
     try {
-      await stopDaemon();
+      await sessionManager.stopDaemon();
       return { success: true };
     } catch (error) {
       console.error('[Terminal] Failed to stop daemon:', error);

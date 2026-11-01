@@ -134,6 +134,9 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [allTerminalSessions, setAllTerminalSessions] = useState<TerminalSessionInfo[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [daemonStatus, setDaemonStatus] = useState<DaemonStatusResponse | null>(null);
+  // Null until the first status probe answers; shown as "Checking" rather
+  // than "Not Running" so a slow probe is not mistaken for a stopped daemon.
+  const daemonChecking = daemonStatus === null;
   const [isDaemonControlling, setIsDaemonControlling] = useState(false);
   const [usePtyDaemon, setUsePtyDaemon] = useState<boolean>(false);
   const [isDaemonModeChanging, setIsDaemonModeChanging] = useState(false);
@@ -602,14 +605,14 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               active={activeTab === 'repository'}
               onClick={() => setActiveTab('repository')}
               icon={<HardDrive size={18} />}
-              label="Repository Monitoring"
+              label="Repo Monitor"
               theme={theme}
             />
             <MonitorNavButton
               active={activeTab === 'terminals'}
               onClick={() => setActiveTab('terminals')}
               icon={<Terminal size={18} />}
-              label="Agent Activity"
+              label="Term Daemon"
               badge={terminalActivities?.filter((a) => a.isWorking).length ?? 0}
               theme={theme}
             />
@@ -617,7 +620,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               active={activeTab === 'clibridge'}
               onClick={() => setActiveTab('clibridge')}
               icon={<Wrench size={18} />}
-              label="CLI Bridge"
+              label="CLI Worker"
               theme={theme}
             />
           </div>
@@ -967,7 +970,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                     width: '40px',
                     height: '40px',
                     borderRadius: '10px',
-                    backgroundColor: !usePtyDaemon
+                    backgroundColor: !usePtyDaemon || daemonChecking
                       ? `${theme.colors.textSecondary}15`
                       : daemonStatus?.isRunning
                         ? `${theme.colors.success}15`
@@ -977,7 +980,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                   <Server
                     size={22}
                     style={{
-                      color: !usePtyDaemon
+                      color: !usePtyDaemon || daemonChecking
                         ? theme.colors.textSecondary
                         : daemonStatus?.isRunning
                           ? theme.colors.success
@@ -1000,7 +1003,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                   <div
                     style={{
                       fontSize: '12px',
-                      color: !usePtyDaemon
+                      color: !usePtyDaemon || daemonChecking
                         ? theme.colors.textSecondary
                         : daemonStatus?.isRunning
                           ? theme.colors.success
@@ -1015,20 +1018,22 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                         width: '6px',
                         height: '6px',
                         borderRadius: '50%',
-                        backgroundColor: !usePtyDaemon
+                        backgroundColor: !usePtyDaemon || daemonChecking
                           ? theme.colors.textSecondary
                           : daemonStatus?.isRunning
                             ? theme.colors.success
                             : theme.colors.error,
                       }}
                     />
-                    {usePtyDaemon
-                      ? (daemonStatus?.isRunning ? 'Running' : 'Not Running')
-                      : 'Disabled'
+                    {!usePtyDaemon
+                      ? 'Disabled'
+                      : daemonChecking
+                        ? 'Checking...'
+                        : daemonStatus?.isRunning ? 'Running' : 'Not Running'
                     }
                   </div>
                 </div>
-                {usePtyDaemon && (
+                {usePtyDaemon && !daemonChecking && (
                   <button
                     onClick={async () => {
                       setIsDaemonControlling(true);
@@ -1283,7 +1288,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 </div>
               )}
 
-              {usePtyDaemon && !daemonStatus?.isRunning && (
+              {usePtyDaemon && !daemonChecking && !daemonStatus?.isRunning && (
                 <div
                   style={{
                     fontSize: '13px',

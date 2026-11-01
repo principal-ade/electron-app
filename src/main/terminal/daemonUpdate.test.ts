@@ -8,13 +8,23 @@ jest.mock('../terminalEnvironment', () => ({}));
 jest.mock('./daemonSpawner', () => ({
   ensureDaemonRunning: jest.fn(),
   restartDaemon: jest.fn(),
+  stopDaemon: jest.fn(),
 }));
-jest.mock('../stores/userPreferencesHandler', () => ({}));
+jest.mock('../stores/userPreferencesHandler', () => ({
+  UserPreferencesHandler: {
+    getInstance: () => ({
+      getUserPreferences: async () => ({ usePtyDaemon: true }),
+    }),
+  },
+}));
 jest.mock('../repository-monitoring/ipcHandlers', () => ({}));
 jest.mock('../telemetry', () => ({ getTracer: () => ({}) }));
 
-import { TerminalSessionManager } from './TerminalSessionManager';
-import { ensureDaemonRunning, restartDaemon } from './daemonSpawner';
+import {
+  TerminalSessionManager,
+  initializeDaemonModeSetting,
+} from './TerminalSessionManager';
+import { ensureDaemonRunning, restartDaemon, stopDaemon } from './daemonSpawner';
 import type { TerminalSession } from './types';
 import type { DaemonBuildMismatch } from '../../shared/pty-daemon/buildIdentity';
 import type { DaemonStatusInfo } from '../../shared/pty-daemon/protocol';
@@ -28,6 +38,7 @@ const mockedEnsure = ensureDaemonRunning as jest.MockedFunction<
   typeof ensureDaemonRunning
 >;
 const mockedRestart = restartDaemon as jest.MockedFunction<typeof restartDaemon>;
+const mockedStop = stopDaemon as jest.MockedFunction<typeof stopDaemon>;
 
 const outdated: DaemonBuildMismatch = {
   running: { version: '1.0.0', bundleHash: 'old' },
@@ -49,6 +60,7 @@ function status(sessionCount: number): DaemonStatusInfo {
 function setup() {
   const manager = new TerminalSessionManager();
   manager['sendToWorker'] = jest.fn();
+  manager.broadcastToRendererWindows = jest.fn();
   // The worker is only consulted for presence; messages go through the mock.
   manager['worker'] = {} as never;
   return manager;
@@ -169,5 +181,97 @@ describe('outdated PTY daemon replacement', () => {
     expect(workerMessages(manager)).toEqual(['CONNECT_DAEMON', 'DISCONNECT_DAEMON']);
     expect(manager['daemonConnectedPromise']).toBeNull();
     expect(manager['daemonUpdateInFlight']).toBe(false);
+  });
+});
+
+describe('stopping and starting the PTY daemon from the monitor', () => {
+  beforeAll(() => initializeDaemonModeSetting());
+
+  beforeEach(() => {
+    mockWindows.length = 0;
+    mockWindows.push({ isDestroyed: () => false, webContents: { send: jest.fn() } });
+    mockedEnsure.mockReset();
+    mockedRestart.mockReset();
+    mockedStop.mockReset();
+    mockedStop.mockResolvedValue();
+    mockedEnsure.mockResolvedValue({ spawned: true, status: null, outdated: null });
+  });
+
+  function connect(manager: TerminalSessionManager) {
+    manager['handleWorkerMessage']({
+      type: 'DAEMON_CONNECTED',
+      id: 'c',
+      timestamp: Date.now(),
+    });
+  }
+
+  function disconnect(manager: TerminalSessionManager) {
+    manager['handleWorkerMessage']({
+      type: 'DAEMON_DISCONNECTED',
+      id: 'd',
+      timestamp: Date.now(),
+    });
+  }
+
+  function exitBroadcasts(manager: TerminalSessionManager): string[] {
+    return (manager.broadcastToRendererWindows as jest.Mock).mock.calls
+      .filter(([channel]) => channel === 'terminal:exit')
+      .map(([, payload]) => (payload as { sessionId: string }).sessionId);
+  }
+
+  it('stop detaches the worker, kills the daemon, and closes its sessions', async () => {
+    const manager = setup();
+    await manager['initializeDaemonConnection']();
+    connect(manager);
+    manager.getAllSessions().set('a', { id: 'a', directory: '/a' } as TerminalSession);
+
+    await manager.stopDaemon();
+
+    expect(workerMessages(manager)).toEqual(['CONNECT_DAEMON', 'DISCONNECT_DAEMON']);
+    expect(mockedStop).toHaveBeenCalledTimes(1);
+    expect(exitBroadcasts(manager)).toEqual(['a']);
+    expect(manager.getAllSessions().size).toBe(0);
+    expect(manager['isDaemonConnected']).toBe(false);
+    expect(manager['daemonConnectedPromise']).toBeNull();
+  });
+
+  it('start respawns the daemon and reattaches the worker', async () => {
+    const manager = setup();
+    manager['isWorkerReady'] = true;
+    await manager['initializeDaemonConnection']();
+    connect(manager);
+    await manager.stopDaemon();
+    disconnect(manager);
+
+    const started = manager.startDaemon();
+    await flush();
+    expect(mockedEnsure).toHaveBeenCalledTimes(2);
+    expect(workerMessages(manager)).toEqual([
+      'CONNECT_DAEMON',
+      'DISCONNECT_DAEMON',
+      'CONNECT_DAEMON',
+    ]);
+    connect(manager);
+    await started;
+
+    expect(manager['isDaemonConnected']).toBe(true);
+  });
+
+  it('a session request after an unexpected disconnect reconnects instead of failing', async () => {
+    const manager = setup();
+    manager['isWorkerReady'] = true;
+    await manager['initializeDaemonConnection']();
+    connect(manager);
+    manager.getAllSessions().set('a', { id: 'a', directory: '/a' } as TerminalSession);
+
+    disconnect(manager);
+    expect(exitBroadcasts(manager)).toEqual(['a']);
+
+    const ready = manager['ensureDaemonReady']();
+    await flush();
+    expect(workerMessages(manager)).toEqual(['CONNECT_DAEMON', 'CONNECT_DAEMON']);
+    connect(manager);
+
+    expect(await ready).toBe(true);
   });
 });

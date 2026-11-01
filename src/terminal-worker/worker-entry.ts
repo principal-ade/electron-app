@@ -416,6 +416,7 @@ async function connectToDaemon(socketPath: string): Promise<void> {
 
   daemonBridge.on('disconnected', (error?: Error) => {
     console.warn('[TerminalWorker] Disconnected from daemon:', error?.message);
+    forgetDaemonSessions();
     const msg: DaemonDisconnectedMessage = {
       type: 'DAEMON_DISCONNECTED',
       id: 'daemon-disconnected',
@@ -486,6 +487,17 @@ function disconnectFromDaemon(): void {
   if (daemonBridge) {
     daemonBridge.disconnect();
     daemonBridge = null;
+  }
+  forgetDaemonSessions();
+}
+
+/**
+ * Drop the local mirror of daemon-owned sessions. Without a bridge they are
+ * unreachable, and a reconnect repopulates the map from the daemon's list.
+ */
+function forgetDaemonSessions(): void {
+  for (const sessionId of Array.from(sessions.keys())) {
+    cleanupSession(sessionId);
   }
 }
 
