@@ -268,12 +268,6 @@ Since repositories are always registered, you should **unregister before moving*
 - **Critical**: This is where the "Move to workspace" button lives!
 - **Required Event**: `REPOSITORY_UPDATED` + `MEMBERSHIP_CHANGED`
 
-#### 3. **Git-Sync Diagnostic Panel** (`git-sync-diagnostic`) *[Optional Panel]*
-- **Component**: `src/renderer/panels/components/GitSyncDiagnosticPanel.tsx`
-- **Uses repository paths**: YES - diagnostic data tied to paths
-- **Impact**: Diagnostics reference wrong path
-- **Required Event**: `REPOSITORY_UPDATED`
-
 ### Medium Priority (May Need Update)
 
 #### 4. **README Viewer Panel** (`readme-viewer`)
@@ -402,7 +396,6 @@ this.broadcastWorkspaceChange('membership-changed', undefined, workspaceId, repo
 **Feed Panels that will update**:
 - ✅ Local Projects Panel - receives `REPOSITORY_UPDATED`
 - ✅ Workspace Repositories Panel - receives `REPOSITORY_UPDATED` + `MEMBERSHIP_CHANGED`
-- ✅ Git-Sync Diagnostic Panel - receives `REPOSITORY_UPDATED`
 
 ### Priority 4: Remove Hard Reload
 With proper events, the UI should update reactively:
@@ -549,10 +542,9 @@ if (workspace.suggestedClonePath && needsMove === false) {
 
 1. **Repositories are registered on app startup**, not when windows are opened
 2. **Unregister before moving** to avoid stale references in monitoring server
-3. **Three Feed panels require event updates** after move:
+3. **Two Feed panels require event updates** after move:
    - Local Projects Panel
    - Workspace Repositories Panel
-   - Git-Sync Diagnostic Panel
 4. **Broadcast both events** for complete update:
    - `REPOSITORY_UPDATED` (Alexandria) for Feed panels
    - `MEMBERSHIP_CHANGED` (Workspace) for workspace state

@@ -37,7 +37,6 @@ import { apiProxyApi } from './main-process-api-implementations/apiProxyApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
 import { orbitAPI } from './main-process-api-implementations/orbitApi';
 import { dockerAPI } from './main-process-api-implementations/dockerApi';
-import { fastForwardAPI } from './main-process-api-implementations/fastForwardApi';
 import { presenceAPI } from './main-process-api-implementations/presenceApi';
 import { sshSetupAPI } from './main-process-api-implementations/sshSetupApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
@@ -121,7 +120,6 @@ const mainProcessExposure: MainProcessAPI = {
   packageManager: packageManagerApi,
   typeExtraction: typeExtractionApi,
   docker: dockerAPI,
-  fastForward: fastForwardAPI,
   presence: presenceAPI,
   sshSetup: sshSetupAPI,
   window: windowAPI,

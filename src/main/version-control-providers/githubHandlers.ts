@@ -1255,8 +1255,8 @@ export class GitHubAdapter {
     // Build query parameters. `/user/repos` defaults to only the repos GitHub
     // feels like returning; without an explicit `affiliation` the caller's own
     // personal repos can be dropped, which is why the "My Projects" panel showed
-    // org repos but no "you" section. Mirror the proven JWTService call and ask
-    // for owner + collaborator + org-member repos. GitHub returns a 422 if
+    // org repos but no "you" section. Ask explicitly for owner + collaborator +
+    // org-member repos. GitHub returns a 422 if
     // `affiliation` is combined with `type`, so only one is sent.
     const params: string[] = [];
     if (options?.type) {

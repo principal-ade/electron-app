@@ -40,16 +40,6 @@ OS Keychain (macOS) / Credential Manager (Windows)
 - GitHub access tokens (obtained via WorkOS) for collaboration features
 - Repository access verification tokens
 
-### 3. CollaborationPanelWithSync Component
-**Location**: `src/renderer/components/CollaborationPanelWithSync.tsx`
-**Purpose**: Extended collaboration panel with git-sync features
-**Secure Storage Interactions**:
-- Manages git-sync authentication tokens
-- Stores credentials for remote repository access
-**Storage Keys Used**:
-- `git-sync-auth` tokens
-- Repository-specific sync credentials
-
 ## Configuration Components
 
 ### 4. AgentSetupWizard
@@ -130,16 +120,6 @@ OS Keychain (macOS) / Credential Manager (Windows)
 - Caches authentication state for issue operations
 **Storage Keys Used**:
 - `github_token` for GitHub API access
-
-### 11. SyncStatusIndicator
-**Location**: `src/renderer/components/repository-maps/SyncStatusIndicator.tsx`
-**Purpose**: Shows git-sync status
-**Secure Storage Interactions**:
-- Reads sync authentication status
-- Displays connection state based on stored credentials
-**Storage Keys Used**:
-- Git-sync authentication tokens
-- Repository sync credentials
 
 ## Service Layer Interfaces
 
@@ -280,7 +260,6 @@ The `UnifiedSecureStorage` has been **already implemented** and is currently in 
 ### Application-Wide Tokens
 - `github_token`: GitHub API authentication
 - `orbit_auth`: Orbit authentication token
-- `git-sync-auth`: Git synchronization credentials
 
 ### Repository-Specific Secrets
 - `repo-{id}`: Repository-specific credentials

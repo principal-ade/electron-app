@@ -7,7 +7,7 @@
  * missing/unauthenticated.
  *
  * IMPORTANT: only valid for api.github.com / git-over-HTTPS callers. The
- * Principal backend (web-ade, git-sync, presence) validates the WorkOS-backed
+ * Principal backend (web-ade, presence) validates the WorkOS-backed
  * token and will NOT accept a gh CLI token — those callers must not use this.
  */
 import { electronCLI } from '../../electron-cli-bridge';

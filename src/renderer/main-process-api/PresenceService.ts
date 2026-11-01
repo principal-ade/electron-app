@@ -84,7 +84,7 @@ export class PresenceService {
   }
 
   /**
-   * Connect to Git-Sync for presence tracking only (no repository required)
+   * Connect to the presence service (no repository required)
    */
   static async connectToPresence(token: string): Promise<{
     success: boolean;

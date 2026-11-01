@@ -143,7 +143,6 @@ export interface UserPreferences {
   titlebarButtons?: {
     theme?: boolean; // Show/hide theme dropdown in titlebar (default: false)
     customize?: boolean; // Show/hide theme customization button in titlebar (default: false)
-    pullMailbox?: boolean; // Show/hide the pull mailbox in titlebar (default: false)
     createRepository?: boolean; // Show/hide the create-repository button in the Principal titlebar (default: false)
   };
 

@@ -40,7 +40,7 @@ Over 70 instances across 30+ files use `.split('/')` for path operations:
 ### Affected Files (Sample):
 - Components: FileViewer, Terminal, RepositoryMaps, AgentOverview
 - Pages: LandingPage, RepoManager, MultiFileEditorWindow
-- Services: GitSyncConnectionManager, NavigationService, FileTypeLayerService
+- Services: NavigationService, FileTypeLayerService
 - Utils: loadFileSystemTree, sessionProjectMapping, loadManifestContents
 
 ## Quick Fix for Mac Alpha Testing

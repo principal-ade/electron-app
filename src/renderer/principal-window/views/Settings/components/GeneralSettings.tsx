@@ -20,7 +20,6 @@ export const GeneralSettings: React.FC = () => {
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
   const [openLocalhostTerminalLinksInApp, setOpenLocalhostTerminalLinksInApp] =
     useState(false);
-  const [showPullMailbox, setShowPullMailbox] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   const [terminalImplementation, setTerminalImplementation] = useState<
@@ -43,7 +42,6 @@ export const GeneralSettings: React.FC = () => {
       setOpenLocalhostTerminalLinksInApp(
         prefs.openLocalhostTerminalLinksInApp === true,
       );
-      setShowPullMailbox(prefs.titlebarButtons?.pullMailbox ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowOnboardingButton(prefs.showOnboardingButton ?? false);
       setTerminalImplementation(
@@ -478,72 +476,6 @@ export const GeneralSettings: React.FC = () => {
               Enable Vim mode for file preview and code editors
             </span>
           </label>
-        </div>
-      </div>
-
-      {/* Titlebar Button Visibility */}
-      <div style={{ marginBottom: '32px' }}>
-        <h4
-          style={{
-            fontSize: '16px',
-            fontWeight: 600,
-            marginBottom: '16px',
-            color: theme.colors.text,
-          }}
-        >
-          Titlebar Buttons
-        </h4>
-        <div
-          style={{
-            backgroundColor: theme.colors.backgroundSecondary,
-            borderRadius: '12px',
-            padding: '20px',
-            border: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          <p
-            style={{
-              fontSize: '14px',
-              color: theme.colors.textSecondary,
-              margin: '0 0 16px 0',
-            }}
-          >
-            Choose which buttons appear in the titlebar
-          </p>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-            }}
-          >
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '16px',
-                fontSize: '14px',
-                color: theme.colors.text,
-              }}
-            >
-              <span>Show pull mailbox (notifications)</span>
-              <input
-                type="checkbox"
-                checked={showPullMailbox}
-                onChange={async (e) => {
-                  const enabled = e.target.checked;
-                  setShowPullMailbox(enabled);
-                  await UserPreferencesService.updatePreferences({
-                    titlebarButtons: {
-                      pullMailbox: enabled,
-                    },
-                  });
-                }}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-            </label>
-          </div>
         </div>
       </div>
 

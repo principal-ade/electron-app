@@ -49,7 +49,6 @@ import type { ApiProxyAPI } from './ApiProxyAPI';
 import type { PackageManagerAPI } from './PackageManagerAPI';
 import type { TypeExtractionAPI } from './TypeExtractionAPI';
 import type { DockerAPI } from './DockerAPI';
-import type { FastForwardAPI } from './FastForwardAPI';
 import type { PresenceAPI } from './PresenceAPI';
 import type { SSHSetupAPI } from './SSHSetupAPI';
 import type { WindowAPI } from './WindowAPI';
@@ -127,7 +126,6 @@ export interface MainProcessAPI {
   packageManager: PackageManagerAPI;
   typeExtraction: TypeExtractionAPI;
   docker: DockerAPI;
-  fastForward: FastForwardAPI;
   presence: PresenceAPI;
   sshSetup: SSHSetupAPI;
   window: WindowAPI;

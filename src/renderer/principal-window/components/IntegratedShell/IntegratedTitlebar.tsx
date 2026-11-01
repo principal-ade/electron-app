@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
-import { PullMailbox } from '../PullMailbox';
-import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
-import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
 import {
   Radar,
 } from 'lucide-react';
@@ -51,7 +48,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   isHomeActive = false,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
-  const [showPullMailbox, setShowPullMailbox] = useState(false);
   const { theme } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
@@ -60,40 +56,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       window.electronTitlebar.isMaximized().then(setIsMaximized);
       window.electronTitlebar.onMaximizeChange(setIsMaximized);
     }
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const applyPreferences = (preferences: UserPreferences) => {
-      if (!isMounted) {
-        return;
-      }
-
-      setShowPullMailbox(preferences.titlebarButtons?.pullMailbox ?? false);
-    };
-
-    void UserPreferencesService.getPreferences().then(applyPreferences);
-
-    const handlePreferencesUpdated = (event: Event) => {
-      const detail = (event as CustomEvent<UserPreferences>).detail;
-      if (detail) {
-        applyPreferences(detail);
-      }
-    };
-
-    window.addEventListener(
-      'user-preferences-updated',
-      handlePreferencesUpdated as EventListener,
-    );
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener(
-        'user-preferences-updated',
-        handlePreferencesUpdated as EventListener,
-      );
-    };
   }, []);
 
   // Static title - Principal Workspace
@@ -219,7 +181,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         }}
       >
         <TerminalDaemonUpdateIndicator />
-        {showPullMailbox && <PullMailbox />}
         <StudioHeaderButton theme={theme} />
         {showSidebarControl && onToggleSidebar && (
           <ViewSidebarControls

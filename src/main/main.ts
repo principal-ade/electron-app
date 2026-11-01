@@ -565,14 +565,12 @@ app
     console.log('[Main] Initializing auth services...');
     const AuthStateManager = require('./services/AuthStateManager').default;
     const { authService } = require('./services/AuthService');
-    const { fastForwardIPC } = require('./services/FastForwardIPC');
 
     // Force initialization
     const authStateManager = AuthStateManager.getInstance();
     console.log('[Main] Auth services initialized:', {
       authService: !!authService,
       authStateManager: !!authStateManager,
-      fastForwardIPC: !!fastForwardIPC,
     });
 
     // SecureTokenIPC will be initialized lazily on first use

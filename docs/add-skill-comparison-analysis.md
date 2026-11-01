@@ -1028,8 +1028,8 @@ export class SkillsMigrationService {
 - **Keep:** Our modal/dialog system
 
 ### 5. Simple Git Clone-Only Approach
-- **Why:** We have sophisticated Git sync with OAuth
-- **Keep:** Our GitHub integration and sync services
+- **Why:** We have GitHub integration with OAuth
+- **Keep:** Our GitHub integration services
 
 ---
 

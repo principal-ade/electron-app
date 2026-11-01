@@ -459,9 +459,6 @@ export interface DevServerProcessState {
 The app is already set up to work with localhost services:
 
 ```typescript
-// Git Sync Service
-'ws://localhost:3001'
-
 // Dev Server configs
 'http://localhost:3000'      // Main dev server
 'http://localhost:3002'      // Orbit server

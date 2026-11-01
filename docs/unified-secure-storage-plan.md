@@ -36,8 +36,7 @@ class UnifiedSecureStorage {
   "encrypted": {
     "tokens": {
       "github_token": "...",
-      "orbit_auth": "...",
-      "git-sync-auth": "..."
+      "orbit_auth": "..."
     },
     "secrets": {
       "repo-{id}": {
@@ -97,7 +96,6 @@ class UnifiedSecureStorage {
 
 2. **Update Services**:
    - `AuthService` → Use unified storage for GitHub auth
-   - `GitSyncService` → Use unified storage for sync credentials
    - Repository operations → Use unified storage for secrets
 
 3. **Data Migration**:

@@ -56,7 +56,6 @@ import { RepositoryRegistrationManager } from './repository-monitoring/Repositor
 import { AlexandriaRegistryService } from './stores/AlexandriaRegistryService';
 import { registerApiProxyHandlers } from './services/ApiProxyService';
 import { registerCLIBridgeHandlers } from './services/ipc/cliBridgeHandlers';
-import { JWTService } from './services/JWTService';
 import { registerGitHubIpcHandlers } from './version-control-providers/githubHandlers';
 import { UserPreferencesHandler } from './stores/userPreferencesHandler';
 import {
@@ -215,7 +214,6 @@ const registerAllIpcHandlers = async () => {
   registerAlexandriaDocsHandlers();
   registerApiProxyHandlers();
   registerBrunoHandlers(); // Register Bruno panel HTTP request handlers
-  JWTService.registerHandlers();
 
   // Register execute-command handler for git operations
   ipcMain.handle(
