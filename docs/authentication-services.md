@@ -10,11 +10,11 @@ This document describes the authentication services used in the Electron applica
 
 File: `src/main/services/AuthService.ts`
 
-The primary authentication service that handles OAuth authentication for the application using WorkOS (with GitHub as the identity provider).
+The primary authentication service that handles GitHub authentication via the gh CLI token and locally stored tokens.
 
 **Key Features:**
 
-* OAuth authentication flow with WorkOS (GitHub provider)
+* GitHub authentication via `gh auth token` with stored-token fallback
 * Secure credential storage using Electron's `safeStorage` API
 * Session management and auth state tracking
 * IPC handlers for renderer process communication

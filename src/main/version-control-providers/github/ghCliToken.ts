@@ -1,13 +1,12 @@
 /**
  * gh CLI token fallback
  *
- * When the in-app, WorkOS-backed GitHub token is unavailable (no valid WorkOS
- * session), GitHub-API destinations can still authenticate with the user's gh
- * CLI token. This shells `gh auth token` and returns it, or null when gh is
+ * When the in-app stored GitHub token is unavailable, GitHub-API
+ * destinations can still authenticate with the user's gh CLI token. This shells `gh auth token` and returns it, or null when gh is
  * missing/unauthenticated.
  *
  * IMPORTANT: only valid for api.github.com / git-over-HTTPS callers. The
- * Principal backend (web-ade, presence) validates the WorkOS-backed
+ * Principal backend (web-ade, presence) validates the in-app stored
  * token and will NOT accept a gh CLI token — those callers must not use this.
  */
 import { electronCLI } from '../../electron-cli-bridge';
@@ -29,7 +28,7 @@ export async function getGhCliToken(): Promise<string | null> {
 
     const token = result.stdout.trim();
     if (result.success && token) {
-      console.log('[GitHub] Using gh CLI token fallback (no WorkOS session)');
+      console.log('[GitHub] Using gh CLI token fallback (no stored token)');
       return token;
     }
     return null;

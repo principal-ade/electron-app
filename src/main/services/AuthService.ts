@@ -1,8 +1,7 @@
 /**
  * AuthService - GitHub authentication via gh CLI and local token storage
  *
- * The hosted OAuth server (auth.principal-ade.com / WorkOS) has been removed.
- * Authentication now works via:
+ * Authentication works via:
  * 1. gh CLI token (`gh auth token`) — primary source
  * 2. Locally stored GitHub tokens in UnifiedSecureStorage — fallback
  *

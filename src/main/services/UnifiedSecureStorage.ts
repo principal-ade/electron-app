@@ -355,5 +355,4 @@ export class UnifiedSecureStorage {
 
 export const TOKEN_KEYS = {
   GITHUB_TOKEN: 'github_token',
-  WORKOS_TOKEN: 'workos_token',
 } as const;

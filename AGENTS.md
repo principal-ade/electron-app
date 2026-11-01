@@ -72,7 +72,3 @@ If the project has a pre-commit hook configured, `alexandria lint` will run auto
 * Invalid view structures
 
 For detailed information about hooks, rules, and configuration options, see [docs/HOOKS\_AND\_RULES.md](../docs/HOOKS_AND_RULES.md).
-
-### Additional Documentation
-
-* **GitHub OAuth and PKCE**: For details on how GitHub OAuth and PKCE are configured, see [docs/OAUTH\_AND\_PKCE\_GUIDE.md](docs/OAUTH_AND_PKCE_GUIDE.md).

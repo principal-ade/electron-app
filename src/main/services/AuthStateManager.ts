@@ -110,7 +110,7 @@ class AuthStateManager extends EventEmitter {
     // Decide whether the renderer-visible state actually changed before
     // broadcasting. `lastChecked` ticks on every auth read (presence
     // heartbeat, token-info fetch, startup check, …) and a session refresh
-    // rotates the WorkOS/GitHub tokens without changing *who* is signed in —
+    // rotates the GitHub token without changing *who* is signed in —
     // neither is visible to renderers. Broadcasting auth-state:changed on
     // those no-op updates causes a feedback loop: useAuthState hands its
     // consumers a brand-new `user` object, an effect keyed on that object

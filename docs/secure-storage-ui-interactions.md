@@ -26,18 +26,18 @@ OS Keychain (macOS) / Credential Manager (Windows)
 - Triggers logout which clears tokens from secure storage
 - Displays user information (username, avatar) retrieved from stored auth data
 **Storage Keys Used**:
-- `github_token` - GitHub access token obtained via WorkOS (via AuthenticationService)
+- `github_token` - GitHub access token (via AuthenticationService)
 - User metadata associated with the token
 
 ### 2. CollaborationPanel Component
 **Location**: `src/renderer/components/CollaborationPanel.tsx`
 **Purpose**: Handles P2P collaboration features
 **Secure Storage Interactions**:
-- Authenticates users via WorkOS (GitHub provider)
+- Authenticates users via GitHub
 - Stores/retrieves GitHub access tokens for API access
 - Uses `GitHubAuth.authenticate()` which internally stores tokens
 **Storage Keys Used**:
-- GitHub access tokens (obtained via WorkOS) for collaboration features
+- GitHub access tokens for collaboration features
 - Repository access verification tokens
 
 ## Configuration Components

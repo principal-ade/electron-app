@@ -125,9 +125,9 @@ export class GitHubArtifactService {
    * Get an authenticated Octokit instance using the stored GitHub token
    */
   private async getOctokit(): Promise<Octokit> {
-    // Fall back to the gh CLI token when there's no in-app (WorkOS-backed)
-    // token — artifact lookups hit api.github.com, which a gh CLI token can
-    // authenticate even without a WorkOS session.
+    // Fall back to the gh CLI token when there's no in-app stored token —
+    // artifact lookups hit api.github.com, which a gh CLI token can
+    // authenticate.
     const token =
       (await authService.getValidToken()) ?? (await getGhCliToken());
     if (!token) {

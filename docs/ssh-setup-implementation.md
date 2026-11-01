@@ -586,7 +586,6 @@ analytics.track('clone_retry_after_ssh_setup', { success: true });
 
 ## Related Documents
 
-- `docs/OAUTH_AND_PKCE_GUIDE.md` - Current OAuth implementation
 - `docs/AUTHENTICATION_SERVICES.md` - Auth architecture
 - `docs/GITHUB_SSH_KEY_MANAGEMENT.md` - API research
 

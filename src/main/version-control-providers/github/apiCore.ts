@@ -48,9 +48,8 @@ export class GitHubAPICore {
       if (token) {
         return token;
       }
-      // No in-app (WorkOS-backed) token — fall back to the gh CLI token. This
-      // call targets api.github.com, which accepts a gh CLI token even when
-      // there's no WorkOS session.
+      // No in-app stored token — fall back to the gh CLI token. This call
+      // targets api.github.com, which accepts a gh CLI token.
       return await getGhCliToken();
     } catch (error) {
       console.error('[GitHub] Failed to get GitHub token:', error);
