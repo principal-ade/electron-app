@@ -157,4 +157,3 @@ const result = await window.mainProcess.authentication.check();
 * `src/shared/main-process-api-interfaces/SecureTokenAPI.ts` - API event definitions
 * `src/shared/main-process-api-interfaces/AuthenticationAPI.ts` - Authentication interfaces
 * `src/main/services/AuthStateManager.ts` - Auth state management
-* `src/main/services/OAuthServerClient.ts` - OAuth client implementation

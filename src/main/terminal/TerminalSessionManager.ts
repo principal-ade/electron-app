@@ -116,15 +116,6 @@ import type {
 import type { ProgramStatusRecord } from '../../shared/terminal/programStatus';
 import { isTerminalCwd } from '../../shared/terminal/cwd';
 
-/**
- * Minimal interface for WebSocket bridge to avoid circular dependency
- * Defines only the methods that TerminalSessionManager needs to call
- */
-interface TerminalWebSocketBridge {
-  onSessionCreated(sessionId: string): Promise<void>;
-  onSessionDestroyed(sessionId: string): Promise<void>;
-}
-
 export interface PortCreationResult {
   success: boolean;
   /** True when a fresh MessageChannel was created; false when an existing one was reused. */
@@ -145,15 +136,6 @@ export class TerminalSessionManager {
 
   // Program Status Protocol (OSC 7501) records per session (live-only)
   private programStatusStore: Map<string, ProgramStatusRecord[]> = new Map();
-
-  // WebSocket bridge for remote terminal access (optional)
-  private wsBridge: TerminalWebSocketBridge | null = null;
-
-  // Data listeners for PTY output (for remote streaming)
-  private dataListeners: Map<
-    string,
-    (sessionId: string, data: string) => void
-  > = new Map();
 
   // Utility process worker
   private worker: UtilityProcess | null = null;
@@ -211,55 +193,6 @@ export class TerminalSessionManager {
    */
   async warmUp(): Promise<void> {
     await this.ensureWorkerReady();
-  }
-
-  /**
-   * Set the WebSocket bridge for remote terminal access
-   */
-  setWebSocketBridge(bridge: TerminalWebSocketBridge): void {
-    this.wsBridge = bridge;
-    console.log('[TerminalSessionManager] WebSocket bridge set');
-  }
-
-  /**
-   * Add a listener for PTY data output (for remote streaming)
-   * Returns a listener ID that can be used to remove the listener
-   */
-  addDataListener(
-    listenerId: string,
-    callback: (sessionId: string, data: string) => void,
-  ): void {
-    this.dataListeners.set(listenerId, callback);
-    console.log(
-      `[TerminalSessionManager] Added data listener: ${listenerId}`,
-    );
-  }
-
-  /**
-   * Remove a data listener
-   */
-  removeDataListener(listenerId: string): void {
-    this.dataListeners.delete(listenerId);
-    console.log(
-      `[TerminalSessionManager] Removed data listener: ${listenerId}`,
-    );
-  }
-
-  /**
-   * Notify all data listeners about PTY output
-   * This should be called when PTY data is received
-   */
-  private notifyDataListeners(sessionId: string, data: string): void {
-    for (const [listenerId, callback] of this.dataListeners.entries()) {
-      try {
-        callback(sessionId, data);
-      } catch (error) {
-        console.error(
-          `[TerminalSessionManager] Error in data listener ${listenerId}:`,
-          error,
-        );
-      }
-    }
   }
 
   // =============================================================================
@@ -1175,18 +1108,6 @@ export class TerminalSessionManager {
       if (createTimer) clearTimeout(createTimer);
     }
 
-    // Notify WebSocket bridge of new session
-    if (this.wsBridge) {
-      try {
-        await this.wsBridge.onSessionCreated(createdSessionId);
-      } catch (error) {
-        console.error(
-          '[TerminalSessionManager] Error notifying bridge of session creation:',
-          error,
-        );
-      }
-    }
-
     return createdSessionId;
   }
 
@@ -1265,18 +1186,6 @@ export class TerminalSessionManager {
       this.cleanupSession(sessionId);
 
       console.log(`[Terminal] Session destroyed: ${sessionId}`);
-
-      // Notify WebSocket bridge of session destruction
-      if (this.wsBridge) {
-        try {
-          await this.wsBridge.onSessionDestroyed(sessionId);
-        } catch (error) {
-          console.error(
-            '[TerminalSessionManager] Error notifying bridge of session destruction:',
-            error,
-          );
-        }
-      }
     }
   }
 
@@ -1609,54 +1518,6 @@ export class TerminalSessionManager {
    */
   createMessageChannelForSession(sessionId: string, windowId: number): boolean {
     return this.createPortForSession(sessionId, windowId, true).success;
-  }
-
-  /**
-   * Create a monitoring port for the bridge to intercept PTY data
-   * This allows remote streaming without affecting renderer ports
-   */
-  createMonitoringPort(sessionId: string): boolean {
-    if (!this.sessions.has(sessionId)) {
-      console.error(`[Terminal] Session ${sessionId} not found`);
-      return false;
-    }
-
-    try {
-      // Create MessageChannel for monitoring
-      const channel = new MessageChannelMain();
-
-      // Set up port2 listener to intercept data and notify listeners
-      channel.port2.on('message', (event) => {
-        if (event.data && event.data.type === 'DATA') {
-          this.notifyDataListeners(sessionId, event.data.data);
-        }
-      });
-
-      channel.port2.start();
-
-      // Send port1 to worker with a special monitoring windowId (-1)
-      const registerMsg: RegisterPortMessage = {
-        type: 'REGISTER_PORT',
-        id: `register-monitor-${sessionId}`,
-        timestamp: Date.now(),
-        sessionId,
-        windowId: -1, // Special ID for monitoring
-        isOwner: false,
-      };
-      this.worker?.postMessage(registerMsg, [channel.port1]);
-
-      console.log(
-        `[Terminal] Created monitoring port for session ${sessionId}`,
-      );
-
-      return true;
-    } catch (error) {
-      console.error(
-        `[Terminal] Failed to create monitoring port for session ${sessionId}:`,
-        error,
-      );
-      return false;
-    }
   }
 
   private closeAllPortsForSession(sessionId: string): void {

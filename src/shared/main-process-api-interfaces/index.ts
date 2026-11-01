@@ -67,18 +67,6 @@ import type { DocumentAPI } from './DocumentAPI';
 import type { BrowserAPI } from './BrowserAPI';
 import type { BrunoAPI } from './BrunoAPI';
 
-/**
- * Terminal Bridge API Interface (Remote Terminal Viewer only)
- * Used to connect the main process bridge to remote terminal sessions
- */
-export interface TerminalBridgeAPI {
-  connectBridge: (args: {
-    token: string;
-    userId: string;
-    githubHandle: string;
-  }) => Promise<{ success: boolean; error?: string }>;
-}
-
 // Re-export for convenience
 export type {
   AgentSessionEvent,
@@ -141,8 +129,6 @@ export interface MainProcessAPI {
   bruno: BrunoAPI;
   processes: ProcessRegistryAPI;
   pullRequestWatch: PullRequestWatchAPI;
-  /** Only available in Remote Terminal Viewer window */
-  terminalBridge?: TerminalBridgeAPI;
 }
 
 /**

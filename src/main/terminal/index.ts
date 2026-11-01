@@ -4,7 +4,6 @@ import { setupSessionHandlers } from './handlers/sessionHandlers';
 import { setupOwnershipHandlers } from './handlers/ownershipHandlers';
 import { setupCommandHandlers } from './handlers/commandHandlers';
 import { isPtyAvailable } from './utils/ptyLoader';
-import { initializeTerminalBridge } from './bridgeInitializer';
 import type { TerminalSessionManager } from './TerminalSessionManager';
 
 /**
@@ -19,11 +18,6 @@ class TerminalManager {
     // Use singleton to share state with TIPC router
     this.sessionManager = getSessionManagerInstance();
     this.setupIPCHandlers();
-
-    // Initialize WebSocket bridge for remote terminal access
-    initializeTerminalBridge().catch((error) => {
-      console.error('[Terminal] Failed to initialize WebSocket bridge:', error);
-    });
   }
 
   /**

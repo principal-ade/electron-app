@@ -148,7 +148,7 @@ const mainProcessPackages = new Set([
   '@principal-ai/markdown-search',
   '@principal-ai/repository-abstraction', '@principal-ai/repository-monitoring-server',
   '@usebruno/lang', '@usebruno/requests',
-  'chokidar', 'express', 'jsonwebtoken', 'jszip', 'node-fetch', 'simple-git', 'ts-json-schema-generator',
+  'chokidar', 'express', 'jszip', 'node-fetch', 'simple-git', 'ts-json-schema-generator',
 ]);
 
 console.log('🔍 Scanning source files for imports...\n');
