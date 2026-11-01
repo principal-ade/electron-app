@@ -383,9 +383,12 @@ export function setupQuickOpenHandlers(): void {
       return;
     }
 
-    // Owner directories open a terminal rooted at the folder — the point is
-    // to land in the folder, ready to clone a sibling repo.
-    if (item.type === 'ownerDirectory' && item.localPath) {
+    // Local repositories and owner directories always open in terminal tabs,
+    // even when the repository also has a dedicated workspace window.
+    if (
+      (item.type === 'repository' || item.type === 'ownerDirectory') &&
+      item.localPath
+    ) {
       await openTerminalTabInPrincipal(item.localPath, item.name);
       return;
     }

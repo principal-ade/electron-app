@@ -336,8 +336,7 @@ export const IntegratedShell: React.FC = () => {
     };
   }, []);
 
-  // GitHub Quick Open results always browse remotely, independent of the
-  // destination preference for local repositories.
+  // GitHub Quick Open results browse remotely rather than opening a terminal.
   useEffect(() => {
     return WindowService.onOpenRepositoryExplorer((payload) => {
       if (!payload?.owner || !payload.name) return;
@@ -349,7 +348,7 @@ export const IntegratedShell: React.FC = () => {
     });
   }, [openRepoExplorer]);
 
-  // Quick Open (Command+O) on an owner directory: main sends
+  // Quick Open (Command+O) on a local repository or owner directory: main sends
   // OPEN_TERMINAL_TAB after focusing the principal window. Ensure a workspace
   // surface is showing (so the terminal host is mounted + visible), then emit
   // terminal:new on the portal bus for WorkspaceShell to materialize the tab.

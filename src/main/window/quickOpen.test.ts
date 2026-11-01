@@ -109,15 +109,56 @@ describe('Quick Open selection', () => {
     });
   });
 
-  it('opens local repositories in a workspace', async () => {
-    const alexandriaEntry = { name: 'widgets', path: '/work/widgets' };
+  it.each([false, true])(
+    'opens local repositories in a terminal tab (workspace already open: %s)',
+    async (isOpen) => {
+      const alexandriaEntry = { name: 'widgets', path: '/work/widgets' };
+      await select({}, {
+        type: 'repository',
+        name: 'widgets',
+        localPath: '/work/widgets',
+        alexandriaEntry,
+        isOpen,
+        openWindowId: isOpen ? 123 : undefined,
+      });
+      expect(send).toHaveBeenCalledWith(WindowEvent.OPEN_TERMINAL_TAB, {
+        directory: '/work/widgets',
+        label: 'widgets',
+      });
+      expect(openDevWorkspaceWindow).not.toHaveBeenCalled();
+    },
+  );
+
+  it('waits for a new principal window before opening a repository tab', async () => {
+    isLoading.mockReturnValue(true);
     await select({}, {
       type: 'repository',
       name: 'widgets',
-      alexandriaEntry,
+      localPath: '/work/widgets',
       isOpen: false,
     });
-    expect(openDevWorkspaceWindow).toHaveBeenCalledWith({ alexandriaEntry });
     expect(send).not.toHaveBeenCalled();
+    expect(once).toHaveBeenCalledWith('did-finish-load', expect.any(Function));
+
+    once.mock.calls[0][1]();
+    expect(send).toHaveBeenCalledWith(WindowEvent.OPEN_TERMINAL_TAB, {
+      directory: '/work/widgets',
+      label: 'widgets',
+    });
+    expect(openDevWorkspaceWindow).not.toHaveBeenCalled();
+  });
+
+  it('does not open a repository tab in a window destroyed while loading', async () => {
+    isLoading.mockReturnValue(true);
+    await select({}, {
+      type: 'repository',
+      name: 'widgets',
+      localPath: '/work/widgets',
+      isOpen: false,
+    });
+    isDestroyed.mockReturnValue(true);
+    once.mock.calls[0][1]();
+    expect(send).not.toHaveBeenCalled();
+    expect(openDevWorkspaceWindow).not.toHaveBeenCalled();
   });
 });
