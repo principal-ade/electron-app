@@ -17,7 +17,6 @@ import { AuthenticationService } from '../../../../main-process-api/Authenticati
 import { SSHSetupWizard } from '../../../../components/SSHSetupWizard';
 import { PresenceService } from '../../../../main-process-api/PresenceService';
 import { SecureAuthService } from '../../../../services/SecureAuthService';
-import { useGitSyncConnection } from '../../../../hooks/useGitSyncConnection';
 import type {
   TokenInfo,
   GitHubSSHKey,
@@ -125,7 +124,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
   const [validatingGithubToken, setValidatingGithubToken] = useState(false);
 
   // Presence connectivity state
-  const { isConnected } = useGitSyncConnection();
+  const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
@@ -299,6 +298,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
         );
       } else {
         console.info('[AuthDetails] Connected to presence');
+        setIsConnected(true);
       }
     } catch (err) {
       console.error('[AuthDetails] Failed to connect to presence:', err);
@@ -315,6 +315,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
       const result = await PresenceService.disconnectFromPresence();
       if (result.success) {
         console.info('[AuthDetails] Disconnected from presence');
+        setIsConnected(false);
       } else {
         console.error(
           '[AuthDetails] Failed to disconnect from presence:',

@@ -7,7 +7,6 @@ import { Settings, type SettingsCategory } from '../../views/Settings';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
 import { OnboardingView } from '../../views/OnboardingView';
-import { ConnectionsView } from '../../views/ConnectionsView';
 import { HomeView } from '../../views/HomeView';
 import {
   PrincipalPortal,
@@ -55,7 +54,6 @@ const OVERLAY_VIEWS: OverlayView[] = [
   'settings',
   'monitoring',
   'auth',
-  'connections',
 ];
 
 const isOverlayView = (view: string): view is OverlayView =>
@@ -73,7 +71,6 @@ const VIEW_OPTIONS = [
   'auth',
   'processes',
   'requests',
-  'connections',
   'skills',
   'drawings',
   'subsystem-models',
@@ -230,7 +227,6 @@ export const IntegratedShell: React.FC = () => {
     settings: { left: false, right: false },
     processes: { left: false, right: false },
     requests: { left: false, right: false },
-    connections: { left: false, right: false },
     skills: { left: false, right: false },
   });
 
@@ -665,7 +661,6 @@ export const IntegratedShell: React.FC = () => {
             settings: { left: false, right: false },
             processes: { left: false, right: false },
             requests: { left: false, right: false },
-            connections: { left: false, right: false },
             skills: { left: false, right: false },
           });
           return { success: true };
@@ -725,7 +720,6 @@ export const IntegratedShell: React.FC = () => {
           settings: { left: false, right: false },
           processes: { left: false, right: false },
           requests: { left: false, right: false },
-          connections: { left: false, right: false },
           skills: { left: false, right: false },
         });
       }),
@@ -974,7 +968,6 @@ export const IntegratedShell: React.FC = () => {
                       <Settings initialCategory={settingsCategory} />
                     )}
                     {overlay === 'auth' && <AuthView />}
-                    {overlay === 'connections' && <ConnectionsView />}
                   </motion.div>
                 </motion.div>
               )}

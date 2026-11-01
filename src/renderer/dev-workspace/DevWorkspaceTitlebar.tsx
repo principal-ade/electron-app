@@ -22,7 +22,6 @@ import {
 } from './DevWorkspaceConfigModal';
 import { useTheme } from '@principal-ade/industry-theme';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
-import { GitSyncStatusIndicator } from '../components/Titlebar/GitSyncStatusIndicator';
 import { StorybookHeaderButton } from '../components/Titlebar/StorybookHeaderButton';
 import { RepositoryAvatar } from '../components/repository-maps/RepositoryAvatar';
 import type { StorybookManager } from '../hooks/useStorybookManager';
@@ -610,31 +609,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                   )}
                 </span>
               )}
-          </div>
-
-          {/* Git-Sync connectivity indicator - right side, mirrors avatar */}
-          <div
-            style={{
-              width: '28px',
-              height: '28px',
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <GitSyncStatusIndicator
-              repositoryPath={
-                selectedSource?.type === 'local'
-                  ? selectedSource.location
-                  : undefined
-              }
-              branch={
-                selectedSource?.type === 'local'
-                  ? selectedSource.metadata?.currentBranch
-                  : undefined
-              }
-            />
           </div>
         </div>
 

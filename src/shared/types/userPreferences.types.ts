@@ -14,7 +14,6 @@ export type InteractiveShellNavigationView =
   | 'auth'
   | 'processes'
   | 'requests'
-  | 'connections'
   | 'skills'
   | 'drawings'
   | 'subsystem-models';
@@ -121,7 +120,6 @@ export interface UserPreferences {
   defaultView?: 'projects' | 'customization';
   showRepoFilterBar?: boolean; // Show/hide the filter bar in repos view
   showMonitorButton?: boolean; // Show/hide the monitor button in side nav (default: false)
-  showConnectionsButton?: boolean; // Show/hide the connections button in side nav (default: false)
   showOnboardingButton?: boolean; // Show/hide the onboarding/tutorials button in side nav (default: false)
   showExtensionsButton?: boolean; // Show/hide the extensions button in settings (default: false)
   onboardingCompleted?: boolean; // Whether the onboarding wizard has been completed (default: false)

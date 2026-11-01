@@ -3,7 +3,6 @@ import {
   Settings,
   Activity,
   Cpu,
-  Radio,
   ToolCase,
   GraduationCap,
   PenTool,
@@ -113,12 +112,10 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const [hoveredNavItemId, setHoveredNavItemId] =
     useState<NavigationView | 'repository' | null>(null);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
-  const [showConnectionsButton, setShowConnectionsButton] = useState(false);
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   useEffect(() => {
     UserPreferencesService.getPreferences().then((prefs) => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
-      setShowConnectionsButton(prefs.showConnectionsButton ?? false);
       setShowOnboardingButton(prefs.showOnboardingButton ?? false);
     });
 
@@ -127,9 +124,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       if (detail) {
         if ('showMonitorButton' in detail) {
           setShowMonitorButton(detail.showMonitorButton ?? false);
-        }
-        if ('showConnectionsButton' in detail) {
-          setShowConnectionsButton(detail.showConnectionsButton ?? false);
         }
         if ('showOnboardingButton' in detail) {
           setShowOnboardingButton(detail.showOnboardingButton ?? false);
@@ -208,16 +202,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             id: 'processes' as NavigationView,
             icon: <Cpu size={20} />,
             label: 'Processes',
-          },
-        ]
-      : []),
-    // Only include connections button if user has enabled it in preferences
-    ...(showConnectionsButton
-      ? [
-          {
-            id: 'connections' as NavigationView,
-            icon: <Radio size={20} />,
-            label: 'Connections',
           },
         ]
       : []),

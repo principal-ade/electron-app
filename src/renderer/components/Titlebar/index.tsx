@@ -10,6 +10,3 @@ export { TerminalDaemonUpdateIndicator } from './TerminalDaemonUpdateIndicator';
 
 export { OnboardingButton } from './OnboardingButton';
 export type { default as OnboardingButtonType } from './OnboardingButton';
-
-export { GitSyncStatusIndicator } from './GitSyncStatusIndicator';
-export type { GitSyncStatusIndicatorProps } from './GitSyncStatusIndicator';

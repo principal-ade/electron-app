@@ -6,7 +6,6 @@
  * - fileSystem: File read/write operations
  * - repositoryMonitoring: Git status and file tree
  * - userPreferences: User settings
- * - gitSync: Git-sync room connections
  * - authentication: Authentication status
  * - githubArtifact: GitHub Actions artifact fetching for quality metrics
  *
@@ -28,7 +27,6 @@ import { shellAPI } from './main-process-api-implementations/shellApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
 import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi';
 import { topicAPI } from './main-process-api-implementations/topicApi';
-import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
 import { authenticationAPI } from './main-process-api-implementations/authenticationApi';
 import { agentSessionSDKApi } from './main-process-api-implementations/agentSessionSDKApi';
 import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
@@ -57,7 +55,6 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   window: windowAPI,
   alexandria: alexandriaAPI,
   topics: topicAPI,
-  gitSync: gitSyncAPI,
   authentication: authenticationAPI,
   agentSessionSDK: agentSessionSDKApi,
   githubArtifact: githubArtifactAPI,

@@ -612,7 +612,6 @@ export class GitService {
     }
   }
 
-  // Additional methods needed by GitSyncManager
   static async getCurrentBranch(directory: string): Promise<GitBranchInfo> {
     console.info(`[GitService] Getting current branch for: ${directory}`);
     try {

@@ -355,7 +355,6 @@ export class UnifiedSecureStorage {
 
 export const TOKEN_KEYS = {
   ORBIT_AUTH: 'orbit_auth',
-  GIT_SYNC_AUTH: 'git-sync-auth',
   GITHUB_TOKEN: 'github_token',
   WORKOS_TOKEN: 'workos_token',
 } as const;

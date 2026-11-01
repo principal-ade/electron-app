@@ -46,7 +46,6 @@ interface UsePanelPersistenceOptions {
     | 'terminalManager'
     | 'authView'
     | 'repositoryDetailsNested'
-    | 'gitSyncView'
     | 'projectsView'
     | 'skillBrowserView'
     | 'feedView';

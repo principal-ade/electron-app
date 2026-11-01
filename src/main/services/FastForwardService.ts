@@ -137,7 +137,7 @@ class FastForwardService extends EventEmitter {
   }
 
   /**
-   * Handle incoming webhook event from GitSyncWebSocketManager
+   * Handle an incoming GitHub webhook event
    */
   async handleWebhookEvent(data: WebhookEventData): Promise<void> {
     console.log(
