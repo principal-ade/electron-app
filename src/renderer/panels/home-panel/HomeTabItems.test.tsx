@@ -14,7 +14,13 @@ jest.mock('@industry-theme/xterm-terminal-panel', () => ({
 jest.mock('@principal-ade/industry-theme', () => ({
   useTheme: () => ({
     theme: {
-      colors: { backgroundSecondary: '#222222', backgroundTertiary: '#333333' },
+      colors: {
+        backgroundSecondary: '#222222',
+        backgroundTertiary: '#333333',
+        text: '#eeeeee',
+        textSecondary: '#999999',
+        primary: '#4488ff',
+      },
       fonts: {},
       fontSizes: [10, 12, 14],
     },
@@ -710,7 +716,7 @@ describe('dropping onto topic rows', () => {
   });
 });
 
-test('tints the focused tab row more strongly than hover', () => {
+test('colours the focused tab row label instead of tinting its background', () => {
   const props = {
     entry: profile,
     open: true,
@@ -724,8 +730,12 @@ test('tints the focused tab row more strongly than hover', () => {
   fireEvent.mouseEnter(row);
   expect(row.style.backgroundColor).toBe('rgb(34, 34, 34)');
   fireEvent.mouseLeave(row);
+  const label = screen.getByText('Clone profile');
+  expect(label.style.color).toBe('rgb(238, 238, 238)');
   rerender(<HomeTabRow {...props} active />);
-  expect(row.style.backgroundColor).toBe('rgb(51, 51, 51)');
+  expect(row.style.backgroundColor).toBe('transparent');
+  expect(label.style.color).toBe('rgb(68, 136, 255)');
   fireEvent.mouseEnter(row);
-  expect(row.style.backgroundColor).toBe('rgb(51, 51, 51)');
+  expect(row.style.backgroundColor).toBe('rgb(34, 34, 34)');
+  expect(label.style.color).toBe('rgb(68, 136, 255)');
 });

@@ -338,13 +338,12 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
         padding: `8px 10px 8px ${14 + depth * 18}px`,
         borderRadius: 0,
         cursor: 'pointer',
-        // Focus uses a stronger tint than hover so the two stay distinguishable.
+        // Focus is shown by colouring the label and icon, not the background,
+        // so hover keeps reading as hover on the active row.
         backgroundColor:
-          dropActive || active
-            ? theme.colors.backgroundTertiary
-            : hovered
-              ? theme.colors.backgroundSecondary
-              : 'transparent',
+          dropActive || hovered
+            ? theme.colors.backgroundSecondary
+            : 'transparent',
         outline: dropActive ? `1px dashed ${theme.colors.primary}` : 'none',
         outlineOffset: -1,
         transition: 'background-color 0.15s ease',
@@ -357,10 +356,14 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
           // Center the 14px glyph on the first wrapped line (line-height is
           // 1.35 × 16px = 21.6px, plus the label's 1px top padding).
           marginTop: wrapLabel ? 5 : 0,
-          color: theme.colors.textSecondary,
+          color: active ? theme.colors.primary : theme.colors.textSecondary,
         }}
       >
-        {homeTabIcon(entry, depth > 0 ? 13 : 14, theme.colors.textSecondary)}
+        {homeTabIcon(
+          entry,
+          depth > 0 ? 13 : 14,
+          active ? theme.colors.primary : theme.colors.textSecondary,
+        )}
       </span>
       <span
         style={{
@@ -368,7 +371,11 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
           minWidth: 0,
           fontFamily: theme.fonts?.body,
           fontSize: depth > 0 ? theme.fontSizes[1] : theme.fontSizes[2],
-          color: open ? theme.colors.text : theme.colors.textSecondary,
+          color: active
+            ? theme.colors.primary
+            : open
+              ? theme.colors.text
+              : theme.colors.textSecondary,
           // A pinned-but-closed entry reads as dormant next to an open tab.
           opacity: open ? 1 : 0.75,
           ...(wrapLabel

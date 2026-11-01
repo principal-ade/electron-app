@@ -704,12 +704,22 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                           const name =
                             payload.github?.name ?? entry?.name ?? payload.purl;
                           const path = entry?.path ? String(entry.path) : '';
+                          const hasActiveTab =
+                            activeTabId !== null &&
+                            (openTabs.some((tab) => tab.id === activeTabId) ||
+                              pinnedTabs.some((pin) => pin.id === activeTabId) ||
+                              repoProcesses.some(
+                                (process) =>
+                                  homeTabs.processTabs.get(process.id)?.id ===
+                                  activeTabId,
+                              ));
                           return (
                             <div key={key}>
                               <OrgRepoItemCard
                                 flush
                                 showTooltips={false}
                                 repo={{ name }}
+                                active={hasActiveTab}
                                 isCloned={!!path}
                                 isDirty={status?.isDirty}
                                 watching={path ? watchedPaths.has(path) : false}

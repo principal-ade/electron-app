@@ -4,7 +4,11 @@ import { OrgRepoItemCard } from './OrgRepoItemCard';
 
 jest.mock('@principal-ade/industry-theme', () => ({
   useTheme: () => ({
-    theme: { colors: {}, fonts: {}, fontSizes: [10, 12, 14] },
+    theme: {
+      colors: { text: '#eeeeee', primary: '#4488ff', success: '#22cc66' },
+      fonts: {},
+      fontSizes: [10, 12, 14],
+    },
   }),
 }));
 
@@ -25,6 +29,34 @@ test.each([undefined, true])(
     expect(row.style.paddingBottom).toBe(flush ? '8px' : '6px');
   },
 );
+
+test.each([false, true])(
+  'colours the repo name and icon with the primary colour when active=%s',
+  (active) => {
+    const { container } = render(
+      <OrgRepoItemCard repo={{ name: 'app' }} isCloned active={active} />,
+    );
+    const expected = active ? 'rgb(68, 136, 255)' : 'rgb(238, 238, 238)';
+    expect(screen.getByText('app').style.color).toBe(expected);
+    expect(container.querySelector('svg')?.getAttribute('stroke')).toBe(
+      active ? '#4488ff' : '#eeeeee',
+    );
+  },
+);
+
+test('keeps the synced green icon while the repo is active', () => {
+  const { container } = render(
+    <OrgRepoItemCard
+      repo={{ name: 'app' }}
+      isCloned
+      active
+      sync={{ ahead: 0, behind: 0 }}
+    />,
+  );
+  expect(container.querySelector('svg')?.getAttribute('stroke')).toBe(
+    '#22cc66',
+  );
+});
 
 test('can hide all repository tooltips while keeping accessible action labels', () => {
   const { container } = render(

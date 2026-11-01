@@ -83,6 +83,11 @@ export interface OrgRepoItemCardProps {
    * reopens its tab.
    */
   tabIcons?: React.ReactNode;
+  /**
+   * Whether the focused workspace tab belongs to this repository. Colours the
+   * name so the whole repo block reads as the current context.
+   */
+  active?: boolean;
   /** Whether this repository is pinned to Home. */
   pinned?: boolean;
   /**
@@ -111,6 +116,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   onPushAhead,
   watching = false,
   tabIcons,
+  active = false,
   pinned = false,
   onTogglePin,
 }) => {
@@ -170,7 +176,15 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
         {isCloned ? (
           <FolderGit2
             size={15}
-            color={synced ? theme.colors.success : theme.colors.text}
+            // The synced green outranks the active tint so "up to date" never
+            // disappears while the repo is focused.
+            color={
+              synced
+                ? theme.colors.success
+                : active
+                  ? theme.colors.primary
+                  : theme.colors.text
+            }
           />
         ) : (
           <Cloud size={15} color={theme.colors.textSecondary} />
@@ -220,7 +234,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
               minWidth: 0,
               fontFamily: theme.fonts?.body,
               fontSize: theme.fontSizes[2],
-              color: theme.colors.text,
+              color: active ? theme.colors.primary : theme.colors.text,
               lineHeight: 1.2,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
