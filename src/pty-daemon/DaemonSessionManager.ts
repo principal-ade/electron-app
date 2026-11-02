@@ -27,14 +27,17 @@ import {
   addPtySpawnFailedEvent,
 } from './telemetry';
 import { stripTsNodeEnv } from '../shared/nodeOptions';
+import { resolveNodePtyModule } from './nodePty';
 
 // node-pty is loaded dynamically to avoid webpack bundling issues
 let pty: typeof import('node-pty') | null = null;
 
 function loadNodePty(): typeof import('node-pty') {
   if (!pty) {
-    // Use eval to prevent webpack from trying to bundle node-pty
-    pty = eval('require')('node-pty') as typeof import('node-pty');
+    // Use eval to prevent webpack from trying to bundle node-pty. Resolve
+    // through the asar path in a packaged app; see nodePty.ts for why the
+    // unpacked copy breaks spawn-helper.
+    pty = eval('require')(resolveNodePtyModule()) as typeof import('node-pty');
   }
   return pty;
 }
@@ -68,7 +71,15 @@ export class DaemonSessionManager extends EventEmitter {
    * Create a new PTY session.
    */
   createSession(msg: CreateSessionMessage, parentContext?: Context): void {
-    const { id, cwd, shell, env, cols = DEFAULT_COLS, rows = DEFAULT_ROWS, context } = msg;
+    const {
+      id,
+      cwd,
+      shell,
+      env,
+      cols = DEFAULT_COLS,
+      rows = DEFAULT_ROWS,
+      context,
+    } = msg;
 
     // Check if session already exists
     if (this.sessions.has(id)) {
@@ -180,7 +191,8 @@ export class DaemonSessionManager extends EventEmitter {
         }
       }, 100);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       const shellPath = shell || this.getDefaultShell();
 
       // Log detailed error for daemon.log
