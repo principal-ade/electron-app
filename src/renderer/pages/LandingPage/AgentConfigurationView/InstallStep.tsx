@@ -15,12 +15,6 @@ interface InstallStepProps {
   onInstall: () => void;
   onCheckStatus: () => void;
   onInstallComplete: () => void;
-  handleClaudeTourButtonClick?: (
-    stepIndex: number,
-    buttonAction: () => void,
-  ) => void;
-  isClaudeTourActive?: boolean;
-  claudeTourStepIndex?: number;
   isCurrentStep: boolean;
   isInstalled: boolean;
 }
@@ -32,9 +26,6 @@ export const InstallStep: React.FC<InstallStepProps> = ({
   installProgress,
   onInstall,
   onCheckStatus,
-  handleClaudeTourButtonClick,
-  isClaudeTourActive,
-  claudeTourStepIndex,
   isInstalled,
 }) => {
   const { theme } = useTheme();
@@ -46,7 +37,7 @@ export const InstallStep: React.FC<InstallStepProps> = ({
   };
 
   return (
-    <div className="text-center" data-tour="install-step">
+    <div className="text-center">
       <div className="mb-6">
         <div
           className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
@@ -99,19 +90,8 @@ export const InstallStep: React.FC<InstallStepProps> = ({
             ) : (
               <>
                 <button
-                  onClick={() => {
-                    if (
-                      handleClaudeTourButtonClick &&
-                      isClaudeTourActive &&
-                      claudeTourStepIndex === 0
-                    ) {
-                      handleClaudeTourButtonClick(0, onInstall);
-                    } else {
-                      onInstall();
-                    }
-                  }}
+                  onClick={onInstall}
                   disabled={isProcessing}
-                  data-tour="install-agent"
                   className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   style={{
                     backgroundColor: theme.colors.primary,

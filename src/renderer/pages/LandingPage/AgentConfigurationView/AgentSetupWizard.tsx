@@ -18,16 +18,6 @@ interface AgentSetupWizardProps {
   checkAgentStatus: () => void;
   onShowDetails: () => void;
   onBackToAssistants?: () => void;
-  handleClaudeTourNext?: () => void;
-  handleClaudeTourAction?: (action: {
-    fn: (step: number) => Promise<void>;
-  }) => void;
-  handleClaudeTourButtonClick?: (
-    stepIndex: number,
-    buttonAction: () => void,
-  ) => void;
-  isClaudeTourActive?: boolean;
-  claudeTourStepIndex?: number;
 }
 
 interface InstallProgress {
@@ -42,11 +32,6 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
   checkAgentStatus,
   onShowDetails,
   onBackToAssistants,
-  handleClaudeTourNext,
-  handleClaudeTourAction,
-  handleClaudeTourButtonClick,
-  isClaudeTourActive,
-  claudeTourStepIndex,
 }) => {
   const { theme } = useTheme();
   const [isConfiguringHooks, setIsConfiguringHooks] = useState(false);
@@ -130,17 +115,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
       setInstallProgress(null);
       checkAgentStatus();
     }, 2000);
-
-    // Handle tour navigation if applicable
-    if (agentType === 'claude') {
-      handleClaudeTourNext?.();
-    }
-  }, [
-    agentType,
-    agentConfig.ui.downloadUrl,
-    handleClaudeTourNext,
-    checkAgentStatus,
-  ]);
+  }, [agentConfig.ui.downloadUrl, checkAgentStatus]);
 
   const handleConfigureHooks = useCallback(async () => {
     setError(null);
@@ -150,7 +125,6 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
 
       if (result) {
         await checkAgentStatus();
-        handleClaudeTourNext?.();
       } else {
         setError('Failed to configure hooks');
       }
@@ -159,7 +133,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
     } finally {
       setIsConfiguringHooks(false);
     }
-  }, [agentType, checkAgentStatus, handleClaudeTourNext]);
+  }, [agentType, checkAgentStatus]);
 
   const handleRemoveHooks = useCallback(async () => {
     setError(null);
@@ -213,7 +187,6 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
             serverCount: result.status.mcpCount,
           });
           await checkAgentStatus();
-          handleClaudeTourNext?.();
         } else {
           setError(result.error || 'Failed to enable MCP server');
         }
@@ -224,7 +197,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
     } finally {
       setIsTogglingMCP(false);
     }
-  }, [agentType, mcpStatus.enabled, checkAgentStatus, handleClaudeTourNext]);
+  }, [agentType, mcpStatus.enabled, checkAgentStatus]);
 
   const getCurrentStep = () => {
     // Use local status if available (immediately after install)
@@ -245,25 +218,6 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
   };
 
   const currentStep = getCurrentStep();
-
-  const handleTriggerStepAction = useCallback(
-    async (step: number) => {
-      if (step === 0) {
-        await handleInstallAgent();
-      } else if (step === 1) {
-        await handleConfigureHooks();
-      } else if (step === 2) {
-        await handleMCPToggle();
-      }
-    },
-    [handleInstallAgent, handleConfigureHooks, handleMCPToggle],
-  );
-
-  useEffect(() => {
-    if (handleClaudeTourAction && isClaudeTourActive) {
-      handleClaudeTourAction({ fn: handleTriggerStepAction });
-    }
-  }, [handleClaudeTourAction, isClaudeTourActive, handleTriggerStepAction]);
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-4">
@@ -372,9 +326,6 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
                   onInstall={handleInstallAgent}
                   onCheckStatus={checkAgentStatus}
                   onInstallComplete={() => setLocalInstallStatus(true)}
-                  handleClaudeTourButtonClick={handleClaudeTourButtonClick}
-                  isClaudeTourActive={isClaudeTourActive}
-                  claudeTourStepIndex={claudeTourStepIndex}
                   isCurrentStep={currentStep === 'install'}
                   isInstalled={realInstalled ?? true}
                 />
@@ -417,29 +368,14 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
                       ? `${agentConfig.ui.color}20`
                       : theme.colors.backgroundLight
                   }
-                  dataTour="configure-step"
                 >
                   <div className="flex justify-center">
                     {!agentStatus?.hasHooks ? (
                       <button
-                        onClick={() => {
-                          if (
-                            handleClaudeTourButtonClick &&
-                            isClaudeTourActive &&
-                            claudeTourStepIndex === 1
-                          ) {
-                            handleClaudeTourButtonClick(
-                              1,
-                              handleConfigureHooks,
-                            );
-                          } else {
-                            handleConfigureHooks();
-                          }
-                        }}
+                        onClick={handleConfigureHooks}
                         disabled={
                           isConfiguringHooks || currentStep !== 'configure'
                         }
-                        data-tour="configure-hooks"
                         className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         style={{
                           backgroundColor: theme.colors.primary,
@@ -527,27 +463,15 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
                       ? `${agentConfig.ui.color}20`
                       : theme.colors.backgroundTertiary
                   }
-                  dataTour="mcp-step"
                 >
                   <div className="flex justify-center">
                     {!mcpStatus.enabled ? (
                       <button
-                        onClick={() => {
-                          if (
-                            handleClaudeTourButtonClick &&
-                            isClaudeTourActive &&
-                            claudeTourStepIndex === 2
-                          ) {
-                            handleClaudeTourButtonClick(2, handleMCPToggle);
-                          } else {
-                            handleMCPToggle();
-                          }
-                        }}
+                        onClick={handleMCPToggle}
                         disabled={
                           isTogglingMCP ||
                           (currentStep !== 'mcp' && !mcpStatus.enabled)
                         }
-                        data-tour="enable-mcp"
                         className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         style={{
                           backgroundColor: theme.colors.primary,

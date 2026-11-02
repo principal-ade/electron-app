@@ -15,16 +15,6 @@ interface AgentConfigurationViewProps {
   onShowDetails?: () => void;
   onBackToSetup?: () => void;
   onBackToAssistants?: () => void;
-  handleClaudeTourNext?: () => void;
-  handleClaudeTourAction?: (action: {
-    fn: (step: number) => Promise<void>;
-  }) => void;
-  handleClaudeTourButtonClick?: (
-    stepIndex: number,
-    buttonAction: () => void,
-  ) => void;
-  isClaudeTourActive?: boolean;
-  claudeTourStepIndex?: number;
 }
 
 export const AgentConfigurationView: React.FC<AgentConfigurationViewProps> = ({
@@ -35,11 +25,6 @@ export const AgentConfigurationView: React.FC<AgentConfigurationViewProps> = ({
   onShowDetails,
   onBackToSetup,
   onBackToAssistants,
-  handleClaudeTourNext,
-  handleClaudeTourAction,
-  handleClaudeTourButtonClick,
-  isClaudeTourActive,
-  claudeTourStepIndex,
 }) => {
   // Simple view
   if (viewLayout === 'simple') {
@@ -50,11 +35,6 @@ export const AgentConfigurationView: React.FC<AgentConfigurationViewProps> = ({
         checkAgentStatus={checkAgentStatus}
         onShowDetails={onShowDetails || (() => {})}
         onBackToAssistants={onBackToAssistants}
-        handleClaudeTourNext={handleClaudeTourNext}
-        handleClaudeTourAction={handleClaudeTourAction}
-        handleClaudeTourButtonClick={handleClaudeTourButtonClick}
-        isClaudeTourActive={isClaudeTourActive}
-        claudeTourStepIndex={claudeTourStepIndex}
       />
     );
   }

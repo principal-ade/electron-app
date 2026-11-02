@@ -7,7 +7,6 @@ interface WizardStepProps {
   description: string;
   children?: React.ReactNode;
   iconBackgroundColor?: string;
-  dataTour?: string;
 }
 
 export const WizardStep: React.FC<WizardStepProps> = ({
@@ -17,12 +16,11 @@ export const WizardStep: React.FC<WizardStepProps> = ({
   description,
   children,
   iconBackgroundColor,
-  dataTour,
 }) => {
   const { theme } = useTheme();
 
   return (
-    <div className="text-center" data-tour={dataTour}>
+    <div className="text-center">
       <div className="mb-6">
         <div
           className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
