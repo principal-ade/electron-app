@@ -154,10 +154,13 @@ const configuration: webpack.Configuration = {
         // Shared repository monitor daemon, spawned under node by
         // src/main/repository-monitoring/daemonLaunch.ts. Staged as .cjs so
         // Node never treats it as ESM, and unpacked from asar (package.json
-        // asarUnpack) so a child process can execute it.
+        // asarUnpack) so a child process can execute it. We wrap it to set a
+        // recognizable process title in Activity Monitor.
         {
-          from: require.resolve(
-            '@principal-ai/repository-monitoring-server/dist/daemon/repository-monitoring-daemon.js',
+          from: path.resolve(
+            webpackPaths.srcMainPath,
+            'repository-monitoring',
+            'repo-monitor-daemon-wrapper.ts',
           ),
           to: path.join(webpackPaths.distMainPath, 'repo-monitor-daemon.cjs'),
         },

@@ -10,6 +10,11 @@
 
 import * as fs from 'fs';
 import { DaemonSessionManager } from './DaemonSessionManager';
+
+// Set a recognizable name in Activity Monitor/ps
+if (typeof process !== 'undefined') {
+  process.title = 'Principal PTY Daemon';
+}
 import { SocketServer } from './SocketServer';
 import { Logger } from './Logger';
 import {
