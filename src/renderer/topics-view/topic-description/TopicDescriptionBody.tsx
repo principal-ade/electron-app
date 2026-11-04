@@ -4,7 +4,7 @@
  * The reusable core of the topic-description preview: it fetches a local topic
  * by id (`TopicService.getTopic`), renders its markdown description via
  * `IndustryMarkdownSlide`, and supports the lightweight inline edits the
- * preview offers (text deletion, checkbox toggles, drag-to-append text, and
+ * preview offers (checkbox toggles, drag-to-append text, and
  * dragged-in image assets). It live-refreshes via `TopicService.onTopicChange`.
  *
  * This is the chrome-less body shared by the Topics view and Dev Workspace
@@ -361,26 +361,6 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
       } catch (err) {
         console.error('[TopicDescriptionBody] append failed', err);
       }
-    },
-    [topicId],
-  );
-
-  // Inline deletion: highlighting text (or clicking a list item's bullet) in
-  // the preview removes it and hands us the new content. Update optimistically
-  // and persist through the same sink the MDX editor tab uses; the
-  // TOPIC_UPDATED broadcast then reconciles via the onTopicChange subscription.
-  const handleContentChange = React.useCallback(
-    (next: string) => {
-      if (!topicId) return;
-      setDescription(next);
-      void TopicService.updateTopic(topicId, { description: next }).catch(
-        (err) => {
-          console.error(
-            '[TopicDescriptionBody] description update failed',
-            err,
-          );
-        },
-      );
     },
     [topicId],
   );
@@ -825,9 +805,7 @@ export const TopicDescriptionBody: React.FC<TopicDescriptionBodyProps> = ({
                 // reach onLinkClick / the purl resolver instead of being stripped.
                 allowedLinkProtocols={PURL_LINK_PROTOCOLS}
                 onOpenMermaidInTab={handleOpenMermaidInTab}
-                selectableBlocks
-                deletionMode="text"
-                onContentChange={handleContentChange}
+                enableHighlightCopy
                 editable
                 onCheckboxChange={handleCheckboxChange}
                 transformImageUri={resolveAssetUri}
