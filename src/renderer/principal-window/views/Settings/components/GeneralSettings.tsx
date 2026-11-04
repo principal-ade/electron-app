@@ -12,10 +12,13 @@ export const GeneralSettings: React.FC = () => {
   const { theme } = useTheme();
   const [currentVersion, setCurrentVersion] = useState('0.0.0');
   const [isDevMode, setIsDevMode] = useState(false);
-  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(
-    null,
-  );
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
+    string | null
+  >(null);
+  const [buildsDirectory, setBuildsDirectory] = useState<string | null>(null);
   const [isSelectingBaseDirectory, setIsSelectingBaseDirectory] =
+    useState(false);
+  const [isSelectingBuildsDirectory, setIsSelectingBuildsDirectory] =
     useState(false);
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
   const [openLocalhostTerminalLinksInApp, setOpenLocalhostTerminalLinksInApp] =
@@ -38,6 +41,7 @@ export const GeneralSettings: React.FC = () => {
       if (!isMounted) return;
 
       setBaseDefaultDirectory(prefs.baseDefaultDirectory || null);
+      setBuildsDirectory(prefs.buildsDirectory || null);
       setEnableVimMode(prefs.enableVimMode ?? false);
       setOpenLocalhostTerminalLinksInApp(
         prefs.openLocalhostTerminalLinksInApp === true,
@@ -108,6 +112,41 @@ export const GeneralSettings: React.FC = () => {
     setBaseDefaultDirectory(null);
     await UserPreferencesService.updatePreferences({
       baseDefaultDirectory: undefined,
+    });
+  };
+
+  const handleSelectBuildsDirectory = async () => {
+    setIsSelectingBuildsDirectory(true);
+    try {
+      const result = await FileSystemService.selectDirectory({
+        title: 'Select Builds Directory',
+        buttonLabel: 'Select Directory',
+        properties: ['openDirectory', 'createDirectory'],
+      });
+
+      if (!result || result.canceled || !result.filePaths?.[0]) {
+        return;
+      }
+
+      const directory = result.filePaths[0];
+      setBuildsDirectory(directory);
+      await UserPreferencesService.updatePreferences({
+        buildsDirectory: directory,
+      });
+    } catch (error) {
+      console.error(
+        '[GeneralSettings] Failed to select builds directory:',
+        error,
+      );
+    } finally {
+      setIsSelectingBuildsDirectory(false);
+    }
+  };
+
+  const handleClearBuildsDirectory = async () => {
+    setBuildsDirectory(null);
+    await UserPreferencesService.updatePreferences({
+      buildsDirectory: undefined,
     });
   };
 
@@ -320,6 +359,122 @@ export const GeneralSettings: React.FC = () => {
               }}
             >
               Example: {baseDefaultDirectory}/octocat/hello-world
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Builds Directory */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Builds Directory
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <p
+            style={{
+              fontSize: '14px',
+              color: theme.colors.textSecondary,
+              marginBottom: '12px',
+            }}
+          >
+            Where build configurations check out and run, using the owner/repo
+            layout — separate from your working clones. Falls back to the base
+            directory when unset.
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <code
+              data-testid="builds-directory"
+              style={{
+                flex: '1 1 320px',
+                minWidth: 0,
+                padding: '10px 14px',
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.background,
+                color: buildsDirectory
+                  ? theme.colors.text
+                  : theme.colors.textSecondary,
+                fontSize: '14px',
+                fontFamily: 'monospace',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {buildsDirectory || 'Not set (uses base directory)'}
+            </code>
+            <button
+              onClick={handleSelectBuildsDirectory}
+              disabled={isSelectingBuildsDirectory}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: theme.colors.primary,
+                color: '#ffffff',
+                cursor: isSelectingBuildsDirectory ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: isSelectingBuildsDirectory ? 0.6 : 1,
+                transition: 'all 0.2s',
+              }}
+            >
+              <FolderOpen size={16} />
+              {buildsDirectory ? 'Change Folder…' : 'Choose Folder…'}
+            </button>
+            {buildsDirectory && (
+              <button
+                onClick={handleClearBuildsDirectory}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.text,
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {(buildsDirectory || baseDefaultDirectory) && (
+            <p
+              style={{
+                fontSize: '13px',
+                color: theme.colors.textSecondary,
+                margin: '12px 0 0 0',
+                fontFamily: 'monospace',
+              }}
+            >
+              Example: {(buildsDirectory || baseDefaultDirectory) as string}
+              /octocat/hello-world
             </p>
           )}
         </div>

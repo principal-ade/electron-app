@@ -25,9 +25,10 @@ function asObject(value: unknown): Record<string, unknown> | null {
 
 /**
  * The bridge has no renderer of its own, so it acts on the window a user would
- * consider "the app": the focused one, else the first live window.
+ * consider "the app": the focused one, else the first live window. Exported
+ * for the build run route, which inherits the same limitation.
  */
-function resolveTargetWindow(): BrowserWindow | null {
+export function resolveTargetWindow(): BrowserWindow | null {
   const focused = BrowserWindow.getFocusedWindow();
   if (focused && !focused.isDestroyed()) return focused;
   return (
@@ -58,9 +59,13 @@ export function registerTerminalRoutes(app: Application): void {
     const body = asObject(req.body);
     const cwd = body && typeof body.cwd === 'string' ? body.cwd.trim() : '';
     const context =
-      body && typeof body.context === 'string' ? body.context.trim() : undefined;
+      body && typeof body.context === 'string'
+        ? body.context.trim()
+        : undefined;
     const command =
-      body && typeof body.command === 'string' ? body.command.trim() : undefined;
+      body && typeof body.command === 'string'
+        ? body.command.trim()
+        : undefined;
 
     if (!cwd || !path.isAbsolute(cwd)) {
       res
@@ -89,7 +94,10 @@ export function registerTerminalRoutes(app: Application): void {
     if (!window) {
       res
         .status(409)
-        .json({ success: false, error: 'no live application window to own the terminal' });
+        .json({
+          success: false,
+          error: 'no live application window to own the terminal',
+        });
       return;
     }
 
@@ -121,5 +129,24 @@ export function registerTerminalRoutes(app: Application): void {
     }
     await sessionManager.destroySession(sessionId);
     res.json({ success: true, sessionId });
+  });
+
+  // Liveness + OSC 7501 program status, so an agent can poll for completion
+  // without scraping scrollback.
+  app.get('/api/terminals/:id/status', (req: Request, res: Response) => {
+    const sessionManager = getSessionManagerInstance();
+    const sessionId = String(req.params.id);
+    if (!sessionManager.hasSession(sessionId)) {
+      res.status(404).json({ success: false, error: 'unknown session id' });
+      return;
+    }
+    const session = sessionManager.getSession(sessionId);
+    res.json({
+      success: true,
+      sessionId,
+      alive: true,
+      programStatus: sessionManager.getProgramStatus(sessionId),
+      lastActivity: session?.lastActivity ?? null,
+    });
   });
 }

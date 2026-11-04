@@ -17,6 +17,7 @@ export interface DetachedTabOpeners {
   openLocalTopic: (topicId: string, title?: string) => void;
   openSubsystemModel: (modelId: string, title: string) => void;
   openC4Sketch: (sketchId: string, title: string) => void;
+  renameTab: (tabId: string, name: string) => void;
 }
 
 export function useDetachedTabAdopter(openers: DetachedTabOpeners): void {
@@ -41,6 +42,11 @@ export function useDetachedTabAdopter(openers: DetachedTabOpeners): void {
             if (!tab.modelId) throw new Error('missing modelId');
             openersRef.current.openSubsystemModel(tab.modelId, tab.label);
           }
+          // Reapply a rename that traveled with the descriptor. The openers
+          // above all write through functional `setTabs` updates, so this
+          // composes in order.
+          const renamed = tab.customLabel?.trim();
+          if (renamed) openersRef.current.renameTab(tab.tabId, renamed);
           const accepted = await WindowService.acceptIncomingDetachedTab(token);
           if (!accepted) {
             console.warn(

@@ -52,6 +52,16 @@ export class SecretsService {
   }
 
   /**
+   * Remove specific secret keys from a repository
+   */
+  static async removeKeys(
+    repoId: string,
+    keys: string[],
+  ): Promise<SecretOperationResult> {
+    return window.mainProcess.secrets.removeKeys(repoId, keys);
+  }
+
+  /**
    * Get only metadata and keys for a repository (no values)
    */
   static async getMetadata(repoId: string): Promise<SecretMetadataOnly | null> {

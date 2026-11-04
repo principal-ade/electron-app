@@ -203,6 +203,14 @@ export interface C4SketchTab extends BaseTab {
   sketchId: string;
 }
 
+/** Build configuration tab — read, grant secrets, and run the config. */
+export interface BuildConfigurationTab extends BaseTab {
+  contentType: 'build-configuration';
+  configId: string;
+  /** pkg: purl of the repository this build targets, for Home grouping. */
+  repo?: string;
+}
+
 /**
  * Localhost browser tab — an embedded `<webview>` (via
  * `@industry-theme/localhost-panels`) pointed at a local dev server. Opened from
@@ -235,3 +243,13 @@ export type FeedTab =
   | SourceFileTab
   | MediaTab
   | LocalhostBrowserTab;
+
+/**
+ * Host-assigned tab rename, trimmed — or undefined when the tab has none.
+ * Whitespace-only counts as unset. Mirrors `customTabLabel` in
+ * `@industry-theme/xterm-terminal-panel`.
+ */
+export function customTabLabel(tab: { customLabel?: string }): string | undefined {
+  const trimmed = tab.customLabel?.trim();
+  return trimmed ? trimmed : undefined;
+}

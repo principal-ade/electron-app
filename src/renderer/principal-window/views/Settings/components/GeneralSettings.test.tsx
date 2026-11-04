@@ -1,5 +1,12 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
@@ -87,7 +94,11 @@ test('choosing a folder persists it as the base directory', async () => {
   render(<GeneralSettings />);
   await screen.findByText('Version 1.2.3');
 
-  fireEvent.click(screen.getByRole('button', { name: /choose folder/i }));
+  const baseRow = screen.getByTestId('base-default-directory')
+    .parentElement as HTMLElement;
+  fireEvent.click(
+    within(baseRow).getByRole('button', { name: /choose folder/i }),
+  );
 
   await waitFor(() =>
     expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
@@ -105,7 +116,11 @@ test('a cancelled folder picker leaves the base directory untouched', async () =
   render(<GeneralSettings />);
   await screen.findByText('Version 1.2.3');
 
-  fireEvent.click(screen.getByRole('button', { name: /choose folder/i }));
+  const baseRow = screen.getByTestId('base-default-directory')
+    .parentElement as HTMLElement;
+  fireEvent.click(
+    within(baseRow).getByRole('button', { name: /choose folder/i }),
+  );
 
   await waitFor(() =>
     expect(FileSystemService.selectDirectory).toHaveBeenCalled(),
@@ -122,14 +137,38 @@ test('clearing the base directory persists an empty value', async () => {
   render(<GeneralSettings />);
   await screen.findByText('/Users/dev/Development');
 
-  fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+  const baseRow = screen.getByTestId('base-default-directory')
+    .parentElement as HTMLElement;
+  fireEvent.click(within(baseRow).getByRole('button', { name: 'Clear' }));
 
   await waitFor(() =>
     expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
       baseDefaultDirectory: undefined,
     }),
   );
-  expect(
-    screen.getByTestId('base-default-directory').textContent,
-  ).toBe('Not set');
+  expect(screen.getByTestId('base-default-directory').textContent).toBe(
+    'Not set',
+  );
+});
+
+test('choosing a builds directory persists it separately', async () => {
+  (FileSystemService.selectDirectory as jest.Mock).mockResolvedValue({
+    filePaths: ['/Users/dev/Builds'],
+    canceled: false,
+  });
+  render(<GeneralSettings />);
+  await screen.findByText('Version 1.2.3');
+
+  const buildsRow = screen.getByTestId('builds-directory')
+    .parentElement as HTMLElement;
+  fireEvent.click(
+    within(buildsRow).getByRole('button', { name: /choose folder/i }),
+  );
+
+  await waitFor(() =>
+    expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
+      buildsDirectory: '/Users/dev/Builds',
+    }),
+  );
+  expect(await screen.findByText('/Users/dev/Builds')).toBeTruthy();
 });

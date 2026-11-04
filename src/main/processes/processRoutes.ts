@@ -16,42 +16,7 @@ import path from 'path';
 import type { Application, Request, Response } from 'express';
 import type { ProcessRegistry } from './ProcessRegistry';
 import { ProcessKind } from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
-
-/**
- * Binaries an agent may start. Narrow on purpose — this is the difference
- * between "run my dev server" and "run anything". Widen as needed.
- */
-const AGENT_COMMAND_ALLOWLIST = new Set([
-  'npm',
-  'pnpm',
-  'yarn',
-  'bun',
-  'npx',
-  'node',
-  'deno',
-  'tsx',
-  'tsc',
-  'vite',
-  'next',
-  'astro',
-  'nuxt',
-  'storybook',
-  'http-server',
-  'vitest',
-  'jest',
-  'python',
-  'python3',
-  'uv',
-  'go',
-  'cargo',
-  'make',
-  'ruby',
-  'bundle',
-  'php',
-  'composer',
-  'dotnet',
-  'docker',
-]);
+import { AGENT_COMMAND_ALLOWLIST } from '../../shared/build-configurations/types';
 
 const PROCESS_KINDS: ProcessKind[] = [
   'dev-server',
@@ -97,25 +62,30 @@ export function registerProcessRoutes(
       body && typeof body.command === 'string' ? body.command.trim() : '';
     const cwd = body && typeof body.cwd === 'string' ? body.cwd.trim() : '';
     const args =
-      body && Array.isArray(body.args) ? body.args.map((a) => String(a)) : undefined;
+      body && Array.isArray(body.args)
+        ? body.args.map((a) => String(a))
+        : undefined;
     const label =
       body && typeof body.label === 'string' ? body.label.trim() : undefined;
     const kind =
-      body && typeof body.kind === 'string' && PROCESS_KINDS.includes(body.kind as ProcessKind)
+      body &&
+      typeof body.kind === 'string' &&
+      PROCESS_KINDS.includes(body.kind as ProcessKind)
         ? (body.kind as ProcessKind)
         : undefined;
     const env =
       body && body.env && typeof body.env === 'object'
         ? Object.fromEntries(
-            Object.entries(body.env as Record<string, unknown>).map(([k, v]) => [
-              k,
-              String(v),
-            ]),
+            Object.entries(body.env as Record<string, unknown>).map(
+              ([k, v]) => [k, String(v)],
+            ),
           )
         : undefined;
 
     if (!command) {
-      res.status(400).json({ success: false, error: 'body.command is required' });
+      res
+        .status(400)
+        .json({ success: false, error: 'body.command is required' });
       return;
     }
     if (!cwd || !path.isAbsolute(cwd)) {
@@ -148,7 +118,11 @@ export function registerProcessRoutes(
     );
     res
       .status(result.success ? 201 : 400)
-      .json({ success: result.success, process: result.process, error: result.error });
+      .json({
+        success: result.success,
+        process: result.process,
+        error: result.error,
+      });
   });
 
   // Stop (kill) a running process.
@@ -158,12 +132,19 @@ export function registerProcessRoutes(
   });
 
   // Restart a process (re-run its command).
-  app.post('/api/processes/:id/restart', async (req: Request, res: Response) => {
-    const result = await registry.restart(String(req.params.id));
-    res
-      .status(result.success ? 200 : 404)
-      .json({ success: result.success, process: result.process, error: result.error });
-  });
+  app.post(
+    '/api/processes/:id/restart',
+    async (req: Request, res: Response) => {
+      const result = await registry.restart(String(req.params.id));
+      res
+        .status(result.success ? 200 : 404)
+        .json({
+          success: result.success,
+          process: result.process,
+          error: result.error,
+        });
+    },
+  );
 
   // Remove an entry from the list (only when not running).
   app.delete('/api/processes/:id', async (req: Request, res: Response) => {

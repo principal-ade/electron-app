@@ -35,6 +35,8 @@ export interface DetachableTabDescriptor {
   kind: DetachableTabKind;
   tabId: string;
   label: string;
+  /** Host-assigned rename, when the source tab was renamed. */
+  customLabel?: string;
   /** `local-topic` payload. */
   topicId?: string;
   title?: string;
@@ -142,6 +144,7 @@ export function isDetachableTabDescriptor(
   if (
     !isString(candidate['tabId'], MAX_ID_LENGTH) ||
     !isString(candidate['label'], MAX_LABEL_LENGTH) ||
+    !isOptionalString(candidate['customLabel'], MAX_LABEL_LENGTH) ||
     !isOptionalString(candidate['topicId'], MAX_ID_LENGTH) ||
     !isOptionalString(candidate['title'], MAX_LABEL_LENGTH) ||
     !isOptionalString(candidate['modelId'], MAX_ID_LENGTH) ||

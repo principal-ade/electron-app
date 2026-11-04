@@ -105,6 +105,12 @@ export interface UserPreferences {
   /** Base default directory - the top-level directory for all Principal work (cloning, workspaces, discovery) */
   baseDefaultDirectory?: string;
   /**
+   * Builds directory - where agent-run build checkouts live
+   * (<buildsDirectory>/<owner>/<repo>), separate from working clones.
+   * Falls back to baseDefaultDirectory when unset.
+   */
+  buildsDirectory?: string;
+  /**
    * Filesystem watcher implementation used by the repository monitoring
    * worker. 'parcel' (default) uses native fsevents via @parcel/watcher;
    * 'chokidar' is the older fallback. Changing this triggers a worker
@@ -314,7 +320,8 @@ export type HomePinnedTabKind =
   | 'skill'
   | 'localhost-browser'
   | 'terminal'
-  | 'repo-tab';
+  | 'repo-tab'
+  | 'build-configuration';
 
 /**
  * A Home rail tab entry the user pinned. Deliberately flat (optional per-kind
@@ -329,6 +336,12 @@ export interface HomePinnedTab {
   kind: HomePinnedTabKind;
   /** Display label for the rail row / icon tooltip. */
   label: string;
+  /**
+   * Host-assigned rename, when the user renamed the tab. `label` already
+   * carries the resolved display name; this preserves the override so
+   * reopening the tab can reapply it via `renameTab`.
+   */
+  customLabel?: string;
   /** Owning clone path when this tab is rooted in a repository. */
   repoPath?: string;
   // Kind-specific payload.
@@ -340,6 +353,8 @@ export interface HomePinnedTab {
   name?: string;
   modelId?: string;
   skillId?: string;
+  /** Build configuration id (kind `build-configuration`). */
+  configId?: string;
   /** Secure request-store id only. Never put a request payload in preferences. */
   savedRequestId?: string;
   /** Drawing file path, localhost URL path, or terminal directory (by kind). */

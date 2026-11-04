@@ -25,6 +25,7 @@ import {
   FolderGit2,
   FolderSearch,
   Globe,
+  Hammer,
   IdCard,
   Image as ImageIcon,
   Network,
@@ -61,9 +62,11 @@ const DROP_FEEDBACK_MS = 2000;
 /**
  * Label the tab's purpose in Home, where its repository is already shown. A
  * standalone terminal (no repo row above it) shows its cwd instead: that is
- * what distinguishes one terminal from another.
+ * what distinguishes one terminal from another. A host rename wins over every
+ * computed label — it already resolved into `entry.label`.
  */
 function homeTabLabel(entry: HomeTabEntry): string {
+  if (entry.customLabel) return entry.label;
   if (entry.kind === 'repo-tab') {
     if (entry.variant === 'project-info') return 'Clone profile';
     if (entry.variant === 'repo-explorer') return 'Clone explorer';
@@ -126,6 +129,8 @@ export function homeTabIcon(
       return <ToolCase size={size} color={color} />;
     case 'localhost-browser':
       return <Globe size={size} color={color} />;
+    case 'build-configuration':
+      return <Hammer size={size} color={color} />;
     case 'terminal':
       return <Terminal size={size} color={color} />;
     case 'repo-tab':

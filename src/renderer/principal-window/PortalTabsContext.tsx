@@ -37,6 +37,7 @@ import type {
   SkillTab,
   SubsystemModelTab,
   C4SketchTab,
+  BuildConfigurationTab,
   LocalhostBrowserTab,
   HttpRequestTab,
 } from '../events/portalTabs';
@@ -78,6 +79,7 @@ export type WorkspaceTab =
   | SkillTab
   | SubsystemModelTab
   | C4SketchTab
+  | BuildConfigurationTab
   // Processes
   | LocalhostBrowserTab
   | HttpRequestTab;
@@ -145,6 +147,12 @@ export interface WorkspaceTabsContextValue {
   openSkill: (skill: Skill) => void;
   /** Open or focus a subsystem model tab. */
   openSubsystemModel: (modelId: string, title: string) => void;
+  /** Open or focus a build configuration tab. */
+  openBuildConfiguration: (
+    configId: string,
+    title?: string,
+    repo?: string,
+  ) => void;
   /** Open or focus a standalone authored C4 sketch tab. */
   openC4Sketch: (sketchId: string, title: string) => void;
   /** Open or navigate a browser tab, keyed by managed process or localhost origin. */
@@ -154,6 +162,12 @@ export interface WorkspaceTabsContextValue {
     label?: string,
     processId?: string,
   ) => string;
+  /**
+   * Rename the active tab (or clear the rename with an empty name). Sets
+   * `customLabel`, which the tab strip and Home prefer over the computed
+   * label; the domain label underneath is untouched, so clearing restores it.
+   */
+  renameTab: (tabId: string, name: string) => void;
 }
 
 /** Back-compat shape for `useProjectsTabs` (titlebar + IntegratedShell). */
@@ -179,6 +193,11 @@ export interface TopicsTabsContextValue {
 const WorkspaceTabsContext = createContext<WorkspaceTabsContextValue | null>(
   null,
 );
+
+/** Null-tolerant read for surfaces that render outside the tab provider. */
+export function useWorkspaceTabsOptional(): WorkspaceTabsContextValue | null {
+  return useContext(WorkspaceTabsContext);
+}
 
 // ----------------------------------------------------------------------------
 // Shared workspace bucket (Projects + Topics)
@@ -602,6 +621,25 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [openTab],
   );
 
+  const openBuildConfiguration = useCallback(
+    (configId: string, title?: string, repo?: string) => {
+      const id = `build-configuration-${configId}`;
+      openTab(
+        id,
+        () =>
+          ({
+            id,
+            label: title || 'Build configuration',
+            contentType: 'build-configuration',
+            closable: true,
+            configId,
+            repo,
+          }) as BuildConfigurationTab,
+      );
+    },
+    [openTab],
+  );
+
   const openLocalhostBrowser = useCallback(
     (port: number, path = '/', label?: string, processId?: string) => {
       const target = { port, path, label, processId };
@@ -640,6 +678,17 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [openTab],
   );
 
+  const renameTab = useCallback((tabId: string, name: string) => {
+    const trimmed = name.trim();
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === tabId
+          ? { ...tab, customLabel: trimmed ? trimmed : undefined }
+          : tab,
+      ),
+    );
+  }, []);
+
   return useMemo<WorkspaceTabsContextValue>(
     () => ({
       ...requestPins,
@@ -648,6 +697,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       setTabs,
       activeTabId,
       setActiveTabId,
+      renameTab,
       openLocalTopic,
       openMarkdownDoc,
       openSourceFile,
@@ -661,6 +711,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openSkill,
       openSubsystemModel,
       openC4Sketch,
+      openBuildConfiguration,
       openLocalhostBrowser,
     }),
     [
@@ -668,6 +719,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openHttpRequest,
       tabs,
       activeTabId,
+      renameTab,
       openLocalTopic,
       openMarkdownDoc,
       openSourceFile,
@@ -681,6 +733,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openSkill,
       openSubsystemModel,
       openC4Sketch,
+      openBuildConfiguration,
       openLocalhostBrowser,
     ],
   );

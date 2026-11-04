@@ -13,6 +13,7 @@ import { appVersionRouter } from './app-version/tipc';
 import { alexandriaRouter } from './alexandria/tipc';
 import { topicRouter } from './topics/tipc';
 import { subsystemModelRouter } from './subsystem-models/tipc/subsystemModelRouter';
+import { buildConfigurationRouter } from './build-configurations/tipc/buildConfigurationRouter';
 import { c4SketchRouter } from './c4-sketches/tipc/c4SketchRouter';
 import { geminiRouter } from './gemini/tipc';
 // import { AgentSessionEventsHttpBridge } from './agent-session-events/AgentSessionEventsHttpBridge';
@@ -324,6 +325,8 @@ export const initializeServices = async () => {
   console.log('[Main Process] TIPC topic router registered');
   registerIpcMain(subsystemModelRouter);
   console.log('[Main Process] TIPC subsystem model router registered');
+  registerIpcMain(buildConfigurationRouter);
+  console.log('[Main Process] TIPC build configuration router registered');
   registerIpcMain(c4SketchRouter);
   console.log('[Main Process] TIPC C4 sketch router registered');
   registerIpcMain(geminiRouter);

@@ -27,6 +27,12 @@ export interface TerminalSessionCreateInput {
   command?: string;
   context?: string;
   metadata?: TerminalSessionMetadata;
+  /**
+   * Per-session environment overlay, merged over the base terminal
+   * environment at spawn. Absent for normal renderer terminals; the build
+   * run registry passes resolved secrets here. Values are never logged.
+   */
+  env?: Record<string, string>;
 }
 
 export interface TerminalSessionCreateResult {
@@ -233,9 +239,17 @@ export async function createTerminalSession(
       input.command,
       input.metadata,
       traceparentFromSpan(span),
+      input.env,
     );
 
     span.setAttribute('session.id', sessionId);
+    if (input.env) {
+      // Count only — names and values never enter telemetry.
+      span.setAttribute(
+        'session.env_overlay_count',
+        Object.keys(input.env).length,
+      );
+    }
 
     span.addEvent('terminal.session.manager_action', {
       action: 'create',

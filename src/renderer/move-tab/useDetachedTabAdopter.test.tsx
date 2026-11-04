@@ -52,6 +52,7 @@ test.each([
     openLocalTopic: jest.fn(),
     openSubsystemModel: jest.fn(),
     openC4Sketch: jest.fn(),
+    renameTab: jest.fn(),
   };
   const descriptor = {
     ...value,
@@ -73,4 +74,56 @@ test.each([
     value.kind === 'local-topic' ? 'Topic' : 'Title',
   );
   expect(WindowService.rejectIncomingDetachedTab).not.toHaveBeenCalled();
+});
+
+test('reapplies a traveled rename after adopting', async () => {
+  const openers = {
+    openLocalTopic: jest.fn(),
+    openSubsystemModel: jest.fn(),
+    openC4Sketch: jest.fn(),
+    renameTab: jest.fn(),
+  };
+  (WindowService.claimIncomingDetachedTab as jest.Mock).mockResolvedValue({
+    kind: 'local-topic',
+    tabId: 'local-topic-topic-a',
+    label: 'My focus',
+    customLabel: 'My focus',
+    topicId: 'topic-a',
+    title: 'Topic',
+  } as DetachableTabDescriptor);
+  renderHook(() => useDetachedTabAdopter(openers));
+  act(() => incoming({ token: 'token' }));
+  await waitFor(() =>
+    expect(WindowService.acceptIncomingDetachedTab).toHaveBeenCalledWith(
+      'token',
+    ),
+  );
+  expect(openers.renameTab).toHaveBeenCalledWith(
+    'local-topic-topic-a',
+    'My focus',
+  );
+});
+
+test('skips renameTab when the descriptor carries no rename', async () => {
+  const openers = {
+    openLocalTopic: jest.fn(),
+    openSubsystemModel: jest.fn(),
+    openC4Sketch: jest.fn(),
+    renameTab: jest.fn(),
+  };
+  (WindowService.claimIncomingDetachedTab as jest.Mock).mockResolvedValue({
+    kind: 'local-topic',
+    tabId: 'local-topic-topic-a',
+    label: 'Topic',
+    topicId: 'topic-a',
+    title: 'Topic',
+  } as DetachableTabDescriptor);
+  renderHook(() => useDetachedTabAdopter(openers));
+  act(() => incoming({ token: 'token' }));
+  await waitFor(() =>
+    expect(WindowService.acceptIncomingDetachedTab).toHaveBeenCalledWith(
+      'token',
+    ),
+  );
+  expect(openers.renameTab).not.toHaveBeenCalled();
 });

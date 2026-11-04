@@ -1,4 +1,5 @@
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { Purl } from '@principal-ai/alexandria-core-library';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
 import {
@@ -76,6 +77,20 @@ export function getHomeRepositories(
           )
           .sort((a, b) => String(b.path).length - String(a.path).length)[0];
         if (entry) add(payloadFromLocalEntry(entry));
+        break;
+      }
+      case 'build-configuration': {
+        // A build's purl identifies the repo it targets; the config has no
+        // checkout of its own in the tab, so group by purl.
+        if (!tab.repo) break;
+        const entry = repositories.find(
+          (repo) => (repo.purl ?? repo.github?.purl) === tab.repo,
+        );
+        add(
+          entry
+            ? payloadFromLocalEntry(entry)
+            : payloadFromPurl(tab.repo as Purl),
+        );
         break;
       }
     }

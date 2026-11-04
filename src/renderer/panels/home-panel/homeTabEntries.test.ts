@@ -2,7 +2,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import type { Purl } from '@principal-ai/alexandria-core-library';
 import type { HomePinnedTab } from '../../../shared/types/userPreferences.types';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
-import { buildHomeTabEntries, resolveRepoPath } from './homeTabEntries';
+import { buildHomeTabEntries, entryFromTab, resolveRepoPath } from './homeTabEntries';
 import type { ProcessEntry } from '../../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 import type { HttpRequestTab } from '../../events/portalTabs';
 
@@ -744,5 +744,78 @@ describe('Home processes', () => {
     );
     expect(result.repos[0].key).toBe('/work/app/src');
     expect(result.processes).toEqual([outside]);
+  });
+
+  it('nests an open build configuration under its repository and reopens a closed pin', () => {
+    const buildTab: WorkspaceTab = {
+      id: 'build-configuration-bc-1',
+      label: 'mac publish',
+      contentType: 'build-configuration',
+      configId: 'bc-1',
+      repo: String(purl),
+    };
+    const open = buildHomeTabEntries([entry], [], [buildTab], []);
+    expect(open.repos).toHaveLength(1);
+    const entryUnderRepo = open.repos[0].openTabs[0];
+    expect(entryUnderRepo).toMatchObject({
+      id: buildTab.id,
+      kind: 'build-configuration',
+      configId: 'bc-1',
+      repoPath: '/work/app',
+      purl: String(purl),
+    });
+
+    const closed = buildHomeTabEntries([entry], [], [], [entryUnderRepo]);
+    expect(closed.repos[0].pinnedTabs).toEqual([entryUnderRepo]);
+  });
+});
+
+describe('tab renames (customLabel)', () => {
+  it('prefers the rename for the entry label and preserves it for reopen', () => {
+    const tab = {
+      id: 'local-topic-t1',
+      label: 'Topic',
+      contentType: 'local-topic',
+      topicId: 't1',
+      customLabel: '  My focus  ',
+    } as WorkspaceTab;
+    expect(entryFromTab(tab)).toMatchObject({
+      id: tab.id,
+      label: 'My focus',
+      customLabel: 'My focus',
+    });
+  });
+
+  it('omits customLabel when unset or whitespace-only', () => {
+    const plain = {
+      id: 'local-topic-t1',
+      label: 'Topic',
+      contentType: 'local-topic',
+      topicId: 't1',
+    } as WorkspaceTab;
+    expect(entryFromTab(plain)).toMatchObject({ label: 'Topic' });
+    expect(entryFromTab(plain)).not.toHaveProperty('customLabel');
+
+    const blank = { ...plain, customLabel: '   ' };
+    expect(entryFromTab(blank)).toMatchObject({ label: 'Topic' });
+    expect(entryFromTab(blank)).not.toHaveProperty('customLabel');
+  });
+
+  it('keeps a renamed repo-nested terminal name instead of Tab N', () => {
+    const terminal = {
+      id: 'tab-1',
+      label: 'app',
+      contentType: 'terminal',
+      directory: '/work/app',
+      customLabel: 'api server',
+    } as WorkspaceTab;
+    const result = buildHomeTabEntries([entry], [], [terminal], []);
+    expect(result.repos).toHaveLength(1);
+    expect(result.repos[0].openTabs[0]).toMatchObject({
+      id: 'tab-1',
+      kind: 'terminal',
+      label: 'api server',
+      customLabel: 'api server',
+    });
   });
 });

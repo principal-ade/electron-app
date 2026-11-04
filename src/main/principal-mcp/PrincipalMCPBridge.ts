@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import { BrowserWindow } from 'electron';
 import { Server } from 'http';
 import { EventEmitter } from 'events';
 import { SpanStatusCode } from '@opentelemetry/api';
@@ -24,6 +25,18 @@ import { registerDependencyRoutes } from '../dependency-graph/dependencyRoutes';
 import { DependencyGraphService } from '../dependency-graph/DependencyGraphService';
 import { registerProcessRoutes } from '../processes/processRoutes';
 import { registerTerminalRoutes } from '../terminal/terminalRoutes';
+import { registerBuildConfigurationRoutes } from '../builds/buildConfigurationRoutes';
+import {
+  getBuildConfigurationStore,
+  getBuildRoots,
+  getBuildRunRegistry,
+  getBuildSecretResolver,
+  getGrantedSecretKeys,
+  listRegisteredRepositoryPurls,
+} from '../builds/buildInstances';
+import { BUILD_SECRETS_REQUESTED } from '../../shared/build-configurations/events';
+import { createTerminalSession } from '../terminal/terminalSessionService';
+import { resolveTargetWindow } from '../terminal/terminalRoutes';
 import { getProcessRegistry } from '../processes/ProcessRegistry';
 import { registerCatalogRoutes } from './catalogRoutes';
 import { registerPullRequestWatchRoutes } from '../pr-watching/pullRequestWatchRoutes';
@@ -1063,6 +1076,46 @@ export class PrincipalMCPBridge extends EventEmitter {
     // TERMINAL SESSION ROUTES
     // ============================================
     registerTerminalRoutes(this.app);
+
+    // ============================================
+    // BUILD CONFIGURATION ROUTES
+    // ============================================
+    // Store/registry/resolver are shared with the TIPC router, so UI runs
+    // are visible to bridge polling and vice versa. An app restart drops
+    // run history while the terminal tabs themselves may survive.
+    const buildRunRegistry = getBuildRunRegistry();
+    registerBuildConfigurationRoutes(this.app, {
+      store: getBuildConfigurationStore(),
+      listRepositoryPurls: listRegisteredRepositoryPurls,
+      getGrantedKeys: getGrantedSecretKeys,
+      runs: {
+        resolveSecrets: (secretRepoId, decls, options) =>
+          getBuildSecretResolver().resolve(secretRepoId, decls, options),
+        trackRun: (input) => buildRunRegistry.trackRun(input),
+        getRun: (runId) => buildRunRegistry.getRun(runId),
+        createBuildSession: async ({ cwd, command, context, env }) => {
+          const window = resolveTargetWindow();
+          if (!window) {
+            throw new Error('no live application window to own the terminal');
+          }
+          return createTerminalSession(
+            { cwd, command, context, env },
+            window.id,
+            'http',
+          );
+        },
+        getBuildRoots,
+      },
+      onSecretsRequested: (event) => {
+        // The secret-setting surface subscribes renderer-side; fan the
+        // names-only request out to every live window.
+        for (const window of BrowserWindow.getAllWindows()) {
+          if (!window.isDestroyed()) {
+            window.webContents.send(BUILD_SECRETS_REQUESTED, event);
+          }
+        }
+      },
+    });
   }
 
   public async start(): Promise<number> {

@@ -22,6 +22,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import type { Purl } from '@principal-ai/alexandria-core-library';
 import type { HomePinnedTab } from '../../../shared/types/userPreferences.types';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
+import { customTabLabel } from '../../events/portalTabs';
 import type { ProcessEntry } from '../../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 import {
   payloadFromLocalEntry,
@@ -107,6 +108,10 @@ function ownerForTab(tab: WorkspaceTab): {
     case 'source-file':
     case 'media':
       return { path: tab.filePath };
+    case 'build-configuration':
+      // Builds are authored against a purl, not a checkout — the config may
+      // run anywhere. Group under the repo row the build targets.
+      return tab.repo ? { purl: tab.repo as Purl } : null;
     default:
       return null;
   }
@@ -120,7 +125,13 @@ export function entryFromTab(
   tab: WorkspaceTab,
   repoPath?: string,
 ): HomeTabEntry | null {
-  const base = { id: tab.id, label: tab.label, repoPath };
+  const customLabel = customTabLabel(tab);
+  const base = {
+    id: tab.id,
+    label: customLabel ?? tab.label,
+    repoPath,
+    ...(customLabel ? { customLabel } : {}),
+  };
   switch (tab.contentType) {
     case 'http-request':
       return {
@@ -165,6 +176,13 @@ export function entryFromTab(
         port: tab.port,
         path: tab.path,
         processId: tab.processId,
+      };
+    case 'build-configuration':
+      return {
+        ...base,
+        kind: 'build-configuration',
+        configId: tab.configId,
+        purl: tab.repo,
       };
     case 'terminal':
       return { ...base, kind: 'terminal', path: tab.directory };
@@ -352,9 +370,11 @@ export function buildHomeTabEntries(
       // Repo-nested terminals already sit under a row naming their location,
       // so the tab-bar position is the useful label there. A standalone
       // terminal has no repo row, so keep its cwd (the only thing that tells
-      // two of them apart).
+      // two of them apart). A host rename wins over the position either way.
       const terminalNumber = terminalNumbers.get(tab.id);
-      if (terminalNumber != null) entry.label = `Tab ${terminalNumber}`;
+      if (terminalNumber != null && !entry.customLabel) {
+        entry.label = `Tab ${terminalNumber}`;
+      }
     }
     openIds.add(tab.id);
 

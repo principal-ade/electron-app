@@ -19,7 +19,11 @@ import {
   TerminalAPIEvents,
   type TerminalDaemonUpdateEvent,
 } from '../../shared/main-process-api-interfaces/TerminalService';
-import { ensureDaemonRunning, restartDaemon, stopDaemon } from './daemonSpawner';
+import {
+  ensureDaemonRunning,
+  restartDaemon,
+  stopDaemon,
+} from './daemonSpawner';
 import type { DaemonBuildMismatch } from '../../shared/pty-daemon/buildIdentity';
 import { SOCKET_PATH } from '../../shared/pty-daemon/constants';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
@@ -74,9 +78,14 @@ export async function initializeDaemonModeSetting(): Promise<void> {
     const prefs = await prefsHandler.getUserPreferences();
     // Default to false (disabled) - daemon mode is opt-in until it has soaked.
     cachedDaemonModeEnabled = prefs.usePtyDaemon === true;
-    console.log(`[Terminal] Daemon mode setting: ${cachedDaemonModeEnabled ? 'ENABLED' : 'DISABLED'}`);
+    console.log(
+      `[Terminal] Daemon mode setting: ${cachedDaemonModeEnabled ? 'ENABLED' : 'DISABLED'}`,
+    );
   } catch (error) {
-    console.warn('[Terminal] Failed to load daemon mode preference, defaulting to disabled:', error);
+    console.warn(
+      '[Terminal] Failed to load daemon mode preference, defaulting to disabled:',
+      error,
+    );
     cachedDaemonModeEnabled = false;
   } finally {
     // Release any worker spawn waiting on this setting.
@@ -92,7 +101,9 @@ export async function initializeDaemonModeSetting(): Promise<void> {
 function getDaemonModeEnabled(): boolean {
   if (cachedDaemonModeEnabled === null) {
     // Not yet initialized, default to false (disabled)
-    console.warn('[Terminal] Daemon mode setting not initialized, defaulting to disabled');
+    console.warn(
+      '[Terminal] Daemon mode setting not initialized, defaulting to disabled',
+    );
     return false;
   }
   return cachedDaemonModeEnabled;
@@ -123,6 +134,31 @@ export interface PortCreationResult {
   reason?: string;
 }
 
+/**
+ * A terminal session's process exited. Delivered to exit listeners before
+ * the session (and its program-status records) is cleaned up.
+ */
+export interface TerminalSessionExit {
+  sessionId: string;
+  exitCode?: number;
+}
+
+/**
+ * Overlay entries that survive into the spawned environment: own string
+ * values only. Non-strings (including values smuggled through untyped
+ * callers) are dropped rather than stringified into the PTY.
+ */
+export function mergeEnvOverlay(
+  overlay?: Record<string, unknown>,
+): Record<string, string> {
+  const merged: Record<string, string> = {};
+  if (!overlay || typeof overlay !== 'object') return merged;
+  for (const [key, value] of Object.entries(overlay)) {
+    if (typeof value === 'string') merged[key] = value;
+  }
+  return merged;
+}
+
 export class TerminalSessionManager {
   // Minimal session state in main - just enough to track existence and metadata
   private sessions: Map<string, TerminalSession> = new Map();
@@ -136,6 +172,13 @@ export class TerminalSessionManager {
 
   // Program Status Protocol (OSC 7501) records per session (live-only)
   private programStatusStore: Map<string, ProgramStatusRecord[]> = new Map();
+
+  // Session-exit subscribers (the build run registry). Fired with the raw
+  // exit code before the session is cleaned up, so records are still
+  // readable when the listener runs.
+  private sessionExitListeners = new Set<
+    (event: TerminalSessionExit) => void
+  >();
 
   // Utility process worker
   private worker: UtilityProcess | null = null;
@@ -315,7 +358,9 @@ export class TerminalSessionManager {
     switch (msg.type) {
       case 'READY': {
         const useDaemonMode = getDaemonModeEnabled();
-        console.log(`[Terminal] Worker is ready (mode: ${useDaemonMode ? 'DAEMON' : 'LEGACY'})`);
+        console.log(
+          `[Terminal] Worker is ready (mode: ${useDaemonMode ? 'DAEMON' : 'LEGACY'})`,
+        );
         this.isWorkerReady = true;
         if (this.workerReadyResolve) {
           this.workerReadyResolve();
@@ -347,6 +392,10 @@ export class TerminalSessionManager {
       }
 
       case 'SESSION_EXIT':
+        this.emitSessionExit({
+          sessionId: msg.sessionId,
+          exitCode: msg.exitCode,
+        });
         this.pendingSessionExits.get(msg.sessionId)?.();
         this.broadcastToRendererWindows(TerminalAPIEvents.ON_EXIT, {
           sessionId: msg.sessionId,
@@ -402,8 +451,12 @@ export class TerminalSessionManager {
 
       case 'CWD_CHANGED': {
         const session = this.sessions.get(msg.sessionId);
-        if (!session || !isTerminalCwd(msg.cwd, process.platform) ||
-            session.directory === msg.cwd) break;
+        if (
+          !session ||
+          !isTerminalCwd(msg.cwd, process.platform) ||
+          session.directory === msg.cwd
+        )
+          break;
 
         // Update live metadata, not session identity, ownership, or repo watches.
         session.directory = msg.cwd;
@@ -467,7 +520,10 @@ export class TerminalSessionManager {
 
       this.connectWorkerToDaemon();
     } catch (error) {
-      console.error('[Terminal] Failed to initialize daemon connection:', error);
+      console.error(
+        '[Terminal] Failed to initialize daemon connection:',
+        error,
+      );
       // Settle anything awaiting the connection (ensureDaemonReady) and allow a
       // later attempt, instead of leaving every session request to time out.
       this.settleDaemonConnection();
@@ -634,7 +690,9 @@ export class TerminalSessionManager {
    * Restore sessions received from daemon after app restart
    */
   private restoreSessionsFromDaemon(daemonSessions: DaemonSessionInfo[]): void {
-    console.log(`[Terminal] Restoring ${daemonSessions.length} sessions from daemon`);
+    console.log(
+      `[Terminal] Restoring ${daemonSessions.length} sessions from daemon`,
+    );
 
     const span = tracer.startSpan('terminal.sessions.restore');
     span.addEvent('terminal.sessions.restored', {
@@ -822,7 +880,10 @@ export class TerminalSessionManager {
       ownershipManager.cleanupWindow(window.id);
       window.removeListener('closed', cleanup);
       if (!webContents.isDestroyed()) {
-        webContents.removeListener('did-start-navigation', handleMainFrameNavigation);
+        webContents.removeListener(
+          'did-start-navigation',
+          handleMainFrameNavigation,
+        );
       }
     };
 
@@ -983,6 +1044,7 @@ export class TerminalSessionManager {
     command?: string,
     metadata?: TerminalSessionMetadata,
     traceparent?: string,
+    envOverlay?: Record<string, string>,
   ): Promise<string> {
     const isReady = await this.ensureDaemonReady();
     if (!isReady) {
@@ -1021,10 +1083,15 @@ export class TerminalSessionManager {
         env[key] = value;
       }
     }
+    // Per-session overlay (build secrets): wins over the base environment.
+    // Absent for normal terminals, which keep today's exact environment.
+    Object.assign(env, mergeEnvOverlay(envOverlay));
 
     // Determine repository info from directory
     const repoPath = await this.findGitRoot(workingDirectory);
-    const repoId = repoPath ? await this.getRepoIdFromPath(repoPath) : undefined;
+    const repoId = repoPath
+      ? await this.getRepoIdFromPath(repoPath)
+      : undefined;
 
     // Create session tracking in main (minimal state)
     const now = Date.now();
@@ -1314,7 +1381,9 @@ export class TerminalSessionManager {
    */
   async getScrollbackBuffer(sessionId: string): Promise<string | null> {
     if (!this.sessions.has(sessionId)) {
-      console.warn(`[Terminal] getScrollbackBuffer: session ${sessionId} not found`);
+      console.warn(
+        `[Terminal] getScrollbackBuffer: session ${sessionId} not found`,
+      );
       return null;
     }
 
@@ -1323,11 +1392,17 @@ export class TerminalSessionManager {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pendingScrollbackRequests.delete(requestId);
-        console.warn(`[Terminal] getScrollbackBuffer: request ${requestId} timed out`);
+        console.warn(
+          `[Terminal] getScrollbackBuffer: request ${requestId} timed out`,
+        );
         reject(new Error('Scrollback request timed out'));
       }, 5000);
 
-      this.pendingScrollbackRequests.set(requestId, { resolve, reject, timeout });
+      this.pendingScrollbackRequests.set(requestId, {
+        resolve,
+        reject,
+        timeout,
+      });
 
       const message: GetScrollbackMessage = {
         type: 'GET_SCROLLBACK',
@@ -1394,6 +1469,28 @@ export class TerminalSessionManager {
   }
 
   /**
+   * Subscribe to session exits. The listener fires before cleanup, so
+   * `getProgramStatus` still returns the session's final OSC 7501 records.
+   * Returns an unsubscribe function.
+   */
+  onSessionExit(listener: (event: TerminalSessionExit) => void): () => void {
+    this.sessionExitListeners.add(listener);
+    return () => {
+      this.sessionExitListeners.delete(listener);
+    };
+  }
+
+  private emitSessionExit(event: TerminalSessionExit): void {
+    for (const listener of Array.from(this.sessionExitListeners)) {
+      try {
+        listener(event);
+      } catch (error) {
+        console.error('[Terminal] Session exit listener failed:', error);
+      }
+    }
+  }
+
+  /**
    * Get the current OSC 7501 program-status records for a session.
    */
   getProgramStatus(sessionId: string): ProgramStatusRecord[] {
@@ -1434,7 +1531,11 @@ export class TerminalSessionManager {
     const window = BrowserWindow.fromId(windowId);
     if (!window || window.isDestroyed()) {
       console.error(`[Terminal] Window ${windowId} not found or destroyed`);
-      return { success: false, created: false, reason: 'Window not found or destroyed' };
+      return {
+        success: false,
+        created: false,
+        reason: 'Window not found or destroyed',
+      };
     }
 
     // Check if port already exists
@@ -1665,9 +1766,7 @@ export class TerminalSessionManager {
 
       // Parse GitHub URL to get owner/repo
       // Handles: git@github.com:owner/repo.git or https://github.com/owner/repo.git
-      const match = remoteUrl.match(
-        /github\.com[:/]([^/]+)\/(.+?)(\.git)?$/,
-      );
+      const match = remoteUrl.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
       if (match) {
         return `${match[1]}/${match[2]}`;
       }

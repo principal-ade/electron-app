@@ -68,6 +68,7 @@ import { ProcessRegistryService } from '../main-process-api/ProcessRegistryServi
 import { useTerminalImplementation } from '../hooks/useTerminalImplementation';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { RepoFileSearchPalette } from './RepoFileSearchPalette';
+import { RenameTabModal } from './RenameTabModal';
 import { useTerminalLinkHandler } from '../hooks/useTerminalLinkHandler';
 import { useTerminalRepoInfo } from '../hooks/useTerminalRepoInfo';
 import { DetachTabButton } from '../move-tab/DetachTabButton';
@@ -121,13 +122,16 @@ import { ProcessesView } from '../principal-window/views/ProcessesView';
 import { SubsystemModelTabContent } from '../subsystem-models/SubsystemModelTabContent';
 import { C4SketchTabContent } from '../c4-sketches/C4SketchTabContent';
 import { LocalhostBrowserTabContent } from '../principal-window/views/ProcessesView/LocalhostBrowserTabContent';
+import { BuildConfigurationTab } from '../panels/build-configurations/BuildConfigurationTab';
 import type {
   FeedTab,
   DrawingTab,
   SubsystemModelTab,
   SkillTab,
   LocalhostBrowserTab,
+  BuildConfigurationTab as BuildConfigurationTabModel,
 } from '../events/portalTabs';
+import { customTabLabel } from '../events/portalTabs';
 import {
   useWorkspaceTabs,
   type WorkspaceTab,
@@ -288,6 +292,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     setTabs,
     activeTabId,
     setActiveTabId,
+    renameTab,
     openMarkdownDoc,
     openSourceFile,
     openMedia,
@@ -300,6 +305,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     openDrawing,
     openLocalhostBrowser,
     openHttpRequest,
+    openBuildConfiguration,
     catalogRequests,
   } = useWorkspaceTabs();
   // The Topics left panel emits open intents on the portal bus
@@ -502,6 +508,14 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     [detachingTabId],
   );
 
+  // Host rename for non-terminal tabs. Terminal tabs resolve `customLabel`
+  // inside the panel; every other kind shows `tab.label` unless this returns
+  // a name. Returning undefined falls back to the panel-computed label.
+  const renderTabLabel = useCallback(
+    (tab: WorkspaceTab) => customTabLabel(tab) ?? undefined,
+    [],
+  );
+
   // Open a repo from a topic tab's Projects rail. Mirrors a pick from the
   // Projects surface: a purl that matches a local clone opens that repo's
   // profile (with every clone aggregated), or a terminal for alternate gestures;
@@ -582,6 +596,15 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         }
         case 'c4-sketch':
           return <C4SketchTabContent key={tab.id} sketchId={tab.sketchId} />;
+        case 'build-configuration': {
+          const buildTab = tab as BuildConfigurationTabModel;
+          return (
+            <BuildConfigurationTab
+              key={buildTab.id}
+              configId={buildTab.configId}
+            />
+          );
+        }
         case 'localhost-browser': {
           const browserTab = tab as LocalhostBrowserTab;
           return (
@@ -645,6 +668,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   } | null>(null);
   // Transient feedback when the chord fires but there is no repo to search.
   const [fileSearchNotice, setFileSearchNotice] = useState<string | null>(null);
+
+  // Rename target for the tab-rename modal (`Cmd+Shift+N`). The id resolves
+  // against live tabs at render time; closing the tab first just no-ops.
+  const [renameTargetId, setRenameTargetId] = useState<string | null>(null);
 
   // Cross-window tab receiver.
   const { incomingTab, clearIncomingTab } = useTabReceiver();
@@ -794,6 +821,11 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             });
           }
           break;
+        case 'build-configuration':
+          if (entry.configId) {
+            openBuildConfiguration(entry.configId, entry.label, entry.purl);
+          }
+          break;
         case 'localhost-browser':
           if (entry.port != null) {
             // A pinned browser tab is the one "launch" entry: when its linked
@@ -847,6 +879,15 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           break;
         }
       }
+      // A pinned rename survives as `entry.customLabel` (the display name is
+      // already resolved into `entry.label`). Reapply it so the reopened tab
+      // shows the custom name, not the recomputed default. `openTab` and
+      // `renameTab` are both functional `setTabs` updates, so they compose in
+      // order for the synchronous openers. The skill path resolves through
+      // loaded skills in `SkillsSurfaceContext`, so a rename on a skill whose
+      // surface hasn't loaded yet is dropped.
+      const renamed = entry.customLabel?.trim();
+      if (renamed) renameTab(entry.id, renamed);
     },
     [
       openLocalTopic,
@@ -858,9 +899,11 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       openSubsystemModel,
       skillsBus,
       openLocalhostBrowser,
+      openBuildConfiguration,
       openRepoExplorer,
       openFileCityGuide,
       openProjectInfo,
+      renameTab,
     ],
   );
 
@@ -1028,6 +1071,29 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     const timer = setTimeout(() => setFileSearchNotice(null), 2500);
     return () => clearTimeout(timer);
   }, [fileSearchNotice]);
+
+  // Cmd+Shift+N (Ctrl+Shift+N off macOS): rename the active tab. Capture phase
+  // + stopPropagation so the terminal never sees the chord; a no-op with no
+  // active tab or while the modal is already open. Cmd+Shift+R is deliberately
+  // avoided — browsers reserve it for hard refresh.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (
+        !((e.metaKey || e.ctrlKey) && e.shiftKey) ||
+        e.altKey ||
+        e.code !== 'KeyN'
+      ) {
+        return;
+      }
+      if (!activeTabId) return; // nothing to rename → don't consume the chord
+      if (renameTargetId) return; // already open → let the modal own the keys
+      e.preventDefault();
+      e.stopPropagation();
+      setRenameTargetId(activeTabId);
+    };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, [activeTabId, renameTargetId]);
 
   // The active tab and its detached-window descriptor (null for tabs that
   // carry live state and cannot be reconstructed in another window).
@@ -1281,6 +1347,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onOpenTabHandled={handleOpenTabHandled}
               renderTabContent={renderTabContent}
               renderTabIcon={renderTabIcon}
+              renderTabLabel={renderTabLabel}
               renderEmptyState={renderTerminalEmptyState}
               bottomBarContent={bottomBarContent}
             />
@@ -1332,6 +1399,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       handleOpenHomeEntry,
       renderTabContent,
       renderTabIcon,
+      renderTabLabel,
       bottomBarContent,
       baseDefaultDirectory,
       terminalImplementation,
@@ -1369,6 +1437,20 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           />
           {/* Projects repository delete modal — always mounted with the shell. */}
           {deleteModal}
+          {/* Cmd+Shift+N tab rename. */}
+          {renameTargetId &&
+            (() => {
+              const target = tabs.find((tab) => tab.id === renameTargetId);
+              if (!target) return null;
+              return (
+                <RenameTabModal
+                  isOpen
+                  initialName={customTabLabel(target) ?? target.label}
+                  onClose={() => setRenameTargetId(null)}
+                  onRename={(name) => renameTab(renameTargetId, name)}
+                />
+              );
+            })()}
           {/* Cmd+Shift+F file search, scoped to the active terminal's repo. */}
           {fileSearchRepo && (
             <RepoFileSearchPalette

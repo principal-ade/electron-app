@@ -43,6 +43,7 @@ export const PortalIntentBridge: React.FC = () => {
     openLocalTopic: ws.openLocalTopic,
     openSubsystemModel: ws.openSubsystemModel,
     openC4Sketch: ws.openC4Sketch,
+    renameTab: ws.renameTab,
   });
 
   useEffect(() => {
