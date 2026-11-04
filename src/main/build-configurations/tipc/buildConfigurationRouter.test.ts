@@ -29,6 +29,18 @@ type Router = {
       input: { id: string };
     }) => Promise<unknown>;
   };
+  buildConfiguration_update: {
+    action: (args: {
+      context: unknown;
+      input: { id: string; patch: Record<string, unknown> };
+    }) => Promise<unknown>;
+  };
+  buildConfiguration_confirmSecrets: {
+    action: (args: {
+      context: unknown;
+      input: { id: string };
+    }) => Promise<unknown>;
+  };
 };
 
 describe('buildConfigurationRouter', () => {

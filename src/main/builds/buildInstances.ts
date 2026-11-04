@@ -15,6 +15,11 @@ import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 import type { BuildCheckoutRoots } from '../../shared/build-configurations/types';
+import {
+  prepareBuildCheckout,
+  type PrepareBuildCheckoutInput,
+  type PrepareBuildCheckoutResult,
+} from './prepareBuildCheckout';
 
 let store: BuildConfigurationStore | null = null;
 let resolver: BuildSecretResolver | null = null;
@@ -64,4 +69,11 @@ export async function getBuildRoots(): Promise<BuildCheckoutRoots> {
     buildsDirectory: prefs.buildsDirectory,
     baseDefaultDirectory: prefs.baseDefaultDirectory,
   };
+}
+
+/** Clone/update a config's checkout with the real git runner. */
+export function prepareBuildConfigurationCheckout(
+  input: PrepareBuildCheckoutInput,
+): Promise<PrepareBuildCheckoutResult> {
+  return prepareBuildCheckout(input);
 }

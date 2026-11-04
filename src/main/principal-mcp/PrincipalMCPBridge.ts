@@ -32,6 +32,7 @@ import {
   getBuildRunRegistry,
   getBuildSecretResolver,
   getGrantedSecretKeys,
+  prepareBuildConfigurationCheckout,
   listRegisteredRepositoryPurls,
 } from '../builds/buildInstances';
 import { BUILD_SECRETS_REQUESTED } from '../../shared/build-configurations/events';
@@ -1105,6 +1106,7 @@ export class PrincipalMCPBridge extends EventEmitter {
           );
         },
         getBuildRoots,
+        prepareCheckout: prepareBuildConfigurationCheckout,
       },
       onSecretsRequested: (event) => {
         // The secret-setting surface subscribes renderer-side; fan the

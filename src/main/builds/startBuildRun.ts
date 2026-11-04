@@ -15,8 +15,10 @@ import {
   isConfirmationCurrent,
   isAllowedCommandLine,
   resolveBuildCheckoutDir,
+  resolveBuildRepoRoot,
   secretStoreRepoId,
   type BuildCheckoutRoots,
+  type BuildConfiguration,
   type BuildSecretDecl,
 } from '../../shared/build-configurations/types';
 
@@ -50,7 +52,25 @@ export interface BuildRunDependencies {
     input: BuildSessionInput,
   ) => Promise<{ sessionId: string }>;
   getBuildRoots: () => Promise<BuildCheckoutRoots>;
+  /**
+   * Clone or update the checkout before the build session starts. Optional:
+   * without it the run refuses when the directory is missing (tests and any
+   * caller that manages checkouts itself).
+   */
+  prepareCheckout?: (
+    input: PrepareCheckoutInput,
+  ) => Promise<PrepareCheckoutResult>;
 }
+
+export interface PrepareCheckoutInput {
+  config: BuildConfiguration;
+  /** Repo root, before `command.cwd` is applied. */
+  directory: string;
+}
+
+export type PrepareCheckoutResult =
+  | { ok: true; action: string }
+  | { ok: false; error: string };
 
 export interface StartBuildRunDeps {
   store: Pick<BuildConfigurationStore, 'get'>;
@@ -67,6 +87,7 @@ export type StartBuildRunCode =
   | 'repo-not-registered'
   | 'no-base-directory'
   | 'checkout-missing'
+  | 'checkout-failed'
   | 'secrets-missing'
   | 'no-window'
   | 'failed';
@@ -116,22 +137,28 @@ export async function startBuildRun(
   if (!registered.has(config.repo)) {
     return fail('repo-not-registered', 'config repo is not registered');
   }
+  const buildRoots = await deps.runs.getBuildRoots();
+  const repoRoot = resolveBuildRepoRoot({
+    checkoutPath: config.checkout.path,
+    repo: config.repo,
+    buildsDirectory: buildRoots.buildsDirectory,
+  });
   const directory = resolveBuildCheckoutDir({
     checkoutPath: config.checkout.path,
     cwd: config.command.cwd,
     repo: config.repo,
-    buildsDirectory: (await deps.runs.getBuildRoots()).buildsDirectory,
+    buildsDirectory: buildRoots.buildsDirectory,
   });
-  if (!directory) {
+  if (!directory || !repoRoot) {
     return fail(
       'no-base-directory',
       'no checkout path set and no builds directory configured; set checkout.path or pick a builds directory in Settings → General',
     );
   }
-  if (!existsSync(directory)) {
+  if (!deps.runs.prepareCheckout && !existsSync(directory)) {
     return fail(
       'checkout-missing',
-      `checkout is not present on disk: ${directory} (cloning on run arrives with the checkout policy)`,
+      `checkout is not present on disk: ${directory}`,
     );
   }
   const granted = new Set(
@@ -162,6 +189,24 @@ export async function startBuildRun(
     );
   }
   const env = resolved.env;
+
+  // Checkouts live outside the secrets path: clone/update only after the
+  // cheap gates pass, so a misconfigured run fails fast.
+  if (deps.runs.prepareCheckout) {
+    const prepared = await deps.runs.prepareCheckout({
+      config,
+      directory: repoRoot,
+    });
+    if (!prepared.ok) {
+      return fail('checkout-failed', prepared.error);
+    }
+    if (!existsSync(directory)) {
+      return fail(
+        'checkout-failed',
+        `checkout has no working directory: ${directory}`,
+      );
+    }
+  }
 
   let sessionId: string;
   try {

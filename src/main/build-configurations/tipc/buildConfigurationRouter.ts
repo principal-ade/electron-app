@@ -14,6 +14,7 @@ import {
   getBuildSecretResolver,
   getGrantedSecretKeys,
   listRegisteredRepositoryPurls,
+  prepareBuildConfigurationCheckout,
 } from '../../builds/buildInstances';
 import {
   confirmationFingerprintSource,
@@ -86,6 +87,7 @@ export const buildConfigurationRouter = {
               return createTerminalSession(sessionInput, window.id, 'renderer');
             },
             getBuildRoots,
+            prepareCheckout: prepareBuildConfigurationCheckout,
           },
         },
         input.id,

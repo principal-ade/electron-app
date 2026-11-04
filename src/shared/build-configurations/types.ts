@@ -424,14 +424,33 @@ export function resolveBuildCheckoutDir(args: {
   repo: string;
   buildsDirectory?: string | null;
 }): string | null {
-  if (args.checkoutPath) return withCwd(args.checkoutPath, args.cwd);
+  const root = resolveBuildRepoRoot(args);
+  return root ? withCwd(root, args.cwd) : null;
+}
+
+/**
+ * Repository root a build checks out into, before `command.cwd` is applied.
+ * An explicit checkout path wins; otherwise
+ * <buildsDirectory>/<owner>/<repo>. Null when neither resolves.
+ */
+export function resolveBuildRepoRoot(args: {
+  checkoutPath: string | null;
+  repo: string;
+  buildsDirectory?: string | null;
+}): string | null {
+  if (args.checkoutPath) return args.checkoutPath.replace(/[/\\]+$/, '') || '/';
   if (!args.buildsDirectory) return null;
   const parsed = parsePurlSafe(args.repo);
   if (!parsed) return null;
-  return withCwd(
-    joinSegments(args.buildsDirectory, parsed.owner, parsed.repo),
-    args.cwd,
-  );
+  return joinSegments(args.buildsDirectory, parsed.owner, parsed.repo);
+}
+
+/** Clone URL for a supported build repo, or null. */
+export function buildCheckoutCloneUrl(repo: string): string | null {
+  const parsed = parsePurlSafe(repo);
+  return parsed
+    ? `https://github.com/${parsed.owner}/${parsed.repo}.git`
+    : null;
 }
 
 function withCwd(dir: string, cwd: string): string {
