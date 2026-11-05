@@ -21,6 +21,8 @@ export const GeneralSettings: React.FC = () => {
   const [isSelectingBuildsDirectory, setIsSelectingBuildsDirectory] =
     useState(false);
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
+  const [subsystemModelLayoutDirection, setSubsystemModelLayoutDirection] =
+    useState<'horizontal' | 'vertical'>('vertical');
   const [openLocalhostTerminalLinksInApp, setOpenLocalhostTerminalLinksInApp] =
     useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
@@ -43,6 +45,11 @@ export const GeneralSettings: React.FC = () => {
       setBaseDefaultDirectory(prefs.baseDefaultDirectory || null);
       setBuildsDirectory(prefs.buildsDirectory || null);
       setEnableVimMode(prefs.enableVimMode ?? false);
+      setSubsystemModelLayoutDirection(
+        prefs.subsystemModelLayoutDirection === 'horizontal'
+          ? 'horizontal'
+          : 'vertical',
+      );
       setOpenLocalhostTerminalLinksInApp(
         prefs.openLocalhostTerminalLinksInApp === true,
       );
@@ -570,6 +577,75 @@ export const GeneralSettings: React.FC = () => {
             Principal window. Other links, or links without an available app tab
             host, open in your default browser. Applies immediately.
           </p>
+        </div>
+      </div>
+
+      {/* Subsystem Diagram Layout */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Subsystem Diagrams
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <label
+            htmlFor="subsystem-model-layout-direction"
+            style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: theme.colors.text,
+              marginBottom: '8px',
+            }}
+          >
+            Default layout direction
+          </label>
+          <p
+            style={{
+              fontSize: '13px',
+              color: theme.colors.textSecondary,
+              margin: '0 0 12px',
+            }}
+          >
+            Sets the initial direction for diagrams that do not already have a
+            saved layout.
+          </p>
+          <select
+            id="subsystem-model-layout-direction"
+            value={subsystemModelLayoutDirection}
+            onChange={async (event) => {
+              const value = event.target.value as 'horizontal' | 'vertical';
+              setSubsystemModelLayoutDirection(value);
+              await UserPreferencesService.updatePreferences({
+                subsystemModelLayoutDirection: value,
+              });
+            }}
+            style={{
+              padding: '10px 14px',
+              borderRadius: '8px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              cursor: 'pointer',
+              fontSize: '14px',
+              minWidth: '200px',
+            }}
+          >
+            <option value="vertical">Vertical</option>
+            <option value="horizontal">Horizontal</option>
+          </select>
         </div>
       </div>
 

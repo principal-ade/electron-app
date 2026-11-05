@@ -89,6 +89,10 @@ export interface UserPreferences {
   /** Enable vim mode in Monaco editors */
   enableVimMode?: boolean;
 
+  // Subsystem diagram preferences
+  /** Initial layout direction for subsystem diagrams (default: vertical). */
+  subsystemModelLayoutDirection?: 'horizontal' | 'vertical';
+
   // Terminal preferences
   /** Open supported HTTP localhost terminal links in an app tab (default: false). */
   openLocalhostTerminalLinksInApp?: boolean;

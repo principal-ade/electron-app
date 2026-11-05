@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { act } from 'react';
 import {
-  act,
   fireEvent,
   render,
   screen,
@@ -63,6 +62,34 @@ test('loads the saved setting and lets the user turn it off', async () => {
   expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
     openLocalhostTerminalLinksInApp: false,
   });
+});
+
+test('subsystem diagram layout defaults to vertical and persists changes', async () => {
+  render(<GeneralSettings />);
+  const direction = (await screen.findByLabelText(
+    'Default layout direction',
+  )) as HTMLSelectElement;
+
+  expect(direction.value).toBe('vertical');
+  fireEvent.change(direction, { target: { value: 'horizontal' } });
+
+  expect(direction.value).toBe('horizontal');
+  expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
+    subsystemModelLayoutDirection: 'horizontal',
+  });
+});
+
+test('loads the saved subsystem diagram layout direction', async () => {
+  (UserPreferencesService.getPreferences as jest.Mock).mockResolvedValue({
+    subsystemModelLayoutDirection: 'horizontal',
+  });
+  render(<GeneralSettings />);
+
+  expect(
+    (await screen.findByLabelText(
+      'Default layout direction',
+    )) as HTMLSelectElement,
+  ).toHaveProperty('value', 'horizontal');
 });
 
 test('reflects preference updates from another window', async () => {
