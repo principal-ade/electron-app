@@ -139,6 +139,35 @@ describe('pinned launch configurations', () => {
     expect(new ProcessRegistry(store).list()).toEqual([]);
   });
 
+  it('updates a process display label and persists it for pinned launches', async () => {
+    const registry = new ProcessRegistry(store);
+    await registry.start(request);
+    registry.setPinned('server-1', true);
+
+    expect(registry.setLabel('server-1', '  Frontend  ')).toEqual({
+      success: true,
+    });
+    expect(registry.get('server-1')?.label).toBe('Frontend');
+    expect(saved).toEqual([
+      { id: 'server-1', request: { ...request, label: 'Frontend' } },
+    ]);
+
+    const restored = new ProcessRegistry(store);
+    expect(restored.list()[0].label).toBe('Frontend');
+  });
+
+  it('does not change a pinned label when secure persistence fails', async () => {
+    const registry = new ProcessRegistry(store);
+    await registry.start(request);
+    registry.setPinned('server-1', true);
+    (store.save as jest.Mock).mockImplementation(() => {
+      throw new Error('locked');
+    });
+
+    expect(registry.setLabel('server-1', 'Renamed').success).toBe(false);
+    expect(registry.get('server-1')?.label).toBe('Dev server');
+  });
+
   it('does not change pin state when secure persistence fails', async () => {
     const registry = new ProcessRegistry(store);
     await registry.start(request);

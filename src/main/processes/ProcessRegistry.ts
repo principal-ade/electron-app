@@ -163,6 +163,55 @@ export class ProcessRegistry extends EventEmitter {
     return [...(this.logs.get(id) ?? [])];
   }
 
+  /** Update the Home display label for a managed process. */
+  setLabel(id: string, label: string): ProcessControlResult {
+    const entry = this.entries.get(id);
+    const descriptor = this.descriptors.get(id);
+    if (!entry || entry.origin !== 'managed' || !descriptor) {
+      return { success: false, error: 'unknown managed process id' };
+    }
+
+    const normalizedLabel = label.trim();
+    if (!normalizedLabel) {
+      return { success: false, error: 'label must not be empty' };
+    }
+
+    const updatedDescriptor = { ...descriptor, label: normalizedLabel };
+    if (entry.pinned) {
+      if (this.persistenceError) {
+        return { success: false, error: this.persistenceError };
+      }
+      try {
+        if (!this.launchStore) {
+          throw new Error('Process launch storage is unavailable.');
+        }
+        const launches = [...this.entries.values()]
+          .filter((candidate) => candidate.pinned)
+          .map((candidate) => {
+            const request =
+              candidate.id === id
+                ? updatedDescriptor
+                : this.descriptors.get(candidate.id);
+            if (!request) {
+              throw new Error('Missing process launch configuration.');
+            }
+            return { id: candidate.id, request };
+          });
+        this.launchStore.save(launches);
+      } catch {
+        return {
+          success: false,
+          error: 'Could not securely save the process display name.',
+        };
+      }
+    }
+
+    this.descriptors.set(id, updatedDescriptor);
+    entry.label = normalizedLabel;
+    this.emitChanged();
+    return { success: true };
+  }
+
   /**
    * Resolve a working directory to a registered repository (most specific
    * match wins). Returns undefined when the cwd isn't inside any repo.

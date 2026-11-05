@@ -116,13 +116,31 @@ export function registerProcessRoutes(
       { command, args, cwd, env, label, kind },
       'agent',
     );
-    res
-      .status(result.success ? 201 : 400)
-      .json({
-        success: result.success,
-        process: result.process,
-        error: result.error,
+    res.status(result.success ? 201 : 400).json({
+      success: result.success,
+      process: result.process,
+      error: result.error,
+    });
+  });
+
+  // Update the display name shown for a managed process in Home.
+  app.patch('/api/processes/:id', (req: Request, res: Response) => {
+    const body = asObject(req.body);
+    const label = body && typeof body.label === 'string' ? body.label : '';
+    if (!label.trim()) {
+      res.status(400).json({
+        success: false,
+        error: 'body.label must be a non-empty string',
       });
+      return;
+    }
+    const result = registry.setLabel(String(req.params.id), label);
+    const status = result.success
+      ? 200
+      : result.error === 'unknown managed process id'
+        ? 404
+        : 500;
+    res.status(status).json(result);
   });
 
   // Stop (kill) a running process.
@@ -136,13 +154,11 @@ export function registerProcessRoutes(
     '/api/processes/:id/restart',
     async (req: Request, res: Response) => {
       const result = await registry.restart(String(req.params.id));
-      res
-        .status(result.success ? 200 : 404)
-        .json({
-          success: result.success,
-          process: result.process,
-          error: result.error,
-        });
+      res.status(result.success ? 200 : 404).json({
+        success: result.success,
+        process: result.process,
+        error: result.error,
+      });
     },
   );
 
