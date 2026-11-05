@@ -2,6 +2,7 @@
 import type { Application, Request, Response } from 'express';
 import type { TopicRegistryService } from '../stores/TopicRegistryService';
 import { TopicAPIEvent } from '../../shared/main-process-api-interfaces/TopicAPI';
+import { getWindowForTopicActivation } from '../window/modernWindowManager';
 import { broadcastTopicEvent } from './tipc/topicRouter';
 import { registerTopicRoutes } from './topicRoutes';
 import {
@@ -12,7 +13,7 @@ import {
 
 jest.mock('./tipc/topicRouter', () => ({ broadcastTopicEvent: jest.fn() }));
 jest.mock('../window/modernWindowManager', () => ({
-  focusedOrMainWindow: jest.fn(),
+  getWindowForTopicActivation: jest.fn(),
 }));
 jest.mock('./validateTopicLinks', () => ({ validateTopicLinks: jest.fn() }));
 
@@ -137,6 +138,94 @@ test('creates and broadcasts a topic with all five reference types', async () =>
     TopicAPIEvent.TOPIC_ADDED,
     created,
   );
+});
+
+describe('topic activation', () => {
+  const topic = { id: 'topic-1', title: 'Topic one' };
+
+  function activationHandler() {
+    const post = jest.fn();
+    registerTopicRoutes(
+      {
+        post,
+        patch: jest.fn(),
+        get: jest.fn(),
+        delete: jest.fn(),
+      } as unknown as Application,
+      {
+        getTopic: jest.fn().mockResolvedValue(topic),
+      } as unknown as TopicRegistryService,
+    );
+    const registration = post.mock.calls.find(
+      ([route]) => route === '/api/topics/:id/activate',
+    );
+    if (!registration)
+      throw new Error('Topic activation handler not registered');
+    return registration[1] as (req: Request, res: Response) => Promise<void>;
+  }
+
+  test('dispatches to an existing window without requesting focus', async () => {
+    const send = jest.fn();
+    const appWindow = {
+      window: {
+        isDestroyed: () => false,
+        webContents: { isLoading: () => false, send },
+      },
+    };
+    jest.mocked(getWindowForTopicActivation).mockResolvedValue({
+      appWindow: appWindow as never,
+      created: false,
+    });
+    const res = response();
+
+    await activationHandler()(
+      { params: { id: topic.id } } as unknown as Request,
+      res as unknown as Response,
+    );
+
+    expect(send).toHaveBeenCalledWith(TopicAPIEvent.TOPIC_ACTIVATE, {
+      topicId: topic.id,
+      title: topic.title,
+    });
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      delivered: 1,
+      windowOpened: 'existing',
+    });
+  });
+
+  test('waits for a newly created hidden window renderer before dispatch', async () => {
+    const send = jest.fn();
+    let loading = true;
+    const once = jest.fn((_event: string, callback: () => void) => {
+      loading = false;
+      callback();
+    });
+    const appWindow = {
+      window: {
+        isDestroyed: () => false,
+        webContents: { isLoading: () => loading, once, send },
+      },
+    };
+    jest.mocked(getWindowForTopicActivation).mockResolvedValue({
+      appWindow: appWindow as never,
+      created: true,
+    });
+    const res = response();
+
+    await activationHandler()(
+      { params: { id: topic.id } } as unknown as Request,
+      res as unknown as Response,
+    );
+
+    expect(once).toHaveBeenCalledWith('did-finish-load', expect.any(Function));
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      delivered: 1,
+      windowOpened: 'created',
+    });
+  });
 });
 
 describe('topic updates', () => {

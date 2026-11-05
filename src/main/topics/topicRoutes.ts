@@ -26,7 +26,7 @@ import {
   TopicUpdateConflictError,
 } from './topicRevision';
 import { broadcastTopicEvent } from './tipc/topicRouter';
-import { focusedOrMainWindow } from '../window/modernWindowManager';
+import { getWindowForTopicActivation } from '../window/modernWindowManager';
 
 const DESCRIPTION_PREVIEW_MAX = 200;
 
@@ -518,10 +518,9 @@ export function registerTopicRoutes(
   // Open a topic in the running app: a briefed terminal can ask
   // the app to surface a topic it just authored or linked. Unlike the
   // `TOPIC_*` registry broadcasts (which fan out to every window), this targets
-  // a single window — whichever one the user currently has focused — and asks
-  // its renderer to open the topic as a tab. The Topics-view handler lives in
-  // the principal window, so when the focused window can't host it the resolver
-  // falls back to focusing/creating the principal window.
+  // a single window — the focused app window, or otherwise the main window —
+  // and asks its renderer to open the topic as a tab. It never surfaces an
+  // existing window; if needed, it creates a hidden main window.
   app.post('/api/topics/:id/activate', async (req: Request, res: Response) => {
     const id = String(req.params.id);
     if (!id) {
@@ -534,8 +533,20 @@ export function registerTopicRoutes(
         res.status(404).json({ success: false, error: 'unknown topic id' });
         return;
       }
-      const target = await focusedOrMainWindow();
-      if (!target || target.window.isDestroyed()) {
+      const { appWindow, created } = await getWindowForTopicActivation();
+      if (!appWindow || appWindow.window.isDestroyed()) {
+        res.json({ success: true, delivered: 0, windowOpened: 'none' });
+        return;
+      }
+      const { webContents } = appWindow.window;
+      // A newly created (or otherwise loading) window can drop IPC sent before
+      // its renderer finishes loading.
+      if (webContents.isLoading()) {
+        await new Promise<void>((resolve) => {
+          webContents.once('did-finish-load', () => resolve());
+        });
+      }
+      if (appWindow.window.isDestroyed()) {
         res.json({ success: true, delivered: 0, windowOpened: 'none' });
         return;
       }
@@ -543,8 +554,12 @@ export function registerTopicRoutes(
         topicId: topic.id,
         title: topic.title,
       };
-      target.window.webContents.send(TopicAPIEvent.TOPIC_ACTIVATE, payload);
-      res.json({ success: true, delivered: 1, windowOpened: 'focused' });
+      webContents.send(TopicAPIEvent.TOPIC_ACTIVATE, payload);
+      res.json({
+        success: true,
+        delivered: 1,
+        windowOpened: created ? 'created' : 'existing',
+      });
     } catch (err) {
       console.error('[topicRoutes] activate failed', err);
       res

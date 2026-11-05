@@ -36,9 +36,10 @@ export enum TopicAPIEvent {
   /** Fired after a sessionId → topicId entry is written to disk. */
   SESSION_LINKED = 'topic:session-linked',
   /**
-   * Sent to a single window's webContents (the focused one, resolved by the
-   * bridge's activate route) asking its renderer to surface a topic. Unlike
-   * the `TOPIC_*` broadcasts above, this is point-to-point, not fan-out.
+   * Sent to a single window's webContents (the focused app window, or the main
+   * window otherwise) asking its renderer to open a topic tab. The bridge's
+   * activate route does not surface or focus a window. Unlike the `TOPIC_*`
+   * broadcasts above, this is point-to-point, not fan-out.
    */
   TOPIC_ACTIVATE = 'topic:activate',
 }

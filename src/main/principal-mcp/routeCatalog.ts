@@ -248,10 +248,10 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         path: '/api/topics/:id/activate',
         summary: 'Dispatch a request to open the topic as an app tab.',
         response:
-          '{ success: true, delivered: 0 | 1, windowOpened: "none" | "focused" }',
+          '{ success: true, delivered: 0 | 1, windowOpened: "none" | "existing" | "created" }',
         errors: unknownTopic,
         notes: [
-          'Targets a focused/main window, with main-window fallback. delivered: 1 means an event was sent, not a renderer acknowledgement.',
+          'Targets the focused app window when available; otherwise uses the existing main window or creates one hidden. Does not show, restore, or focus an existing window. windowOpened reports none, existing, or created. delivered: 1 means an event was sent, not a renderer acknowledgement.',
         ],
       },
       {

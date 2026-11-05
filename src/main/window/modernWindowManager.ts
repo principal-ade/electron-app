@@ -61,6 +61,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     windowType: keyof typeof WINDOW_FEATURES = 'main',
     customFeatures?: Partial<WindowFeatures>,
     metadata?: WindowMetadata,
+    windowBehavior: { showOnReady?: boolean } = {},
   ) {
     const tracer = getTracer('principal-ade-main');
     const constructorSpan = tracer.startSpan('window.constructor', {
@@ -134,7 +135,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     console.log(`[ModernWindow] Window created with ID: ${this.window.id}`);
 
     // Setup behaviors FIRST (includes ready-to-show handler)
-    this.setupWindowBehaviors();
+    this.setupWindowBehaviors(windowBehavior.showOnReady ?? true);
 
     // Track the window
     applicationWindows.set(this.window.id, this);
@@ -551,7 +552,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     );
   }
 
-  private setupWindowBehaviors(): void {
+  private setupWindowBehaviors(showOnReady: boolean): void {
     const windowId = this.window.id;
     const tracer = getTracer('principal-ade-main');
 
@@ -563,13 +564,15 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         },
       });
 
-      // Maximize before show so the window doesn't briefly render at its
-      // constructed bounds and then animate outward from the top-left.
-      if (this.features.maximizeOnShow && !process.env.START_MINIMIZED) {
-        this.window.maximize();
-      }
+      if (showOnReady) {
+        // Maximize before show so the window doesn't briefly render at its
+        // constructed bounds and then animate outward from the top-left.
+        if (this.features.maximizeOnShow && !process.env.START_MINIMIZED) {
+          this.window.maximize();
+        }
 
-      this.window.show();
+        this.window.show();
+      }
       showSpan.end();
 
       // Close splash screen when main window is ready
@@ -671,6 +674,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
  */
 export async function createWindow(
   options?: BrowserWindowConstructorOptions,
+  windowBehavior: { showOnReady?: boolean } = {},
 ): Promise<ModernApplicationWindow | null> {
   const tracer = getTracer('principal-ade-main');
   const isMainWindow = !options || Object.keys(options).length === 0;
@@ -702,6 +706,7 @@ export async function createWindow(
       windowType,
       undefined,
       metadata,
+      windowBehavior,
     );
 
     span.setAttribute('window.id', appWindow.window.id);
@@ -896,6 +901,36 @@ export async function focusOrCreateMainWindow(): Promise<IModernApplicationWindo
   // No main window exists, create one
   console.log('[ModernWindow] No main window exists, creating new one');
   return await createWindow(undefined);
+}
+
+/**
+ * Resolve the window for a topic activation without changing app/window focus.
+ * If no app window is currently focused, use the main window or create it
+ * hidden so the renderer can receive the activation without surfacing Principal.
+ */
+export async function getWindowForTopicActivation(): Promise<{
+  appWindow: IModernApplicationWindow | null;
+  created: boolean;
+}> {
+  const focused = BrowserWindow.getFocusedWindow();
+  if (focused && !focused.isDestroyed()) {
+    const appWindow = applicationWindows.get(focused.id);
+    if (appWindow && !appWindow.window.isDestroyed()) {
+      return { appWindow, created: false };
+    }
+  }
+
+  const mainId = getMainWindowId();
+  if (mainId !== null) {
+    const mainWindow = applicationWindows.get(mainId);
+    if (mainWindow && !mainWindow.window.isDestroyed()) {
+      return { appWindow: mainWindow, created: false };
+    }
+    setMainWindowId(null);
+  }
+
+  const appWindow = await createWindow(undefined, { showOnReady: false });
+  return { appWindow, created: appWindow !== null };
 }
 
 /**

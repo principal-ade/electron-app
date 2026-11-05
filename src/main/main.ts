@@ -22,6 +22,7 @@ import {
   getIsRestarting,
   handleAppRestart,
 } from './window/modernWindowManager';
+import { PrimaryWindowType } from './window/types';
 // import { registerWindowHandlers } from './services/ipc/window/windowHandlers'; // Replaced by modernWindowHandlers
 import { initializeServices, shutdownServices } from './initialization';
 import { verifyRequiredAssets } from './util';
@@ -600,15 +601,34 @@ app
     createWindow();
 
     app.on('activate', () => {
-      if (applicationWindows.size === 0 && !getIsRestarting()) {
+      if (getIsRestarting()) {
+        console.log(
+          '[Main Process] app.on("activate"): Restart in progress, not creating window.',
+        );
+        return;
+      }
+
+      if (applicationWindows.size === 0) {
         console.log(
           '[Main Process] app.on("activate"): No windows open and not restarting, creating window.',
         );
         createWindow();
-      } else if (getIsRestarting()) {
-        console.log(
-          '[Main Process] app.on("activate"): Restart in progress, not creating window.',
-        );
+        return;
+      }
+
+      // Topic activation may create a hidden main window so it can prepare a
+      // tab without interrupting the user. Reveal it only after the user
+      // explicitly activates Principal.
+      const mainWindow = Array.from(applicationWindows.values()).find(
+        (appWindow) =>
+          appWindow.metadata.primaryType === PrimaryWindowType.MAIN,
+      );
+      if (mainWindow && !mainWindow.window.isVisible()) {
+        if (mainWindow.window.isMinimized()) {
+          mainWindow.window.restore();
+        }
+        mainWindow.window.show();
+        mainWindow.window.focus();
       }
     });
   })
