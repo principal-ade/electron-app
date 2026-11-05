@@ -124,7 +124,10 @@ import type {
   DaemonSessionInfo,
   GetScrollbackMessage,
 } from '../../terminal-worker/types';
-import type { ProgramStatusRecord } from '../../shared/terminal/programStatus';
+import type {
+  ProgramStatusEvent,
+  ProgramStatusRecord,
+} from '../../shared/terminal/programStatus';
 import { isTerminalCwd } from '../../shared/terminal/cwd';
 
 export interface PortCreationResult {
@@ -172,6 +175,12 @@ export class TerminalSessionManager {
 
   // Program Status Protocol (OSC 7501) records per session (live-only)
   private programStatusStore: Map<string, ProgramStatusRecord[]> = new Map();
+
+  // Program-status subscribers (the build run registry). Fired with the
+  // session's full record set whenever it changes.
+  private programStatusListeners = new Set<
+    (event: ProgramStatusEvent) => void
+  >();
 
   // Session-exit subscribers (the build run registry). Fired with the raw
   // exit code before the session is cleaned up, so records are still
@@ -473,6 +482,10 @@ export class TerminalSessionManager {
 
       case 'PROGRAM_STATUS': {
         this.programStatusStore.set(msg.sessionId, msg.records);
+        this.emitProgramStatus({
+          sessionId: msg.sessionId,
+          records: msg.records,
+        });
         // Broadcast to every window (mirrors terminal:activity-sync /
         // terminal:sessions-changed) rather than only registered windows.
         const payload = {
@@ -1486,6 +1499,26 @@ export class TerminalSessionManager {
         listener(event);
       } catch (error) {
         console.error('[Terminal] Session exit listener failed:', error);
+      }
+    }
+  }
+
+  /**
+   * Subscribe to OSC 7501 record changes. Returns an unsubscribe function.
+   */
+  onProgramStatus(listener: (event: ProgramStatusEvent) => void): () => void {
+    this.programStatusListeners.add(listener);
+    return () => {
+      this.programStatusListeners.delete(listener);
+    };
+  }
+
+  private emitProgramStatus(event: ProgramStatusEvent): void {
+    for (const listener of Array.from(this.programStatusListeners)) {
+      try {
+        listener(event);
+      } catch (error) {
+        console.error('[Terminal] Program status listener failed:', error);
       }
     }
   }

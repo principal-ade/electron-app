@@ -212,7 +212,7 @@ export async function startBuildRun(
   try {
     const session = await deps.runs.createBuildSession({
       cwd: directory,
-      command: buildRunCommand(config.command.line),
+      command: buildRunCommand(config.command.line, runId),
       context: `build:${configId}`,
       env,
     });

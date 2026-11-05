@@ -1,4 +1,5 @@
 /** @jest-environment node */
+import type { ProgramStatusEvent } from '../../shared/terminal/programStatus';
 import {
   BUILD_RUN_OSC_APP,
   BuildRunRegistry,
@@ -6,21 +7,40 @@ import {
   generateRunId,
 } from './BuildRunRegistry';
 
+type ExitEvent = { sessionId: string; exitCode?: number };
+type StatusRecord = {
+  state: string;
+  app?: string;
+  id?: string;
+  title?: string;
+};
+
 function backend() {
-  const listeners = new Set<
-    (event: { sessionId: string; exitCode?: number }) => void
-  >();
+  const exitListeners = new Set<(event: ExitEvent) => void>();
+  const statusListeners = new Set<(event: ProgramStatusEvent) => void>();
   return {
-    listeners,
+    exitListeners,
+    statusListeners,
     destroyed: [] as string[],
-    emit: (event: { sessionId: string; exitCode?: number }) => {
-      for (const listener of Array.from(listeners)) listener(event);
+    emitExit: (event: ExitEvent) => {
+      for (const listener of Array.from(exitListeners)) listener(event);
     },
-    onSessionExit: jest.fn(
-      (listener: (event: { sessionId: string; exitCode?: number }) => void) => {
-        listeners.add(listener);
+    emitStatus: (sessionId: string, records: StatusRecord[]) => {
+      for (const listener of Array.from(statusListeners)) {
+        listener({ sessionId, records } as unknown as ProgramStatusEvent);
+      }
+    },
+    onSessionExit: jest.fn((listener: (event: ExitEvent) => void) => {
+      exitListeners.add(listener);
+      return () => {
+        exitListeners.delete(listener);
+      };
+    }),
+    onProgramStatus: jest.fn(
+      (listener: (event: ProgramStatusEvent) => void) => {
+        statusListeners.add(listener);
         return () => {
-          listeners.delete(listener);
+          statusListeners.delete(listener);
         };
       },
     ),
@@ -35,10 +55,7 @@ function backend() {
 }
 
 // Per-test record store, since the backend object above closes over helpers.
-const backendRecords = new Map<
-  string,
-  Array<{ state: string; app?: string }>
->();
+const backendRecords = new Map<string, StatusRecord[]>();
 const destroyedSessions: string[] = [];
 
 describe('BuildRunRegistry', () => {
@@ -75,13 +92,96 @@ describe('BuildRunRegistry', () => {
     expect(record.startedAt).toBeTruthy();
   });
 
+  test('a tagged done report finalizes without a session exit', () => {
+    const { fake, registry } = track();
+    fake.emitStatus('session-1', [
+      { state: 'working', app: BUILD_RUN_OSC_APP, id: 'run-1' },
+      {
+        state: 'done',
+        app: BUILD_RUN_OSC_APP,
+        id: 'run-1',
+        title: 'exit=0',
+      },
+    ]);
+    expect(registry.getRun('run-1')).toMatchObject({
+      status: 'succeeded',
+      exitCode: 0,
+    });
+  });
+
+  test('an error report finalizes failed with its exit code', () => {
+    const { fake, registry } = track();
+    fake.emitStatus('session-1', [
+      {
+        state: 'error',
+        app: BUILD_RUN_OSC_APP,
+        id: 'run-1',
+        title: 'exit=130',
+      },
+    ]);
+    expect(registry.getRun('run-1')).toMatchObject({
+      status: 'failed',
+      exitCode: 130,
+    });
+  });
+
+  test('reports for other runs in a reused session are ignored', () => {
+    const { fake, registry } = track();
+    fake.emitStatus('session-1', [
+      {
+        state: 'done',
+        app: BUILD_RUN_OSC_APP,
+        id: 'run-previous',
+        title: 'exit=0',
+      },
+    ]);
+    expect(registry.getRun('run-1')?.status).toBe('running');
+  });
+
+  test('a stale report already stored does not finalize a new run', () => {
+    backendRecords.set('session-1', [
+      {
+        state: 'done',
+        app: BUILD_RUN_OSC_APP,
+        id: 'run-previous',
+        title: 'exit=0',
+      },
+    ]);
+    const { registry } = track();
+    expect(registry.getRun('run-1')?.status).toBe('running');
+  });
+
+  test('a report that landed before tracking finalizes the run', () => {
+    backendRecords.set('session-1', [
+      {
+        state: 'done',
+        app: BUILD_RUN_OSC_APP,
+        id: 'run-1',
+        title: 'exit=0',
+      },
+    ]);
+    const { registry } = track();
+    expect(registry.getRun('run-1')).toMatchObject({
+      status: 'succeeded',
+      exitCode: 0,
+    });
+  });
+
+  test('reports for other sessions are ignored', () => {
+    const { fake, registry } = track();
+    fake.emitStatus('session-other', [
+      { state: 'done', app: BUILD_RUN_OSC_APP, id: 'run-1' },
+    ]);
+    expect(registry.getRun('run-1')?.status).toBe('running');
+  });
+
   test('a done OSC record means succeeded with the exit event code', () => {
     const { fake, registry } = track();
     backendRecords.set('session-1', [
-      { state: 'working', app: BUILD_RUN_OSC_APP },
-      { state: 'done', app: BUILD_RUN_OSC_APP },
+      { state: 'working', app: BUILD_RUN_OSC_APP, id: 'run-1' },
+      { state: 'done', app: BUILD_RUN_OSC_APP, id: 'run-1', title: 'exit=0' },
     ]);
-    fake.emit({ sessionId: 'session-1', exitCode: 0 });
+    fake.emitExit({ sessionId: 'session-1', exitCode: 0 });
     expect(registry.getRun('run-1')).toMatchObject({
       status: 'succeeded',
       exitCode: 0,
@@ -91,9 +191,14 @@ describe('BuildRunRegistry', () => {
   test('an error OSC record means failed', () => {
     const { fake, registry } = track();
     backendRecords.set('session-1', [
-      { state: 'error', app: BUILD_RUN_OSC_APP },
+      {
+        state: 'error',
+        app: BUILD_RUN_OSC_APP,
+        id: 'run-1',
+        title: 'exit=2',
+      },
     ]);
-    fake.emit({ sessionId: 'session-1', exitCode: 2 });
+    fake.emitExit({ sessionId: 'session-1', exitCode: 2 });
     expect(registry.getRun('run-1')).toMatchObject({
       status: 'failed',
       exitCode: 2,
@@ -102,7 +207,7 @@ describe('BuildRunRegistry', () => {
 
   test('without an OSC record the exit code decides', () => {
     const { fake, registry } = track();
-    fake.emit({ sessionId: 'session-1', exitCode: 1 });
+    fake.emitExit({ sessionId: 'session-1', exitCode: 1 });
     expect(registry.getRun('run-1')).toMatchObject({
       status: 'failed',
       exitCode: 1,
@@ -113,13 +218,13 @@ describe('BuildRunRegistry', () => {
       terminalSessionId: 'session-2',
       timeoutMs: 60_000,
     });
-    fake.emit({ sessionId: 'session-2', exitCode: 0 });
+    fake.emitExit({ sessionId: 'session-2', exitCode: 0 });
     expect(registry.getRun('run-2')).toMatchObject({ status: 'succeeded' });
   });
 
   test('exits for other sessions are ignored', () => {
     const { fake, registry } = track();
-    fake.emit({ sessionId: 'session-other', exitCode: 1 });
+    fake.emitExit({ sessionId: 'session-other', exitCode: 1 });
     expect(registry.getRun('run-1')?.status).toBe('running');
   });
 
@@ -128,9 +233,23 @@ describe('BuildRunRegistry', () => {
     jest.advanceTimersByTime(1_000);
     expect(registry.getRun('run-1')).toMatchObject({ status: 'timed-out' });
     expect(fake.destroySession).toHaveBeenCalledWith('session-1');
-    // A late exit must not overwrite the terminal state.
-    fake.emit({ sessionId: 'session-1', exitCode: 0 });
+    // Late signals must not overwrite the terminal state.
+    fake.emitExit({ sessionId: 'session-1', exitCode: 0 });
+    fake.emitStatus('session-1', [
+      { state: 'done', app: BUILD_RUN_OSC_APP, id: 'run-1' },
+    ]);
     expect(registry.getRun('run-1')?.status).toBe('timed-out');
+  });
+
+  test('finalizing unsubscribes both signal listeners', () => {
+    const { fake, registry } = track();
+    expect(fake.statusListeners.size).toBe(1);
+    fake.emitStatus('session-1', [
+      { state: 'done', app: BUILD_RUN_OSC_APP, id: 'run-1' },
+    ]);
+    expect(registry.getRun('run-1')).toMatchObject({ status: 'succeeded' });
+    expect(fake.statusListeners.size).toBe(0);
+    expect(fake.exitListeners.size).toBe(0);
   });
 
   test('unknown runs read back null', () => {
@@ -148,7 +267,9 @@ describe('BuildRunRegistry', () => {
         terminalSessionId: `session-${n}`,
         timeoutMs: 60_000,
       });
-      fake.emit({ sessionId: `session-${n}`, exitCode: 0 });
+      fake.emitStatus(`session-${n}`, [
+        { state: 'done', app: BUILD_RUN_OSC_APP, id: `run-${n}` },
+      ]);
     }
     expect(registry.getRun('run-1')).toBeNull();
     expect(registry.getRun('run-3')).toMatchObject({ status: 'succeeded' });
@@ -156,11 +277,12 @@ describe('BuildRunRegistry', () => {
 });
 
 describe('buildRunCommand', () => {
-  test('wraps the line and reports via OSC 7501 under the build app tag', () => {
-    const wrapped = buildRunCommand('npm run build');
+  test('wraps the line and reports the run id via OSC 7501', () => {
+    const wrapped = buildRunCommand('npm run build', 'run-abc');
     expect(wrapped).toContain('npm run build');
     expect(wrapped).toContain('7501');
     expect(wrapped).toContain('app=principal-build');
+    expect(wrapped).toContain('id=run-abc');
   });
 });
 

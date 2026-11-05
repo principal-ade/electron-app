@@ -6,7 +6,10 @@
  * restart drops run history while the terminal tab itself may survive.
  */
 
-import type { ProgramStatusRecord } from '../../shared/terminal/programStatus';
+import type {
+  ProgramStatusEvent,
+  ProgramStatusRecord,
+} from '../../shared/terminal/programStatus';
 import type {
   BuildRunRecord,
   BuildRunStatus,
@@ -17,6 +20,12 @@ export interface RunSessionBackend {
   onSessionExit(
     listener: (event: { sessionId: string; exitCode?: number }) => void,
   ): () => void;
+  /**
+   * Subscribe to OSC 7501 record changes. Optional so older backends and
+   * fakes keep working; without it completion falls back to the session
+   * exit event, which never fires for a build typed into a live shell.
+   */
+  onProgramStatus?(listener: (event: ProgramStatusEvent) => void): () => void;
   getProgramStatus(sessionId: string): ProgramStatusRecord[];
   hasSession(sessionId: string): boolean;
   destroySession(sessionId: string): Promise<void>;
@@ -42,18 +51,26 @@ export function generateRunId(): string {
 
 /**
  * Wrap the config's command so the tab itself reports completion via
- * OSC 7501. The title carries `exit=N` base64-encoded: the OSC parser
- * rejects non-base64 titles, so the literal `title=exit=0` form would
- * decode to garbage while the record itself still lands.
+ * OSC 7501. The record carries the run id so a reused session's earlier
+ * `done` record cannot finalize a later run. The title carries `exit=N`
+ * base64-encoded: the OSC parser rejects non-base64 titles, so the literal
+ * `title=exit=0` form would decode to garbage while the record itself still
+ * lands.
  */
-export function buildRunCommand(line: string): string {
-  return `{ ${line}; } ; ec=$?; __ps_title=$(printf 'exit=%d' "$ec" | base64 | tr -d '\\n'); __ps_state=$([ "$ec" -eq 0 ] && printf done || printf error); printf '\\033]7501;state=%s:app=principal-build:title=%s\\033\\\\' "$__ps_state" "$__ps_title"`;
+export function buildRunCommand(line: string, runId: string): string {
+  return `{ ${line}; } ; ec=$?; __ps_title=$(printf 'exit=%d' "$ec" | base64 | tr -d '\\n'); __ps_state=$([ "$ec" -eq 0 ] && printf done || printf error); printf '\\033]7501;state=%s:app=principal-build:id=${runId}:title=%s\\033\\\\' "$__ps_state" "$__ps_title"`;
+}
+
+/** Exit code a build record's decoded `exit=N` title carries, if any. */
+function exitCodeFromTitle(title: string | undefined): number | undefined {
+  const match = /^exit=(-?\d+)$/.exec(title ?? '');
+  return match ? Number(match[1]) : undefined;
 }
 
 export class BuildRunRegistry {
   private readonly runs = new Map<string, BuildRunRecord>();
   private readonly timers = new Map<string, NodeJS.Timeout>();
-  private readonly unsubscribes = new Map<string, () => void>();
+  private readonly disposers = new Map<string, Array<() => void>>();
 
   constructor(
     private readonly backend: RunSessionBackend,
@@ -66,10 +83,10 @@ export class BuildRunRegistry {
 
   /**
    * Start tracking a run for an already-spawned terminal session running
-   * the wrapper from `buildRunCommand`. Completion arrives via the session
-   * exit event; the OSC record decides success vs failure, the exit event
-   * supplies the code. A run that outlives `timeoutMs` is marked timed-out
-   * and its session destroyed.
+   * the wrapper from `buildRunCommand`. Completion normally arrives as the
+   * wrapper's OSC 7501 report, tagged with this run's id — build commands
+   * are typed into a persistent shell, so the session itself rarely exits.
+   * The session exit event and `timeoutMs` remain fallbacks.
    */
   trackRun(input: TrackRunInput): BuildRunRecord {
     const record: BuildRunRecord = {
@@ -90,15 +107,39 @@ export class BuildRunRegistry {
       this.stopWatching(record.runId);
     };
 
-    this.unsubscribes.set(
+    const applyRecords = (records: ProgramStatusRecord[]) => {
+      const report = this.findRunReport(records, record.runId);
+      if (!report) return;
+      finish(
+        report.state === 'done' ? 'succeeded' : 'failed',
+        exitCodeFromTitle(report.title),
+      );
+    };
+
+    if (this.backend.onProgramStatus) {
+      this.addDisposer(
+        record.runId,
+        this.backend.onProgramStatus((event) => {
+          if (event.sessionId !== record.terminalSessionId) return;
+          applyRecords(event.records);
+        }),
+      );
+    }
+    // The report may have landed between session creation and this call.
+    applyRecords(this.backend.getProgramStatus(record.terminalSessionId));
+
+    this.addDisposer(
       record.runId,
       this.backend.onSessionExit((event) => {
         if (event.sessionId !== record.terminalSessionId) return;
-        const report = this.buildReport(record.terminalSessionId);
+        const report = this.findRunReport(
+          this.backend.getProgramStatus(record.terminalSessionId),
+          record.runId,
+        );
         if (report) {
           finish(
             report.state === 'done' ? 'succeeded' : 'failed',
-            event.exitCode,
+            event.exitCode ?? exitCodeFromTitle(report.title),
           );
         } else {
           finish(event.exitCode === 0 ? 'succeeded' : 'failed', event.exitCode);
@@ -120,13 +161,27 @@ export class BuildRunRegistry {
     return record;
   }
 
-  /** Latest principal-build OSC record for the session, if any. */
-  private buildReport(sessionId: string): ProgramStatusRecord | null {
-    const records = this.backend.getProgramStatus(sessionId);
+  /**
+   * This run's terminal report. Matching on the id is what makes a reused
+   * session safe: the previous run's `done` record is still in the store.
+   */
+  private findRunReport(
+    records: ProgramStatusRecord[],
+    runId: string,
+  ): ProgramStatusRecord | null {
     for (let i = records.length - 1; i >= 0; i--) {
-      if (records[i].app === BUILD_RUN_OSC_APP) return records[i];
+      const candidate = records[i];
+      if (candidate.app === BUILD_RUN_OSC_APP && candidate.id === runId) {
+        return candidate;
+      }
     }
     return null;
+  }
+
+  private addDisposer(runId: string, dispose: () => void): void {
+    const existing = this.disposers.get(runId);
+    if (existing) existing.push(dispose);
+    else this.disposers.set(runId, [dispose]);
   }
 
   private stopWatching(runId: string): void {
@@ -135,8 +190,8 @@ export class BuildRunRegistry {
       clearTimeout(timer);
       this.timers.delete(runId);
     }
-    this.unsubscribes.get(runId)?.();
-    this.unsubscribes.delete(runId);
+    for (const dispose of this.disposers.get(runId) ?? []) dispose();
+    this.disposers.delete(runId);
   }
 
   private evictFinished(): void {

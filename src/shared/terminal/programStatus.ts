@@ -47,6 +47,15 @@ export interface ProgramStatusRecord {
   title?: string;
 }
 
+/**
+ * A session's complete record set, emitted whenever it changes. The array is
+ * the whole set (reports replace records), not a delta.
+ */
+export interface ProgramStatusEvent {
+  sessionId: string;
+  records: ProgramStatusRecord[];
+}
+
 /** States a terminal accepts (excludes `clear`). */
 export const PROGRAM_STATUS_STATES: ReadonlyArray<
   Exclude<ProgramStatusState, 'clear'>
@@ -208,14 +217,16 @@ function base64Decode(input: string): number[] | null {
 
 function isControlCodePoint(cp: number): boolean {
   return (
-    (cp >= 0x00 && cp <= 0x1f) ||
-    cp === 0x7f ||
-    (cp >= 0x80 && cp <= 0x9f)
+    (cp >= 0x00 && cp <= 0x1f) || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f)
   );
 }
 
 /** Decode base64 → UTF-8 string, rejecting control chars. Returns null on any failure. */
-function decodeText(encoded: string, encodedLimit: number, decodedLimit: number): string | null {
+function decodeText(
+  encoded: string,
+  encodedLimit: number,
+  decodedLimit: number,
+): string | null {
   if (encoded.length > encodedLimit) return null;
   const bytes = base64Decode(encoded);
   if (bytes === null) return null;
@@ -232,7 +243,10 @@ function decodeText(encoded: string, encodedLimit: number, decodedLimit: number)
       cp = ((b0 & 0x1f) << 6) | (bytes[i + 1] & 0x3f);
       size = 2;
     } else if (b0 >= 0xe0 && b0 < 0xf0) {
-      cp = ((b0 & 0x0f) << 12) | ((bytes[i + 1] & 0x3f) << 6) | (bytes[i + 2] & 0x3f);
+      cp =
+        ((b0 & 0x0f) << 12) |
+        ((bytes[i + 1] & 0x3f) << 6) |
+        (bytes[i + 2] & 0x3f);
       size = 3;
     } else if (b0 >= 0xf0 && b0 < 0xf5) {
       cp =
@@ -269,7 +283,9 @@ function parseId(id: string): string | null {
  * Returns `'query'` for feature detection, a record for a valid report, or
  * `null` when the report must be ignored/discarded.
  */
-export function parseProgramStatusPayload(payload: string): ParsedProgramStatus {
+export function parseProgramStatusPayload(
+  payload: string,
+): ParsedProgramStatus {
   const trimmed = payload.trim();
   if (trimmed === '?') return 'query';
   if (trimmed.length === 0) return null;
@@ -291,7 +307,9 @@ export function parseProgramStatusPayload(payload: string): ParsedProgramStatus 
   if (
     state === undefined ||
     (state !== 'clear' &&
-      !PROGRAM_STATUS_STATES.includes(state as Exclude<ProgramStatusState, 'clear'>))
+      !PROGRAM_STATUS_STATES.includes(
+        state as Exclude<ProgramStatusState, 'clear'>,
+      ))
   ) {
     return null; // missing/unknown state — ignore report
   }
@@ -337,7 +355,11 @@ export function parseProgramStatusPayload(payload: string): ParsedProgramStatus 
 
   // msg / title — discard whole report on any failure
   if (pairs.has('msg')) {
-    const decoded = decodeText(pairs.get('msg') as string, LIMIT.MSG_ENCODED, LIMIT.MSG_DECODED);
+    const decoded = decodeText(
+      pairs.get('msg') as string,
+      LIMIT.MSG_ENCODED,
+      LIMIT.MSG_DECODED,
+    );
     if (decoded === null) return null;
     record.msg = decoded;
   }
