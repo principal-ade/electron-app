@@ -25,6 +25,7 @@ import type { RepositorySelectedPayload } from '../../../events/repositorySelect
 /** The workspace surfaces hosted by the portal (vs. standalone overlays). */
 export type WorkspaceView =
   | 'home-panel'
+  | 'sessions'
   | 'projects'
   | 'topics'
   | 'drawings'
@@ -35,6 +36,7 @@ export type WorkspaceView =
 
 export const WORKSPACE_VIEWS: WorkspaceView[] = [
   'home-panel',
+  'sessions',
   'projects',
   'topics',
   'drawings',
@@ -74,6 +76,7 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
     // overlay (zIndex 2) and hide views like Settings.
     <div style={{ height: '100%', width: '100%', isolation: 'isolate' }}>
       {(workspaceView === 'home-panel' ||
+        workspaceView === 'sessions' ||
         workspaceView === 'projects' ||
         workspaceView === 'topics' ||
         workspaceView === 'drawings' ||

@@ -3,6 +3,7 @@ import {
   Settings,
   Activity,
   Cpu,
+  History,
   ToolCase,
   GraduationCap,
   PenTool,
@@ -172,6 +173,11 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           },
         ]
       : []),
+    {
+      id: 'sessions',
+      icon: <History size={20} />,
+      label: 'Sessions',
+    },
     // Projects surface — the clone/dev-oriented browser.
     {
       id: 'projects' as NavigationView,

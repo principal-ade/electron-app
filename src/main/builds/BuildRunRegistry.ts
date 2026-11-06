@@ -101,6 +101,10 @@ export class BuildRunRegistry {
     return this.runs.get(runId) ?? null;
   }
 
+  listRuns(): BuildRunRecord[] {
+    return Array.from(this.runs.values(), (run) => ({ ...run }));
+  }
+
   /** Read the terminal snapshot associated with a tracked run. */
   async getOutputBuffer(runId: string): Promise<string | null> {
     const run = this.getRun(runId);

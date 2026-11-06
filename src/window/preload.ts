@@ -14,6 +14,9 @@ import { packageManagerApi } from './main-process-api-implementations/packageMan
 import { agentConfigAPI } from './main-process-api-implementations/agentConfigApi';
 import { agentSessionApi } from './main-process-api-implementations/agentSessionApi';
 import { agentSessionSDKApi } from './main-process-api-implementations/agentSessionSDKApi';
+import { openCodeSessionHistoryAPI } from './main-process-api-implementations/openCodeSessionHistoryApi';
+import { claudeSessionHistoryAPI } from './main-process-api-implementations/claudeSessionHistoryApi';
+import { cursorSessionHistoryAPI } from './main-process-api-implementations/cursorSessionHistoryApi';
 import { agentInstallationAPI } from './main-process-api-implementations/agentInstallationApi';
 import { agentSessionEventsAPI } from './main-process-api-implementations/agentSessionEventsApi';
 import { authenticationAPI } from './main-process-api-implementations/authenticationApi';
@@ -96,6 +99,9 @@ const mainProcessExposure: MainProcessAPI = {
   topics: topicAPI,
   agentSession: agentSessionApi,
   agentSessionSDK: agentSessionSDKApi,
+  openCodeSessionHistory: openCodeSessionHistoryAPI,
+  claudeSessionHistory: claudeSessionHistoryAPI,
+  cursorSessionHistory: cursorSessionHistoryAPI,
   agentSessionEvents: agentSessionEventsAPI,
   appVersionManager: appVersionManagerApi,
   authentication: authenticationAPI,

@@ -138,7 +138,6 @@ const createMockRepositoryProfile = (
     size: 5432, // KB
     activityData: generateMockActivityData('medium'),
     totalCommits: 892,
-    contributors: 24,
     defaultBranch: 'main',
     createdAt: '2021-03-15T10:30:00Z',
     updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
@@ -201,19 +200,6 @@ const createMockActions = (
     registerRepository: async (name: string, path: string) => {
       console.info('[Mock Action] registerRepository:', name, path);
       return { name, path } as AlexandriaEntry;
-    },
-    getContributors: async (_owner: string, _repo: string) => {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      return [
-        { login: 'alice',   contributions: 342, avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4' },
-        { login: 'bob',     contributions: 278, avatar_url: 'https://avatars.githubusercontent.com/u/2?v=4' },
-        { login: 'carol',   contributions: 201, avatar_url: 'https://avatars.githubusercontent.com/u/3?v=4' },
-        { login: 'dave',    contributions: 155, avatar_url: 'https://avatars.githubusercontent.com/u/4?v=4' },
-        { login: 'eve',     contributions: 98,  avatar_url: 'https://avatars.githubusercontent.com/u/5?v=4' },
-        { login: 'frank',   contributions: 74,  avatar_url: 'https://avatars.githubusercontent.com/u/6?v=4' },
-        { login: 'grace',   contributions: 52,  avatar_url: 'https://avatars.githubusercontent.com/u/7?v=4' },
-        { login: 'henry',   contributions: 41,  avatar_url: 'https://avatars.githubusercontent.com/u/8?v=4' },
-      ];
     },
   };
 };
@@ -338,7 +324,6 @@ export const LocalRepository = {
         stars: 23,
         forks: 4,
         totalCommits: 342,
-        contributors: 3,
         github: {
           owner: 'johndoe',
           name: 'my-local-project',
@@ -419,7 +404,6 @@ export const HighActivity = {
         forks: 12847,
         watchers: 3421,
         totalCommits: 15234,
-        contributors: 487,
         size: 45678,
         github: {
           owner: 'framework-org',
@@ -554,7 +538,6 @@ export const CompleteProfile = {
         forks: 456,
         watchers: 234,
         totalCommits: 5678,
-        contributors: 12,
         size: 34567,
         openIssues: 89,
         htmlUrl: 'https://github.com/principal-ade/desktop-app',
@@ -590,7 +573,6 @@ export const MultipleClones = {
         stars: 42,
         forks: 8,
         totalCommits: 287,
-        contributors: 5,
         htmlUrl: 'https://github.com/dev/multi-clone-repo',
         github: {
           owner: 'dev',

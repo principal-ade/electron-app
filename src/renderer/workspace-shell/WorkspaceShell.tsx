@@ -146,10 +146,12 @@ import {
 import { DRAWING_EVENTS } from '../drawings-view/drawingsStorage';
 import type { HomeTabEntry } from '../panels/home-panel/homeTabEntries';
 import { TerminalEmptyState } from './TerminalEmptyState';
+import { SessionsLeftPanel } from '../sessions-view/SessionsLeftPanel';
 
 /** Which surface's left panel + landing the shell currently shows. */
 export type WorkspaceView =
   | 'home-panel'
+  | 'sessions'
   | 'projects'
   | 'topics'
   | 'drawings'
@@ -1157,7 +1159,11 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       // The panel mints the tab id and creates the session with a context
       // derived from it, so a second open in the same directory gets its own tab
       // instead of reattaching to the first one's session.
-      setRequestOpenTab({ directory, label: event.payload?.label });
+      setRequestOpenTab({
+        directory,
+        label: event.payload?.label,
+        command: event.payload?.command,
+      });
     };
     events.on(PORTAL_INTENTS.terminalNew, handleTerminalOpen);
     // The titlebar search lives outside the shell, so it can only reach the
@@ -1258,7 +1264,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               'Repository')
             : activeView === 'home-panel'
               ? 'Home'
-              : activeView === 'projects'
+              : activeView === 'sessions'
+                ? 'Sessions'
+                : activeView === 'projects'
                 ? 'Activity'
                 : activeView === 'drawings'
                   ? 'Drawings'
@@ -1291,6 +1299,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onActivateTab={setActiveTabId}
               onOpenEntry={handleOpenHomeEntry}
             />
+          ) : activeView === 'sessions' ? (
+            <SessionsLeftPanel repositories={repositories} />
           ) : activeView === 'projects' ? (
             <ProjectsLeftPanel
               repositories={repositories}

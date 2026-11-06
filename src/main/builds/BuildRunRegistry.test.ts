@@ -85,7 +85,7 @@ describe('BuildRunRegistry', () => {
   }
 
   test('starts runs as running with a started timestamp', () => {
-    const { record } = track();
+    const { record, registry } = track();
     expect(record).toMatchObject({
       runId: 'run-1',
       configId: 'bc-web-build',
@@ -93,6 +93,7 @@ describe('BuildRunRegistry', () => {
       status: 'running',
     });
     expect(record.startedAt).toBeTruthy();
+    expect(registry.listRuns()).toEqual([record]);
   });
 
   test('reads output and secret-name metadata by tracked run id', async () => {

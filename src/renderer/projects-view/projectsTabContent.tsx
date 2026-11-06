@@ -298,37 +298,6 @@ const RepositoryProfileTabContent: React.FC<{
           }
         }
 
-        let contributors: number | undefined = undefined;
-        if (entry?.path) {
-          try {
-            contributors = await GitService.getContributorCount(entry.path);
-            console.info(
-              '[RepositoryProfileTab] Contributor count (local):',
-              contributors,
-            );
-          } catch (err) {
-            console.warn(
-              '[RepositoryProfileTab] Failed to fetch contributor count:',
-              err,
-            );
-          }
-        } else if (gh?.owner && gh?.name) {
-          try {
-            const githubContributors =
-              await GithubService.getRepositoryContributors(gh.owner, gh.name);
-            contributors = githubContributors.length;
-            console.info(
-              '[RepositoryProfileTab] Contributor count (GitHub):',
-              contributors,
-            );
-          } catch (err) {
-            console.warn(
-              '[RepositoryProfileTab] Failed to fetch GitHub contributors:',
-              err,
-            );
-          }
-        }
-
         const profileData: RepositoryProfileData = {
           name: entry?.name ?? gh?.name ?? displayName,
           fullName: gh ? `${gh.owner}/${gh.name}` : displayName,
@@ -346,7 +315,6 @@ const RepositoryProfileTabContent: React.FC<{
           size: 0,
           activityData,
           totalCommits: totalCommits || 0,
-          contributors,
           defaultBranch: githubDefaultBranch || gh?.defaultBranch || 'main',
           createdAt:
             githubCreatedAt || entry?.registeredAt || new Date().toISOString(),
@@ -581,9 +549,6 @@ const RepositoryProfileTabContent: React.FC<{
         return AlexandriaService.registerRepository(path, remoteUrl);
       },
 
-      getContributors: async (owner: string, repo: string) => {
-        return GithubService.getRepositoryContributors(owner, repo);
-      },
     }),
     [openLocalhostBrowser],
   );

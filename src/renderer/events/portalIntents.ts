@@ -140,6 +140,8 @@ export interface TerminalNewPayload {
   directory: string;
   /** Optional tab label (defaults to the directory's basename). */
   label?: string;
+  /** Optional command to run when the terminal tab starts. */
+  command?: string;
 }
 
 /** Emit a {@link PORTAL_INTENTS.terminalNew} intent. */

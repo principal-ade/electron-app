@@ -35,6 +35,32 @@ const profile: HomeTabEntry = {
   purl: 'pkg:github/owner/app',
 };
 
+const buildEntry: HomeTabEntry = {
+  id: 'build-config-tab',
+  kind: 'build-configuration',
+  configId: 'bc-electron-mac',
+  purl: 'pkg:github/principal-ade/electron-app',
+  label: 'electron-app mac publish',
+};
+
+test('subtly marks a running build in the Home rail', () => {
+  const { container } = render(
+    <HomeTabRow
+      entry={buildEntry}
+      open
+      working
+      pinned={false}
+      onActivate={jest.fn()}
+      onTogglePin={jest.fn()}
+    />,
+  );
+  const row = screen.getByRole('button', {
+    name: 'Open electron-app mac publish; build running',
+  });
+  expect(row.getAttribute('aria-busy')).toBe('true');
+  expect(container.querySelector('.home-build-running')).toBe(row);
+});
+
 test.each([true, false])(
   'shows Clone profile with a distinct icon when open=%s',
   (open) => {

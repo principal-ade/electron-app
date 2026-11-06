@@ -164,6 +164,8 @@ export interface HomeTabRowProps {
   inOwnWindow?: boolean;
   /** Live status for this terminal, independent of active-tab and pin state. */
   programStatus?: ProgramStatusRecord;
+  /** Whether the build represented by this entry is currently running. */
+  working?: boolean;
   pinned: boolean;
   /** Extra left padding for child rows nested under a repo row. */
   depth?: number;
@@ -197,6 +199,7 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
   tabNumber,
   inOwnWindow = false,
   programStatus,
+  working = false,
   pinned,
   depth = 0,
   pinnable = true,
@@ -285,6 +288,9 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
     : entry.kind === 'terminal' && !entry.repoPath && entry.path
       ? `Open terminal in ${entry.path}`
       : `Open ${label}`;
+  const rowLabel = working
+    ? `${accessibleLabel}; build running`
+    : accessibleLabel;
 
   return (
     <div
@@ -333,7 +339,13 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
         );
       }}
       role="button"
-      aria-label={accessibleLabel}
+      aria-label={rowLabel}
+      aria-busy={working || undefined}
+      className={
+        working && entry.kind === 'build-configuration'
+          ? 'home-build-running'
+          : undefined
+      }
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -352,6 +364,11 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
         outline: dropActive ? `1px dashed ${theme.colors.primary}` : 'none',
         outlineOffset: -1,
         transition: 'background-color 0.15s ease',
+        ...(working && entry.kind === 'build-configuration'
+          ? ({
+              '--home-build-shimmer-color': theme.colors.primary,
+            } as React.CSSProperties)
+          : {}),
       }}
     >
       <span

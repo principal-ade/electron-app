@@ -82,6 +82,12 @@ export type BuildConfigurationRouterType = Record<
       input: GetBuildRunInput;
     }) => Promise<BuildRunRecord | null>;
   };
+  buildConfiguration_listRuns: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<BuildRunRecord[]>;
+  };
   buildConfiguration_stopRun: {
     action: (args: {
       context: ActionContext;

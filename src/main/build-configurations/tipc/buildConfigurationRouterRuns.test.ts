@@ -36,6 +36,7 @@ jest.mock('../../builds/buildInstances', () => {
         return record;
       }),
       getRun: jest.fn((runId: string) => runs.get(runId) ?? null),
+      listRuns: jest.fn(() => Array.from(runs.values())),
       stopRun: jest.fn(async (runId: string) => {
         const record = runs.get(runId);
         if (record?.status === 'running') record.status = 'cancelled';
@@ -64,6 +65,9 @@ type Router = {
       context: unknown;
       input: { runId: string };
     }) => Promise<unknown>;
+  };
+  buildConfiguration_listRuns: {
+    action: (args: { context: unknown; input?: void }) => Promise<unknown>;
   };
   buildConfiguration_stopRun: {
     action: (args: {
@@ -134,6 +138,9 @@ describe('buildConfigurationRouter runs', () => {
       input: { runId: (result as { runId: string }).runId },
     });
     expect(record).toMatchObject({ status: 'running' });
+    await expect(
+      router.buildConfiguration_listRuns.action({ context: {} }),
+    ).resolves.toEqual([record]);
 
     const stopped = await router.buildConfiguration_stopRun.action({
       context: {},

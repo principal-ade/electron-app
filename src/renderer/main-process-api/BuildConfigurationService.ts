@@ -25,6 +25,10 @@ export class BuildConfigurationService {
     return buildConfigurationClient.getRun({ runId });
   }
 
+  static listRuns(): Promise<BuildRunRecord[]> {
+    return buildConfigurationClient.listRuns();
+  }
+
   static stopRun(runId: string): Promise<BuildRunRecord | null> {
     return buildConfigurationClient.stopRun({ runId });
   }

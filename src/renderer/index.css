@@ -88,6 +88,37 @@ body > :not(#root) * {
   }
 }
 
+/* Low-contrast, slow shimmer for build entries that are actively running. */
+@keyframes homeBuildShimmer {
+  0%,
+  100% {
+    background-position: 120% center;
+  }
+  50% {
+    background-position: -120% center;
+  }
+}
+
+.home-build-running {
+  background-image: linear-gradient(
+    110deg,
+    transparent 25%,
+    color-mix(in srgb, var(--home-build-shimmer-color) 3%, transparent) 40%,
+    color-mix(in srgb, var(--home-build-shimmer-color) 8%, transparent) 50%,
+    color-mix(in srgb, var(--home-build-shimmer-color) 3%, transparent) 60%,
+    transparent 75%
+  );
+  background-size: 240% 100%;
+  animation: homeBuildShimmer 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-build-running {
+    background-image: none;
+    animation: none;
+  }
+}
+
 /* Progress bar stripes animation */
 @keyframes progress-bar-stripes {
   from {

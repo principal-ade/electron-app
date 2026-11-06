@@ -99,6 +99,9 @@ export const buildConfigurationRouter = {
   buildConfiguration_getRun: t.procedure
     .input<GetBuildRunInput>()
     .action(async ({ input }) => getBuildRunRegistry().getRun(input.runId)),
+  buildConfiguration_listRuns: t.procedure.action(async () =>
+    getBuildRunRegistry().listRuns(),
+  ),
   buildConfiguration_stopRun: t.procedure
     .input<StopBuildRunInput>()
     .action(async ({ input }) => getBuildRunRegistry().stopRun(input.runId)),

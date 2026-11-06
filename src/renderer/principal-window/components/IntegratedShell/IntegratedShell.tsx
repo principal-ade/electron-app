@@ -63,6 +63,7 @@ const isOverlayView = (view: string): view is OverlayView =>
 const VIEW_OPTIONS = [
   'home',
   'home-panel',
+  'sessions',
   'topics',
   'projects',
   'onboarding',
@@ -365,6 +366,7 @@ export const IntegratedShell: React.FC = () => {
         pendingTerminalOpenRef.current = {
           directory: payload.directory,
           label: payload.label,
+          command: payload.command,
         };
         return;
       }
@@ -372,6 +374,7 @@ export const IntegratedShell: React.FC = () => {
       emitTerminalNew(portalEvents, 'quick-open', {
         directory: payload.directory,
         label: payload.label,
+        command: payload.command,
       });
     });
     return unsubscribe;

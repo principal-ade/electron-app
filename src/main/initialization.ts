@@ -28,6 +28,9 @@ import {
 } from './principal-mcp/PrincipalMCPBridge';
 import { applicationWindows } from './window/modernWindowManager';
 import { registerAgentSessionSDKHandlers } from './agent-session-events/agentSessionSDKHandlers';
+import { registerOpenCodeSessionHistoryHandlers } from './opencode/openCodeSessionHistoryHandlers';
+import { registerClaudeSessionHistoryHandlers } from './agent-history/claudeSessionHistoryHandlers';
+import { registerCursorSessionHistoryHandlers } from './agent-history/cursorSessionHistoryHandlers';
 
 // Import all IPC handlers
 import { registerWindowManagerIpcHandlers } from './window/windowManagerHandlers';
@@ -271,6 +274,9 @@ const registerAllIpcHandlers = async () => {
   registerGitHandlers();
   registerSSHSetupHandlers();
   registerAgentSessionSDKHandlers(); // SDK-based handlers replace old session handlers
+  registerOpenCodeSessionHistoryHandlers();
+  registerClaudeSessionHistoryHandlers();
+  registerCursorSessionHistoryHandlers();
   // Agent installation handlers removed - we only configure hooks now
   setupAgentConfigHandlers();
   setupShellHandlers();

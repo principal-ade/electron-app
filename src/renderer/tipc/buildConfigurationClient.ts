@@ -26,6 +26,7 @@ interface TipcBuildConfigurationClient {
   buildConfiguration_getRun: (
     input: GetBuildRunInput,
   ) => Promise<BuildRunRecord | null>;
+  buildConfiguration_listRuns: () => Promise<BuildRunRecord[]>;
   buildConfiguration_stopRun: (
     input: StopBuildRunInput,
   ) => Promise<BuildRunRecord | null>;
@@ -59,6 +60,7 @@ export const buildConfigurationClient = {
     getClient().buildConfiguration_run(input),
   getRun: (input: GetBuildRunInput) =>
     getClient().buildConfiguration_getRun(input),
+  listRuns: () => getClient().buildConfiguration_listRuns(),
   stopRun: (input: StopBuildRunInput) =>
     getClient().buildConfiguration_stopRun(input),
   confirmSecrets: (input: ConfirmBuildSecretsInput) =>

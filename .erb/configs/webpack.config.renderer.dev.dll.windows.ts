@@ -148,6 +148,7 @@ const configuration: webpack.Configuration = {
           'electron-log',
           'electron-store',
           'node-pty',
+          'cursor-history', // Node-only SQLite session reader; consumed by the main process
           'express',
           'concurrently',
           'dotenv',

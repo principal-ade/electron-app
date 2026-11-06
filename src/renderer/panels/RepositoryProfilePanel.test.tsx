@@ -29,7 +29,7 @@ jest.mock('themed-markdown', () => ({ DocumentView: () => <div>Remote README</di
 jest.mock('../events/repositorySelected', () => ({ payloadFromGithub: jest.fn() }));
 jest.mock('../providers/AuthProvider', () => ({ useAuthUser: () => ({ user: null }) }));
 jest.mock('../main-process-api/GitService', () => ({
-  GitService: { getBranchStatus: jest.fn(), getOwnershipMap: jest.fn(), getContributors: jest.fn() },
+  GitService: { getBranchStatus: jest.fn() },
 }));
 jest.mock('../main-process-api/GithubService', () => ({ GithubService: {} }));
 jest.mock('../main-process-api/RepositoryMonitoringService', () => ({
@@ -88,10 +88,6 @@ beforeEach(() => {
   window.ResizeObserver = jest.fn().mockImplementation(() => ({ observe: jest.fn(), disconnect: jest.fn() }));
   jest.mocked(GitService.getBranchStatus).mockResolvedValue({
     ahead: 0, behind: 0, hasUpstream: false, branch: 'main',
-  });
-  jest.mocked(GitService.getContributors).mockResolvedValue([]);
-  jest.mocked(GitService.getOwnershipMap).mockResolvedValue({
-    byEmail: new Map(), totalLines: new Map(), totalLinesGlobal: 0,
   });
   jest.mocked(RepositoryMonitoringService.getGitStatusWithFiles).mockImplementation(async (repoPath) => ({
     ...dirtyStatus, repoPath,

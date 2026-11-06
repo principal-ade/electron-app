@@ -34,6 +34,8 @@ export interface OpenTerminalTabPayload {
   directory: string;
   /** Optional tab label (defaults to the directory basename). */
   label?: string;
+  /** Optional command to run in the new terminal tab. */
+  command?: string;
 }
 
 export interface OpenRepositoryExplorerPayload {

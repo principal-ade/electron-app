@@ -52,7 +52,8 @@ export const DeleteAlexandriaEntryModal: React.FC<
   const loadingGitStatus =
     !!repositoryPath && (result === undefined || result === 'loading');
   const statusUnavailable = !repositoryPath || result === 'unavailable';
-  const canDelete = !isDeleting && gitStatus !== null;
+  const canDelete =
+    !isDeleting && result !== undefined && result !== 'loading';
 
   // Always delete local files
   const deleteLocal = true;
@@ -329,7 +330,8 @@ export const DeleteAlexandriaEntryModal: React.FC<
               }}
             >
               Status unavailable. Repository-monitor could not check this clone
-              for uncommitted changes or unpushed commits. Retry before deleting.
+              for uncommitted changes or unpushed commits. You can still delete
+              the folder, but any unsaved work may be lost.
               <button
                 type="button"
                 onClick={() => setStatusAttempt((attempt) => attempt + 1)}

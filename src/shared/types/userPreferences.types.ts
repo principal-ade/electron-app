@@ -6,6 +6,7 @@ import type { PanelLayout } from '@principal-ade/panels';
 export type InteractiveShellNavigationView =
   | 'home'
   | 'home-panel'
+  | 'sessions'
   | 'topics'
   | 'projects'
   | 'onboarding'

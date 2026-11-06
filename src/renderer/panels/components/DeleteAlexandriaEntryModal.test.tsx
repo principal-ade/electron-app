@@ -146,7 +146,7 @@ it('blocks deletion while loading but still allows cancellation', () => {
 });
 
 it.each(['missing', 'error', 'wrong-clone'])(
-  'shows an unavailable warning for %s status and requires a successful retry',
+  'shows an unavailable warning for %s status but still allows deletion',
   async (failure) => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     if (failure === 'error') {
@@ -162,7 +162,7 @@ it.each(['missing', 'error', 'wrong-clone'])(
     await screen.findByRole('alert');
     expect(screen.getByText(/Status unavailable/)).toBeTruthy();
     expect(screen.queryByText('Checking for uncommitted work…')).toBeNull();
-    expect(deleteButton().disabled).toBe(true);
+    expect(deleteButton().disabled).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: 'Retry status check' }));
     await act(async () => {});
     expect(service.refreshGitStatus).toHaveBeenCalledWith('/selected-clone');
@@ -172,6 +172,21 @@ it.each(['missing', 'error', 'wrong-clone'])(
     warn.mockRestore();
   },
 );
+
+it('allows deleting when repository status cannot be checked', async () => {
+  service.getGitStatusWithFiles.mockRejectedValueOnce(
+    new Error('monitor offline'),
+  );
+  const input = props();
+  render(<DeleteAlexandriaEntryModal {...input} />);
+  await screen.findByRole('alert');
+
+  fireEvent.click(deleteButton());
+  await act(async () => {});
+
+  expect(input.onConfirm).toHaveBeenCalledWith(true);
+  expect(input.onClose).toHaveBeenCalled();
+});
 
 it('bounds loading to five seconds and ignores a late snapshot after timeout', async () => {
   jest.useFakeTimers();
@@ -187,8 +202,9 @@ it('bounds loading to five seconds and ignores a late snapshot after timeout', a
   });
   expect(screen.getByRole('alert')).toBeTruthy();
   expect(screen.queryByText('Checking for uncommitted work…')).toBeNull();
+  expect(deleteButton().disabled).toBe(false);
   await act(async () => resolve(status()));
-  expect(deleteButton().disabled).toBe(true);
+  expect(deleteButton().disabled).toBe(false);
   expect(screen.getByRole('alert')).toBeTruthy();
   unmount();
 });

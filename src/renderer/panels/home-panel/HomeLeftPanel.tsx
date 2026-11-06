@@ -16,6 +16,7 @@ import { githubIdToPurl } from '@principal-ai/alexandria-core-library';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { GitService } from '../../main-process-api/GitService';
+import { BuildConfigurationService } from '../../main-process-api/BuildConfigurationService';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import {
   extractLocalClones,
@@ -129,6 +130,38 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // PRs the user (or an agent via the bridge) asked the app to keep an eye on.
   const { pullRequests: watchedPullRequests, error: pullRequestsError } =
     useWatchedPullRequests();
+  const [runningBuildConfigIds, setRunningBuildConfigIds] = useState<
+    Set<string>
+  >(() => new Set());
+  useEffect(() => {
+    let cancelled = false;
+    const refreshRunningBuilds = async () => {
+      try {
+        const runs = await BuildConfigurationService.listRuns();
+        if (cancelled) return;
+        const next = new Set(
+          runs
+            .filter((run) => run.status === 'running')
+            .map((run) => run.configId),
+        );
+        setRunningBuildConfigIds((current) => {
+          const unchanged =
+            current.size === next.size &&
+            Array.from(next).every((configId) => current.has(configId));
+          return unchanged ? current : next;
+        });
+      } catch {
+        // Keep the last known status through brief IPC or app-start hiccups.
+      }
+    };
+
+    void refreshRunningBuilds();
+    const interval = setInterval(() => void refreshRunningBuilds(), 2_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
   // Pinned tab entries + pinned repos (persisted in preferences) so a closed
   // tab or a clean, tab-less repo can stay reachable from the rail.
   const {
@@ -525,6 +558,11 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
             ? programStatusByTab?.[entry.id]
             : undefined
         }
+        working={
+          entry.kind === 'build-configuration' &&
+          !!entry.configId &&
+          runningBuildConfigIds.has(entry.configId)
+        }
         pinned={pinnedTabIds.has(entry.id)}
         depth={depth}
         // Topic and subsystem-model titles are user-authored and often long;
@@ -712,7 +750,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                           const hasActiveTab =
                             activeTabId !== null &&
                             (openTabs.some((tab) => tab.id === activeTabId) ||
-                              pinnedTabs.some((pin) => pin.id === activeTabId) ||
+                              pinnedTabs.some(
+                                (pin) => pin.id === activeTabId,
+                              ) ||
                               repoProcesses.some(
                                 (process) =>
                                   homeTabs.processTabs.get(process.id)?.id ===

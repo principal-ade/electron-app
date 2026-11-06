@@ -19,7 +19,6 @@ import {
   GitCommit,
   FolderOpen,
   Trash2,
-  Users,
   GitBranch,
   CheckCircle2,
   AlertCircle,
@@ -81,7 +80,6 @@ export interface RepositoryProfileData {
   size: number; // in KB
   activityData: Map<string, number>; // date -> commit count
   totalCommits?: number; // Optional to show loading state
-  contributors?: number; // Number of contributors
   defaultBranch: string;
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
@@ -167,15 +165,6 @@ export interface RepositoryProfilePanelActions extends PanelActions {
     remoteUrl?: string,
   ) => Promise<AlexandriaEntry>;
 
-  /**
-   * Get contributors for a GitHub repository (optional)
-   */
-  getContributors?: (
-    owner: string,
-    repo: string,
-  ) => Promise<
-    Array<{ login: string; contributions: number; avatar_url: string }>
-  >;
 }
 
 interface RepositoryProfilePanelProps {
@@ -529,50 +518,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   // State for city data (derived from file trees)
   const [cityData, setCityData] = useState<CityData | null>(null);
 
-  // State for contributors list
-  const [showContributors, setShowContributors] = useState(false);
-  const [contributors, setContributors] = useState<
-    Array<{ name: string; commits: number; avatarUrl?: string; email?: string }>
-  >([]);
-  const [contributorsLoading, setContributorsLoading] = useState(false);
-
-  // Lower-cased name → email lookup, populated from local-git contributors. Lets
-  // us resolve a GitHub-sourced contributor (login only) back to an email so the
-  // file-touch query has a key.
-  const [nameToEmail, setNameToEmail] = useState<Map<string, string>>(
-    new Map(),
-  );
-
-  // Lower-cased GitHub login → git email, sampled from the GitHub commits API.
-  // This is the precise login↔email bridge that the contributors endpoint omits.
-  const [loginToEmail, setLoginToEmail] = useState<Map<string, string>>(
-    new Map(),
-  );
-
-  // Repo-wide ownership map (single blame sweep). Held in a ref so we don't
-  // copy the (potentially large) map into state; bumped via ownershipVersion
-  // so effects re-run when it changes.
-  const ownershipMapRef = useRef<{
-    byEmail: Map<string, Map<string, number>>;
-    totalLines: Map<string, number>;
-    totalLinesGlobal: number;
-  } | null>(null);
-  const [ownershipVersion, setOwnershipVersion] = useState(0);
-  const [_ownershipLoading, setOwnershipLoading] = useState(false);
-  const [hoveredAuthorEmail, setHoveredAuthorEmail] = useState<string | null>(
-    null,
-  );
-
-  // Deterministic per-author color: hash email to a hue in HSL space.
-  const colorForAuthor = (email: string): string => {
-    let hash = 0;
-    for (let i = 0; i < email.length; i++) {
-      hash = ((hash << 5) - hash + email.charCodeAt(i)) | 0;
-    }
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 70%, 55%)`;
-  };
-
   // Branch badges and changed files share the same monitored snapshot.
   const { statuses: gitStatusMap } = useRepositoryStatuses(
     repositoryData?.localClones?.map((clone) => clone.path) ?? [],
@@ -630,7 +575,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const changedFileSpotlightLayers = useMemo<HighlightLayer[] | null>(() => {
     if (
       showStats ||
-      showContributors ||
       isPlaying ||
       !repositoryPath ||
       !gitStatusMap.get(repositoryPath)?.isDirty ||
@@ -652,7 +596,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return [...fileColors, ...gitLayers];
   }, [
     showStats,
-    showContributors,
     isPlaying,
     repositoryPath,
     gitStatusMap,
@@ -660,10 +603,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     highlightLayers,
   ]);
   const spotlightLayers = packageSpotlightLayers ?? changedFileSpotlightLayers;
-
-  const CONTRIBUTORS_COLUMN_MIN_WIDTH = 900;
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [panelWidth, setPanelWidth] = useState<number>(0);
 
   // Track which button is currently bouncing (by clone path)
   const [bouncingButton, setBouncingButton] = useState<string | null>(null);
@@ -687,16 +626,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     const timer = setTimeout(() => setCloneProgress(null), 3000);
     return () => clearTimeout(timer);
   }, [cloneProgress?.phase]);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      setPanelWidth(entry.contentRect.width);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   // Create initial highlight layers from git status and file suffixes when data loads
   useEffect(() => {
@@ -824,28 +753,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       }
     }
 
-    // 3. Author hover layer — files the hovered author owns at HEAD (per blame).
-    if (hoveredAuthorEmail) {
-      const owned = ownershipMapRef.current?.byEmail.get(
-        hoveredAuthorEmail.toLowerCase(),
-      );
-      if (owned && owned.size > 0) {
-        layers.push({
-          id: `author-hover-${hoveredAuthorEmail}`,
-          name: `Files owned by ${hoveredAuthorEmail}`,
-          enabled: true,
-          color: colorForAuthor(hoveredAuthorEmail),
-          priority: 0,
-          items: Array.from(owned.keys()).map((path) => ({
-            type: 'file' as const,
-            path,
-            renderStrategy: 'fill' as const,
-          })),
-          opacity: 0.55,
-        });
-      }
-    }
-
     setHighlightLayers(layers);
 
     console.info(
@@ -858,8 +765,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     repositoryData?.localClones,
     theme.colors,
     cityData,
-    hoveredAuthorEmail,
-    ownershipVersion,
   ]);
 
   // Check if the current user has already forked this repo
@@ -913,9 +818,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         setRemoteFileTree(null);
         setFileTreesError(null);
         setCityData(null);
-        // Reset contributors
-        setShowContributors(false);
-        setContributors([]);
         return;
       }
 
@@ -1397,165 +1299,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     }
   };
 
-  // Fetch contributors whenever repository changes
-  useEffect(() => {
-    const localPath = repositoryData?.localClones?.[0]?.path;
-    if (!localPath && !repositoryData?.github) {
-      setContributors([]);
-      return;
-    }
-
-    let cancelled = false;
-    setContributorsLoading(true);
-
-    const load = async () => {
-      try {
-        let list: Array<{
-          name: string;
-          commits: number;
-          avatarUrl?: string;
-          email?: string;
-        }> = [];
-        const githubOwner = repositoryData?.github?.owner;
-        const githubName = repositoryData?.github?.name;
-
-        // Pull in parallel:
-        // - local-git contributors (for name→email map, when a clone exists)
-        // - GitHub login→email map sampled from recent commits (when GitHub is configured)
-        const localContribsPromise = localPath
-          ? GitService.getContributors(localPath)
-          : Promise.resolve([]);
-        const loginEmailPromise =
-          githubOwner && githubName
-            ? GithubService.getCommitAuthorEmailMap(githubOwner, githubName)
-            : Promise.resolve(new Map<string, string>());
-
-        if (githubOwner && githubName) {
-          const fetch =
-            actions.getContributors ??
-            GithubService.getRepositoryContributors.bind(GithubService);
-          const raw = await fetch(githubOwner, githubName);
-          list = raw.map((c) => ({
-            name: c.login,
-            commits: c.contributions,
-            avatarUrl: c.avatar_url,
-          }));
-        } else if (localPath) {
-          const raw = await localContribsPromise;
-          list = raw.map((c) => ({
-            name: c.name,
-            commits: c.commits,
-            email: c.email,
-            avatarUrl: undefined,
-          }));
-        }
-
-        const [localContribs, loginEmailMap] = await Promise.all([
-          localContribsPromise,
-          loginEmailPromise,
-        ]);
-        const nameMap = new Map<string, string>();
-        for (const c of localContribs) {
-          if (c.email) nameMap.set(c.name.toLowerCase(), c.email);
-        }
-
-        if (!cancelled) {
-          // Backfill emails on the displayed list using the precise login→email
-          // map first, then fall back to the name→email map (best-effort).
-          if (githubOwner && githubName) {
-            list = list.map((c) => ({
-              ...c,
-              email:
-                c.email ??
-                loginEmailMap.get(c.name.toLowerCase()) ??
-                nameMap.get(c.name.toLowerCase()),
-            }));
-          }
-          console.info('[RepositoryProfilePanel] contributor maps loaded', {
-            contributors: list.length,
-            nameMap: nameMap.size,
-            loginEmailMap: loginEmailMap.size,
-          });
-          setContributors(list);
-          setNameToEmail(nameMap);
-          setLoginToEmail(loginEmailMap);
-        }
-      } catch {
-        if (!cancelled) {
-          setContributors([]);
-          setNameToEmail(new Map());
-          setLoginToEmail(new Map());
-        }
-      } finally {
-        if (!cancelled) setContributorsLoading(false);
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    repositoryData?.localClones?.[0]?.path,
-    repositoryData?.github?.owner,
-    repositoryData?.github?.name,
-    actions,
-  ]);
-
-  // Resolve a contributor row to a lookup email for the ownership map. Order:
-  //   1. Direct email (local-git source already has it)
-  //   2. GitHub login → email, sampled from the commits API (precise)
-  //   3. Local-git name → email (when GitHub login happens to match git name)
-  // Returns undefined if no email could be resolved (no ownership data either way).
-  const resolveContributorEmail = (c: {
-    name: string;
-    email?: string;
-  }): string | undefined => {
-    if (c.email) return c.email;
-    const lower = c.name.toLowerCase();
-    const fromLogin = loginToEmail.get(lower);
-    if (fromLogin) return fromLogin;
-    const fromName = nameToEmail.get(lower);
-    if (fromName) return fromName;
-    return undefined;
-  };
-
-  // Run one repo-wide blame sweep when the local clone is known. Reset on
-  // path change; we don't auto-refresh on subsequent commits — the user can
-  // reload the panel to recompute.
-  useEffect(() => {
-    const localPath = repositoryData?.localClones?.[0]?.path;
-    if (!localPath) {
-      ownershipMapRef.current = null;
-      setOwnershipVersion((v) => v + 1);
-      return;
-    }
-    let cancelled = false;
-    setOwnershipLoading(true);
-    ownershipMapRef.current = null;
-    setOwnershipVersion((v) => v + 1);
-    GitService.getOwnershipMap(localPath)
-      .then((map) => {
-        if (cancelled) return;
-        ownershipMapRef.current = map;
-        console.info('[RepositoryProfilePanel] ownership map loaded', {
-          authors: map.byEmail.size,
-          files: map.totalLines.size,
-          totalLines: map.totalLinesGlobal,
-        });
-        setOwnershipVersion((v) => v + 1);
-        setOwnershipLoading(false);
-      })
-      .catch((err) => {
-        console.error('[RepositoryProfilePanel] ownership map failed:', err);
-        if (!cancelled) setOwnershipLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [repositoryData?.localClones?.[0]?.path]);
-
   // Empty state - no repository selected
   if (!repositoryData) {
     return (
@@ -1639,11 +1382,8 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   }
 
   const initials = getInitials(repositoryData.name);
-  const isNarrow = panelWidth > 0 && panelWidth < CONTRIBUTORS_COLUMN_MIN_WIDTH;
-
   return (
     <div
-      ref={containerRef}
       style={{
         height: '100%',
         display: 'flex',
@@ -1686,7 +1426,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             style={{
               flexShrink: 0,
               minWidth: 0,
-              maxWidth: !isNarrow && contributors.length > 0 ? 600 : undefined,
             }}
           >
             {/* Avatar Section - positioned to overlap banner */}
@@ -2741,11 +2480,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 : null;
               const hasChanges = gitStatus && gitStatus.isDirty;
 
-              if (showContributors) {
-                return <Users size={16} color={theme.colors.primary} />;
-              } else if (!hasLocalClone && (readmeContent || readmeLoading)) {
+              if (!hasLocalClone && (readmeContent || readmeLoading)) {
                 return <FolderGit2 size={16} color={theme.colors.primary} />;
-              } else if (!showContributors && hasChanges && !showStats) {
+              } else if (hasChanges && !showStats) {
                 return <Circle size={16} color={theme.colors.warning} />;
               } else {
                 return <GitCommit size={16} color={theme.colors.primary} />;
@@ -2770,19 +2507,16 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   : null;
                 const hasChanges = gitStatus && gitStatus.isDirty;
 
-                if (showContributors) {
-                  return 'Contributors';
-                } else if (!hasLocalClone && (readmeContent || readmeLoading)) {
+                if (!hasLocalClone && (readmeContent || readmeLoading)) {
                   return 'README';
-                } else if (!showContributors && hasChanges && !showStats) {
+                } else if (hasChanges && !showStats) {
                   return 'Changed Files';
                 } else {
                   return 'Repository Info';
                 }
               })()}
             </h4>
-            {!showContributors &&
-              repositoryPath &&
+            {repositoryPath &&
               gitStatusMap.get(repositoryPath)?.isDirty && (
                 <button
                   type="button"
@@ -2802,187 +2536,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   {showStats ? 'Changed Files' : 'Repository Info'}
                 </button>
               )}
-            {showContributors && (
-              <button
-                onClick={() => setShowContributors(false)}
-                style={{
-                  marginLeft: 'auto',
-                  padding: `${spacing.xs}px ${spacing.sm}px`,
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary,
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'color 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = theme.colors.text;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                }}
-              >
-                Back to Info
-              </button>
-            )}
           </div>
 
-          {showContributors && contributorsLoading ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: spacing.lg,
-                color: theme.colors.textSecondary,
-              }}
-            >
-              Loading contributors...
-            </div>
-          ) : showContributors ? (
-            contributors.length === 0 ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: spacing.lg,
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.fonts?.body,
-                  fontSize: theme.fontSizes[1],
-                }}
-              >
-                No contributors found
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: spacing.sm,
-                  alignContent: 'flex-start',
-                  overflow: 'auto',
-                }}
-              >
-                {(() => {
-                  console.info(
-                    '[RepositoryProfilePanel] rendering contributor cards',
-                    {
-                      count: contributors.length,
-                      nameMapSize: nameToEmail.size,
-                    },
-                  );
-                  return null;
-                })()}
-                {contributors.map((contributor) => {
-                  const email = resolveContributorEmail(contributor);
-                  const isHovered =
-                    !!email &&
-                    hoveredAuthorEmail?.toLowerCase() === email.toLowerCase();
-                  const authorColor = email ? colorForAuthor(email) : null;
-                  const cardBorder =
-                    isHovered && authorColor
-                      ? `1px solid ${authorColor}`
-                      : `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`;
-
-                  return (
-                    <div
-                      key={contributor.name}
-                      onMouseEnter={() => {
-                        console.info('[RepositoryProfilePanel] card hover', {
-                          name: contributor.name,
-                          resolvedEmail: email,
-                          nameMapSize: nameToEmail.size,
-                        });
-                        if (email) setHoveredAuthorEmail(email);
-                      }}
-                      onMouseLeave={() => {
-                        setHoveredAuthorEmail((prev) =>
-                          email && prev?.toLowerCase() === email.toLowerCase()
-                            ? null
-                            : prev,
-                        );
-                      }}
-                      style={{
-                        width: 'calc(50% - 4px)',
-                        minWidth: 120,
-                        padding: `${spacing.xs}px ${spacing.sm}px`,
-                        borderRadius: 6,
-                        border: cardBorder,
-                        backgroundColor:
-                          theme.colors.backgroundSecondary ??
-                          theme.colors.background,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: spacing.sm,
-                        boxSizing: 'border-box',
-                        cursor: email ? 'pointer' : 'default',
-                        transition: 'border-color 0.15s ease',
-                      }}
-                    >
-                      {contributor.avatarUrl ? (
-                        <img
-                          src={contributor.avatarUrl}
-                          alt={contributor.name}
-                          style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: '50%',
-                            flexShrink: 0,
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: '50%',
-                            backgroundColor: theme.colors.primary + '30',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: theme.fontSizes[0],
-                            fontFamily: theme.fonts?.body,
-                            color: theme.colors.primary,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {contributor.name.slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div
-                          style={{
-                            fontSize: theme.fontSizes[1],
-                            fontWeight: theme.fontWeights?.semibold ?? 600,
-                            fontFamily: theme.fonts?.body,
-                            color: theme.colors.primary,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {contributor.name}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: theme.fontSizes[0],
-                            fontFamily: theme.fonts?.body,
-                            color: theme.colors.textSecondary,
-                          }}
-                        >
-                          {formatNumber(contributor.commits)} commit
-                          {contributor.commits !== 1 ? 's' : ''}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )
-          ) : (
-            (() => {
+            {(() => {
               // Check if we should show README for remote-only repos
               const hasLocalClone =
                 repositoryData?.localClones &&
@@ -3378,8 +2934,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   )}
                 </div>
               );
-            })()
-          )}
+            })()}
         </section>
 
         {/* File City 3D - Right */}
