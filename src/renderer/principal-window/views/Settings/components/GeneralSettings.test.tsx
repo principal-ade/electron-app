@@ -199,3 +199,18 @@ test('choosing a builds directory persists it separately', async () => {
   );
   expect(await screen.findByText('/Users/dev/Builds')).toBeTruthy();
 });
+
+test('build terminal cleanup defaults to five minutes and is configurable', async () => {
+  render(<GeneralSettings />);
+  const cleanupDelay = (await screen.findByTestId(
+    'build-terminal-cleanup-delay',
+  )) as HTMLInputElement;
+  expect(cleanupDelay.value).toBe('5');
+
+  fireEvent.change(cleanupDelay, { target: { value: '10' } });
+  await waitFor(() =>
+    expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
+      buildTerminalCleanupDelayMs: 10 * 60_000,
+    }),
+  );
+});

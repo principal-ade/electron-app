@@ -25,3 +25,29 @@ test.each([
   await expect(connected).resolves.toEqual([]);
   bridge.disconnect();
 });
+
+test('forwards the request id with a daemon scrollback snapshot', async () => {
+  const socket = Object.assign(new EventEmitter(), {
+    connect: jest.fn(),
+    write: jest.fn(),
+    end: jest.fn(),
+  });
+  jest.mocked(Socket).mockImplementation(() => socket as unknown as Socket);
+  const bridge = new DaemonBridge();
+  const connected = bridge.connect();
+  socket.emit('connect');
+  socket.emit('data', Buffer.from('{"type":"sessions","sessions":[]}\n'));
+  await connected;
+
+  const onScrollback = jest.fn();
+  bridge.on('scrollback', onScrollback);
+  socket.emit(
+    'data',
+    Buffer.from(
+      '{"type":"scrollback","id":"session-1","data":"output","requestId":"request-1"}\n',
+    ),
+  );
+
+  expect(onScrollback).toHaveBeenCalledWith('session-1', 'output', 'request-1');
+  bridge.disconnect();
+});

@@ -14,6 +14,12 @@ import type {
   BuildRunRecord,
   BuildRunStatus,
 } from '../../shared/build-configurations/types';
+import { DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS } from '../../shared/types/userPreferences.types';
+import {
+  MAX_BUILD_OUTPUT_BYTES,
+  sanitizeBuildOutput,
+  tailBuildOutput,
+} from './buildRunOutput';
 
 /** Minimal session-manager surface the registry needs. */
 export interface RunSessionBackend {
@@ -28,6 +34,7 @@ export interface RunSessionBackend {
   onProgramStatus?(listener: (event: ProgramStatusEvent) => void): () => void;
   getProgramStatus(sessionId: string): ProgramStatusRecord[];
   hasSession(sessionId: string): boolean;
+  getScrollbackBuffer?(sessionId: string): Promise<string | null>;
   destroySession(sessionId: string): Promise<void>;
 }
 
@@ -36,7 +43,16 @@ export interface TrackRunInput {
   configId: string;
   terminalSessionId: string;
   timeoutMs: number;
+  cleanupDelayMs?: number;
+  /** Names only: values are resolved afresh when output is redacted. */
+  secretEnvNames?: string[];
 }
+
+export type BuildRunOutputSanitizer = (input: {
+  run: BuildRunRecord;
+  secretEnvNames: string[];
+  rawOutput: string;
+}) => Promise<string | null>;
 
 /** OSC 7501 app tag the run wrapper reports under. */
 export const BUILD_RUN_OSC_APP = 'principal-build';
@@ -70,15 +86,36 @@ function exitCodeFromTitle(title: string | undefined): number | undefined {
 export class BuildRunRegistry {
   private readonly runs = new Map<string, BuildRunRecord>();
   private readonly timers = new Map<string, NodeJS.Timeout>();
+  private readonly cleanupTimers = new Map<string, NodeJS.Timeout>();
   private readonly disposers = new Map<string, Array<() => void>>();
+  private readonly secretEnvNames = new Map<string, string[]>();
+  private readonly outputSnapshots = new Map<string, string | null>();
 
   constructor(
     private readonly backend: RunSessionBackend,
     private readonly maxRuns: number = MAX_RUNS,
+    private readonly sanitizeOutput?: BuildRunOutputSanitizer,
   ) {}
 
   getRun(runId: string): BuildRunRecord | null {
     return this.runs.get(runId) ?? null;
+  }
+
+  /** Read the terminal snapshot associated with a tracked run. */
+  async getOutputBuffer(runId: string): Promise<string | null> {
+    const run = this.getRun(runId);
+    if (!run || !this.backend.getScrollbackBuffer) return null;
+    return this.backend.getScrollbackBuffer(run.terminalSessionId);
+  }
+
+  /** `undefined` while running; null if the completed output was unsafe/unavailable. */
+  getOutputSnapshot(runId: string): string | null | undefined {
+    return this.outputSnapshots.get(runId);
+  }
+
+  getSecretEnvNames(runId: string): string[] | null {
+    if (!this.runs.has(runId)) return null;
+    return [...(this.secretEnvNames.get(runId) ?? [])];
   }
 
   /**
@@ -97,6 +134,7 @@ export class BuildRunRegistry {
       startedAt: new Date().toISOString(),
     };
     this.runs.set(record.runId, record);
+    this.secretEnvNames.set(record.runId, [...(input.secretEnvNames ?? [])]);
     this.evictFinished();
 
     const finish = (status: BuildRunStatus, exitCode?: number) => {
@@ -105,6 +143,12 @@ export class BuildRunRegistry {
       if (exitCode !== undefined) record.exitCode = exitCode;
       record.endedAt = new Date().toISOString();
       this.stopWatching(record.runId);
+      const snapshot = this.captureOutput(record);
+      this.scheduleCleanup(
+        record,
+        input.cleanupDelayMs ?? DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS,
+        snapshot,
+      );
     };
 
     const applyRecords = (records: ProgramStatusRecord[]) => {
@@ -147,16 +191,20 @@ export class BuildRunRegistry {
       }),
     );
 
-    const timer = setTimeout(() => {
-      if (record.status !== 'running') return;
-      record.status = 'timed-out';
-      record.endedAt = new Date().toISOString();
-      this.stopWatching(record.runId);
-      this.backend.destroySession(record.terminalSessionId).catch(() => {});
-    }, input.timeoutMs);
-    // A stuck build must not hold the app open on quit.
-    if (typeof timer.unref === 'function') timer.unref();
-    this.timers.set(record.runId, timer);
+    if (record.status === 'running') {
+      const timer = setTimeout(() => {
+        if (record.status !== 'running') return;
+        record.status = 'timed-out';
+        record.endedAt = new Date().toISOString();
+        this.stopWatching(record.runId);
+        void this.captureOutput(record).finally(() =>
+          this.destroySession(record.terminalSessionId),
+        );
+      }, input.timeoutMs);
+      // A stuck build must not hold the app open on quit.
+      if (typeof timer.unref === 'function') timer.unref();
+      this.timers.set(record.runId, timer);
+    }
 
     return record;
   }
@@ -194,12 +242,82 @@ export class BuildRunRegistry {
     this.disposers.delete(runId);
   }
 
+  private async captureOutput(record: BuildRunRecord): Promise<void> {
+    if (!this.backend.getScrollbackBuffer) {
+      this.outputSnapshots.set(record.runId, null);
+      return;
+    }
+    try {
+      const rawOutput = await this.backend.getScrollbackBuffer(
+        record.terminalSessionId,
+      );
+      if (rawOutput === null) {
+        this.outputSnapshots.set(record.runId, null);
+        return;
+      }
+      const secretEnvNames = this.secretEnvNames.get(record.runId) ?? [];
+      const safeOutput = this.sanitizeOutput
+        ? await this.sanitizeOutput({
+            run: record,
+            secretEnvNames: [...secretEnvNames],
+            rawOutput,
+          })
+        : secretEnvNames.length === 0
+          ? sanitizeBuildOutput(rawOutput)
+          : null;
+      this.outputSnapshots.set(
+        record.runId,
+        safeOutput === null
+          ? null
+          : tailBuildOutput(safeOutput, MAX_BUILD_OUTPUT_BYTES).output,
+      );
+    } catch (error) {
+      console.warn(
+        '[BuildRunRegistry] Failed to snapshot build output:',
+        error,
+      );
+      this.outputSnapshots.set(record.runId, null);
+    }
+  }
+
+  private scheduleCleanup(
+    record: BuildRunRecord,
+    requestedDelayMs: number,
+    snapshot: Promise<void>,
+  ): void {
+    const delayMs =
+      Number.isFinite(requestedDelayMs) && requestedDelayMs >= 0
+        ? Math.min(requestedDelayMs, 24 * 60 * 60 * 1000)
+        : DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS;
+    const timer = setTimeout(() => {
+      this.cleanupTimers.delete(record.runId);
+      void snapshot.finally(() =>
+        this.destroySession(record.terminalSessionId),
+      );
+    }, delayMs);
+    if (typeof timer.unref === 'function') timer.unref();
+    this.cleanupTimers.set(record.runId, timer);
+  }
+
+  private async destroySession(sessionId: string): Promise<void> {
+    try {
+      await this.backend.destroySession(sessionId);
+    } catch (error) {
+      console.warn(
+        '[BuildRunRegistry] Failed to clean up build terminal:',
+        error,
+      );
+    }
+  }
+
   private evictFinished(): void {
     while (this.runs.size > this.maxRuns) {
       const oldest = this.runs.keys().next().value as string | undefined;
       if (oldest === undefined) return;
       if (this.runs.get(oldest)?.status === 'running') return;
       this.runs.delete(oldest);
+      this.secretEnvNames.delete(oldest);
+      this.outputSnapshots.delete(oldest);
     }
   }
 }

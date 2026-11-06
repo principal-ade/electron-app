@@ -895,6 +895,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         notes: [
           'Secrets resolve into the PTY spawn environment, never the typed command line. The tab shows the bare command plus a wrapper reporting completion via OSC 7501.',
           'The run tracks the session to succeeded/failed/timed-out; poll GET /api/build-runs/:id. A run outliving the config timeout is marked timed-out and its session destroyed.',
+          'After completion, the terminal stays open for the app-wide Build Terminal Cleanup delay (Settings → General; defaults to five minutes), then its idle PTY is destroyed.',
         ],
         example: {},
       },
@@ -909,6 +910,30 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         },
         notes: [
           'Run records are in-memory; an app restart drops run history while the terminal tab itself may survive.',
+        ],
+      },
+      {
+        method: 'GET',
+        path: '/api/build-runs/:id/output',
+        summary: 'Read a sanitized, bounded output tail for a build run.',
+        query: {
+          tailBytes:
+            'Optional integer from 1 to 65536; defaults to 20480 bytes.',
+        },
+        response:
+          '{ success: true, runId, terminalSessionId, output, bytesReturned, truncated }',
+        errors: {
+          '400': 'tailBytes is not an integer in the supported range.',
+          '404': 'Unknown build run id.',
+          '409':
+            'Output is unavailable or the current secret grants cannot safely redact it.',
+          '501': 'Build output snapshots are not wired in this app build.',
+        },
+        notes: [
+          'Only tracked build-run terminals are readable; arbitrary terminal scrollback is not exposed.',
+          'ANSI/control sequences are removed and the run secret values are re-resolved and redacted before output crosses the bridge.',
+          'Resolving values for redaction writes the existing names-only secret audit record; secret values never cross the bridge.',
+          'A sanitized output snapshot remains readable after the terminal closes, until the in-memory run record is evicted or the app restarts. The PTY buffer may already have been trimmed by the terminal scrollback limit.',
         ],
       },
     ],

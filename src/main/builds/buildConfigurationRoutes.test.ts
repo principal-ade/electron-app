@@ -49,6 +49,7 @@ function handlers(store: BuildConfigurationStore, overrides = {}) {
     ),
     run: byPath(post, '/api/build-configurations/:id/run'),
     getRun: byPath(get, '/api/build-runs/:id'),
+    getRunOutput: byPath(get, '/api/build-runs/:id/output'),
   };
 }
 
@@ -264,6 +265,13 @@ describe('buildConfigurationRoutes', () => {
     const getRun = response();
     await h.getRun({ params: { id: 'run-1' } } as unknown as Request, getRun);
     expect(status(getRun)).toBe(404);
+
+    const output = response();
+    await h.getRunOutput(
+      { params: { id: 'run-1' }, query: {} } as unknown as Request,
+      output,
+    );
+    expect(status(output)).toBe(404);
   });
 
   describe('runs (wired)', () => {
@@ -272,6 +280,9 @@ describe('buildConfigurationRoutes', () => {
       resolveSecrets: jest.Mock;
       trackRun: jest.Mock;
       getRun: jest.Mock;
+      getOutputBuffer: jest.Mock;
+      getOutputSnapshot: jest.Mock;
+      getSecretEnvNames: jest.Mock;
       createBuildSession: jest.Mock;
       getBuildRoots: jest.Mock;
       records: Map<string, Record<string, unknown>>;
@@ -317,6 +328,9 @@ describe('buildConfigurationRoutes', () => {
           return record;
         }),
         getRun: jest.fn((runId: string) => records.get(runId) ?? null),
+        getOutputBuffer: jest.fn(async () => ''),
+        getOutputSnapshot: jest.fn(() => undefined),
+        getSecretEnvNames: jest.fn(() => []),
         createBuildSession: jest.fn(async () => ({ sessionId: 'session-1' })),
         getBuildRoots: jest.fn(async () => ({})),
       };
@@ -332,6 +346,9 @@ describe('buildConfigurationRoutes', () => {
           resolveSecrets: runs.resolveSecrets,
           trackRun: runs.trackRun,
           getRun: runs.getRun,
+          getOutputBuffer: runs.getOutputBuffer,
+          getOutputSnapshot: runs.getOutputSnapshot,
+          getSecretEnvNames: runs.getSecretEnvNames,
           createBuildSession: runs.createBuildSession,
           getBuildRoots: runs.getBuildRoots,
         },
@@ -369,6 +386,67 @@ describe('buildConfigurationRoutes', () => {
         fetched,
       );
       expect(body(fetched).run).toMatchObject({ runId: started.runId });
+
+      runs.getOutputBuffer.mockResolvedValue(
+        '\u001b[31mcompile failed: granted-value\u001b[0m\r\n',
+      );
+      runs.getSecretEnvNames.mockReturnValue(['NODE_AUTH_TOKEN']);
+      const output = response();
+      await h.getRunOutput(
+        {
+          params: { id: started.runId },
+          query: { tailBytes: '1000' },
+        } as unknown as Request,
+        output,
+      );
+      expect(body(output)).toMatchObject({
+        success: true,
+        runId: started.runId,
+        terminalSessionId: 'session-1',
+        output: 'compile failed: [REDACTED]\n',
+        truncated: false,
+      });
+      expect(runs.resolveSecrets).toHaveBeenLastCalledWith(
+        `build:${created.id}`,
+        [{ env: 'NODE_AUTH_TOKEN', label: 'NODE_AUTH_TOKEN', required: true }],
+        { configId: created.id, runId: started.runId },
+      );
+
+      runs.resolveSecrets.mockResolvedValue({
+        env: {},
+        missing: ['NODE_AUTH_TOKEN'],
+      });
+      const unsafeOutput = response();
+      await h.getRunOutput(
+        {
+          params: { id: started.runId },
+          query: {},
+        } as unknown as Request,
+        unsafeOutput,
+      );
+      expect(status(unsafeOutput)).toBe(409);
+      expect(body(unsafeOutput).error).toMatch(/redaction/);
+
+      runs.getOutputSnapshot.mockReturnValue('saved output: [REDACTED]\n');
+      const savedOutput = response();
+      await h.getRunOutput(
+        {
+          params: { id: started.runId },
+          query: {},
+        } as unknown as Request,
+        savedOutput,
+      );
+      expect(body(savedOutput).output).toBe('saved output: [REDACTED]\n');
+
+      const invalidLimit = response();
+      await h.getRunOutput(
+        {
+          params: { id: started.runId },
+          query: { tailBytes: '999999' },
+        } as unknown as Request,
+        invalidLimit,
+      );
+      expect(status(invalidLimit)).toBe(400);
 
       const missing = response();
       await h.getRun(
@@ -442,6 +520,9 @@ describe('buildConfigurationRoutes', () => {
           resolveSecrets: runs.resolveSecrets,
           trackRun: runs.trackRun,
           getRun: runs.getRun,
+          getOutputBuffer: runs.getOutputBuffer,
+          getOutputSnapshot: runs.getOutputSnapshot,
+          getSecretEnvNames: runs.getSecretEnvNames,
           createBuildSession: jest.fn(async () => {
             throw new Error('no live application window to own the terminal');
           }),

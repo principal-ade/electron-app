@@ -66,6 +66,9 @@ export interface RepositoryUIState {
 
 export const USER_PREFERENCES_KEY = 'preferences';
 
+/** Build terminal cleanup grace period: five minutes by default. */
+export const DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS = 5 * 60 * 1000;
+
 export interface UserPreferences {
   // AI/LLM settings
   ollamaModel?: string; // Selected Ollama model for summarizing agent work
@@ -114,6 +117,8 @@ export interface UserPreferences {
    * Falls back to baseDefaultDirectory when unset.
    */
   buildsDirectory?: string;
+  /** Minutes to keep a completed build terminal open before cleanup (default: 5). */
+  buildTerminalCleanupDelayMs?: number;
   /**
    * Filesystem watcher implementation used by the repository monitoring
    * worker. 'parcel' (default) uses native fsevents via @parcel/watcher;

@@ -57,6 +57,8 @@ export interface ListMessage {
 export interface AttachMessage {
   type: 'attach';
   id: string;
+  /** Correlates an explicit scrollback snapshot request. */
+  requestId?: string;
 }
 
 export interface PingMessage {
@@ -115,6 +117,8 @@ export interface ScrollbackMessage {
   type: 'scrollback';
   id: string;
   data: string;
+  /** Present for an explicit snapshot request; absent for legacy attaches. */
+  requestId?: string;
 }
 
 export interface PongMessage {

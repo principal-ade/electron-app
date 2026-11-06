@@ -27,7 +27,7 @@ export interface DaemonBridgeEvents {
   created: (sessionId: string, pid: number) => void;
   exit: (sessionId: string, exitCode: number, signal?: string) => void;
   'session-error': (sessionId: string, error: string) => void;
-  scrollback: (sessionId: string, data: string) => void;
+  scrollback: (sessionId: string, data: string, requestId?: string) => void;
   sessions: (sessions: SessionInfo[]) => void;
 }
 
@@ -189,7 +189,7 @@ export class DaemonBridge extends EventEmitter {
         break;
 
       case 'scrollback':
-        this.emit('scrollback', msg.id, msg.data);
+        this.emit('scrollback', msg.id, msg.data, msg.requestId);
         break;
 
       case 'pong':

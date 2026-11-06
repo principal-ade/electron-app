@@ -28,6 +28,7 @@ import { registerTerminalRoutes } from '../terminal/terminalRoutes';
 import { registerBuildConfigurationRoutes } from '../builds/buildConfigurationRoutes';
 import {
   getBuildConfigurationStore,
+  getBuildTerminalCleanupDelayMs,
   getBuildRoots,
   getBuildRunRegistry,
   getBuildSecretResolver,
@@ -1094,6 +1095,10 @@ export class PrincipalMCPBridge extends EventEmitter {
           getBuildSecretResolver().resolve(secretRepoId, decls, options),
         trackRun: (input) => buildRunRegistry.trackRun(input),
         getRun: (runId) => buildRunRegistry.getRun(runId),
+        getOutputBuffer: (runId) => buildRunRegistry.getOutputBuffer(runId),
+        getOutputSnapshot: (runId) => buildRunRegistry.getOutputSnapshot(runId),
+        getSecretEnvNames: (runId) => buildRunRegistry.getSecretEnvNames(runId),
+        getCleanupDelayMs: getBuildTerminalCleanupDelayMs,
         createBuildSession: async ({ cwd, command, context, env }) => {
           const window = resolveTargetWindow();
           if (!window) {

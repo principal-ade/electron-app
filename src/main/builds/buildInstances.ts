@@ -14,7 +14,12 @@ import { getSessionManagerInstance } from '../terminal/sessionManagerSingleton';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
-import type { BuildCheckoutRoots } from '../../shared/build-configurations/types';
+import {
+  secretStoreRepoId,
+  type BuildCheckoutRoots,
+} from '../../shared/build-configurations/types';
+import { DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS } from '../../shared/types/userPreferences.types';
+import { sanitizeBuildOutput } from './buildRunOutput';
 import {
   prepareBuildCheckout,
   type PrepareBuildCheckoutInput,
@@ -36,8 +41,47 @@ export function getBuildSecretResolver(): BuildSecretResolver {
 }
 
 export function getBuildRunRegistry(): BuildRunRegistry {
-  registry ??= new BuildRunRegistry(getSessionManagerInstance());
+  registry ??= new BuildRunRegistry(
+    getSessionManagerInstance(),
+    undefined,
+    async ({ run, secretEnvNames, rawOutput }) => {
+      let secretValues: string[] = [];
+      if (secretEnvNames.length > 0) {
+        const resolved = await getBuildSecretResolver().resolve(
+          secretStoreRepoId(run.configId),
+          secretEnvNames.map((env) => ({ env, label: env, required: true })),
+          { configId: run.configId, runId: run.runId },
+        );
+        if (resolved.missing.length > 0) return null;
+        secretValues = Object.values(resolved.env);
+      }
+      return sanitizeBuildOutput(rawOutput, secretValues);
+    },
+  );
   return registry;
+}
+
+/** Cleanup delay is a global preference, clamped to a day, with a 5m default. */
+export async function getBuildTerminalCleanupDelayMs(): Promise<number> {
+  try {
+    const prefs =
+      await UserPreferencesHandler.getInstance().getUserPreferences();
+    const delay = prefs.buildTerminalCleanupDelayMs;
+    if (
+      typeof delay === 'number' &&
+      Number.isInteger(delay) &&
+      delay >= 0 &&
+      delay <= 24 * 60 * 60 * 1000
+    ) {
+      return delay;
+    }
+  } catch (error) {
+    console.warn(
+      '[BuildRun] Failed to read terminal cleanup preference:',
+      error,
+    );
+  }
+  return DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS;
 }
 
 /** PURLs of registered local repositories. */

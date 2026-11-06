@@ -22,6 +22,12 @@ import {
   type BuildRunDependencies,
   type StartBuildRunCode,
 } from './startBuildRun';
+import {
+  DEFAULT_BUILD_OUTPUT_BYTES,
+  MAX_BUILD_OUTPUT_BYTES,
+  sanitizeBuildOutput,
+  tailBuildOutput,
+} from './buildRunOutput';
 
 export interface SecretRequestEvent {
   configId: string;
@@ -328,6 +334,121 @@ export function registerBuildConfigurationRoutes(
       fail(res, error);
     }
   });
+
+  // Return a bounded, sanitized output tail for one tracked build run. This
+  // intentionally does not expose arbitrary terminal scrollback over HTTP.
+  app.get('/api/build-runs/:id/output', async (req: Request, res: Response) => {
+    try {
+      const runId = String(req.params.id);
+      const run = deps.runs?.getRun(runId) ?? null;
+      if (!run) {
+        res.status(404).json({ success: false, error: 'unknown build run id' });
+        return;
+      }
+      if (
+        !deps.runs?.getOutputBuffer ||
+        !deps.runs.getOutputSnapshot ||
+        !deps.runs.getSecretEnvNames
+      ) {
+        res.status(501).json({
+          success: false,
+          error: 'build output is not available in this app build',
+        });
+        return;
+      }
+
+      const requestedBytes = parseTailBytes(req.query.tailBytes);
+      if (requestedBytes === null) {
+        res.status(400).json({
+          success: false,
+          error: `tailBytes must be an integer between 1 and ${MAX_BUILD_OUTPUT_BYTES}`,
+        });
+        return;
+      }
+
+      const secretEnvNames = deps.runs.getSecretEnvNames(runId);
+      if (secretEnvNames === null) {
+        res.status(409).json({
+          success: false,
+          error:
+            'build secret metadata is unavailable for safe output redaction',
+        });
+        return;
+      }
+
+      const snapshot = deps.runs.getOutputSnapshot(runId);
+      if (snapshot === null) {
+        res.status(409).json({
+          success: false,
+          error: 'build terminal output could not be safely snapshotted',
+        });
+        return;
+      }
+
+      let safeOutput: string;
+      if (snapshot !== undefined) {
+        safeOutput = snapshot;
+      } else {
+        let secretValues: string[] = [];
+        if (secretEnvNames.length > 0) {
+          if (!deps.runs.resolveSecrets) {
+            res.status(409).json({
+              success: false,
+              error: 'secret redaction is unavailable; output was not returned',
+            });
+            return;
+          }
+          const resolved = await deps.runs.resolveSecrets(
+            secretStoreRepoId(run.configId),
+            secretEnvNames.map((env) => ({ env, label: env, required: true })),
+            { configId: run.configId, runId },
+          );
+          if (resolved.missing.length > 0) {
+            res.status(409).json({
+              success: false,
+              error:
+                'some build secrets are unavailable for safe output redaction',
+            });
+            return;
+          }
+          secretValues = Object.values(resolved.env);
+        }
+
+        const rawOutput = await deps.runs.getOutputBuffer(runId);
+        if (rawOutput === null) {
+          res.status(409).json({
+            success: false,
+            error: 'build terminal output is no longer available',
+          });
+          return;
+        }
+        safeOutput = sanitizeBuildOutput(rawOutput, secretValues);
+      }
+
+      const tail = tailBuildOutput(safeOutput, requestedBytes);
+      res.json({
+        success: true,
+        runId,
+        terminalSessionId: run.terminalSessionId,
+        output: tail.output,
+        bytesReturned: tail.bytesReturned,
+        truncated: tail.truncated,
+      });
+    } catch (error) {
+      fail(res, error);
+    }
+  });
+}
+
+function parseTailBytes(value: unknown): number | null {
+  if (value === undefined) return DEFAULT_BUILD_OUTPUT_BYTES;
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) return null;
+  const bytes = Number(value);
+  return Number.isSafeInteger(bytes) &&
+    bytes >= 1 &&
+    bytes <= MAX_BUILD_OUTPUT_BYTES
+    ? bytes
+    : null;
 }
 
 function httpStatusForRunCode(code: StartBuildRunCode): number {

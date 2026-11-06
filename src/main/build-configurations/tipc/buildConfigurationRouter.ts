@@ -9,6 +9,7 @@ import type {
 } from '../../../shared/tipc/buildConfigurationRouterTypes';
 import {
   getBuildConfigurationStore,
+  getBuildTerminalCleanupDelayMs,
   getBuildRoots,
   getBuildRunRegistry,
   getBuildSecretResolver,
@@ -78,6 +79,7 @@ export const buildConfigurationRouter = {
               getBuildSecretResolver().resolve(secretRepoId, decls, options),
             trackRun: (runInput) => getBuildRunRegistry().trackRun(runInput),
             getRun: (runId) => getBuildRunRegistry().getRun(runId),
+            getCleanupDelayMs: getBuildTerminalCleanupDelayMs,
             createBuildSession: async (sessionInput) => {
               if (!window || window.isDestroyed()) {
                 throw new Error(

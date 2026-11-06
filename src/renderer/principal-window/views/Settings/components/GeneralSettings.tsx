@@ -6,7 +6,10 @@ import { UserPreferencesService } from '../../../../main-process-api/UserPrefere
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
-import type { UserPreferences } from '../../../../../shared/types/userPreferences.types';
+import {
+  DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS,
+  type UserPreferences,
+} from '../../../../../shared/types/userPreferences.types';
 
 export const GeneralSettings: React.FC = () => {
   const { theme } = useTheme();
@@ -16,6 +19,10 @@ export const GeneralSettings: React.FC = () => {
     string | null
   >(null);
   const [buildsDirectory, setBuildsDirectory] = useState<string | null>(null);
+  const [
+    buildTerminalCleanupDelayMinutes,
+    setBuildTerminalCleanupDelayMinutes,
+  ] = useState(DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS / 60_000);
   const [isSelectingBaseDirectory, setIsSelectingBaseDirectory] =
     useState(false);
   const [isSelectingBuildsDirectory, setIsSelectingBuildsDirectory] =
@@ -44,6 +51,16 @@ export const GeneralSettings: React.FC = () => {
 
       setBaseDefaultDirectory(prefs.baseDefaultDirectory || null);
       setBuildsDirectory(prefs.buildsDirectory || null);
+      const savedCleanupDelayMs = prefs.buildTerminalCleanupDelayMs;
+      const cleanupDelayMs =
+        typeof savedCleanupDelayMs === 'number' &&
+        Number.isFinite(savedCleanupDelayMs) &&
+        savedCleanupDelayMs >= 0
+          ? savedCleanupDelayMs
+          : DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS;
+      setBuildTerminalCleanupDelayMinutes(
+        Math.max(0, Math.min(1440, Math.floor(cleanupDelayMs / 60_000))),
+      );
       setEnableVimMode(prefs.enableVimMode ?? false);
       setSubsystemModelLayoutDirection(
         prefs.subsystemModelLayoutDirection === 'horizontal'
@@ -154,6 +171,16 @@ export const GeneralSettings: React.FC = () => {
     setBuildsDirectory(null);
     await UserPreferencesService.updatePreferences({
       buildsDirectory: undefined,
+    });
+  };
+
+  const handleBuildTerminalCleanupDelayChange = async (value: string) => {
+    if (value.trim() === '') return;
+    const minutes = Number(value);
+    if (!Number.isInteger(minutes) || minutes < 0 || minutes > 1440) return;
+    setBuildTerminalCleanupDelayMinutes(minutes);
+    await UserPreferencesService.updatePreferences({
+      buildTerminalCleanupDelayMs: minutes * 60_000,
     });
   };
 
@@ -484,6 +511,73 @@ export const GeneralSettings: React.FC = () => {
               /octocat/hello-world
             </p>
           )}
+        </div>
+      </div>
+
+      {/* Build Terminal Cleanup */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Build Terminal Cleanup
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <p
+            style={{
+              fontSize: '14px',
+              color: theme.colors.textSecondary,
+              marginBottom: '12px',
+            }}
+          >
+            Keep completed build terminals available for inspection, then close
+            their idle shells. Set to 0 to close immediately.
+          </p>
+          <label
+            htmlFor="build-terminal-cleanup-delay"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '14px',
+              color: theme.colors.text,
+            }}
+          >
+            Close after
+            <input
+              id="build-terminal-cleanup-delay"
+              data-testid="build-terminal-cleanup-delay"
+              type="number"
+              min={0}
+              max={1440}
+              step={1}
+              value={buildTerminalCleanupDelayMinutes}
+              onChange={(event) =>
+                void handleBuildTerminalCleanupDelayChange(event.target.value)
+              }
+              style={{
+                width: '88px',
+                padding: '8px 10px',
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                fontSize: '14px',
+              }}
+            />
+            minutes
+          </label>
         </div>
       </div>
 

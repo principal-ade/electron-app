@@ -75,6 +75,9 @@ test('clones a missing checkout before spawning the build session', async () => 
   const result = await startBuildRun(d, 'bc-test');
 
   expect(result).toMatchObject({ ok: true, terminalSessionId: 'session-1' });
+  expect(runs.trackRun).toHaveBeenCalledWith(
+    expect.objectContaining({ cleanupDelayMs: 5 * 60 * 1000 }),
+  );
   expect(runs.prepareCheckout).toHaveBeenCalledWith({
     config: expect.objectContaining({ id: 'bc-test' }),
     directory: checkoutDir(),

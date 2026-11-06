@@ -48,6 +48,9 @@ function backend() {
       (sessionId: string) => (backendRecords.get(sessionId) ?? []) as never,
     ),
     hasSession: jest.fn(() => true),
+    getScrollbackBuffer: jest.fn(
+      async (sessionId: string) => `output:${sessionId}`,
+    ),
     destroySession: jest.fn(async (sessionId: string) => {
       destroyedSessions.push(sessionId);
     }),
@@ -90,6 +93,35 @@ describe('BuildRunRegistry', () => {
       status: 'running',
     });
     expect(record.startedAt).toBeTruthy();
+  });
+
+  test('reads output and secret-name metadata by tracked run id', async () => {
+    const { fake, registry } = track({ secretEnvNames: ['NPM_TOKEN'] });
+    await expect(registry.getOutputBuffer('run-1')).resolves.toBe(
+      'output:session-1',
+    );
+    expect(fake.getScrollbackBuffer).toHaveBeenCalledWith('session-1');
+    expect(registry.getSecretEnvNames('run-1')).toEqual(['NPM_TOKEN']);
+    expect(registry.getSecretEnvNames('missing')).toBeNull();
+  });
+
+  test('snapshots completed output and destroys the terminal after its grace period', async () => {
+    const { fake, registry } = track({ cleanupDelayMs: 1_000 });
+    fake.emitStatus('session-1', [
+      { state: 'done', app: BUILD_RUN_OSC_APP, id: 'run-1', title: 'exit=0' },
+    ]);
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(registry.getOutputSnapshot('run-1')).toBe('output:session-1');
+    expect(fake.destroySession).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(999);
+    expect(fake.destroySession).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(1);
+    await Promise.resolve();
+    expect(fake.destroySession).toHaveBeenCalledWith('session-1');
+    expect(registry.getOutputSnapshot('run-1')).toBe('output:session-1');
   });
 
   test('a tagged done report finalizes without a session exit', () => {
@@ -231,6 +263,8 @@ describe('BuildRunRegistry', () => {
   test('timeout marks timed-out and destroys the session', async () => {
     const { fake, registry } = track({ timeoutMs: 1_000 });
     jest.advanceTimersByTime(1_000);
+    await Promise.resolve();
+    await Promise.resolve();
     expect(registry.getRun('run-1')).toMatchObject({ status: 'timed-out' });
     expect(fake.destroySession).toHaveBeenCalledWith('session-1');
     // Late signals must not overwrite the terminal state.

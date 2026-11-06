@@ -315,6 +315,7 @@ export class SocketServer extends EventEmitter {
             type: 'scrollback',
             id: msg.id,
             data: scrollback,
+            requestId: msg.requestId,
           });
         }
         break;

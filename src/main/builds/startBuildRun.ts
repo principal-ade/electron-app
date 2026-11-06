@@ -21,6 +21,7 @@ import {
   type BuildConfiguration,
   type BuildSecretDecl,
 } from '../../shared/build-configurations/types';
+import { DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS } from '../../shared/types/userPreferences.types';
 
 export interface ResolvedBuildSecrets {
   env: Record<string, string>;
@@ -46,8 +47,18 @@ export interface BuildRunDependencies {
     configId: string;
     terminalSessionId: string;
     timeoutMs: number;
+    cleanupDelayMs?: number;
+    secretEnvNames?: string[];
   }) => BuildRunRecord;
   getRun: (runId: string) => BuildRunRecord | null;
+  /** Optional read-only PTY snapshot, used by the build output route. */
+  getOutputBuffer?: (runId: string) => Promise<string | null>;
+  /** Already-sanitized output captured when a run completed. */
+  getOutputSnapshot?: (runId: string) => string | null | undefined;
+  /** Secret names from the environment snapshot for this particular run. */
+  getSecretEnvNames?: (runId: string) => string[] | null;
+  /** App-wide delay before an idle build terminal is destroyed. */
+  getCleanupDelayMs?: () => Promise<number>;
   createBuildSession: (
     input: BuildSessionInput,
   ) => Promise<{ sessionId: string }>;
@@ -189,6 +200,9 @@ export async function startBuildRun(
     );
   }
   const env = resolved.env;
+  const cleanupDelayMs =
+    (await deps.runs.getCleanupDelayMs?.()) ??
+    DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS;
 
   // Checkouts live outside the secrets path: clone/update only after the
   // cheap gates pass, so a misconfigured run fails fast.
@@ -233,6 +247,8 @@ export async function startBuildRun(
     configId,
     terminalSessionId: sessionId,
     timeoutMs: config.command.timeoutMs,
+    secretEnvNames: Object.keys(env),
+    cleanupDelayMs,
   });
   return {
     ok: true,

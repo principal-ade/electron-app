@@ -204,6 +204,10 @@ const pendingCreations: Map<
   string,
   { resolve: () => void; reject: (err: Error) => void }
 > = new Map();
+const pendingDaemonScrollback = new Map<
+  string,
+  { sessionId: string; timer: NodeJS.Timeout }
+>();
 
 // =============================================================================
 // PTY Loading (Legacy Mode)
@@ -370,6 +374,28 @@ async function connectToDaemon(socketPath: string): Promise<void> {
     sendToRenderer(sessionId, data);
   });
 
+  daemonBridge.on(
+    'scrollback',
+    (sessionId: string, data: string, requestId?: string) => {
+      // Older daemon processes omit requestId. Accept an unambiguous response
+      // for this session so an app update can still read their scrollback.
+      const requestsForSession = Array.from(
+        pendingDaemonScrollback.entries(),
+      ).filter(([, pending]) => pending.sessionId === sessionId);
+      const matchingRequestId =
+        requestId ??
+        (requestsForSession.length === 1
+          ? requestsForSession[0][0]
+          : undefined);
+      if (!matchingRequestId) return;
+      const pending = pendingDaemonScrollback.get(matchingRequestId);
+      if (!pending || pending.sessionId !== sessionId) return;
+      clearTimeout(pending.timer);
+      pendingDaemonScrollback.delete(matchingRequestId);
+      sendScrollbackResponse(sessionId, matchingRequestId, data);
+    },
+  );
+
   daemonBridge.on('created', (sessionId: string, _pid: number) => {
     const pending = pendingCreations.get(sessionId);
     if (pending) {
@@ -403,6 +429,13 @@ async function connectToDaemon(socketPath: string): Promise<void> {
       pending.reject(new Error(error));
       pendingCreations.delete(sessionId);
       return;
+    }
+
+    for (const [requestId, pending] of pendingDaemonScrollback) {
+      if (pending.sessionId !== sessionId) continue;
+      clearTimeout(pending.timer);
+      pendingDaemonScrollback.delete(requestId);
+      sendScrollbackResponse(sessionId, requestId, null);
     }
 
     sendToMain({
@@ -496,6 +529,11 @@ function disconnectFromDaemon(): void {
  * unreachable, and a reconnect repopulates the map from the daemon's list.
  */
 function forgetDaemonSessions(): void {
+  for (const [requestId, pending] of pendingDaemonScrollback) {
+    clearTimeout(pending.timer);
+    pendingDaemonScrollback.delete(requestId);
+    sendScrollbackResponse(pending.sessionId, requestId, null);
+  }
   for (const sessionId of Array.from(sessions.keys())) {
     cleanupSession(sessionId);
   }
@@ -983,32 +1021,11 @@ function setOwner(sessionId: string, windowId: number): void {
  * Handle GET_SCROLLBACK request from main process.
  * Returns the scrollback buffer for a session.
  */
-function handleGetScrollback(sessionId: string, requestId: string): void {
-  const session = sessions.get(sessionId);
-  let buffer: string | null = null;
-
-  if (session) {
-    if (USE_DAEMON_MODE && daemonBridge?.connected) {
-      // Daemon mode: request scrollback from daemon
-      // For now, daemon mode scrollback is handled via attach message
-      // Return null here - the attach flow handles scrollback replay
-      console.info(
-        `[TerminalWorker] GET_SCROLLBACK for ${sessionId}: daemon mode, returning null (use attach)`,
-      );
-      buffer = null;
-    } else {
-      // Legacy mode: join the scrollback array
-      buffer = session.scrollback.join('');
-      console.info(
-        `[TerminalWorker] GET_SCROLLBACK for ${sessionId}: returning ${buffer.length} bytes from ${session.scrollback.length} chunks`,
-      );
-    }
-  } else {
-    console.warn(
-      `[TerminalWorker] GET_SCROLLBACK for ${sessionId}: session not found`,
-    );
-  }
-
+function sendScrollbackResponse(
+  sessionId: string,
+  requestId: string,
+  buffer: string | null,
+): void {
   const response: ScrollbackResponseMessage = {
     type: 'SCROLLBACK_RESPONSE',
     id: `scrollback-response-${requestId}`,
@@ -1018,6 +1035,38 @@ function handleGetScrollback(sessionId: string, requestId: string): void {
     buffer,
   };
   sendToMain(response);
+}
+
+function handleGetScrollback(sessionId: string, requestId: string): void {
+  const session = sessions.get(sessionId);
+  if (!session) {
+    console.warn(
+      `[TerminalWorker] GET_SCROLLBACK for ${sessionId}: session not found`,
+    );
+    sendScrollbackResponse(sessionId, requestId, null);
+    return;
+  }
+
+  if (USE_DAEMON_MODE) {
+    if (!daemonBridge?.connected) {
+      sendScrollbackResponse(sessionId, requestId, null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      pendingDaemonScrollback.delete(requestId);
+      sendScrollbackResponse(sessionId, requestId, null);
+    }, 5000);
+    pendingDaemonScrollback.set(requestId, { sessionId, timer });
+    daemonBridge.send({ type: 'attach', id: sessionId, requestId });
+    return;
+  }
+
+  // Legacy mode stores the PTY stream in the worker itself.
+  const buffer = session.scrollback.join('');
+  console.info(
+    `[TerminalWorker] GET_SCROLLBACK for ${sessionId}: returning ${buffer.length} bytes from ${session.scrollback.length} chunks`,
+  );
+  sendScrollbackResponse(sessionId, requestId, buffer);
 }
 
 function handleRendererMessage(
