@@ -11,6 +11,7 @@ import type {
   GetBuildRunInput,
   RunBuildConfigurationInput,
   RunBuildConfigurationResult,
+  StopBuildRunInput,
   UpdateBuildConfigurationInput,
 } from '../../shared/tipc/buildConfigurationRouterTypes';
 
@@ -24,6 +25,9 @@ interface TipcBuildConfigurationClient {
   ) => Promise<RunBuildConfigurationResult>;
   buildConfiguration_getRun: (
     input: GetBuildRunInput,
+  ) => Promise<BuildRunRecord | null>;
+  buildConfiguration_stopRun: (
+    input: StopBuildRunInput,
   ) => Promise<BuildRunRecord | null>;
   buildConfiguration_confirmSecrets: (
     input: ConfirmBuildSecretsInput,
@@ -55,6 +59,8 @@ export const buildConfigurationClient = {
     getClient().buildConfiguration_run(input),
   getRun: (input: GetBuildRunInput) =>
     getClient().buildConfiguration_getRun(input),
+  stopRun: (input: StopBuildRunInput) =>
+    getClient().buildConfiguration_stopRun(input),
   confirmSecrets: (input: ConfirmBuildSecretsInput) =>
     getClient().buildConfiguration_confirmSecrets(input),
   update: (input: UpdateBuildConfigurationInput) =>

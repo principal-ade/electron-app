@@ -124,6 +124,18 @@ describe('BuildRunRegistry', () => {
     expect(registry.getOutputSnapshot('run-1')).toBe('output:session-1');
   });
 
+  test('stopping a run snapshots output and marks it cancelled', async () => {
+    const { fake, registry } = track();
+
+    await expect(registry.stopRun('run-1')).resolves.toMatchObject({
+      status: 'cancelled',
+      terminalSessionId: 'session-1',
+    });
+    expect(fake.destroySession).toHaveBeenCalledWith('session-1');
+    expect(registry.getOutputSnapshot('run-1')).toBe('output:session-1');
+    expect(registry.getRun('run-1')?.status).toBe('cancelled');
+  });
+
   test('a tagged done report finalizes without a session exit', () => {
     const { fake, registry } = track();
     fake.emitStatus('session-1', [

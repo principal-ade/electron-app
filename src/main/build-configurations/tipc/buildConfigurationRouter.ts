@@ -5,6 +5,7 @@ import type {
   GetBuildConfigurationInput,
   GetBuildRunInput,
   RunBuildConfigurationInput,
+  StopBuildRunInput,
   UpdateBuildConfigurationInput,
 } from '../../../shared/tipc/buildConfigurationRouterTypes';
 import {
@@ -98,6 +99,9 @@ export const buildConfigurationRouter = {
   buildConfiguration_getRun: t.procedure
     .input<GetBuildRunInput>()
     .action(async ({ input }) => getBuildRunRegistry().getRun(input.runId)),
+  buildConfiguration_stopRun: t.procedure
+    .input<StopBuildRunInput>()
+    .action(async ({ input }) => getBuildRunRegistry().stopRun(input.runId)),
   buildConfiguration_update: t.procedure
     .input<UpdateBuildConfigurationInput>()
     .action(({ input }) =>

@@ -25,6 +25,10 @@ export class BuildConfigurationService {
     return buildConfigurationClient.getRun({ runId });
   }
 
+  static stopRun(runId: string): Promise<BuildRunRecord | null> {
+    return buildConfigurationClient.stopRun({ runId });
+  }
+
   static confirmSecrets(id: string): Promise<StoredBuildConfiguration | null> {
     return buildConfigurationClient.confirmSecrets({ id });
   }

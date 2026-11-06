@@ -302,7 +302,12 @@ export type BuildCommand = z.infer<typeof commandSchema>;
 export type BuildConfiguration = z.infer<typeof buildConfigurationSchema>;
 
 /** Lifecycle of a terminal-backed build run. */
-export type BuildRunStatus = 'running' | 'succeeded' | 'failed' | 'timed-out';
+export type BuildRunStatus =
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'timed-out'
+  | 'cancelled';
 
 /** A tracked build run. Records live in memory; tabs may outlive them. */
 export interface BuildRunRecord {

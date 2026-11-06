@@ -9,7 +9,10 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import type { StoredBuildConfiguration } from '../../../shared/build-configurations/types';
+import type {
+  BuildRunStatus,
+  StoredBuildConfiguration,
+} from '../../../shared/build-configurations/types';
 import {
   resolveBuildCheckoutDir,
   secretStoreRepoId,
@@ -294,8 +297,11 @@ export const BuildConfigurationTab: React.FC<BuildConfigurationTabProps> = ({
 
   // Run command: start via TIPC, then poll the registry until terminal.
   const [runId, setRunId] = useState<string | null>(null);
-  const [runStatus, setRunStatus] = useState<string | null>(null);
+  const [runStatus, setRunStatus] = useState<
+    BuildRunStatus | 'starting' | 'expired' | null
+  >(null);
   const [runError, setRunError] = useState<string | null>(null);
+  const [isStoppingRun, setIsStoppingRun] = useState(false);
 
   useEffect(() => {
     if (!runId) return;
@@ -306,21 +312,16 @@ export const BuildConfigurationTab: React.FC<BuildConfigurationTabProps> = ({
         const record = await BuildConfigurationService.getRun(runId);
         if (cancelled) return;
         if (!record) {
-          setRunStatus('Run record expired (the app restarted).');
+          setRunStatus('expired');
         } else if (record.status === 'running') {
-          setRunStatus('Build running…');
+          setRunStatus(record.status);
           return;
         } else {
-          setRunStatus(
-            `Build ${record.status}` +
-              (record.exitCode !== undefined
-                ? ` (exit ${record.exitCode}).`
-                : '.'),
-          );
+          setRunStatus(record.status);
         }
       } catch (err: unknown) {
         if (!cancelled) {
-          setRunStatus(
+          setRunError(
             `Could not poll the run: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
@@ -377,12 +378,13 @@ export const BuildConfigurationTab: React.FC<BuildConfigurationTabProps> = ({
 
   const startRun = useCallback(() => {
     setRunError(null);
-    setRunStatus('Starting build…');
+    setRunId(null);
+    setRunStatus('starting');
     BuildConfigurationService.run(configId).then(
       (result) => {
         if (result.ok) {
           setRunId(result.runId);
-          setRunStatus('Build running…');
+          setRunStatus(result.status);
         } else {
           setRunStatus(null);
           setRunError(
@@ -402,6 +404,25 @@ export const BuildConfigurationTab: React.FC<BuildConfigurationTabProps> = ({
       },
     );
   }, [configId]);
+
+  const stopRun = useCallback(async () => {
+    if (!runId || runStatus !== 'running') return;
+    setIsStoppingRun(true);
+    setRunError(null);
+    try {
+      const record = await BuildConfigurationService.stopRun(runId);
+      if (!record) {
+        setRunStatus('expired');
+        setRunError('The build run is no longer available to stop.');
+      } else {
+        setRunStatus(record.status);
+      }
+    } catch (err: unknown) {
+      setRunError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsStoppingRun(false);
+    }
+  }, [runId, runStatus]);
 
   if (error) {
     return (
@@ -452,7 +473,7 @@ export const BuildConfigurationTab: React.FC<BuildConfigurationTabProps> = ({
           />
         )}
       </div>
-      {(runStatus || runError) && (
+      {runError && (
         <div
           style={{
             maxWidth: 720,
@@ -463,14 +484,14 @@ export const BuildConfigurationTab: React.FC<BuildConfigurationTabProps> = ({
           }}
         >
           <div
-            role={runError ? 'alert' : 'status'}
+            role="alert"
             style={{
               fontFamily: theme.fonts.body,
               fontSize: theme.fontSizes[1],
               color: runError ? theme.colors.error : theme.colors.textSecondary,
             }}
           >
-            {runError ?? runStatus}
+            {runError}
           </div>
         </div>
       )}
@@ -495,6 +516,10 @@ export const BuildConfigurationTab: React.FC<BuildConfigurationTabProps> = ({
         onClearSecret={clearSecret}
         onConfirmSecrets={confirmSecrets}
         onRunBuild={startRun}
+        runStatus={runStatus}
+        onStopBuild={stopRun}
+        stopBuildDisabled={runStatus !== 'running' || isStoppingRun}
+        stopBuildPending={isStoppingRun}
         runBuildDisabled={!canRun}
         runBuildTitle={runTitle}
         onAddSecret={addSecret}

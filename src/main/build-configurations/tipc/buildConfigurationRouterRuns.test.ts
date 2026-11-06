@@ -36,6 +36,11 @@ jest.mock('../../builds/buildInstances', () => {
         return record;
       }),
       getRun: jest.fn((runId: string) => runs.get(runId) ?? null),
+      stopRun: jest.fn(async (runId: string) => {
+        const record = runs.get(runId);
+        if (record?.status === 'running') record.status = 'cancelled';
+        return record ?? null;
+      }),
     }),
     listRegisteredRepositoryPurls: async () => ['pkg:github/owner/repo'],
     getGrantedSecretKeys: async () => ['NODE_AUTH_TOKEN'],
@@ -55,6 +60,12 @@ type Router = {
     }) => Promise<unknown>;
   };
   buildConfiguration_getRun: {
+    action: (args: {
+      context: unknown;
+      input: { runId: string };
+    }) => Promise<unknown>;
+  };
+  buildConfiguration_stopRun: {
     action: (args: {
       context: unknown;
       input: { runId: string };
@@ -123,6 +134,12 @@ describe('buildConfigurationRouter runs', () => {
       input: { runId: (result as { runId: string }).runId },
     });
     expect(record).toMatchObject({ status: 'running' });
+
+    const stopped = await router.buildConfiguration_stopRun.action({
+      context: {},
+      input: { runId: (result as { runId: string }).runId },
+    });
+    expect(stopped).toMatchObject({ status: 'cancelled' });
   });
 
   test('refuses without a live window', async () => {

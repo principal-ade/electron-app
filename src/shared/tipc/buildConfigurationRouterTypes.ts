@@ -20,6 +20,10 @@ export interface GetBuildRunInput {
   runId: string;
 }
 
+export interface StopBuildRunInput {
+  runId: string;
+}
+
 export interface ConfirmBuildSecretsInput {
   id: string;
 }
@@ -76,6 +80,12 @@ export type BuildConfigurationRouterType = Record<
     action: (args: {
       context: ActionContext;
       input: GetBuildRunInput;
+    }) => Promise<BuildRunRecord | null>;
+  };
+  buildConfiguration_stopRun: {
+    action: (args: {
+      context: ActionContext;
+      input: StopBuildRunInput;
     }) => Promise<BuildRunRecord | null>;
   };
   buildConfiguration_confirmSecrets: {

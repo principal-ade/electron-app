@@ -1,9 +1,9 @@
 /**
  * BuildConfigurationTabContent
  *
- * Read-only view of a build configuration (topic-1793592184227).
- * Presentational only: no main-process calls, no secret values, no
- * approve/run actions yet. For Storybook first, tab wiring later.
+ * Presentational build-configuration view (topic-1793592184227).
+ * The parent owns configuration, secret, run, and stop actions; this component
+ * renders only secret grant state and never receives secret values.
  */
 
 import React, { useState } from 'react';
@@ -16,6 +16,7 @@ import {
   resolveBuildCheckoutDir,
   type BuildCheckout,
   type BuildCommand,
+  type BuildRunStatus,
   type BuildSecretDecl,
 } from '../../../shared/build-configurations/types';
 
@@ -49,6 +50,12 @@ export interface BuildConfigurationTabContentProps {
   onConfirmSecrets?: () => void;
   /** Called when the user runs the build. Renders right of the name. */
   onRunBuild?: () => void;
+  /** Current build state, displayed beside the run/stop control. */
+  runStatus?: BuildRunStatus | 'starting' | 'expired' | null;
+  /** Called when the user stops the active build. */
+  onStopBuild?: () => void;
+  stopBuildDisabled?: boolean;
+  stopBuildPending?: boolean;
   runBuildDisabled?: boolean;
   runBuildTitle?: string;
   /** Called when the user declares a new secret. */
@@ -479,6 +486,27 @@ function resetLabel(reset: 'ff-only' | 'clean' | 'none'): string {
   }
 }
 
+function runStatusLabel(
+  status: BuildRunStatus | 'starting' | 'expired',
+): string {
+  switch (status) {
+    case 'starting':
+      return 'Starting…';
+    case 'running':
+      return 'Build running';
+    case 'succeeded':
+      return 'Build succeeded';
+    case 'failed':
+      return 'Build failed';
+    case 'timed-out':
+      return 'Build timed out';
+    case 'cancelled':
+      return 'Build stopped';
+    case 'expired':
+      return 'Run status unavailable';
+  }
+}
+
 export const BuildConfigurationTabContent: React.FC<
   BuildConfigurationTabContentProps
 > = ({
@@ -487,6 +515,10 @@ export const BuildConfigurationTabContent: React.FC<
   onClearSecret,
   onConfirmSecrets,
   onRunBuild,
+  runStatus,
+  onStopBuild,
+  stopBuildDisabled,
+  stopBuildPending,
   runBuildDisabled,
   runBuildTitle,
   onAddSecret,
@@ -520,6 +552,16 @@ export const BuildConfigurationTabContent: React.FC<
     setDragIndex(null);
     setDropIndex(null);
   };
+  const statusColor =
+    runStatus === 'succeeded'
+      ? theme.colors.success
+      : runStatus === 'running' || runStatus === 'starting'
+        ? theme.colors.primary
+        : runStatus === 'failed' ||
+            runStatus === 'timed-out' ||
+            runStatus === 'expired'
+          ? theme.colors.error
+          : theme.colors.textSecondary;
 
   return (
     <div
@@ -547,12 +589,29 @@ export const BuildConfigurationTabContent: React.FC<
           >
             {config.name}
           </div>
-          {onRunBuild && (
+          {runStatus && (
+            <span
+              role="status"
+              style={{
+                padding: '5px 10px',
+                borderRadius: 999,
+                border: `1px solid ${statusColor}`,
+                color: statusColor,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[0],
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {runStatusLabel(runStatus)}
+            </span>
+          )}
+          {(runStatus === 'running' || runStatus === 'starting') &&
+          onStopBuild ? (
             <button
               type="button"
-              onClick={onRunBuild}
-              disabled={runBuildDisabled}
-              title={runBuildTitle}
+              onClick={onStopBuild}
+              disabled={stopBuildDisabled}
+              title="Stop this build and close its terminal session"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -560,9 +619,9 @@ export const BuildConfigurationTabContent: React.FC<
                 padding: '6px 16px',
                 borderRadius: 6,
                 border: 'none',
-                cursor: runBuildDisabled ? 'default' : 'pointer',
-                opacity: runBuildDisabled ? 0.5 : 1,
-                background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}dd)`,
+                cursor: stopBuildDisabled ? 'default' : 'pointer',
+                opacity: stopBuildDisabled ? 0.6 : 1,
+                background: theme.colors.error,
                 color: theme.colors.background,
                 fontFamily: theme.fonts.body,
                 fontSize: theme.fontSizes[1],
@@ -571,8 +630,36 @@ export const BuildConfigurationTabContent: React.FC<
                 flexShrink: 0,
               }}
             >
-              Run build
+              {stopBuildPending ? 'Stopping…' : 'Stop'}
             </button>
+          ) : (
+            onRunBuild && (
+              <button
+                type="button"
+                onClick={onRunBuild}
+                disabled={runBuildDisabled}
+                title={runBuildTitle}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 16px',
+                  borderRadius: 6,
+                  border: 'none',
+                  cursor: runBuildDisabled ? 'default' : 'pointer',
+                  opacity: runBuildDisabled ? 0.5 : 1,
+                  background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}dd)`,
+                  color: theme.colors.background,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: theme.fontWeights.semibold,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                Run build
+              </button>
+            )
           )}
         </div>
 

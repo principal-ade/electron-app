@@ -118,6 +118,20 @@ export class BuildRunRegistry {
     return [...(this.secretEnvNames.get(runId) ?? [])];
   }
 
+  /** Stop a running build, retain its sanitized output, then close its PTY. */
+  async stopRun(runId: string): Promise<BuildRunRecord | null> {
+    const record = this.getRun(runId);
+    if (!record) return null;
+    if (record.status !== 'running') return record;
+
+    record.status = 'cancelled';
+    record.endedAt = new Date().toISOString();
+    this.stopWatching(runId);
+    await this.captureOutput(record);
+    await this.destroySession(record.terminalSessionId);
+    return record;
+  }
+
   /**
    * Start tracking a run for an already-spawned terminal session running
    * the wrapper from `buildRunCommand`. Completion normally arrives as the
