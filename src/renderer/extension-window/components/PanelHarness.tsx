@@ -7,10 +7,9 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import * as ReactJSXRuntime from 'react/jsx-runtime';
+import { ExtensionService } from '../../main-process-api/ExtensionService';
 import type { PanelMetadata } from '../../../shared/main-process-api-interfaces/ExtensionAPI';
 
-// Get the mainProcess API from the window object
-const mainProcess = window.mainProcess;
 
 interface PanelHarnessProps {
   /** The package name of the extension */
@@ -195,7 +194,7 @@ export const PanelHarness: React.FC<PanelHarnessProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const loadPanel = useCallback(async () => {
-    if (!mainProcess?.extension) {
+    if (!ExtensionService.isAvailable()) {
       setError('Extension API not available');
       setLoading(false);
       return;
@@ -207,7 +206,7 @@ export const PanelHarness: React.FC<PanelHarnessProps> = ({
     try {
       // Fetch the bundle content from main process
       const bundleContent =
-        await mainProcess.extension.fetchExtensionBundle(packageName);
+        await ExtensionService.fetchBundle(packageName);
 
       if (!bundleContent) {
         setError(`Failed to fetch bundle for: ${packageName}`);

@@ -9,7 +9,7 @@
 import React, { useState, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Sparkles, Loader2, X, Send, AlertCircle, Settings } from 'lucide-react';
-import { geminiClient } from '../tipc/geminiClient';
+import { GeminiService } from '../main-process-api/GeminiService';
 import { SecretsService } from '../main-process-api/SecretsService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -68,7 +68,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
       const model = prefs?.gemini?.selectedModel || 'gemini-2.5-flash-lite';
 
       // Call Gemini API
-      const result = await geminiClient.summarizeCommits({
+      const result = await GeminiService.summarizeCommits({
         apiKey,
         model,
         commits: selectedCommits,

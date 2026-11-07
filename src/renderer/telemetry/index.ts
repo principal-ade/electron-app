@@ -115,7 +115,6 @@ class WebTelemetryProvider {
     try {
       console.info(`[Telemetry] Initializing renderer telemetry for ${windowType}...`);
 
-      // Get app version from window.mainProcess if available
       const appVersion = this.getAppVersion();
 
       // Use window-type-specific service name for proper scope separation

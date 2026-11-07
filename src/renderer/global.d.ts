@@ -1,5 +1,6 @@
 import type { MainProcessAPI } from '../shared/main-process-api-interfaces/index';
 import type { QuickOpenItem } from '../shared/quickOpen';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 // GitHub search result type
 interface GitHubSearchResult {
@@ -19,6 +20,33 @@ interface GitHubSearchResult {
 declare global {
   interface Window {
     mainProcess: MainProcessAPI;
+    electron: {
+      ipcRenderer: {
+        invoke: typeof Electron.ipcRenderer.invoke;
+        on: (
+          channel: string,
+          handler: (...args: unknown[]) => void,
+        ) => () => void;
+      };
+      onTerminalData: (
+        sessionId: string,
+        callback: (data: string) => void,
+      ) => () => void;
+      onOwnershipLost: (
+        callback: (data: {
+          sessionId: string;
+          newOwnerWindowId: number;
+        }) => void,
+      ) => () => void;
+      writeToTerminalPort: (sessionId: string, data: string) => boolean;
+      hasTerminalPort: (sessionId: string) => boolean;
+      onPortReady: (
+        callback: (
+          data: { sessionId: string; writable: boolean },
+          port: MessagePort,
+        ) => void,
+      ) => () => void;
+    };
     appName: string;
     __preloadTest?: { test: string };
     // Titlebar controls (exposed by preload)
@@ -28,7 +56,9 @@ declare global {
       close: () => void;
       closeWithConfirmation: () => Promise<boolean>;
       isMaximized: () => Promise<boolean>;
-      onMaximizeChange: (callback: (isMaximized: boolean) => void) => void;
+      onMaximizeChange: (
+        callback: (isMaximized: boolean) => void,
+      ) => () => void;
     };
     electronAPI?: {
       // Window Switcher API
@@ -36,7 +66,13 @@ declare global {
       selectWindow?: (windowId: number) => void;
       onWindowListUpdate?: (
         callback: (data: {
-          windows?: Array<{ id: number; title: string; thumbnail?: string }>;
+          windows?: Array<{
+            id: number;
+            title: string;
+            primaryType?: string;
+            alexandriaEntry?: AlexandriaEntry;
+            thumbnail?: string;
+          }>;
           selectedIndex?: number;
         }) => void,
       ) => void | (() => void);
@@ -45,7 +81,10 @@ declare global {
       cycleSelection?: (direction: 'next' | 'previous') => void;
       // Quick Open API
       onQuickOpenItems?: (
-        callback: (event: Electron.IpcRendererEvent, items: QuickOpenItem[]) => void,
+        callback: (
+          event: Electron.IpcRendererEvent,
+          items: QuickOpenItem[],
+        ) => void,
       ) => void | (() => void);
       requestQuickOpenItems?: () => void;
       selectQuickOpenItem?: (item: QuickOpenItem) => void;

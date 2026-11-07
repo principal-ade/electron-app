@@ -19,6 +19,7 @@ import type {
   ActiveFileSlice,
 } from '@principal-ade/panel-framework-core';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
@@ -574,7 +575,7 @@ export const RepositoryPanelProvider: React.FC<
 
       setLineCountsLoading(true);
       try {
-        const rawLineCounts = await window.mainProcess?.fileCityImage?.countLines(repositoryPath);
+        const rawLineCounts = await FileCityImageService.countLines(repositoryPath);
         if (rawLineCounts) {
           // Transform paths to use relative paths (strip repo name prefix if present)
           const repoName = repositoryPath.split('/').pop() || '';
@@ -2414,7 +2415,7 @@ export const RepositoryPanelProvider: React.FC<
 
         setLineCountsLoading(true);
         try {
-          const rawLineCounts = await window.mainProcess?.fileCityImage?.countLines(repositoryPathRef.current);
+          const rawLineCounts = await FileCityImageService.countLines(repositoryPathRef.current);
           if (rawLineCounts) {
             // Transform paths to use relative paths (strip repo name prefix if present)
             const repoName = repositoryPathRef.current.split('/').pop() || '';

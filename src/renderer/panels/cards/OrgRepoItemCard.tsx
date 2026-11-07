@@ -3,6 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   ArrowDown,
   ArrowUp,
+  AlertCircle,
   Eye,
   Circle,
   Bookmark,
@@ -11,6 +12,7 @@ import {
   Eraser,
   FolderGit2,
   FolderTree,
+  Loader2,
   Lock,
   Terminal,
 } from 'lucide-react';
@@ -69,6 +71,8 @@ export interface OrgRepoItemCardProps {
    * flow. Omit to render it as static text.
    */
   onPushAhead?: () => void;
+  /** Push progress/error shown inline in the Home row. */
+  pushStatus?: { state: 'pushing' | 'error'; message?: string };
   /**
    * Whether the repository monitoring worker is watching this clone. A watched
    * repo has live git status (push/dirty updates arrive as events); an unwatched
@@ -114,6 +118,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
   dragText,
   sync,
   onPushAhead,
+  pushStatus,
   watching = false,
   tabIcons,
   active = false,
@@ -127,7 +132,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
 
   const ahead = sync?.ahead ?? 0;
   const behind = sync?.behind ?? 0;
-  const showSync = ahead > 0 || behind > 0;
+  const showSync = ahead > 0 || behind > 0 || pushStatus?.state === 'pushing';
   // Synced with remote: the sync prop is present and nothing is ahead/behind.
   // Tints the repo icon green as an at-a-glance "up to date" signal (only the
   // Home rows pass `sync`, so the Projects list is unaffected).
@@ -423,7 +428,7 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
             color: theme.colors.textSecondary,
           }}
         >
-          {ahead > 0 && (
+          {(ahead > 0 || pushStatus?.state === 'pushing') && (
             <span
               style={{
                 display: 'inline-flex',
@@ -432,7 +437,20 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
                 color: theme.colors.info,
               }}
             >
-              {onPushAhead ? (
+              {pushStatus?.state === 'pushing' ? (
+                <span
+                  role="status"
+                  aria-label={`Pushing ${repo.name} to remote`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <Loader2 size={12} className="animate-spin" />
+                  Pushing…
+                </span>
+              ) : onPushAhead ? (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -441,10 +459,16 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
                   }}
                   title={
                     showTooltips
-                      ? `${ahead} commit${ahead === 1 ? '' : 's'} ahead of remote — push to remote`
+                      ? pushStatus?.state === 'error'
+                        ? `Push failed: ${pushStatus.message || 'Push failed.'} — click to retry`
+                        : `${ahead} commit${ahead === 1 ? '' : 's'} ahead of remote — push to remote`
                       : undefined
                   }
-                  aria-label={`Push ${ahead} commit${ahead === 1 ? '' : 's'} to remote`}
+                  aria-label={
+                    pushStatus?.state === 'error'
+                      ? `Push failed: ${pushStatus.message || 'Push failed.'}. Retry push.`
+                      : `Push ${ahead} commit${ahead === 1 ? '' : 's'} to remote`
+                  }
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -463,7 +487,11 @@ export const OrgRepoItemCard: React.FC<OrgRepoItemCardProps> = ({
                     e.currentTarget.style.textDecoration = 'none';
                   }}
                 >
-                  <ArrowUp size={12} />
+                  {pushStatus?.state === 'error' ? (
+                    <AlertCircle size={12} color={theme.colors.error} />
+                  ) : (
+                    <ArrowUp size={12} />
+                  )}
                   {ahead}
                 </button>
               ) : (

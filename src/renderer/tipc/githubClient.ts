@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@egoist/tipc/renderer';
+import { ipcInvoke } from './ipcTransport';
 import type {
   GetUserRepositoriesInput,
   GetUserStarredRepositoriesInput,
@@ -91,8 +92,12 @@ export interface GithubClient {
   isFollowingUser: (input: IsFollowingUserInput) => Promise<boolean>;
   followUser: (input: FollowUserInput) => Promise<void>;
   unfollowUser: (input: UnfollowUserInput) => Promise<void>;
-  getOwnerActivity: (input: GetOwnerActivityInput) => Promise<CommitActivityCard[]>;
-  getRepoActivity: (input: GetRepoActivityInput) => Promise<CommitActivityCard[]>;
+  getOwnerActivity: (
+    input: GetOwnerActivityInput,
+  ) => Promise<CommitActivityCard[]>;
+  getRepoActivity: (
+    input: GetRepoActivityInput,
+  ) => Promise<CommitActivityCard[]>;
 
   // Repository Operations
   getRepository: (
@@ -130,14 +135,9 @@ let _githubClient: GithubClient | null = null;
 
 function getGithubClient(): GithubClient {
   if (!_githubClient) {
-    if (!window.electron?.ipcRenderer?.invoke) {
-      throw new Error(
-        'GitHub client not available - window.electron not initialized',
-      );
-    }
     // Use shared GithubRouterType which satisfies RouterType constraint
     _githubClient = createClient<GithubRouterType>({
-      ipcInvoke: window.electron.ipcRenderer.invoke,
+      ipcInvoke,
     }) as unknown as GithubClient;
   }
   return _githubClient;

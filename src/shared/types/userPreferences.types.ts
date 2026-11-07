@@ -19,6 +19,12 @@ export type InteractiveShellNavigationView =
   | 'drawings'
   | 'subsystem-models';
 
+/** Sidebar destinations whose order and visibility can be customized. */
+export type SidebarNavigationItem = Exclude<
+  InteractiveShellNavigationView,
+  'home' | 'auth'
+>;
+
 // Onboarding state types
 export interface OnboardingCardState {
   completed: boolean;
@@ -138,6 +144,11 @@ export interface UserPreferences {
   showMonitorButton?: boolean; // Show/hide the monitor button in side nav (default: false)
   showOnboardingButton?: boolean; // Show/hide the onboarding/tutorials button in side nav (default: false)
   showExtensionsButton?: boolean; // Show/hide the extensions button in settings (default: false)
+  /** User-customized order and visibility for the principal navigation sidebar. */
+  sidebarNavigation?: {
+    order?: SidebarNavigationItem[];
+    visibility?: Partial<Record<SidebarNavigationItem, boolean>>;
+  };
   onboardingCompleted?: boolean; // Whether the onboarding wizard has been completed (default: false)
 
   /**

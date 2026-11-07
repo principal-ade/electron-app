@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { WindowService } from '../../../main-process-api/WindowService';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
 import {
@@ -8,19 +9,6 @@ import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 import { StudioHeaderButton } from '../../../components/Titlebar/StudioHeaderButton';
 import { TerminalDaemonUpdateIndicator } from '../../../components/Titlebar/TerminalDaemonUpdateIndicator';
 import { blurAfterPointerActivation } from '../../../utils/blurAfterPointerActivation';
-
-declare global {
-  interface Window {
-    electronTitlebar?: {
-      minimize: () => void;
-      maximize: () => void;
-      close: () => void;
-      closeWithConfirmation: () => Promise<boolean>;
-      isMaximized: () => Promise<boolean>;
-      onMaximizeChange: (callback: (isMaximized: boolean) => void) => void;
-    };
-  }
-}
 
 interface IntegratedTitlebarProps {
   sidebarCollapsed?: boolean;
@@ -52,10 +40,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
   useEffect(() => {
-    if (window.electronTitlebar) {
-      window.electronTitlebar.isMaximized().then(setIsMaximized);
-      window.electronTitlebar.onMaximizeChange(setIsMaximized);
-    }
+    void WindowService.isMaximized().then(setIsMaximized);
+    return WindowService.onMaximizeChange(setIsMaximized);
   }, []);
 
   // Static title - Principal Workspace
@@ -198,7 +184,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       </div>
 
       {/* Window controls for Windows */}
-      {!isMac && window.electronTitlebar && (
+      {!isMac && WindowService.hasTitlebarControls() && (
         <div
           className="window-controls"
           style={{
@@ -214,7 +200,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         >
           <button
             className="titlebar-button"
-            onClick={() => window.electronTitlebar?.minimize()}
+            onClick={() => WindowService.minimize()}
             style={{
               width: '46px',
               height: '100%',
@@ -240,7 +226,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
 
           <button
             className="titlebar-button"
-            onClick={() => window.electronTitlebar?.maximize()}
+            onClick={() => WindowService.maximize()}
             style={{
               width: '46px',
               height: '100%',
@@ -281,7 +267,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
 
           <button
             className="titlebar-button close"
-            onClick={() => window.electronTitlebar?.close()}
+            onClick={() => WindowService.close()}
             style={{
               width: '46px',
               height: '100%',

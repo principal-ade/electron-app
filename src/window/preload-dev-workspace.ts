@@ -93,9 +93,11 @@ try {
       ipcRenderer.invoke('window-close-with-confirmation'),
     isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
     onMaximizeChange: (callback: (isMaximized: boolean) => void) => {
-      ipcRenderer.on('window-maximized-changed', (_, isMaximized) =>
-        callback(isMaximized),
-      );
+      const listener = (_: Electron.IpcRendererEvent, isMaximized: boolean) =>
+        callback(isMaximized);
+      ipcRenderer.on('window-maximized-changed', listener);
+      return () =>
+        ipcRenderer.removeListener('window-maximized-changed', listener);
     },
   });
   console.info('[Preload-DevWorkspace] ✅ Electron Titlebar API exposed');
@@ -223,7 +225,6 @@ try {
         ipcRenderer.on(channel, subscription);
         return () => ipcRenderer.removeListener(channel, subscription);
       },
-      send: ipcRenderer.send.bind(ipcRenderer),
     },
 
     // Terminal data subscription (abstracts MessagePort) - matches testing app

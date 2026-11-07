@@ -3,6 +3,7 @@ import { History, RefreshCw, Search, X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { extractLocalClones } from '../events/repositorySelected';
+import { SessionHistoryService } from '../main-process-api/SessionHistoryService';
 
 type Theme = ReturnType<typeof useTheme>['theme'];
 
@@ -272,17 +273,17 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
       () => {
         const searchQuery = query.trim();
         const openCodeRequest = searchQuery
-          ? window.mainProcess.openCodeSessionHistory.searchProjects(
+          ? SessionHistoryService.openCode.searchProjects(
               directories,
               searchQuery,
             )
-          : window.mainProcess.openCodeSessionHistory.listProjects(directories);
+          : SessionHistoryService.openCode.listProjects(directories);
         const claudeRequest = searchQuery
-          ? window.mainProcess.claudeSessionHistory.search(searchQuery)
-          : window.mainProcess.claudeSessionHistory.list();
+          ? SessionHistoryService.claude.search(searchQuery)
+          : SessionHistoryService.claude.list();
         const cursorRequest = searchQuery
-          ? window.mainProcess.cursorSessionHistory.search(searchQuery)
-          : window.mainProcess.cursorSessionHistory.list();
+          ? SessionHistoryService.cursor.search(searchQuery)
+          : SessionHistoryService.cursor.list();
 
         void Promise.allSettled([
           openCodeRequest,
@@ -362,17 +363,17 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
     setError(null);
     try {
       if (session.agent === 'OpenCode') {
-        await window.mainProcess.openCodeSessionHistory.resume(
+        await SessionHistoryService.openCode.resume(
           session.directory,
           session.id,
         );
       } else if (session.agent === 'Claude Code') {
-        await window.mainProcess.claudeSessionHistory.resume(
+        await SessionHistoryService.claude.resume(
           session.directory,
           session.id,
         );
       } else {
-        await window.mainProcess.cursorSessionHistory.resume(
+        await SessionHistoryService.cursor.resume(
           session.directory,
           session.id,
         );

@@ -5,6 +5,7 @@ import { LocalProjectCard } from '@industry-theme/repository-composition-panels'
 import { FileCityLogo } from '@principal-ai/logo-component';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowCard } from './WindowCard';
+import { WindowService, type WindowListPayload } from '../main-process-api/WindowService';
 
 // NOTE: Cmd+' was reclaimed by the principal window's IntegratedShell to toggle
 // the Sky View overlay. The Window Switcher toggle shortcut is removed — only the
@@ -178,18 +179,6 @@ const DraggableCard: React.FC<DraggableCardProps> = ({
   );
 };
 
-// Note: WindowListPayload should match the preload's WindowListData
-// We use a looser type here to handle potential mismatches gracefully
-type WindowListPayload = {
-  windows?: Array<{
-    id: number;
-    title: string;
-    primaryType?: string;
-    alexandriaEntry?: AlexandriaEntry;
-  }>;
-  selectedIndex?: number;
-};
-
 function normalizeIndex(index: number, total: number): number {
   if (total === 0) {
     return 0;
@@ -208,8 +197,7 @@ export const WindowSwitcherApp: React.FC = () => {
   const [gridPositions, setGridPositions] = useState<Record<number, GridPosition>>(() => loadSavedGridPositions());
 
   const windowsRef = useRef<SwitcherWindow[]>(windows);
-  const electronAPI =
-    typeof window !== 'undefined' ? window.electronAPI : undefined;
+  const windowSwitcherAvailable = WindowService.isWindowSwitcherAvailable();
 
   // Initialize z-index order when window count changes
   const windowCount = windows.length;
@@ -222,13 +210,13 @@ export const WindowSwitcherApp: React.FC = () => {
   }, [windows]);
 
   useEffect(() => {
-    if (!electronAPI) {
+    if (!windowSwitcherAvailable) {
       return;
     }
 
     const cleanupFns: Array<() => void> = [];
 
-    const unsubscribeList = electronAPI.onWindowListUpdate?.(
+    const unsubscribeList = WindowService.onWindowListUpdate(
       (data: WindowListPayload) => {
         const nextWindows = data?.windows ?? [];
         setWindows(nextWindows);
@@ -247,7 +235,7 @@ export const WindowSwitcherApp: React.FC = () => {
       cleanupFns.push(unsubscribeList);
     }
 
-    const unsubscribeNext = electronAPI.onSelectNext?.(() => {
+    const unsubscribeNext = WindowService.onWindowSwitcherNext(() => {
       setSelectedIndex((current) => {
         const total = windowsRef.current.length;
         if (total === 0) {
@@ -261,7 +249,7 @@ export const WindowSwitcherApp: React.FC = () => {
       cleanupFns.push(unsubscribeNext);
     }
 
-    const unsubscribePrevious = electronAPI.onSelectPrevious?.(() => {
+    const unsubscribePrevious = WindowService.onWindowSwitcherPrevious(() => {
       setSelectedIndex((current) => {
         const total = windowsRef.current.length;
         if (total === 0) {
@@ -275,7 +263,7 @@ export const WindowSwitcherApp: React.FC = () => {
       cleanupFns.push(unsubscribePrevious);
     }
 
-    electronAPI.getWindowList?.();
+    WindowService.requestWindowList();
 
     return () => {
       cleanupFns.forEach((fn) => {
@@ -286,10 +274,10 @@ export const WindowSwitcherApp: React.FC = () => {
         }
       });
     };
-  }, [electronAPI]);
+  }, [windowSwitcherAvailable]);
 
   useEffect(() => {
-    if (!electronAPI) {
+    if (!windowSwitcherAvailable) {
       return;
     }
 
@@ -304,13 +292,13 @@ export const WindowSwitcherApp: React.FC = () => {
       // Arrow keys for navigation
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
         event.preventDefault();
-        electronAPI.cycleSelection?.('next');
+        WindowService.cycleWindowSelection('next');
         return;
       }
 
       if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
         event.preventDefault();
-        electronAPI.cycleSelection?.('previous');
+        WindowService.cycleWindowSelection('previous');
         return;
       }
 
@@ -319,7 +307,7 @@ export const WindowSwitcherApp: React.FC = () => {
         event.preventDefault();
         const selectedWindow = windows[selectedIndex];
         if (selectedWindow) {
-          electronAPI.selectWindow?.(selectedWindow.id);
+          WindowService.selectWindow(selectedWindow.id);
         }
       }
     };
@@ -329,16 +317,16 @@ export const WindowSwitcherApp: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [electronAPI, windows, selectedIndex]);
+  }, [windowSwitcherAvailable, windows, selectedIndex]);
 
   const handleTileClick = (index: number) => {
     const target = windows[index];
-    if (!target || !electronAPI) {
+    if (!target || !windowSwitcherAvailable) {
       return;
     }
 
     setSelectedIndex(index);
-    electronAPI.selectWindow?.(target.id);
+    WindowService.selectWindow(target.id);
   };
 
   // Bring card to front when dragging starts
@@ -449,8 +437,8 @@ export const WindowSwitcherApp: React.FC = () => {
 
   // Handle clicking the main window header
   const handleMainWindowClick = () => {
-    if (mainWindow && electronAPI) {
-      electronAPI.selectWindow?.(mainWindow.id);
+    if (mainWindow && windowSwitcherAvailable) {
+      WindowService.selectWindow(mainWindow.id);
     }
   };
 

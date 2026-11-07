@@ -25,7 +25,7 @@ import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { usePortalEvents } from '../../PortalEventContext';
 import { useTopicsTabs } from '../../contexts/TopicsTabsContext';
 import { useWorkspaceTabs } from '../../PortalTabsContext';
-import { topicClient } from '../../../tipc/topicClient';
+import { TopicService } from '../../../main-process-api/TopicService';
 import { useBridgeBrowserOpen } from '../../../hooks/useBridgeBrowserOpen';
 import { useBridgeRequestOpen } from '../../../hooks/useBridgeRequestOpen';
 import {
@@ -310,7 +310,7 @@ export const IntegratedShell: React.FC = () => {
   // off whatever they were on. Only dismiss an overlay, where the portal is
   // hidden and the freshly-opened tab would otherwise be invisible.
   useEffect(() => {
-    const unsubscribe = topicClient.onTopicActivate(({ topicId, title }) => {
+    const unsubscribe = TopicService.onTopicActivate(({ topicId, title }) => {
       setOverlay(null);
       // Nothing has ever been mounted, so give the tab somewhere to land.
       if (!surfaceRef.current) {

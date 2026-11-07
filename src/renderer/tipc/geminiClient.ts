@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@egoist/tipc/renderer';
+import { ipcInvoke } from './ipcTransport';
 import type {
   ListModelsInput,
   ValidateApiKeyInput,
@@ -30,7 +31,7 @@ export interface GeminiClient {
   listModels: (input: ListModelsInput) => Promise<ListModelsOutput>;
   validateApiKey: (input: ValidateApiKeyInput) => Promise<ValidateApiKeyOutput>;
   summarizeCommits: (
-    input: SummarizeCommitsInput
+    input: SummarizeCommitsInput,
   ) => Promise<SummarizeCommitsOutput>;
 }
 
@@ -47,14 +48,9 @@ let _geminiClient: GeminiClient | null = null;
 
 function getGeminiClient(): GeminiClient {
   if (!_geminiClient) {
-    if (!window.electron?.ipcRenderer?.invoke) {
-      throw new Error(
-        'Gemini client not available - window.electron not initialized'
-      );
-    }
     // Use shared GeminiRouterType which satisfies RouterType constraint
     _geminiClient = createClient<GeminiRouterType>({
-      ipcInvoke: window.electron.ipcRenderer.invoke,
+      ipcInvoke,
     }) as unknown as GeminiClient;
   }
   return _geminiClient;

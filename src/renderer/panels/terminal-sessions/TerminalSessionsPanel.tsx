@@ -10,11 +10,7 @@ import type {
 import type { Tracer, Span } from '@opentelemetry/api';
 import type { TerminalSessionInfo } from '../../../shared/tipc/terminalRouterTypes';
 import { WindowService } from '../../main-process-api/WindowService';
-import {
-  terminalClient,
-  onActivitySync,
-  type TerminalActivityState,
-} from '../../tipc/terminalClient';
+import { TerminalService, type TerminalActivityState } from '../../main-process-api/TerminalService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 
 /**
@@ -151,7 +147,7 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
     // Fetch initial activity state
     const fetchInitialActivities = async () => {
       try {
-        const activities = await terminalClient.getActivityState();
+        const activities = await TerminalService.getActivityState();
         setTerminalActivities(activities);
       } catch (_error) {
         // Silently fail - may not be available in Storybook
@@ -162,7 +158,7 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
     // Subscribe to activity sync broadcasts
     let unsubscribe: (() => void) | undefined;
     try {
-      unsubscribe = onActivitySync((activities) => {
+      unsubscribe = TerminalService.onActivitySync((activities) => {
         setTerminalActivities(activities);
       });
     } catch (_error) {

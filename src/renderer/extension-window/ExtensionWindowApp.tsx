@@ -14,12 +14,8 @@ import { ExtensionWindowTitlebar } from './ExtensionWindowTitlebar';
 import { ExtensionList } from './components/ExtensionList';
 import { ExtensionDetails } from './components/ExtensionDetails';
 import { PanelHarness } from './components/PanelHarness';
+import { ExtensionService } from '../main-process-api/ExtensionService';
 
-// Get the mainProcess API from the window object
-const mainProcess = window.mainProcess;
-
-// Check if the API is available at module level
-const isAPIAvailable = !!mainProcess?.extension;
 
 export const ExtensionWindowApp: React.FC = () => {
   const [extensions, setExtensions] = useState<DiscoveredExtension[]>([]);
@@ -43,15 +39,15 @@ export const ExtensionWindowApp: React.FC = () => {
 
   // Load extensions on mount
   const loadExtensions = useCallback(async () => {
-    if (!mainProcess?.extension) return;
+    if (!ExtensionService.isAvailable()) return;
 
     setLoading(true);
     setError(null);
 
     try {
       const [discoveredExtensions, directory] = await Promise.all([
-        mainProcess.extension.discoverExtensions(),
-        mainProcess.extension.getExtensionsDirectory(),
+        ExtensionService.discover(),
+        ExtensionService.getDirectory(),
       ]);
 
       setExtensions(discoveredExtensions);
@@ -73,12 +69,12 @@ export const ExtensionWindowApp: React.FC = () => {
   }, [selectedExtension]);
 
   useEffect(() => {
-    if (!mainProcess?.extension) return;
+    if (!ExtensionService.isAvailable()) return;
 
     loadExtensions();
 
     // Subscribe to extension changes
-    const unsubscribe = mainProcess.extension.onExtensionsChanged(
+    const unsubscribe = ExtensionService.onChanged(
       (updatedExtensions) => {
         setExtensions(updatedExtensions);
       },
@@ -118,13 +114,13 @@ export const ExtensionWindowApp: React.FC = () => {
 
   // Handle enable/disable
   const handleToggleEnabled = async (extension: DiscoveredExtension) => {
-    if (!mainProcess?.extension) return;
+    if (!ExtensionService.isAvailable()) return;
 
     try {
       if (extension.enabled) {
-        await mainProcess.extension.disableExtension(extension.packageName);
+        await ExtensionService.disable(extension.packageName);
       } else {
-        await mainProcess.extension.enableExtension(extension.packageName);
+        await ExtensionService.enable(extension.packageName);
       }
       await loadExtensions();
     } catch (err) {
@@ -134,7 +130,7 @@ export const ExtensionWindowApp: React.FC = () => {
 
   // Handle uninstall
   const handleUninstall = async (extension: DiscoveredExtension) => {
-    if (!mainProcess?.extension) return;
+    if (!ExtensionService.isAvailable()) return;
 
     if (
       !confirm(`Are you sure you want to uninstall "${extension.packageName}"?`)
@@ -143,7 +139,7 @@ export const ExtensionWindowApp: React.FC = () => {
     }
 
     try {
-      await mainProcess.extension.uninstallExtension(extension.packageName);
+      await ExtensionService.uninstall(extension.packageName);
       if (selectedExtension?.packageName === extension.packageName) {
         setSelectedExtension(null);
         setSelectedPanel(null);
@@ -155,7 +151,7 @@ export const ExtensionWindowApp: React.FC = () => {
   };
 
   // Show error state if API is not available
-  if (!isAPIAvailable) {
+  if (!ExtensionService.isAvailable()) {
     return (
       <div className="h-screen w-screen overflow-hidden bg-gray-900 flex flex-col items-center justify-center text-white">
         <div className="text-red-500 text-xl mb-4">
@@ -167,9 +163,8 @@ export const ExtensionWindowApp: React.FC = () => {
           Check the console for [Preload-ExtensionWindow] logs.
         </div>
         <div className="text-gray-500 text-xs mt-4 text-center">
-          mainProcess: {mainProcess ? 'defined' : 'undefined'}
+          Extension service available: {ExtensionService.isAvailable() ? 'yes' : 'no'}
           <br />
-          extension: {mainProcess?.extension ? 'defined' : 'undefined'}
         </div>
       </div>
     );

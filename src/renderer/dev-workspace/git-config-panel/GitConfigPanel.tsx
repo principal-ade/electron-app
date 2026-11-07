@@ -52,7 +52,7 @@ export const GitConfigPanel: React.FC<GitConfigPanelProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const result = await window.mainProcess.git.execCommand(repositoryPath, [
+      const result = await GitService.execCommand(repositoryPath, [
         'remote',
         'get-url',
         'origin',

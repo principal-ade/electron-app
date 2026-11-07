@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ProgramStatusRecord } from '../../shared/terminal/programStatus';
-import { onProgramStatus, terminalClient } from '../tipc/terminalClient';
+import { TerminalService } from '../main-process-api/TerminalService';
 
 /** Seed newly opened windows, then follow live OSC 7501 broadcasts. */
 export function useTerminalProgramStatusState(): Record<
@@ -15,14 +15,15 @@ export function useTerminalProgramStatusState(): Record<
     let disposed = false;
     const updates: Record<string, ProgramStatusRecord[]> = {};
     // Subscribe first so an update during the initial read cannot be lost.
-    const unsubscribe = onProgramStatus(({ sessionId, records: next }) => {
+    const unsubscribe = TerminalService.onProgramStatus(
+      ({ sessionId, records: next }) => {
       if (disposed) return;
       updates[sessionId] = next ?? [];
       setRecords((prev) => ({ ...prev, [sessionId]: next ?? [] }));
-    });
+      },
+    );
 
-    terminalClient
-      .getAllProgramStatus()
+    TerminalService.getAllProgramStatus()
       .then((snapshot) => {
         if (!disposed) setRecords({ ...snapshot, ...updates });
       })

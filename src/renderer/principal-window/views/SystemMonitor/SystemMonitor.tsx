@@ -19,12 +19,8 @@ import {
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { CLIBridgeService, type CLIBridgeStatus, type CLIBridgeTestResult } from '../../../main-process-api/CLIBridgeService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
-import {
-  terminalClient,
-  onActivitySync,
-  type TerminalActivityState,
-  type DaemonStatusResponse,
-} from '../../../tipc/terminalClient';
+import { TerminalService } from '../../../main-process-api/TerminalService';
+import type { TerminalActivityState, DaemonStatusResponse } from '../../../main-process-api/TerminalService';
 import type { TerminalSessionInfo } from '../../../../shared/tipc/terminalRouterTypes';
 import type {
   MonitoringStatus,
@@ -326,7 +322,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
     // Fetch initial activity state
     const fetchInitialActivities = async () => {
       try {
-        const activities = await terminalClient.getActivityState();
+        const activities = await TerminalService.getActivityState();
         setTerminalActivities(activities);
       } catch (error) {
         console.error('Failed to fetch terminal activities:', error);
@@ -335,7 +331,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
     fetchInitialActivities();
 
     // Subscribe to activity sync broadcasts
-    const unsubscribe = onActivitySync((activities) => {
+    const unsubscribe = TerminalService.onActivitySync((activities) => {
       setTerminalActivities(activities);
     });
 
@@ -348,7 +344,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
 
     const fetchAllSessions = async () => {
       try {
-        const sessions = await terminalClient.listTerminalSessions();
+        const sessions = await TerminalService.listSessions();
         setAllTerminalSessions(sessions);
         setSessionsLoading(false);
       } catch (error) {
@@ -378,7 +374,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
 
     const fetchDaemonStatus = async () => {
       try {
-        const status = await terminalClient.getDaemonStatus();
+        const status = await TerminalService.getDaemonStatus();
         setDaemonStatus(status);
       } catch (error) {
         console.error('Failed to fetch daemon status:', error);
@@ -1039,12 +1035,12 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                       setIsDaemonControlling(true);
                       try {
                         if (daemonStatus?.isRunning) {
-                          await terminalClient.stopDaemon();
+                          await TerminalService.stopDaemon();
                         } else {
-                          await terminalClient.startDaemon();
+                          await TerminalService.startDaemon();
                         }
                         // Refresh status after action
-                        const status = await terminalClient.getDaemonStatus();
+                        const status = await TerminalService.getDaemonStatus();
                         setDaemonStatus(status);
                       } catch (error) {
                         console.error('Failed to control daemon:', error);
@@ -1308,8 +1304,8 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                     onClick={async () => {
                       setIsDaemonControlling(true);
                       try {
-                        await terminalClient.startDaemon();
-                        const status = await terminalClient.getDaemonStatus();
+                        await TerminalService.startDaemon();
+                        const status = await TerminalService.getDaemonStatus();
                         setDaemonStatus(status);
                       } catch (error) {
                         console.error('Failed to start daemon:', error);

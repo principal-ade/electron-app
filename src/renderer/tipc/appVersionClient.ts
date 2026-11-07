@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@egoist/tipc/renderer';
+import { ipcInvoke } from './ipcTransport';
 import type {
   CheckForUpdateInput,
   CheckForUpdateResult,
@@ -51,14 +52,9 @@ let _appVersionClient: AppVersionClient | null = null;
 
 function getAppVersionClient(): AppVersionClient {
   if (!_appVersionClient) {
-    if (!window.electron?.ipcRenderer?.invoke) {
-      throw new Error(
-        'AppVersion client not available - window.electron not initialized',
-      );
-    }
     // Use shared AppVersionRouterType which satisfies RouterType constraint
     _appVersionClient = createClient<AppVersionRouterType>({
-      ipcInvoke: window.electron.ipcRenderer.invoke,
+      ipcInvoke,
     }) as unknown as AppVersionClient;
   }
   return _appVersionClient;

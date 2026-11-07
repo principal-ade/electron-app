@@ -129,7 +129,7 @@ import { SubsystemModelTabContent } from '../subsystem-models/SubsystemModelTabC
 import { C4SketchTabContent } from '../c4-sketches/C4SketchTabContent';
 import type { C4SketchTab } from '../events/portalTabs';
 import { TOPIC_EVENT, type TopicOpenEvent } from './topics-panel/topic-events';
-import { topicClient } from '../tipc/topicClient';
+import { TopicService } from '../main-process-api/TopicService';
 import { useTopicRemoved } from '../topics-view/useTopicRemoved';
 import type {
   DocumentSelectedPayload,
@@ -2279,7 +2279,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // host — the same surface a Topics-sidebar click uses. Without this the IPC
   // would land on a channel no renderer here listens to and silently drop.
   useEffect(() => {
-    return topicClient.onTopicActivate(({ topicId, title }) => {
+    return TopicService.onTopicActivate(({ topicId, title }) => {
       if (topicId) openTopicTab(topicId, title);
     });
   }, [openTopicTab]);

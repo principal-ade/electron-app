@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ExternalLink, FolderGit2, Search, Star, Terminal } from 'lucide-react';
-import { githubClient } from '../../../tipc/githubClient';
+import { GithubService } from '../../../main-process-api/GithubService';
 import type { GitHubRepository } from '../../../../shared/tipc/githubRouterTypes';
 import { usePrincipalEvents } from '../../PrincipalEventContext';
 import { usePortalEvents } from '../../PortalEventContext';
@@ -309,8 +309,7 @@ export const TitlebarGitHubSearch: React.FC = () => {
         if (isCurrent()) setLocalResults([]);
       });
 
-    const repos = githubClient
-      .searchRepos({ query: q, perPage: 5 })
+    const repos = GithubService.searchRepos(q, { perPage: 5 })
       .then((res) => {
         if (!isCurrent()) return;
         const found = res.repos || [];

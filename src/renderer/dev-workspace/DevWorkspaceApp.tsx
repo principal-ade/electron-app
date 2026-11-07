@@ -40,6 +40,7 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
+import { ShellService } from '../main-process-api/ShellService';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { useStorybookManager } from '../hooks/useStorybookManager';
@@ -585,12 +586,13 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     loadBranch();
 
     // Subscribe to git status changes
-    const unsubscribe =
-      window.mainProcess.repositoryMonitoring.onGitStatusChanged((status) => {
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
+      (status) => {
         if (status.repoPath === repositoryPath && status.branch) {
           setCurrentBranch(status.branch);
         }
-      });
+      },
+    );
 
     return () => unsubscribe();
   }, [repositoryPath]);
@@ -819,7 +821,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     const actionsUrl = `https://github.com/${githubInfo.owner}/${githubInfo.repo}/actions`;
 
     try {
-      await window.mainProcess.shell.openExternal(actionsUrl);
+      await ShellService.openExternal(actionsUrl);
     } catch (error) {
       console.error('[DevWorkspaceApp] Failed to open GitHub Actions:', error);
     }
@@ -832,7 +834,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     const repoUrl = `https://github.com/${githubInfo.owner}/${githubInfo.repo}`;
 
     try {
-      await window.mainProcess.shell.openExternal(repoUrl);
+      await ShellService.openExternal(repoUrl);
     } catch (error) {
       console.error(
         '[DevWorkspaceApp] Failed to open GitHub Repository:',
@@ -887,7 +889,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   // Open repository in Finder
   const handleOpenInFinder = useCallback(() => {
     if (!repositoryPath) return;
-    window.mainProcess.shell.showItemInFolder(repositoryPath);
+    ShellService.showItemInFolder(repositoryPath);
   }, [repositoryPath]);
 
   // Handle focus mode toggle - hides sidebars AND collapses panels
@@ -1013,7 +1015,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onLeftCollapseComplete={handleLeftCollapseComplete}
           onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
           onOpenGitHubActions={
-            githubInfo && hasGitHubFolder ? handleOpenGitHubActions : undefined
+                githubInfo && hasGitHubFolder
+                  ? handleOpenGitHubActions
+                  : undefined
           }
           onOpenGitHubRepo={githubInfo ? handleOpenGitHubRepo : undefined}
           sidebarsHidden={sidebarsHidden}

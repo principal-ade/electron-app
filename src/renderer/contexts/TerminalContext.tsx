@@ -10,7 +10,12 @@ import React, {
 } from 'react';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { getTracer } from '../telemetry';
-import { TerminalService } from '../main-process-api/TerminalService';
+import {
+  TerminalService,
+  type TerminalActivityState,
+  type UpdateActivityInput,
+  type ProgramStatusRecord,
+} from '../main-process-api/TerminalService';
 import { useTerminalProgramStatusState } from './useTerminalProgramStatusState';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
@@ -24,7 +29,7 @@ import type {
  * Extended terminal actions with command support
  */
 interface TerminalPanelActions extends BaseTerminalPanelActions {
-  onTerminalCwdChange?: typeof onCwdChange;
+  onTerminalCwdChange?: typeof TerminalService.onCwdChange;
   createTerminalSession: (options?: {
     cwd?: string;
     context?: string;
@@ -44,14 +49,6 @@ function uint8ToBase64(bytes: Uint8Array): string {
   }
   return btoa(binary);
 }
-import {
-  terminalClient,
-  onActivitySync,
-  onCwdChange,
-  type TerminalActivityState,
-  type UpdateActivityInput,
-  type ProgramStatusRecord,
-} from '../tipc/terminalClient';
 
 /**
  * Terminal context value
@@ -165,8 +162,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
   // Listen for terminal activity sync broadcasts from main process
   useEffect(() => {
     // Fetch initial activity state
-    terminalClient
-      .getActivityState()
+    TerminalService.getActivityState()
       .then((activities) => {
         console.info(
           '[TerminalProvider] Loaded initial activity state:',
@@ -185,7 +181,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     // Subscribe to activity sync broadcasts
     const activityTracer = getTracer('principal-ade-dev-workspace');
 
-    const unsubscribe = onActivitySync((activities) => {
+    const unsubscribe = TerminalService.onActivitySync((activities) => {
       const span = activityTracer.startSpan('terminal.activity.sync_handle');
       const safeActivities = activities ?? [];
 
@@ -219,7 +215,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     };
   }, []);
 
-  useEffect(() => onCwdChange(({ sessionId, cwd }) => {
+  useEffect(() => TerminalService.onCwdChange(({ sessionId, cwd }) => {
     setTerminalSessions((previous) => previous.map((session) =>
       session.id === sessionId && session.directory !== cwd
         ? { ...session, directory: cwd }
@@ -470,7 +466,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
         return TerminalService.refresh(sessionId);
       },
 
-      onTerminalCwdChange: onCwdChange,
+      onTerminalCwdChange: TerminalService.onCwdChange,
 
       listTerminalSessions: async (): Promise<TerminalSessionInfo[]> => {
         const sessions = await TerminalService.list();
@@ -619,7 +615,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
           '[TerminalActions] getTerminalBuffer called for session:',
           sessionId,
         );
-        const result = await terminalClient.getTerminalBuffer({ sessionId });
+        const result = await TerminalService.getTerminalBuffer({ sessionId });
         console.info(
           `[TerminalActions] getTerminalBuffer result: success=${result.success}, size=${result.size}`,
         );
@@ -632,7 +628,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
   // Activity tracking actions
   const updateActivity = useCallback(async (input: UpdateActivityInput) => {
     console.info('[TerminalProvider] Updating activity:', input);
-    await terminalClient.updateActivity(input);
+    await TerminalService.updateActivity(input);
   }, []);
 
   const getActivityForSession = useCallback(

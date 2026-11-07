@@ -162,7 +162,7 @@ export function useStorybookManager(
   const stop = useCallback(async () => {
     if (status !== 'running' || !sessionId) return;
     try {
-      await window.mainProcess.terminal.destroy(sessionId);
+      await TerminalService.destroy(sessionId);
       setStatus('idle');
       setSessionId(null);
       setPort(null);
@@ -276,14 +276,7 @@ export function useStorybookManager(
         events.emit({ ...navigatePayload, timestamp: Date.now() });
       }, 150);
     }, 300);
-  }, [
-    status,
-    currentLayout,
-    onLayoutChange,
-    onPanelSizesChange,
-    events,
-    port,
-  ]);
+  }, [status, currentLayout, onLayoutChange, onPanelSizesChange, events, port]);
 
   const hidePanel = useCallback(() => {
     if (currentLayout && onLayoutChange) {

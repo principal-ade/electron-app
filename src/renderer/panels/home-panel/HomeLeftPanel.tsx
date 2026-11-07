@@ -112,13 +112,16 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const [selectedRepo, setSelectedRepo] =
     useState<RepositorySelectedPayload | null>(null);
   const [repoCardExiting, setRepoCardExiting] = useState(false);
-  // The repo whose ahead indicator was clicked — opens the push-to-remote modal.
+  // The repo whose ahead indicator was clicked — opens the push confirmation.
   const [pushTarget, setPushTarget] = useState<{
     path: string;
     name: string;
     ahead: number;
     branch?: string;
   } | null>(null);
+  const [pushStatusByPath, setPushStatusByPath] = useState<
+    Record<string, { state: 'pushing' | 'error'; message?: string }>
+  >({});
 
   // Repos with uncommitted changes / unpushed commits — the in-progress list.
   const inProgressRepos = useInProgressRepos(repositories);
@@ -450,7 +453,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   );
 
   // Push the clicked repo's local commits to its upstream (creating the
-  // upstream if the branch has none yet). Shared by the push modal.
+  // upstream if the branch has none yet). Used by the Home push flow.
   const pushToRemote = useCallback(
     async (path: string): Promise<{ success: boolean; message: string }> => {
       const safety = await GitService.isPushSafe(path);
@@ -468,6 +471,47 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       console.warn('[HomeLeftPanel] Failed to refresh after push:', err);
     });
   }, []);
+
+  const startPush = useCallback(
+    (path: string) => {
+      setPushStatusByPath((current) => ({
+        ...current,
+        [path]: { state: 'pushing' },
+      }));
+      setPushTarget(null);
+
+      void (async () => {
+        try {
+          const result = await pushToRemote(path);
+          if (!result.success) {
+            setPushStatusByPath((current) => ({
+              ...current,
+              [path]: {
+                state: 'error',
+                message: result.message || 'Push failed.',
+              },
+            }));
+            return;
+          }
+          setPushStatusByPath((current) => {
+            const next = { ...current };
+            delete next[path];
+            return next;
+          });
+          handlePushed(path);
+        } catch (err) {
+          setPushStatusByPath((current) => ({
+            ...current,
+            [path]: {
+              state: 'error',
+              message: err instanceof Error ? err.message : 'Push failed.',
+            },
+          }));
+        }
+      })();
+    },
+    [handlePushed, pushToRemote],
+  );
 
   // Clicking an in-progress row opens a terminal tab at the clone's path.
   const openTerminalForEntry = useCallback(
@@ -772,6 +816,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                                   ahead: status?.ahead,
                                   behind: status?.behind,
                                 }}
+                                pushStatus={
+                                  path ? pushStatusByPath[path] : undefined
+                                }
                                 onPushAhead={
                                   path && (status?.ahead ?? 0) > 0
                                     ? () =>
@@ -939,13 +986,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         repoName={pushTarget?.name ?? ''}
         aheadCount={pushTarget?.ahead ?? 0}
         branch={pushTarget?.branch}
-        onPush={() =>
-          pushTarget
-            ? pushToRemote(pushTarget.path)
-            : Promise.resolve({ success: false, message: 'No repository.' })
-        }
-        onPushed={() => {
-          if (pushTarget) handlePushed(pushTarget.path);
+        onPush={() => {
+          if (pushTarget) startPush(pushTarget.path);
         }}
       />
     </div>

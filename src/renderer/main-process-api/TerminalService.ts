@@ -13,6 +13,9 @@ import {
   onPortReady,
   onSessionsChanged,
   onTerminalEvent,
+  onActivitySync,
+  onProgramStatus,
+  onCwdChange,
 } from '../tipc/terminalClient';
 import type {
   TerminalInfo,
@@ -22,8 +25,83 @@ import type {
   TerminalSessionMetadata,
   TerminalDaemonUpdateEvent,
 } from '../../shared/main-process-api-interfaces/TerminalService';
+import type {
+  TerminalActivityState,
+  UpdateActivityInput,
+  TerminalSessionInfo,
+  DaemonStatusResponse,
+  ProgramStatusRecord,
+} from '../tipc/terminalClient';
+import type {
+  DaemonControlResult,
+  GetTerminalBufferInput,
+  GetTerminalBufferResult,
+} from '../../shared/tipc/terminalRouterTypes';
+
+export type {
+  DaemonStatusResponse,
+  ProgramStatusRecord,
+  TerminalActivityState,
+  TerminalSessionInfo,
+  UpdateActivityInput,
+} from '../tipc/terminalClient';
 
 export class TerminalService {
+  static listSessions(): Promise<TerminalSessionInfo[]> {
+    return terminalClient.listTerminalSessions();
+  }
+
+  static getActivityState(): Promise<TerminalActivityState[]> {
+    return terminalClient.getActivityState();
+  }
+
+  static onActivitySync(
+    callback: (activities: TerminalActivityState[]) => void,
+  ): () => void {
+    return onActivitySync(callback);
+  }
+
+  static getDaemonStatus(): Promise<DaemonStatusResponse> {
+    return terminalClient.getDaemonStatus();
+  }
+
+  static startDaemon(): Promise<DaemonControlResult> {
+    return terminalClient.startDaemon();
+  }
+
+  static stopDaemon(): Promise<DaemonControlResult> {
+    return terminalClient.stopDaemon();
+  }
+
+  static getAllProgramStatus(): Promise<Record<string, ProgramStatusRecord[]>> {
+    return terminalClient.getAllProgramStatus();
+  }
+
+  static onProgramStatus(
+    callback: (event: {
+      sessionId: string;
+      records: ProgramStatusRecord[];
+    }) => void,
+  ): () => void {
+    return onProgramStatus(callback);
+  }
+
+  static onCwdChange(
+    callback: (event: { sessionId: string; cwd: string }) => void,
+  ): () => void {
+    return onCwdChange(callback);
+  }
+
+  static getTerminalBuffer(
+    input: GetTerminalBufferInput,
+  ): Promise<GetTerminalBufferResult> {
+    return terminalClient.getTerminalBuffer(input);
+  }
+
+  static updateActivity(input: UpdateActivityInput): Promise<void> {
+    return terminalClient.updateActivity(input);
+  }
+
   static async list(): Promise<TerminalInfo[]> {
     const sessions = await terminalClient.listTerminalSessions();
     // Map to TerminalInfo format
@@ -49,7 +127,11 @@ export class TerminalService {
   ): Promise<string> {
     // For TIPC, we use createTerminalSession which handles creation
     // The session manager will reuse existing sessions based on context
-    return terminalClient.createTerminalSession({ cwd: dir, context, metadata });
+    return terminalClient.createTerminalSession({
+      cwd: dir,
+      context,
+      metadata,
+    });
   }
 
   static async createWithCommand(
@@ -58,7 +140,12 @@ export class TerminalService {
     context?: string,
     metadata?: TerminalSessionMetadata,
   ): Promise<string> {
-    return terminalClient.createTerminalSession({ cwd: dir, command, context, metadata });
+    return terminalClient.createTerminalSession({
+      cwd: dir,
+      command,
+      context,
+      metadata,
+    });
   }
 
   static async destroy(id: string): Promise<void> {

@@ -1,4 +1,5 @@
 import { createClient } from '@egoist/tipc/renderer';
+import { ipcInvoke } from './ipcTransport';
 import type {
   GetSubsystemModelInput,
   SubsystemModelRouterType,
@@ -20,11 +21,8 @@ let client: TipcSubsystemModelClient | null = null;
 
 function getClient(): TipcSubsystemModelClient {
   if (!client) {
-    if (!window.electron?.ipcRenderer?.invoke) {
-      throw new Error('Subsystem model client is not available');
-    }
     client = createClient<SubsystemModelRouterType>({
-      ipcInvoke: window.electron.ipcRenderer.invoke,
+      ipcInvoke,
     }) as unknown as TipcSubsystemModelClient;
   }
   return client;

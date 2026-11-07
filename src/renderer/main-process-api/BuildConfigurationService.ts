@@ -7,6 +7,7 @@ import type { RunBuildConfigurationResult } from '../../shared/tipc/buildConfigu
 import type { BuildSecretsRequestedEvent } from '../../shared/build-configurations/events';
 import { BUILD_SECRETS_REQUESTED } from '../../shared/build-configurations/events';
 import { buildConfigurationClient } from '../tipc/buildConfigurationClient';
+import { ipcOn } from '../tipc/ipcTransport';
 
 export class BuildConfigurationService {
   static list(): Promise<BuildConfigurationSummary[]> {
@@ -51,13 +52,10 @@ export class BuildConfigurationService {
   static onSecretsRequested(
     callback: (event: BuildSecretsRequestedEvent) => void,
   ): () => void {
-    return window.electron.ipcRenderer.on(
-      BUILD_SECRETS_REQUESTED,
-      (...args: unknown[]) => {
+    return ipcOn(BUILD_SECRETS_REQUESTED, (...args: unknown[]) => {
         const event = args[0] as BuildSecretsRequestedEvent | undefined;
         if (!event || typeof event.configId !== 'string') return;
         callback(event);
-      },
-    );
+    });
   }
 }

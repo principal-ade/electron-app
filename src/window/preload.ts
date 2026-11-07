@@ -168,9 +168,11 @@ try {
       ipcRenderer.invoke('window-close-with-confirmation'),
     isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
     onMaximizeChange: (callback: (isMaximized: boolean) => void) => {
-      ipcRenderer.on('window-maximized-changed', (_, isMaximized) =>
-        callback(isMaximized),
-      );
+      const listener = (_: Electron.IpcRendererEvent, isMaximized: boolean) =>
+        callback(isMaximized);
+      ipcRenderer.on('window-maximized-changed', listener);
+      return () =>
+        ipcRenderer.removeListener('window-maximized-changed', listener);
     },
   });
   console.info('[Preload] ✅ Electron Titlebar API exposed');
@@ -216,7 +218,9 @@ try {
       ipcRenderer.send('window-switcher:cycle', direction),
 
     // Quick Open API
-    onQuickOpenItems: (callback: (event: Electron.IpcRendererEvent, items: unknown[]) => void) => {
+    onQuickOpenItems: (
+      callback: (event: Electron.IpcRendererEvent, items: unknown[]) => void,
+    ) => {
       const listener = (event: Electron.IpcRendererEvent, items: unknown[]) =>
         callback(event, items);
       ipcRenderer.on('quick-open:items', listener);
@@ -268,12 +272,18 @@ try {
     'telemetryExportEnabled',
     String(telemetrySettings.enabled),
   );
-  contextBridge.exposeInMainWorld('getTelemetrySettings', readTelemetrySettings);
+  contextBridge.exposeInMainWorld(
+    'getTelemetrySettings',
+    readTelemetrySettings,
+  );
   console.info('[Preload] ✅ OTEL settings exposed:', telemetrySettings);
 } catch (error) {
   console.error('[Preload] ❌ Failed to expose OTEL settings:', error);
   // Fail closed: without the resolved settings, don't export to a guessed port.
-  contextBridge.exposeInMainWorld('otelCollectorEndpoint', 'http://localhost:4318');
+  contextBridge.exposeInMainWorld(
+    'otelCollectorEndpoint',
+    'http://localhost:4318',
+  );
   contextBridge.exposeInMainWorld('telemetryExportEnabled', 'false');
 }
 
@@ -348,7 +358,6 @@ try {
         ipcRenderer.on(channel, subscription);
         return () => ipcRenderer.removeListener(channel, subscription);
       },
-      send: ipcRenderer.send.bind(ipcRenderer),
     },
 
     // Terminal data subscription (abstracts MessagePort) - matches testing app

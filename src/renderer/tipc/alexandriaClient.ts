@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@egoist/tipc/renderer';
+import { ipcInvoke } from './ipcTransport';
 import type {
   AlexandriaRouterType,
   AlexandriaEntry,
@@ -116,13 +117,8 @@ let _tipcClient: TipcAlexandriaClient | null = null;
 
 function getTipcClient(): TipcAlexandriaClient {
   if (!_tipcClient) {
-    if (!window.electron?.ipcRenderer?.invoke) {
-      throw new Error(
-        'Alexandria client not available - window.electron not initialized',
-      );
-    }
     _tipcClient = createClient<AlexandriaRouterType>({
-      ipcInvoke: window.electron.ipcRenderer.invoke,
+      ipcInvoke,
     }) as unknown as TipcAlexandriaClient;
   }
   return _tipcClient;

@@ -86,6 +86,24 @@ test('can hide all repository tooltips while keeping accessible action labels', 
   expect(screen.getByLabelText('Has uncommitted changes')).toBeTruthy();
 });
 
+test('shows push progress inline in the Home row', () => {
+  render(
+    <OrgRepoItemCard
+      repo={{ name: 'app' }}
+      sync={{ ahead: 0 }}
+      pushStatus={{ state: 'pushing' }}
+      onPushAhead={jest.fn()}
+    />,
+  );
+
+  expect(
+    screen.getByRole('status', { name: 'Pushing app to remote' }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole('button', { name: 'Push 2 commits to remote' }),
+  ).toBeNull();
+});
+
 test.each([false, true])(
   'orders the row as eye, remote status, then pin when pinned=%s',
   (pinned) => {

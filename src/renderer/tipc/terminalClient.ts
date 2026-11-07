@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@egoist/tipc/renderer';
+import { ipcInvoke, ipcOn } from './ipcTransport';
 import { getTracer } from '../telemetry';
 import { traceparentFromSpan } from '../../shared/telemetry/traceparent';
 import type {
@@ -27,43 +28,6 @@ import type {
   GetTerminalBufferResult,
 } from '../../shared/tipc/terminalRouterTypes';
 import type { ProgramStatusRecord } from '../../shared/terminal/programStatus';
-
-// Extend Window interface for TypeScript
-declare global {
-  interface Window {
-    electron: {
-      ipcRenderer: {
-        invoke: typeof Electron.ipcRenderer.invoke;
-        on: (
-          channel: string,
-          handler: (...args: unknown[]) => void,
-        ) => () => void;
-        send: typeof Electron.ipcRenderer.send;
-      };
-      onTerminalData: (
-        sessionId: string,
-        callback: (data: string) => void,
-      ) => () => void;
-      onOwnershipLost: (
-        callback: (data: {
-          sessionId: string;
-          newOwnerWindowId: number;
-        }) => void,
-      ) => () => void;
-      // Fast terminal write using MessagePort (no IPC round-trip)
-      writeToTerminalPort: (sessionId: string, data: string) => boolean;
-      // Check if MessagePort is available for a session
-      hasTerminalPort: (sessionId: string) => boolean;
-      // Subscribe to port ready events (for direct MessagePort access)
-      onPortReady: (
-        callback: (
-          data: { sessionId: string; writable: boolean },
-          port: MessagePort,
-        ) => void,
-      ) => () => void;
-    };
-  }
-}
 
 // Define the client interface to match main process router implementation
 // The shared TerminalRouterType is used for createClient<T>() to satisfy TIPC's RouterType constraint
@@ -100,27 +64,22 @@ export interface TerminalClient {
   getDaemonStatus: () => Promise<DaemonStatusResponse>;
   startDaemon: () => Promise<DaemonControlResult>;
   stopDaemon: () => Promise<DaemonControlResult>;
-  getTerminalBuffer: (input: GetTerminalBufferInput) => Promise<GetTerminalBufferResult>;
+  getTerminalBuffer: (
+    input: GetTerminalBufferInput,
+  ) => Promise<GetTerminalBufferResult>;
 }
 
 // Tracer for terminal telemetry (renderer scope)
 const tracer = getTracer('principal-ade-dev-workspace');
 
-// Lazy-initialized TIPC client for terminal operations
-// We use lazy initialization because window.electron is injected by the preload script
-// and isn't available at module load time.
+// Lazy-initialized TIPC client for terminal operations.
 let _terminalClient: TerminalClient | null = null;
 
 function getTerminalClient(): TerminalClient {
   if (!_terminalClient) {
-    if (!window.electron?.ipcRenderer?.invoke) {
-      throw new Error(
-        'Terminal client not available - window.electron not initialized',
-      );
-    }
     // Use shared TerminalRouterType which satisfies RouterType constraint
     _terminalClient = createClient<TerminalRouterType>({
-      ipcInvoke: window.electron.ipcRenderer.invoke,
+      ipcInvoke,
     }) as unknown as TerminalClient;
   }
   return _terminalClient;
@@ -158,7 +117,9 @@ async function createTerminalSessionWithTelemetry(
       span.setAttribute('session.id', sessionId);
       return sessionId;
     } catch (error) {
-      span.recordException(error instanceof Error ? error : new Error(String(error)));
+      span.recordException(
+        error instanceof Error ? error : new Error(String(error)),
+      );
       throw error;
     } finally {
       span.end();
@@ -169,7 +130,9 @@ async function createTerminalSessionWithTelemetry(
 /**
  * Wrapped listTerminalSessions with telemetry
  */
-async function listTerminalSessionsWithTelemetry(): Promise<TerminalSessionInfo[]> {
+async function listTerminalSessionsWithTelemetry(): Promise<
+  TerminalSessionInfo[]
+> {
   const span = tracer.startSpan('terminal.session.list');
 
   try {
@@ -187,7 +150,9 @@ async function listTerminalSessionsWithTelemetry(): Promise<TerminalSessionInfo[
 
     return sessions;
   } catch (error) {
-    span.recordException(error instanceof Error ? error : new Error(String(error)));
+    span.recordException(
+      error instanceof Error ? error : new Error(String(error)),
+    );
     throw error;
   } finally {
     span.end();
@@ -238,7 +203,7 @@ export const onTerminalEvent = <T>(
   channel: string,
   callback: (payload: T) => void,
 ): (() => void) => {
-  return window.electron.ipcRenderer.on(channel, (...args: unknown[]) => {
+  return ipcOn(channel, (...args: unknown[]) => {
     callback(args[0] as T);
   });
 };
@@ -281,14 +246,11 @@ export const onPortReady = (
 export const onActivitySync = (
   callback: (activities: TerminalActivityState[]) => void,
 ): (() => void) => {
-  return window.electron.ipcRenderer.on(
-    'terminal:activity-sync',
-    (...args: unknown[]) => {
+  return ipcOn('terminal:activity-sync', (...args: unknown[]) => {
       // Preload strips IPC event, so first arg is activities array
       const activities = args[0] as TerminalActivityState[];
       callback(activities);
-    },
-  );
+  });
 };
 
 /**
@@ -302,26 +264,27 @@ export const onProgramStatus = (
     records: ProgramStatusRecord[];
   }) => void,
 ): (() => void) => {
-  return window.electron.ipcRenderer.on(
-    'terminal:program-status',
-    (...args: unknown[]) => {
+  return ipcOn('terminal:program-status', (...args: unknown[]) => {
       // Preload strips the IPC event, so the first arg is the payload.
       const payload = args[0] as {
         sessionId: string;
         records: ProgramStatusRecord[];
       };
       callback(payload);
-    },
-  );
+  });
 };
 
 /** Observe cwd metadata without acquiring terminal ownership or a data port. */
 export const onCwdChange = (
   callback: (data: { sessionId: string; cwd: string }) => void,
 ): (() => void) => {
-  return window.electron.ipcRenderer.on('terminal:cwd-change', (...args: unknown[]) => {
+  return ipcOn('terminal:cwd-change', (...args: unknown[]) => {
     const data = args[0] as { sessionId?: unknown; cwd?: unknown } | undefined;
-    if (data && typeof data.sessionId === 'string' && typeof data.cwd === 'string') {
+    if (
+      data &&
+      typeof data.sessionId === 'string' &&
+      typeof data.cwd === 'string'
+    ) {
       callback({ sessionId: data.sessionId, cwd: data.cwd });
     }
   });
@@ -334,15 +297,19 @@ export const onCwdChange = (
 export const onSessionsChanged = (
   callback: (sessions: TerminalSessionInfo[]) => void,
 ): (() => void) => {
-  return window.electron.ipcRenderer.on(
-    'terminal:sessions-changed',
-    (...args: unknown[]) => {
+  return ipcOn('terminal:sessions-changed', (...args: unknown[]) => {
       // Preload strips IPC event, so first arg is sessions array
       const sessions = args[0] as TerminalSessionInfo[];
       callback(sessions);
-    },
-  );
+  });
 };
 
 // Re-export types for convenience
-export type { UpdateActivityInput, TerminalActivityState, TerminalSessionInfo, DaemonStatusResponse, DaemonControlResult, ProgramStatusRecord };
+export type {
+  UpdateActivityInput,
+  TerminalActivityState,
+  TerminalSessionInfo,
+  DaemonStatusResponse,
+  DaemonControlResult,
+  ProgramStatusRecord,
+};

@@ -25,7 +25,9 @@ declare global {
       close: () => void;
       closeWithConfirmation: () => Promise<boolean>;
       isMaximized: () => Promise<boolean>;
-      onMaximizeChange: (callback: (isMaximized: boolean) => void) => void;
+      onMaximizeChange: (
+        callback: (isMaximized: boolean) => void,
+      ) => () => void;
     };
   }
 }

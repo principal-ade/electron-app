@@ -38,10 +38,86 @@ export type {
   DetachedTabWindow,
 };
 
+export interface WindowListPayload {
+  windows?: Array<{
+    id: number;
+    title: string;
+    primaryType?: string;
+    alexandriaEntry?: AlexandriaEntry;
+    thumbnail?: string;
+  }>;
+  selectedIndex?: number;
+}
+
 /**
  * Service for managing application windows
  */
 export class WindowService {
+  static hasTitlebarControls(): boolean {
+    return Boolean(window.electronTitlebar);
+  }
+
+  static isMaximized(): Promise<boolean> {
+    return window.electronTitlebar?.isMaximized() ?? Promise.resolve(false);
+  }
+
+  static onMaximizeChange(
+    callback: (isMaximized: boolean) => void,
+  ): () => void {
+    return window.electronTitlebar?.onMaximizeChange(callback) ?? (() => {});
+  }
+
+  static minimize(): void {
+    window.electronTitlebar?.minimize();
+  }
+
+  static maximize(): void {
+    window.electronTitlebar?.maximize();
+  }
+
+  static close(): void {
+    window.electronTitlebar?.close();
+  }
+
+  static closeWithConfirmation(): Promise<boolean> {
+    return (
+      window.electronTitlebar?.closeWithConfirmation() ?? Promise.resolve(false)
+    );
+  }
+
+  static isWindowSwitcherAvailable(): boolean {
+    return Boolean(window.electronAPI);
+  }
+
+  static requestWindowList(): void {
+    window.electronAPI?.getWindowList?.();
+  }
+
+  static onWindowListUpdate(
+    callback: (data: WindowListPayload) => void,
+  ): () => void {
+    const result = window.electronAPI?.onWindowListUpdate?.(callback);
+    return typeof result === 'function' ? result : () => {};
+  }
+
+  static onWindowSwitcherNext(callback: () => void): () => void {
+    const result = window.electronAPI?.onSelectNext?.(callback);
+    return typeof result === 'function' ? result : () => {};
+  }
+
+  static onWindowSwitcherPrevious(callback: () => void): () => void {
+    const result = window.electronAPI?.onSelectPrevious?.(callback);
+    return typeof result === 'function' ? result : () => {};
+  }
+
+  static cycleWindowSelection(direction: 'next' | 'previous'): void {
+    window.electronAPI?.cycleSelection?.(direction);
+  }
+
+  static selectWindow(windowId: number): void {
+    window.electronAPI?.selectWindow?.(windowId);
+  }
+
   /**
    * Get the current window's ID
    * @returns The Electron BrowserWindow ID

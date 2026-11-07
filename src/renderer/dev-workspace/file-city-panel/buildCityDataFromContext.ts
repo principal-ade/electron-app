@@ -4,6 +4,7 @@ import {
   type CityData,
 } from './cityDataBuilders';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
+import { FileCityImageService } from '../../main-process-api/FileCityImageService';
 
 export interface BuildCityDataInput {
   fileTree: RepoFileTree;
@@ -29,13 +30,13 @@ export async function buildCityDataFromContext(
   const { fileTree, repositoryPath } = input;
   const rawCityData = buildCityDataFromFileTree(fileTree, '');
 
-  const countLines = window.mainProcess?.fileCityImage?.countLines;
-  if (!repositoryPath || !countLines) {
+  if (!repositoryPath) {
     return rawCityData;
   }
 
   try {
-    const rawLineCounts = await countLines(repositoryPath);
+    const rawLineCounts = await FileCityImageService.countLines(repositoryPath);
+    if (!rawLineCounts) return rawCityData;
     const repoName = repositoryPath.split('/').pop() || '';
     const lineCounts: Record<string, number> = {};
     for (const [filePath, count] of Object.entries(rawLineCounts)) {

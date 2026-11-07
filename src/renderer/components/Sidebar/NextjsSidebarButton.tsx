@@ -203,7 +203,7 @@ export const NextjsSidebarButton: React.FC<NextjsSidebarButtonProps> = ({
       // Stop Next.js
       console.info('[NextjsSidebarButton] Stopping Next.js...');
       try {
-        await window.mainProcess.terminal.destroy(nextjsSessionId);
+        await TerminalService.destroy(nextjsSessionId);
         setNextjsStatus('idle');
         setNextjsSessionId(null);
         setNextjsPort(null);

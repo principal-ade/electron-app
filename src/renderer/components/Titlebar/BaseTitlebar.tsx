@@ -1,19 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { WindowService } from '../../main-process-api/WindowService';
 import './Titlebar.css';
-
-declare global {
-  interface Window {
-    electronTitlebar?: {
-      minimize: () => void;
-      maximize: () => void;
-      close: () => void;
-      closeWithConfirmation: () => Promise<boolean>;
-      isMaximized: () => Promise<boolean>;
-      onMaximizeChange: (callback: (isMaximized: boolean) => void) => void;
-    };
-  }
-}
 
 export interface BaseTitlebarProps {
   title?: string | React.ReactNode;
@@ -39,13 +27,11 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
   const { theme, mode } = useTheme();
 
   useEffect(() => {
-    if (window.electronTitlebar) {
-      window.electronTitlebar.isMaximized().then(setIsMaximized);
-      window.electronTitlebar.onMaximizeChange(setIsMaximized);
-    }
+    void WindowService.isMaximized().then(setIsMaximized);
+    return WindowService.onMaximizeChange(setIsMaximized);
   }, []);
 
-  if (!window.electronTitlebar) {
+  if (!WindowService.hasTitlebarControls()) {
     return null;
   }
 
@@ -88,7 +74,8 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
       >
         {React.Children.toArray(children).filter(
           (child): child is React.ReactElement =>
-            React.isValidElement(child) && (child.props as { position?: string }).position === 'left',
+            React.isValidElement(child) &&
+            (child.props as { position?: string }).position === 'left',
         )}
       </div>
 
@@ -102,12 +89,14 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
           WebkitAppRegion: 'drag' as 'drag' | 'no-drag',
         }}
       >
-        {React.Children.toArray(children).filter((child) =>
+        {React.Children.toArray(children).filter(
+          (child) =>
           React.isValidElement(child) &&
           (child.props as { position?: string }).position === 'center',
         )}
         {/* Show title only if no center content */}
-        {React.Children.toArray(children).filter((child) =>
+        {React.Children.toArray(children).filter(
+          (child) =>
           React.isValidElement(child) &&
           (child.props as { position?: string }).position === 'center',
         ).length === 0 &&
@@ -147,7 +136,7 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
         <div className="titlebar-controls">
           <button
             className="titlebar-button minimize"
-            onClick={() => window.electronTitlebar?.minimize()}
+            onClick={() => WindowService.minimize()}
             aria-label="Minimize"
           >
             <svg width="12" height="1" viewBox="0 0 12 1">
@@ -156,7 +145,7 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
           </button>
           <button
             className="titlebar-button maximize"
-            onClick={() => window.electronTitlebar?.maximize()}
+            onClick={() => WindowService.maximize()}
             aria-label={isMaximized ? 'Restore' : 'Maximize'}
           >
             {isMaximized ? (
@@ -182,9 +171,9 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
             className="titlebar-button close"
             onClick={() => {
               if (confirmBeforeClose) {
-                window.electronTitlebar?.closeWithConfirmation();
+                WindowService.closeWithConfirmation();
               } else {
-                window.electronTitlebar?.close();
+                WindowService.close();
               }
             }}
             aria-label="Close"

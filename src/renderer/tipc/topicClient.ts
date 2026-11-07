@@ -7,6 +7,7 @@
  */
 
 import { createClient } from '@egoist/tipc/renderer';
+import { ipcInvoke, ipcOn } from './ipcTransport';
 import type {
   AppendDescriptionInput,
   AttachImageAssetInput,
@@ -87,13 +88,8 @@ let _tipcClient: TipcTopicClient | null = null;
 
 function getTipcClient(): TipcTopicClient {
   if (!_tipcClient) {
-    if (!window.electron?.ipcRenderer?.invoke) {
-      throw new Error(
-        'Topic client not available - window.electron not initialized',
-      );
-    }
     _tipcClient = createClient<TopicRouterType>({
-      ipcInvoke: window.electron.ipcRenderer.invoke,
+      ipcInvoke,
     }) as unknown as TipcTopicClient;
   }
   return _tipcClient;
@@ -111,24 +107,18 @@ export const topicClient: TopicClient = {
   getSessionLinks: () => getTipcClient().topic_getSessionLinks(),
   linkSession: (input) => getTipcClient().topic_linkSession(input),
   onSessionLinked: (callback) => {
-    return window.electron.ipcRenderer.on(
-      TopicAPIEvent.SESSION_LINKED,
-      (...args: unknown[]) => {
+    return ipcOn(TopicAPIEvent.SESSION_LINKED, (...args: unknown[]) => {
         const event = args[0] as SessionLinkedEvent | undefined;
         if (!event) return;
         callback(event);
-      },
-    );
+    });
   },
   onTopicActivate: (callback) => {
-    return window.electron.ipcRenderer.on(
-      TopicAPIEvent.TOPIC_ACTIVATE,
-      (...args: unknown[]) => {
+    return ipcOn(TopicAPIEvent.TOPIC_ACTIVATE, (...args: unknown[]) => {
         const event = args[0] as TopicActivateEvent | undefined;
         if (!event) return;
         callback(event);
-      },
-    );
+    });
   },
 };
 

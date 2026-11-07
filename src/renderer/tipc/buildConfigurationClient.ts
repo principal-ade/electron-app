@@ -1,4 +1,5 @@
 import { createClient } from '@egoist/tipc/renderer';
+import { ipcInvoke } from './ipcTransport';
 import type {
   BuildConfigurationSummary,
   BuildRunRecord,
@@ -42,11 +43,8 @@ let client: TipcBuildConfigurationClient | null = null;
 
 function getClient(): TipcBuildConfigurationClient {
   if (!client) {
-    if (!window.electron?.ipcRenderer?.invoke) {
-      throw new Error('Build configuration client is not available');
-    }
     client = createClient<BuildConfigurationRouterType>({
-      ipcInvoke: window.electron.ipcRenderer.invoke,
+      ipcInvoke,
     }) as unknown as TipcBuildConfigurationClient;
   }
   return client;

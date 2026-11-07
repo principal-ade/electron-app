@@ -165,4 +165,76 @@ export default [{
   rules: {
     '@typescript-eslint/no-explicit-any': 'off',
   },
+}, // Renderer IPC boundary: UI code uses renderer services
+{
+  files: ['src/renderer/**/*.{ts,tsx}'],
+  rules: {
+    'no-restricted-properties': ['error',
+      { object: 'window', property: 'mainProcess', message: 'Use a renderer service instead of window.mainProcess.' },
+      { object: 'window', property: 'electron', message: 'Use a renderer service or typed IPC adapter instead of window.electron.' },
+      { object: 'window', property: 'electronTitlebar', message: 'Use WindowService for titlebar operations.' },
+      { object: 'window', property: 'electronAPI', message: 'Use a renderer service for preload APIs.' },
+    ],
+    'no-restricted-imports': ['error', {
+      paths: [
+        { name: 'electron', message: 'Renderer code must use the typed preload/service boundary.' },
+        { name: '@egoist/tipc/renderer', message: 'Construct TIPC clients in the service/adapter layer, not renderer UI code.' },
+      ],
+      patterns: [{
+        group: ['**/tipc/*Client', '**/tipc/ipcTransport'],
+        message: 'Use a renderer service instead of importing a raw TIPC client or transport.',
+      }],
+    }],
+  },
+}, // Service adapters own the typed preload surface
+{
+  files: ['src/renderer/main-process-api/**/*.{ts,tsx}'],
+  rules: {
+    'no-restricted-properties': ['error', {
+      object: 'window', property: 'electron', message: 'Use ipcTransport or a typed TIPC client for IPC access.',
+    }],
+    'no-restricted-imports': ['error', {
+      paths: [{ name: 'electron', message: 'Renderer service adapters must use the preload transport.' }],
+    }],
+  },
+}, {
+  files: ['src/renderer/services/**/*.{ts,tsx}'],
+  rules: {
+    'no-restricted-properties': ['error', {
+      object: 'window', property: 'electron', message: 'Use a typed renderer service for IPC access.',
+    }],
+  },
+}, // TIPC clients are typed adapters; only the transport touches generic IPC
+{
+  files: ['src/renderer/tipc/**/*.{ts,tsx}'],
+  rules: {
+    'no-restricted-properties': ['error',
+      { object: 'window', property: 'mainProcess', message: 'Use the renderer service layer for main-process APIs.' },
+      { object: 'window', property: 'electronTitlebar', message: 'Use WindowService for titlebar operations.' },
+      { object: 'window', property: 'electronAPI', message: 'Use a renderer service for preload APIs.' },
+      { object: 'window.electron', property: 'ipcRenderer', message: 'Use ipcTransport for generic IPC access.' },
+    ],
+    'no-restricted-imports': ['error', {
+      paths: [{ name: 'electron', message: 'Use the typed preload transport.' }],
+    }],
+  },
+}, {
+  files: ['src/renderer/tipc/ipcTransport.ts'],
+  rules: {
+    'no-restricted-properties': ['error',
+      { object: 'window', property: 'mainProcess', message: 'Keep raw preload access in the renderer service layer.' },
+      { object: 'window', property: 'electronTitlebar', message: 'Use WindowService for titlebar operations.' },
+      { object: 'window', property: 'electronAPI', message: 'Use a renderer service for preload APIs.' },
+    ],
+    'no-restricted-imports': ['error', {
+      paths: [{ name: 'electron', message: 'Use the typed preload transport.' }],
+    }],
+  },
+}, // Test and Storybook fixtures may mock preload APIs
+{
+  files: ['src/renderer/**/*.test.{ts,tsx}', 'src/renderer/**/*.spec.{ts,tsx}', 'src/renderer/**/*.stories.{ts,tsx}'],
+  rules: {
+    'no-restricted-properties': 'off',
+    'no-restricted-imports': 'off',
+  },
 }, ...storybook.configs["flat/recommended"]];

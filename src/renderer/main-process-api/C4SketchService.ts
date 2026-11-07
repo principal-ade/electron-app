@@ -1,4 +1,5 @@
 import { createClient } from '@egoist/tipc/renderer';
+import { ipcInvoke } from '../tipc/ipcTransport';
 import type { C4Sketch } from '@principal-ai/subsystems-react';
 import type {
   C4SketchRouterType,
@@ -16,10 +17,8 @@ interface C4SketchClient {
 let client: C4SketchClient | null = null;
 function getClient(): C4SketchClient {
   if (!client) {
-    if (!window.electron?.ipcRenderer?.invoke)
-      throw new Error('C4 sketch client is not available');
     client = createClient<C4SketchRouterType>({
-      ipcInvoke: window.electron.ipcRenderer.invoke,
+      ipcInvoke,
     }) as unknown as C4SketchClient;
   }
   return client;

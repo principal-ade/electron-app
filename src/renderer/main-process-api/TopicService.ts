@@ -12,13 +12,22 @@
 import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import type {
   CreateTopicInput,
+  TopicActivateEvent,
   TopicChangeEvent,
   UpdateTopicInput,
 } from '../../shared/main-process-api-interfaces/TopicAPI';
 import type { GetTopicsInput } from '../../shared/tipc/topicRouterTypes';
 import { topicClient } from '../tipc/topicClient';
 
+export type { Topic };
+
 export class TopicService {
+  static onTopicActivate(
+    callback: (event: TopicActivateEvent) => void,
+  ): () => void {
+    return topicClient.onTopicActivate(callback);
+  }
+
   /**
    * Subscribe to topic change events. Uses legacy IPC under the hood since
    * TIPC doesn't support events.

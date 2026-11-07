@@ -6,6 +6,7 @@ import { UserPreferencesService } from '../../../../main-process-api/UserPrefere
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
+import { SidebarNavigationSettings } from './SidebarNavigationSettings';
 import {
   DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS,
   type UserPreferences,
@@ -32,8 +33,6 @@ export const GeneralSettings: React.FC = () => {
     useState<'horizontal' | 'vertical'>('vertical');
   const [openLocalhostTerminalLinksInApp, setOpenLocalhostTerminalLinksInApp] =
     useState(false);
-  const [showMonitorButton, setShowMonitorButton] = useState(false);
-  const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   const [terminalImplementation, setTerminalImplementation] = useState<
     'xterm' | 'ghostty'
   >('ghostty');
@@ -70,8 +69,6 @@ export const GeneralSettings: React.FC = () => {
       setOpenLocalhostTerminalLinksInApp(
         prefs.openLocalhostTerminalLinksInApp === true,
       );
-      setShowMonitorButton(prefs.showMonitorButton ?? false);
-      setShowOnboardingButton(prefs.showOnboardingButton ?? false);
       setTerminalImplementation(
         prefs.terminalImplementation === 'xterm' ? 'xterm' : 'ghostty',
       );
@@ -804,213 +801,7 @@ export const GeneralSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* Panel Visibility */}
-      <div style={{ marginBottom: '32px' }}>
-        <h4
-          style={{
-            fontSize: '16px',
-            fontWeight: 600,
-            marginBottom: '16px',
-            color: theme.colors.text,
-          }}
-        >
-          Panel Visibility
-        </h4>
-        <div
-          style={{
-            backgroundColor: theme.colors.backgroundSecondary,
-            borderRadius: '12px',
-            padding: '20px',
-            border: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="showMonitorButton"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show Monitor Button
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled, the Monitor button will appear in the side
-                navigation. When disabled (default), the button is hidden.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showMonitorButton"
-                type="checkbox"
-                checked={showMonitorButton}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowMonitorButton(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showMonitorButton: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showMonitorButton
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showMonitorButton ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-
-          {/* Tutorials Button Toggle */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="showOnboardingButton"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show Tutorials Button
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled, the Tutorials button will appear in the side
-                navigation. When disabled (default), the button is hidden.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showOnboardingButton"
-                type="checkbox"
-                checked={showOnboardingButton}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowOnboardingButton(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showOnboardingButton: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showOnboardingButton
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showOnboardingButton ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-        </div>
-      </div>
+      <SidebarNavigationSettings />
 
       {/* Data Management */}
       <div style={{ marginBottom: '32px' }}>

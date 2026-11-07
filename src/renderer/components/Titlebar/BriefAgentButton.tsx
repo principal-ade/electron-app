@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Bot } from 'lucide-react';
-import type { Topic } from '../../tipc/topicClient';
+import type { Topic } from '../../main-process-api/TopicService';
 import { TopicService } from '../../main-process-api/TopicService';
 import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
 

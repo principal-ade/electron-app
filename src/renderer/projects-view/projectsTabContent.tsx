@@ -94,6 +94,7 @@ import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import type { FileTree as RepoFileTree } from '@principal-ai/repository-abstraction';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import { useWorkspaceTabs } from '../principal-window/PortalTabsContext';
 import { commitActivityPanelActions } from '../panels/commitActivityPanelActions';
 import { MarkdownDocTabContent } from './MarkdownDocTabContent';
@@ -526,11 +527,7 @@ const RepositoryProfileTabContent: React.FC<{
         }
       },
       getLineCounts: async (repoPath: string) => {
-        // Use main process to get line counts
-        if (window.mainProcess?.fileCityImage?.countLines) {
-          return await window.mainProcess.fileCityImage.countLines(repoPath);
-        }
-        return {};
+        return (await FileCityImageService.countLines(repoPath)) ?? {};
       },
 
       isRepositoryStarred: async (owner: string, repo: string) => {
@@ -741,10 +738,7 @@ const FileCityGuideTabContent: React.FC<{
     // Line counts are local-only — remote repos have no building heights.
     if (localPath) {
       setLineCountsLoading(true);
-      const fileCityApi = window.mainProcess?.fileCityImage;
-      const lineCountsPromise = fileCityApi
-        ? fileCityApi.countLines(localPath)
-        : Promise.resolve(null);
+      const lineCountsPromise = FileCityImageService.countLines(localPath);
       lineCountsPromise
         .then((raw) => {
           if (cancelled) return;
