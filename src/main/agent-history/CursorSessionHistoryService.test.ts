@@ -113,6 +113,9 @@ describe('CursorSessionHistoryService', () => {
     await expect(
       service.resume('/work/example', 'cursor-session-1234'),
     ).resolves.toBeUndefined();
+    expect(getSession).toHaveBeenCalledWith('cursor-session-1234', {
+      sqliteDriver: 'node:sqlite',
+    });
     await expect(service.resume('/work/example', 'invalid;id')).rejects.toThrow(
       'Invalid Cursor session ID',
     );
@@ -121,6 +124,21 @@ describe('CursorSessionHistoryService', () => {
       context: 0,
       sqliteDriver: 'node:sqlite',
     });
+  });
+
+  it('uses the legacy Store source when the hydrated session omits resolvedSource', async () => {
+    jest.mocked(getSession).mockResolvedValue({
+      id: 'cursor-session-1234',
+      workspace: '/work/example',
+      source: 'transcript',
+      messages: [],
+      messageCount: 0,
+    } as never);
+    const service = new CursorSessionHistoryService();
+
+    await expect(
+      service.resume('/work/example', 'cursor-session-1234'),
+    ).resolves.toBeUndefined();
   });
 
   it('treats an uninstalled Cursor database as an empty history', async () => {

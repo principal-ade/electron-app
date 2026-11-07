@@ -181,4 +181,30 @@ describe('SessionsLeftPanel', () => {
       );
     });
   });
+
+  it('hides non-resumable Cursor IDE sessions', async () => {
+    cursorHistory.list.mockResolvedValue([
+      {
+        id: 'cursor-composer-1234',
+        title: 'Old Composer conversation',
+        directory: '/work/example',
+        createdAt: 100,
+        updatedAt: 200,
+        resumable: false,
+      },
+    ]);
+
+    render(
+      <SessionsLeftPanel
+        repositories={[{ path: '/work/example' } as AlexandriaEntry]}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        'No Claude Code, Cursor, or OpenCode sessions found.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText('Old Composer conversation')).toBeNull();
+  });
 });

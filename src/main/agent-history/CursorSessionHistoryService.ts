@@ -62,16 +62,22 @@ function summaryOfSession(session: Session): CursorSessionSummary {
   const firstPrompt = session.messages.find(
     (message) => message.role === 'user',
   )?.content;
+  const resumable = session.resolvedSource
+    ? CURSOR_CLI_SESSION_SOURCE.has(session.resolvedSource)
+    : [
+        'store',
+        'transcript',
+        'store-complete',
+        'store-partial',
+        'merged',
+      ].includes(session.source ?? '');
   return {
     id: session.id,
     title: firstPrompt?.trim() || 'Cursor session',
     directory,
     createdAt: Date.parse(session.timestamp) || 0,
     updatedAt: Date.parse(session.metadata?.lastModified ?? '') || 0,
-    resumable:
-      !!session.resolvedSource &&
-      CURSOR_CLI_SESSION_SOURCE.has(session.resolvedSource) &&
-      !!directory,
+    resumable: resumable && !!directory,
   };
 }
 
@@ -146,7 +152,6 @@ export class CursorSessionHistoryService {
     }
     const session = summaryOfSession(
       await getSession(sessionId, {
-        workspace: directory,
         sqliteDriver: 'node:sqlite',
       }),
     );

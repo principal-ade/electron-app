@@ -324,11 +324,13 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
           }
           if (cursorResult.status === 'fulfilled') {
             combined.push(
-              ...cursorResult.value.map((session) => ({
-                ...session,
-                agent: 'Cursor' as const,
-                canResume: session.resumable,
-              })),
+              ...cursorResult.value
+                .filter((session) => session.resumable)
+                .map((session) => ({
+                  ...session,
+                  agent: 'Cursor' as const,
+                  canResume: true,
+                })),
             );
           } else {
             errors.push(

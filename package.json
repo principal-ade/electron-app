@@ -144,6 +144,7 @@
       "\\.(css|less|sass|scss)$": "identity-obj-proxy"
     },
     "setupFiles": [
+      "./.erb/scripts/jest-env-setup.cjs",
       "./.erb/scripts/check-build-exists.ts"
     ],
     "setupFilesAfterEnv": [
