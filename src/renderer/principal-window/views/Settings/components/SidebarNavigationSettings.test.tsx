@@ -32,6 +32,15 @@ test('sidebar navigation order appends new entries and ignores invalid ids', () 
   ]);
 });
 
+test('monitor and settings are fixed destinations, not configurable entries', () => {
+  expect(
+    resolveSidebarNavigationOrder(['settings', 'monitoring', 'topics']),
+  ).toEqual([
+    'topics',
+    ...DEFAULT_SIDEBAR_NAVIGATION_ORDER.filter((id) => id !== 'topics'),
+  ]);
+});
+
 test('changing item order persists the updated order', async () => {
   render(<SidebarNavigationSettings />);
   const moveProjectsDown = await screen.findByRole('button', {
@@ -55,17 +64,23 @@ test('changing item order persists the updated order', async () => {
 
 test('changing item visibility persists without hiding other default items', async () => {
   render(<SidebarNavigationSettings />);
-  const monitorVisibility = (await screen.findByRole('checkbox', {
-    name: 'Show Monitor in sidebar',
+  expect(
+    screen.queryByRole('checkbox', { name: 'Show Monitor in sidebar' }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole('checkbox', { name: 'Show Settings in sidebar' }),
+  ).toBeNull();
+  const tutorialsVisibility = (await screen.findByRole('checkbox', {
+    name: 'Show Tutorials in sidebar',
   })) as HTMLInputElement;
 
-  expect(monitorVisibility.checked).toBe(false);
-  fireEvent.click(monitorVisibility);
+  expect(tutorialsVisibility.checked).toBe(false);
+  fireEvent.click(tutorialsVisibility);
 
   expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
     sidebarNavigation: {
       order: DEFAULT_SIDEBAR_NAVIGATION_ORDER,
-      visibility: { monitoring: true },
+      visibility: { onboarding: true },
     },
   });
 });

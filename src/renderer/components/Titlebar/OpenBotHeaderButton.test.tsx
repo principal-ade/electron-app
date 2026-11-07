@@ -1,0 +1,33 @@
+import React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import type { Theme } from '@principal-ade/industry-theme';
+import { useWorkspaceTabs } from '../../principal-window/PortalTabsContext';
+import { OpenBotHeaderButton } from './OpenBotHeaderButton';
+
+jest.mock('../../principal-window/PortalTabsContext', () => ({
+  useWorkspaceTabs: jest.fn(),
+}));
+
+const theme = {
+  colors: {
+    backgroundSecondary: '#222',
+    backgroundTertiary: '#333',
+    border: '#444',
+    text: '#fff',
+    textSecondary: '#aaa',
+  },
+  fontSizes: [10, 12],
+  fonts: { body: 'sans-serif' },
+} as unknown as Theme;
+
+test('opens the OpenBot localhost page in a workspace tab', () => {
+  const openLocalhostBrowser = jest.fn();
+  jest.mocked(useWorkspaceTabs).mockReturnValue({
+    openLocalhostBrowser,
+  } as unknown as ReturnType<typeof useWorkspaceTabs>);
+
+  render(<OpenBotHeaderButton theme={theme} />);
+  fireEvent.click(screen.getByRole('button', { name: 'OpenBot' }));
+
+  expect(openLocalhostBrowser).toHaveBeenCalledWith(3010, '/', 'OpenBot');
+});

@@ -16,7 +16,6 @@ const defaultVisibility = (
   item: SidebarNavigationItem,
   preferences: UserPreferences,
 ): boolean => {
-  if (item === 'monitoring') return preferences.showMonitorButton ?? false;
   if (item === 'onboarding') return preferences.showOnboardingButton ?? false;
   return true;
 };
@@ -95,8 +94,9 @@ export const SidebarNavigationSettings: React.FC = () => {
           }}
         >
           Choose which destinations appear in the sidebar and change their
-          order. Processes only appears while processes are active. The
-          repository shortcut and Discord link are managed separately.
+          order. Processes only appears while processes are active. Monitor and
+          Settings stay at the bottom; the repository shortcut is managed
+          separately.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {order.map((id, index) => {

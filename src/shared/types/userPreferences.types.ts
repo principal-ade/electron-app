@@ -23,7 +23,7 @@ export type InteractiveShellNavigationView =
 /** Sidebar destinations whose order and visibility can be customized. */
 export type SidebarNavigationItem = Exclude<
   InteractiveShellNavigationView,
-  'home' | 'auth'
+  'home' | 'auth' | 'settings' | 'monitoring'
 >;
 
 // Onboarding state types
@@ -142,7 +142,6 @@ export interface UserPreferences {
   // UI preferences
   defaultView?: 'projects' | 'customization';
   showRepoFilterBar?: boolean; // Show/hide the filter bar in repos view
-  showMonitorButton?: boolean; // Show/hide the monitor button in side nav (default: false)
   showOnboardingButton?: boolean; // Show/hide the onboarding/tutorials button in side nav (default: false)
   showExtensionsButton?: boolean; // Show/hide the extensions button in settings (default: false)
   /** User-customized order and visibility for the principal navigation sidebar. */

@@ -113,6 +113,15 @@ test('updates branch counts and changed files from the same monitored event with
   expect(GitService.getBranchStatus).not.toHaveBeenCalled();
 });
 
+test('does not show commit history playback controls in the repository profile', () => {
+  render(<RepositoryProfilePanel context={context()} actions={actions} events={events} />);
+
+  expect(screen.queryByText('Commit History:')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Latest' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Last 7 Active' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Full Year' })).toBeNull();
+});
+
 test('spotlights only package files without zooming and restores existing layers on leave', async () => {
   const paths = ['packages/ui/index.ts', 'packages/ui/nested/button.ts', 'packages/ui-other/index.ts', 'package.json', 'src/changed.ts'];
   const city = { buildings: paths.map(path => ({ path })) } as CityData;

@@ -6,7 +6,7 @@
  * Modeled after UserProfilePanel for visual consistency.
  */
 
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useRepositoryStatuses } from '../hooks/useRepositoryStatuses';
 import { useTheme } from '@principal-ade/industry-theme';
 import type {
@@ -23,8 +23,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Circle,
-  Play,
-  Pause,
   Check,
   Copy,
   Loader2,
@@ -54,7 +52,6 @@ import { githubIdToPurl } from '@principal-ai/alexandria-core-library';
 import { RepositoryBuildsSection } from './build-configurations/RepositoryBuildsSection';
 import type { LocalClone } from '../../shared/types/repository.types';
 import * as LucideIcons from 'lucide-react';
-import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
 import { useAuthUser } from '../providers/AuthProvider';
 import { ShellService } from '../main-process-api/ShellService';
@@ -530,18 +527,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   // Feedback for copying a local clone path (keyed by the path just copied).
   const [copiedClonePath, setCopiedClonePath] = useState<string | null>(null);
 
-  // State for commit playback
-  type PlayMode = 'today' | 'week' | 'year';
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playMode, setPlayMode] = useState<PlayMode>('year');
   const [highlightLayers, setHighlightLayers] = useState<HighlightLayer[]>([]);
-  const [currentCommitInfo, setCurrentCommitInfo] = useState<{
-    hash: string;
-    message: string;
-    author: string;
-    date: string;
-  } | null>(null);
-  const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
 
   const packageSpotlightLayers = useMemo<HighlightLayer[] | null>(() => {
     if (hoveredPackagePath === null || !cityData) return null;
@@ -575,7 +561,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const changedFileSpotlightLayers = useMemo<HighlightLayer[] | null>(() => {
     if (
       showStats ||
-      isPlaying ||
       !repositoryPath ||
       !gitStatusMap.get(repositoryPath)?.isDirty ||
       !cityData
@@ -596,7 +581,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return [...fileColors, ...gitLayers];
   }, [
     showStats,
-    isPlaying,
     repositoryPath,
     gitStatusMap,
     cityData,
@@ -629,11 +613,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // Create initial highlight layers from git status and file suffixes when data loads
   useEffect(() => {
-    // Only create highlights if not currently playing
-    if (isPlaying) {
-      return;
-    }
-
     const layers: HighlightLayer[] = [];
 
     // 1. First, add file suffix color layers (higher priority: 100+)
@@ -761,7 +740,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     );
   }, [
     gitStatusMap,
-    isPlaying,
     repositoryData?.localClones,
     theme.colors,
     cityData,
@@ -1144,136 +1122,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       );
     } catch (error) {
       console.error('Failed to copy clone path:', error);
-    }
-  };
-
-  // Handle playback toggle
-  const handlePlayPause = async (mode: PlayMode) => {
-    if (isPlaying) {
-      // Stop playback
-      playbackRef.current.cancelled = true;
-      setIsPlaying(false);
-      setCurrentCommitInfo(null);
-      setHighlightLayers([]);
-      return;
-    }
-
-    const localPath = repositoryData?.localClones?.[0]?.path;
-    if (!localPath) return;
-
-    playbackRef.current.cancelled = false;
-    setIsPlaying(true);
-    setPlayMode(mode);
-    setHighlightLayers([]);
-
-    try {
-      // Get commits based on mode
-      const commits = await GitService.getCommitHistory(
-        localPath,
-        mode === 'year' ? 365 : mode === 'week' ? 7 : 1,
-      );
-
-      // Play through commits
-      for (const commit of commits) {
-        if (playbackRef.current.cancelled) break; // Stop if user paused
-
-        setCurrentCommitInfo({
-          hash: commit.hash,
-          message: commit.message.split('\n')[0],
-          author: commit.author,
-          date: commit.date.split('T')[0],
-        });
-
-        // Get changed files for this commit
-        const changedFiles = await GitService.getChangedFilesForCommit(
-          localPath,
-          commit.hash,
-        );
-
-        // Group files by status type (layers only support one color per layer)
-        const addedFiles: string[] = [];
-        const modifiedFiles: string[] = [];
-        const deletedFiles: string[] = [];
-
-        for (const [filePath, fileInfo] of changedFiles.entries()) {
-          switch (fileInfo.status) {
-            case 'added':
-              addedFiles.push(filePath);
-              break;
-            case 'modified':
-            case 'renamed':
-              modifiedFiles.push(filePath);
-              break;
-            case 'deleted':
-              deletedFiles.push(filePath);
-              break;
-          }
-        }
-
-        // Create separate layers for each status type with borders
-        const layers: HighlightLayer[] = [];
-
-        if (addedFiles.length > 0) {
-          layers.push({
-            id: `commit-${commit.hash}-added`,
-            name: `Added Files`,
-            enabled: true,
-            color: theme.colors.success,
-            priority: 3,
-            items: addedFiles.map((path) => ({
-              type: 'file' as const,
-              path,
-              renderStrategy: 'border' as const,
-            })),
-            opacity: 0.8,
-          });
-        }
-
-        if (modifiedFiles.length > 0) {
-          layers.push({
-            id: `commit-${commit.hash}-modified`,
-            name: `Modified Files`,
-            enabled: true,
-            color: theme.colors.warning,
-            priority: 2,
-            items: modifiedFiles.map((path) => ({
-              type: 'file' as const,
-              path,
-              renderStrategy: 'border' as const,
-            })),
-            opacity: 0.8,
-          });
-        }
-
-        if (deletedFiles.length > 0) {
-          layers.push({
-            id: `commit-${commit.hash}-deleted`,
-            name: `Deleted Files`,
-            enabled: true,
-            color: theme.colors.error,
-            priority: 1,
-            items: deletedFiles.map((path) => ({
-              type: 'file' as const,
-              path,
-              renderStrategy: 'border' as const,
-            })),
-            opacity: 0.8,
-          });
-        }
-
-        setHighlightLayers(layers);
-
-        // Wait before showing next commit
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      }
-    } catch (error) {
-      console.warn('[RepositoryProfilePanel] Playback error:', error);
-    } finally {
-      if (!playbackRef.current.cancelled) {
-        setIsPlaying(false);
-        setCurrentCommitInfo(null);
-        setHighlightLayers([]);
-      }
     }
   };
 
@@ -2747,190 +2595,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                       onPackageHover={setHoveredPackagePath}
                       onOpenBrowser={actions.openLocalhostBrowser}
                     />
-                  )}
-                  {/* Playback Buttons (for local repos) */}
-                  {repositoryData.isLocal && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: spacing.sm,
-                        marginTop: spacing.md,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: theme.fontSizes[1],
-                          fontWeight: 500,
-                          color: theme.colors.textSecondary,
-                          fontFamily: theme.fonts?.body,
-                        }}
-                      >
-                        Commit History:
-                      </span>
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: spacing.xs,
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        {isPlaying ? (
-                          <button
-                            onClick={() => handlePlayPause(playMode)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: spacing.xs,
-                              padding: `${spacing.xs}px ${spacing.sm}px`,
-                              background: theme.colors.backgroundSecondary,
-                              border: `1px solid ${theme.colors.border}`,
-                              borderRadius: 6,
-                              color: theme.colors.text,
-                              fontSize: theme.fontSizes[0],
-                              fontFamily: theme.fonts?.body,
-                              fontWeight: theme.fontWeights?.medium ?? 500,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                            }}
-                          >
-                            <Pause size={12} />
-                            Stop
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handlePlayPause('today')}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: spacing.xs,
-                                padding: `${spacing.xs}px ${spacing.sm}px`,
-                                background: theme.colors.backgroundSecondary,
-                                border: `1px solid ${theme.colors.border}`,
-                                borderRadius: 6,
-                                color: theme.colors.text,
-                                fontSize: theme.fontSizes[0],
-                                fontFamily: theme.fonts?.body,
-                                fontWeight: theme.fontWeights?.medium ?? 500,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = `${theme.colors.primary}15`;
-                                e.currentTarget.style.borderColor =
-                                  theme.colors.primary;
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background =
-                                  theme.colors.backgroundSecondary;
-                                e.currentTarget.style.borderColor =
-                                  theme.colors.border;
-                              }}
-                            >
-                              <Play size={12} />
-                              Latest
-                            </button>
-                            <button
-                              onClick={() => handlePlayPause('week')}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: spacing.xs,
-                                padding: `${spacing.xs}px ${spacing.sm}px`,
-                                background: theme.colors.backgroundSecondary,
-                                border: `1px solid ${theme.colors.border}`,
-                                borderRadius: 6,
-                                color: theme.colors.text,
-                                fontSize: theme.fontSizes[0],
-                                fontFamily: theme.fonts?.body,
-                                fontWeight: theme.fontWeights?.medium ?? 500,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = `${theme.colors.primary}15`;
-                                e.currentTarget.style.borderColor =
-                                  theme.colors.primary;
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background =
-                                  theme.colors.backgroundSecondary;
-                                e.currentTarget.style.borderColor =
-                                  theme.colors.border;
-                              }}
-                            >
-                              <Play size={12} />
-                              Last 7 Active
-                            </button>
-                            <button
-                              onClick={() => handlePlayPause('year')}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: spacing.xs,
-                                padding: `${spacing.xs}px ${spacing.sm}px`,
-                                background: theme.colors.backgroundSecondary,
-                                border: `1px solid ${theme.colors.border}`,
-                                borderRadius: 6,
-                                color: theme.colors.text,
-                                fontSize: theme.fontSizes[0],
-                                fontFamily: theme.fonts?.body,
-                                fontWeight: theme.fontWeights?.medium ?? 500,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = `${theme.colors.primary}15`;
-                                e.currentTarget.style.borderColor =
-                                  theme.colors.primary;
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background =
-                                  theme.colors.backgroundSecondary;
-                                e.currentTarget.style.borderColor =
-                                  theme.colors.border;
-                              }}
-                            >
-                              <Play size={12} />
-                              Full Year
-                            </button>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Current commit info during playback */}
-                      {currentCommitInfo && (
-                        <div
-                          style={{
-                            padding: spacing.sm,
-                            background: `${theme.colors.primary}10`,
-                            border: `1px solid ${theme.colors.primary}30`,
-                            borderRadius: 6,
-                            fontSize: theme.fontSizes[0],
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontWeight: 600,
-                              marginBottom: spacing.xs,
-                              color: theme.colors.text,
-                            }}
-                          >
-                            {currentCommitInfo.message}
-                          </div>
-                          <div
-                            style={{
-                              color: theme.colors.textSecondary,
-                              fontSize: theme.fontSizes[0],
-                            }}
-                          >
-                            {currentCommitInfo.author} •{' '}
-                            {currentCommitInfo.date}
-                          </div>
-                        </div>
-                      )}
-                    </div>
                   )}
                 </div>
               );

@@ -12,9 +12,7 @@ export const SIDEBAR_NAVIGATION_ITEMS: ReadonlyArray<{
   { id: 'requests', label: 'Requests' },
   { id: 'onboarding', label: 'Tutorials' },
   { id: 'processes', label: 'Processes' },
-  { id: 'monitoring', label: 'Monitor' },
   { id: 'skills', label: 'Skills' },
-  { id: 'settings', label: 'Settings' },
   { id: 'sessions', label: 'Sessions' },
 ];
 
