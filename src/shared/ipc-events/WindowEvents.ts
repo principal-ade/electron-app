@@ -22,6 +22,8 @@ export enum WindowEvent {
    * optionally starting a command in that tab.
    */
   OPEN_TERMINAL_TAB = 'window:open-terminal-tab',
+  /** Renderer acknowledgement that a requested terminal tab was materialized. */
+  OPEN_TERMINAL_TAB_ACK = 'window:open-terminal-tab-ack',
   // Browse a remote GitHub repository without cloning it.
   OPEN_REPOSITORY_EXPLORER = 'window:open-repository-explorer',
 

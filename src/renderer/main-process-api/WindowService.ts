@@ -192,6 +192,17 @@ export class WindowService {
     }
   }
 
+  static acknowledgeOpenTerminalTab(requestId: string, opened: boolean): void {
+    try {
+      window.mainProcess.window.acknowledgeOpenTerminalTab(requestId, opened);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to acknowledge open terminal tab:',
+        error,
+      );
+    }
+  }
+
   static onOpenRepositoryExplorer(
     callback: (payload: OpenRepositoryExplorerPayload) => void,
   ): () => void {

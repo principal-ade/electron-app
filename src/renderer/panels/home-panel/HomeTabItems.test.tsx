@@ -61,6 +61,37 @@ test('subtly marks a running build in the Home rail', () => {
   expect(container.querySelector('.home-build-running')).toBe(row);
 });
 
+test('uses an OpenCode logo and the session title for its terminal row', () => {
+  const title = 'Push progress in the home tab';
+  const entry: HomeTabEntry = {
+    id: 'opencode-terminal',
+    kind: 'terminal',
+    label: title,
+    customLabel: title,
+    agent: 'opencode',
+    repoPath: '/work/app',
+  };
+  const { container } = render(
+    <HomeTabRow
+      entry={entry}
+      open
+      active
+      tabNumber={1}
+      pinned={false}
+      onActivate={jest.fn()}
+      onTogglePin={jest.fn()}
+    />,
+  );
+
+  expect(screen.getByText(title)).toBeTruthy();
+  expect(screen.queryByText('Tab 1')).toBeNull();
+  const mark = container.querySelector('[data-agent-icon="opencode"]');
+  expect(mark).not.toBeNull();
+  expect(mark?.querySelectorAll('path')[1]?.getAttribute('fill')).toBe(
+    '#999999',
+  );
+});
+
 test.each([true, false])(
   'shows Clone profile with a distinct icon when open=%s',
   (open) => {

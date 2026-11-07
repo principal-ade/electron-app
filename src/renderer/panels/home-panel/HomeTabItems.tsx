@@ -35,6 +35,7 @@ import {
   ToolCase,
 } from 'lucide-react';
 import { TopicsIcon } from '../../components/TopicsIcon';
+import { OpenCodeIcon } from '../../components/OpenCodeIcon';
 import {
   agentContextDragText,
   drawingContextDragText,
@@ -132,6 +133,9 @@ export function homeTabIcon(
     case 'build-configuration':
       return <Hammer size={size} color={color} />;
     case 'terminal':
+      if (entry.agent === 'opencode') {
+        return <OpenCodeIcon size={size} color={color} />;
+      }
       return <Terminal size={size} color={color} />;
     case 'repo-tab':
       if (entry.variant === 'project-info') {
@@ -221,6 +225,12 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
   );
   const label = homeTabLabel(entry);
   const dragText = homeTabDragText(entry);
+  const iconColor =
+    entry.kind === 'terminal' && entry.agent === 'opencode'
+      ? theme.colors.textSecondary
+      : active
+        ? theme.colors.primary
+        : theme.colors.textSecondary;
   const association = associationFromEntry(entry);
   const dropTopicId =
     onDropAssociation && entry.kind === 'topic' ? entry.topicId : undefined;
@@ -378,13 +388,13 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
           // Center the 14px glyph on the first wrapped line (line-height is
           // 1.35 × 16px = 21.6px, plus the label's 1px top padding).
           marginTop: wrapLabel ? 5 : 0,
-          color: active ? theme.colors.primary : theme.colors.textSecondary,
+          color: iconColor,
         }}
       >
         {homeTabIcon(
           entry,
           depth > 0 ? 13 : 14,
-          active ? theme.colors.primary : theme.colors.textSecondary,
+          iconColor,
         )}
       </span>
       <span

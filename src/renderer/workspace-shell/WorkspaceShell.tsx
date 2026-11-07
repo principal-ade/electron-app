@@ -47,6 +47,7 @@ import { HttpRequestTabContent } from '../requests/HttpRequestTabContent';
 import { RequestsLeftPanel } from '../requests/RequestsLeftPanel';
 import { requestDefinition } from '../../shared/requests/preparedRequest';
 import { TopicsIcon } from '../components/TopicsIcon';
+import { OpenCodeIcon } from '../components/OpenCodeIcon';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -470,6 +471,18 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     return () => clearTimeout(timer);
   }, [detachNotice]);
 
+  const renderAgentIcon = useCallback(
+    (agent: string, size: number) =>
+      agent === 'opencode' ? (
+        <OpenCodeIcon
+          size={size}
+          color={theme.colors.text}
+          backgroundColor={theme.colors.background}
+        />
+      ) : undefined,
+    [theme.colors.background, theme.colors.text],
+  );
+
   const renderTabIcon = useCallback(
     (tab: WorkspaceTab) => {
       // The tab being moved shows the handshake in progress (up to 20s).
@@ -486,6 +499,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       if (projectsIcon) return projectsIcon;
       switch (tab.contentType) {
         case 'terminal':
+          if (tab.agent) {
+            return renderAgentIcon(tab.agent, 14) ?? <Terminal size={14} />;
+          }
           return <Terminal size={14} />;
         case 'topics-home':
           return <TopicsIcon size={14} />;
@@ -507,7 +523,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           return null;
       }
     },
-    [detachingTabId],
+    [detachingTabId, renderAgentIcon],
   );
 
   // Host rename for non-terminal tabs. Terminal tabs resolve `customLabel`
@@ -654,9 +670,28 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const [requestFocusTabId, setRequestFocusTabId] = useState<string | null>(
     null,
   );
-  const [requestOpenTab, setRequestOpenTab] =
-    useState<TerminalTabOpenRequest | null>(null);
-  const handleOpenTabHandled = useCallback(() => setRequestOpenTab(null), []);
+  type BridgeAwareTerminalTabOpenRequest = TerminalTabOpenRequest & {
+    requestId?: string;
+    agent?: string;
+    startupNotice?: {
+      message: string;
+      subtitle?: string;
+      timeoutMs?: number;
+    };
+  };
+  const [requestOpenTabs, setRequestOpenTabs] = useState<
+    BridgeAwareTerminalTabOpenRequest[]
+  >([]);
+  const requestOpenTabsRef = useRef<BridgeAwareTerminalTabOpenRequest[]>([]);
+  const requestOpenTab = requestOpenTabs[0] ?? null;
+  const handleOpenTabHandled = useCallback(() => {
+    const [handled, ...remaining] = requestOpenTabsRef.current;
+    requestOpenTabsRef.current = remaining;
+    setRequestOpenTabs(remaining);
+    if (handled?.requestId) {
+      WindowService.acknowledgeOpenTerminalTab(handled.requestId, true);
+    }
+  }, []);
   const handleFocusTabHandled = useCallback(
     () => setRequestFocusTabId(null),
     [],
@@ -1159,11 +1194,18 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       // The panel mints the tab id and creates the session with a context
       // derived from it, so a second open in the same directory gets its own tab
       // instead of reattaching to the first one's session.
-      setRequestOpenTab({
+      const openRequest: BridgeAwareTerminalTabOpenRequest = {
         directory,
         label: event.payload?.label,
+        customLabel: event.payload?.customLabel,
+        agent: event.payload?.agent,
+        startupNotice: event.payload?.startupNotice,
         command: event.payload?.command,
-      });
+        requestId: event.payload?.requestId,
+      };
+      const nextRequests = [...requestOpenTabsRef.current, openRequest];
+      requestOpenTabsRef.current = nextRequests;
+      setRequestOpenTabs(nextRequests);
     };
     events.on(PORTAL_INTENTS.terminalNew, handleTerminalOpen);
     // The titlebar search lives outside the shell, so it can only reach the
@@ -1357,6 +1399,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onOpenTabHandled={handleOpenTabHandled}
               renderTabContent={renderTabContent}
               renderTabIcon={renderTabIcon}
+              renderAgentIcon={renderAgentIcon}
               renderTabLabel={renderTabLabel}
               renderEmptyState={renderTerminalEmptyState}
               bottomBarContent={bottomBarContent}
@@ -1409,6 +1452,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       handleOpenHomeEntry,
       renderTabContent,
       renderTabIcon,
+      renderAgentIcon,
       renderTabLabel,
       bottomBarContent,
       baseDefaultDirectory,

@@ -303,6 +303,22 @@ describe('buildHomeTabEntries', () => {
     ]);
   });
 
+  it('preserves a host-assigned terminal custom label instead of numbering it', () => {
+    const named = {
+      ...terminal(),
+      label: 'Fix login',
+      customLabel: 'Fix login',
+      agent: 'opencode',
+    } as WorkspaceTab;
+    const { repos } = buildHomeTabEntries([entry], [], [named], []);
+
+    expect(repos[0].openTabs[0]).toMatchObject({
+      label: 'Fix login',
+      customLabel: 'Fix login',
+      agent: 'opencode',
+    });
+  });
+
   it('keeps a standalone terminal in Open Tabs with its cwd', () => {
     const { repos, openTabs } = buildHomeTabEntries(
       [],

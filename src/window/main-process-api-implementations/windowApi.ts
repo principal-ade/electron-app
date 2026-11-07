@@ -122,6 +122,9 @@ export const windowAPI: WindowAPI = {
     };
   },
 
+  acknowledgeOpenTerminalTab: (requestId, opened) =>
+    ipcRenderer.send(WindowEvent.OPEN_TERMINAL_TAB_ACK, { requestId, opened }),
+
   onOpenRepositoryExplorer: (
     callback: (payload: OpenRepositoryExplorerPayload) => void,
   ) => {

@@ -12,6 +12,10 @@
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
+  CodingAgentId,
+  TerminalStartupNotice,
+} from '../../shared/agentSessionTypes';
+import type {
   GithubRepository,
   Purl,
 } from '@principal-ai/alexandria-core-library';
@@ -142,6 +146,14 @@ export interface TerminalNewPayload {
   label?: string;
   /** Optional command to run when the terminal tab starts. */
   command?: string;
+  /** Optional persistent display name for the tab. */
+  customLabel?: string;
+  /** Coding agent associated with this terminal. */
+  agent?: CodingAgentId;
+  /** Optional transient message shown over the terminal during startup. */
+  startupNotice?: TerminalStartupNotice;
+  /** Correlation ID for bridge requests awaiting tab creation. */
+  requestId?: string;
 }
 
 /** Emit a {@link PORTAL_INTENTS.terminalNew} intent. */

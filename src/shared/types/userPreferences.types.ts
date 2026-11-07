@@ -1,6 +1,7 @@
 import { TerminalId } from './terminal.types';
 import type { RepositoryPanelVisibility } from './repositoryPanel.types';
 import type { PanelLayout } from '@principal-ade/panels';
+import type { CodingAgentId } from '../agentSessionTypes';
 
 // Interactive shell navigation view types
 export type InteractiveShellNavigationView =
@@ -363,6 +364,8 @@ export interface HomePinnedTab {
    * reopening the tab can reapply it via `renameTab`.
    */
   customLabel?: string;
+  /** Coding-agent identity for terminal rows; independent of the tab label. */
+  agent?: CodingAgentId;
   /** Owning clone path when this tab is rooted in a repository. */
   repoPath?: string;
   // Kind-specific payload.

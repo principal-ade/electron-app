@@ -15,6 +15,8 @@ import { registerDocumentRoutes } from './documentRoutes';
 import { registerBrowserRoutes } from './browserRoutes';
 import { registerRepoOpenRoutes } from './repoOpenRoutes';
 import { registerRequestRoutes } from './requestRoutes';
+import { createAgentSessionProviders } from './agentSessionRoutes';
+import { registerAgentSessionRoutes } from './agentSessionRoutes';
 import { getDocumentNotesPersistence } from '../document-notes/documentNotesPersistence';
 import { registerTopicRoutes } from '../topics/topicRoutes';
 import { registerSubsystemModelRoutes } from '../subsystem-models/subsystemModelRoutes';
@@ -1047,6 +1049,17 @@ export class PrincipalMCPBridge extends EventEmitter {
     registerBrowserRoutes(this.app, getProcessRegistry());
     registerRepoOpenRoutes(this.app);
     registerRequestRoutes(this.app);
+
+    // ============================================
+    // CODING AGENT SESSION HISTORY / RESUME ROUTES
+    // ============================================
+    registerAgentSessionRoutes(this.app, {
+      providers: createAgentSessionProviders(),
+      getRepositoryDirectories: async () =>
+        (await AlexandriaRegistryService.getInstance().getRepositories()).map(
+          (repo) => repo.path,
+        ),
+    });
 
     // ============================================
     // PULL REQUEST WATCH ROUTES

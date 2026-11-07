@@ -21,6 +21,7 @@
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { Purl } from '@principal-ai/alexandria-core-library';
 import type { HomePinnedTab } from '../../../shared/types/userPreferences.types';
+import type { CodingAgentId } from '../../../shared/agentSessionTypes';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
 import { customTabLabel } from '../../events/portalTabs';
 import type { ProcessEntry } from '../../../shared/main-process-api-interfaces/ProcessRegistryAPI';
@@ -131,6 +132,9 @@ export function entryFromTab(
     label: customLabel ?? tab.label,
     repoPath,
     ...(customLabel ? { customLabel } : {}),
+    ...(tab.contentType === 'terminal' && typeof tab.agent === 'string'
+      ? { agent: tab.agent as CodingAgentId }
+      : {}),
   };
   switch (tab.contentType) {
     case 'http-request':

@@ -198,7 +198,7 @@ export const IntegratedShell: React.FC = () => {
 
   // Queued when Quick Open asks for a terminal tab before the portal has ever
   // mounted; flushed once a surface is set and WorkspaceShell is up.
-  const pendingTerminalOpenRef = useRef<TerminalNewPayload | null>(null);
+  const pendingTerminalOpenRef = useRef<TerminalNewPayload[]>([]);
 
   const prevOverlayRef = useRef<string | null>(null);
 
@@ -363,18 +363,26 @@ export const IntegratedShell: React.FC = () => {
 
       if (!portalMounted) {
         // WorkspaceShell isn't mounted yet — queue and flush after it mounts.
-        pendingTerminalOpenRef.current = {
+        pendingTerminalOpenRef.current.push({
           directory: payload.directory,
           label: payload.label,
+          customLabel: payload.customLabel,
+          agent: payload.agent,
+          startupNotice: payload.startupNotice,
           command: payload.command,
-        };
+          requestId: payload.requestId,
+        });
         return;
       }
 
       emitTerminalNew(portalEvents, 'quick-open', {
         directory: payload.directory,
         label: payload.label,
+        customLabel: payload.customLabel,
+        agent: payload.agent,
+        startupNotice: payload.startupNotice,
         command: payload.command,
+        requestId: payload.requestId,
       });
     });
     return unsubscribe;
@@ -384,15 +392,17 @@ export const IntegratedShell: React.FC = () => {
   useEffect(() => {
     if (!surface) return;
     const pending = pendingTerminalOpenRef.current;
-    if (!pending) return;
+    if (pending.length === 0) return;
 
     // WorkspaceShell mounts in the same commit as `surface`; its terminal:new
     // listener registers in a useEffect that runs after paint. Defer one
     // macrotask so the emit is not lost.
     const timer = setTimeout(() => {
       if (pendingTerminalOpenRef.current !== pending) return;
-      pendingTerminalOpenRef.current = null;
-      emitTerminalNew(portalEvents, 'quick-open', pending);
+      pendingTerminalOpenRef.current = [];
+      pending.forEach((payload) =>
+        emitTerminalNew(portalEvents, 'quick-open', payload),
+      );
     }, 0);
     return () => clearTimeout(timer);
   }, [surface, portalEvents]);

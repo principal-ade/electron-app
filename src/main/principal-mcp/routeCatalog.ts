@@ -939,6 +939,71 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
     ],
   },
   {
+    name: 'agent-sessions',
+    description:
+      'Browse recent coding-agent session summaries and resume a supported session in a new terminal tab.',
+    routes: [
+      {
+        method: 'GET',
+        path: '/api/agent-sessions',
+        summary:
+          'List or search recent Claude Code, OpenCode, or Cursor sessions scoped to registered repositories.',
+        query: {
+          agent: 'string (required): opencode, claude, or cursor.',
+          directory:
+            'string (optional): absolute directory inside a registered repository; narrows the results. OpenCode lists sessions from this project context.',
+          q: 'string (optional): title/content search; provider-specific history search is used.',
+        },
+        response:
+          '{ success: true, agent, sessions: [{ agent, id, title, directory, createdAt, updatedAt, resumable }] }',
+        errors: {
+          '400':
+            'Unsupported agent or directory outside registered repositories.',
+          '403': 'Browser-origin requests are not allowed.',
+          '500': 'Session history could not be read.',
+        },
+        notes: [
+          'Without directory, OpenCode is queried across registered repositories; Claude Code and Cursor history is filtered to registered repository paths.',
+          'This returns summaries, not full transcripts or event streams. Cursor entries can be non-resumable when Cursor has no supported CLI resume target.',
+        ],
+      },
+      {
+        method: 'POST',
+        path: '/api/agent-sessions/open',
+        summary:
+          'Validate a session and resume it in a new terminal tab in the focused Principal MAIN window.',
+        body: {
+          agent: 'string (required): opencode, claude, or cursor.',
+          sessionId:
+            'string (required): provider session ID from the list response.',
+          directory:
+            'string (required): absolute session directory from the list response, inside a registered repository.',
+        },
+        response: '{ success: true, opened: boolean, sessionId, reason? }',
+        errors: {
+          '400':
+            'Malformed request or directory outside registered repositories.',
+          '403': 'Browser-origin requests are not allowed.',
+          '404': 'Session is unknown or not in a registered repository.',
+          '409': 'The provider reports that this session cannot be resumed.',
+          '500': 'The session could not be prepared or dispatched.',
+        },
+        notes: [
+          'The app constructs a provider-specific CLI resume command from the validated session ID; callers cannot supply a command.',
+          'The new terminal tab uses the session title as its display name and carries the agent ID separately for provider-specific icons.',
+          'A short startup overlay identifies the resumed provider and is dismissed on first terminal output or by a timeout.',
+          'A new terminal tab is created; the previous shell process and scrollback are not restored.',
+          'opened is true only after the renderer acknowledges that it materialized the terminal tab. No focused MAIN window or no acknowledgement returns opened: false.',
+        ],
+        example: {
+          agent: 'opencode',
+          sessionId: 'ses_1234567890',
+          directory: '/absolute/path/to/repo',
+        },
+      },
+    ],
+  },
+  {
     name: 'terminals',
     description:
       'Open, list, and close real PTY terminal sessions. Uses the renderer\u2019s own session-creation path, so reuse, ownership, and telemetry match a terminal opened in the UI.',

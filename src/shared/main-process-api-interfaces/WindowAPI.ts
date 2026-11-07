@@ -4,6 +4,10 @@
 
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type {
+  CodingAgentId,
+  TerminalStartupNotice,
+} from '../agentSessionTypes';
+import type {
   DetachableTabDescriptor,
   DetachedTabIncomingPayload,
   DetachedTabOpenOptions,
@@ -36,6 +40,14 @@ export interface OpenTerminalTabPayload {
   label?: string;
   /** Optional command to run in the new terminal tab. */
   command?: string;
+  /** Optional persistent display name; unlike label, this overrides `Tab N` in Home. */
+  customLabel?: string;
+  /** Coding agent associated with the terminal session, if any. */
+  agent?: CodingAgentId;
+  /** Transient startup message to show over the new terminal. */
+  startupNotice?: TerminalStartupNotice;
+  /** Correlation ID for bridge requests that wait for the tab to open. */
+  requestId?: string;
 }
 
 export interface OpenRepositoryExplorerPayload {
@@ -76,6 +88,7 @@ export interface WindowAPI {
   onOpenTerminalTab(
     callback: (payload: OpenTerminalTabPayload) => void,
   ): () => void;
+  acknowledgeOpenTerminalTab(requestId: string, opened: boolean): void;
   onOpenRepositoryExplorer(
     callback: (payload: OpenRepositoryExplorerPayload) => void,
   ): () => void;
