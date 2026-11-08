@@ -27,21 +27,15 @@ jobs:
           node-version: '22.12.0'
           cache: 'npm'
 
-      - name: Configure npm authentication
+      - name: Configure GitHub dependency access
         run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
           git config --global url."https://github.com/".insteadOf ssh://git@github.com/
 
       - name: Install dependencies
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm install --legacy-peer-deps
 
       - name: Install release/app dependencies
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > release/app/.npmrc
           cd release/app
           npm install --legacy-peer-deps --ignore-scripts
 
